@@ -248,6 +248,20 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         }
     }
 
+    /**
+     * Returns newly created {@link CloseEvent} if the specified {@link Throwable} is not an instance of
+     * {@link CancelledSubscriptionException#INSTANCE} or {@link AbortedStreamException#INSTANCE}.
+     */
+    static CloseEvent newCloseEvent(Throwable cause) {
+        if (cause == CancelledSubscriptionException.INSTANCE) {
+            return CANCELLED_CLOSE;
+        } else if (cause == AbortedStreamException.INSTANCE) {
+            return ABORTED_CLOSE;
+        } else {
+            return new CloseEvent(cause);
+        }
+    }
+
     static final class SubscriptionImpl implements Subscription {
 
         private final AbstractStreamMessage<?> publisher;

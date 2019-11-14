@@ -282,6 +282,14 @@ public interface ServiceRequestContext extends RequestContext {
     void setRequestTimeout(Duration requestTimeout);
 
     /**
+     * Returns {@link Request} timeout handler which is executed when
+     * receiving the current {@link Request} and sending the corresponding {@link Response}
+     * is not completely received within the allowed {@link #requestTimeoutMillis()}.
+     */
+    @Nullable
+    Runnable requestTimeoutHandler();
+
+    /**
      * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,
      * e.g., by calling {@link HttpResponseWriter#close()}. If not set, the response will be closed with
      * {@link HttpStatus#SERVICE_UNAVAILABLE}.

@@ -120,7 +120,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
-                           boolean notifyCancellation) {
+                            boolean notifyCancellation) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
 
@@ -204,21 +204,31 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public void abort() {
+        abort0(AbortedStreamException.get());
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        abort0(cause);
+    }
+
+    private void abort0(Throwable cause) {
         final AbortableSubscriber subscriber = this.subscriber;
         if (subscriber != null) {
-            subscriber.abort();
+            subscriber.abort(cause);
             return;
         }
 
-        final AbortableSubscriber abortable = new AbortableSubscriber(this, AbortingSubscriber.get(),
+        final AbortableSubscriber abortable = new AbortableSubscriber(this, AbortingSubscriber.get(cause),
                                                                       ImmediateEventExecutor.INSTANCE,
                                                                       false);
         if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
-            this.subscriber.abort();
+            this.subscriber.abort(cause);
             return;
         }
 
-        abortable.abort();
+        abortable.abort(cause);
         abortable.onSubscribe(NoopSubscription.INSTANCE);
     }
 
@@ -231,11 +241,12 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     static final class AbortableSubscriber implements Subscriber<Object>, Subscription {
         private final PublisherBasedStreamMessage<?> parent;
         private final EventExecutor executor;
-        private boolean notifyCancellation;
+        private final boolean notifyCancellation;
         private Subscriber<Object> subscriber;
-        private volatile boolean abortPending;
         @Nullable
         private volatile Subscription subscription;
+        @Nullable
+        private volatile Throwable abortCause;
 
         @SuppressWarnings("unchecked")
         AbortableSubscriber(PublisherBasedStreamMessage<?> parent, Subscriber<?> subscriber,
@@ -260,11 +271,13 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             assert subscription != null;
 
             // Don't cancel but just abort if abort is pending.
-            cancelOrAbort(!abortPending);
+            cancelOrAbort(abortCause == null);
         }
 
-        void abort() {
-            abortPending = true;
+        void abort(Throwable cause) {
+            if (abortCause == null) {
+                abortCause = cause;
+            }
             if (subscription != null) {
                 cancelOrAbort(false);
             }
@@ -291,8 +304,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 this.subscriber = NoopSubscriber.get();
             }
 
-            final Throwable cause = cancel ? CancelledSubscriptionException.get()
-                                           : AbortedStreamException.get();
+            final Throwable cause = cancel ? CancelledSubscriptionException.get() : abortCause;
             try {
                 if (!cancel || notifyCancellation) {
                     subscriber.onError(cause);
@@ -320,7 +332,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 this.subscription = subscription;
                 subscriber.onSubscribe(this);
             } finally {
-                if (abortPending) {
+                if (abortCause != null) {
                     cancelOrAbort0(false);
                 }
             }

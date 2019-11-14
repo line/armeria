@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.Futures.allAsList;
 import static com.google.common.util.concurrent.Futures.transformAsync;
 import static com.linecorp.armeria.common.HttpStatus.OK;
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,10 +40,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.IntStream;
 
 import org.apache.thrift.async.AsyncMethodCallback;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -70,7 +72,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.brave.BraveService;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import brave.ScopedSpan;
 import brave.Tracer.SpanInScope;
@@ -81,21 +83,22 @@ import brave.sampler.Sampler;
 import zipkin2.Span;
 import zipkin2.reporter.Reporter;
 
-public class BraveIntegrationTest {
+class BraveIntegrationTest {
 
     private static final ReporterImpl spanReporter = new ReporterImpl();
 
-    private HelloService.Iface fooClient;
-    private HelloService.Iface fooClientWithoutTracing;
-    private HelloService.Iface timeoutClient;
-    private HelloService.Iface timeoutClientClientTimesOut;
-    private HelloService.AsyncIface barClient;
-    private HelloService.AsyncIface quxClient;
-    private HelloService.Iface zipClient;
-    private HttpClient poolHttpClient;
+    private static HelloService.Iface fooClient;
+    private static HelloService.Iface fooClientWithoutTracing;
+    private static HelloService.Iface timeoutClient;
+    private static HelloService.Iface timeoutClientClientTimesOut;
+    private static HelloService.Iface http1TimeoutClientClientTimesOut;
+    private static HelloService.AsyncIface barClient;
+    private static HelloService.AsyncIface quxClient;
+    private static HelloService.Iface zipClient;
+    private static HttpClient poolHttpClient;
 
-    @Rule
-    public final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension(true) {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             // Our test that triggers a timeout will take a second to run. Hopefully it doesn't cause flakiness
@@ -188,8 +191,8 @@ public class BraveIntegrationTest {
         }
     };
 
-    @Before
-    public void setupClients() {
+    @BeforeEach
+    void setupClients() {
         fooClient = new ClientBuilder(server.uri(BINARY, "/foo"))
                 .decorator(BraveClient.newDecorator(newTracing("client/foo")))
                 .build(HelloService.Iface.class);
@@ -207,15 +210,19 @@ public class BraveIntegrationTest {
                 .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
                 .responseTimeout(Duration.ofMillis(10))
                 .build(HelloService.Iface.class);
+        http1TimeoutClientClientTimesOut = new ClientBuilder(server.uri(H1C, BINARY, "/timeout"))
+                .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
+                .responseTimeout(Duration.ofMillis(10))
+                .build(HelloService.Iface.class);
     }
 
-    @After
-    public void tearDown() {
+    @AfterEach
+    void tearDown() {
         Tracing.current().close();
     }
 
-    @After
-    public void shouldHaveNoExtraSpans() {
+    @AfterEach
+    void shouldHaveNoExtraSpans() {
         assertThat(spanReporter.spans).isEmpty();
     }
 
@@ -243,8 +250,9 @@ public class BraveIntegrationTest {
                       .build();
     }
 
-    @Test(timeout = 10000)
-    public void testServiceHasMultipleClientRequests() throws Exception {
+    @Test
+    @Timeout(10000)
+    void testServiceHasMultipleClientRequests() throws Exception {
         assertThat(zipClient.hello("Lee")).isEqualTo("Hello, Lee!, and Hello, Lee!");
 
         final Span[] spans = spanReporter.take(6);
@@ -252,8 +260,9 @@ public class BraveIntegrationTest {
         assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
     }
 
-    @Test(timeout = 10000)
-    public void testClientInitiatedTrace() throws Exception {
+    @Test
+    @Timeout(10000)
+    void testClientInitiatedTrace() throws Exception {
         assertThat(fooClient.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
         final Span[] spans = spanReporter.take(6);
@@ -341,8 +350,9 @@ public class BraveIntegrationTest {
         assertThat(serverEndTime).isGreaterThanOrEqualTo(serverWireSendTime);
     }
 
-    @Test(timeout = 10000)
-    public void testServiceInitiatedTrace() throws Exception {
+    @Test
+    @Timeout(10000)
+    void testServiceInitiatedTrace() throws Exception {
         assertThat(fooClientWithoutTracing.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
         final Span[] spans = spanReporter.take(5);
@@ -383,8 +393,9 @@ public class BraveIntegrationTest {
         assertThat(spans).allMatch(s -> "hello".equals(s.name()));
     }
 
-    @Test(timeout = 10000)
-    public void testSpanInThreadPoolHasSameTraceId() throws Exception {
+    @Test
+    @Timeout(10000)
+    void testSpanInThreadPoolHasSameTraceId() throws Exception {
         poolHttpClient.get("pool").aggregate().get();
         final Span[] spans = spanReporter.take(5);
         assertThat(Arrays.stream(spans).map(Span::traceId).collect(toImmutableSet())).hasSize(1);
@@ -393,8 +404,9 @@ public class BraveIntegrationTest {
                          .collect(toImmutableSet())).hasSize(1);
     }
 
-    @Test(timeout = 10000)
-    public void testServerTimesOut() throws Exception {
+    @Test
+    @Timeout(10000)
+    void testServerTimesOut() throws Exception {
         assertThatThrownBy(() -> timeoutClient.hello("name"))
                 .isInstanceOf(InvalidResponseHeadersException.class);
         final Span[] spans = spanReporter.take(2);
@@ -408,8 +420,9 @@ public class BraveIntegrationTest {
         assertThat(clientSpan.annotations()).hasSize(2);
     }
 
-    @Test(timeout = 10000)
-    public void testClientTimesOut() throws Exception {
+    @Test
+    @Timeout(10000)
+    void testClientTimesOut() throws Exception {
         assertThatThrownBy(() -> timeoutClientClientTimesOut.hello("name"))
                 .isInstanceOf(ResponseTimeoutException.class);
         final Span[] spans = spanReporter.take(2);
@@ -417,14 +430,33 @@ public class BraveIntegrationTest {
         final Span serverSpan = findSpan(spans, "service/timeout");
         final Span clientSpan = findSpan(spans, "client/timeout");
 
-        // Client timed out, so no response data was ever sent from the server. There is no wire send in the
-        // server and no wire receive in the client.
-        assertThat(serverSpan.annotations()).hasSize(1);
+        // HTTP2 client timed out, so RST_STREAM frame was sent to the server.
+        // There is a wire send in the server and no wire receive in the client.
+        assertThat(serverSpan.annotations()).hasSize(2);
+        assertThat(serverSpan.annotations().get(1).value()).isEqualTo("ws");
         assertThat(clientSpan.annotations()).hasSize(1);
     }
 
-    @Test(timeout = 10000)
-    public void testNoRequestContextTraceable() throws Exception {
+    @Test
+    @Timeout(10000)
+    void testHttp1ClientTimesOut() throws Exception {
+        assertThatThrownBy(() -> http1TimeoutClientClientTimesOut.hello("name"))
+                .isInstanceOf(ResponseTimeoutException.class);
+        final Span[] spans = spanReporter.take(2);
+
+        final Span serverSpan = findSpan(spans, "service/timeout");
+        final Span clientSpan = findSpan(spans, "client/timeout");
+
+        // HTTP1 client timed out, so no response data was ever sent from the server.
+        // There is a wire send in the server and no wire receive in the client.
+        assertThat(serverSpan.annotations()).hasSize(2);
+        assertThat(serverSpan.annotations().get(1).value()).isEqualTo("ws");
+        assertThat(clientSpan.annotations()).hasSize(1);
+    }
+
+    @Test
+    @Timeout(10000)
+    void testNoRequestContextTraceable() throws Exception {
         RequestContextCurrentTraceContext.setCurrentThreadNotRequestThread(true);
         try {
             final Tracing tracing = newTracing("no-request");
@@ -442,8 +474,9 @@ public class BraveIntegrationTest {
         }
     }
 
-    @Test(timeout = 10000)
-    public void testNonRequestContextThreadPatternTraceable() throws Exception {
+    @Test
+    @Timeout(10000)
+    void testNonRequestContextThreadPatternTraceable() throws Exception {
         final CountDownLatch done = new CountDownLatch(1);
         ThreadFactories.builder("nonrequest-").eventLoop(false)
                        .build()

@@ -226,9 +226,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         unfinishedRequests.forEach((req, res) -> {
             // Mark the request stream as closed due to disconnection.
             req.close(ClosedSessionException.get());
-            // XXX(trustin): Should we allow aborting with an exception other than AbortedStreamException?
-            //               (ClosedSessionException in this case.)
-            res.abort();
+            res.abort(ClosedSessionException.get());
         });
     }
 
@@ -405,7 +403,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }).exceptionally(CompletionActions::log);
 
             res.completionFuture().handleAsync((ret, cause) -> {
-                req.abort();
+                if (cause == null) {
+                    req.abort();
+                } else {
+                    req.abort(cause);
+                }
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
                 if (!isTransient) {
                     gracefulShutdownSupport.dec();
