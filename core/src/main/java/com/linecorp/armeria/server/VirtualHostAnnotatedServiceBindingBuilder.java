@@ -89,8 +89,19 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      */
     public VirtualHostAnnotatedServiceBindingBuilder exceptionHandler(
             ExceptionHandlerFunction exceptionHandlerFunction) {
-        requireNonNull(exceptionHandlerFunction, "exceptionHandler");
+        requireNonNull(exceptionHandlerFunction, "exceptionHandlerFunction");
         exceptionHandlerFunctionBuilder.add(exceptionHandlerFunction);
+        return this;
+    }
+
+    /**
+     * Adds the given {@link ExceptionHandlerFunction}s to this
+     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     */
+    public VirtualHostAnnotatedServiceBindingBuilder exceptionHandlers(
+            List<ExceptionHandlerFunction> exceptionHandlerFunctions) {
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        exceptionHandlerFunctionBuilder.addAll(exceptionHandlerFunctions);
         return this;
     }
 
@@ -106,6 +117,17 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     /**
+     * Adds the given {@link ResponseConverterFunction}s to this
+     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     */
+    public VirtualHostAnnotatedServiceBindingBuilder responseConverters(
+            List<ResponseConverterFunction> responseConverterFunctions) {
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+        responseConverterFunctionBuilder.addAll(responseConverterFunctions);
+        return this;
+    }
+
+    /**
      * Adds the given {@link RequestConverterFunction} to this
      * {@link VirtualHostAnnotatedServiceBindingBuilder}.
      */
@@ -113,6 +135,17 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
             RequestConverterFunction requestConverterFunction) {
         requireNonNull(requestConverterFunction, "requestConverterFunction");
         requestConverterFunctionBuilder.add(requestConverterFunction);
+        return this;
+    }
+
+    /**
+     * Adds the given {@link RequestConverterFunction}s to this
+     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     */
+    public VirtualHostAnnotatedServiceBindingBuilder requestConverters(
+            List<RequestConverterFunction> requestConverterFunctions) {
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requestConverterFunctionBuilder.addAll(requestConverterFunctions);
         return this;
     }
 
