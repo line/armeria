@@ -855,7 +855,7 @@ public final class Flags {
      *
      * <p>This flag is disabled by default.
      * Specify the {@code -Dcom.linecorp.armeria.useDefaultDnsResolver=true} JVM option
-     * to enable it
+     * to enable it.
      */
     public static boolean useDefaultDnsResolver() {
         return USE_DEFAULT_DNS_RESOLVER;
