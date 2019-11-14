@@ -41,6 +41,11 @@ import io.netty.channel.Channel;
 public interface RequestLogBuilder {
 
     /**
+     * A dummy {@link RequestLogBuilder} that discards everything it collected.
+     */
+    RequestLogBuilder NOOP = new NoopRequestLogBuilder();
+
+    /**
      * Adds the specified {@link RequestLog} so that the logs are propagated from the {@code child}.
      * Note that only the request-side logs of the first added child will be propagated. To fill the
      * response-side logs you need to call {@link #endResponseWithLastChild()}.
