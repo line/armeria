@@ -1,15 +1,30 @@
-import React, { Dispatch, SetStateAction } from 'react';
+import React, {Dispatch, SetStateAction, useReducer} from 'react';
 
 export interface Row {
   key: string;
   value: string;
 }
-export const CreateDefaultRow = (): Row => {
-  return {
-    key: '',
-    value: '',
-  };
+
+export enum ACTION {
+  REMOVE_ROW,
+  CHANGE_CELL,
+}
+
+const editorReducer = (state, action) => {
+  switch (action.type) {
+    case ACTION.REMOVE_ROW: {
+      return {};
+    }
+    case ACTION.CHANGE_CELL: {
+      return { ...user, isAdmin: !state.isAdmin };
+    }
+    default: {
+      throw new Error(`unexpected action.type: ${action.type}`);
+    }
+  }
 };
+
+const [user, dispatchUser] = useReducer(userReducer, initialUserState);
 
 const ValueListContext = React.createContext<
   ([Row[], Dispatch<SetStateAction<Row[]>>]) | undefined
