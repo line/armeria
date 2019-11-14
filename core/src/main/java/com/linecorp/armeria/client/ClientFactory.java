@@ -129,17 +129,17 @@ public interface ClientFactory extends AutoCloseable {
     MeterRegistry meterRegistry();
 
     /**
-     * Returns the {@link ClientFactoryOptions} that has been used to create this {@link ClientFactory}.
-     */
-    ClientFactoryOptions options();
-
-    /**
      * Sets the {@link MeterRegistry} that collects various stats. Note that this method is intended to be
      * used during the initialization phase of an application, so that the application gets a chance to
      * switch to the preferred {@link MeterRegistry} implementation. Invoking this method after this factory
      * started to export stats to the old {@link MeterRegistry} may result in undocumented behavior.
      */
     void setMeterRegistry(MeterRegistry meterRegistry);
+
+    /**
+     * Returns the {@link ClientFactoryOptions} that has been used to create this {@link ClientFactory}.
+     */
+    ClientFactoryOptions options();
 
     /**
      * Creates a new client that connects to the specified {@code uri}.

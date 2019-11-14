@@ -34,7 +34,7 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.ConstantPool;
 
 /**
- * A client factory option.
+ * A {@link ClientFactory} option.
  *
  * @param <T> the type of the option value
  */
@@ -66,7 +66,7 @@ public final class ClientFactoryOption<T> extends AbstractOption<T> {
             EVENT_LOOP_SCHEDULER_FACTORY = valueOf("EVENT_LOOP_SCHEDULER_FACTORY");
 
     /**
-     * The options of sockets created by the {@link ClientFactory}.
+     * The {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
      */
     public static final ClientFactoryOption<Map<ChannelOption<?>, Object>> CHANNEL_OPTIONS =
             valueOf("CHANNEL_OPTIONS");
@@ -87,7 +87,7 @@ public final class ClientFactoryOption<T> extends AbstractOption<T> {
             ADDRESS_RESOLVER_GROUP_FACTORY = valueOf("ADDRESS_RESOLVER_GROUP_FACTORY");
 
     /**
-     * The <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
+     * The HTTP/2 <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
      * window size</a>.
      */
     public static final ClientFactoryOption<Integer> HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
@@ -108,7 +108,7 @@ public final class ClientFactoryOption<T> extends AbstractOption<T> {
             valueOf("HTTP2_MAX_FRAME_SIZE");
 
     /**
-     * The <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * The HTTP/2 <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      * that indicates the maximum size of header list that the client is prepared to accept, in octets.
      */
     public static final ClientFactoryOption<Long> HTTP2_MAX_HEADER_LIST_SIZE =

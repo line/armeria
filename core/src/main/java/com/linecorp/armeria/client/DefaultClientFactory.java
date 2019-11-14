@@ -129,6 +129,11 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public ClientFactoryOptions options() {
+        return httpClientFactory.options();
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
         uri = normalizeUri(uri, scheme);
@@ -174,11 +179,6 @@ final class DefaultClientFactory extends AbstractClientFactory {
 
     void doClose() {
         clientFactoriesToClose.forEach(ClientFactory::close);
-    }
-
-    @Override
-    public ClientFactoryOptions options() {
-        return httpClientFactory.options();
     }
 
     private URI normalizeUri(URI uri, Scheme scheme) {

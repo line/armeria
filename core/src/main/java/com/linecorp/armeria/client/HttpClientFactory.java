@@ -217,6 +217,11 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public ClientFactoryOptions options() {
+        return options;
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
         final Endpoint endpoint = newEndpoint(uri);
@@ -298,10 +303,5 @@ final class HttpClientFactory extends AbstractClientFactory {
 
         return pools.computeIfAbsent(eventLoop,
                                      e -> new HttpChannelPool(this, eventLoop, connectionPoolListener()));
-    }
-
-    @Override
-    public ClientFactoryOptions options() {
-        return options;
     }
 }

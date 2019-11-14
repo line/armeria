@@ -197,6 +197,28 @@ public final class ClientFactoryOptions extends AbstractOptions {
         return channelOptions;
     }
 
+    private ClientFactoryOptions(ClientFactoryOptionValue<?>... options) {
+        super(ClientFactoryOptions::filterValue, options);
+    }
+
+    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
+                                 ClientFactoryOptionValue<?>... options) {
+
+        super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
+    }
+
+    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
+                                 Iterable<ClientFactoryOptionValue<?>> options) {
+
+        super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
+    }
+
+    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
+                                 ClientFactoryOptions options) {
+
+        super(clientFactoryOptions, options);
+    }
+
     /**
      * Converts this {@link ClientFactoryOptions} to a {@link Map}.
      */
@@ -228,7 +250,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     /**
-     * Returns the options of sockets created by the {@link ClientFactory}.
+     * Returns the {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
      */
     public Map<ChannelOption<?>, Object> channelOptions() {
         return get0(ClientFactoryOption.CHANNEL_OPTIONS).get();
@@ -253,8 +275,8 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     /**
-     * Returns the <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
-     * window size</a>.
+     * Returns the HTTP/2 <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection
+     * flow-control window size</a>.
      */
     public int http2InitialConnectionWindowSize() {
         return get0(ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE).get();
@@ -277,8 +299,9 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     /**
-     * Returns the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
-     * that indicates the maximum size of header list that the client is prepared to accept, in octets.
+     * Returns the HTTP/2 <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">
+     * SETTINGS_MAX_HEADER_LIST_SIZE</a> that indicates the maximum size of header list
+     * that the client is prepared to accept, in octets.
      */
     public long http2MaxHeaderListSize() {
         return get0(ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE).get();
@@ -340,27 +363,5 @@ public final class ClientFactoryOptions extends AbstractOptions {
      */
     public MeterRegistry meterRegistry() {
         return get0(ClientFactoryOption.METER_REGISTRY).get();
-    }
-
-    private ClientFactoryOptions(ClientFactoryOptionValue<?>... options) {
-        super(ClientFactoryOptions::filterValue, options);
-    }
-
-    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
-                                 ClientFactoryOptionValue<?>... options) {
-
-        super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
-    }
-
-    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
-                                 Iterable<ClientFactoryOptionValue<?>> options) {
-
-        super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
-    }
-
-    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
-                                 ClientFactoryOptions options) {
-
-        super(clientFactoryOptions, options);
     }
 }
