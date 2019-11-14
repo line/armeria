@@ -68,8 +68,6 @@ public final class LoggingDecorators {
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ?> responseTrailersSanitizer,
             Function<? super Throwable, ?> responseCauseSanitizer) {
-
-        final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
         final LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
         final Throwable responseCause = log.responseCause();
 
@@ -80,6 +78,7 @@ public final class LoggingDecorators {
             if (responseCause == null) {
                 responseLogLevel.log(logger, RESPONSE_FORMAT, responseStr);
             } else {
+                final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
                 if (!requestLogLevel.isEnabled(logger)) {
                     // Request wasn't logged but this is an unsuccessful response, log the request too to help
                     // debugging.
