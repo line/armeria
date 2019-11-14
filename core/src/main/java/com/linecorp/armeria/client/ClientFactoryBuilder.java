@@ -455,7 +455,7 @@ public final class ClientFactoryBuilder {
                                                                maxNumEventLoopsFunctions);
         }
 
-        // FIXME(ikhoon) This workaround enables DefaultAddressResolverGroup by default for Windows OS.
+        // FIXME(ikhoon) This workaround enables DefaultAddressResolverGroup by `useDefaultDnsResolver` flag.
         // The DefaultAddressResolverGroup which calls blocking operation uses JDK's built-in domain name lookup
         // mechanism. However DNS result is easy to cache, so it doesn't have a big impact on performance.
         // The code that uses DefaultAddressResolverGroup could be removed after resolving the following issue.

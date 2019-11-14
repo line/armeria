@@ -21,9 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
-
-import com.linecorp.armeria.common.util.OsType;
-import com.linecorp.armeria.common.util.SystemInfo;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import io.netty.resolver.DefaultAddressResolverGroup;
 
@@ -62,12 +61,16 @@ class ClientFactoryBuilderTest {
     }
 
     @Test
-    void useDefaultDnsResolverForWindow() {
+    @EnabledIfSystemProperty(named = "com.linecorp.armeria.useDefaultDnsResolver", matches = "true")
+    void useDefaultAddressResolverGroup() {
         final DefaultClientFactory clientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
-        if (SystemInfo.osType() == OsType.WINDOWS) {
-            assertThat(clientFactory.addressResolverGroup()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
-        } else {
-            assertThat(clientFactory.addressResolverGroup()).isInstanceOf(RefreshingAddressResolverGroup.class);
-        }
+        assertThat(clientFactory.addressResolverGroup()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+    }
+
+    @Test
+    @DisabledIfSystemProperty(named = "com.linecorp.armeria.useDefaultDnsResolver",  matches = "true")
+    void useRefreshingAddressResolverGroup() {
+        final DefaultClientFactory clientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
+        assertThat(clientFactory.addressResolverGroup()).isInstanceOf(RefreshingAddressResolverGroup.class);
     }
 }

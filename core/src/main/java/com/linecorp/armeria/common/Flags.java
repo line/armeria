@@ -44,7 +44,6 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.OsType;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.SslContextUtil;
@@ -299,8 +298,7 @@ public final class Flags {
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
-    private static final boolean USE_DEFAULT_DNS_RESOLVER =
-            getBoolean("useDefaultDnsResolver", SystemInfo.osType() == OsType.WINDOWS);
+    private static final boolean USE_DEFAULT_DNS_RESOLVER = getBoolean("useDefaultDnsResolver", false);
 
     static {
         if (!isEpollAvailable()) {
@@ -855,9 +853,9 @@ public final class Flags {
      * lookup mechanism.
      * Note that this resolver performs a blocking name lookup from the caller thread.
      *
-     * <p>This flag is enabled for Windows OS and disabled for others by default.
-     * Specify the {@code -Dcom.linecorp.armeria.useDefaultDnsResolver=<true|false>} JVM option
-     * to override the default value.
+     * <p>This flag is disabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.useDefaultDnsResolver=true} JVM option
+     * to enable it
      */
     public static boolean useDefaultDnsResolver() {
         return USE_DEFAULT_DNS_RESOLVER;
