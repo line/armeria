@@ -247,10 +247,11 @@ public final class AnnotatedHttpServiceFactory {
      * created per each {@link Route} associated with the {@code method}.
      */
     @VisibleForTesting
-    static List<AnnotatedHttpServiceElement> create(String pathPrefix, Object object, Method method,
-                                                    List<ExceptionHandlerFunction> exceptionHandlerFunctions,
-                                                    List<RequestConverterFunction> requestConverterFunctions,
-                                                    List<ResponseConverterFunction> responseConverterFunctions) {
+    static List<AnnotatedHttpServiceElement> create(
+            String pathPrefix, Object object, Method method,
+            List<ExceptionHandlerFunction> exceptionHandlerFunctions,
+            List<RequestConverterFunction> requestConverterFunctions,
+            List<ResponseConverterFunction> responseConverterFunctions) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {

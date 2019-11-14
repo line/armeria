@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfigurator.ofExceptionHandlersAndConverters;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.collectDecorators;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.create;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.find;
@@ -28,7 +27,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
