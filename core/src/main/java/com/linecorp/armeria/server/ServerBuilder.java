@@ -1026,7 +1026,29 @@ public final class ServerBuilder {
         final AnnotatedHttpServiceConfigurator configurator =
                 AnnotatedHttpServiceConfigurator
                         .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
-        return annotatedService(pathPrefix, service, decorator, configurator);
+        return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
+                                configurator.requestConverters(), configurator.responseConverters());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param customizer the {@link Consumer} which customizes the given
+     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
+     */
+    public ServerBuilder annotatedService(String pathPrefix, Object service,
+                                          Function<Service<HttpRequest, HttpResponse>,
+                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(decorator, "decorator");
+        requireNonNull(customizer, "customizer");
+        final AnnotatedHttpServiceConfiguratorSetters setters = new AnnotatedHttpServiceConfiguratorSetters();
+        customizer.accept(setters);
+        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
+        return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
+                                configurator.requestConverters(), configurator.responseConverters());
     }
 
     /**
@@ -1042,38 +1064,17 @@ public final class ServerBuilder {
                                           List<ExceptionHandlerFunction> exceptionHandlerFunctions,
                                           List<RequestConverterFunction> requestConverterFunctions,
                                           List<ResponseConverterFunction> responseConverterFunctions) {
-        final AnnotatedHttpServiceConfigurator configurator =
-                AnnotatedHttpServiceConfigurator
-                        .ofExceptionHandlersAndConverters(exceptionHandlerFunctions, requestConverterFunctions,
-                                                          responseConverterFunctions);
-        return annotatedService(pathPrefix, service, decorator, configurator);
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
-     * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
-     */
-    public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Function<Service<HttpRequest, HttpResponse>,
-                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
-                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        final AnnotatedHttpServiceConfiguratorSetters setters = new AnnotatedHttpServiceConfiguratorSetters();
-        customizer.accept(setters);
-        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
-        return annotatedService(pathPrefix, service, decorator, configurator);
-    }
-
-    private ServerBuilder annotatedService(String pathPrefix, Object service,
-                                           Function<Service<HttpRequest, HttpResponse>,
-                                                   ? extends Service<HttpRequest, HttpResponse>> decorator,
-                                           AnnotatedHttpServiceConfigurator configurator) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(decorator, "decorator");
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
         return annotatedService().pathPrefix(pathPrefix)
                                  .decorator(decorator)
-                                 .exceptionHandlers(configurator.exceptionHandlers())
-                                 .responseConverters(configurator.responseConverters())
-                                 .requestConverters(configurator.requestConverters())
+                                 .exceptionHandlers(exceptionHandlerFunctions)
+                                 .requestConverters(requestConverterFunctions)
+                                 .responseConverters(responseConverterFunctions)
                                  .build(service);
     }
 

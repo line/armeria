@@ -56,7 +56,6 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfigurator;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -101,7 +100,8 @@ public final class VirtualHostBuilder {
             serverEngine.setNeedClientAuth(false);
 
             final SslContext sslContextClient =
-                    buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {});
+                    buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {
+                    });
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
 
@@ -555,11 +555,10 @@ public final class VirtualHostBuilder {
      *                                       {@link RequestConverterFunction} and/or
      *                                       {@link ResponseConverterFunction}
      */
-    public VirtualHostBuilder annotatedService(
-            String pathPrefix, Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator,
-            Iterable<?> exceptionHandlersAndConverters) {
+    public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
+                                               Function<Service<HttpRequest, HttpResponse>,
+                                                       ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                               Iterable<?> exceptionHandlersAndConverters) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
         requireNonNull(decorator, "decorator");
@@ -567,35 +566,8 @@ public final class VirtualHostBuilder {
         final AnnotatedHttpServiceConfigurator configurator =
                 AnnotatedHttpServiceConfigurator
                         .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
-        return annotatedService(pathPrefix, service, decorator, configurator);
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
-     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}
-     * @param requestConverterFunctions a list of {@link RequestConverterFunction}
-     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}
-     */
-    public VirtualHostBuilder annotatedService(
-            String pathPrefix, Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator,
-            List<ExceptionHandlerFunction> exceptionHandlerFunctions,
-            List<RequestConverterFunction> requestConverterFunctions,
-            List<ResponseConverterFunction> responseConverterFunctions) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-
-        final AnnotatedHttpServiceConfigurator configurator =
-                AnnotatedHttpServiceConfigurator
-                        .ofExceptionHandlersAndConverters(exceptionHandlerFunctions, requestConverterFunctions,
-                                                          responseConverterFunctions);
-        return annotatedService(pathPrefix, service, decorator, configurator);
+        return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
+                                configurator.requestConverters(), configurator.responseConverters());
     }
 
     /**
@@ -608,21 +580,41 @@ public final class VirtualHostBuilder {
                                                Function<Service<HttpRequest, HttpResponse>,
                                                        ? extends Service<HttpRequest, HttpResponse>> decorator,
                                                Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(decorator, "decorator");
+        requireNonNull(customizer, "customizer");
         final AnnotatedHttpServiceConfiguratorSetters setters = new AnnotatedHttpServiceConfiguratorSetters();
         customizer.accept(setters);
         final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
-        return annotatedService(pathPrefix, service, decorator, configurator);
+        return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
+                                configurator.requestConverters(), configurator.responseConverters());
     }
 
-    private VirtualHostBuilder annotatedService(String pathPrefix, Object service,
-                                           Function<Service<HttpRequest, HttpResponse>,
-                                                   ? extends Service<HttpRequest, HttpResponse>> decorator,
-                                           AnnotatedHttpServiceConfigurator configurator) {
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}
+     * @param requestConverterFunctions a list of {@link RequestConverterFunction}
+     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}
+     */
+    public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
+                                               Function<Service<HttpRequest, HttpResponse>,
+                                                       ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                               List<ExceptionHandlerFunction> exceptionHandlerFunctions,
+                                               List<RequestConverterFunction> requestConverterFunctions,
+                                               List<ResponseConverterFunction> responseConverterFunctions) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(decorator, "decorator");
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
         return annotatedService().pathPrefix(pathPrefix)
                                  .decorator(decorator)
-                                 .exceptionHandlers(configurator.exceptionHandlers())
-                                 .responseConverters(configurator.responseConverters())
-                                 .requestConverters(configurator.requestConverters())
+                                 .exceptionHandlers(exceptionHandlerFunctions)
+                                 .requestConverters(requestConverterFunctions)
+                                 .responseConverters(responseConverterFunctions)
                                  .build(service);
     }
 
@@ -632,22 +624,6 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostAnnotatedServiceBindingBuilder annotatedService() {
         return new VirtualHostAnnotatedServiceBindingBuilder(this);
-    }
-
-    /**
-     * Converts each of the {@link AnnotatedHttpServiceElement} to {@link ServiceConfigBuilder} and
-     * registers it with {@link VirtualHostBuilder}.
-     */
-    private void registerHttpServiceElement(List<AnnotatedHttpServiceElement> elements,
-                                            Function<Service<HttpRequest, HttpResponse>,
-                                                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        elements.forEach(element -> {
-            final Service<HttpRequest, HttpResponse> decoratedService =
-                    element.buildSafeDecoratedService(decorator);
-            final ServiceConfigBuilder serviceConfigBuilder =
-                    new ServiceConfigBuilder(element.route(), decoratedService);
-            serverBuilder.serviceConfigBuilder(serviceConfigBuilder);
-        });
     }
 
     VirtualHostBuilder addServiceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
@@ -660,9 +636,9 @@ public final class VirtualHostBuilder {
         final List<ServiceConfigBuilder> serviceConfigBuilders;
         if (defaultVirtualHostBuilder != null) {
             serviceConfigBuilders = ImmutableList.<ServiceConfigBuilder>builder()
-                                                 .addAll(this.serviceConfigBuilders)
-                                                 .addAll(defaultVirtualHostBuilder.serviceConfigBuilders)
-                                                 .build();
+                    .addAll(this.serviceConfigBuilders)
+                    .addAll(defaultVirtualHostBuilder.serviceConfigBuilders)
+                    .build();
         } else {
             serviceConfigBuilders = ImmutableList.copyOf(this.serviceConfigBuilders);
         }
