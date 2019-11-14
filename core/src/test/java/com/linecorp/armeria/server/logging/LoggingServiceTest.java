@@ -156,7 +156,7 @@ public class LoggingServiceTest {
     }
 
     @Test
-    public void  map_request_level_test_header_as_warn() throws Exception {
+    public void mapRequestLogLevelMapper() throws Exception {
         when(log.requestHeaders()).thenAnswer(invocation -> RequestHeaders.of(HttpMethod.GET, "/",
                                                                               "x-req", "test",
                                                                               "x-res", "test"));
@@ -186,29 +186,8 @@ public class LoggingServiceTest {
         verify(logger).warn(RESPONSE_FORMAT,
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
                             ", trailers: " + RESPONSE_TRAILERS);
-    }
 
-    @Test
-    public void map_request_level_header_as_info() throws Exception {
         when(log.requestHeaders()).thenAnswer(invocation -> RequestHeaders.of(HttpMethod.GET, "/"));
-
-        final LoggingService service =
-                LoggingService.builder()
-                              .requestLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-test")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
-                              .responseLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-res")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
-                              .newDecorator().apply(delegate);
 
         service.serve(ctx, REQUEST);
         verify(logger).info(REQUEST_FORMAT,
@@ -220,98 +199,45 @@ public class LoggingServiceTest {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void double_set_request_log_level_and_mapper() throws Exception {
-        final LoggingService service =
-                LoggingService.builder()
-                              .requestLogLevel(LogLevel.INFO)
-                              .requestLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-test")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
-                              .newDecorator().apply(delegate);
-        service.serve(ctx, REQUEST);
+    public void duplicateSetRequestLogLevelAndMapper() throws Exception {
+        LoggingService.builder()
+                      .requestLogLevel(LogLevel.INFO)
+                      .requestLogLevelMapper(log -> LogLevel.INFO);
     }
 
     @Test(expected = IllegalStateException.class)
-    public void double_set_request_log_level_and_mapper_reversed() throws Exception {
-        final LoggingService service =
-                LoggingService.builder()
-                              .requestLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-test")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              }).requestLogLevel(LogLevel.INFO)
-                              .newDecorator().apply(delegate);
-        service.serve(ctx, REQUEST);
+    public void reversedDuplicateSetRequestLogLevelAndMapper() throws Exception {
+        LoggingService.builder()
+                      .requestLogLevelMapper(log -> LogLevel.INFO)
+                      .requestLogLevel(LogLevel.INFO);
     }
 
     @Test(expected = IllegalStateException.class)
-    public void double_set_successful_response_log_level_and_mapper() throws Exception {
-        final LoggingService service =
-                LoggingService.builder()
-                              .successfulResponseLogLevel(LogLevel.INFO)
-                              .responseLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-test")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
-                              .newDecorator().apply(delegate);
-        service.serve(ctx, REQUEST);
+    public void duplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
+        LoggingService.builder()
+                      .successfulResponseLogLevel(LogLevel.INFO)
+                      .responseLogLevelMapper(log -> LogLevel.INFO);
     }
 
     @Test(expected = IllegalStateException.class)
-    public void double_set_successful_response_log_level_and_mapper_reversed() throws Exception {
-        final LoggingService service =
-                LoggingService.builder()
-                              .responseLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-test")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
-                              .successfulResponseLogLevel(LogLevel.INFO)
-                              .newDecorator().apply(delegate);
-        service.serve(ctx, REQUEST);
+    public void reversedDuplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
+        LoggingService.builder()
+                      .responseLogLevelMapper(log -> LogLevel.INFO)
+                      .successfulResponseLogLevel(LogLevel.INFO);
     }
 
     @Test(expected = IllegalStateException.class)
-    public void double_set_failure_response_log_level_and_mapper() throws Exception {
-        final LoggingService service =
-                LoggingService.builder()
-                              .failureResponseLogLevel(LogLevel.INFO)
-                              .responseLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-test")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
-                              .newDecorator().apply(delegate);
-        service.serve(ctx, REQUEST);
+    public void duplicateSetFailureResponseLogLevelAndMapper() throws Exception {
+        LoggingService.builder()
+                      .failureResponseLogLevel(LogLevel.INFO)
+                      .responseLogLevelMapper(log -> LogLevel.INFO);
     }
 
     @Test(expected = IllegalStateException.class)
-    public void double_set_failure_response_log_level_and_mapper_reversed() throws Exception {
-        final LoggingService service =
-                LoggingService.builder()
-                              .responseLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-test")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
-                              .failureResponseLogLevel(LogLevel.INFO)
-                              .newDecorator().apply(delegate);
-        service.serve(ctx, REQUEST);
+    public void reversedDuplicateSetFailureResponseLogLevelAndMapper() throws Exception {
+        LoggingService.builder()
+                      .responseLogLevelMapper(log -> LogLevel.INFO)
+                      .failureResponseLogLevel(LogLevel.INFO);
     }
 
     @Test
