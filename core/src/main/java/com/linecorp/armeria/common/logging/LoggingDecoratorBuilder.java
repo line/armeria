@@ -326,6 +326,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     public String toString() {
         return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
                         requestLogLevelMapper, responseLogLevelMapper,
+                        isSetRequestLogLevelMapper, isSetResponseLogLevelMapper,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer);
     }
@@ -337,18 +338,27 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             LogLevel failureResponseLogLevel,
             Function<? super RequestLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
+            boolean isSetRequestLogLevelMapper,
+            boolean isSetResponseLogLevelMapper,
             Function<? super HttpHeaders, ?> requestHeadersSanitizer,
             Function<?, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ?> requestTrailersSanitizer,
             Function<? super HttpHeaders, ?> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
-        final ToStringHelper helper = MoreObjects.toStringHelper(self)
-                                                 .add("requestLogLevel", requestLogLevel)
-                                                 .add("successfulResponseLogLevel", successfulResponseLogLevel)
-                                                 .add("failedResponseLogLevel", failureResponseLogLevel)
-                                                 .add("requestLogLevelMapper", requestLogLevelMapper)
-                                                 .add("responseLogLevelMapper", responseLogLevelMapper);
+        final ToStringHelper helper = MoreObjects.toStringHelper(self);
+
+        if (isSetRequestLogLevelMapper) {
+            helper.add("requestLogLevelMapper", requestLogLevelMapper);
+        } else {
+            helper.add("requestLogLevel", requestLogLevel);
+        }
+        if (isSetResponseLogLevelMapper) {
+            helper.add("responseLogLevelMapper", responseLogLevelMapper);
+        } else {
+            helper.add("successfulResponseLogLevel", successfulResponseLogLevel);
+            helper.add("failureResponseLogLevel", failureResponseLogLevel);
+        }
 
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);
