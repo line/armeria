@@ -14,13 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.annotation;
+package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfigurator;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -85,7 +86,7 @@ public final class AnnotatedHttpServiceConfiguratorSetters {
     /**
      * Converts this setter to a {@link AnnotatedHttpServiceConfigurator} in order to fill unspecified values.
      */
-    AnnotatedHttpServiceConfigurator toAnnotatedServiceConfigurator() {
+    public AnnotatedHttpServiceConfigurator toAnnotatedServiceConfigurator() {
         final AnnotatedHttpServiceConfigurator configurator = new AnnotatedHttpServiceConfigurator();
         configurator.configureExceptionHandlers(exceptionHandlers.build());
         configurator.configureRequestConverters(requestConverters.build());

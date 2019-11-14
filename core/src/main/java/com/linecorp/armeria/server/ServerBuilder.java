@@ -69,9 +69,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfiguratorSetters;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfigurator;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -207,7 +205,7 @@ public final class ServerBuilder {
         virtualHostTemplate.requestContentPreviewerFactory(ContentPreviewerFactory.disabled());
         virtualHostTemplate.responseContentPreviewerFactory(ContentPreviewerFactory.disabled());
         virtualHostTemplate.accessLogger(
-                    host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
+                host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
     }
 
@@ -1025,11 +1023,10 @@ public final class ServerBuilder {
         requireNonNull(service, "service");
         requireNonNull(decorator, "decorator");
         requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
-
-        final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
-        registerHttpServiceElement(elements, decorator);
-        return this;
+        final AnnotatedHttpServiceConfigurator configurator =
+                AnnotatedHttpServiceConfigurator
+                        .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
+        return annotatedService(pathPrefix, service, decorator, configurator);
     }
 
     /**
@@ -1045,18 +1042,11 @@ public final class ServerBuilder {
                                           List<ExceptionHandlerFunction> exceptionHandlerFunctions,
                                           List<RequestConverterFunction> requestConverterFunctions,
                                           List<ResponseConverterFunction> responseConverterFunctions) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-
-        final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
-                                                 requestConverterFunctions, responseConverterFunctions);
-        registerHttpServiceElement(elements, decorator);
-        return this;
+        final AnnotatedHttpServiceConfigurator configurator =
+                AnnotatedHttpServiceConfigurator
+                        .ofExceptionHandlersAndConverters(exceptionHandlerFunctions, requestConverterFunctions,
+                                                          responseConverterFunctions);
+        return annotatedService(pathPrefix, service, decorator, configurator);
     }
 
     /**
@@ -1069,15 +1059,22 @@ public final class ServerBuilder {
                                           Function<Service<HttpRequest, HttpResponse>,
                                                   ? extends Service<HttpRequest, HttpResponse>> decorator,
                                           Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(customizer, "customizer");
+        final AnnotatedHttpServiceConfiguratorSetters setters = new AnnotatedHttpServiceConfiguratorSetters();
+        customizer.accept(setters);
+        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
+        return annotatedService(pathPrefix, service, decorator, configurator);
+    }
 
-        final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service, customizer);
-        registerHttpServiceElement(elements, decorator);
-        return this;
+    private ServerBuilder annotatedService(String pathPrefix, Object service,
+                                           Function<Service<HttpRequest, HttpResponse>,
+                                                   ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                           AnnotatedHttpServiceConfigurator configurator) {
+        return annotatedService().pathPrefix(pathPrefix)
+                                 .decorator(decorator)
+                                 .exceptionHandlers(configurator.exceptionHandlers())
+                                 .responseConverters(configurator.responseConverters())
+                                 .requestConverters(configurator.requestConverters())
+                                 .build(service);
     }
 
     /**
@@ -1085,22 +1082,6 @@ public final class ServerBuilder {
      */
     public AnnotatedServiceBindingBuilder annotatedService() {
         return new AnnotatedServiceBindingBuilder(this);
-    }
-
-    /**
-     * Converts each of the {@link AnnotatedHttpServiceElement} to {@link ServiceConfigBuilder} and
-     * registers it with {@link VirtualHostBuilder}.
-     */
-    private void registerHttpServiceElement(List<AnnotatedHttpServiceElement> elements,
-                                            Function<Service<HttpRequest, HttpResponse>,
-                                                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        elements.forEach(element -> {
-            final Service<HttpRequest, HttpResponse> decoratedService =
-                    element.buildSafeDecoratedService(decorator);
-            final ServiceConfigBuilder serviceConfigBuilder =
-                    new ServiceConfigBuilder(element.route(), decoratedService);
-            serviceConfigBuilder(serviceConfigBuilder);
-        });
     }
 
     ServerBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
