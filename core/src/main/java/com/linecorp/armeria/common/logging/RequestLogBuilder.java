@@ -42,7 +42,13 @@ public interface RequestLogBuilder {
 
     /**
      * A dummy {@link RequestLogBuilder} that discards everything it collected.
+     *
+     * @deprecated This field will be removed without a replacement. The {@link NoopRequestLogBuilder}
+     *             means that it does not perform any operations on {@link RequestLogBuilder}.
+     *             The {@link NoopRequestLogBuilder} behavior can be achieved by performing operations
+     *             on {@link RequestContext#logBuilder()} if {@link RequestContext} is not null.
      */
+    @Deprecated
     RequestLogBuilder NOOP = new NoopRequestLogBuilder();
 
     /**
