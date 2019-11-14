@@ -29,6 +29,8 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
+import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -59,6 +61,7 @@ public final class ServiceConfig {
     private final ContentPreviewerFactory responseContentPreviewerFactory;
     private final AccessLogWriter accessLogWriter;
     private final boolean shutdownAccessLogWriterOnStop;
+    private final boolean handlesCorsPreflight;
 
     /**
      * Creates a new instance.
@@ -98,6 +101,8 @@ public final class ServiceConfig {
                                                               "responseContentPreviewerFactory");
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
+
+        handlesCorsPreflight = service.as(CorsService.class).isPresent();
     }
 
     static String validateLoggerName(String value, String propertyName) {
@@ -247,6 +252,13 @@ public final class ServiceConfig {
      */
     public boolean shutdownAccessLogWriterOnStop() {
         return shutdownAccessLogWriterOnStop;
+    }
+
+    /**
+     * Returns {@code true} if the service has {@link CorsDecorator} in the decorator chain.
+     */
+    boolean handlesCorsPreflight() {
+        return handlesCorsPreflight;
     }
 
     @Override
