@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -47,7 +47,7 @@ import io.netty.util.ReferenceCountUtil;
 @State(Scope.Thread)
 public class GrpcServiceBenchmark {
 
-    private static final Service<HttpRequest, HttpResponse> SERVICE =
+    private static final HttpService SERVICE =
             GrpcService.builder()
                        .addService(new GithubApiService())
                        .build();

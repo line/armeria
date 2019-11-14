@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -136,7 +137,7 @@ public final class HttpAuthServiceBuilder {
 
     /**
      * Sets the {@link AuthSuccessHandler} which handles successfully authorized requests.
-     * By default, the request will be delegated to the next {@link Service}.
+     * By default, the request will be delegated to the next {@link HttpService}.
      */
     public HttpAuthServiceBuilder onSuccess(AuthSuccessHandler<HttpRequest, HttpResponse> successHandler) {
         this.successHandler = requireNonNull(successHandler, "successHandler");
@@ -156,16 +157,16 @@ public final class HttpAuthServiceBuilder {
     /**
      * Returns a newly-created {@link HttpAuthService} based on the {@link Authorizer}s added to this builder.
      */
-    public HttpAuthService build(Service<HttpRequest, HttpResponse> delegate) {
+    public HttpAuthService build(HttpService delegate) {
         return new HttpAuthService(requireNonNull(delegate, "delegate"), authorizer(),
                                    successHandler, failureHandler);
     }
 
     /**
-     * Returns a newly-created decorator that decorates a {@link Service} with a new {@link HttpAuthService}
-     * based on the {@link Authorizer}s added to this builder.
+     * Returns a newly-created decorator that decorates an {@link HttpService} with a new
+     * {@link HttpAuthService} based on the {@link Authorizer}s added to this builder.
      */
-    public Function<Service<HttpRequest, HttpResponse>, HttpAuthService> newDecorator() {
+    public Function<? super HttpService, HttpAuthService> newDecorator() {
         final Authorizer<HttpRequest> authorizer = authorizer();
         final AuthSuccessHandler<HttpRequest, HttpResponse> successHandler = this.successHandler;
         final AuthFailureHandler<HttpRequest, HttpResponse> failureHandler = this.failureHandler;

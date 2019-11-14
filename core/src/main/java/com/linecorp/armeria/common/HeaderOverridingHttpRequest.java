@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.List;
@@ -155,6 +156,11 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     @Override
     public void abort() {
         delegate.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        delegate.abort(requireNonNull(cause, "cause"));
     }
 
     @Override

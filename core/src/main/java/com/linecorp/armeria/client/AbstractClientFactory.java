@@ -96,18 +96,17 @@ public abstract class AbstractClientFactory implements ClientFactory {
     protected final Scheme validateScheme(URI uri) {
         requireNonNull(uri, "uri");
 
-        final String scheme = uri.getScheme();
-        if (scheme == null) {
-            throw new IllegalArgumentException("URI with missing scheme: " + uri);
-        }
-
         if (uri.getAuthority() == null) {
             throw new IllegalArgumentException("URI with missing authority: " + uri);
         }
 
+        final String scheme = uri.getScheme();
+        if (scheme == null) {
+            throw new IllegalArgumentException("URI with missing scheme: " + uri);
+        }
         final Optional<Scheme> parsedSchemeOpt = Scheme.tryParse(scheme);
         if (!parsedSchemeOpt.isPresent()) {
-            throw new IllegalArgumentException("URI with unknown scheme: " + uri);
+            throw new IllegalArgumentException("URI with undefined scheme: " + uri);
         }
 
         final Scheme parsedScheme = parsedSchemeOpt.get();

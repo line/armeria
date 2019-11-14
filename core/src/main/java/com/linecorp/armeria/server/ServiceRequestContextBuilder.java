@@ -21,7 +21,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -31,6 +30,7 @@ import com.linecorp.armeria.common.AbstractRequestContextBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -71,7 +71,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
 
-    private Service<HttpRequest, HttpResponse> service = fakeService;
+    private HttpService service = fakeService;
     @Nullable
     private RoutingResult routingResult;
     @Nullable
@@ -87,7 +87,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      * Sets the {@link Service} that handles the request. If not set, a dummy {@link Service}, which always
      * returns a {@code "405 Method Not Allowed"} response, is used.
      */
-    public ServiceRequestContextBuilder service(Service<HttpRequest, HttpResponse> service) {
+    public ServiceRequestContextBuilder service(HttpService service) {
         this.service = requireNonNull(service, "service");
         return this;
     }
@@ -122,7 +122,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      * Adds the {@link Consumer} that configures the given {@link ServerBuilder}. The {@link Consumer}s added
      * by this method will be invoked when this builder builds a dummy {@link Server}. This may be useful
      * when you need to update the default settings of the dummy {@link Server},
-     * such as {@link ServerConfig#maxRequestLength()}.
+     * such as {@link ServerBuilder#maxRequestLength(long)}.
      */
     public ServiceRequestContextBuilder serverConfigurator(Consumer<? super ServerBuilder> serverConfigurator) {
         serverConfigurators.add(requireNonNull(serverConfigurator, "serverConfigurator"));
@@ -173,17 +173,17 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         // Build the context with the properties set by a user and the fake objects.
         if (isRequestStartTimeSet()) {
             return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), uuid(), routingCtx,
+                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
                     routingResult, req, sslSession(), proxiedAddresses, clientAddress,
                     requestStartTimeNanos(), requestStartTimeMicros());
         } else {
             return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), uuid(), routingCtx,
+                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
                     routingResult, req, sslSession(), proxiedAddresses, clientAddress);
         }
     }
 
-    private static ServiceConfig findServiceConfig(Server server, String path, Service<?, ?> service) {
+    private static ServiceConfig findServiceConfig(Server server, String path, HttpService service) {
         for (ServiceConfig cfg : server.config().defaultVirtualHost().serviceConfigs()) {
             final Route route = cfg.route();
             if (route.pathType() != RoutePathType.EXACT) {
@@ -225,8 +225,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     }
 
     @Override
-    public ServiceRequestContextBuilder uuid(UUID uuid) {
-        return (ServiceRequestContextBuilder) super.uuid(uuid);
+    public ServiceRequestContextBuilder id(RequestId id) {
+        return (ServiceRequestContextBuilder) super.id(id);
     }
 
     @Override

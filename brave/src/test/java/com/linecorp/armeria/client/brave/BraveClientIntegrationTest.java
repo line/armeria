@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.brave;
 
 import java.util.List;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
@@ -164,12 +164,13 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     private static class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  UUID.randomUUID(), HttpMethod.GET, "/", null,
+                  RequestId.random(), HttpMethod.GET, "/", null,
                   HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
-        public RequestContext newDerivedContext(@Nullable HttpRequest req,
+        public RequestContext newDerivedContext(RequestId id,
+                                                @Nullable HttpRequest req,
                                                 @Nullable RpcRequest rpcReq) {
             throw new UnsupportedOperationException();
         }

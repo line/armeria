@@ -117,6 +117,9 @@ dependencies {
     // Project Reactor
     testCompile 'io.projectreactor:reactor-test'
 
+    // TestNG
+    testCompile 'org.testng:testng'
+
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'
     testCompile 'org.reactivestreams:reactive-streams-tck'

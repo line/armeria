@@ -53,6 +53,9 @@ com.github.ben-manes.caffeine:
 com.github.jengelman.gradle.plugins:
   shadow: { version: '5.1.0' }
 
+com.github.node-gradle:
+  gradle-node-plugin: { version: '2.2.0' }
+
 com.google.api:
   gax-grpc: { version: '1.49.1' }
 
@@ -102,9 +105,6 @@ com.google.protobuf:
     exclusions:
     - com.google.errorprone:error_prone_annotations
   protobuf-gradle-plugin: { version: '0.8.10' }
-
-com.moowork.gradle:
-  gradle-node-plugin: { version: '1.3.1' }
 
 com.puppycrawl.tools:
   checkstyle: { version: '8.25' }
@@ -215,6 +215,9 @@ javax.inject:
 
 javax.validation:
   validation-api: { version: '2.0.1.Final' }
+
+org.testng:
+  testng: { version: '7.0.0' }
 
 junit:
   junit:

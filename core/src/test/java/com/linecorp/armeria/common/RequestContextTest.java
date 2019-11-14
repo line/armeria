@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -443,12 +442,13 @@ public class RequestContextTest {
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  UUID.randomUUID(), HttpMethod.GET, "/", null,
+                  RequestId.random(), HttpMethod.GET, "/", null,
                   HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
-        public RequestContext newDerivedContext(@Nullable HttpRequest req,
+        public RequestContext newDerivedContext(RequestId id,
+                                                @Nullable HttpRequest req,
                                                 @Nullable RpcRequest rpcReq) {
             throw new UnsupportedOperationException();
         }

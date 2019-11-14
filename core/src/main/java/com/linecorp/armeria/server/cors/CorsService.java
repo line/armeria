@@ -33,12 +33,12 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
- * Decorates an HTTP {@link Service} to add the
+ * Decorates an {@link HttpService} to add the
  * <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">Cross-Origin Resource Sharing
  * (CORS)</a> support.
  *
@@ -56,7 +56,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
     /**
      * Creates a new {@link CorsService} that decorates the specified {@code delegate} to add CORS support.
      */
-    public CorsService(Service<HttpRequest, HttpResponse> delegate, CorsConfig config) {
+    public CorsService(HttpService delegate, CorsConfig config) {
         super(delegate);
         this.config = requireNonNull(config, "config");
     }

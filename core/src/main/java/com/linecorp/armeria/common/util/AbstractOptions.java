@@ -151,7 +151,12 @@ public abstract class AbstractOptions {
      * @return the value of the specified {@code option}. {@code defaultValue} if there's no such option.
      */
     protected final <O extends AbstractOption<V>, V> V getOrElse0(O option, V defaultValue) {
-        return get0(option).orElse(defaultValue);
+        final Optional<V> opt = get0(option);
+        if (opt.isPresent()) {
+            return opt.get();
+        } else {
+            return requireNonNull(defaultValue, "defaultValue");
+        }
     }
 
     /**

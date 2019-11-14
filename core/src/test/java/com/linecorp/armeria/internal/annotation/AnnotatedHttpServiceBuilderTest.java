@@ -128,18 +128,18 @@ public class AnnotatedHttpServiceBuilderTest {
         });
 
         Server.builder().annotatedService(new Object() {
-                                                 @Get("/")
-                                                 public void root(@Param("a") byte a) {}
-                                             },
-                                             new JacksonRequestConverterFunction(),
-                                             new ByteArrayRequestConverterFunction(),
-                                             new DummyExceptionHandler());
+                                              @Get("/")
+                                              public void root(@Param("a") byte a) {}
+                                          },
+                                          new JacksonRequestConverterFunction(),
+                                          new ByteArrayRequestConverterFunction(),
+                                          new DummyExceptionHandler());
 
         Server.builder().annotatedService(new Object() {
-                                                 @Get("/")
-                                                 public void root(@Param("a") byte a) {}
-                                             },
-                                             LoggingService.newDecorator());
+                                              @Get("/")
+                                              public void root(@Param("a") byte a) {}
+                                          },
+                                          LoggingService.newDecorator());
 
         Server.builder().annotatedService(new Object() {
             @Get("/")

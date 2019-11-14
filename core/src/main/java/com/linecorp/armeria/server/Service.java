@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Constructor;
 import java.util.Optional;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -42,9 +41,9 @@ import com.linecorp.armeria.common.util.Unwrappable;
 public interface Service<I extends Request, O extends Response> extends Unwrappable {
 
     /**
-     * Invoked when this {@link Service} has been added to a {@link Server} with the specified configuration.
-     * Please note that this method can be invoked more than once if this {@link Service} has been added more
-     * than once.
+     * Invoked when this service has been added to a {@link Server} with the specified
+     * configuration. Please note that this method can be invoked more than once if this service
+     * has been added more than once.
      */
     default void serviceAdded(ServiceConfig cfg) throws Exception {}
 
@@ -62,11 +61,11 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
      * Unwraps this {@link Service} into the object of the specified {@code type}.
      * Use this method instead of an explicit downcast. For example:
      * <pre>{@code
-     * Service s = new MyService().decorate(LoggingService.newDecorator())
-     *                            .decorate(AuthService.newDecorator());
+     * HttpService s = new MyService().decorate(LoggingService.newDecorator())
+     *                                .decorate(HttpAuthService.newDecorator());
      * MyService s1 = s.as(MyService.class);
      * LoggingService s2 = s.as(LoggingService.class);
-     * AuthService s3 = s.as(AuthService.class);
+     * AuthService s3 = s.as(HttpAuthService.class);
      * }</pre>
      *
      * @param type the type of the object to return
@@ -108,30 +107,6 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
         } catch (Exception e) {
             throw new IllegalStateException("failed to instantiate: " + serviceType.getName(), e);
         }
-    }
-
-    /**
-     * Creates a new {@link Service} that decorates this {@link Service} with the specified {@code decorator}.
-     */
-    default <T extends Service<I, O>,
-             R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
-    R decorate(Function<T, R> decorator) {
-        @SuppressWarnings("unchecked")
-        final R newService = decorator.apply((T) this);
-
-        if (newService == null) {
-            throw new NullPointerException("decorator.apply() returned null: " + decorator);
-        }
-
-        return newService;
-    }
-
-    /**
-     * Creates a new {@link Service} that decorates this {@link Service} with the specified
-     * {@link DecoratingServiceFunction}.
-     */
-    default Service<I, O> decorate(DecoratingServiceFunction<I, O> function) {
-        return new FunctionalDecoratingService<>(this, function);
     }
 
     /**

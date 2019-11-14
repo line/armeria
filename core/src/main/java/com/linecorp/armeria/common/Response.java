@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * A response stream or a holder of the future result value.
- * It has to be a {@link HttpResponse} or a {@link RpcResponse}.
+ * It has to be an {@link HttpResponse} or an {@link RpcResponse}.
  */
 public interface Response {
 

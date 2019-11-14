@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -38,6 +37,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
@@ -169,10 +169,10 @@ public interface RequestLog extends AttributeMap {
     RequestContext context();
 
     /**
-     * Returns the {@link UUID} of the {@link Request}. This method is a shortcut to {@code context().uuid()}.
+     * Returns the {@link RequestId}. This method is a shortcut to {@code context().id()}.
      */
-    default UUID uuid() {
-        return context().uuid();
+    default RequestId id() {
+        return context().id();
     }
 
     /**

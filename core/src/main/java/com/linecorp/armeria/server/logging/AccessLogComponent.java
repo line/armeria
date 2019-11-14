@@ -41,6 +41,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -237,6 +238,7 @@ interface AccessLogComponent {
                 case REQUEST_LINE:
                 case RESPONSE_STATUS_CODE:
                 case RESPONSE_LENGTH:
+                case REQUEST_ID:
                     return true;
                 default:
                     return false;
@@ -306,9 +308,15 @@ interface AccessLogComponent {
 
                 case RESPONSE_STATUS_CODE:
                     return log.statusCode();
-
                 case RESPONSE_LENGTH:
                     return log.responseLength();
+                case REQUEST_ID:
+                    final RequestId id = log.id();
+                    if ("short".equals(variable)) {
+                        return id.shortText();
+                    } else {
+                        return id.text();
+                    }
             }
             return null;
         }

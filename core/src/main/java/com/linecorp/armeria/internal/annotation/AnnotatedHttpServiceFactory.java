@@ -74,8 +74,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -83,12 +81,9 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotationUtil.FindOption;
-import com.linecorp.armeria.server.DecoratingServiceFunction;
-import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.Blocking;
@@ -120,7 +115,6 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.Trace;
-import com.linecorp.armeria.server.cors.CorsService;
 
 /**
  * Builds a list of {@link AnnotatedHttpService}s from an {@link Object}.
@@ -165,24 +159,6 @@ public final class AnnotatedHttpServiceFactory {
                     .put(Delete.class, HttpMethod.DELETE)
                     .put(Trace.class, HttpMethod.TRACE)
                     .build();
-
-    /**
-     * An initial decorator for a service without an {@link Options} mapping. This decorator
-     * will receive {@link Options} requests only for CORS preflight requests not processed by a
-     * preceding {@link CorsService}. In such case, a {@code FORBIDDEN} status code is returned.
-     */
-    private static final Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> noOptionMappingInitialDecorator =
-            delegate -> new SimpleDecoratingHttpService(delegate) {
-                @Override
-                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    if (req.method() == HttpMethod.OPTIONS) {
-                        // This must be a CORS preflight request.
-                        throw HttpStatusException.of(HttpStatus.FORBIDDEN);
-                    }
-                    return delegate().serve(ctx, req);
-                }
-            };
 
     /**
      * Returns the list of {@link AnnotatedHttpService} defined by {@link Path} and HTTP method annotations
@@ -379,20 +355,8 @@ public final class AnnotatedHttpServiceFactory {
                     route,
                     new AnnotatedHttpService(object, method, resolvers, eh, res, route, responseHeaders,
                                              responseTrailers, useBlockingTaskExecutor),
-                    decorator(method, clazz, getInitialDecorator(route.methods())));
+                    decorator(method, clazz));
         }).collect(toImmutableList());
-    }
-
-    /**
-     * A CORS preflight request can be received although no {@link Options} mapping is defined because
-     * we handle it specially.
-     */
-    private static Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
-            getInitialDecorator(Set<HttpMethod> httpMethods) {
-        if (httpMethods.contains(HttpMethod.OPTIONS)) {
-            return Function.identity();
-        }
-        return noOptionMappingInitialDecorator;
     }
 
     private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
@@ -602,16 +566,12 @@ public final class AnnotatedHttpServiceFactory {
      * Returns a decorator chain which is specified by {@link Decorator} annotations and user-defined
      * decorator annotations.
      */
-    private static Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> decorator(
-            Method method, Class<?> clazz,
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> initialDecorator) {
+    private static Function<? super HttpService, ? extends HttpService> decorator(
+            Method method, Class<?> clazz) {
 
         final List<DecoratorAndOrder> decorators = collectDecorators(clazz, method);
 
-        Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> decorator = initialDecorator;
+        Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
         for (int i = decorators.size() - 1; i >= 0; i--) {
             final DecoratorAndOrder d = decorators.get(i);
             decorator = decorator.andThen(d.decorator());
@@ -728,13 +688,11 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Returns a new decorator which decorates a {@link Service} by the specified
+     * Returns a new decorator which decorates an {@link HttpService} by the specified
      * {@link Decorator}.
      */
-    @SuppressWarnings("unchecked")
-    private static Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> newDecorator(Decorator decorator) {
-        return service -> service.decorate(getInstance(decorator, DecoratingServiceFunction.class));
+    private static Function<? super HttpService, ? extends HttpService> newDecorator(Decorator decorator) {
+        return service -> service.decorate(getInstance(decorator, DecoratingHttpServiceFunction.class));
     }
 
     /**
@@ -856,13 +814,11 @@ public final class AnnotatedHttpServiceFactory {
     static final class DecoratorAndOrder {
         // Keep the specified annotation for testing purpose.
         private final Annotation annotation;
-        private final Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> decorator;
+        private final Function<? super HttpService, ? extends HttpService> decorator;
         private final int order;
 
         private DecoratorAndOrder(Annotation annotation,
-                                  Function<Service<HttpRequest, HttpResponse>,
-                                          ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                  Function<? super HttpService, ? extends HttpService> decorator,
                                   int order) {
             this.annotation = annotation;
             this.decorator = decorator;
@@ -873,8 +829,7 @@ public final class AnnotatedHttpServiceFactory {
             return annotation;
         }
 
-        Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> decorator() {
+        Function<? super HttpService, ? extends HttpService> decorator() {
             return decorator;
         }
 

@@ -26,8 +26,6 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
@@ -37,10 +35,10 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * A builder class for binding a {@link Service} to a virtual host fluently. This class can be instantiated
+ * A builder class for binding an {@link HttpService} to a virtual host fluently. This class can be instantiated
  * through {@link VirtualHostBuilder#annotatedService()}.
  *
- * <p>Call {@link #build(Object)} to build the {@link Service} and return to the {@link VirtualHostBuilder}.
+ * <p>Call {@link #build(Object)} to build the {@link HttpService} and return to the {@link VirtualHostBuilder}.
  *
  * <pre>{@code
  * ServerBuilder sb = Server.builder();
@@ -186,8 +184,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    VirtualHostAnnotatedServiceBindingBuilder decorator(Function<T, R> decorator) {
+    public VirtualHostAnnotatedServiceBindingBuilder decorator(
+            Function<? super HttpService, ? extends HttpService> decorator) {
         defaultServiceConfigSetters.decorator(decorator);
         return this;
     }
@@ -207,11 +205,11 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
                                                  requestConverterFunctionBuilder.build(),
                                                  responseConverterFunctionBuilder.build());
         elements.forEach(element -> {
-            final Service<HttpRequest, HttpResponse> decoratedService =
-                    element.buildSafeDecoratedService(defaultServiceConfigSetters.getDecorator());
+            final HttpService decoratedService =
+                    element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());
             final ServiceConfigBuilder serviceConfigBuilder =
                     defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
-            virtualHostBuilder.serviceConfigBuilder(serviceConfigBuilder);
+            virtualHostBuilder.addServiceConfigBuilder(serviceConfigBuilder);
         });
         return virtualHostBuilder;
     }

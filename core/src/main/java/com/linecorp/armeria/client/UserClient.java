@@ -19,14 +19,17 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.internal.ClientUtil.initContextAndExecuteWithFallback;
 
 import java.net.URI;
-import java.util.UUID;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -48,6 +51,9 @@ import io.netty.channel.EventLoop;
 public abstract class UserClient<I extends Request, O extends Response>
         extends AbstractUnwrappable<Client<I, O>>
         implements ClientBuilderParams {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserClient.class);
+    private static boolean warnedNullRequestId;
 
     private final ClientBuilderParams params;
     private final MeterRegistry meterRegistry;
@@ -142,7 +148,8 @@ public abstract class UserClient<I extends Request, O extends Response>
         final DefaultClientRequestContext ctx;
         final HttpRequest httpReq;
         final RpcRequest rpcReq;
-        final UUID uuid = UUID.randomUUID();
+        final RequestId id = nextRequestId();
+
         if (req instanceof HttpRequest) {
             httpReq = (HttpRequest) req;
             rpcReq = null;
@@ -153,14 +160,27 @@ public abstract class UserClient<I extends Request, O extends Response>
 
         if (eventLoop == null) {
             ctx = new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
-                                                  uuid, method, path, query, fragment, options(),
+                                                  id, method, path, query, fragment, options(),
                                                   httpReq, rpcReq);
         } else {
             ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol,
-                                                  uuid, method, path, query, fragment, options(),
+                                                  id, method, path, query, fragment, options(),
                                                   httpReq, rpcReq);
         }
 
         return initContextAndExecuteWithFallback(delegate(), ctx, endpoint, fallback);
+    }
+
+    private RequestId nextRequestId() {
+        final RequestId id = options().requestIdGenerator().get();
+        if (id == null) {
+            if (!warnedNullRequestId) {
+                warnedNullRequestId = true;
+                logger.warn("requestIdGenerator.get() returned null; using RequestId.random()");
+            }
+            return RequestId.random();
+        } else {
+            return id;
+        }
     }
 }

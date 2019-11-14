@@ -35,16 +35,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerConfig;
-import com.linecorp.armeria.server.ServiceWithRoutes;
+import com.linecorp.armeria.server.VirtualHost;
+import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -183,10 +182,12 @@ public final class GrpcServiceBuilder {
 
     /**
      * Sets the maximum size in bytes of an individual incoming message. If not set, will use
-     * {@link ServerConfig#maxRequestLength()}. To support long-running RPC streams, it is recommended to
-     * set {@link ServerBuilder#maxRequestLength(long)} and
-     * {@link ServerBuilder#requestTimeoutMillis(long)} to very high values and set this to the expected
-     * limit of individual messages in the stream.
+     * {@link VirtualHost#maxRequestLength()}. To support long-running RPC streams, it is recommended to
+     * set {@link ServerBuilder#maxRequestLength(long)}
+     * (or {@link VirtualHostBuilder#maxRequestLength(long)})
+     * and {@link ServerBuilder#requestTimeoutMillis(long)}
+     * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
+     * to very high values and set this to the expected limit of individual messages in the stream.
      */
     public GrpcServiceBuilder setMaxInboundMessageSizeBytes(int maxInboundMessageSizeBytes) {
         checkArgument(maxInboundMessageSizeBytes > 0,
@@ -277,11 +278,11 @@ public final class GrpcServiceBuilder {
     /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
-     * {@linkplain ServerBuilder#service(ServiceWithRoutes, Function[])
-     * ServerBuilder.service(ServiceWithRoutes)} to mount all service paths
+     * {@linkplain ServerBuilder#service(HttpServiceWithRoutes, Function[])
+     * ServerBuilder.service(HttpServiceWithRoutes)} to mount all service paths
      * without interfering with other services.
      */
-    public ServiceWithRoutes<HttpRequest, HttpResponse> build() {
+    public HttpServiceWithRoutes build() {
         final HandlerRegistry handlerRegistry = registryBuilder.build();
 
         final GrpcService grpcService = new GrpcService(

@@ -22,9 +22,7 @@ import org.apache.thrift.TBase;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
@@ -43,9 +41,8 @@ import com.linecorp.armeria.server.docs.DocService;
  * > }
  * }</pre>
  */
-public class ThriftServiceRegistrationBean
-        extends AbstractServiceRegistrationBean<Service<HttpRequest, HttpResponse>,
-        ThriftServiceRegistrationBean, TBase<?, ?>, ExampleHeaders> {
+public class ThriftServiceRegistrationBean extends AbstractServiceRegistrationBean<
+        HttpService, ThriftServiceRegistrationBean, TBase<?, ?>, ExampleHeaders> {
 
     /**
      * The url path to register the service at. If not specified, defaults to {@code /api}.

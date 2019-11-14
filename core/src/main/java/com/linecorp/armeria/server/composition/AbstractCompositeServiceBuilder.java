@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 
@@ -64,16 +62,12 @@ import com.linecorp.armeria.server.Service;
  * }
  * }</pre>
  *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
- *
  * @see CompositeServiceEntry
  */
-public abstract class AbstractCompositeServiceBuilder<I extends Request, O extends Response> {
+public abstract class AbstractCompositeServiceBuilder<T extends Service<?, ?>> {
 
-    private final List<CompositeServiceEntry<I, O>> services = new ArrayList<>();
-    private final List<CompositeServiceEntry<I, O>> unmodifiableServices =
-            Collections.unmodifiableList(services);
+    private final List<CompositeServiceEntry<T>> services = new ArrayList<>();
+    private final List<CompositeServiceEntry<T>> unmodifiableServices = Collections.unmodifiableList(services);
 
     /**
      * Creates a new instance.
@@ -85,24 +79,14 @@ public abstract class AbstractCompositeServiceBuilder<I extends Request, O exten
      * {@link #serviceUnder(String, Service)}, {@link #service(Route, Service)} and
      * {@link #service(CompositeServiceEntry)}.
      */
-    protected final List<CompositeServiceEntry<I, O>> services() {
+    protected final List<CompositeServiceEntry<T>> services() {
         return unmodifiableServices;
-    }
-
-    /**
-     * Binds the specified {@link Service} at the specified path pattern.
-     *
-     * @deprecated Use {@link #service(String, Service)} instead.
-     */
-    @Deprecated
-    protected AbstractCompositeServiceBuilder<I, O> serviceAt(String pathPattern, Service<I, O> service) {
-        return service(pathPattern, service);
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory..
      */
-    protected AbstractCompositeServiceBuilder<I, O> serviceUnder(String pathPrefix, Service<I, O> service) {
+    protected AbstractCompositeServiceBuilder<T> serviceUnder(String pathPrefix, T service) {
         return service(CompositeServiceEntry.ofPrefix(pathPrefix, service));
     }
 
@@ -120,21 +104,21 @@ public abstract class AbstractCompositeServiceBuilder<I extends Request, O exten
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    protected AbstractCompositeServiceBuilder<I, O> service(String pathPattern, Service<I, O> service) {
+    protected AbstractCompositeServiceBuilder<T> service(String pathPattern, T service) {
         return service(CompositeServiceEntry.of(pathPattern, service));
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link Route}.
      */
-    protected AbstractCompositeServiceBuilder<I, O> service(Route route, Service<I, O> service) {
+    protected AbstractCompositeServiceBuilder<T> service(Route route, T service) {
         return service(CompositeServiceEntry.of(route, service));
     }
 
     /**
      * Binds the specified {@link CompositeServiceEntry}.
      */
-    protected AbstractCompositeServiceBuilder<I, O> service(CompositeServiceEntry<I, O> entry) {
+    protected AbstractCompositeServiceBuilder<T> service(CompositeServiceEntry<T> entry) {
         services.add(requireNonNull(entry, "entry"));
         return this;
     }

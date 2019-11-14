@@ -39,7 +39,7 @@ import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
  * HTTP/2 data. Helpers in this class create {@link HttpData} objects that leave the stream open.
- * To create a {@link HttpData} that closes the stream, directly instantiate {@link DefaultHttpData}.
+ * To create an {@link HttpData} that closes the stream, directly instantiate {@link DefaultHttpData}.
  *
  * <p>Implementations should generally extend {@link AbstractHttpData} to interact with other {@link HttpData}
  * implementations.

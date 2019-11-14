@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +30,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -56,6 +58,15 @@ class ClientOptionsBuilderTest {
         final ClientOptionsBuilder b = ClientOptions.builder();
         b.option(ClientOption.MAX_RESPONSE_LENGTH, 123L);
         assertThat(b.build().maxResponseLength()).isEqualTo(123);
+    }
+
+    @Test
+    void testIdGenerator() {
+        final Supplier<RequestId> expected = () -> null;
+        final ClientOptionsBuilder b = ClientOptions.builder();
+        b.requestIdGenerator(expected);
+        final ClientOptions options = b.build();
+        assertThat(options.requestIdGenerator()).isSameAs(expected);
     }
 
     @Test

@@ -43,6 +43,9 @@ import com.linecorp.armeria.shared.AsyncCounters;
 import io.grpc.ManagedChannel;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 
+/**
+ * The {@link SimpleBenchmarkBase} contains the shared logic for benchmarking grpc.
+ */
 @State(Scope.Benchmark)
 public abstract class SimpleBenchmarkBase {
 

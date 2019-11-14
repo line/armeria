@@ -23,9 +23,9 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 /**
- * A {@link Service} that decorates another {@link Service}. Use {@link SimpleDecoratingService} or
- * {@link Service#decorate(DecoratingServiceFunction)} if your {@link Service} has the same {@link Request}
- * and {@link Response} type with the {@link Service} being decorated.
+ * A {@link Service} that decorates another {@link Service}. Use {@link SimpleDecoratingHttpService} or
+ * {@link SimpleDecoratingRpcService} if your {@link Service} has the same {@link Request} and {@link Response}
+ * type with the {@link Service} being decorated.
  *
  * @param <T_I> the {@link Request} type of the {@link Service} being decorated
  * @param <T_O> the {@link Response} type of the {@link Service} being decorated

@@ -30,6 +30,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
 
+/**
+ * Microbenchmarks of a {@link com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup}.
+ */
 @State(Scope.Thread)
 public class DnsEndpointGroupBenchmark {
 

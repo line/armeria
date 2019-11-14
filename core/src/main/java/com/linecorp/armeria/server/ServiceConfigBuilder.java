@@ -22,37 +22,13 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder {
 
-    static ServiceConfigBuilder copyOf(ServiceConfigBuilder original) {
-        final ServiceConfigBuilder builder = new ServiceConfigBuilder(original.route, original.service)
-                .requestContentPreviewerFactory(original.requestContentPreviewerFactory)
-                .responseContentPreviewerFactory(original.requestContentPreviewerFactory);
-        if (original.accessLogWriter != null) {
-            builder.accessLogWriter(original.accessLogWriter, original.shutdownAccessLogWriterOnStop);
-        }
-        if (original.loggerName != null) {
-            builder.loggerName(original.loggerName);
-        }
-        if (original.requestTimeoutMillis != null) {
-            builder.requestTimeoutMillis(original.requestTimeoutMillis);
-        }
-        if (original.maxRequestLength != null) {
-            builder.maxRequestLength(original.maxRequestLength);
-        }
-        if (original.verboseResponses != null) {
-            builder.verboseResponses(original.verboseResponses);
-        }
-        return builder;
-    }
-
     private final Route route;
-    private final Service<HttpRequest, HttpResponse> service;
+    private final HttpService service;
     @Nullable
     private String loggerName;
 
@@ -70,7 +46,7 @@ final class ServiceConfigBuilder {
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
 
-    ServiceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
+    ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
     }
@@ -143,17 +119,24 @@ final class ServiceConfigBuilder {
         return this;
     }
 
-    ServiceConfig build() {
-        assert requestTimeoutMillis != null;
-        assert maxRequestLength != null;
-        assert verboseResponses != null;
-        assert requestContentPreviewerFactory != null;
-        assert responseContentPreviewerFactory != null;
-        assert accessLogWriter != null;
-        return new ServiceConfig(route, service, loggerName, requestTimeoutMillis,
-                                 maxRequestLength, verboseResponses, requestContentPreviewerFactory,
-                                 responseContentPreviewerFactory, accessLogWriter,
-                                 shutdownAccessLogWriterOnStop);
+    ServiceConfig build(long defaultRequestTimeoutMillis,
+                        long defaultMaxRequestLength,
+                        boolean defaultVerboseResponses,
+                        ContentPreviewerFactory defaultRequestContentPreviewerFactory,
+                        ContentPreviewerFactory defaultResponseContentPreviewerFactory,
+                        AccessLogWriter defaultAccessLogWriter,
+                        boolean defaultShutdownAccessLogWriterOnStop) {
+        return new ServiceConfig(
+                route, service, loggerName,
+                requestTimeoutMillis != null ? requestTimeoutMillis : defaultRequestTimeoutMillis,
+                maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
+                verboseResponses != null ? verboseResponses : defaultVerboseResponses,
+                requestContentPreviewerFactory != null ? requestContentPreviewerFactory
+                                                       : defaultRequestContentPreviewerFactory,
+                responseContentPreviewerFactory != null ? responseContentPreviewerFactory
+                                                        : defaultResponseContentPreviewerFactory,
+                accessLogWriter != null ? accessLogWriter : defaultAccessLogWriter,
+                accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop);
     }
 
     @Override

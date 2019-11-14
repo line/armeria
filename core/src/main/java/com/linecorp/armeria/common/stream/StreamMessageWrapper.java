@@ -154,6 +154,12 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     }
 
     @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        delegate().abort(cause);
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("delegate", delegate()).toString();
