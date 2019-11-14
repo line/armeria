@@ -422,7 +422,7 @@ class HttpClientIntegrationTest {
         try {
             final AsyncHttpClient client = AsyncHttpClient.builder("http://group:" + groupName)
                                                           .setHttpHeader(HttpHeaderNames.AUTHORITY,
-                                                               "255.255.255.255.xip.io")
+                                                                         "255.255.255.255.xip.io")
                                                           .build();
 
             final AggregatedHttpResponse res = client.get("/hello/world").aggregate().join();
@@ -489,7 +489,7 @@ class HttpClientIntegrationTest {
         final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
                                                       .factory(clientFactory)
                                                       .decorator(HttpDecodingClient.newDecorator(
-                                                    new DeflateStreamDecoderFactory()))
+                                                              new DeflateStreamDecoderFactory()))
                                                       .build();
 
         final AggregatedHttpResponse response =
@@ -504,7 +504,7 @@ class HttpClientIntegrationTest {
         final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
                                                       .factory(clientFactory)
                                                       .decorator(HttpDecodingClient.newDecorator(
-                                                    new DeflateStreamDecoderFactory()))
+                                                              new DeflateStreamDecoderFactory()))
                                                       .build();
 
         final AggregatedHttpResponse response =

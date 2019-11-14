@@ -68,9 +68,9 @@ class ClientRequestContextInitFailureTest {
         final AtomicReference<ClientRequestContext> capturedCtx = new AtomicReference<>();
         final AsyncHttpClient client = AsyncHttpClient.builder("http://" + authority)
                                                       .decorator((delegate, ctx, req) -> {
-                                                capturedCtx.set(ctx);
-                                                return delegate.execute(ctx, req);
-                                            }).build();
+                                                          capturedCtx.set(ctx);
+                                                          return delegate.execute(ctx, req);
+                                                      }).build();
 
         final Throwable actualCause = catchThrowable(() -> client.get("/").aggregate().join()).getCause();
         assertThat(actualCause).isInstanceOf(UnprocessedRequestException.class);
