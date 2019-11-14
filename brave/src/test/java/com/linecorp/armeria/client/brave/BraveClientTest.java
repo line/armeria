@@ -221,7 +221,6 @@ class BraveClientTest {
         ctx.logBuilder().endRequest();
 
         try (SafeCloseable ignored = ctx.push()) {
-            @SuppressWarnings("unchecked")
             final HttpClient delegate = mock(HttpClient.class);
             when(delegate.execute(any(), any())).thenReturn(res);
 
