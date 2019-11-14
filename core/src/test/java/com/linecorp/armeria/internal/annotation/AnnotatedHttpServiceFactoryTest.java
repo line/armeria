@@ -150,7 +150,8 @@ class AnnotatedHttpServiceFactoryTest {
     @Test
     void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
         final Object object = new PathPrefixServiceObject();
-        final List<AnnotatedHttpServiceElement> elements = find("/", object, new ArrayList<>());
+        final List<AnnotatedHttpServiceElement> elements = find("/", object, ImmutableList.of(),
+                                                                ImmutableList.of(), ImmutableList.of());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
@@ -164,7 +165,8 @@ class AnnotatedHttpServiceFactoryTest {
     void testFindAnnotatedServiceElementsWithoutPathPrefixAnnotation() {
         final Object serviceObject = new ServiceObject();
         final List<AnnotatedHttpServiceElement> elements = find(HOME_PATH_PREFIX, serviceObject,
-                                                                new ArrayList<>());
+                                                                ImmutableList.of(), ImmutableList.of(),
+                                                                ImmutableList.of());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
@@ -181,10 +183,8 @@ class AnnotatedHttpServiceFactoryTest {
 
         getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                final AnnotatedHttpServiceConfigurator configurator =
-                        ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
-                                                         ImmutableList.of());
-                create("/", serviceObject, method, configurator);
+                create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
+                       ImmutableList.of());
             }).isInstanceOf(IllegalArgumentException.class)
               .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
         });
@@ -271,10 +271,8 @@ class AnnotatedHttpServiceFactoryTest {
         final MultiPathFailingService serviceObject = new MultiPathFailingService();
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                final AnnotatedHttpServiceConfigurator configurator =
-                        ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
-                                                         ImmutableList.of());
-                create("/", serviceObject, method, configurator);
+                create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
+                       ImmutableList.of());
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -284,11 +282,9 @@ class AnnotatedHttpServiceFactoryTest {
         return getMethods(service.getClass(), HttpResponse.class)
                 .filter(method -> method.getName().equals(methodName)).flatMap(
                         method -> {
-                            final AnnotatedHttpServiceConfigurator configurator =
-                                    ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
-                                                                     ImmutableList.of());
                             final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
-                                    "/", service, method, configurator);
+                                    "/", service, method, ImmutableList.of(), ImmutableList.of(),
+                                    ImmutableList.of());
                             return annotatedHttpServices.stream();
                         }
                 )
