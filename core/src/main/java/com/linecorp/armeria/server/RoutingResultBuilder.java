@@ -63,7 +63,7 @@ public final class RoutingResultBuilder {
         requireNonNull(type, "type");
         checkArgument(type != RoutingResultType.NOT_MATCHED,
                       "type: %s (expected: %s or %s)",
-                      RoutingResultType.MATCHED, RoutingResultType.CORS_PREFLIGHT);
+                      type, RoutingResultType.MATCHED, RoutingResultType.CORS_PREFLIGHT);
         this.type = type;
         return this;
     }
