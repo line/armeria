@@ -17,16 +17,12 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -34,7 +30,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfiguratorSetters;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -42,17 +37,14 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class AnnotatedServiceBindingBuilderTest {
 
+    private static final ExceptionHandlerFunction handlerFunction = (ctx, req, cause) -> HttpResponse.of(501);
+
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService()
-              .exceptionHandler((ctx, req, cause) -> HttpResponse.of(501))
-              .build(new TestService())
-              .annotatedService()
-              .configuratorCustomizer(
-                      setters -> setters.configureExceptionHandlers((ctx, req, cause) -> HttpResponse.of(502)))
-              .pathPrefix("/custom")
+              .exceptionHandler(handlerFunction)
               .build(new TestService());
         }
     };
@@ -118,38 +110,10 @@ class AnnotatedServiceBindingBuilderTest {
     }
 
     @Test
-    void testServiceConfigState_shouldCatchException() {
-        final Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer =
-                setters -> setters.configureExceptionHandlers((ctx, req, cause) -> HttpResponse.of(502));
-        final ExceptionHandlerFunction exceptionHandlerFunction = (ctx, request, cause) -> HttpResponse.of(400);
+    void testServiceDecoration_shouldCatchException() throws IOException {
+        final HttpStatus status = get("/foo").status();
 
-        assertThatThrownBy(() -> Server.builder()
-                                       .annotatedService()
-                                       .exceptionHandler(exceptionHandlerFunction)
-                                       .configuratorCustomizer(customizer)
-                                       .build(new TestService())
-                                       .build())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Cannot call configuratorCustomizer()");
-        assertThatThrownBy(() -> Server.builder()
-                                       .annotatedService()
-                                       .configuratorCustomizer(customizer)
-                                       .exceptionHandler(exceptionHandlerFunction)
-                                       .build(new TestService())
-                                       .build())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Cannot call exceptionHandler()");
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "/foo, 501",
-            "/custom/foo, 502"
-    })
-    void testServiceDecoration_shouldCatchException(String path, Integer statusCode) throws IOException {
-        final HttpStatus status = get(path).status();
-
-        assertThat(status.code()).isEqualTo(statusCode);
+        assertThat(status.code()).isEqualTo(501);
     }
 
     private static AggregatedHttpResponse get(String path) {
