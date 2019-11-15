@@ -67,7 +67,10 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
 
     /**
      * Returns the {@link LogLevel} to use when logging requests.
+     *
+     * @deprecated It will be private in the future.
      */
+    @Deprecated
     protected LogLevel requestLogLevel() {
         return requestLogLevel;
     }
@@ -88,7 +91,10 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
 
     /**
      * Returns the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
+     *
+     * @deprecated It will be private in the future.
      */
+    @Deprecated
     protected LogLevel successfulResponseLogLevel() {
         return successfulResponseLogLevel;
     }
@@ -108,7 +114,10 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
 
     /**
      * Returns the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
+     *
+     * @deprecated It will be private in the future.
      */
+    @Deprecated
     protected LogLevel failedResponseLogLevel() {
         return failedResponseLogLevel;
     }
