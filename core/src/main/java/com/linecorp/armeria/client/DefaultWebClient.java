@@ -38,12 +38,12 @@ import com.linecorp.armeria.internal.PathAndQuery;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 
-final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
+final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultHttpClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultWebClient.class);
 
-    DefaultHttpClient(ClientBuilderParams params, HttpClient delegate,
-                      MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
+    DefaultWebClient(ClientBuilderParams params, HttpClient delegate,
+                     MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
         super(params, delegate, meterRegistry, sessionProtocol, endpoint);
     }
 

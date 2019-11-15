@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
-class DefaultHttpClientTest {
+class DefaultWebClientTest {
 
     @Test
     void testConcatenateRequestPath() throws Exception {
@@ -44,11 +44,11 @@ class DefaultHttpClientTest {
         final HttpClient mockClientDelegate = mock(HttpClient.class);
         final ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(
                 ClientFactory.ofDefault(), new URI(clientUriPath), WebClient.class, ClientOptions.of());
-        final DefaultHttpClient defaultHttpClient = new DefaultHttpClient(
+        final DefaultWebClient defaultWebClient = new DefaultWebClient(
                 clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
                 SessionProtocol.of("http"), Endpoint.of("127.0.0.1"));
 
-        defaultHttpClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
+        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
 
         final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
