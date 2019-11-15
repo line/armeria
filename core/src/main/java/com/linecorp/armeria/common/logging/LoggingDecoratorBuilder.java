@@ -146,7 +146,8 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      */
     public T responseLogLevelMapper(Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
         if (isResponseLogLevelSet) {
-            throw new IllegalStateException("successfulResponseLogLevel or failedResponseLogLevel has been set already.");
+            throw new IllegalStateException(
+                    "successfulResponseLogLevel or failedResponseLogLevel has been set already.");
         }
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         isResponseLogLevelMapperSet = true;
