@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.RoutingResult.LOWEST_SCORE;
 import static java.util.Objects.requireNonNull;
 
@@ -30,6 +31,8 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
  * Builds a new {@link RoutingResult}.
  */
 public final class RoutingResultBuilder {
+
+    private RoutingResultType type = RoutingResultType.MATCHED;
 
     @Nullable
     private String path;
@@ -49,6 +52,20 @@ public final class RoutingResultBuilder {
 
     RoutingResultBuilder(int expectedNumParams) {
         pathParams = ImmutableMap.builderWithExpectedSize(expectedNumParams);
+    }
+
+    /**
+     * Sets the result type.
+     *
+     * @param type {@link RoutingResultType#MATCHED} or {@link RoutingResultType#CORS_PREFLIGHT}.
+     */
+    public RoutingResultBuilder type(RoutingResultType type) {
+        requireNonNull(type, "type");
+        checkArgument(type != RoutingResultType.NOT_MATCHED,
+                      "type: %s (expected: %s or %s)",
+                      type, RoutingResultType.MATCHED, RoutingResultType.CORS_PREFLIGHT);
+        this.type = type;
+        return this;
     }
 
     /**
@@ -109,7 +126,8 @@ public final class RoutingResultBuilder {
             return RoutingResult.empty();
         }
 
-        return new RoutingResult(path, query, pathParams != null ? pathParams.build() : ImmutableMap.of(),
+        return new RoutingResult(type, path, query,
+                                 pathParams != null ? pathParams.build() : ImmutableMap.of(),
                                  score, negotiatedResponseMediaType);
     }
 

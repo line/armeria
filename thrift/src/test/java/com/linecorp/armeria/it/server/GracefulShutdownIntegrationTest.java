@@ -19,8 +19,8 @@ package com.linecorp.armeria.it.server;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.concurrent.CompletableFuture;
@@ -28,8 +28,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -43,24 +45,28 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService.AsyncIface;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class GracefulShutdownIntegrationTest {
+class GracefulShutdownIntegrationTest {
 
     private static final AtomicInteger accessLogWriterCounter1 = new AtomicInteger();
     private static final AtomicInteger accessLogWriterCounter2 = new AtomicInteger();
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    private static final AtomicBoolean sleepServiceCalled = new AtomicBoolean();
+
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.gracefulShutdownTimeout(1000L, 2000L);
             sb.requestTimeoutMillis(0); // Disable RequestTimeoutException.
 
             sb.service("/sleep", THttpService.of(
-                    (AsyncIface) (milliseconds, resultHandler) ->
-                            ServiceRequestContext.current().eventLoop().schedule(
-                                    () -> resultHandler.onComplete(milliseconds), milliseconds, MILLISECONDS)));
+                    (AsyncIface) (milliseconds, resultHandler) -> {
+                        sleepServiceCalled.set(true);
+                        ServiceRequestContext.current().eventLoop().schedule(
+                                () -> resultHandler.onComplete(milliseconds), milliseconds, MILLISECONDS);
+                    }));
 
             final AccessLogWriter writer1 = new AccessLogWriter() {
                 @Override
@@ -98,6 +104,11 @@ public class GracefulShutdownIntegrationTest {
         }
     };
 
+    @BeforeEach
+    void clear() {
+        sleepServiceCalled.set(false);
+    }
+
     private static long baselineNanos;
 
     private static long baselineNanos() throws Exception {
@@ -116,8 +127,9 @@ public class GracefulShutdownIntegrationTest {
         return baselineNanos = stopTime - startTime;
     }
 
-    @Test(timeout = 20000L)
-    public void testBaseline() throws Exception {
+    @Timeout(20)
+    @Test
+    void testBaseline() throws Exception {
         final long baselineNanos = baselineNanos();
 
         // Measure the time taken for stopping the server after handling a single request.
@@ -133,17 +145,16 @@ public class GracefulShutdownIntegrationTest {
                                                    baselineNanos + MILLISECONDS.toNanos(400));
     }
 
-    @Test(timeout = 20000L)
-    public void waitsForRequestToComplete() throws Exception {
+    @Timeout(20)
+    @Test
+    void waitsForRequestToComplete() throws Exception {
         final long baselineNanos = baselineNanos();
         server.start();
 
         final SleepService.Iface client = newClient();
         final AtomicBoolean completed = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
         CompletableFuture.runAsync(() -> {
             try {
-                latch.countDown();
                 client.sleep(500L);
                 completed.set(true);
             } catch (Throwable t) {
@@ -151,21 +162,21 @@ public class GracefulShutdownIntegrationTest {
             }
         });
 
-        // Wait for the latch to make sure the request has been sent before shutting down.
-        latch.await();
-
+        // Wait for making sure the request has been sent before shutting down.
+        await().untilTrue(sleepServiceCalled);
         final long startTime = System.nanoTime();
         server.stop().join();
         final long stopTime = System.nanoTime();
-        assertTrue(completed.get());
+        assertThat(completed.get()).isTrue();
 
         // Should take 500 more milliseconds than the baseline.
         assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(100),
                                                    baselineNanos + MILLISECONDS.toNanos(900));
     }
 
-    @Test(timeout = 20000L)
-    public void interruptsSlowRequests() throws Exception {
+    @Timeout(20)
+    @Test
+    void interruptsSlowRequests() throws Exception {
         final long baselineNanos = baselineNanos();
         server.start();
 
@@ -201,8 +212,9 @@ public class GracefulShutdownIntegrationTest {
                                                    baselineNanos + MILLISECONDS.toNanos(1400));
     }
 
-    @Test(timeout = 20000)
-    public void testHardTimeout() throws Exception {
+    @Timeout(20)
+    @Test
+    void testHardTimeout() throws Exception {
         final long baselineNanos = baselineNanos();
         final Server server = GracefulShutdownIntegrationTest.server.start();
 

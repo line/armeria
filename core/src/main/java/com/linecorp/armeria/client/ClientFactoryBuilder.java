@@ -50,6 +50,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -454,6 +455,12 @@ public final class ClientFactoryBuilder {
             final Function<? super EventLoopGroup,
                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory =
                     eventLoopGroup -> {
+                        // FIXME(ikhoon): Remove DefaultAddressResolverGroup registration after fixing Window
+                        //                domain name resolution failure.
+                        //                https://github.com/line/armeria/issues/2243
+                        if (Flags.useJdkDnsResolver() && dnsResolverGroupCustomizers == null) {
+                            return DefaultAddressResolverGroup.INSTANCE;
+                        }
                         final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder();
                         if (dnsResolverGroupCustomizers != null) {
                             dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));

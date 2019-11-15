@@ -16,19 +16,27 @@
 
 package com.linecorp.armeria.common.stream;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 final class AbortingSubscriber<T> implements Subscriber<T> {
 
-    private static final AbortingSubscriber<Object> INSTANCE = new AbortingSubscriber<>();
+    static final AbortingSubscriber<Object> INSTANCE =
+            new AbortingSubscriber<>(AbortedStreamException.INSTANCE);
 
     @SuppressWarnings("unchecked")
-    static <T> AbortingSubscriber<T> get() {
-        return (AbortingSubscriber<T>) INSTANCE;
+    static <T> AbortingSubscriber<T> get(@Nullable Throwable cause) {
+        return cause == null || cause == AbortedStreamException.INSTANCE ? (AbortingSubscriber<T>) INSTANCE
+                                                                         : new AbortingSubscriber<>(cause);
     }
 
-    private AbortingSubscriber() {}
+    private final Throwable cause;
+
+    private AbortingSubscriber(Throwable cause) {
+        this.cause = cause;
+    }
 
     @Override
     public void onSubscribe(Subscription s) {
@@ -43,4 +51,11 @@ final class AbortingSubscriber<T> implements Subscriber<T> {
 
     @Override
     public void onComplete() {}
+
+    /**
+     * Returns the cause which tells why the stream has been aborted.
+     */
+    Throwable cause() {
+        return cause;
+    }
 }

@@ -379,6 +379,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Nullable
+    @Override
     public Runnable requestTimeoutHandler() {
         return requestTimeoutHandler;
     }

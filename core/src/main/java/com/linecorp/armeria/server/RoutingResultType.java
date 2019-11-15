@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,21 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import org.junit.jupiter.api.Test;
-
-class CatchAllPathMappingTest {
-    @Test
-    void testLoggerName() throws Exception {
-        assertThat(Route.ofCatchAll().loggerName()).isEqualTo("__ROOT__");
-    }
-
-    @Test
-    void testMetricName() throws Exception {
-        assertThat(Route.ofCatchAll().meterTag()).isEqualTo("catch-all");
-    }
+/**
+ * The type of {@link RoutingResult}.
+ */
+public enum RoutingResultType {
+    /**
+     * A {@link Route} did not match a {@link RoutingContext}.
+     */
+    NOT_MATCHED,
+    /**
+     * A {@link Route} matched a {@link RoutingContext}.
+     */
+    MATCHED,
+    /**
+     * A {@link Route} did not match a {@link RoutingContext}, but a CORS preflight request must be handled for
+     * the {@link Route}.
+     */
+    CORS_PREFLIGHT
 }

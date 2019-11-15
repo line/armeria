@@ -31,6 +31,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
@@ -267,6 +268,30 @@ public interface ClientRequestContext extends RequestContext {
      * {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      */
     void setResponseTimeout(Duration responseTimeout);
+
+    /**
+     * Returns {@link Response} timeout handler which is executed when
+     * the {@link Response} is not completely received within the allowed {@link #responseTimeoutMillis()}
+     * or the default {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     */
+    @Nullable
+    Runnable responseTimeoutHandler();
+
+    /**
+     * Sets a handler to run when the response times out. {@code responseTimeoutHandler} must abort
+     * the response, e.g., by calling {@link HttpResponseWriter#abort(Throwable)}.
+     * If not set, the response will be closed with {@link ResponseTimeoutException}.
+     *
+     * <p>For example,
+     * <pre>{@code
+     * HttpResponseWriter res = HttpResponse.streaming();
+     * ctx.setResponseTimeoutHandler(() -> {
+     *    res.abort(new IllegalStateException("Server is in a bad state."));
+     * });
+     * ...
+     * }</pre>
+     */
+    void setResponseTimeoutHandler(Runnable responseTimeoutHandler);
 
     /**
      * Returns the maximum length of the received {@link Response}.

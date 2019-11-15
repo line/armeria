@@ -73,10 +73,10 @@ public final class CompositeServiceEntry<T extends Service<?, ?>> {
 
     /**
      * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound at
-     * {@linkplain RouteBuilder#catchAll() the catch-all path mapping}.
+     * {@linkplain Route#ofCatchAll() the catch-all path mapping}.
      */
     public static <T extends Service<?, ?>> CompositeServiceEntry<T> ofCatchAll(T service) {
-        return new CompositeServiceEntry<>(Route.builder().catchAll().build(), service);
+        return new CompositeServiceEntry<>(Route.ofCatchAll(), service);
     }
 
     /**

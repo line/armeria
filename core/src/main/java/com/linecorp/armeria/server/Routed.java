@@ -97,6 +97,13 @@ public final class Routed<T> {
     }
 
     /**
+     * Returns the type of {@link RoutingResult}.
+     */
+    public RoutingResultType routingResultType() {
+        return isPresent() ? routingResult.type() : RoutingResultType.NOT_MATCHED;
+    }
+
+    /**
      * Returns the value.
      *
      * @throws IllegalStateException if there's no match

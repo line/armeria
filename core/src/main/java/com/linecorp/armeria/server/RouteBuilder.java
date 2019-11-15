@@ -46,6 +46,8 @@ import com.linecorp.armeria.common.MediaType;
  */
 public final class RouteBuilder {
 
+    static final Route CATCH_ALL_ROUTE = new RouteBuilder().catchAll().build();
+
     @Nullable
     private PathMapping pathMapping;
 

@@ -154,7 +154,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
         // Try to close the request first, then abort the response if it is already closed.
         if (!tryClose(cause) &&
             response != null && !response.isComplete()) {
-            response.abort();
+            response.abort(cause);
         }
     }
 }

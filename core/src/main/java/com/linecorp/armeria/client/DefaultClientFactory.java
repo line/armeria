@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpClientBuilder.isUndefinedUri;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
@@ -44,6 +46,7 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.resolver.AddressResolverGroup;
 
 /**
  * A {@link ClientFactory} which combines all discovered {@link ClientFactory} implementations.
@@ -179,6 +182,11 @@ final class DefaultClientFactory extends AbstractClientFactory {
 
     void doClose() {
         clientFactoriesToClose.forEach(ClientFactory::close);
+    }
+
+    @VisibleForTesting
+    AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
+        return httpClientFactory.addressResolverGroup();
     }
 
     private URI normalizeUri(URI uri, Scheme scheme) {
