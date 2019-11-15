@@ -92,7 +92,7 @@ class HttpServerAbortingInfiniteStreamTest {
     };
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C"})
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
     void shouldCancelInfiniteStreamImmediately(SessionProtocol protocol) {
         expectedProtocol.set(protocol);
 

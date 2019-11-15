@@ -50,8 +50,8 @@ class CircuitBreakerHttpClientIntegrationTest {
         final WebClient client =
                 WebClient.builder()
                          .decorator(CircuitBreakerHttpClient.newDecorator(
-                                       circuitBreaker,
-                                       (ctx, cause) -> CompletableFuture.completedFuture(false)))
+                                 circuitBreaker,
+                                 (ctx, cause) -> CompletableFuture.completedFuture(false)))
                          .build();
 
         for (int i = 0; i < 3; i++) {

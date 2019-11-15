@@ -83,7 +83,7 @@ public class AbstractUnaryGrpcServiceTest {
                                                                           ByteString.copyFromUtf8("hello"))
                                                                   .build())
                                                .build()).getPayload().getBody().toStringUtf8())
-                  .isEqualTo("hello");
+                .isEqualTo("hello");
     }
 
     @Test

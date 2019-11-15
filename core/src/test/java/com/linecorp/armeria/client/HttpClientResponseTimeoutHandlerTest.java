@@ -72,15 +72,15 @@ class HttpClientResponseTimeoutHandlerTest {
         final WebClient client = WebClient.builder(server.uri(protocol, "/"))
                                           .responseTimeout(Duration.ofSeconds(2))
                                           .decorator((delegate, ctx, req) -> {
-                                                          if (useResponseTimeoutHandler) {
-                                                              ctx.setResponseTimeoutHandler(() -> {
-                                                                  ctx.request().abort(reqCause);
-                                                                  invokeResponseTimeoutHandler.set(true);
-                                                              });
-                                                          }
-                                                          logHolder.set(ctx.log());
-                                                          return delegate.execute(ctx, req);
-                                                      })
+                                              if (useResponseTimeoutHandler) {
+                                                  ctx.setResponseTimeoutHandler(() -> {
+                                                      ctx.request().abort(reqCause);
+                                                      invokeResponseTimeoutHandler.set(true);
+                                                  });
+                                              }
+                                              logHolder.set(ctx.log());
+                                              return delegate.execute(ctx, req);
+                                          })
                                           .build();
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
@@ -110,12 +110,12 @@ class HttpClientResponseTimeoutHandlerTest {
         final WebClient client = WebClient.builder(server.uri(protocol, "/"))
                                           .responseTimeout(Duration.ofSeconds(2))
                                           .decorator((delegate, ctx, req) -> {
-                                                          ctx.setResponseTimeoutHandler(() -> {
-                                                              ctx.request().abort(reqCause);
-                                                          });
-                                                          logHolder.set(ctx.log());
-                                                          return delegate.execute(ctx, req);
-                                                      })
+                                              ctx.setResponseTimeoutHandler(() -> {
+                                                  ctx.request().abort(reqCause);
+                                              });
+                                              logHolder.set(ctx.log());
+                                              return delegate.execute(ctx, req);
+                                          })
                                           .build();
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");

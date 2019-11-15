@@ -51,8 +51,8 @@ class HttpClientWithRequestLogTest {
         final WebClient client =
                 WebClient.builder(LOCAL_HOST)
                          .decorator((delegate, ctx, req1) -> {
-                                   throw new AnticipatedException();
-                               })
+                             throw new AnticipatedException();
+                         })
                          .decorator(new ExceptionHoldingDecorator())
                          .build();
 
@@ -75,10 +75,10 @@ class HttpClientWithRequestLogTest {
         final WebClient client =
                 WebClient.builder(LOCAL_HOST)
                          .decorator((delegate, ctx, req) -> {
-                                   final HttpRequest badReq = HttpRequest.of(
-                                           req, req.headers().toBuilder().path("/%").build());
-                                   return delegate.execute(ctx, badReq);
-                               })
+                             final HttpRequest badReq = HttpRequest.of(
+                                     req, req.headers().toBuilder().path("/%").build());
+                             return delegate.execute(ctx, badReq);
+                         })
                          .decorator(new ExceptionHoldingDecorator())
                          .build();
 
@@ -102,10 +102,10 @@ class HttpClientWithRequestLogTest {
                 WebClient.builder("http://unresolved.armeria.com")
                          .decorator(new ExceptionHoldingDecorator())
                          .decorator((delegate, ctx, req) -> {
-                                   ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
-                                                         RequestLogAvailability.REQUEST_START);
-                                   return delegate.execute(ctx, req);
-                               })
+                             ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
+                                                   RequestLogAvailability.REQUEST_START);
+                             return delegate.execute(ctx, req);
+                         })
                          .build();
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
@@ -134,10 +134,10 @@ class HttpClientWithRequestLogTest {
                 WebClient.builder("http://127.0.0.1:1")
                          .decorator(new ExceptionHoldingDecorator())
                          .decorator((delegate, ctx, req) -> {
-                                   ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
-                                                         RequestLogAvailability.REQUEST_START);
-                                   return delegate.execute(ctx, req);
-                               })
+                             ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
+                                                   RequestLogAvailability.REQUEST_START);
+                             return delegate.execute(ctx, req);
+                         })
                          .build();
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())

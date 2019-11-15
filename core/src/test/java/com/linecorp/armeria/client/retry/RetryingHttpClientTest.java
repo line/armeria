@@ -467,9 +467,9 @@ public class RetryingHttpClientTest {
                     WebClient.builder(server.uri("/"))
                              .decorator(RetryingHttpClient.newDecorator(retryAlways))
                              .decorator((delegate, ctx, req) -> {
-                                       context.set(ctx);
-                                       return delegate.execute(ctx, req);
-                                   })
+                                 context.set(ctx);
+                                 return delegate.execute(ctx, req);
+                             })
                              .build();
             final HttpResponse httpResponse = client.get("/response-abort");
             if (abortCause == null) {
@@ -528,9 +528,9 @@ public class RetryingHttpClientTest {
                     WebClient.builder(server.uri("/"))
                              .decorator(RetryingHttpClient.newDecorator(retryAlways))
                              .decorator((delegate, ctx, req) -> {
-                                       context.set(ctx);
-                                       return delegate.execute(ctx, req);
-                                   })
+                                 context.set(ctx);
+                                 return delegate.execute(ctx, req);
+                             })
                              .build();
 
             final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/request-abort");
@@ -565,8 +565,8 @@ public class RetryingHttpClientTest {
         };
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .decorator((delegate, ctx, req) -> {
-                                                          throw new AnticipatedException();
-                                                      })
+                                              throw new AnticipatedException();
+                                          })
                                           .decorator(RetryingHttpClient.newDecorator(strategy, 5))
                                           .build();
 
@@ -581,11 +581,11 @@ public class RetryingHttpClientTest {
         final AtomicReference<EventLoop> eventLoop = new AtomicReference<>();
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .decorator((delegate, ctx, req) -> {
-                                                          eventLoop.set(ctx.eventLoop());
-                                                          return delegate.execute(ctx, req);
-                                                      })
+                                              eventLoop.set(ctx.eventLoop());
+                                              return delegate.execute(ctx, req);
+                                          })
                                           .decorator(RetryingHttpClient.newDecorator(
-                                                              RetryStrategy.onServerErrorStatus(), 2))
+                                                  RetryStrategy.onServerErrorStatus(), 2))
                                           .build();
         client.get("/503-then-success").aggregate().whenComplete((unused, cause) -> {
             assertThat(eventLoop.get().inEventLoop()).isTrue();

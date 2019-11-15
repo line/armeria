@@ -47,11 +47,11 @@ class HttpServerAdditionalHeadersTest {
             ctx.addAdditionalResponseHeader(HttpHeaderNames.SCHEME, "https");
             ctx.addAdditionalResponseHeader(HttpHeaderNames.STATUS, "100");
             ctx.addAdditionalResponseHeader(HttpHeaderNames.METHOD, "CONNECT");
-            ctx.addAdditionalResponseHeader(HttpHeaderNames.PATH,   "/foo");
+            ctx.addAdditionalResponseHeader(HttpHeaderNames.PATH, "/foo");
             ctx.addAdditionalResponseTrailer(HttpHeaderNames.SCHEME, "https");
             ctx.addAdditionalResponseTrailer(HttpHeaderNames.STATUS, "100");
             ctx.addAdditionalResponseTrailer(HttpHeaderNames.METHOD, "CONNECT");
-            ctx.addAdditionalResponseTrailer(HttpHeaderNames.PATH,   "/foo");
+            ctx.addAdditionalResponseTrailer(HttpHeaderNames.PATH, "/foo");
             ctx.addAdditionalResponseTrailer(HttpHeaderNames.TRANSFER_ENCODING, "magic");
         }
     };

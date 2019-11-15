@@ -292,18 +292,18 @@ class HttpServerStreamingTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H2C, H1, H2)
-                    .map(protocol -> {
-                        final WebClientBuilder builder = WebClient.builder(
-                                protocol.uriText() + "://127.0.0.1:" +
-                                (protocol.isTls() ? server.httpsPort() : server.httpPort()));
+                         .map(protocol -> {
+                             final WebClientBuilder builder = WebClient.builder(
+                                     protocol.uriText() + "://127.0.0.1:" +
+                                     (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 
-                        builder.factory(clientFactory);
-                        builder.responseTimeoutMillis(0);
-                        builder.maxResponseLength(0);
+                             builder.factory(clientFactory);
+                             builder.responseTimeoutMillis(0);
+                             builder.maxResponseLength(0);
 
-                        return builder.build();
-                    })
-                    .map(Arguments::of);
+                             return builder.build();
+                         })
+                         .map(Arguments::of);
         }
     }
 

@@ -129,7 +129,7 @@ class HttpClientSniTest {
     void testCustomAuthority() throws Exception {
         final WebClient client = WebClient.builder(SessionProtocol.HTTPS,
                                                    Endpoint.of("a.com", httpsPort)
-                                                                       .withIpAddr("127.0.0.1"))
+                                                           .withIpAddr("127.0.0.1"))
                                           .factory(clientFactory)
                                           .build();
 

@@ -53,7 +53,7 @@ public class RedirectServiceTest {
             final String value2 = ctx.pathParam("var2");
             final String value3 = ctx.pathParam("var3");
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
-                    "SERVICE_NAMED_PARAM %s %s %s", value1, value2, value3);
+                                   "SERVICE_NAMED_PARAM %s %s %s", value1, value2, value3);
         }
     };
 
@@ -80,7 +80,7 @@ public class RedirectServiceTest {
                 sb.service("/test1h", new RedirectService(HttpStatus.USE_PROXY, "/new0/branch1"));
                 sb.service("/test1i", new RedirectService(HttpStatus.TEMPORARY_REDIRECT, "/new0/branch1"));
                 sb.service("/test1j",
-                        new RedirectService(HttpStatus.TEMPORARY_REDIRECT, ctx -> "/new0/branch1"));
+                           new RedirectService(HttpStatus.TEMPORARY_REDIRECT, ctx -> "/new0/branch1"));
 
                 sb.service("/test1k/{var1}", new RedirectService("/new0/{var1}"));
 
@@ -94,13 +94,13 @@ public class RedirectServiceTest {
                         "/new1/:0/new1/:1/new1/:2"));
 
                 sb.service("/test3a", new RedirectService("http://localhost:" + serverRule1Port +
-                        "/new0/branch1"));
+                                                          "/new0/branch1"));
                 sb.service("/test3b", new RedirectService("http://127.0.0.1:" + serverRule1Port +
-                        "/new0/branch1"));
+                                                          "/new0/branch1"));
                 sb.service("/test3c/{var1}", new RedirectService("http://localhost:" + serverRule1Port +
-                        "/new0/{var1}"));
+                                                                 "/new0/{var1}"));
                 sb.service("/test3d/{var1}", new RedirectService("http://127.0.0.1:" + serverRule1Port +
-                        "/new0/{var1}"));
+                                                                 "/new0/{var1}"));
 
                 // For testing preserveQueryString option.
                 sb.service("/query_string/preserved", new RedirectService("/new"));
@@ -133,9 +133,9 @@ public class RedirectServiceTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/test1a/{var1}/{var2}/{var3}",
-                    new RedirectService(
-                            ctx -> "/new1/" + ctx.pathParam("var4") + "/new1/" + ctx.pathParam("var5") +
-                                    "/new1/" + ctx.pathParam("var6")));
+                       new RedirectService(
+                               ctx -> "/new1/" + ctx.pathParam("var4") + "/new1/" + ctx.pathParam("var5") +
+                                      "/new1/" + ctx.pathParam("var6")));
         }
     };
     @Rule
@@ -143,8 +143,8 @@ public class RedirectServiceTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("regex:/test1a/(?<var4>.*)/(?<var5>.*)/(?<var1>.*)",
-                    new RedirectService(
-                            "/new1/{var4}/new1/{var5}/new1/{var6}"));
+                       new RedirectService(
+                               "/new1/{var4}/new1/{var5}/new1/{var6}"));
         }
     };
     @Rule
@@ -152,8 +152,8 @@ public class RedirectServiceTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("glob:/test1a/*/*/*",
-                    new RedirectService(
-                            "/new1/{var4}/new1/{var5}/new1/{var6}"));
+                       new RedirectService(
+                               "/new1/{var4}/new1/{var5}/new1/{var6}"));
         }
     };
 
@@ -215,7 +215,7 @@ public class RedirectServiceTest {
                 HttpStatus.TEMPORARY_REDIRECT,
                 HttpStatus.TEMPORARY_REDIRECT,
                 HttpStatus.TEMPORARY_REDIRECT,
-        };
+                };
         final String[] expectedLocations = {
                 "/new0/branch1",
                 "/new0/branch1",

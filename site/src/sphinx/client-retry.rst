@@ -23,9 +23,9 @@ You can just use the ``decorator()`` method in :api:`ClientBuilder` or :api:`Web
 
 .. code-block:: java
 
+    import com.linecorp.armeria.client.WebClient;
     import com.linecorp.armeria.client.retry.RetryingHttpClient;
     import com.linecorp.armeria.client.retry.RetryStrategy;
-    import com.linecorp.armeria.client.WebClient;
     import com.linecorp.armeria.common.AggregatedHttpResponse;
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();

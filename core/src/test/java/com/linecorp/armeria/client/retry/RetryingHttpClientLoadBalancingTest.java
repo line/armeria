@@ -115,7 +115,7 @@ class RetryingHttpClientLoadBalancingTest {
             };
             final WebClient c = WebClient.builder("h2c://group:" + groupName)
                                          .decorator(RetryingHttpClient.builder(retryStrategy)
-                                                                                  .newDecorator())
+                                                                      .newDecorator())
                                          .build();
 
             for (int i = 0; i < NUM_PORTS; i++) {

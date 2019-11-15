@@ -108,7 +108,7 @@ public class RetryingHttpClientWithLoggingTest {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .decorator(loggingDecorator())
                                           .decorator(RetryingHttpClient.builder(retryStrategy)
-                                                                                   .newDecorator())
+                                                                       .newDecorator())
                                           .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
@@ -123,7 +123,7 @@ public class RetryingHttpClientWithLoggingTest {
         successLogIndex = 1;
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .decorator(RetryingHttpClient.newDecorator(
-                                                              RetryStrategy.onServerErrorStatus()))
+                                                  RetryStrategy.onServerErrorStatus()))
                                           .decorator(loggingDecorator())
                                           .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");

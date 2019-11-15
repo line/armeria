@@ -236,10 +236,10 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         final AggregatedHttpResponse msg =
                 WebClient.of(rule.uri("/"))
                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
-                                                          HttpHeaderNames.CONTENT_TYPE,
-                                                          MediaType.PLAIN_TEXT_UTF_8,
-                                                          HttpHeaderNames.ACCEPT, "text/*"),
-                                        HttpData.ofUtf8("Armeria"))
+                                                    HttpHeaderNames.CONTENT_TYPE,
+                                                    MediaType.PLAIN_TEXT_UTF_8,
+                                                    HttpHeaderNames.ACCEPT, "text/*"),
+                                  HttpData.ofUtf8("Armeria"))
                          .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
         assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
@@ -256,11 +256,11 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         final AggregatedHttpResponse msg =
                 WebClient.of(rule.uri("/"))
                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
-                                                          HttpHeaderNames.CONTENT_TYPE,
-                                                          MediaType.PLAIN_TEXT_UTF_8,
-                                                          HttpHeaderNames.ACCEPT,
-                                                          "application/json; charset=utf-8"),
-                                        HttpData.ofUtf8("Armeria"))
+                                                    HttpHeaderNames.CONTENT_TYPE,
+                                                    MediaType.PLAIN_TEXT_UTF_8,
+                                                    HttpHeaderNames.ACCEPT,
+                                                    "application/json; charset=utf-8"),
+                                  HttpData.ofUtf8("Armeria"))
                          .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
         assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
