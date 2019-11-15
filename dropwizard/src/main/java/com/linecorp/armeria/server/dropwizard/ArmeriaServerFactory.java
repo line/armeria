@@ -153,25 +153,26 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
     @VisibleForTesting
     ServerBuilder decorateServerBuilderFromConfig(final ServerBuilder serverBuilder) {
         Objects.requireNonNull(serverBuilder);
-        serverBuilder.maxNumConnections(getMaxNumConnections());
-        serverBuilder.blockingTaskExecutor(Executors.newFixedThreadPool(getMaxThreads()), true);
-        serverBuilder.maxRequestLength(maxRequestLength.toBytes());
-        serverBuilder.idleTimeoutMillis(getIdleThreadTimeout().toMilliseconds());
-        serverBuilder.gracefulShutdownTimeout(
-                Duration.ofMillis(getShutdownGracePeriod().toMilliseconds()),
-                Duration.ofMillis(getShutdownGracePeriod().toMilliseconds()));
+        serverBuilder.maxNumConnections(getMaxNumConnections())
+                     .blockingTaskExecutor(Executors.newFixedThreadPool(getMaxThreads()), true)
+                     .maxRequestLength(maxRequestLength.toBytes())
+                     .idleTimeoutMillis(getIdleThreadTimeout().toMilliseconds())
+                     .gracefulShutdownTimeout(
+                             Duration.ofMillis(getShutdownGracePeriod().toMilliseconds()),
+                             Duration.ofMillis(getShutdownGracePeriod().toMilliseconds()))
+                     .verboseResponses(hasVerboseResponses());
         if (!isDateHeaderEnabled()) {
             serverBuilder.disableDateHeader();
         }
         if (!isServerHeaderEnabled()) {
             serverBuilder.disableServerHeader();
         }
-        serverBuilder.verboseResponses(hasVerboseResponses());
         Optional.ofNullable(getDefaultHostname()).ifPresent(serverBuilder::defaultHostname);
         // TODO: Add more items to server builder via Configuration
         return serverBuilder;
     }
 
+    @Nullable
     private String getDefaultHostname() {
         return defaultHostname;
     }
