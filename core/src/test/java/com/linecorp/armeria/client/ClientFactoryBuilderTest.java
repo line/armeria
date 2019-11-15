@@ -21,6 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+
+import io.netty.resolver.DefaultAddressResolverGroup;
 
 class ClientFactoryBuilderTest {
 
@@ -54,5 +58,19 @@ class ClientFactoryBuilderTest {
         final IllegalStateException cause = assertThrows(IllegalStateException.class,
                                                          () -> builder2.maxNumEventLoopsPerEndpoint(2));
         assertThat(cause).hasMessageContaining("mutually exclusive");
+    }
+
+    @Test
+    @EnabledIfSystemProperty(named = "com.linecorp.armeria.useJdkDnsResolver", matches = "true")
+    void useDefaultAddressResolverGroup() {
+        final DefaultClientFactory clientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
+        assertThat(clientFactory.addressResolverGroup()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+    }
+
+    @Test
+    @DisabledIfSystemProperty(named = "com.linecorp.armeria.useJdkDnsResolver",  matches = "true")
+    void useRefreshingAddressResolverGroup() {
+        final DefaultClientFactory clientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
+        assertThat(clientFactory.addressResolverGroup()).isInstanceOf(RefreshingAddressResolverGroup.class);
     }
 }

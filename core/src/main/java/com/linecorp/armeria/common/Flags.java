@@ -60,6 +60,8 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.resolver.DefaultAddressResolverGroup;
+import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -296,6 +298,8 @@ public final class Flags {
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
+
+    private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
 
     static {
         if (!isEpollAvailable()) {
@@ -843,6 +847,21 @@ public final class Flags {
      */
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
         return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
+    }
+
+    /**
+     * Enables {@link DefaultAddressResolverGroup} that resolves domain name using JDK's built-in domain name
+     * lookup mechanism.
+     * Note that JDK's built-in resolver performs a blocking name lookup from the caller thread, and thus
+     * this flag should be enabled only when the default asynchronous resolver does not work as expected,
+     * for example by always throwing a {@link DnsNameResolverTimeoutException}.
+     *
+     * <p>This flag is disabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.useJdkDnsResolver=true} JVM option
+     * to enable it.
+     */
+    public static boolean useJdkDnsResolver() {
+        return USE_JDK_DNS_RESOLVER;
     }
 
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
