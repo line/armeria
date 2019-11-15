@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -84,6 +85,11 @@ public abstract class AbstractRequestContext implements RequestContext {
 
     @Override
     public final ExecutorService makeContextAware(ExecutorService executor) {
+        return RequestContext.super.makeContextAware(executor);
+    }
+
+    @Override
+    public final ScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
         return RequestContext.super.makeContextAware(executor);
     }
 

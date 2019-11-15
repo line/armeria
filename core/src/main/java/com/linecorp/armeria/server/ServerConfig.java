@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -42,7 +42,6 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import io.micrometer.core.instrument.internal.TimedExecutor;
 import io.micrometer.core.instrument.internal.TimedExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -86,7 +85,7 @@ public final class ServerConfig {
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
 
-    private final ExecutorService blockingTaskExecutor;
+    private final ScheduledExecutorService blockingTaskExecutor;
     private final boolean shutdownBlockingTaskExecutorOnStop;
 
     private final MeterRegistry meterRegistry;
@@ -117,7 +116,7 @@ public final class ServerConfig {
             long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
             int http1MaxInitialLineLength, int http1MaxHeaderSize, int http1MaxChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
+            ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
             MeterRegistry meterRegistry, String serviceLoggerPrefix,
             int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
@@ -157,21 +156,11 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        if (blockingTaskExecutor instanceof ExecutorService) {
-            ExecutorService taskExecutor = (ExecutorService) blockingTaskExecutor;
-            if (!(blockingTaskExecutor instanceof TimedExecutorService)) {
-                taskExecutor = ExecutorServiceMetrics.monitor(meterRegistry, taskExecutor,
-                                                              "armeriaBlockingTaskExecutor");
-            }
-            this.blockingTaskExecutor = new InterminableExecutorService(taskExecutor);
-        } else {
-            Executor taskExecutor = blockingTaskExecutor;
-            if (!(blockingTaskExecutor instanceof TimedExecutor)) {
-                taskExecutor = ExecutorServiceMetrics.monitor(meterRegistry, taskExecutor,
-                                                              "armeriaBlockingTaskExecutor");
-            }
-            this.blockingTaskExecutor = new ExecutorBasedExecutorService(taskExecutor);
+        if (!(blockingTaskExecutor instanceof TimedExecutorService)) {
+            blockingTaskExecutor = ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
+                                                                  "armeriaBlockingTaskExecutor");
         }
+        this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
@@ -555,12 +544,12 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the {@link ExecutorService} dedicated to the execution of blocking tasks or invocations.
-     * Note that the {@link ExecutorService} returned by this method does not set the
+     * Returns the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
+     * Note that the {@link ScheduledExecutorService} returned by this method does not set the
      * {@link ServiceRequestContext} when executing a submitted task.
      * Use {@link ServiceRequestContext#blockingTaskExecutor()} if possible.
      */
-    public ExecutorService blockingTaskExecutor() {
+    public ScheduledExecutorService blockingTaskExecutor() {
         return blockingTaskExecutor;
     }
 
@@ -689,7 +678,7 @@ public final class ServerConfig {
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
+            ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
             @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,

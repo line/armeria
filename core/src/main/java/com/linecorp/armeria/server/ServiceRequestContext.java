@@ -24,7 +24,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -211,14 +211,14 @@ public interface ServiceRequestContext extends RequestContext {
     HttpService service();
 
     /**
-     * Returns the {@link ExecutorService} that could be used for executing a potentially long-running task.
-     * The {@link ExecutorService} will propagate the {@link ServiceRequestContext} automatically when running
-     * a task.
+     * Returns the {@link ScheduledExecutorService} that could be used for executing a potentially
+     * long-running task. The {@link ScheduledExecutorService} will propagate the {@link ServiceRequestContext}
+     * automatically when running a task.
      *
      * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
      * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
      */
-    ExecutorService blockingTaskExecutor();
+    ScheduledExecutorService blockingTaskExecutor();
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable

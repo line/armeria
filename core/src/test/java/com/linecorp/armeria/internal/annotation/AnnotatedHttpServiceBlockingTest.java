@@ -18,13 +18,10 @@ package com.linecorp.armeria.internal.annotation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.LinkedTransferQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -50,30 +47,19 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class AnnotatedHttpServiceBlockingTest {
-
-    private static final CountingThreadPoolExecutor executor = new CountingThreadPoolExecutor(
-            0, 1, 1, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
-            ThreadFactories.newThreadFactory("blocking-test", true));
-
     private static final AtomicInteger blockingCount = new AtomicInteger();
+
+    private static final ScheduledExecutorService executor =
+            new ScheduledThreadPoolExecutor(1, ThreadFactories.newThreadFactory("blocking-test", true)) {
+                @Override
+                protected void beforeExecute(Thread t, Runnable r) {
+                    blockingCount.incrementAndGet();
+                }
+            };
 
     @BeforeEach
     void clear() {
         blockingCount.set(0);
-    }
-
-    private static class CountingThreadPoolExecutor extends ThreadPoolExecutor {
-
-        CountingThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime,
-                                   TimeUnit unit, BlockingQueue<Runnable> workQueue,
-                                   ThreadFactory threadFactory) {
-            super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
-        }
-
-        @Override
-        protected void beforeExecute(Thread t, Runnable r) {
-            blockingCount.incrementAndGet();
-        }
     }
 
     @RegisterExtension
@@ -84,7 +70,7 @@ class AnnotatedHttpServiceBlockingTest {
                                 LoggingService.newDecorator());
             sb.annotatedService("/myBlocking", new MyBlockingAnnotatedService(),
                                 LoggingService.newDecorator());
-            sb.blockingTaskExecutor(executor, false);
+            sb.blockingTaskExecutor(executor, true);
         }
     };
 

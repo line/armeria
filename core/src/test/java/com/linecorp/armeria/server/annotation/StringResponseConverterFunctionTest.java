@@ -16,21 +16,19 @@
 package com.linecorp.armeria.server.annotation;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.nio.charset.Charset;
 import java.util.List;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -41,20 +39,16 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
-public class StringResponseConverterFunctionTest {
+class StringResponseConverterFunctionTest {
 
     private static final ResponseConverterFunction function = new StringResponseConverterFunction();
-    private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+    private static final ServiceRequestContext ctx = ServiceRequestContext.builder(
+            HttpRequest.of(HttpMethod.GET, "/")).build();
 
     private static final HttpHeaders DEFAULT_TRAILERS = HttpHeaders.of();
 
-    @BeforeClass
-    public static void setup() {
-        when(ctx.blockingTaskExecutor()).thenReturn(MoreExecutors.newDirectExecutorService());
-    }
-
     @Test
-    public void aggregatedText() throws Exception {
+    void aggregatedText() throws Exception {
         final ResponseHeaders expectedHeadersWithoutContentLength =
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
@@ -77,7 +71,7 @@ public class StringResponseConverterFunctionTest {
     }
 
     @Test
-    public void withoutContentType() throws Exception {
+    void withoutContentType() throws Exception {
         StepVerifier.create(function.convertResponse(ctx, ResponseHeaders.of(HttpStatus.OK),
                                                      "foo", DEFAULT_TRAILERS))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
@@ -94,7 +88,7 @@ public class StringResponseConverterFunctionTest {
     }
 
     @Test
-    public void charset() throws Exception {
+    void charset() throws Exception {
         final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.OK,
                                                            HttpHeaderNames.CONTENT_TYPE,
                                                            "text/plain; charset=euc-kr");
