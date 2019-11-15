@@ -40,15 +40,16 @@ import io.dropwizard.validation.PortRange;
 
 public abstract class ArmeriaProxyConnectorFactory implements ConnectorFactory, ArmeriaServerDecorator {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ArmeriaProxyConnectorFactory.class);
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaProxyConnectorFactory.class);
 
     // Default from ServerBuilder
     @JsonProperty
     private @MinSize(0) @MaxSize(Integer.MAX_VALUE) Size maxTlvSize = Size.bytes(65535 - 216);
 
     @JsonProperty
-    private @PortRange int port = 8082;
+    private @PortRange int port = 8080;
 
+    @Nullable
     @Override
     public Connector build(Server server, MetricRegistry metrics, String name,
                            @Nullable ThreadPool threadPool) {
@@ -57,7 +58,7 @@ public abstract class ArmeriaProxyConnectorFactory implements ConnectorFactory, 
 
     @Override
     public void decorate(final ServerBuilder sb) throws CertificateException, SSLException {
-        LOGGER.debug("Building Armeria Proxy Server");
+        logger.debug("Building Armeria Proxy Server");
         sb.port(getPort(), getSessionProtocols())
           .proxyProtocolMaxTlvSize((int) getMaxTlvSize().toBytes());
         // are there other proxy settings?

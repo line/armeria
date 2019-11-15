@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -38,14 +39,14 @@ public class ArmeriaHttpConnectorFactory extends HttpConnectorFactory
         implements ArmeriaServerDecorator {
 
     public static final String TYPE = "armeria-http";
-    private static final Logger LOGGER = LoggerFactory.getLogger(ArmeriaHttpConnectorFactory.class);
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaHttpConnectorFactory.class);
 
     /**
-     * Builds an instance of {@link ArmeriaHttpConnectorFactory} on port 8082.
+     * Builds an instance of {@link ArmeriaHttpConnectorFactory} on port 8080.
      */
     public static @Valid ConnectorFactory build() {
         final ArmeriaHttpConnectorFactory factory = new ArmeriaHttpConnectorFactory();
-        factory.setPort(8082);
+        factory.setPort(8080);
         return factory;
     }
 
@@ -61,11 +62,11 @@ public class ArmeriaHttpConnectorFactory extends HttpConnectorFactory
 
     @Override
     public void decorate(final ServerBuilder sb) {
-        LOGGER.debug("Building Armeria HTTP Server");
+        logger.debug("Building Armeria HTTP Server");
         buildHttpServer(sb).port(getPort(), getSessionProtocols());
     }
 
-    // visible for testing
+    @VisibleForTesting
     ServerBuilder buildHttpServer(ServerBuilder sb) {
         return sb.http1MaxHeaderSize((int) getMaxResponseHeaderSize().toBytes())
                  .http1MaxChunkSize((int) maxChunkSize.toBytes())

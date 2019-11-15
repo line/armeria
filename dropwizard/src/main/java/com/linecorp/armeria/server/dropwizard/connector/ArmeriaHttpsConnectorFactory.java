@@ -23,13 +23,16 @@ import java.util.Objects;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -41,10 +44,10 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
         implements ArmeriaServerDecorator {
 
     public static final String TYPE = "armeria-https";
-    private static final Logger LOGGER = LoggerFactory.getLogger(ArmeriaHttpsConnectorFactory.class);
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaHttpsConnectorFactory.class);
 
     /**
-     * Builds an instance of {@link ArmeriaHttpsConnectorFactory} on port 8082
+     * Builds an instance of {@link ArmeriaHttpsConnectorFactory} on port 8080
      * which does not use a self-signed certificate.
      *
      * @param keyCertChainPath path to a key cert chain
@@ -58,7 +61,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
     }
 
     /**
-     * Builds an instance of {@code ArmeriaHttpsConnectorFactory} on port 8082
+     * Builds an instance of {@code ArmeriaHttpsConnectorFactory} on port 8080
      * and sets if a self-signed certificate is used.
      *
      * @param keyCertChainPath path to a key cert chain
@@ -71,7 +74,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
                                                 @Nullable final String keyStorePassword,
                                                 final boolean certIsSelfSigned) {
         final ArmeriaHttpsConnectorFactory factory = new ArmeriaHttpsConnectorFactory();
-        factory.setPort(8082);
+        factory.setPort(8080);
         factory.setKeyCertChainFile(keyCertChainPath);
         factory.setKeyStorePath(Objects.requireNonNull(keyStorePath, "keyStorePath must not be null"));
         factory.setKeyStorePassword(keyStorePassword);
@@ -83,6 +86,17 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
     private String keyCertChainFile;
     @JsonProperty
     private boolean selfSigned;
+
+    @JsonProperty
+    private @Min(0) int initialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
+    @JsonProperty
+    private @Min(0) int initialStreamingWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
+    @JsonProperty
+    private @Min(0) int maxFrameSize = Flags.defaultHttp2MaxFrameSize();
+    @JsonProperty
+    private @Min(0L) long maxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
+    @JsonProperty
+    private @Min(0L) long maxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
 
     public ArmeriaHttpsConnectorFactory() {
     }
@@ -105,13 +119,20 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
 
     @Override
     public void decorate(ServerBuilder sb) throws SSLException, CertificateException {
-        LOGGER.debug("Building Armeria HTTPS Server");
+        logger.debug("Building Armeria HTTPS Server");
+
         buildTlsServer(sb, getKeyCertChainFile(),
                        Objects.requireNonNull(getKeyStorePath(), TYPE + " keyStorePath must not be null"))
-                .port(getPort(), getSessionProtocols());
+                .port(getPort(), getSessionProtocols())
+                .http2InitialConnectionWindowSize(initialConnectionWindowSize)
+                .http2InitialStreamWindowSize(initialStreamingWindowSize)
+                .http2MaxFrameSize(maxFrameSize)
+                .http2MaxStreamsPerConnection(maxStreamsPerConnection)
+                .http2MaxHeaderListSize(maxHeaderListSize);
+        // more HTTP/2 settings?
     }
 
-    // visible for testing
+    @VisibleForTesting
     ServerBuilder buildTlsServer(final ServerBuilder sb,
                                  final String keyCertChainFile,
                                  final String keyStoreFile) throws SSLException, CertificateException {
@@ -128,11 +149,11 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
                     if (isValidKeyStorePassword()) {
                         sb.tls(_keyCertChainFile, _keyStoreFile, getKeyStorePassword());
                     } else {
-                        LOGGER.warn("keyStorePassword is not valid. Continuing to configure server without it");
+                        logger.warn("keyStorePassword is not valid. Continuing to configure server without it");
                         sb.tls(_keyCertChainFile, _keyStoreFile);
                     }
                 } catch (SSLException e) {
-                    LOGGER.error("Error building server with protocol " + protocol, e);
+                    logger.error("Error building server with protocol " + protocol, e);
                     throw e;
                 }
                 // more TLS settings?
@@ -144,6 +165,46 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
             throw new SSLException("No protocols in " + sessionProtocols + " use TLS.");
         }
         return sb;
+    }
+
+    public int getInitialConnectionWindowSize() {
+        return initialConnectionWindowSize;
+    }
+
+    public void setInitialConnectionWindowSize(final int initialConnectionWindowSize) {
+        this.initialConnectionWindowSize = initialConnectionWindowSize;
+    }
+
+    public int getInitialStreamingWindowSize() {
+        return initialStreamingWindowSize;
+    }
+
+    public void setInitialStreamingWindowSize(final int initialStreamingWindowSize) {
+        this.initialStreamingWindowSize = initialStreamingWindowSize;
+    }
+
+    public int getMaxFrameSize() {
+        return maxFrameSize;
+    }
+
+    public void setMaxFrameSize(final int maxFrameSize) {
+        this.maxFrameSize = maxFrameSize;
+    }
+
+    public long getMaxStreamsPerConnection() {
+        return maxStreamsPerConnection;
+    }
+
+    public void setMaxStreamsPerConnection(final long maxStreamsPerConnection) {
+        this.maxStreamsPerConnection = maxStreamsPerConnection;
+    }
+
+    public long getMaxHeaderListSize() {
+        return maxHeaderListSize;
+    }
+
+    public void setMaxHeaderListSize(final long maxHeaderListSize) {
+        this.maxHeaderListSize = maxHeaderListSize;
     }
 
     @Override

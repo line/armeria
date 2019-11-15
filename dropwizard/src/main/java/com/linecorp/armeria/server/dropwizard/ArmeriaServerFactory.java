@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 import org.eclipse.jetty.server.Handler;
@@ -36,8 +37,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.Flags;
@@ -64,7 +65,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 public class ArmeriaServerFactory extends SimpleServerFactory {
 
     public static final String TYPE = "armeria";
-    private static final Logger LOGGER = LoggerFactory.getLogger(ArmeriaServerFactory.class);
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerFactory.class);
 
     /**
      * Wrap a {@link Server} in a {@link JettyService}.
@@ -107,10 +108,10 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
         }
         if (writerFactory != null && !writerFactory.getWriter()
                                                    .equals(AccessLogWriter.disabled())) {
-            LOGGER.trace("Setting up Armeria AccessLogWriter");
+            logger.trace("Setting up Armeria AccessLogWriter");
             sb.accessLogWriter(writerFactory.getWriter(), true);
         } else {
-            LOGGER.info("Armeria access logs will not be written");
+            logger.info("Armeria access logs will not be written");
             sb.accessLogWriter(AccessLogWriter.disabled(), true);
         }
         return sb;
@@ -125,9 +126,11 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
     @JsonProperty
     private @MinSize(0) Size maxRequestLength = Size.bytes(Flags.defaultMaxRequestLength());
     @JsonProperty
-    private boolean disableDateHeader;
+    private @Min(0) int maxNumConnections = Flags.maxNumConnections();
     @JsonProperty
-    private boolean disableServerHeader;
+    private boolean dateHeaderEnabled = true;
+    @JsonProperty
+    private boolean serverHeaderEnabled = true;
     @JsonProperty
     private boolean verboseResponses;
     @JsonProperty
@@ -146,20 +149,20 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
      * @param serverBuilder A non-production ready ServerBuilder
      * @return A production-ready ServerBuilder
      */
-    // visible for testing
+    @VisibleForTesting
     ServerBuilder decorateServerBuilderFromConfig(final ServerBuilder serverBuilder) {
         Objects.requireNonNull(serverBuilder);
-        serverBuilder.maxNumConnections(getMaxQueuedRequests());
+        serverBuilder.maxNumConnections(getMaxNumConnections());
         serverBuilder.blockingTaskExecutor(Executors.newFixedThreadPool(getMaxThreads()), true);
         serverBuilder.maxRequestLength(maxRequestLength.toBytes());
         serverBuilder.idleTimeoutMillis(getIdleThreadTimeout().toMilliseconds());
         serverBuilder.gracefulShutdownTimeout(
-                Duration.ofSeconds(30L),
+                Duration.ofMillis(getShutdownGracePeriod().toMilliseconds()),
                 Duration.ofMillis(getShutdownGracePeriod().toMilliseconds()));
-        if (isDateHeaderDisabled()) {
+        if (!isDateHeaderEnabled()) {
             serverBuilder.disableDateHeader();
         }
-        if (isServerHeaderDisabled()) {
+        if (!isServerHeaderEnabled()) {
             serverBuilder.disableServerHeader();
         }
         serverBuilder.verboseResponses(hasVerboseResponses());
@@ -181,24 +184,20 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
         this.verboseResponses = verboseResponses;
     }
 
-    @JsonGetter("disableServerHeader")
-    private boolean isServerHeaderDisabled() {
-        return disableServerHeader;
+    public boolean isDateHeaderEnabled() {
+        return dateHeaderEnabled;
     }
 
-    @JsonGetter("disableDateHeader")
-    public boolean isDateHeaderDisabled() {
-        return disableDateHeader;
+    public void setDateHeaderEnabled(final boolean dateHeaderEnabled) {
+        this.dateHeaderEnabled = dateHeaderEnabled;
     }
 
-    @JsonSetter("disableDateHeader")
-    public void disableDateHeaderDisabled(boolean disabled) {
-        this.disableDateHeader = disabled;
+    public boolean isServerHeaderEnabled() {
+        return serverHeaderEnabled;
     }
 
-    @JsonSetter("disableServerHeader")
-    public void setDisableServerHeader(boolean disabled) {
-        this.disableServerHeader = disabled;
+    public void setServerHeaderEnabled(final boolean serverHeaderEnabled) {
+        this.serverHeaderEnabled = serverHeaderEnabled;
     }
 
     @Override
@@ -239,6 +238,14 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
 
     public void setMaxRequestLength(final Size maxRequestLength) {
         this.maxRequestLength = maxRequestLength;
+    }
+
+    public int getMaxNumConnections() {
+        return maxNumConnections;
+    }
+
+    public void setMaxNumConnections(final int maxNumConnections) {
+        this.maxNumConnections = maxNumConnections;
     }
 
     @JsonIgnore
@@ -294,7 +301,7 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
     private ServerBuilder getArmeriaServerBuilder(final Server server,
                                                   @Nullable final ConnectorFactory connector,
                                                   @Nullable final MetricRegistry metricRegistry) {
-        LOGGER.debug("Building Armeria Server");
+        logger.debug("Building Armeria Server");
         final JettyService jettyService = getJettyService(server);
         final ServerBuilder serverBuilder = com.linecorp.armeria.server.Server
                 .builder()
@@ -303,7 +310,7 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
             decorateServerBuilder(serverBuilder, this.connector, accessLogWriter,
                                   DropwizardMeterRegistries.newRegistry(metricRegistry));
         } catch (SSLException | CertificateException e) {
-            LOGGER.error("Unable to define TLS Server", e);
+            logger.error("Unable to define TLS Server", e);
             // TODO: Throw an exception?
         }
         return decorateServerBuilderFromConfig(serverBuilder);

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.dropwizard;
 
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
 import io.dropwizard.Configuration;
@@ -22,8 +23,14 @@ import io.dropwizard.ConfiguredBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 
+/**
+ * A Dropwizard {@link ConfiguredBundle} that routes requests through an
+ * Armeria {@link Server} rather than the default Jetty server.
+ *
+ * @param <C> The Dropwizard {@link Configuration} type.
+ */
 public abstract class ArmeriaBundle<C extends Configuration>
-        implements ConfiguredBundle<C>, ManagedArmeriaServer.BuilderCallback {
+        implements ConfiguredBundle<C>, ArmeriaServerConfigurator {
 
     @Override
     public void initialize(Bootstrap<?> bootstrap) {
@@ -31,10 +38,10 @@ public abstract class ArmeriaBundle<C extends Configuration>
 
     @Override
     public void run(final C configuration, final Environment environment) throws Exception {
-        final ManagedArmeriaServer managedArmeriaServer = new ManagedArmeriaServer<>(configuration, this);
+        final ManagedArmeriaServer<C> managedArmeriaServer = new ManagedArmeriaServer<>(configuration, this);
         environment.lifecycle().manage(managedArmeriaServer);
     }
 
     @Override
-    public abstract void onServerBuilderReady(ServerBuilder builder);
+    public abstract void configure(ServerBuilder builder);
 }

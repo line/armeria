@@ -43,7 +43,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpConnectorFactory;
 import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpsConnectorFactory;
-import com.linecorp.armeria.server.dropwizard.connector.proxy.ArmeriaHttpProxyConnectorFactory;
 import com.linecorp.armeria.server.dropwizard.logging.AccessLogWriterFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -104,14 +103,14 @@ class ArmeriaServerFactoryTest {
     @Test
     public void testManualFactoryBuilder() {
         final ArmeriaServerFactory factory = new ArmeriaServerFactory();
-        final ConnectorFactory connector = ArmeriaHttpProxyConnectorFactory.build();
+        final ConnectorFactory connector = ArmeriaHttpConnectorFactory.build();
         final Server server = buildServer(factory, connector, DISABLED_LOG_WRITER);
 
         assertThat(server).isNotNull();
         assertThat(server.getServer()).isNotNull();
         assertThat(server.getConnectors()).isEmpty();
 
-        assertThat(factory.getConnector()).isInstanceOf(ArmeriaHttpProxyConnectorFactory.class);
+        assertThat(factory.getConnector()).isInstanceOf(ArmeriaHttpConnectorFactory.class);
 
         assertThat(factory.getServerBuilder()).isNotNull();
 

@@ -31,54 +31,50 @@ import io.dropwizard.server.ServerFactory;
 
 public class ManagedArmeriaServer<T extends Configuration> implements Managed {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ManagedArmeriaServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(ManagedArmeriaServer.class);
 
     private final @Valid T configuration;
-    private final BuilderCallback builderCallback;
+    private final ArmeriaServerConfigurator serverConfigurator;
     private Server server;
 
     /**
     * An Armeria {@link Server} wrapper class that accepts a Dropwizard Configuration
     * and initializes the Armeria {@link ServerBuilder} to be passed back to the
-    * user via a {@link BuilderCallback}.
+    * user via an {@link ArmeriaServerConfigurator}.
     *
     * @param configuration The Dropwizard configuration
-    * @param builderCallback A non-null implementation of {@link BuilderCallback}
+    * @param serverConfigurator A non-null implementation of {@link ArmeriaServerConfigurator}
     */
     public ManagedArmeriaServer(final T configuration,
-                                final BuilderCallback builderCallback) {
+                                final ArmeriaServerConfigurator serverConfigurator) {
         this.configuration = configuration;
-        this.builderCallback = Objects.requireNonNull(builderCallback, "builderCallback");
+        this.serverConfigurator = Objects.requireNonNull(serverConfigurator, "serverConfigurator");
     }
 
     @Override
     public void start() throws Exception {
-        LOGGER.trace("Getting Armeria Server Builder");
+        logger.trace("Getting Armeria Server Builder");
         final ServerFactory serverFactory = configuration.getServerFactory();
         if (!(serverFactory instanceof ArmeriaServerFactory)) {
             throw new RuntimeException("Cannot manage Armeria Server " +
                     "unless Configuration server.type=" + ArmeriaServerFactory.TYPE);
         }
         final ServerBuilder sb = ((ArmeriaServerFactory) serverFactory).getServerBuilder();
-        LOGGER.trace("Calling Builder Callback");
-        builderCallback.onServerBuilderReady(sb);
+        logger.trace("Calling Server Configurator");
+        serverConfigurator.configure(sb);
         server = sb.build();
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Built server {}", server);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Built server {}", server);
         }
-        LOGGER.info("Starting Armeria Server");
-        server.start().thenRunAsync(() -> LOGGER.info("Started Armeria Server"));
+        logger.info("Starting Armeria Server");
+        server.start().thenRunAsync(() -> logger.info("Started Armeria Server"));
     }
 
     @Override
     public void stop() throws Exception {
         if (server != null) {
-            LOGGER.info("Stopping Armeria Server");
-            server.stop().thenRunAsync(() -> LOGGER.info("Stopped Armeria Server"));
+            logger.info("Stopping Armeria Server");
+            server.stop().thenRunAsync(() -> logger.info("Stopped Armeria Server"));
         }
-    }
-
-    public interface BuilderCallback {
-        void onServerBuilderReady(ServerBuilder builder);
     }
 }

@@ -37,7 +37,7 @@ public interface ArmeriaServerDecorator {
      * @throws SSLException Thrown when configuring TLS
      * @throws CertificateException Thrown when validating certificates
      */
-    default void decorate(ServerBuilder sb) throws SSLException, CertificateException {
+    default void decorate(final ServerBuilder sb) throws SSLException, CertificateException {
         sb.port(getPort(), getSessionProtocols());
     }
 

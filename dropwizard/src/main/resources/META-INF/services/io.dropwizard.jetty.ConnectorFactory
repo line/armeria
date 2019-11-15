@@ -1,5 +1,2 @@
 com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpConnectorFactory
 com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpsConnectorFactory
-com.linecorp.armeria.server.dropwizard.connector.ArmeriaH2ConnectorFactory
-com.linecorp.armeria.server.dropwizard.connector.proxy.ArmeriaHttpProxyConnectorFactory
-com.linecorp.armeria.server.dropwizard.connector.proxy.ArmeriaHttpsProxyConnectorFactory
