@@ -52,7 +52,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
 
     private static final Function<? super EventLoopGroup, ? extends EventLoopScheduler>
             DEFAULT_EVENT_LOOP_SCHEDULER_FACTORY =
-            eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 1, 0, ImmutableList.of());
+            eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, ImmutableList.of());
 
     private static final Consumer<SslContextBuilder> DEFAULT_SSL_CONTEXT_CUSTOMIZER = b -> { /* no-op */ };
 
