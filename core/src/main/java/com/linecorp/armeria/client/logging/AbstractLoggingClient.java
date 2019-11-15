@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.Sampler;
 
@@ -46,9 +47,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractLoggingClient.class);
 
-    private final LogLevel requestLogLevel;
-    private final LogLevel successfulResponseLogLevel;
-    private final LogLevel failedResponseLogLevel;
+    private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
+    private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
     private final Function<? super HttpHeaders, ?> requestHeadersSanitizer;
     private final Function<Object, ?> requestContentSanitizer;
     private final Function<? super HttpHeaders, ?> requestTrailersSanitizer;
@@ -65,9 +65,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
      */
     AbstractLoggingClient(Client<I, O> delegate, LogLevel level) {
         this(delegate,
-             level,
-             level,
-             level,
+             log -> level,
+             log -> level,
              Function.identity(),
              Function.identity(),
              Function.identity(),
@@ -83,9 +82,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
      * {@link LogLevel}s with the specified sanitizers.
      */
     AbstractLoggingClient(Client<I, O> delegate,
-                          LogLevel requestLogLevel,
-                          LogLevel successfulResponseLogLevel,
-                          LogLevel failedResponseLogLevel,
+                          Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+                          Function<? super RequestLog, LogLevel> responseLogLevelMapper,
                           Function<? super HttpHeaders, ?> requestHeadersSanitizer,
                           Function<Object, ?> requestContentSanitizer,
                           Function<? super HttpHeaders, ?> requestTrailersSanitizer,
@@ -95,10 +93,9 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
                           Function<? super Throwable, ?> responseCauseSanitizer,
                           Sampler<? super ClientRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
-        this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
-        this.successfulResponseLogLevel = requireNonNull(successfulResponseLogLevel,
-                                                         "successfulResponseLogLevel");
-        this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
+        this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
+        this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
+
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
@@ -113,16 +110,17 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
+            ctx.log().addListener(log -> logRequest(logger, log,
+                                                    requestLogLevelMapper,
                                                     requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(log -> logResponse(logger, log, requestLogLevel,
+            ctx.log().addListener(log -> logResponse(logger, log,
+                                                     requestLogLevelMapper,
+                                                     responseLogLevelMapper,
                                                      requestHeadersSanitizer,
                                                      requestContentSanitizer,
                                                      requestHeadersSanitizer,
-                                                     successfulResponseLogLevel,
-                                                     failedResponseLogLevel,
                                                      responseHeadersSanitizer,
                                                      responseContentSanitizer,
                                                      responseTrailersSanitizer,

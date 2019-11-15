@@ -31,6 +31,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -181,6 +182,11 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     ConnectionPoolListener connectionPoolListener() {
         return connectionPoolListener;
+    }
+
+    @VisibleForTesting
+    AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
+        return addressResolverGroup;
     }
 
     @Override

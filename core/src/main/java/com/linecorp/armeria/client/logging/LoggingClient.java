@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -91,9 +92,8 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
      * {@link LogLevel}s with the specified sanitizers.
      */
     LoggingClient(HttpClient delegate,
-                  LogLevel requestLogLevel,
-                  LogLevel successfulResponseLogLevel,
-                  LogLevel failedResponseLogLevel,
+                  Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+                  Function<? super RequestLog, LogLevel> responseLogLevelMapper,
                   Function<? super HttpHeaders, ?> requestHeadersSanitizer,
                   Function<Object, ?> requestContentSanitizer,
                   Function<? super HttpHeaders, ?> requestTrailersSanitizer,
@@ -102,7 +102,7 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
                   Function<? super HttpHeaders, ?> responseTrailersSanitizer,
                   Function<? super Throwable, ?> responseCauseSanitizer,
                   Sampler<? super ClientRequestContext> sampler) {
-        super(delegate, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
+        super(delegate, requestLogLevelMapper, responseLogLevelMapper,
               requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
               responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
               responseCauseSanitizer, sampler);
