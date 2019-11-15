@@ -95,7 +95,7 @@ class BraveIntegrationTest {
     private static HelloService.AsyncIface barClient;
     private static HelloService.AsyncIface quxClient;
     private static HelloService.Iface zipClient;
-    private static WebClient poolHttpClient;
+    private static WebClient poolWebClient;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension(true) {
@@ -202,7 +202,7 @@ class BraveIntegrationTest {
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
-        poolHttpClient = WebClient.of(server.uri("/"));
+        poolWebClient = WebClient.of(server.uri("/"));
         timeoutClient = new ClientBuilder(server.uri(BINARY, "/timeout"))
                 .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
                 .build(HelloService.Iface.class);
@@ -396,7 +396,7 @@ class BraveIntegrationTest {
     @Test
     @Timeout(10000)
     void testSpanInThreadPoolHasSameTraceId() throws Exception {
-        poolHttpClient.get("pool").aggregate().get();
+        poolWebClient.get("pool").aggregate().get();
         final Span[] spans = spanReporter.take(5);
         assertThat(Arrays.stream(spans).map(Span::traceId).collect(toImmutableSet())).hasSize(1);
         assertThat(Arrays.stream(spans).map(Span::parentId)

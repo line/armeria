@@ -143,11 +143,11 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
 
     @Override
     public WebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
-        throw new UnsupportedOperationException("RPC decorator cannot be added to the HTTP client builder.");
+        throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
     }
 
     @Override
     public WebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
-        throw new UnsupportedOperationException("RPC decorator cannot be added to the HTTP client builder.");
+        throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
     }
 }

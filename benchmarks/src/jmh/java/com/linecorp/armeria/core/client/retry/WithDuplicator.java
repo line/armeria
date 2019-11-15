@@ -34,7 +34,7 @@ public class WithDuplicator extends RetryingClientBase {
 
         return WebClient.builder(baseUrl())
                         .decorator(RetryingHttpClient.builder(retryStrategy)
-                                                           .newDecorator())
+                                                     .newDecorator())
                         .build();
     }
 }

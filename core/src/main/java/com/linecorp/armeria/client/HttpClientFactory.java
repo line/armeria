@@ -247,7 +247,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         }
 
         if (clientType == WebClient.class) {
-            final WebClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
+            final WebClient client = newWebClient(uri, scheme, endpoint, options, delegate);
 
             @SuppressWarnings("unchecked")
             final T castClient = (T) client;
@@ -257,8 +257,8 @@ final class HttpClientFactory extends AbstractClientFactory {
         }
     }
 
-    private DefaultWebClient newHttpClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
-                                           HttpClient delegate) {
+    private DefaultWebClient newWebClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
+                                          HttpClient delegate) {
         return new DefaultWebClient(
                 new DefaultClientBuilderParams(this, uri, WebClient.class, options),
                 delegate, meterRegistry, scheme.sessionProtocol(), endpoint);

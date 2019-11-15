@@ -349,7 +349,7 @@ public final class Clients {
      * but with different {@link ClientOption}s. For example:
      *
      * <pre>{@code
-     * WebClient derivedHttpClient = Clients.newDerivedClient(httpClient, options -> {
+     * WebClient derivedWebClient = Clients.newDerivedClient(webClient, options -> {
      *     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
      *     builder.decorator(...);  // Add a decorator.
      *     builder.addHttpHeader(...); // Add an HTTP header.
