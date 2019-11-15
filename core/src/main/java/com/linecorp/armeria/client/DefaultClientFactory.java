@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.AsyncHttpClientBuilder.isUndefinedUri;
+import static com.linecorp.armeria.client.WebClientBuilder.isUndefinedUri;
 
 import java.net.URI;
 import java.util.ArrayList;

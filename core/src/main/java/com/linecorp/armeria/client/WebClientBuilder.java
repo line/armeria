@@ -30,14 +30,14 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
- * Creates a new HTTP client that connects to the specified {@link URI} using the builder pattern.
- * Use the factory methods in {@link AsyncHttpClient} if you do not have many options to override.
+ * Creates a new web client that connects to the specified {@link URI} using the builder pattern.
+ * Use the factory methods in {@link WebClient} if you do not have many options to override.
  * Please refer to {@link ClientBuilder} for how decorators and HTTP headers are configured
  */
-public final class AsyncHttpClientBuilder extends AbstractClientOptionsBuilder<AsyncHttpClientBuilder> {
+public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClientBuilder> {
 
     /**
-     * An undefined {@link URI} to create {@link AsyncHttpClient} without specifying {@link URI}.
+     * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
      */
     private static final URI UNDEFINED_URI = URI.create("http://undefined");
 
@@ -61,7 +61,7 @@ public final class AsyncHttpClientBuilder extends AbstractClientOptionsBuilder<A
     /**
      * Creates a new instance.
      */
-    AsyncHttpClientBuilder() {
+    WebClientBuilder() {
         uri = UNDEFINED_URI;
         scheme = null;
         endpoint = null;
@@ -73,7 +73,7 @@ public final class AsyncHttpClientBuilder extends AbstractClientOptionsBuilder<A
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    AsyncHttpClientBuilder(URI uri) {
+    WebClientBuilder(URI uri) {
         if (isUndefinedUri(uri)) {
             this.uri = uri;
         } else {
@@ -90,7 +90,7 @@ public final class AsyncHttpClientBuilder extends AbstractClientOptionsBuilder<A
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    AsyncHttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+    WebClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
         validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
 
         uri = null;
@@ -111,7 +111,7 @@ public final class AsyncHttpClientBuilder extends AbstractClientOptionsBuilder<A
     /**
      * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#ofDefault()}.
      */
-    public AsyncHttpClientBuilder factory(ClientFactory factory) {
+    public WebClientBuilder factory(ClientFactory factory) {
         this.factory = requireNonNull(factory, "factory");
         return this;
     }
@@ -119,35 +119,35 @@ public final class AsyncHttpClientBuilder extends AbstractClientOptionsBuilder<A
     /**
      * Sets the {@code path} of the client.
      */
-    public AsyncHttpClientBuilder path(String path) {
+    public WebClientBuilder path(String path) {
         this.path = requireNonNull(path, "path");
         return this;
     }
 
     /**
-     * Returns a newly-created HTTP client based on the properties of this builder.
+     * Returns a newly-created web client based on the properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
-     *                                  {@link AsyncHttpClient#builder(String)} or
-     *                                  {@link AsyncHttpClient#builder(URI)} is not an HTTP scheme
+     *                                  {@link WebClient#builder(String)} or
+     *                                  {@link WebClient#builder(URI)} is not an HTTP scheme
      */
-    public AsyncHttpClient build() {
+    public WebClient build() {
         if (uri != null) {
-            return factory.newClient(uri, AsyncHttpClient.class, buildOptions());
+            return factory.newClient(uri, WebClient.class, buildOptions());
         } else if (path != null) {
-            return factory.newClient(scheme, endpoint, path, AsyncHttpClient.class, buildOptions());
+            return factory.newClient(scheme, endpoint, path, WebClient.class, buildOptions());
         } else {
-            return factory.newClient(scheme, endpoint, AsyncHttpClient.class, buildOptions());
+            return factory.newClient(scheme, endpoint, WebClient.class, buildOptions());
         }
     }
 
     @Override
-    public AsyncHttpClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
+    public WebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the HTTP client builder.");
     }
 
     @Override
-    public AsyncHttpClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
+    public WebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the HTTP client builder.");
     }
 }

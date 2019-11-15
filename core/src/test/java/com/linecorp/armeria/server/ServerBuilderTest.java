@@ -28,8 +28,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -218,7 +218,7 @@ class ServerBuilderTest {
      */
     @Test
     void decoratorTest() throws Exception {
-        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().get();
         assertThat(res.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res.headers().contains("virtualhost_decorator")).isEqualTo(false);
@@ -226,7 +226,7 @@ class ServerBuilderTest {
         assertThat(res2.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res2.headers().contains("virtualhost_decorator")).isEqualTo(false);
 
-        final AsyncHttpClient vhostClient = AsyncHttpClient.of(clientFactory,
+        final WebClient vhostClient = WebClient.of(clientFactory,
                                                                "http://test.example.com:" + server.httpPort());
         final AggregatedHttpResponse res3 = vhostClient.get("/").aggregate().get();
         assertThat(res3.headers().get("global_decorator")).isEqualTo("true");
@@ -244,9 +244,9 @@ class ServerBuilderTest {
                                     .and().build();
         server.start().join();
 
-        final AsyncHttpClient client = AsyncHttpClient.of(clientFactory,
+        final WebClient client = WebClient.of(clientFactory,
                                                           "http://127.0.0.1:" + server.activeLocalPort());
-        final AsyncHttpClient fooClient = AsyncHttpClient.of(clientFactory,
+        final WebClient fooClient = WebClient.of(clientFactory,
                                                              "http://foo.com:" + server.activeLocalPort());
 
         assertThat(client.get("/").aggregate().join().contentUtf8()).isEqualTo("default");
@@ -287,9 +287,9 @@ class ServerBuilderTest {
         server.start().join();
 
         try {
-            final AsyncHttpClient client = AsyncHttpClient.of(clientFactory,
+            final WebClient client = WebClient.of(clientFactory,
                                                               "http://127.0.0.1:" + server.activeLocalPort());
-            final AsyncHttpClient fooClient = AsyncHttpClient.of(clientFactory,
+            final WebClient fooClient = WebClient.of(clientFactory,
                                                                  "http://foo.com:" + server.activeLocalPort());
 
             assertThat(client.get("/default_virtual_host").aggregate().join().status())

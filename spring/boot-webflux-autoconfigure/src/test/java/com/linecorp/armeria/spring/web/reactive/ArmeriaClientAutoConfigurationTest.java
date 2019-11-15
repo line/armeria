@@ -28,9 +28,8 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.reactive.function.client.WebClient;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 
 import reactor.core.publisher.Mono;
@@ -44,9 +43,9 @@ public class ArmeriaClientAutoConfigurationTest {
     static class TestConfiguration {
         @RestController
         static class TestController {
-            private final WebClient webClient;
+            private final org.springframework.web.reactive.function.client.WebClient webClient;
 
-            TestController(WebClient.Builder builder) {
+            TestController(org.springframework.web.reactive.function.client.WebClient.Builder builder) {
                 webClient = builder.build();
             }
 
@@ -70,7 +69,7 @@ public class ArmeriaClientAutoConfigurationTest {
 
     @Test
     public void shouldGetHelloFromRestController() throws Exception {
-        final AsyncHttpClient client = AsyncHttpClient.of("http://127.0.0.1:" + port);
+        final WebClient client = WebClient.of("http://127.0.0.1:" + port);
         final AggregatedHttpResponse response = client.get("/proxy?port=" + port).aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("hello");
     }

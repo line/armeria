@@ -29,7 +29,7 @@ import org.junit.Test;
 
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -86,7 +86,7 @@ public class UnaryGrpcClientTest {
 
     @Before
     public void setUp() {
-        client = new UnaryGrpcClient(AsyncHttpClient.of("http://127.0.0.1:" + server.getPort()));
+        client = new UnaryGrpcClient(WebClient.of("http://127.0.0.1:" + server.getPort()));
     }
 
     @Test

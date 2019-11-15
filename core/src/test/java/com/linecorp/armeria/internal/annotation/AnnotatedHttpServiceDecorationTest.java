@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -160,7 +160,7 @@ public class AnnotatedHttpServiceDecorationTest {
 
     @Test
     public void testDecoratingAnnotatedService() throws Exception {
-        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.uri("/"));
 
         AggregatedHttpResponse response;
 

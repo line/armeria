@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
@@ -90,11 +90,11 @@ class HttpRequestDuplicatorTest {
 
     @Test
     void longLivedRequest() {
-        final AsyncHttpClient client =
-                AsyncHttpClient.builder(server.uri("/"))
-                               .decorator(RetryingHttpClient.newDecorator(
+        final WebClient client =
+                WebClient.builder(server.uri("/"))
+                         .decorator(RetryingHttpClient.newDecorator(
                                        RetryStrategy.onServerErrorStatus(Backoff.withoutDelay())))
-                               .build();
+                         .build();
 
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/long_streaming");
         writeStreamingRequest(req, 0);

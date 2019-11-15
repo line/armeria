@@ -37,9 +37,9 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingRpcClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -301,7 +301,7 @@ public class PrometheusMetricsIntegrationTest {
 
     private static AggregatedHttpResponse makeMetricsRequest() throws ExecutionException,
                                                                       InterruptedException {
-        final AsyncHttpClient client = AsyncHttpClient.of("http://127.0.0.1:" + server.httpPort());
+        final WebClient client = WebClient.of("http://127.0.0.1:" + server.httpPort());
         return client.execute(RequestHeaders.of(HttpMethod.GET, "/internal/prometheus/metrics",
                                                 HttpHeaderNames.ACCEPT, MediaType.PLAIN_TEXT_UTF_8))
                      .aggregate().get();

@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import com.linecorp.armeria.client.AsyncHttpClientBuilder;
+import com.linecorp.armeria.client.WebClientBuilder;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 public class ArmeriaClientConfiguratorTest {
@@ -60,7 +60,7 @@ public class ArmeriaClientConfiguratorTest {
             }
 
             @Override
-            public void configure(AsyncHttpClientBuilder builder) {}
+            public void configure(WebClientBuilder builder) {}
 
             @Override
             public String toString() {

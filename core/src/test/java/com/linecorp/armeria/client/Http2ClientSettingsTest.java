@@ -77,7 +77,7 @@ public class Http2ClientSettingsTest {
 
             final int port = ss.getLocalPort();
 
-            final AsyncHttpClient client = AsyncHttpClient.of(clientFactory, "h2c://127.0.0.1:" + port);
+            final WebClient client = WebClient.of(clientFactory, "h2c://127.0.0.1:" + port);
             final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {
@@ -154,7 +154,7 @@ public class Http2ClientSettingsTest {
                                   .build()) {
 
             final int port = ss.getLocalPort();
-            final AsyncHttpClient client = AsyncHttpClient.of(clientFactory, "http://127.0.0.1:" + port);
+            final WebClient client = WebClient.of(clientFactory, "http://127.0.0.1:" + port);
             client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {

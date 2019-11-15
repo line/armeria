@@ -10,7 +10,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -22,13 +22,13 @@ import com.linecorp.armeria.server.Server;
 public class AnnotatedHttpServiceTest {
 
     private static Server server;
-    private static AsyncHttpClient client;
+    private static WebClient client;
 
     @BeforeClass
     public static void beforeClass() {
         server = newServer(0);
         server.start().join();
-        client = AsyncHttpClient.of("http://127.0.0.1:" + server.activeLocalPort());
+        client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
     }
 
     @AfterClass

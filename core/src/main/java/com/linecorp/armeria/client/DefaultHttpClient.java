@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.AsyncHttpClientBuilder.isUndefinedUri;
+import static com.linecorp.armeria.client.WebClientBuilder.isUndefinedUri;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isAbsoluteUri;
 
@@ -38,7 +38,7 @@ import com.linecorp.armeria.internal.PathAndQuery;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 
-final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements AsyncHttpClient {
+final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultHttpClient.class);
 

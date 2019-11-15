@@ -29,8 +29,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -113,10 +113,10 @@ class RetryingHttpClientLoadBalancingTest {
                     return CompletableFuture.completedFuture(null);
                 }
             };
-            final AsyncHttpClient c = AsyncHttpClient.builder("h2c://group:" + groupName)
-                                                     .decorator(RetryingHttpClient.builder(retryStrategy)
+            final WebClient c = WebClient.builder("h2c://group:" + groupName)
+                                         .decorator(RetryingHttpClient.builder(retryStrategy)
                                                                                   .newDecorator())
-                                                     .build();
+                                         .build();
 
             for (int i = 0; i < NUM_PORTS; i++) {
                 c.get(mode.path).aggregate().join();

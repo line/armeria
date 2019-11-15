@@ -33,10 +33,10 @@ import java.util.function.Function;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -151,9 +151,9 @@ public class CircuitBreakerHttpClientTest {
                               .build();
 
         final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
-                                                      .decorator(builder.mapping(mapping).newDecorator())
-                                                      .build();
+        final WebClient client = WebClient.builder(server.uri("/"))
+                                          .decorator(builder.mapping(mapping).newDecorator())
+                                          .build();
 
         ticker.addAndGet(Duration.ofMillis(1).toNanos());
         // CLOSED

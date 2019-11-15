@@ -24,7 +24,7 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -117,8 +117,8 @@ class AnnotatedServiceBindingBuilderTest {
     }
 
     private static AggregatedHttpResponse get(String path) {
-        final AsyncHttpClient httpClient = AsyncHttpClient.of(server.httpUri("/"));
-        return httpClient.get(path).aggregate().join();
+        final WebClient webClient = WebClient.of(server.httpUri("/"));
+        return webClient.get(path).aggregate().join();
     }
 
     private static class TestService {

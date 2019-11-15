@@ -20,13 +20,13 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -53,19 +53,19 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  */
 public class UnaryGrpcClient {
 
-    private final AsyncHttpClient httpClient;
+    private final WebClient webClient;
 
     /**
-     * Constructs a {@link UnaryGrpcClient} for the given {@link AsyncHttpClient}.
+     * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient}.
      */
     // TODO(anuraaga): We would ideally use our standard client building pattern, i.e.,
     // new ClientBuilder(...).build(UnaryGrpcClient.class), but that requires mapping protocol schemes to media
     // types, which cannot be duplicated. As this and normal gproto+ clients must use the same media type, we
     // cannot currently implement this without rethinking / refactoring core and punt for now since this is an
     // advanced API.
-    public UnaryGrpcClient(AsyncHttpClient httpClient) {
-        this.httpClient = Clients.newDerivedClient(
-                httpClient,
+    public UnaryGrpcClient(WebClient webClient) {
+        this.webClient = Clients.newDerivedClient(
+                webClient,
                 ClientOption.DECORATION.newValue(
                         ClientDecoration.of(GrpcFramingDecorator::new)
                 ));
@@ -86,8 +86,8 @@ public class UnaryGrpcClient {
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto",
                                   HttpHeaderNames.TE, HttpHeaderValues.TRAILERS),
                 HttpData.wrap(payload));
-        return httpClient.execute(request).aggregate()
-                         .thenApply(msg -> {
+        return webClient.execute(request).aggregate()
+                        .thenApply(msg -> {
                              if (!HttpStatus.OK.equals(msg.status())) {
                                  throw new ArmeriaStatusException(
                                          StatusCodes.INTERNAL,

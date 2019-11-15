@@ -240,8 +240,8 @@ final class HttpClientFactory extends AbstractClientFactory {
             return castClient;
         }
 
-        if (clientType == AsyncHttpClient.class) {
-            final AsyncHttpClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
+        if (clientType == WebClient.class) {
+            final WebClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
 
             @SuppressWarnings("unchecked")
             final T castClient = (T) client;
@@ -254,15 +254,15 @@ final class HttpClientFactory extends AbstractClientFactory {
     private DefaultHttpClient newHttpClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
                                             HttpClient delegate) {
         return new DefaultHttpClient(
-                new DefaultClientBuilderParams(this, uri, AsyncHttpClient.class, options),
+                new DefaultClientBuilderParams(this, uri, WebClient.class, options),
                 delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
     }
 
     private static void validateClientType(Class<?> clientType) {
-        if (clientType != AsyncHttpClient.class && clientType != HttpClient.class) {
+        if (clientType != WebClient.class && clientType != HttpClient.class) {
             throw new IllegalArgumentException(
                     "clientType: " + clientType +
-                    " (expected: " + AsyncHttpClient.class.getSimpleName() + " or " +
+                    " (expected: " + WebClient.class.getSimpleName() + " or " +
                     HttpClient.class.getSimpleName() + ')');
         }
     }

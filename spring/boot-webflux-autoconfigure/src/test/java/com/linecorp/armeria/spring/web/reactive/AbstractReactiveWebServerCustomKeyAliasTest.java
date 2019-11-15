@@ -30,8 +30,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.web.server.LocalServerPort;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.WebClient;
 
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 
@@ -65,7 +65,7 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
                                   .build()) {
 
             // Send a request to make the TrustManager record the certificate.
-            final AsyncHttpClient client = AsyncHttpClient.of(clientFactory, "h2://127.0.0.1:" + port);
+            final WebClient client = WebClient.of(clientFactory, "h2://127.0.0.1:" + port);
             client.get("/").drainAll().join();
 
             assertThat(actualKeyName).hasValue(expectedKeyName);

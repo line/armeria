@@ -30,11 +30,11 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
@@ -56,7 +56,7 @@ import io.netty.channel.EventLoop;
 import okhttp3.Protocol;
 
 @RunWith(Parameterized.class)
-public class BraveClientIntegrationTest extends ITHttpAsyncClient<AsyncHttpClient> {
+public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     @Parameters
     public static List<SessionProtocol> sessionProtocols() {
@@ -92,9 +92,9 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<AsyncHttpClien
     }
 
     @Override
-    protected AsyncHttpClient newClient(int port) {
-        return AsyncHttpClient.of(sessionProtocol.uriText() + "://127.0.0.1:" + port,
-                                  ClientOptions.of(ClientOption.DECORATION.newValue(
+    protected WebClient newClient(int port) {
+        return WebClient.of(sessionProtocol.uriText() + "://127.0.0.1:" + port,
+                            ClientOptions.of(ClientOption.DECORATION.newValue(
                                           ClientDecoration.builder()
                                                           .add(BraveClient.newDecorator(httpTracing))
                                                           .build())));
@@ -143,21 +143,21 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<AsyncHttpClien
     }
 
     @Override
-    protected void closeClient(AsyncHttpClient client) {
+    protected void closeClient(WebClient client) {
     }
 
     @Override
-    protected void get(AsyncHttpClient client, String pathIncludingQuery) {
+    protected void get(WebClient client, String pathIncludingQuery) {
         client.get(pathIncludingQuery).aggregate().join();
     }
 
     @Override
-    protected void post(AsyncHttpClient client, String pathIncludingQuery, String body) {
+    protected void post(WebClient client, String pathIncludingQuery, String body) {
         client.post(pathIncludingQuery, body).aggregate().join();
     }
 
     @Override
-    protected void getAsync(AsyncHttpClient client, String pathIncludingQuery) throws Exception {
+    protected void getAsync(WebClient client, String pathIncludingQuery) throws Exception {
         client.get(pathIncludingQuery);
     }
 

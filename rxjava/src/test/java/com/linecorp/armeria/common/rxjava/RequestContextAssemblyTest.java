@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -104,7 +104,7 @@ public class RequestContextAssemblyTest {
     public void enableTracking() throws Exception {
         try {
             RequestContextAssembly.enable();
-            final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
+            final WebClient client = WebClient.of(rule.uri("/"));
             assertThat(client.execute(RequestHeaders.of(HttpMethod.GET, "/foo")).aggregate().get().status())
                     .isEqualTo(HttpStatus.OK);
         } finally {
@@ -114,7 +114,7 @@ public class RequestContextAssemblyTest {
 
     @Test
     public void withoutTracking() throws Exception {
-        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.uri("/"));
         assertThat(client.execute(RequestHeaders.of(HttpMethod.GET, "/foo")).aggregate().get().status())
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -126,7 +126,7 @@ public class RequestContextAssemblyTest {
             calledFlag.incrementAndGet();
             return single;
         });
-        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.uri("/"));
         client.execute(RequestHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
         assertThat(calledFlag.get()).isEqualTo(3);
 

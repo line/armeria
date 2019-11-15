@@ -23,7 +23,7 @@ import java.net.ServerSocket;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -273,7 +273,7 @@ public class RedirectServiceTest {
                 null
         };
 
-        final AsyncHttpClient client = AsyncHttpClient.of(serverRule1.uri("/"));
+        final WebClient client = WebClient.of(serverRule1.uri("/"));
         for (int i = 0; i < testPaths.length; ++i) {
             AggregatedHttpResponse res = client.get(testPaths[i]).aggregate().get();
             assertThat(res.status()).isEqualTo(redirectStatuses[i]);
@@ -286,7 +286,7 @@ public class RedirectServiceTest {
             }
 
             if (newLocation.startsWith("http")) {
-                final AsyncHttpClient client2 = AsyncHttpClient.of(newLocation);
+                final WebClient client2 = WebClient.of(newLocation);
                 res = client2.get("").aggregate().get();
             } else {
                 res = client.get(newLocation).aggregate().get();
@@ -370,7 +370,7 @@ public class RedirectServiceTest {
     public void testMisconfiguredPathParams3() throws Exception {
         serverRule2c.start();
 
-        final AsyncHttpClient client = AsyncHttpClient.of(serverRule2c.uri("/"));
+        final WebClient client = WebClient.of(serverRule2c.uri("/"));
         AggregatedHttpResponse res = client.get("/test1a/qwe/asd/zxc").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
 

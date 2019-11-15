@@ -26,8 +26,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -70,7 +70,7 @@ class PortUnificationServerTest {
     @ParameterizedTest
     @ArgumentsSource(UniqueProtocolsProvider.class)
     void test(SessionProtocol protocol) throws Exception {
-        final AsyncHttpClient client = AsyncHttpClient.of(clientFactory, server.uri(protocol, "/"));
+        final WebClient client = WebClient.of(clientFactory, server.uri(protocol, "/"));
         final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))
                                                       .aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo(protocol.name());

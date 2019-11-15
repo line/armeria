@@ -16,23 +16,22 @@ Both behave the same except for the different request and response types.
 So, let's find out what we can do with :api:`RetryingHttpClient`.
 
 ``RetryingHttpClient``
-------------------
+----------------------
 
-You can just use the ``decorator()`` method in :api:`ClientBuilder` or :api:`AsyncHttpClientBuilder` to build a
+You can just use the ``decorator()`` method in :api:`ClientBuilder` or :api:`WebClientBuilder` to build a
 :api:`RetryingHttpClient`. For example:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.AsyncHttpClient;
     import com.linecorp.armeria.client.retry.RetryingHttpClient;
     import com.linecorp.armeria.client.retry.RetryStrategy;
+    import com.linecorp.armeria.client.WebClient;
     import com.linecorp.armeria.common.AggregatedHttpResponse;
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    AsyncHttpClient client = AsyncHttpClient
-            .builder("http://example.com/hello")
-            .decorator(RetryingHttpClient.newDecorator(strategy))
-            .build();
+    WebClient client = WebClient.builder("http://example.com/hello")
+                                .decorator(RetryingHttpClient.newDecorator(strategy))
+                                .build();
 
     AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
@@ -136,7 +135,7 @@ You can return a different :api:`Backoff` according to the response status.
     };
 
 If you need to determine whether you need to retry by looking into the response content, you should implement
-:api:`RetryStrategyWithContent` and specify it when you create an :api:`AsyncHttpClient`
+:api:`RetryStrategyWithContent` and specify it when you create an :api:`WebClient`
 using :api:`RetryingHttpClientBuilder`:
 
 .. code-block:: java
@@ -167,8 +166,8 @@ using :api:`RetryingHttpClientBuilder`:
             }
         };
 
-    // Create an AsyncHttpClient with a custom strategy.
-    AsyncHttpClient client = AsyncHttpClient
+    // Create an WebClient with a custom strategy.
+    WebClient client = WebClient
             .builder(...)
             .decorator(RetryingHttpClient.builder(strategy)
                                          .newDecorator())
@@ -327,11 +326,10 @@ requests and responses, decorate :api:`LoggingClient` with :api:`RetryingHttpCli
 .. code-block:: java
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    AsyncHttpClient client = AsyncHttpClient
-            .builder(...)
-            .decorator(LoggingClient.newDecorator())
-            .decorator(RetryingHttpClient.newDecorator(strategy))
-            .build();
+    WebClient client = WebClient.builder(...)
+                                .decorator(LoggingClient.newDecorator())
+                                .decorator(RetryingHttpClient.newDecorator(strategy))
+                                .build();
 
 This will produce following logs when there are three attempts:
 
@@ -359,11 +357,10 @@ do the reverse:
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
     // Note the order of decoration.
-    AsyncHttpClient client = AsyncHttpClient
-            .builder(...)
-            .decorator(RetryingHttpClient.newDecorator(strategy))
-            .decorator(LoggingClient.newDecorator())
-            .build();
+    WebClient client = WebClient.builder(...)
+                                .decorator(RetryingHttpClient.newDecorator(strategy))
+                                .decorator(LoggingClient.newDecorator())
+                                .build();
 
 This will produce single request and response log pair and the total number of attempts only, regardless
 how many attempts are made:
@@ -390,13 +387,12 @@ You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClien
     CircuitBreakerStrategy cbStrategy = CircuitBreakerStrategy.onServerErrorStatus();
     RetryStrategy myRetryStrategy = new RetryStrategy() { ... };
 
-    AsyncHttpClient client = AsyncHttpClient
-            .builder(...)
-            .decorator(CircuitBreakerHttpClient.builder(cbStrategy)
-                                               .newDecorator())
-            .decorator(RetryingHttpClient.builder(myRetryStrategy)
-                                         .newDecorator())
-            .build();
+    WebClient client = WebClient.builder(...)
+                                .decorator(CircuitBreakerHttpClient.builder(cbStrategy)
+                                                                   .newDecorator())
+                                .decorator(RetryingHttpClient.builder(myRetryStrategy)
+                                                             .newDecorator())
+                                .build();
 
     AggregatedHttpResponse res = client.execute(...).aggregate().join();
 

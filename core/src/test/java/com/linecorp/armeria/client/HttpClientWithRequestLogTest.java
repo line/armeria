@@ -48,13 +48,13 @@ class HttpClientWithRequestLogTest {
 
     @Test
     void exceptionRaisedInDecorator() {
-        final AsyncHttpClient client =
-                AsyncHttpClient.builder(LOCAL_HOST)
-                               .decorator((delegate, ctx, req1) -> {
+        final WebClient client =
+                WebClient.builder(LOCAL_HOST)
+                         .decorator((delegate, ctx, req1) -> {
                                    throw new AnticipatedException();
                                })
-                               .decorator(new ExceptionHoldingDecorator())
-                               .build();
+                         .decorator(new ExceptionHoldingDecorator())
+                         .build();
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
@@ -72,15 +72,15 @@ class HttpClientWithRequestLogTest {
 
     @Test
     void invalidPath() {
-        final AsyncHttpClient client =
-                AsyncHttpClient.builder(LOCAL_HOST)
-                               .decorator((delegate, ctx, req) -> {
+        final WebClient client =
+                WebClient.builder(LOCAL_HOST)
+                         .decorator((delegate, ctx, req) -> {
                                    final HttpRequest badReq = HttpRequest.of(
                                            req, req.headers().toBuilder().path("/%").build());
                                    return delegate.execute(ctx, badReq);
                                })
-                               .decorator(new ExceptionHoldingDecorator())
-                               .build();
+                         .decorator(new ExceptionHoldingDecorator())
+                         .build();
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
@@ -98,15 +98,15 @@ class HttpClientWithRequestLogTest {
     void unresolvedUri() {
         final AtomicReference<ClientConnectionTimings> ref = new AtomicReference<>();
 
-        final AsyncHttpClient client =
-                AsyncHttpClient.builder("http://unresolved.armeria.com")
-                               .decorator(new ExceptionHoldingDecorator())
-                               .decorator((delegate, ctx, req) -> {
+        final WebClient client =
+                WebClient.builder("http://unresolved.armeria.com")
+                         .decorator(new ExceptionHoldingDecorator())
+                         .decorator((delegate, ctx, req) -> {
                                    ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
                                                          RequestLogAvailability.REQUEST_START);
                                    return delegate.execute(ctx, req);
                                })
-                               .build();
+                         .build();
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get()).isInstanceOf(Exception.class);
@@ -130,15 +130,15 @@ class HttpClientWithRequestLogTest {
         final AtomicReference<ClientConnectionTimings> ref = new AtomicReference<>();
 
         // According to rfc7805, TCP port number 1 is not used so a connection error always happens.
-        final AsyncHttpClient client =
-                AsyncHttpClient.builder("http://127.0.0.1:1")
-                               .decorator(new ExceptionHoldingDecorator())
-                               .decorator((delegate, ctx, req) -> {
+        final WebClient client =
+                WebClient.builder("http://127.0.0.1:1")
+                         .decorator(new ExceptionHoldingDecorator())
+                         .decorator((delegate, ctx, req) -> {
                                    ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
                                                          RequestLogAvailability.REQUEST_START);
                                    return delegate.execute(ctx, req);
                                })
-                               .build();
+                         .build();
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
                 .hasCauseInstanceOf(UnprocessedRequestException.class)

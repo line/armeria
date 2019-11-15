@@ -39,7 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -165,7 +165,7 @@ public class GrpcDocServiceTest {
         // when building a DocService, so we add them manually here.
         addExamples(expectedJson);
 
-        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
@@ -186,7 +186,7 @@ public class GrpcDocServiceTest {
 
     @Test
     public void excludeAllServices() throws IOException {
-        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());

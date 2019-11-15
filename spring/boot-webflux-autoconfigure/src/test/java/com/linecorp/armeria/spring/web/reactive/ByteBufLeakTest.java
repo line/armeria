@@ -45,7 +45,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -117,7 +117,7 @@ public class ByteBufLeakTest {
     @Test
     public void confirmNoBufferLeak() throws Exception {
         assert allocatedBuffers.isEmpty();
-        final AsyncHttpClient client = AsyncHttpClient.of("http://127.0.0.1:" + port);
+        final WebClient client = WebClient.of("http://127.0.0.1:" + port);
         for (int i = 0; i < 2; i++) {
             assertThat(client.get("/mono").aggregate().join().contentUtf8())
                     .isEqualTo("hello, WebFlux!");

@@ -22,7 +22,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.ServerPort;
 public abstract class RetryingClientBase {
 
     private Server server;
-    private AsyncHttpClient client;
+    private WebClient client;
 
     @Setup
     public void start() {
@@ -51,7 +51,7 @@ public abstract class RetryingClientBase {
         server.stop().join();
     }
 
-    protected abstract AsyncHttpClient newClient();
+    protected abstract WebClient newClient();
 
     protected String baseUrl() {
         final ServerPort httpPort = server.activePorts().values().stream()

@@ -31,20 +31,20 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
- * An asynchronous HTTP client.
+ * An asynchronous web client.
  */
-public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
+public interface WebClient extends ClientBuilderParams, Unwrappable {
 
     /**
-     * Creates a new HTTP client without a base URI using the default {@link ClientFactory} and
+     * Creates a new web client without a base URI using the default {@link ClientFactory} and
      * the default {@link ClientOptions}.
      */
-    static AsyncHttpClient of() {
+    static WebClient of() {
         return builder().options(ClientOptions.of()).build();
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@code uri} using the default
+     * Creates a new web client that connects to the specified {@code uri} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
@@ -52,12 +52,12 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
-    static AsyncHttpClient of(String uri, ClientOptionValue<?>... options) {
+    static WebClient of(String uri, ClientOptionValue<?>... options) {
         return of(ClientFactory.ofDefault(), uri, options);
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@code uri} using the default
+     * Creates a new web client that connects to the specified {@code uri} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
@@ -65,12 +65,12 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
-    static AsyncHttpClient of(String uri, ClientOptions options) {
+    static WebClient of(String uri, ClientOptions options) {
         return of(ClientFactory.ofDefault(), uri, options);
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@code uri} using an alternative
+     * Creates a new web client that connects to the specified {@code uri} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -79,12 +79,12 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
-    static AsyncHttpClient of(ClientFactory factory, String uri, ClientOptionValue<?>... options) {
+    static WebClient of(ClientFactory factory, String uri, ClientOptionValue<?>... options) {
         return builder(uri).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@code uri} using an alternative
+     * Creates a new web client that connects to the specified {@code uri} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -93,12 +93,12 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
-    static AsyncHttpClient of(ClientFactory factory, String uri, ClientOptions options) {
+    static WebClient of(ClientFactory factory, String uri, ClientOptions options) {
         return builder(uri).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link URI} using the default
+     * Creates a new web client that connects to the specified {@link URI} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
@@ -106,12 +106,12 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
-    static AsyncHttpClient of(URI uri, ClientOptionValue<?>... options) {
+    static WebClient of(URI uri, ClientOptionValue<?>... options) {
         return of(ClientFactory.ofDefault(), uri, options);
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link URI} using the default
+     * Creates a new web client that connects to the specified {@link URI} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
@@ -119,12 +119,12 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
-    static AsyncHttpClient of(URI uri, ClientOptions options) {
+    static WebClient of(URI uri, ClientOptions options) {
         return of(ClientFactory.ofDefault(), uri, options);
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link URI} using an alternative
+     * Creates a new web client that connects to the specified {@link URI} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -133,12 +133,12 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
-    static AsyncHttpClient of(ClientFactory factory, URI uri, ClientOptionValue<?>... options) {
+    static WebClient of(ClientFactory factory, URI uri, ClientOptionValue<?>... options) {
         return builder(uri).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link URI} using an alternative
+     * Creates a new web client that connects to the specified {@link URI} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -147,36 +147,36 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
-    static AsyncHttpClient of(ClientFactory factory, URI uri, ClientOptions options) {
+    static WebClient of(ClientFactory factory, URI uri, ClientOptions options) {
         return builder(uri).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * Creates a new web client that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using the default {@link ClientFactory}.
      *
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptionValue}s
      */
-    static AsyncHttpClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptionValue<?>... options) {
+    static WebClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptionValue<?>... options) {
         return of(ClientFactory.ofDefault(), protocol, endpoint, options);
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * Creates a new web client that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using the default {@link ClientFactory}.
      *
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptions}
      */
-    static AsyncHttpClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptions options) {
+    static WebClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptions options) {
         return of(ClientFactory.ofDefault(), protocol, endpoint, options);
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * Creates a new web client that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -184,13 +184,13 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptionValue}s
      */
-    static AsyncHttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
-                              ClientOptionValue<?>... options) {
+    static WebClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
+                        ClientOptionValue<?>... options) {
         return builder(protocol, endpoint).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * Creates a new web client that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -198,47 +198,47 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptions}
      */
-    static AsyncHttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
-                              ClientOptions options) {
+    static WebClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
+                        ClientOptions options) {
         return builder(protocol, endpoint).factory(factory).options(options).build();
     }
 
     /**
-     * Returns a new {@link AsyncHttpClientBuilder} created without a base {@link URI}.
+     * Returns a new {@link WebClientBuilder} created without a base {@link URI}.
      */
-    static AsyncHttpClientBuilder builder() {
-        return new AsyncHttpClientBuilder();
+    static WebClientBuilder builder() {
+        return new WebClientBuilder();
     }
 
     /**
-     * Returns a new {@link AsyncHttpClientBuilder} created with the specified base {@code uri}.
+     * Returns a new {@link WebClientBuilder} created with the specified base {@code uri}.
      *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol} or the uri violates RFC 2396
      */
-    static AsyncHttpClientBuilder builder(String uri) {
+    static WebClientBuilder builder(String uri) {
         return builder(URI.create(requireNonNull(uri, "uri")));
     }
 
     /**
-     * Returns a new {@link AsyncHttpClientBuilder} created with the specified base {@link URI}.
+     * Returns a new {@link WebClientBuilder} created with the specified base {@link URI}.
      *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    static AsyncHttpClientBuilder builder(URI uri) {
-        return new AsyncHttpClientBuilder(uri);
+    static WebClientBuilder builder(URI uri) {
+        return new WebClientBuilder(uri);
     }
 
     /**
-     * Returns a new {@link AsyncHttpClientBuilder} created with the specified {@link SessionProtocol}
+     * Returns a new {@link WebClientBuilder} created with the specified {@link SessionProtocol}
      * and base {@link Endpoint}.
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    static AsyncHttpClientBuilder builder(SessionProtocol sessionProtocol, Endpoint endpoint) {
-        return new AsyncHttpClientBuilder(sessionProtocol, endpoint);
+    static WebClientBuilder builder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+        return new WebClientBuilder(sessionProtocol, endpoint);
     }
 
     /**

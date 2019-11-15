@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
@@ -95,7 +95,7 @@ public class AnnotatedHttpServiceAccessModifierTest {
 
     @Test
     public void testAccessModifier() throws Exception {
-        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.uri("/"));
 
         assertThat(client.get("/anonymous/public").aggregate().join().contentUtf8())
                 .isEqualTo("hello");

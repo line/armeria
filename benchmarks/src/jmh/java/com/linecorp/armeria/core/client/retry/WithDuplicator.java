@@ -19,7 +19,7 @@ package com.linecorp.armeria.core.client.retry;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.common.HttpResponse;
@@ -28,13 +28,13 @@ import com.linecorp.armeria.common.HttpResponse;
 public class WithDuplicator extends RetryingClientBase {
 
     @Override
-    protected AsyncHttpClient newClient() {
+    protected WebClient newClient() {
         final RetryStrategyWithContent<HttpResponse> retryStrategy =
                 (ctx, response) -> response.aggregate().handle((unused1, unused2) -> null);
 
-        return AsyncHttpClient.builder(baseUrl())
-                              .decorator(RetryingHttpClient.builder(retryStrategy)
+        return WebClient.builder(baseUrl())
+                        .decorator(RetryingHttpClient.builder(retryStrategy)
                                                            .newDecorator())
-                              .build();
+                        .build();
     }
 }

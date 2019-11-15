@@ -29,13 +29,13 @@ class HttpClientUnwrapTest {
 
     @Test
     void test() {
-        final AsyncHttpClient client =
-                AsyncHttpClient.builder()
-                               .decorator(LoggingClient.newDecorator())
-                               .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
-                               .build();
+        final WebClient client =
+                WebClient.builder()
+                         .decorator(LoggingClient.newDecorator())
+                         .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
+                         .build();
 
-        assertThat(client.as(AsyncHttpClient.class)).containsSame(client);
+        assertThat(client.as(WebClient.class)).containsSame(client);
 
         assertThat(client.as(RetryingHttpClient.class)).containsInstanceOf(RetryingHttpClient.class);
         assertThat(client.as(LoggingClient.class)).containsInstanceOf(LoggingClient.class);
@@ -51,7 +51,7 @@ class HttpClientUnwrapTest {
 
         final ClientFactory factory = client.factory();
 
-        assertThat(factory.unwrap(client, AsyncHttpClient.class)).containsSame(client);
+        assertThat(factory.unwrap(client, WebClient.class)).containsSame(client);
 
         assertThat(factory.unwrap(client, RetryingHttpClient.class))
                 .containsInstanceOf(RetryingHttpClient.class);

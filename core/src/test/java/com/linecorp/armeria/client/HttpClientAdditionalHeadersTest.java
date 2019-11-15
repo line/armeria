@@ -37,16 +37,16 @@ class HttpClientAdditionalHeadersTest {
 
     @Test
     void blacklistedHeadersMustBeFiltered() {
-        final AsyncHttpClient client =
-                AsyncHttpClient.builder(server.httpUri("/"))
-                               .decorator((delegate, ctx, req) -> {
+        final WebClient client =
+                WebClient.builder(server.httpUri("/"))
+                         .decorator((delegate, ctx, req) -> {
                                    ctx.addAdditionalRequestHeader(HttpHeaderNames.SCHEME, "https");
                                    ctx.addAdditionalRequestHeader(HttpHeaderNames.STATUS, "503");
                                    ctx.addAdditionalRequestHeader(HttpHeaderNames.METHOD, "CONNECT");
                                    ctx.addAdditionalRequestHeader("foo", "bar");
                                    return delegate.execute(ctx, req);
                                })
-                               .build();
+                         .build();
 
         assertThat(client.get("/").aggregate().join().contentUtf8())
                 .doesNotContain("=https")

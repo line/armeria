@@ -59,10 +59,10 @@ public class HttpClientTimeoutTest {
     @Test
     public void responseTimeoutH1C() throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
-            final AsyncHttpClient client = AsyncHttpClient.builder("h1c://127.0.0.1:" + ss.getLocalPort())
-                                                          .factory(factory)
-                                                          .responseTimeout(Duration.ofSeconds(1))
-                                                          .build();
+            final WebClient client = WebClient.builder("h1c://127.0.0.1:" + ss.getLocalPort())
+                                              .factory(factory)
+                                              .responseTimeout(Duration.ofSeconds(1))
+                                              .build();
 
             final HttpResponse res = client.get("/");
             try (Socket s = ss.accept()) {
@@ -85,10 +85,10 @@ public class HttpClientTimeoutTest {
     @Test
     public void responseTimeoutH2C() throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
-            final AsyncHttpClient client = AsyncHttpClient.builder("h2c://127.0.0.1:" + ss.getLocalPort())
-                                                          .factory(factory)
-                                                          .responseTimeout(Duration.ofSeconds(1))
-                                                          .build();
+            final WebClient client = WebClient.builder("h2c://127.0.0.1:" + ss.getLocalPort())
+                                              .factory(factory)
+                                              .responseTimeout(Duration.ofSeconds(1))
+                                              .build();
 
             final HttpResponse res = client.get("/");
             try (Socket s = ss.accept()) {

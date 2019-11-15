@@ -34,7 +34,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -72,7 +72,7 @@ public class ArmeriaAutoConfigurationWithConsumerTest {
 
     @Test
     public void normal() throws Exception {
-        final AsyncHttpClient client = AsyncHttpClient.of(newUrl("h1c"));
+        final WebClient client = WebClient.of(newUrl("h1c"));
 
         final HttpResponse response = client.get("/customizer");
 

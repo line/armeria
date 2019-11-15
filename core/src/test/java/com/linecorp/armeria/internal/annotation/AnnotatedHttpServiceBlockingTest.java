@@ -35,7 +35,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
-import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -146,7 +146,7 @@ class AnnotatedHttpServiceBlockingTest {
             "/myEvenLoop/completionStage, 0"
     })
     void testOnlyEventLoopWithoutBlockingAnnotation(String path, Integer count) throws Exception {
-        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
 
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
         final AggregatedHttpResponse res = client.execute(headers).aggregate().join();
@@ -162,7 +162,7 @@ class AnnotatedHttpServiceBlockingTest {
             "/myBlocking/completionStage, 1"
     })
     void testOnlyBlockingWithBlockingAnnotation(String path, Integer count) throws Exception {
-        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
 
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
         final AggregatedHttpResponse res = client.execute(headers).aggregate().join();

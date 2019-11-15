@@ -43,7 +43,7 @@ class DefaultHttpClientTest {
 
         final HttpClient mockClientDelegate = mock(HttpClient.class);
         final ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(
-                ClientFactory.ofDefault(), new URI(clientUriPath), AsyncHttpClient.class, ClientOptions.of());
+                ClientFactory.ofDefault(), new URI(clientUriPath), WebClient.class, ClientOptions.of());
         final DefaultHttpClient defaultHttpClient = new DefaultHttpClient(
                 clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
                 SessionProtocol.of("http"), Endpoint.of("127.0.0.1"));

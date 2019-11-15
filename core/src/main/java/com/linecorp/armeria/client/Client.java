@@ -55,10 +55,9 @@ public interface Client<I extends Request, O extends Response> extends Unwrappab
      * Unwraps this {@link Client} into the object of the specified {@code type}.
      * Use this method instead of an explicit downcast. For example:
      * <pre>{@code
-     * AsyncHttpClient client = AsyncHttpClient
-     *     .builder(...)
-     *     .decorator(LoggingClient.newDecorator())
-     *     .build();
+     * WebClient client = WebClient.builder(...)
+     *                             .decorator(LoggingClient.newDecorator())
+     *                             .build();
      *
      * LoggingClient unwrapped = client.as(LoggingClient.class).get();
      *
