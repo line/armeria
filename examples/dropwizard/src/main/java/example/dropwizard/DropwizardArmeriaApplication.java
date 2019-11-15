@@ -1,9 +1,5 @@
 package example.dropwizard;
 
-import java.util.Objects;
-
-import javax.validation.Valid;
-
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -29,11 +25,9 @@ public class DropwizardArmeriaApplication extends Application<DropwizardArmeriaC
 
     @Override
     public void initialize(final Bootstrap<DropwizardArmeriaConfiguration> bootstrap) {
-        final ArmeriaBundle bundle = new ArmeriaBundle<DropwizardArmeriaConfiguration>() {
+        final ArmeriaBundle bundle = new ArmeriaBundle() {
             @Override
-            public void onServerBuilderReady(final ServerBuilder builder) {
-                Objects.requireNonNull(builder);
-
+            public void configure(final ServerBuilder builder) {
                 builder.service("/", (ctx, res) -> HttpResponse.of(MediaType.HTML_UTF_8, "<h2>It works!</h2>"));
                 builder.service("/armeria", (ctx, res) -> HttpResponse.of("Hello, Armeria!"));
 
@@ -48,7 +42,7 @@ public class DropwizardArmeriaApplication extends Application<DropwizardArmeriaC
     }
 
     @Override
-    public void run(@Valid final DropwizardArmeriaConfiguration configuration,
+    public void run(final DropwizardArmeriaConfiguration configuration,
                     final Environment environment) {
         environment.jersey().register(JerseyResource.class);
 

@@ -13,5 +13,3 @@ curl -v -w "\n\n" http://localhost:8080/admin/ping
 curl -v -w "\n\n" http://localhost:8080/admin/threads
 curl -v -w "\n\n" http://localhost:8080/admin/healthcheck
 curl -v -w "\n\n" http://localhost:8080/admin/metrics
-
-

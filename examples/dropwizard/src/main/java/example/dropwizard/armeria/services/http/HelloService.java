@@ -4,19 +4,20 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.ProducesText;
 
 public class HelloService {
 
     @Get("/hello")
-    @Produces("text/plain")
-    public HttpResponse helloText() {
+    @ProducesText
+    public String helloText() {
         // Return a text document to the client.
-        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Armeria");
+        return "Armeria";
     }
 
     @Get("/hello")
-    @Produces("application/json")
+    @ProducesJson
     public HttpResponse helloJson() {
         // Return a JSON object to the client.
         return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, "{ \"name\": \"Armeria\" }");
