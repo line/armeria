@@ -3,7 +3,7 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath "com.moowork.gradle:gradle-node-plugin:${managedVersions['com.moowork.gradle:gradle-node-plugin']}"
+        classpath "com.github.node-gradle:gradle-node-plugin:${managedVersions['com.github.node-gradle:gradle-node-plugin']}"
     }
 }
 
@@ -13,7 +13,7 @@ if (rootProject.hasProperty('noWeb')) {
 }
 
 apply plugin: 'base'
-apply plugin: 'com.moowork.node'
+apply plugin: 'com.github.node-gradle.node'
 
 tasks.yarn.args += ['--frozen-lockfile']
 

@@ -48,8 +48,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -75,7 +75,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
     @Nullable
     private Server server;
 
-    SamlDecorator(SamlServiceProvider sp, Service<HttpRequest, HttpResponse> delegate) {
+    SamlDecorator(SamlServiceProvider sp, HttpService delegate) {
         super(delegate);
         this.sp = sp;
         portConfigHolder = sp.portConfigAutoFiller();

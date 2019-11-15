@@ -39,7 +39,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -109,7 +109,7 @@ public class ArmeriaSslConfigurationTest {
     }
 
     private void verify(SessionProtocol protocol) {
-        final HttpResponse response = HttpClient.of(clientFactory, newUrl(protocol)).get("/ok");
+        final HttpResponse response = WebClient.of(clientFactory, newUrl(protocol)).get("/ok");
 
         final AggregatedHttpResponse res = response.aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);

@@ -33,8 +33,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -52,9 +52,10 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import io.netty.handler.codec.DateFormatter;
 
 /**
- * A {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+ * An {@link HttpClient} decorator that handles failures of an invocation and retries HTTP requests.
  */
-public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpResponse> {
+public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpResponse>
+        implements HttpClient {
 
     private static final Logger logger = LoggerFactory.getLogger(RetryingHttpClient.class);
 
@@ -74,36 +75,39 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     }
 
     /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
+     * requests.
      *
      * @param retryStrategy the retry strategy
      */
-    public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
+    public static Function<? super HttpClient, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy) {
         return builder(retryStrategy).newDecorator();
     }
 
     /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
+     * requests.
      *
      * @param retryStrategy the retry strategy
      * @param maxTotalAttempts the maximum number of total attempts
      */
-    public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
+    public static Function<? super HttpClient, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts) {
         return builder(retryStrategy).maxTotalAttempts(maxTotalAttempts)
                                      .newDecorator();
     }
 
     /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
+     * requests.
      *
      * @param retryStrategy the retry strategy
      * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
      */
-    public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
+    public static Function<? super HttpClient, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         return builder(retryStrategy).maxTotalAttempts(maxTotalAttempts)
@@ -118,9 +122,9 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     private final boolean needsContentInStrategy;
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    RetryingHttpClient(Client<HttpRequest, HttpResponse> delegate,
+    RetryingHttpClient(HttpClient delegate,
                        RetryStrategy retryStrategy, int totalMaxAttempts,
                        long responseTimeoutMillisForEachAttempt, boolean useRetryAfter) {
         super(delegate, retryStrategy, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
@@ -130,9 +134,9 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     }
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    RetryingHttpClient(Client<HttpRequest, HttpResponse> delegate,
+    RetryingHttpClient(HttpClient delegate,
                        RetryStrategyWithContent<HttpResponse> retryStrategyWithContent, int totalMaxAttempts,
                        long responseTimeoutMillisForEachAttempt, boolean useRetryAfter,
                        int contentPreviewLength) {
@@ -158,10 +162,21 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                             CompletableFuture<HttpResponse> future) {
         final int totalAttempts = getTotalAttempts(ctx);
         final boolean initialAttempt = totalAttempts <= 1;
-        if (originalReq.completionFuture().isCompletedExceptionally() || returnedRes.isComplete()) {
-            // The request or response has been aborted by the client before it receives a response,
-            // so stop retrying.
-            handleException(ctx, rootReqDuplicator, future, AbortedStreamException.get(), initialAttempt);
+        // The request or response has been aborted by the client before it receives a response,
+        // so stop retrying.
+        if (originalReq.completionFuture().isCompletedExceptionally()) {
+            originalReq.completionFuture().handle((unused, cause) -> {
+                handleException(ctx, rootReqDuplicator, future, cause, initialAttempt);
+                return null;
+            });
+            return;
+        }
+        if (returnedRes.isComplete()) {
+            returnedRes.completionFuture().handle((result, cause) -> {
+                final Throwable abortCause = firstNonNull(cause, AbortedStreamException.get());
+                handleException(ctx, rootReqDuplicator, future, abortCause, initialAttempt);
+                return null;
+            });
             return;
         }
 
@@ -198,9 +213,11 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             } else {
                 final Throwable responseCause =
                         log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;
+                final Runnable originalResClosingTask =
+                        responseCause == null ? response::abort : () -> response.abort(responseCause);
                 retryStrategy().shouldRetry(derivedCtx, responseCause)
                                .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator, originalReq,
-                                                     returnedRes, future, response, response::abort));
+                                                     returnedRes, future, response, originalResClosingTask));
             }
         }, RequestLogAvailability.RESPONSE_HEADERS);
     }
@@ -213,7 +230,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         }
         ctx.logBuilder().endResponse(cause);
         future.completeExceptionally(cause);
-        rootReqDuplicator.abort();
+        rootReqDuplicator.abort(cause);
     }
 
     private static int maxSignalLength(long maxResponseLength) {
@@ -234,13 +251,13 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                                                HttpResponse returnedRes,
                                                                CompletableFuture<HttpResponse> future,
                                                                HttpResponse originalRes,
-                                                               Runnable closingOriginalResTask) {
+                                                               Runnable originalResClosingTask) {
         return (backoff, unused) -> {
             if (backoff != null) {
                 final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
                 final long nextDelay = getNextDelay(ctx, backoff, millisAfter);
                 if (nextDelay >= 0) {
-                    closingOriginalResTask.run();
+                    originalResClosingTask.run();
                     scheduleNextRetry(
                             ctx, cause -> handleException(ctx, rootReqDuplicator, future, cause, false),
                             () -> doExecute0(ctx, rootReqDuplicator, originalReq, returnedRes, future),

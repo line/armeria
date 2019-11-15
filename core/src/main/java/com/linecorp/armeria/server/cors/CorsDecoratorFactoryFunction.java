@@ -19,9 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 
@@ -31,13 +29,12 @@ import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunction<CorsDecorator> {
 
     @Override
-    public Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
-    newDecorator(CorsDecorator parameter) {
+    public Function<? super HttpService, ? extends HttpService> newDecorator(CorsDecorator parameter) {
         requireNonNull(parameter, "parameter");
         final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(parameter.origins());
         cb.firstPolicyBuilder.setConfig(parameter);
 
-        final Function<Service<HttpRequest, HttpResponse>, CorsService> decorator = cb.newDecorator();
+        final Function<? super HttpService, CorsService> decorator = cb.newDecorator();
         return service -> {
             if (service.as(CorsService.class).isPresent()) {
                 return service;

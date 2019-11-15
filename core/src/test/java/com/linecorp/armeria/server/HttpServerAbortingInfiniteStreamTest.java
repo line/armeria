@@ -33,7 +33,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
@@ -92,11 +92,11 @@ class HttpServerAbortingInfiniteStreamTest {
     };
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C"})
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
     void shouldCancelInfiniteStreamImmediately(SessionProtocol protocol) {
         expectedProtocol.set(protocol);
 
-        final HttpClient client = HttpClient.of(server.uri(protocol, "/"));
+        final WebClient client = WebClient.of(server.uri(protocol, "/"));
         final HttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/infinity"));
 
         response.subscribe(new Subscriber<HttpObject>() {

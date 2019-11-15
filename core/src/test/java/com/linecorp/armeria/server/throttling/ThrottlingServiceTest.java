@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -46,20 +46,20 @@ public class ThrottlingServiceTest {
     public ServerRule serverRule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/http-never", SERVICE.decorate(ThrottlingHttpService.newDecorator(never())));
-            sb.service("/http-always", SERVICE.decorate(ThrottlingHttpService.newDecorator(always())));
+            sb.service("/http-never", SERVICE.decorate(ThrottlingService.newDecorator(never())));
+            sb.service("/http-always", SERVICE.decorate(ThrottlingService.newDecorator(always())));
         }
     };
 
     @Test
     public void serve() throws Exception {
-        final HttpClient client = HttpClient.of(serverRule.uri("/"));
+        final WebClient client = WebClient.of(serverRule.uri("/"));
         assertThat(client.get("/http-always").aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
     public void throttle() throws Exception {
-        final HttpClient client = HttpClient.of(serverRule.uri("/"));
+        final WebClient client = WebClient.of(serverRule.uri("/"));
         assertThat(client.get("/http-never").aggregate().get().status())
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }

@@ -16,43 +16,53 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.net.URI;
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
-class DefaultHttpClientTest {
+class DefaultWebClientTest {
 
-    @SuppressWarnings("unchecked")
     @Test
     void testConcatenateRequestPath() throws Exception {
         final String clientUriPath = "http://127.0.0.1/hello";
         final String requestPath = "world/test?q1=foo";
 
-        final Client<HttpRequest, HttpResponse> mockClientDelegate = mock(Client.class);
+        final HttpClient mockClientDelegate = mock(HttpClient.class);
         final ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(
-                ClientFactory.ofDefault(), new URI(clientUriPath), HttpClient.class, ClientOptions.of());
-        final DefaultHttpClient defaultHttpClient = new DefaultHttpClient(
+                ClientFactory.ofDefault(), new URI(clientUriPath), WebClient.class, ClientOptions.of());
+        final DefaultWebClient defaultWebClient = new DefaultWebClient(
                 clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
                 SessionProtocol.of("http"), Endpoint.of("127.0.0.1"));
 
-        defaultHttpClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
+        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
 
         final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
 
         final String concatPath = argCaptor.getValue().path();
         assertThat(concatPath).isEqualTo("/hello/world/test?q1=foo");
+    }
+
+    @Test
+    void requestAbortPropagatesException() {
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/");
+        req.abort(new IllegalStateException("closed"));
+        assertThatThrownBy(() -> req.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IllegalStateException.class);
     }
 }

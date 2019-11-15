@@ -43,9 +43,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.DecoratorAndOrder;
-import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -311,17 +311,17 @@ class AnnotatedHttpServiceFactoryTest {
         return list.stream().map(DecoratorAndOrder::order).collect(Collectors.toList());
     }
 
-    static class Decorator1 implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    static class Decorator1 implements DecoratingHttpServiceFunction {
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate, ServiceRequestContext ctx,
+        public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx,
                                   HttpRequest req) throws Exception {
             return delegate.serve(ctx, req);
         }
     }
 
-    static class Decorator2 implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    static class Decorator2 implements DecoratingHttpServiceFunction {
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate, ServiceRequestContext ctx,
+        public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx,
                                   HttpRequest req) throws Exception {
             return delegate.serve(ctx, req);
         }
@@ -354,8 +354,7 @@ class AnnotatedHttpServiceFactoryTest {
     static class UserDefinedRepeatableDecoratorFactory
             implements DecoratorFactoryFunction<UserDefinedRepeatableDecorator> {
         @Override
-        public Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> newDecorator(
+        public Function<? super HttpService, ? extends HttpService> newDecorator(
                 UserDefinedRepeatableDecorator parameter) {
             return service -> new SimpleDecoratingHttpService(service) {
                 @Override

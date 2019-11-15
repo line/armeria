@@ -34,9 +34,8 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.logging.structured.kafka.KafkaStructuredLoggingService.KeySelector;
 
 public class KafkaStructuredLoggingServiceTest {
     @Rule
@@ -53,17 +52,7 @@ public class KafkaStructuredLoggingServiceTest {
     }
 
     @Mock
-    private static Service<HttpRequest, HttpResponse> service;
-
-    private static class KafkaStructuredLoggingServiceExposed
-            extends KafkaStructuredLoggingService<HttpRequest, HttpResponse, SimpleStructuredLog> {
-        KafkaStructuredLoggingServiceExposed(
-                Producer<byte[], SimpleStructuredLog> producer,
-                @Nullable KeySelector<SimpleStructuredLog> keySelector,
-                boolean needToCloseProducer) {
-            super(service, log -> null, producer, TOPIC_NAME, keySelector, needToCloseProducer);
-        }
-    }
+    private static HttpService service;
 
     @Mock
     private Producer<byte[], SimpleStructuredLog> producer;
@@ -71,10 +60,19 @@ public class KafkaStructuredLoggingServiceTest {
     @Captor
     private ArgumentCaptor<ProducerRecord<byte[], SimpleStructuredLog>> captor;
 
+    private static KafkaStructuredLoggingService<SimpleStructuredLog> kafkaStructuredLoggingService(
+            Producer<byte[], SimpleStructuredLog> producer,
+            @Nullable KeySelector<SimpleStructuredLog> keySelector,
+            boolean needToCloseProducer) {
+        return new KafkaStructuredLoggingService<>(
+                service, log -> null, producer, TOPIC_NAME, keySelector, needToCloseProducer);
+    }
+
     @Test
     public void testServiceWithoutKeySelector() {
-        final KafkaStructuredLoggingServiceExposed service =
-                new KafkaStructuredLoggingServiceExposed(producer, null, false);
+
+        final KafkaStructuredLoggingService<SimpleStructuredLog> service =
+                kafkaStructuredLoggingService(producer, null, false);
 
         final SimpleStructuredLog log = new SimpleStructuredLog("kawamuray");
         service.writeLog(null, log);
@@ -88,8 +86,8 @@ public class KafkaStructuredLoggingServiceTest {
 
     @Test
     public void testWithKeySelector() {
-        final KafkaStructuredLoggingServiceExposed service = new KafkaStructuredLoggingServiceExposed(
-                producer, (res, log) -> log.name.getBytes(), false);
+        final KafkaStructuredLoggingService<SimpleStructuredLog> service =
+                kafkaStructuredLoggingService(producer, (res, log) -> log.name.getBytes(), false);
 
         final SimpleStructuredLog log = new SimpleStructuredLog("kawamuray");
         service.writeLog(null, log);
@@ -104,8 +102,8 @@ public class KafkaStructuredLoggingServiceTest {
 
     @Test
     public void testCloseProducerWhenRequested() {
-        final KafkaStructuredLoggingServiceExposed service =
-                new KafkaStructuredLoggingServiceExposed(producer, null, true);
+        final KafkaStructuredLoggingService<SimpleStructuredLog> service =
+                kafkaStructuredLoggingService(producer, null, true);
 
         service.close();
         verify(producer, times(1)).close();
@@ -113,8 +111,8 @@ public class KafkaStructuredLoggingServiceTest {
 
     @Test
     public void testDoNotCloseProducerWhenNotRequested() {
-        final KafkaStructuredLoggingServiceExposed service =
-                new KafkaStructuredLoggingServiceExposed(producer, null, false);
+        final KafkaStructuredLoggingService<SimpleStructuredLog> service =
+                kafkaStructuredLoggingService(producer, null, false);
 
         service.close();
         verify(producer, times(0)).close();

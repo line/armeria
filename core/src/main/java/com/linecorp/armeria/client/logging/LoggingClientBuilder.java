@@ -16,24 +16,14 @@
 
 package com.linecorp.armeria.client.logging;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
-import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.client.HttpClient;
 
 /**
  * Builds a new {@link LoggingClient}.
  */
-public final class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientBuilder> {
-
-    private Sampler<? super ClientRequestContext> sampler = Sampler.always();
+public final class LoggingClientBuilder extends AbstractLoggingClientBuilder<LoggingClientBuilder> {
 
     /**
      * Creates a new instance.
@@ -44,47 +34,27 @@ public final class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingC
     public LoggingClientBuilder() {}
 
     /**
-     * Sets the {@link Sampler} that determines which request needs logging.
-     */
-    public LoggingClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
-        this.sampler = requireNonNull(sampler, "sampler");
-        return this;
-    }
-
-    /**
-     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
-     * cause a random sample of the requests to be logged.
-     */
-    public LoggingClientBuilder samplingRate(float samplingRate) {
-        checkArgument(0.0 <= samplingRate && samplingRate <= 1.0,
-                      "samplingRate: %s (expected: 0.0 <= samplingRate <= 1.0)", samplingRate);
-        return sampler(Sampler.random(samplingRate));
-    }
-
-    /**
      * Returns a newly-created {@link LoggingClient} decorating {@code delegate} based on the properties of
      * this builder.
      */
-    public <I extends Request, O extends Response> LoggingClient<I, O> build(Client<I, O> delegate) {
-        return new LoggingClient<>(delegate,
-                                   requestLogLevel(),
-                                   successfulResponseLogLevel(),
-                                   failedResponseLogLevel(),
-                                   requestHeadersSanitizer(),
-                                   requestContentSanitizer(),
-                                   requestTrailersSanitizer(),
-                                   responseHeadersSanitizer(),
-                                   responseContentSanitizer(),
-                                   responseTrailersSanitizer(),
-                                   responseCauseSanitizer(),
-                                   sampler);
+    public LoggingClient build(HttpClient delegate) {
+        return new LoggingClient(delegate,
+                                 requestLogLevelMapper(),
+                                 responseLogLevelMapper(),
+                                 requestHeadersSanitizer(),
+                                 requestContentSanitizer(),
+                                 requestTrailersSanitizer(),
+                                 responseHeadersSanitizer(),
+                                 responseContentSanitizer(),
+                                 responseTrailersSanitizer(),
+                                 responseCauseSanitizer(),
+                                 sampler());
     }
 
     /**
      * Returns a newly-created {@link LoggingClient} decorator based on the properties of this builder.
      */
-    public <I extends Request, O extends Response> Function<Client<I, O>, LoggingClient<I, O>>
-    newDecorator() {
+    public Function<? super HttpClient, LoggingClient> newDecorator() {
         return this::build;
     }
 }

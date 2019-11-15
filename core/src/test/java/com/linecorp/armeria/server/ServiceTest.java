@@ -19,10 +19,13 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
+import org.junit.jupiter.api.Test;
+
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -32,10 +35,10 @@ public class ServiceTest {
      * Tests if a user can write a decorator with working as() and serviceAdded() using lambda expressions only.
      */
     @Test
-    public void lambdaExpressionDecorator() throws Exception {
+    void lambdaExpressionDecorator() throws Exception {
         final FooService inner = new FooService();
-        final Service<RpcRequest, RpcResponse> outer = inner.decorate((delegate, ctx, req) -> {
-            final RpcRequest newReq = RpcRequest.of(req.serviceType(), "new_" + req.method(), req.params());
+        final HttpService outer = inner.decorate((delegate, ctx, req) -> {
+            final HttpRequest newReq = HttpRequest.of(HttpMethod.GET, "/");
             return delegate.serve(ctx, newReq);
         });
 
@@ -46,7 +49,7 @@ public class ServiceTest {
      * Tests {@link Service#decorate(Class)}.
      */
     @Test
-    public void reflectionDecorator() throws Exception {
+    void reflectionDecorator() throws Exception {
         final FooService inner = new FooService();
         final FooServiceDecorator outer = inner.decorate(FooServiceDecorator.class);
 
@@ -55,8 +58,7 @@ public class ServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    private static void assertDecoration(
-            FooService inner, Service<RpcRequest, RpcResponse> outer) throws Exception {
+    private static void assertDecoration(FooService inner, HttpService outer) throws Exception {
 
         // Test if Service.as() works as expected.
         assertThat(outer.as(serviceType(inner))).containsSame(inner);
@@ -65,8 +67,8 @@ public class ServiceTest {
 
         // Test if FooService.serviceAdded() is invoked.
         @SuppressWarnings({ "unchecked", "rawtypes" })
-        final ServiceConfig cfg = new ServiceConfig(Route.builder().catchAll().build(),
-                                                    (Service) outer, "foo", 1, 1,
+        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(),
+                                                    outer, "foo", 1, 1,
                                                     true, ContentPreviewerFactory.disabled(),
                                                     ContentPreviewerFactory.disabled(),
                                                     AccessLogWriter.disabled(), false);
@@ -79,8 +81,9 @@ public class ServiceTest {
         return (Class<Service<?, ?>>) service.getClass();
     }
 
-    private static final class FooService implements RpcService {
+    private static final class FooService implements HttpService {
 
+        @Nullable
         ServiceConfig cfg;
 
         @Override
@@ -89,26 +92,25 @@ public class ServiceTest {
         }
 
         @Override
-        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             // Will never reach here.
             throw new Error();
         }
     }
 
-    public static class FooServiceDecorator extends SimpleDecoratingRpcService {
-        public FooServiceDecorator(Service<RpcRequest, RpcResponse> delegate) {
+    public static class FooServiceDecorator extends SimpleDecoratingHttpService {
+        public FooServiceDecorator(HttpService delegate) {
             super(delegate);
         }
 
         @Override
-        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             return delegate().serve(ctx, req);
         }
     }
 
     public static class BadFooServiceDecorator extends FooServiceDecorator {
-        public BadFooServiceDecorator(Service<RpcRequest, RpcResponse> delegate,
-                                      @SuppressWarnings("unused") Object unused) {
+        public BadFooServiceDecorator(HttpService delegate, @SuppressWarnings("unused") Object unused) {
             super(delegate);
         }
     }

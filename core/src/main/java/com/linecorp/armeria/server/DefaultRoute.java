@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.RoutingResult.HIGHEST_SCORE;
@@ -85,17 +84,14 @@ final class DefaultRoute implements Route {
             return builder.build();
         }
 
-        // We need to check the method after checking the path, in order to return '405 Method Not Allowed'.
-        // If the request is a CORS preflight, we don't care whether the path mapping supports OPTIONS method.
-        // The request may be always passed into the designated service, but most of cases, it will be handled
-        // by a CorsService decorator before it reaches the final service.
-        if (!routingCtx.isCorsPreflight() && !methods.contains(routingCtx.method())) {
+        if (!methods.contains(routingCtx.method())) {
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
-            if (!routingCtx.delayedThrowable().isPresent()) {
-                routingCtx.delayThrowable(HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
+            if (routingCtx.deferredStatusException() == null) {
+                routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
             }
-            return RoutingResult.empty();
+
+            return emptyOrCorsPreflightResult(routingCtx, builder);
         }
 
         final MediaType contentType = routingCtx.contentType();
@@ -112,8 +108,8 @@ final class DefaultRoute implements Route {
                 }
             }
             if (!contentTypeMatched) {
-                routingCtx.delayThrowable(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
-                return RoutingResult.empty();
+                routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
+                return emptyOrCorsPreflightResult(routingCtx, builder);
             }
         }
 
@@ -147,11 +143,20 @@ final class DefaultRoute implements Route {
                     }
                 }
             }
-            routingCtx.delayThrowable(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
-            return RoutingResult.empty();
+            routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
+            return emptyOrCorsPreflightResult(routingCtx, builder);
         }
 
         return builder.build();
+    }
+
+    private static RoutingResult emptyOrCorsPreflightResult(RoutingContext routingCtx,
+                                                            RoutingResultBuilder builder) {
+        if (routingCtx.isCorsPreflight()) {
+            return builder.type(RoutingResultType.CORS_PREFLIGHT).build();
+        }
+
+        return RoutingResult.empty();
     }
 
     private static boolean isAnyType(MediaType contentType) {

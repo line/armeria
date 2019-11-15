@@ -65,7 +65,7 @@ class HttpResponseDecoderTest {
         final RetryStrategy strategy =
                 (ctx, cause) -> CompletableFuture.completedFuture(Backoff.withoutDelay());
 
-        final HttpClientBuilder builder = HttpClient.builder(server.uri(protocol, "/"));
+        final WebClientBuilder builder = WebClient.builder(server.uri(protocol, "/"));
         // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,
         // which means that we have more chance to reproduce the bug if two threads are racing
         // for notifying RESPONSE_END to listeners.
@@ -91,7 +91,7 @@ class HttpResponseDecoderTest {
         });
 
         // Execute it as much as we can in order to confirm that there's no problem.
-        final HttpClient client = builder.build();
+        final WebClient client = builder.build();
         final int n = 1000;
         final CountDownLatch latch = new CountDownLatch(n);
         for (int i = 0; i < n; i++) {

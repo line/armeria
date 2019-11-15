@@ -132,7 +132,7 @@ public abstract class AbstractHttpService implements HttpService {
     }
 
     /**
-     * Handles an {@link HttpMethod#GET GET} request.
+     * Handles a {@link HttpMethod#GET GET} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      *
      * @deprecated Use {@link #doGet(ServiceRequestContext, HttpRequest)}.
@@ -154,7 +154,7 @@ public abstract class AbstractHttpService implements HttpService {
     }
 
     /**
-     * Handles an {@link HttpMethod#HEAD HEAD} request.
+     * Handles a {@link HttpMethod#HEAD HEAD} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      *
      * @deprecated Use {@link #doHead(ServiceRequestContext, HttpRequest)}.
@@ -176,7 +176,7 @@ public abstract class AbstractHttpService implements HttpService {
     }
 
     /**
-     * Handles an {@link HttpMethod#POST POST} request.
+     * Handles a {@link HttpMethod#POST POST} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      *
      * @deprecated Use {@link #doPost(ServiceRequestContext, HttpRequest)}.
@@ -198,7 +198,7 @@ public abstract class AbstractHttpService implements HttpService {
     }
 
     /**
-     * Handles an {@link HttpMethod#PUT PUT} request.
+     * Handles a {@link HttpMethod#PUT PUT} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      *
      * @deprecated Use {@link #doPut(ServiceRequestContext, HttpRequest)}.
@@ -220,7 +220,7 @@ public abstract class AbstractHttpService implements HttpService {
     }
 
     /**
-     * Handles an {@link HttpMethod#PATCH PATCH} request.
+     * Handles a {@link HttpMethod#PATCH PATCH} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      *
      * @deprecated Use {@link #doPatch(ServiceRequestContext, HttpRequest)}.
@@ -242,7 +242,7 @@ public abstract class AbstractHttpService implements HttpService {
     }
 
     /**
-     * Handles an {@link HttpMethod#DELETE DELETE} request.
+     * Handles a {@link HttpMethod#DELETE DELETE} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      *
      * @deprecated Use {@link #doDelete(ServiceRequestContext, HttpRequest)}.
@@ -264,7 +264,7 @@ public abstract class AbstractHttpService implements HttpService {
     }
 
     /**
-     * Handles an {@link HttpMethod#TRACE TRACE} request.
+     * Handles a {@link HttpMethod#TRACE TRACE} request.
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      *
      * @deprecated Use {@link #doTrace(ServiceRequestContext, HttpRequest)}.

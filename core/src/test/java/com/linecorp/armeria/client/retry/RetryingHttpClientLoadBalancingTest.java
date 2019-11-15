@@ -30,7 +30,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-class RetryingClientLoadBalancingTest {
+class RetryingHttpClientLoadBalancingTest {
 
     private static final int NUM_PORTS = 5;
 
@@ -80,7 +80,7 @@ class RetryingClientLoadBalancingTest {
     };
 
     /**
-     * Makes sure that {@link RetryingClient} respects the {@link Endpoint} selection order.
+     * Makes sure that {@link RetryingHttpClient} respects the {@link Endpoint} selection order.
      */
     @ParameterizedTest
     @EnumSource(TestMode.class)
@@ -113,10 +113,10 @@ class RetryingClientLoadBalancingTest {
                     return CompletableFuture.completedFuture(null);
                 }
             };
-            final HttpClient c = HttpClient.builder("h2c://group:" + groupName)
-                                           .decorator(RetryingHttpClient.builder(retryStrategy)
-                                                                        .newDecorator())
-                                           .build();
+            final WebClient c = WebClient.builder("h2c://group:" + groupName)
+                                         .decorator(RetryingHttpClient.builder(retryStrategy)
+                                                                      .newDecorator())
+                                         .build();
 
             for (int i = 0; i < NUM_PORTS; i++) {
                 c.get(mode.path).aggregate().join();
@@ -129,9 +129,9 @@ class RetryingClientLoadBalancingTest {
                 case FAILURE:
                     final List<Integer> expectedPortsWhenRetried =
                             ImmutableList.<Integer>builder()
-                                         .addAll(expectedPorts)
-                                         .addAll(expectedPorts)
-                                         .build();
+                                    .addAll(expectedPorts)
+                                    .addAll(expectedPorts)
+                                    .build();
                     assertThat(accessedPorts).isEqualTo(expectedPortsWhenRetried);
                     break;
             }

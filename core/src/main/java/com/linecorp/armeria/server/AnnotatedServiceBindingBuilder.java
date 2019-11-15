@@ -26,8 +26,6 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
@@ -37,10 +35,10 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * A builder class for binding a {@link Service} fluently. This class can be instantiated through
+ * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
  * {@link ServerBuilder#annotatedService()}.
  *
- * <p>Call {@link #build(Object)} to build the {@link Service} and return to the {@link ServerBuilder}.
+ * <p>Call {@link #build(Object)} to build the {@link HttpService} and return to the {@link ServerBuilder}.
  *
  * <pre>{@code
  * ServerBuilder sb = Server.builder();
@@ -138,8 +136,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    AnnotatedServiceBindingBuilder decorator(Function<T, R> decorator) {
+    public AnnotatedServiceBindingBuilder decorator(
+            Function<? super HttpService, ? extends HttpService> decorator) {
         defaultServiceConfigSetters.decorator(decorator);
         return this;
     }
@@ -228,8 +226,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
                                                  requestConverterFunctionBuilder.build(),
                                                  responseConverterFunctionBuilder.build());
         elements.forEach(element -> {
-            final Service<HttpRequest, HttpResponse> decoratedService =
-                    element.buildSafeDecoratedService(defaultServiceConfigSetters.getDecorator());
+            final HttpService decoratedService =
+                    element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());
             final ServiceConfigBuilder serviceConfigBuilder =
                     defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
             serverBuilder.serviceConfigBuilder(serviceConfigBuilder);

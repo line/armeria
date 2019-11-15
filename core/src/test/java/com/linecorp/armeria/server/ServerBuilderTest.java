@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -203,7 +203,7 @@ class ServerBuilderTest {
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .accessLogger(host -> {
                           if ("*.example.com".equals(host.hostnamePattern())) {
-                            return null;
+                              return null;
                           }
                           return LoggerFactory.getLogger("default");
                       })
@@ -212,13 +212,13 @@ class ServerBuilderTest {
     }
 
     /**
-     * Makes sure that {@link ServerBuilder#decorator(DecoratingServiceFunction)} works at every service and
-     * virtual hosts and {@link VirtualHostBuilder#decorator(DecoratingServiceFunction)} works only at
+     * Makes sure that {@link ServerBuilder#decorator(DecoratingHttpServiceFunction)} works at every service and
+     * virtual hosts and {@link VirtualHostBuilder#decorator(DecoratingHttpServiceFunction)} works only at
      * its own services.
      */
     @Test
     void decoratorTest() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().get();
         assertThat(res.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res.headers().contains("virtualhost_decorator")).isEqualTo(false);
@@ -226,8 +226,8 @@ class ServerBuilderTest {
         assertThat(res2.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res2.headers().contains("virtualhost_decorator")).isEqualTo(false);
 
-        final HttpClient vhostClient = HttpClient.of(clientFactory,
-                                                     "http://test.example.com:" + server.httpPort());
+        final WebClient vhostClient = WebClient.of(clientFactory,
+                                                   "http://test.example.com:" + server.httpPort());
         final AggregatedHttpResponse res3 = vhostClient.get("/").aggregate().get();
         assertThat(res3.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res3.headers().get("virtualhost_decorator")).isEqualTo("true");
@@ -244,8 +244,10 @@ class ServerBuilderTest {
                                     .and().build();
         server.start().join();
 
-        final HttpClient client = HttpClient.of(clientFactory, "http://127.0.0.1:" + server.activeLocalPort());
-        final HttpClient fooClient = HttpClient.of(clientFactory, "http://foo.com:" + server.activeLocalPort());
+        final WebClient client = WebClient.of(clientFactory,
+                                              "http://127.0.0.1:" + server.activeLocalPort());
+        final WebClient fooClient = WebClient.of(clientFactory,
+                                                 "http://foo.com:" + server.activeLocalPort());
 
         assertThat(client.get("/").aggregate().join().contentUtf8()).isEqualTo("default");
         assertThat(client.get("/abc").aggregate().join().contentUtf8()).isEqualTo("default_abc");
@@ -263,24 +265,32 @@ class ServerBuilderTest {
                                     .requestTimeoutMillis(100)     // for default virtual host
                                     .service("/default_virtual_host",
                                              (ctx, req) -> HttpResponse.delayed(
-                                                     HttpResponse.of(HttpStatus.OK), Duration.ofMillis(200))
-                                    )
-                                    .route().get("/service_config")
-                                    .requestTimeoutMillis(200)     // for service
-                                    .build((ctx, req) -> HttpResponse
-                                            .delayed(HttpResponse.of(HttpStatus.OK), Duration.ofMillis(250)))
-                                    .virtualHost("foo.com")
-                                    .service("/custom_virtual_host", (ctx, req) -> HttpResponse.delayed(
-                                            HttpResponse.of(HttpStatus.OK), Duration.ofMillis(150)))
-                                    .requestTimeoutMillis(300)    // for custom virtual host
-                                    .and().build();
+                                                     HttpResponse.of(HttpStatus.OK),
+                                                     Duration.ofMillis(200),
+                                                     ctx.eventLoop()))
+                                    .withRoute(
+                                            r -> r.get("/service_config")
+                                                  .requestTimeoutMillis(200)     // for service
+                                                  .build((ctx, req) -> HttpResponse.delayed(
+                                                          HttpResponse.of(HttpStatus.OK),
+                                                          Duration.ofMillis(250),
+                                                          ctx.eventLoop())))
+                                    .withVirtualHost(
+                                            h -> h.hostnamePattern("foo.com")
+                                                  .service("/custom_virtual_host",
+                                                           (ctx, req) -> HttpResponse.delayed(
+                                                                   HttpResponse.of(HttpStatus.OK),
+                                                                   Duration.ofMillis(150),
+                                                                   ctx.eventLoop()))
+                                                  .requestTimeoutMillis(300))    // for custom virtual host
+                                    .build();
         server.start().join();
 
         try {
-            final HttpClient client = HttpClient.of(clientFactory,
-                                                    "http://127.0.0.1:" + server.activeLocalPort());
-            final HttpClient fooClient = HttpClient.of(clientFactory,
-                                                       "http://foo.com:" + server.activeLocalPort());
+            final WebClient client = WebClient.of(clientFactory,
+                                                  "http://127.0.0.1:" + server.activeLocalPort());
+            final WebClient fooClient = WebClient.of(clientFactory,
+                                                     "http://foo.com:" + server.activeLocalPort());
 
             assertThat(client.get("/default_virtual_host").aggregate().join().status())
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);

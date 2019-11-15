@@ -35,7 +35,6 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.HttpStatus;
@@ -85,9 +84,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
     void immediateNotification() throws Exception {
         final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
         try (HealthCheckedEndpointGroup endpointGroup = build(
-                HealthCheckedEndpointGroup.builder(
-                        new StaticEndpointGroup(endpoint),
-                        HEALTH_CHECK_PATH))) {
+                HealthCheckedEndpointGroup.builder(endpoint, HEALTH_CHECK_PATH))) {
 
             // Check the initial state (healthy).
             assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
@@ -113,9 +110,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
         this.healthCheckRequestLogs = healthCheckRequestLogs;
         final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
         try (HealthCheckedEndpointGroup endpointGroup = build(
-                HealthCheckedEndpointGroup.builder(
-                        new StaticEndpointGroup(endpoint),
-                        HEALTH_CHECK_PATH))) {
+                HealthCheckedEndpointGroup.builder(endpoint, HEALTH_CHECK_PATH))) {
 
             // Check the initial state (healthy).
             assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
@@ -149,9 +144,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
         this.healthCheckRequestLogs = healthCheckRequestLogs;
         final Endpoint endpoint = Endpoint.of("127.0.0.1", 1);
         try (HealthCheckedEndpointGroup endpointGroup = build(
-                HealthCheckedEndpointGroup.builder(
-                        new StaticEndpointGroup(endpoint),
-                        HEALTH_CHECK_PATH))) {
+                HealthCheckedEndpointGroup.builder(endpoint, HEALTH_CHECK_PATH))) {
 
             // Check the initial state (unhealthy).
             assertThat(endpointGroup.endpoints()).isEmpty();
@@ -178,9 +171,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
         this.healthCheckRequestLogs = healthCheckRequestLogs;
         final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
         try (HealthCheckedEndpointGroup endpointGroup = build(
-                HealthCheckedEndpointGroup.builder(
-                        new StaticEndpointGroup(endpoint),
-                        HEALTH_CHECK_PATH))) {
+                HealthCheckedEndpointGroup.builder(endpoint, HEALTH_CHECK_PATH))) {
 
             // Check the initial state (healthy).
             assertThat(endpointGroup.endpoints()).containsExactly(endpoint);

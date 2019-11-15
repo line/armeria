@@ -29,7 +29,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
@@ -256,14 +255,27 @@ public class HttpServerCorsTest {
                                  .newDecorator());
 
             sb.annotatedService("/cors10", new MyAnnotatedService2());
+
+            // CORS decorator as a route decorator & not bound for OPTIONS.
+            sb.route().get("/cors11/get")
+              .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.routeDecorator().pathPrefix("/cors11")
+              .build(CorsServiceBuilder.forOrigin("http://example.com")
+                                       .shortCircuit()
+                                       .allowRequestMethods(HttpMethod.GET)
+                                       .newDecorator());
+
+            // No CORS decorator & not bound for OPTIONS.
+            sb.route().get("/cors12/get")
+              .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
         }
     };
 
-    static HttpClient client() {
-        return HttpClient.of(clientFactory, server.uri("/"));
+    static WebClient client() {
+        return WebClient.of(clientFactory, server.uri("/"));
     }
 
-    static AggregatedHttpResponse request(HttpClient client, HttpMethod method, String path, String origin,
+    static AggregatedHttpResponse request(WebClient client, HttpMethod method, String path, String origin,
                                           String requestMethod) {
         return client.execute(
                 RequestHeaders.of(method, path,
@@ -273,14 +285,14 @@ public class HttpServerCorsTest {
         ).aggregate().join();
     }
 
-    static AggregatedHttpResponse preflightRequest(HttpClient client, String path, String origin,
+    static AggregatedHttpResponse preflightRequest(WebClient client, String path, String origin,
                                                    String requestMethod) {
         return request(client, HttpMethod.OPTIONS, path, origin, requestMethod);
     }
 
     @Test
     public void testCorsDecoratorAnnotation() {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = preflightRequest(client, "/cors6/any/get", "http://example.com",
                                                                  "GET");
         assertEquals(HttpStatus.OK, response.status());
@@ -344,7 +356,7 @@ public class HttpServerCorsTest {
 
         // Ensure double decoration is prohibited.
         assertThatThrownBy(() -> {
-            final Function<Service<HttpRequest, HttpResponse>, CorsService> decorator =
+            final Function<? super HttpService, CorsService> decorator =
                     CorsServiceBuilder.forAnyOrigin().newDecorator();
             final HttpService service = (ctx, req) -> HttpResponse.of("OK");
             service.decorate(decorator).decorate(decorator);
@@ -356,7 +368,7 @@ public class HttpServerCorsTest {
     // which supports null origin.
     @Test
     public void testCorsNullOrigin() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = preflightRequest(client, "/cors2", "null", "POST");
         assertEquals("null", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
         assertEquals("GET", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS));
@@ -367,7 +379,7 @@ public class HttpServerCorsTest {
     // Makes sure if an any origin supported CorsService works properly and it allows null origin too.
     @Test
     public void testCorsAnyOrigin() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = request(client, HttpMethod.POST, "/cors3", "http://example.com",
                                                         "POST");
         final AggregatedHttpResponse response2 = request(client, HttpMethod.POST, "/cors3", "null", "POST");
@@ -386,7 +398,7 @@ public class HttpServerCorsTest {
     // Makes sure if shortCircuit works properly.
     @Test
     public void testCorsShortCircuit() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = request(client, HttpMethod.POST, "/cors2", "http://example.com",
                                                         "POST");
         final AggregatedHttpResponse response2 = request(client, HttpMethod.POST, "/cors2",
@@ -401,7 +413,7 @@ public class HttpServerCorsTest {
     // Makes sure if it uses a specified policy for specified origins.
     @Test
     public void testCorsDifferentPolicy() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = request(client, HttpMethod.POST, "/cors", "http://example.com",
                                                         "POST");
         final AggregatedHttpResponse response2 = request(client, HttpMethod.POST, "/cors",
@@ -424,7 +436,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsPreflight() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = preflightRequest(client, "/cors", "http://example.com", "POST");
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
@@ -433,7 +445,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsAllowed() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = request(client, HttpMethod.POST, "/cors", "http://example.com",
                                                         "POST");
         assertEquals(HttpStatus.OK, response.status());
@@ -442,7 +454,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsAccessControlHeaders() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = preflightRequest(client, "/cors", "http://example.com", "POST");
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
@@ -453,7 +465,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsExposeHeaders() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = request(client, HttpMethod.POST, "/cors", "http://example.com",
                                                         "POST");
         assertEquals(HttpStatus.OK, response.status());
@@ -466,7 +478,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsForbidden() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = request(client, HttpMethod.POST, "/cors", "http://example.org",
                                                         "POST");
 
@@ -475,7 +487,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testWorkingWithAnnotatedService() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
 
         for (final String path : new String[] { "post", "options" }) {
             final AggregatedHttpResponse response = preflightRequest(client, "/cors4/" + path,
@@ -489,7 +501,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testNoCorsDecoratorForAnnotatedService() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = preflightRequest(client, "/cors5/post", "http://example.com",
                                                                  "POST");
         assertEquals(HttpStatus.FORBIDDEN, response.status());
@@ -497,7 +509,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testAnnotatedServiceHandlesOptions() throws Exception {
-        final HttpClient client = client();
+        final WebClient client = client();
         final AggregatedHttpResponse response = preflightRequest(client, "/cors5/options", "http://example.com",
                                                                  "POST");
         assertEquals(HttpStatus.OK, response.status());
@@ -505,7 +517,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testRoute() {
-        final HttpClient client = client();
+        final WebClient client = client();
         AggregatedHttpResponse res;
 
         res = preflightRequest(client, "/cors8/movies", "http://example.com", "GET");
@@ -523,7 +535,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testRoute_order() {
-        final HttpClient client = client();
+        final WebClient client = client();
         AggregatedHttpResponse res;
 
         res = preflightRequest(client, "/cors9/movies", "http://example.com", "GET");
@@ -541,7 +553,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testRoute_annotated() {
-        final HttpClient client = client();
+        final WebClient client = client();
         AggregatedHttpResponse res;
 
         res = preflightRequest(client, "/cors10/configured", "http://example.com", "GET");
@@ -550,6 +562,51 @@ public class HttpServerCorsTest {
 
         res = preflightRequest(client, "/cors10/not_configured", "http://example.com", "GET");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isNull();
+    }
+
+    /**
+     * If CORS was configured as a route decorator and there's no binding for OPTIONS method,
+     * the server's fallback service decorated with the CORS decorator will be matched and thus
+     * must respond with a CORS response.
+     */
+    @Test
+    public void testCorsWithPartialBindingAndRouteDecorator() {
+        final WebClient client = client();
+        AggregatedHttpResponse res;
+
+        res = preflightRequest(client, "/cors11/get", "http://example.com", "GET");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+
+        // GET must be allowed.
+        res = request(client, HttpMethod.GET, "/cors11/get", "http://example.com", "GET");
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .isEqualTo("http://example.com");
+
+        // Other methods must be disallowed.
+        res = request(client, HttpMethod.GET, "/cors11/get", "http://notallowed.com", "GET");
+        assertThat(res.status()).isSameAs(HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * If no CORS was configured and there's no binding for OPTIONS method, the server's fallback service will
+     * be matched and the service with partial binding must not be invoked.
+     */
+    @Test
+    public void testNoCorsWithPartialBinding() {
+        final WebClient client = client();
+        AggregatedHttpResponse res;
+
+        // A simple OPTIONS request, which should fall back.
+        res = client.options("/cors12/get").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+
+        // A CORS preflight request, which should fall back as well.
+        res = preflightRequest(client, "/cors12/get", "http://example.com", "GET");
+        assertThat(res.status()).isEqualTo(HttpStatus.FORBIDDEN);
+        // .. but will not contain CORS headers.
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isNull();
     }
 }

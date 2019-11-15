@@ -20,7 +20,7 @@ You may want to consider the following options before putting your Armeria appli
       sb.maxNumConnections(500);
 
 - Specify an alternative ``blockingTaskExecutor`` based on expected workload if your server has
-  a :api:`Service` that uses it, such as :api:`TomcatService`, :api:`JettyService` and :api:`THttpService` with
+  a service that uses it, such as :api:`TomcatService`, :api:`JettyService` and :api:`THttpService` with
   synchronous service implementation. The default is a simple ``ThreadPoolExecutor`` with 200 threads and an
   *unbounded* queue, provided by :api:`CommonPools`.
 
@@ -45,7 +45,7 @@ You may want to consider the following options before putting your Armeria appli
       sb.requestTimeout(Duration.ofSeconds(7)); // (default: 10 seconds)
 
       // Client-side
-      ClientBuilder cb = new ClientBuilder(...); // or HttpClientBuilder
+      ClientBuilder cb = new ClientBuilder(...); // or WebClientBuilder
       cb.maxResponseLength(1048576); // bytes (default: 10 MiB)
       cb.responseTimeout(Duration.ofSeconds(10)); // (default: 15 seconds)
 
@@ -55,11 +55,11 @@ You may want to consider the following options before putting your Armeria appli
   .. code-block:: java
 
       import com.linecorp.armeria.server.throttling.RateLimitingThrottlingStrategy;
-      import com.linecorp.armeria.server.throttling.ThrottlingHttpService;
+      import com.linecorp.armeria.server.throttling.ThrottlingService;
 
       ServerBuilder sb = Server.builder();
       sb.service("/my_service", // Allow up to 1000 requests/sec.
-                 myService.decorate(ThrottlingHttpService.newDecorator(
+                 myService.decorate(ThrottlingService.newDecorator(
                          new RateLimitingThrottlingStrategy(1000.0))));
 
 - Decorate your clients with :api:`RetryingClient`. See :ref:`client-retry`.

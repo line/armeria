@@ -28,12 +28,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.Unpooled;
@@ -48,11 +47,12 @@ class CircuitBreakerHttpClientIntegrationTest {
                                                             .minimumRequestThreshold(0)
                                                             .build();
 
-        final HttpClient client =
-                HttpClient.builder()
-                          .decorator(CircuitBreakerHttpClient.newDecorator(
-                                  circuitBreaker, (ctx, cause) -> CompletableFuture.completedFuture(false)))
-                          .build();
+        final WebClient client =
+                WebClient.builder()
+                         .decorator(CircuitBreakerHttpClient.newDecorator(
+                                 circuitBreaker,
+                                 (ctx, cause) -> CompletableFuture.completedFuture(false)))
+                         .build();
 
         for (int i = 0; i < 3; i++) {
             final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "h2c://127.0.0.1:1");
@@ -68,18 +68,22 @@ class CircuitBreakerHttpClientIntegrationTest {
                                 assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class)
                                                             .hasCauseInstanceOf(ConnectException.class);
                             });
+                    await().untilAsserted(() -> {
+                        assertThat(req.completionFuture()).hasFailedWithThrowableThat()
+                                                          .isInstanceOf(UnprocessedRequestException.class);
+                    });
                     break;
                 default:
                     await().until(() -> !circuitBreaker.canRequest());
                     assertThatThrownBy(() -> client.execute(req).aggregate().join())
                             .isInstanceOf(CompletionException.class)
                             .hasCauseInstanceOf(FailFastException.class);
-            }
 
-            await().untilAsserted(() -> {
-                assertThat(req.completionFuture()).hasFailedWithThrowableThat()
-                                                  .isInstanceOf(AbortedStreamException.class);
-            });
+                    await().untilAsserted(() -> {
+                        assertThat(req.completionFuture()).hasFailedWithThrowableThat()
+                                                          .isInstanceOf(FailFastException.class);
+                    });
+            }
 
             assertThat(data.refCnt()).isZero();
 

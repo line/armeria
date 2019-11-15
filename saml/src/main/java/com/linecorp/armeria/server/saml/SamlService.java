@@ -40,22 +40,22 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithRoutes;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
- * A {@link Service} which handles SAML APIs, such as consuming an assertion, retrieving a metadata
+ * An {@link HttpService} which handles SAML APIs, such as consuming an assertion, retrieving a metadata
  * or handling a logout request from an identity provider.
  */
-final class SamlService implements ServiceWithRoutes<HttpRequest, HttpResponse> {
+final class SamlService implements HttpServiceWithRoutes {
 
     private static final HttpData DATA_INCORRECT_PATH =
             HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request with an incorrect path");

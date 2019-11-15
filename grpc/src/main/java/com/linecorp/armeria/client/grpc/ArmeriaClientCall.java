@@ -32,9 +32,9 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -93,7 +93,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private final DefaultClientRequestContext ctx;
     private final Endpoint endpoint;
-    private final Client<HttpRequest, HttpResponse> httpClient;
+    private final HttpClient httpClient;
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
     private final CallOptions callOptions;
@@ -120,7 +120,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     ArmeriaClientCall(
             DefaultClientRequestContext ctx,
             Endpoint endpoint,
-            Client<HttpRequest, HttpResponse> httpClient,
+            HttpClient httpClient,
             HttpRequestWriter req,
             MethodDescriptor<I, O> method,
             int maxOutboundMessageSizeBytes,
@@ -226,7 +226,11 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             status = status.withCause(cause);
         }
         close(status, new Metadata());
-        req.abort();
+        if (cause == null) {
+            req.abort();
+        } else {
+            req.abort(cause);
+        }
     }
 
     @Override

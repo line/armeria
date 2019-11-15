@@ -57,10 +57,11 @@ import com.google.protobuf.StringValue;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -78,7 +79,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -124,6 +124,7 @@ import io.grpc.reflection.v1alpha.ServerReflectionRequest;
 import io.grpc.reflection.v1alpha.ServerReflectionResponse;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -814,15 +815,22 @@ class GrpcServiceServerTest {
 
     @Test
     void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp2() throws Exception {
-        withTimeout(() -> clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H2C));
+        withTimeout(() -> {
+            final RequestLog log = clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H2C);
+            assertThat(log.responseCause()).isInstanceOf(Http2Exception.StreamException.class)
+                                           .hasMessageContaining("received a RST_STREAM frame");
+        });
     }
 
     @Test
     void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp1() throws Exception {
-        withTimeout(() -> clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H1C));
+        withTimeout(() -> {
+            final RequestLog log = clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H1C);
+            assertThat(log.responseCause()).isInstanceOf(ClosedSessionException.class);
+        });
     }
 
-    private static void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
+    private static RequestLog clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
             throws Exception {
 
         final ClientFactory factory = ClientFactory.builder().build();
@@ -860,13 +868,13 @@ class GrpcServiceServerTest {
         assertThat(rpcReq.method()).isEqualTo(
                 "armeria.grpc.testing.UnitTestService/StreamClientCancelsBeforeResponseClosedCancels");
         assertThat(rpcReq.params()).containsExactly(SimpleRequest.getDefaultInstance());
-        assertThat(log.responseCause()).isInstanceOf(AbortedStreamException.class);
+        return log;
     }
 
     @Test
     void unframed() throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final WebClient client = WebClient.of(server.httpUri("/"));
             final AggregatedHttpResponse response = client.execute(
                     RequestHeaders.of(HttpMethod.POST,
                                       UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
@@ -888,7 +896,7 @@ class GrpcServiceServerTest {
     @Test
     void unframed_acceptEncoding() throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final WebClient client = WebClient.of(server.httpUri("/"));
             final AggregatedHttpResponse response = client.execute(
                     RequestHeaders.of(HttpMethod.POST,
                                       UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
@@ -911,7 +919,7 @@ class GrpcServiceServerTest {
     @Test
     void unframed_streamingApi() throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final WebClient client = WebClient.of(server.httpUri("/"));
             final AggregatedHttpResponse response = client.execute(
                     RequestHeaders.of(HttpMethod.POST,
                                       UnitTestServiceGrpc.getStaticStreamedOutputCallMethod()
@@ -926,7 +934,7 @@ class GrpcServiceServerTest {
     @Test
     void unframed_noContentType() throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final WebClient client = WebClient.of(server.httpUri("/"));
             final AggregatedHttpResponse response = client.execute(
                     RequestHeaders.of(HttpMethod.POST,
                                       UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName()),
@@ -939,7 +947,7 @@ class GrpcServiceServerTest {
     @Test
     void unframed_grpcEncoding() throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final WebClient client = WebClient.of(server.httpUri("/"));
             final AggregatedHttpResponse response = client.execute(
                     RequestHeaders.of(HttpMethod.POST,
                                       UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
@@ -954,7 +962,7 @@ class GrpcServiceServerTest {
     @Test
     void unframed_serviceError() throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final WebClient client = WebClient.of(server.httpUri("/"));
             final SimpleRequest request =
                     SimpleRequest.newBuilder()
                                  .setResponseStatus(
@@ -980,7 +988,7 @@ class GrpcServiceServerTest {
     @Test
     void grpcWeb() throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final WebClient client = WebClient.of(server.httpUri("/"));
             final AggregatedHttpResponse response = client.execute(
                     RequestHeaders.of(HttpMethod.POST,
                                       UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
@@ -1008,7 +1016,7 @@ class GrpcServiceServerTest {
     @Test
     void grpcWeb_error() throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final WebClient client = WebClient.of(server.httpUri("/"));
             final AggregatedHttpResponse response = client.execute(
                     RequestHeaders.of(HttpMethod.POST,
                                       UnitTestServiceGrpc.getErrorWithMessageMethod().getFullMethodName(),

@@ -39,7 +39,7 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
-final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
+final class HttpClientDelegate implements HttpClient {
 
     private static final Throwable CONTEXT_INITIALIZATION_FAILED = new Exception(
             ClientRequestContext.class.getSimpleName() + " initialization failed", null, false, false) {
@@ -63,6 +63,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             // - `ClientRequestContext.endpoint()` returns `null` only when the context initialization failed.
             // - `ClientUtil.initContextAndExecuteWithFallback()` will use the fallback response rather than
             //   what we return here.
+            req.abort(CONTEXT_INITIALIZATION_FAILED);
             return HttpResponse.ofFailure(CONTEXT_INITIALIZATION_FAILED);
         }
 
@@ -202,7 +203,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
-        req.abort();
+        req.abort(cause);
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.endRequest(cause);
         logBuilder.endResponse(cause);

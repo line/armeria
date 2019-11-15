@@ -26,10 +26,17 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
 
 /**
- * {@link Route} maps from an incoming HTTP request to a {@link Service} based on its path, method,
+ * {@link Route} maps from an incoming HTTP request to an {@link HttpService} based on its path, method,
  * content type and accepted types.
  */
 public interface Route {
+
+    /**
+     * Returns the catch-all {@link Route} which matches every request.
+     */
+    static Route ofCatchAll() {
+        return RouteBuilder.CATCH_ALL_ROUTE;
+    }
 
     /**
      * Returns a new builder.
@@ -41,7 +48,7 @@ public interface Route {
     /**
      * Matches the specified {@link RoutingContext} and extracts the path parameters from it if exists.
      *
-     * @param routingCtx a context to find the {@link Service}
+     * @param routingCtx a context to find the {@link HttpService}
      *
      * @return a non-empty {@link RoutingResult} if the {@linkplain RoutingContext#path() path},
      *         {@linkplain RoutingContext#method() method},

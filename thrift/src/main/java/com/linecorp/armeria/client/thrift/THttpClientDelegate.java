@@ -39,10 +39,12 @@ import org.apache.thrift.transport.TTransportException;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -58,7 +60,6 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
-import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
@@ -72,9 +73,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.ReferenceCountUtil;
 
-final class THttpClientDelegate
-        extends AbstractUnwrappable<Client<HttpRequest, HttpResponse>>
-        implements Client<RpcRequest, RpcResponse> {
+final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpResponse, RpcRequest, RpcResponse>
+        implements RpcClient {
 
     private final AtomicInteger nextSeqId = new AtomicInteger();
 
@@ -83,7 +83,7 @@ final class THttpClientDelegate
     private final MediaType mediaType;
     private final Map<Class<?>, ThriftServiceMetadata> metadataMap = new ConcurrentHashMap<>();
 
-    THttpClientDelegate(Client<HttpRequest, HttpResponse> httpClient,
+    THttpClientDelegate(HttpClient httpClient,
                         SerializationFormat serializationFormat) {
         super(httpClient);
         this.serializationFormat = serializationFormat;

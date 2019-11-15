@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.HttpClientBuilder.isUndefinedUri;
+import static com.linecorp.armeria.client.WebClientBuilder.isUndefinedUri;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isAbsoluteUri;
 
@@ -38,12 +38,12 @@ import com.linecorp.armeria.internal.PathAndQuery;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 
-final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements HttpClient {
+final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultHttpClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultWebClient.class);
 
-    DefaultHttpClient(ClientBuilderParams params, Client<HttpRequest, HttpResponse> delegate,
-                      MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
+    DefaultWebClient(ClientBuilderParams params, HttpClient delegate,
+                     MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
         super(params, delegate, meterRegistry, sessionProtocol, endpoint);
     }
 
@@ -74,8 +74,9 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
         }
 
         if (isUndefinedUri(uri())) {
-            req.abort();
-            return HttpResponse.ofFailure(new IllegalArgumentException("no authority: " + req.path()));
+            final IllegalArgumentException cause = new IllegalArgumentException("no authority: " + req.path());
+            req.abort(cause);
+            return HttpResponse.ofFailure(cause);
         }
 
         final String originalPath = req.path();
@@ -93,8 +94,9 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     private HttpResponse execute(@Nullable EventLoop eventLoop, Endpoint endpoint, HttpRequest req) {
         final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
-            req.abort();
-            return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
+            final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
+            req.abort(cause);
+            return HttpResponse.ofFailure(cause);
         }
         return execute(eventLoop, endpoint, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req,
@@ -102,7 +104,11 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
                            if (ctx != null && !ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
                                // An exception is raised even before sending a request, so abort the request to
                                // release the elements.
-                               req.abort();
+                               if (cause == null) {
+                                   req.abort();
+                               } else {
+                                   req.abort(cause);
+                               }
                            }
                            return HttpResponse.ofFailure(cause);
                        });

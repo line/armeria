@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
@@ -47,18 +47,18 @@ class HttpServerAdditionalHeadersTest {
             ctx.addAdditionalResponseHeader(HttpHeaderNames.SCHEME, "https");
             ctx.addAdditionalResponseHeader(HttpHeaderNames.STATUS, "100");
             ctx.addAdditionalResponseHeader(HttpHeaderNames.METHOD, "CONNECT");
-            ctx.addAdditionalResponseHeader(HttpHeaderNames.PATH,   "/foo");
+            ctx.addAdditionalResponseHeader(HttpHeaderNames.PATH, "/foo");
             ctx.addAdditionalResponseTrailer(HttpHeaderNames.SCHEME, "https");
             ctx.addAdditionalResponseTrailer(HttpHeaderNames.STATUS, "100");
             ctx.addAdditionalResponseTrailer(HttpHeaderNames.METHOD, "CONNECT");
-            ctx.addAdditionalResponseTrailer(HttpHeaderNames.PATH,   "/foo");
+            ctx.addAdditionalResponseTrailer(HttpHeaderNames.PATH, "/foo");
             ctx.addAdditionalResponseTrailer(HttpHeaderNames.TRANSFER_ENCODING, "magic");
         }
     };
 
     @Test
     void blacklistedHeadersAndTrailersMustBeFiltered() {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/headers_and_trailers").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().names()).doesNotContain(HttpHeaderNames.SCHEME,
@@ -74,7 +74,7 @@ class HttpServerAdditionalHeadersTest {
 
     @Test
     void blacklistedHeadersAndTrailersMustBeFilteredWhenMerged() {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/headers_merged").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(res.headers().names()).doesNotContain(HttpHeaderNames.SCHEME,

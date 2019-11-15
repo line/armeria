@@ -64,7 +64,6 @@ import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverC
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
@@ -78,7 +77,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 /**
- * A {@link Service} which is defined by a {@link Path} or HTTP method annotations.
+ * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
  * This class is not supposed to be instantiated by a user. Please check out the documentation
  * <a href="https://line.github.io/armeria/server-annotated-service.html#annotated-http-service">
  * Annotated HTTP Service</a> to use this.
@@ -376,11 +375,10 @@ public class AnnotatedHttpService implements HttpService {
     }
 
     /**
-     * Returns a {@link Function} which produces a {@link Service} wrapped with an
+     * Returns a {@link Function} which produces an {@link HttpService} wrapped with an
      * {@link ExceptionFilteredHttpResponseDecorator}.
      */
-    public Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> exceptionHandlingDecorator() {
+    public Function<? super HttpService, ? extends HttpService> exceptionHandlingDecorator() {
         return ExceptionFilteredHttpResponseDecorator::new;
     }
 
@@ -392,7 +390,7 @@ public class AnnotatedHttpService implements HttpService {
      */
     private class ExceptionFilteredHttpResponseDecorator extends SimpleDecoratingHttpService {
 
-        ExceptionFilteredHttpResponseDecorator(Service<HttpRequest, HttpResponse> delegate) {
+        ExceptionFilteredHttpResponseDecorator(HttpService delegate) {
             super(delegate);
         }
 

@@ -27,7 +27,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -59,7 +59,7 @@ public class HttpServerBenchmark {
     }
 
     private Server server;
-    private HttpClient httpClient;
+    private WebClient webClient;
 
     @Param
     private Protocol protocol;
@@ -75,9 +75,9 @@ public class HttpServerBenchmark {
         final ServerPort httpPort = server.activePorts().values().stream()
                                           .filter(ServerPort::hasHttp).findAny()
                                           .get();
-        httpClient = Clients.newClient("none+" + protocol.uriText() + "://127.0.0.1:" +
-                                       httpPort.localAddress().getPort() + '/',
-                                       HttpClient.class);
+        webClient = Clients.newClient("none+" + protocol.uriText() + "://127.0.0.1:" +
+                                      httpPort.localAddress().getPort() + '/',
+                                      WebClient.class);
     }
 
     @TearDown
@@ -89,9 +89,9 @@ public class HttpServerBenchmark {
     public void empty(Blackhole bh, AsyncCounters counters) throws Exception {
         counters.incrementCurrentRequests();
         bh.consume(
-                httpClient.get("/empty")
-                          .aggregate()
-                          .handle((msg, t) -> {
+                webClient.get("/empty")
+                         .aggregate()
+                         .handle((msg, t) -> {
                               counters.decrementCurrentRequests();
                               if (t != null) {
                                   counters.incrementNumFailures();

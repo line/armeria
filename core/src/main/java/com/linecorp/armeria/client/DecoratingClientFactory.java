@@ -85,6 +85,11 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public ClientFactoryOptions options() {
+        return delegate().options();
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         return delegate().newClient(uri, clientType, options);
     }

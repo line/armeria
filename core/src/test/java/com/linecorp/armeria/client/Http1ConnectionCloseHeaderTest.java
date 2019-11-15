@@ -45,7 +45,7 @@ public class Http1ConnectionCloseHeaderTest {
         try (ServerSocket ss = new ServerSocket(0);) {
             final int port = ss.getLocalPort();
 
-            final HttpClient client = HttpClient.of("h1c://127.0.0.1:" + port);
+            final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
             client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {
