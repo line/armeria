@@ -455,12 +455,9 @@ public final class ClientFactoryBuilder {
                                                                maxNumEventLoopsFunctions);
         }
 
-        // FIXME(ikhoon) This workaround enables DefaultAddressResolverGroup by `useDefaultDnsResolver` flag.
-        // The DefaultAddressResolverGroup which calls blocking operation uses JDK's built-in domain name lookup
-        // mechanism. However DNS result is easy to cache, so it doesn't have a big impact on performance.
-        // The code that uses DefaultAddressResolverGroup could be removed after resolving the following issue.
-        // https://github.com/line/armeria/issues/2243
-        if (Flags.useDefaultDnsResolver() &&
+        // FIXME(ikhoon): Remove DefaultAddressResolverGroup registration after fixing Window domain name
+        //                resolution failure. https://github.com/line/armeria/issues/2243
+        if (Flags.useJdkDnsResolver() &&
             addressResolverGroupFactory == null && dnsResolverGroupCustomizers == null) {
             addressResolverGroupFactory(unused -> DefaultAddressResolverGroup.INSTANCE);
         }

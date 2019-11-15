@@ -298,7 +298,7 @@ public final class Flags {
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
-    private static final boolean USE_DEFAULT_DNS_RESOLVER = getBoolean("useDefaultDnsResolver", false);
+    private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
 
     static {
         if (!isEpollAvailable()) {
@@ -849,16 +849,17 @@ public final class Flags {
     }
 
     /**
-     * Enables {@link DefaultAddressResolverGroup} that resolves using JDK's built-in domain name
+     * Enables {@link DefaultAddressResolverGroup} that resolves domain name using JDK's built-in domain name
      * lookup mechanism.
-     * Note that this resolver performs a blocking name lookup from the caller thread.
+     * Note that JDK's built-in resolver performs a blocking name lookup from the caller thread, and thus
+     * this flag should be enabled only when the default asynchronous resolver does not work as expected.
      *
      * <p>This flag is disabled by default.
-     * Specify the {@code -Dcom.linecorp.armeria.useDefaultDnsResolver=true} JVM option
+     * Specify the {@code -Dcom.linecorp.armeria.useJdkDnsResolver=true} JVM option
      * to enable it.
      */
-    public static boolean useDefaultDnsResolver() {
-        return USE_DEFAULT_DNS_RESOLVER;
+    public static boolean useJdkDnsResolver() {
+        return USE_JDK_DNS_RESOLVER;
     }
 
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
