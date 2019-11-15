@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -51,7 +52,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
 
     private static final Function<? super EventLoopGroup, ? extends EventLoopScheduler>
             DEFAULT_EVENT_LOOP_SCHEDULER_FACTORY =
-            eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, Collections.emptyList());
+            eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 1, 0, ImmutableList.of());
 
     private static final Consumer<SslContextBuilder> DEFAULT_SSL_CONTEXT_CUSTOMIZER = b -> { /* no-op */ };
 
@@ -265,7 +266,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     /**
-     * Returns the factory that creates a {@link AddressResolverGroup} which resolves remote addresses into
+     * Returns the factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      */
     public Function<? super EventLoopGroup,

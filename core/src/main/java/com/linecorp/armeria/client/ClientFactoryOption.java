@@ -79,7 +79,7 @@ public final class ClientFactoryOption<T> extends AbstractOption<T> {
             valueOf("SSL_CONTEXT_CUSTOMIZER");
 
     /**
-     * The factory that creates a {@link AddressResolverGroup} which resolves remote addresses into
+     * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      */
     public static final ClientFactoryOption<Function<? super EventLoopGroup,
