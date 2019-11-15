@@ -132,6 +132,11 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public ClientFactoryOptions options() {
+        return httpClientFactory.options();
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
         uri = normalizeUri(uri, scheme);

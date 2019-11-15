@@ -60,6 +60,28 @@ class ClientFactoryBuilderTest {
         assertThat(cause).hasMessageContaining("mutually exclusive");
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    void shouldInheritClientFactoryOptions() {
+        final ClientFactory factory1 = ClientFactory.builder()
+                                                    .maxNumEventLoopsPerEndpoint(2)
+                                                    .connectTimeoutMillis(5000)
+                                                    .build();
+
+        final ClientFactory factory2 = ClientFactory.builder()
+                                                    .options(factory1.options())
+                                                    .idleTimeoutMillis(30000)
+                                                    .build();
+
+        assertThat(factory2.options().asMap()).allSatisfy((opt, optVal) -> {
+            if (opt.compareTo(ClientFactoryOption.IDLE_TIMEOUT_MILLIS) == 0) {
+                assertThat(optVal.value()).isNotEqualTo(factory1.options().asMap().get(opt).value());
+            } else {
+                assertThat(optVal.value()).isEqualTo(factory1.options().asMap().get(opt).value());
+            }
+        });
+    }
+
     @Test
     @EnabledIfSystemProperty(named = "com.linecorp.armeria.useJdkDnsResolver", matches = "true")
     void useDefaultAddressResolverGroup() {

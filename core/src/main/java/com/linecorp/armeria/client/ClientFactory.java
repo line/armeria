@@ -137,6 +137,11 @@ public interface ClientFactory extends AutoCloseable {
     void setMeterRegistry(MeterRegistry meterRegistry);
 
     /**
+     * Returns the {@link ClientFactoryOptions} that has been used to create this {@link ClientFactory}.
+     */
+    ClientFactoryOptions options();
+
+    /**
      * Creates a new client that connects to the specified {@code uri}.
      *
      * @param uri the URI of the server endpoint
