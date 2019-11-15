@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 LINE Corporation
+ *  Copyright 2019 LINE Corporation
  *
  *  LINE Corporation licenses this file to you under the Apache License,
  *  version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,37 +18,34 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * A decorating {@link Client} which implements its {@link #execute(ClientRequestContext, Request)} method
- * using a given function.
+ * A decorating {@link HttpClient} which implements its {@link #execute(ClientRequestContext, HttpRequest)}
+ * method using a given function.
  *
- * @see ClientBuilder#decorator(DecoratingClientFunction)
- * @see ClientBuilder#rpcDecorator(DecoratingClientFunction)
+ * @see ClientBuilder#decorator(DecoratingHttpClientFunction)
  */
-final class FunctionalDecoratingClient<I extends Request, O extends Response>
-        extends SimpleDecoratingClient<I, O> {
+final class FunctionalDecoratingHttpClient extends SimpleDecoratingHttpClient {
 
-    private final DecoratingClientFunction<I, O> function;
+    private final DecoratingHttpClientFunction function;
 
     /**
      * Creates a new instance with the specified function.
      */
-    FunctionalDecoratingClient(Client<I, O> delegate,
-                               DecoratingClientFunction<I, O> function) {
+    FunctionalDecoratingHttpClient(HttpClient delegate, DecoratingHttpClientFunction function) {
         super(delegate);
         this.function = requireNonNull(function, "function");
     }
 
     @Override
-    public O execute(ClientRequestContext ctx, I req) throws Exception {
+    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         return function.execute(delegate(), ctx, req);
     }
 
     @Override
     public String toString() {
-        return FunctionalDecoratingClient.class.getSimpleName() + '(' + delegate() + ", " + function + ')';
+        return FunctionalDecoratingHttpClient.class.getSimpleName() + '(' + delegate() + ", " + function + ')';
     }
 }

@@ -33,8 +33,8 @@ import javax.annotation.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -221,8 +221,7 @@ class BraveClientTest {
         ctx.logBuilder().endRequest();
 
         try (SafeCloseable ignored = ctx.push()) {
-            @SuppressWarnings("unchecked")
-            final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
+            final HttpClient delegate = mock(HttpClient.class);
             when(delegate.execute(any(), any())).thenReturn(res);
 
             final BraveClient stub = BraveClient.newDecorator(httpTracing).apply(delegate);

@@ -23,18 +23,17 @@ import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -52,8 +51,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
- * A {@link Channel} backed by an armeria {@link Client}. Stores the {@link ClientBuilderParams} and other
- * {@link Client} params for the associated gRPC stub.
+ * A {@link Channel} backed by an armeria {@link HttpClient}. Stores the {@link ClientBuilderParams} and other
+ * {@link HttpClient} params for the associated gRPC stub.
  */
 class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable {
 
@@ -63,7 +62,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable
     private static final int DEFAULT_MAX_INBOUND_MESSAGE_SIZE = 4 * 1024 * 1024;
 
     private final ClientBuilderParams params;
-    private final Client<HttpRequest, HttpResponse> httpClient;
+    private final HttpClient httpClient;
 
     private final MeterRegistry meterRegistry;
     private final SessionProtocol sessionProtocol;
@@ -74,7 +73,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable
     private final String advertisedEncodingsHeader;
 
     ArmeriaChannel(ClientBuilderParams params,
-                   Client<HttpRequest, HttpResponse> httpClient,
+                   HttpClient httpClient,
                    MeterRegistry meterRegistry,
                    SessionProtocol sessionProtocol,
                    Endpoint endpoint,

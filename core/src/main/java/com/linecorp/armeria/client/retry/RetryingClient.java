@@ -85,7 +85,8 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected RetryingClient(Client<I, O> delegate, RetryStrategyWithContent<O> retryStrategyWithContent,
+    protected RetryingClient(Client<I, O> delegate,
+                             RetryStrategyWithContent<O> retryStrategyWithContent,
                              int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         this(delegate, null, requireNonNull(retryStrategyWithContent, "retryStrategyWithContent"),
              maxTotalAttempts, responseTimeoutMillisForEachAttempt);

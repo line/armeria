@@ -33,8 +33,6 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapMaker;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -246,17 +244,16 @@ final class HttpClientFactory extends AbstractClientFactory {
                             ClientOptions options) {
         validateClientType(clientType);
 
-        final Client<HttpRequest, HttpResponse> delegate = options.decoration().decorate(
-                HttpRequest.class, HttpResponse.class, clientDelegate);
+        final HttpClient delegate = options.decoration().decorate(clientDelegate);
 
-        if (clientType == Client.class) {
+        if (clientType == HttpClient.class) {
             @SuppressWarnings("unchecked")
             final T castClient = (T) delegate;
             return castClient;
         }
 
-        if (clientType == HttpClient.class) {
-            final HttpClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
+        if (clientType == WebClient.class) {
+            final WebClient client = newWebClient(uri, scheme, endpoint, options, delegate);
 
             @SuppressWarnings("unchecked")
             final T castClient = (T) client;
@@ -266,19 +263,19 @@ final class HttpClientFactory extends AbstractClientFactory {
         }
     }
 
-    private DefaultHttpClient newHttpClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
-                                            Client<HttpRequest, HttpResponse> delegate) {
-        return new DefaultHttpClient(
-                new DefaultClientBuilderParams(this, uri, HttpClient.class, options),
+    private DefaultWebClient newWebClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
+                                          HttpClient delegate) {
+        return new DefaultWebClient(
+                new DefaultClientBuilderParams(this, uri, WebClient.class, options),
                 delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
     }
 
     private static void validateClientType(Class<?> clientType) {
-        if (clientType != HttpClient.class && clientType != Client.class) {
+        if (clientType != WebClient.class && clientType != HttpClient.class) {
             throw new IllegalArgumentException(
                     "clientType: " + clientType +
-                    " (expected: " + HttpClient.class.getSimpleName() + " or " +
-                    Client.class.getSimpleName() + ')');
+                    " (expected: " + WebClient.class.getSimpleName() + " or " +
+                    HttpClient.class.getSimpleName() + ')');
         }
     }
 

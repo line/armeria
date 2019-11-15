@@ -28,7 +28,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
@@ -83,7 +83,7 @@ public class AbstractUnaryGrpcServiceTest {
                                                                           ByteString.copyFromUtf8("hello"))
                                                                   .build())
                                                .build()).getPayload().getBody().toStringUtf8())
-                  .isEqualTo("hello");
+                .isEqualTo("hello");
     }
 
     @Test
@@ -109,7 +109,7 @@ public class AbstractUnaryGrpcServiceTest {
 
     @Test
     public void invalidPayload() {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri("/"));
 
         final AggregatedHttpResponse message =
                 client.post("/armeria.grpc.testing.TestService/UnaryCall", "foobarbreak").aggregate().join();

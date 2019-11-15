@@ -39,7 +39,7 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
-final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
+final class HttpClientDelegate implements HttpClient {
 
     private static final Throwable CONTEXT_INITIALIZATION_FAILED = new Exception(
             ClientRequestContext.class.getSimpleName() + " initialization failed", null, false, false) {

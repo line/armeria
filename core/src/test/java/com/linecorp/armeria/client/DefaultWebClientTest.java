@@ -30,27 +30,25 @@ import org.mockito.ArgumentCaptor;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
-class DefaultHttpClientTest {
+class DefaultWebClientTest {
 
-    @SuppressWarnings("unchecked")
     @Test
     void testConcatenateRequestPath() throws Exception {
         final String clientUriPath = "http://127.0.0.1/hello";
         final String requestPath = "world/test?q1=foo";
 
-        final Client<HttpRequest, HttpResponse> mockClientDelegate = mock(Client.class);
+        final HttpClient mockClientDelegate = mock(HttpClient.class);
         final ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(
-                ClientFactory.ofDefault(), new URI(clientUriPath), HttpClient.class, ClientOptions.of());
-        final DefaultHttpClient defaultHttpClient = new DefaultHttpClient(
+                ClientFactory.ofDefault(), new URI(clientUriPath), WebClient.class, ClientOptions.of());
+        final DefaultWebClient defaultWebClient = new DefaultWebClient(
                 clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
                 SessionProtocol.of("http"), Endpoint.of("127.0.0.1"));
 
-        defaultHttpClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
+        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
 
         final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());

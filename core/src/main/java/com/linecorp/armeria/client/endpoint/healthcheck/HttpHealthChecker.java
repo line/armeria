@@ -24,12 +24,12 @@ import javax.annotation.Nullable;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -47,7 +47,7 @@ final class HttpHealthChecker implements AsyncCloseable {
     private static final AsciiString ARMERIA_LPHC = HttpHeaderNames.of("armeria-lphc");
 
     private final HealthCheckerContext ctx;
-    private final HttpClient httpClient;
+    private final WebClient webClient;
     private final String authority;
     private final String path;
     private final boolean useGet;
@@ -60,11 +60,11 @@ final class HttpHealthChecker implements AsyncCloseable {
     HttpHealthChecker(HealthCheckerContext ctx, String path, boolean useGet) {
         final Endpoint endpoint = ctx.endpoint();
         this.ctx = ctx;
-        httpClient = HttpClient.builder(ctx.protocol(), endpoint)
-                               .factory(ctx.clientFactory())
-                               .options(ctx.clientConfigurator().apply(ClientOptions.builder()).build())
-                               .decorator(ResponseTimeoutUpdater::new)
-                               .build();
+        webClient = WebClient.builder(ctx.protocol(), endpoint)
+                             .factory(ctx.clientFactory())
+                             .options(ctx.clientConfigurator().apply(ClientOptions.builder()).build())
+                             .decorator(ResponseTimeoutUpdater::new)
+                             .build();
         authority = endpoint.authority();
         this.path = path;
         this.useGet = useGet;
@@ -91,7 +91,7 @@ final class HttpHealthChecker implements AsyncCloseable {
             headers = builder.build();
         }
 
-        lastResponse = httpClient.execute(headers);
+        lastResponse = webClient.execute(headers);
         lastResponse.aggregate().handle((res, cause) -> {
             if (closed) {
                 return null;
@@ -159,7 +159,7 @@ final class HttpHealthChecker implements AsyncCloseable {
     }
 
     private final class ResponseTimeoutUpdater extends SimpleDecoratingHttpClient {
-        ResponseTimeoutUpdater(Client<HttpRequest, HttpResponse> delegate) {
+        ResponseTimeoutUpdater(HttpClient delegate) {
             super(delegate);
         }
 

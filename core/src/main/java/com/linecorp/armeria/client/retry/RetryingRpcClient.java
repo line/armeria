@@ -21,50 +21,54 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
 /**
- * A {@link Client} decorator that handles failures of an invocation and retries RPC requests.
+ * An {@link RpcClient} decorator that handles failures of an invocation and retries RPC requests.
  */
-public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
+public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse>
+        implements RpcClient {
 
     /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
+     * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
+     * RPC requests.
      *
      * @param retryStrategyWithContent the retry strategy
      */
-    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
+    public static Function<? super RpcClient, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
         return builder(retryStrategyWithContent).newDecorator();
     }
 
     /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
+     * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
+     * RPC requests.
      *
      * @param retryStrategyWithContent the retry strategy
      * @param maxTotalAttempts the maximum number of total attempts
      */
-    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
+    public static Function<? super RpcClient, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent, int maxTotalAttempts) {
         return builder(retryStrategyWithContent).maxTotalAttempts(maxTotalAttempts)
                                                 .newDecorator();
     }
 
     /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
+     * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
+     * RPC requests.
      *
      * @param retryStrategyWithContent the retry strategy
      * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
      */
-    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
+    public static Function<? super RpcClient, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         return builder(retryStrategyWithContent).maxTotalAttempts(maxTotalAttempts)
@@ -82,9 +86,9 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     }
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that decorates the specified {@link RpcClient}.
      */
-    RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
+    RetryingRpcClient(RpcClient delegate,
                       RetryStrategyWithContent<RpcResponse> retryStrategyWithContent,
                       int totalMaxAttempts, long responseTimeoutMillisForEachAttempt) {
         super(delegate, retryStrategyWithContent, totalMaxAttempts, responseTimeoutMillisForEachAttempt);

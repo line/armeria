@@ -37,7 +37,7 @@ import com.codahale.metrics.Sampling;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.metric.MetricCollectingClient;
+import com.linecorp.armeria.client.metric.MetricCollectingRpcClient;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -160,7 +160,7 @@ public class DropwizardMetricsIntegrationTest {
     private static void makeRequest(String name) {
         final Iface client = new ClientBuilder(server.uri(BINARY, "/helloservice"))
                 .factory(clientFactory)
-                .rpcDecorator(MetricCollectingClient.newDecorator(
+                .rpcDecorator(MetricCollectingRpcClient.newDecorator(
                         MeterIdPrefixFunction.ofDefault("armeria.client.HelloService")))
                 .build(Iface.class);
         try {

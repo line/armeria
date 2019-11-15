@@ -33,8 +33,8 @@ import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
- * If you are creating an {@link HttpClient}, it is recommended to use the factory methods in
- * {@link HttpClient}.
+ * If you are creating an {@link WebClient}, it is recommended to use the factory methods in
+ * {@link WebClient}.
  */
 public final class Clients {
 
@@ -349,7 +349,7 @@ public final class Clients {
      * but with different {@link ClientOption}s. For example:
      *
      * <pre>{@code
-     * HttpClient derivedHttpClient = Clients.newDerivedClient(httpClient, options -> {
+     * WebClient derivedWebClient = Clients.newDerivedClient(webClient, options -> {
      *     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
      *     builder.decorator(...);  // Add a decorator.
      *     builder.addHttpHeader(...); // Add an HTTP header.
@@ -401,9 +401,9 @@ public final class Clients {
      * Unwraps the specified client into the object of the specified {@code type}.
      * Use this method instead of an explicit downcast. For example:
      * <pre>{@code
-     * HttpClient client = new HttpClientBuilder()
-     *     .decorator(LoggingClient.newDecorator())
-     *     .build();
+     * WebClient client = WebClient.builder(...)
+     *                             .decorator(LoggingClient.newDecorator())
+     *                             .build();
      *
      * LoggingClient unwrapped = Clients.unwrap(client, LoggingClient.class).get();
      *

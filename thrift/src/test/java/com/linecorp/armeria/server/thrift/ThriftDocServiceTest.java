@@ -40,7 +40,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -172,7 +172,7 @@ public class ThriftDocServiceTest {
         // when building a DocService, so we add them manually here.
         addExamples(expectedJson);
 
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
@@ -230,7 +230,7 @@ public class ThriftDocServiceTest {
 
     @Test
     public void excludeAllServices() throws IOException {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());

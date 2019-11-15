@@ -27,7 +27,7 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -266,7 +266,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
     }
 
     private static AggregatedHttpResponse executeRequest(AggregatedHttpRequest req) {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         return client.execute(req).aggregate().join();
     }
 }

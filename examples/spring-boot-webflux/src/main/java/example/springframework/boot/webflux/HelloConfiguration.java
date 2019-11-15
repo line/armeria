@@ -3,8 +3,8 @@ package example.springframework.boot.webflux;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
 import com.linecorp.armeria.server.Server;
@@ -59,11 +59,11 @@ public class HelloConfiguration {
     }
 
     /**
-     * A user can configure a {@link Client} by providing an {@link ArmeriaClientConfigurator} bean.
+     * A user can configure an {@link HttpClient} by providing an {@link ArmeriaClientConfigurator} bean.
      */
     @Bean
     public ArmeriaClientConfigurator armeriaClientConfigurator(ClientFactory clientFactory) {
-        // Customize the client using the given HttpClientBuilder. For example:
+        // Customize the client using the given WebClientBuilder. For example:
         return builder -> {
             // Use a circuit breaker for each remote host.
             final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();

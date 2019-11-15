@@ -69,19 +69,19 @@ class HttpClientResponseTimeoutHandlerTest {
         final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
         final IllegalStateException reqCause = new IllegalStateException("abort request");
         final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
-        final HttpClient client = HttpClient.builder(server.uri(protocol, "/"))
-                .responseTimeout(Duration.ofSeconds(2))
-                .decorator((delegate, ctx, req) -> {
-                    if (useResponseTimeoutHandler) {
-                        ctx.setResponseTimeoutHandler(() -> {
-                            ctx.request().abort(reqCause);
-                            invokeResponseTimeoutHandler.set(true);
-                        });
-                    }
-                    logHolder.set(ctx.log());
-                    return delegate.execute(ctx, req);
-                })
-                .build();
+        final WebClient client = WebClient.builder(server.uri(protocol, "/"))
+                                          .responseTimeout(Duration.ofSeconds(2))
+                                          .decorator((delegate, ctx, req) -> {
+                                              if (useResponseTimeoutHandler) {
+                                                  ctx.setResponseTimeoutHandler(() -> {
+                                                      ctx.request().abort(reqCause);
+                                                      invokeResponseTimeoutHandler.set(true);
+                                                  });
+                                              }
+                                              logHolder.set(ctx.log());
+                                              return delegate.execute(ctx, req);
+                                          })
+                                          .build();
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
@@ -90,7 +90,7 @@ class HttpClientResponseTimeoutHandlerTest {
         });
 
         if (useResponseTimeoutHandler) {
-            assertThat(invokeResponseTimeoutHandler).isTrue();
+            await().untilTrue(invokeResponseTimeoutHandler);
             assertThat(logHolder.get().requestCause()).isSameAs(reqCause);
             assertThatThrownBy(() -> response.aggregate().join())
                     .isInstanceOf(CompletionException.class)
@@ -107,16 +107,16 @@ class HttpClientResponseTimeoutHandlerTest {
     void testResponseTimeoutHandlerRequestAbort(SessionProtocol protocol) {
         final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
         final IllegalStateException reqCause = new IllegalStateException("abort request");
-        final HttpClient client = HttpClient.builder(server.uri(protocol, "/"))
-                .responseTimeout(Duration.ofSeconds(2))
-                .decorator((delegate, ctx, req) -> {
-                    ctx.setResponseTimeoutHandler(() -> {
-                        ctx.request().abort(reqCause);
-                    });
-                    logHolder.set(ctx.log());
-                    return delegate.execute(ctx, req);
-                })
-                .build();
+        final WebClient client = WebClient.builder(server.uri(protocol, "/"))
+                                          .responseTimeout(Duration.ofSeconds(2))
+                                          .decorator((delegate, ctx, req) -> {
+                                              ctx.setResponseTimeoutHandler(() -> {
+                                                  ctx.request().abort(reqCause);
+                                              });
+                                              logHolder.set(ctx.log());
+                                              return delegate.execute(ctx, req);
+                                          })
+                                          .build();
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
@@ -135,7 +135,8 @@ class HttpClientResponseTimeoutHandlerTest {
         final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
         final IllegalStateException resCause = new IllegalStateException("abort response");
         final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
-        final HttpClient client = HttpClient.builder(server.uri(protocol, "/"))
+        final WebClient client = WebClient
+                .builder(server.uri(protocol, "/"))
                 .responseTimeout(Duration.ofSeconds(2))
                 .decorator((delegate, ctx, req) -> {
                     final HttpResponse response = delegate.execute(ctx, req);

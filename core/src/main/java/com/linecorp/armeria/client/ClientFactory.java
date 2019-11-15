@@ -237,10 +237,10 @@ public interface ClientFactory extends AutoCloseable {
      * Unwraps the specified {@code client} object into the object of the specified {@code type}. For example,
      * <pre>{@code
      * ClientFactory clientFactory = ...;
-     * HttpClient client = new HttpClientBuilder()
-     *     .factory(clientFactory)
-     *     .decorator(LoggingClient.newDecorator())
-     *     .build();
+     * WebClient client = WebClient.builder(...)
+     *                             .factory(clientFactory)
+     *                             .decorator(LoggingClient.newDecorator())
+     *                             .build();
      *
      * LoggingClient unwrapped = clientFactory.unwrap(client, LoggingClient.class).get();
      *

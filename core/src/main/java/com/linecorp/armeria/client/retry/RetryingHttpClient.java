@@ -33,8 +33,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -52,9 +52,10 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import io.netty.handler.codec.DateFormatter;
 
 /**
- * A {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+ * An {@link HttpClient} decorator that handles failures of an invocation and retries HTTP requests.
  */
-public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpResponse> {
+public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpResponse>
+        implements HttpClient {
 
     private static final Logger logger = LoggerFactory.getLogger(RetryingHttpClient.class);
 
@@ -74,36 +75,39 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     }
 
     /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
+     * requests.
      *
      * @param retryStrategy the retry strategy
      */
-    public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
+    public static Function<? super HttpClient, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy) {
         return builder(retryStrategy).newDecorator();
     }
 
     /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
+     * requests.
      *
      * @param retryStrategy the retry strategy
      * @param maxTotalAttempts the maximum number of total attempts
      */
-    public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
+    public static Function<? super HttpClient, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts) {
         return builder(retryStrategy).maxTotalAttempts(maxTotalAttempts)
                                      .newDecorator();
     }
 
     /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
+     * requests.
      *
      * @param retryStrategy the retry strategy
      * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
      */
-    public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
+    public static Function<? super HttpClient, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         return builder(retryStrategy).maxTotalAttempts(maxTotalAttempts)
@@ -118,9 +122,9 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     private final boolean needsContentInStrategy;
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    RetryingHttpClient(Client<HttpRequest, HttpResponse> delegate,
+    RetryingHttpClient(HttpClient delegate,
                        RetryStrategy retryStrategy, int totalMaxAttempts,
                        long responseTimeoutMillisForEachAttempt, boolean useRetryAfter) {
         super(delegate, retryStrategy, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
@@ -130,9 +134,9 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     }
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    RetryingHttpClient(Client<HttpRequest, HttpResponse> delegate,
+    RetryingHttpClient(HttpClient delegate,
                        RetryStrategyWithContent<HttpResponse> retryStrategyWithContent, int totalMaxAttempts,
                        long responseTimeoutMillisForEachAttempt, boolean useRetryAfter,
                        int contentPreviewLength) {
