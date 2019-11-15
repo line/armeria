@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-class RetryingClientLoadBalancingTest {
+class RetryingHttpClientLoadBalancingTest {
 
     private static final int NUM_PORTS = 5;
 
@@ -80,7 +80,7 @@ class RetryingClientLoadBalancingTest {
     };
 
     /**
-     * Makes sure that {@link RetryingClient} respects the {@link Endpoint} selection order.
+     * Makes sure that {@link RetryingHttpClient} respects the {@link Endpoint} selection order.
      */
     @ParameterizedTest
     @EnumSource(TestMode.class)
@@ -107,15 +107,15 @@ class RetryingClientLoadBalancingTest {
                 }
 
                 // Retry only once on failure.
-                if (!HttpStatus.OK.equals(status) && AbstractRetryingClient.getTotalAttempts(ctx) <= 1) {
+                if (!HttpStatus.OK.equals(status) && RetryingClient.getTotalAttempts(ctx) <= 1) {
                     return CompletableFuture.completedFuture(Backoff.withoutDelay());
                 } else {
                     return CompletableFuture.completedFuture(null);
                 }
             };
             final AsyncHttpClient c = AsyncHttpClient.builder("h2c://group:" + groupName)
-                                                     .decorator(RetryingClient.builder(retryStrategy)
-                                                                              .newDecorator())
+                                                     .decorator(RetryingHttpClient.builder(retryStrategy)
+                                                                                  .newDecorator())
                                                      .build();
 
             for (int i = 0; i < NUM_PORTS; i++) {

@@ -47,7 +47,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
-public class RetryingClientWithLoggingTest {
+public class RetryingHttpClientWithLoggingTest {
 
     @Rule
     public final ServerRule server = new ServerRule() {
@@ -93,7 +93,7 @@ public class RetryingClientWithLoggingTest {
         logResult.clear();
     }
 
-    // HttpClient -> RetryingClient -> LoggingClient -> HttpClientDelegate
+    // WebClient -> RetryingClient -> LoggingClient -> HttpClientDelegate
     // In this case, all of the requests and responses are logged.
     @Test
     public void retryingThenLogging() {
@@ -107,8 +107,8 @@ public class RetryingClientWithLoggingTest {
                 });
         final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
                                                       .decorator(loggingDecorator())
-                                                      .decorator(RetryingClient.builder(retryStrategy)
-                                                                               .newDecorator())
+                                                      .decorator(RetryingHttpClient.builder(retryStrategy)
+                                                                                   .newDecorator())
                                                       .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
@@ -116,13 +116,13 @@ public class RetryingClientWithLoggingTest {
         await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
     }
 
-    // HttpClient -> LoggingClient -> RetryingClient -> HttpClientDelegate
+    // WebClient -> LoggingClient -> RetryingClient -> HttpClientDelegate
     // In this case, only the first request and the last response are logged.
     @Test
     public void loggingThenRetrying() throws Exception {
         successLogIndex = 1;
         final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
-                                                      .decorator(RetryingClient.newDecorator(
+                                                      .decorator(RetryingHttpClient.newDecorator(
                                                               RetryStrategy.onServerErrorStatus()))
                                                       .decorator(loggingDecorator())
                                                       .build();

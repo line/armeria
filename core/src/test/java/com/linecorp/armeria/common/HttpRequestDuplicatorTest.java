@@ -30,7 +30,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategy;
-import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -92,7 +92,7 @@ class HttpRequestDuplicatorTest {
     void longLivedRequest() {
         final AsyncHttpClient client =
                 AsyncHttpClient.builder(server.uri("/"))
-                               .decorator(RetryingClient.newDecorator(
+                               .decorator(RetryingHttpClient.newDecorator(
                                        RetryStrategy.onServerErrorStatus(Backoff.withoutDelay())))
                                .build();
 

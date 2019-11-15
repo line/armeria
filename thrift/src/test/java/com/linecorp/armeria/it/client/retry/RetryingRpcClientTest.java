@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.it.client.retry;
 
-import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
+import static com.linecorp.armeria.client.retry.RetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

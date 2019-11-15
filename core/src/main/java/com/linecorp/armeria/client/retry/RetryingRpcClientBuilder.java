@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.RpcResponse;
 /**
  * Builds a new {@link RetryingRpcClient} or its decorator function.
  */
-public final class RetryingRpcClientBuilder extends AbstractRetryingClientBuilder<RpcResponse> {
+public final class RetryingRpcClientBuilder extends RetryingClientBuilder<RpcResponse> {
 
     /**
      * Creates a new builder with the specified {@link RetryStrategyWithContent}.

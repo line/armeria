@@ -84,7 +84,8 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
     import com.linecorp.armeria.common.HttpResponse;
 
     CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-    AsyncHttpClient client = AsyncHttpClient.builder(...)
+    AsyncHttpClient client = AsyncHttpClient
+            .builder(...)
             .decorator(CircuitBreakerHttpClient.builder(strategy)
                                                .newDecorator())
             .build();
@@ -189,7 +190,8 @@ you should implement :api:`CircuitBreakerStrategyWithContent` and specify it whe
                 }
             };
 
-    AsyncHttpClient client = AsyncHttpClient.builder(...)
+    AsyncHttpClient client = AsyncHttpClient
+            .builder(...)
             .decorator(CircuitBreakerHttpClient.builder(myStrategy) // Specify the strategy
                                                .newDecorator())
             .build();

@@ -21,7 +21,7 @@ import org.openjdk.jmh.annotations.State;
 
 import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.retry.RetryStrategy;
-import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.client.retry.RetryingHttpClient;
 
 @State(Scope.Benchmark)
 public class WithoutDuplicator extends RetryingClientBase {
@@ -29,7 +29,7 @@ public class WithoutDuplicator extends RetryingClientBase {
     @Override
     protected AsyncHttpClient newClient() {
         return AsyncHttpClient.builder(baseUrl())
-                              .decorator(RetryingClient.newDecorator(RetryStrategy.never()))
+                              .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
                               .build();
     }
 }

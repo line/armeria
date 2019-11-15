@@ -31,8 +31,9 @@ import io.micrometer.core.instrument.MeterRegistry;
  *
  * <p>Example:
  * <pre>{@code
- * AsyncHttpClient client = AsyncHttpClient.builder(uri)
- *         .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("myClient)))
+ * AsyncHttpClient client = AsyncHttpClient
+ *         .builder(uri)
+ *         .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("myClient")))
  *         .build();
  * }
  * </pre>

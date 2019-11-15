@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
+import static com.linecorp.armeria.client.retry.RetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.common.util.Exceptions.peel;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -79,7 +79,7 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.channel.EventLoop;
 
-public class RetryingClientTest {
+public class RetryingHttpClientTest {
 
     // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
     private static final ClientFactory clientFactory =
@@ -280,10 +280,10 @@ public class RetryingClientTest {
 
     @Test
     public void retryWhenContentMatched() {
-        final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(new RetryIfContentMatch("Need to retry"))
-                              .contentPreviewLength(1024)
-                              .newDecorator();
+        final Function<? super HttpClient, RetryingHttpClient> retryingDecorator =
+                RetryingHttpClient.builder(new RetryIfContentMatch("Need to retry"))
+                                  .contentPreviewLength(1024)
+                                  .newDecorator();
         final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
                                                       .factory(clientFactory)
                                                       .decorator(retryingDecorator)
@@ -420,9 +420,9 @@ public class RetryingClientTest {
                 ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
-        final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(RetryStrategy.onServerErrorStatus(Backoff.fixed(8000)))
-                              .newDecorator();
+        final Function<? super HttpClient, RetryingHttpClient> retryingDecorator =
+                RetryingHttpClient.builder(RetryStrategy.onServerErrorStatus(Backoff.fixed(8000)))
+                                  .newDecorator();
 
         final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
                                                       .factory(factory)
@@ -465,7 +465,7 @@ public class RetryingClientTest {
             final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
             final AsyncHttpClient client =
                     AsyncHttpClient.builder(server.uri("/"))
-                                   .decorator(RetryingClient.newDecorator(retryAlways))
+                                   .decorator(RetryingHttpClient.newDecorator(retryAlways))
                                    .decorator((delegate, ctx, req) -> {
                                        context.set(ctx);
                                        return delegate.execute(ctx, req);
@@ -526,7 +526,7 @@ public class RetryingClientTest {
             final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
             final AsyncHttpClient client =
                     AsyncHttpClient.builder(server.uri("/"))
-                                   .decorator(RetryingClient.newDecorator(retryAlways))
+                                   .decorator(RetryingHttpClient.newDecorator(retryAlways))
                                    .decorator((delegate, ctx, req) -> {
                                        context.set(ctx);
                                        return delegate.execute(ctx, req);
@@ -567,7 +567,7 @@ public class RetryingClientTest {
                                                       .decorator((delegate, ctx, req) -> {
                                                           throw new AnticipatedException();
                                                       })
-                                                      .decorator(RetryingClient.newDecorator(strategy, 5))
+                                                      .decorator(RetryingHttpClient.newDecorator(strategy, 5))
                                                       .build();
 
         assertThatThrownBy(() -> client.get("/").aggregate().join())
@@ -584,7 +584,7 @@ public class RetryingClientTest {
                                                           eventLoop.set(ctx.eventLoop());
                                                           return delegate.execute(ctx, req);
                                                       })
-                                                      .decorator(RetryingClient.newDecorator(
+                                                      .decorator(RetryingHttpClient.newDecorator(
                                                               RetryStrategy.onServerErrorStatus(), 2))
                                                       .build();
         client.get("/503-then-success").aggregate().whenComplete((unused, cause) -> {
@@ -600,12 +600,12 @@ public class RetryingClientTest {
 
     private AsyncHttpClient client(RetryStrategy strategy, long responseTimeoutMillis,
                                    long responseTimeoutForEach, int maxTotalAttempts) {
-        final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(strategy)
-                              .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
-                              .useRetryAfter(true)
-                              .maxTotalAttempts(maxTotalAttempts)
-                              .newDecorator();
+        final Function<? super HttpClient, RetryingHttpClient> retryingDecorator =
+                RetryingHttpClient.builder(strategy)
+                                  .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                                  .useRetryAfter(true)
+                                  .maxTotalAttempts(maxTotalAttempts)
+                                  .newDecorator();
 
         return AsyncHttpClient.builder(server.uri("/"))
                               .factory(clientFactory)

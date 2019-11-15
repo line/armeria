@@ -36,7 +36,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
-public class RetryingClientAuthorityHeaderTest {
+public class RetryingHttpClientAuthorityHeaderTest {
 
     @ClassRule
     public static ServerRule backend1 = new ServerRule() {
@@ -83,7 +83,7 @@ public class RetryingClientAuthorityHeaderTest {
         EndpointGroupRegistry.register("backends", endpointGroup, EndpointSelectionStrategy.ROUND_ROBIN);
 
         return AsyncHttpClient.builder("h2c://group:backends")
-                              .decorator(RetryingClient.newDecorator(RetryStrategy.onServerErrorStatus()))
+                              .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()))
                               .build();
     }
 }

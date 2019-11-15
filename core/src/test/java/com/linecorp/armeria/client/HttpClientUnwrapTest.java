@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.encoding.HttpDecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.RetryStrategy;
-import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 class HttpClientUnwrapTest {
@@ -32,12 +32,12 @@ class HttpClientUnwrapTest {
         final AsyncHttpClient client =
                 AsyncHttpClient.builder()
                                .decorator(LoggingClient.newDecorator())
-                               .decorator(RetryingClient.newDecorator(RetryStrategy.never()))
+                               .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
                                .build();
 
         assertThat(client.as(AsyncHttpClient.class)).containsSame(client);
 
-        assertThat(client.as(RetryingClient.class)).containsInstanceOf(RetryingClient.class);
+        assertThat(client.as(RetryingHttpClient.class)).containsInstanceOf(RetryingHttpClient.class);
         assertThat(client.as(LoggingClient.class)).containsInstanceOf(LoggingClient.class);
 
         // The outermost decorator of the client must be returned,
@@ -45,7 +45,7 @@ class HttpClientUnwrapTest {
         // In the current setup, the outermost `Unwrappable` and `Client` are
         // `client` and `RetryingClient` respectively.
         assertThat(client.as(Unwrappable.class)).containsSame(client);
-        assertThat(client.as(Client.class)).containsInstanceOf(RetryingClient.class);
+        assertThat(client.as(Client.class)).containsInstanceOf(RetryingHttpClient.class);
 
         assertThat(client.as(String.class)).isEmpty();
 
@@ -53,12 +53,12 @@ class HttpClientUnwrapTest {
 
         assertThat(factory.unwrap(client, AsyncHttpClient.class)).containsSame(client);
 
-        assertThat(factory.unwrap(client, RetryingClient.class))
-                .containsInstanceOf(RetryingClient.class);
+        assertThat(factory.unwrap(client, RetryingHttpClient.class))
+                .containsInstanceOf(RetryingHttpClient.class);
         assertThat(factory.unwrap(client, LoggingClient.class)).containsInstanceOf(LoggingClient.class);
 
         assertThat(factory.unwrap(client, Unwrappable.class)).containsSame(client);
-        assertThat(factory.unwrap(client, Client.class)).containsInstanceOf(RetryingClient.class);
+        assertThat(factory.unwrap(client, Client.class)).containsInstanceOf(RetryingHttpClient.class);
 
         assertThat(factory.unwrap(client, HttpDecodingClient.class)).isEmpty();
     }

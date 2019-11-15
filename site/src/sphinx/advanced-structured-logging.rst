@@ -200,7 +200,8 @@ request and response properties, you need to use :api:`ClientConnectionTimings` 
     import com.linecorp.armeria.client.ClientConnectionTimings;
     import com.linecorp.armeria.client.AsyncHttpClient;
 
-    AsyncHttpClient client = AsyncHttpClient.builder("http://armeria.com")
+    AsyncHttpClient client = AsyncHttpClient
+            .builder("http://armeria.com")
             .decorator((delegate, ctx, req) -> {
                 ctx.log().addListener(
                         log -> {
