@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
@@ -39,6 +40,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -152,6 +154,97 @@ public class LoggingServiceTest {
         verify(logger).info(RESPONSE_FORMAT,
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
                             ", trailers: " + RESPONSE_TRAILERS);
+    }
+
+    @Test
+    public void mapRequestLogLevelMapper() throws Exception {
+        when(log.requestHeaders()).thenAnswer(invocation -> RequestHeaders.of(HttpMethod.GET, "/",
+                                                                              "x-req", "test",
+                                                                              "x-res", "test"));
+
+        final LoggingService service =
+                LoggingService.builder()
+                              .requestLogLevelMapper(log -> {
+                                  if (log.requestHeaders().contains("x-req")) {
+                                      return LogLevel.WARN;
+                                  } else {
+                                      return LogLevel.INFO;
+                                  }
+                              })
+                              .responseLogLevelMapper(log -> {
+                                  if (log.requestHeaders().contains("x-res")) {
+                                      return LogLevel.WARN;
+                                  } else {
+                                      return LogLevel.INFO;
+                                  }
+                              })
+                              .newDecorator().apply(delegate);
+
+        service.serve(ctx, REQUEST);
+        verify(logger).warn(REQUEST_FORMAT,
+                            "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
+                            ", trailers: " + REQUEST_TRAILERS);
+        verify(logger).warn(RESPONSE_FORMAT,
+                            "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
+                            ", trailers: " + RESPONSE_TRAILERS);
+
+        when(log.requestHeaders()).thenAnswer(invocation -> RequestHeaders.of(HttpMethod.GET, "/"));
+
+        service.serve(ctx, REQUEST);
+        verify(logger).info(REQUEST_FORMAT,
+                            "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
+                            ", trailers: " + REQUEST_TRAILERS);
+        verify(logger).info(RESPONSE_FORMAT,
+                            "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
+                            ", trailers: " + RESPONSE_TRAILERS);
+    }
+
+    @Test
+    public void duplicateSetRequestLogLevelAndMapper() throws Exception {
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .requestLogLevel(LogLevel.INFO)
+                                               .requestLogLevelMapper(log -> LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void reversedDuplicateSetRequestLogLevelAndMapper() throws Exception {
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .requestLogLevelMapper(log -> LogLevel.INFO)
+                                               .requestLogLevel(LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void duplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .successfulResponseLogLevel(LogLevel.INFO)
+                                               .responseLogLevelMapper(log -> LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void reversedDuplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .responseLogLevelMapper(log -> LogLevel.INFO)
+                                               .successfulResponseLogLevel(LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void duplicateSetFailureResponseLogLevelAndMapper() throws Exception {
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .failureResponseLogLevel(LogLevel.INFO)
+                                               .responseLogLevelMapper(log -> LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    public void reversedDuplicateSetFailureResponseLogLevelAndMapper() throws Exception {
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .responseLogLevelMapper(log -> LogLevel.INFO)
+                                               .failureResponseLogLevel(LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
