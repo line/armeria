@@ -45,7 +45,7 @@ public class DropwizardArmeriaApplicationTest {
     private static String endpoint;
 
     @BeforeAll
-    void setUp() {
+    static void setUp() {
         // endpoint = "http://localhost:" + EXTENSION.getLocalPort();
         service = new HelloService();
     }

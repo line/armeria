@@ -63,6 +63,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 @JsonTypeName(ArmeriaServerFactory.TYPE)
 public class ArmeriaServerFactory extends SimpleServerFactory {
+    // TODO: This class could be stripped down to the essential fields. Implement ServerFactory instead.
 
     public static final String TYPE = "armeria";
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerFactory.class);
@@ -83,10 +84,10 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
      * Builds on a {@link ServerBuilder}.
      *
      * @param sb An instance of a {@link ServerBuilder}
-     * @param connectorFactory Null or {@link ConnectorFactory}. If non-null, must be an instance of
-     *                          an {@link ArmeriaServerDecorator}
-     * @param writerFactory Null or {@link AccessLogWriterFactory}
-     * @param meterRegistry Null or {@link MeterRegistry}
+     * @param connectorFactory {@code null} or {@link ConnectorFactory}. If non-null must be an instance of
+     *                         an {@link ArmeriaServerDecorator}
+     * @param writerFactory {@code null} or {@link AccessLogWriterFactory}
+     * @param meterRegistry {@code null} or {@link MeterRegistry}
      * @throws SSLException Thrown when configuring TLS
      * @throws CertificateException Thrown when validating certificates
      */

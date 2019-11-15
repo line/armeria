@@ -1,7 +1,7 @@
 .. _advanced-dropwizard-integration:
 
 Using Armeria with Dropwizard
-=================================
+=============================
 
 .. note::
 
@@ -127,7 +127,7 @@ Server Properties
     - ``shutdownGracePeriod``
 
 Where defined, the Armeria ServerFactory will prefer Armeria's default properties over Dropwizard's.
-The following additional properties are able to be added to configure the ``ServerBuilder`` before being
+The following additional properties are able to be added to configure the :api:`ServerBuilder` before being
 passed to the :api:`ArmeriaBundle`.
 
 +-----------------------------+-----------------------------------------------------------------------------+
@@ -155,7 +155,7 @@ The default :api:`AccessLogWriter` is ``AccessLogWriter.common()``, but this can
 configuration.
 
 ``common``
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^
 Use NCSA common log format.
 
 .. code-block:: yml
@@ -166,7 +166,7 @@ Use NCSA common log format.
         type: common
 
 ``combined``
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^
 Use NCSA combined log format.
 
 .. code-block:: yml
@@ -177,8 +177,8 @@ Use NCSA combined log format.
         type: combined
 
 ``custom``
-^^^^^^^^^^^^^^^^
-Use your own log format. Refer to :ref:`customize-log-format` for supported format tokens.
+^^^^^^^^^^
+Use your own log format. Refer to :ref:`customizing-log-format` for supported format tokens.
 
 .. code-block:: yml
 

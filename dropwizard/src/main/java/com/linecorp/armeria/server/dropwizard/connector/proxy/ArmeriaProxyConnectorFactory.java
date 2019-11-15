@@ -36,7 +36,6 @@ import io.dropwizard.jetty.ConnectorFactory;
 import io.dropwizard.util.Size;
 import io.dropwizard.validation.MaxSize;
 import io.dropwizard.validation.MinSize;
-import io.dropwizard.validation.PortRange;
 
 public abstract class ArmeriaProxyConnectorFactory implements ConnectorFactory, ArmeriaServerDecorator {
 
@@ -45,9 +44,6 @@ public abstract class ArmeriaProxyConnectorFactory implements ConnectorFactory, 
     // Default from ServerBuilder
     @JsonProperty
     private @MinSize(0) @MaxSize(Integer.MAX_VALUE) Size maxTlvSize = Size.bytes(65535 - 216);
-
-    @JsonProperty
-    private @PortRange int port = 8080;
 
     @Nullable
     @Override
@@ -74,10 +70,6 @@ public abstract class ArmeriaProxyConnectorFactory implements ConnectorFactory, 
 
     @Override
     public int getPort() {
-        return port;
-    }
-
-    public void setPort(int port) {
-        this.port = port;
+        return 0;
     }
 }

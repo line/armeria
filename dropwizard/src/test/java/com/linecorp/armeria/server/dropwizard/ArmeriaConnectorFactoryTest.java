@@ -26,14 +26,20 @@ import java.util.stream.Stream;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
 
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Server;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 
@@ -42,6 +48,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpConnectorFactory;
 import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpsConnectorFactory;
 import com.linecorp.armeria.server.dropwizard.connector.ArmeriaServerDecorator;
+import com.linecorp.armeria.server.dropwizard.connector.proxy.ArmeriaProxyConnectorFactory;
 
 import io.dropwizard.configuration.ConfigurationValidationException;
 import io.dropwizard.configuration.YamlConfigurationFactory;
@@ -183,6 +190,45 @@ class ArmeriaConnectorFactoryTest {
                     .isEqualTo(Flags.defaultHttp2MaxFrameSize());
             assertThat(factory.getMaxHeaderListSize())
                     .isEqualTo(Flags.defaultHttp2MaxHeaderListSize());
+        }
+    }
+
+    @Nested
+    @ExtendWith(MockitoExtension.class)
+    class ArmeriaProxyConnectorFactoryTest {
+
+        @Mock
+        private Server server;
+        @Mock
+        private MetricRegistry registry;
+
+        @Test
+        public void testProxyReturnsNoJettyServer() {
+            final TestProxy factory = new TestProxy();
+            final Connector connector = factory.build(server, registry, "junit", null);
+            assertThat(connector).isNull();
+        }
+
+        @Test
+        public void testProxySessionProtocol() {
+            final TestProxy factory = new TestProxy();
+            assertThat(factory.getSessionProtocols())
+                    .contains(SessionProtocol.PROXY);
+        }
+
+        @Test
+        void testFactoryDefaults() {
+            final TestProxy factory = new TestProxy();
+            assertThat(factory.getPort()).isEqualTo(0);
+            assertThat(factory.getMaxTlvSize().toBytes()).isEqualTo(65535 - 216);
+        }
+    }
+
+    static class TestProxy extends ArmeriaProxyConnectorFactory {
+
+        @Override
+        public String getType() {
+            return "armeria-proxy";
         }
     }
 }
