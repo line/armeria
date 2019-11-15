@@ -3,13 +3,13 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.10.0
+  - com.fasterxml.jackson:jackson-bom:2.10.1
   - io.dropwizard.metrics:metrics-bom:4.1.1
-  - io.grpc:grpc-bom:1.24.1
-  - io.micrometer:micrometer-bom:1.3.0
+  - io.grpc:grpc-bom:1.25.0
+  - io.micrometer:micrometer-bom:1.3.1
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.43.Final
-  - io.zipkin.brave:brave-bom:5.8.0
+  - io.zipkin.brave:brave-bom:5.9.0
   - org.eclipse.jetty:jetty-bom:9.4.22.v20191022
   - org.junit:junit-bom:5.5.2
 
@@ -57,7 +57,7 @@ com.github.node-gradle:
   gradle-node-plugin: { version: '2.2.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.49.1' }
+  gax-grpc: { version: '1.50.1' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -98,8 +98,8 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protoc: { version: '3.9.1' }
-  protobuf-java: { version: &PROTOBUF_VERSION '3.9.1' }
+  protoc: { version: '3.10.1' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.10.0' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
@@ -107,7 +107,7 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.10' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.25' }
+  checkstyle: { version: '8.26' }
 
 com.spotify:
   completable-futures:
@@ -156,13 +156,13 @@ io.grpc:
 io.micrometer:
   micrometer-core:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.3.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.3.1/
   micrometer-registry-prometheus:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.3.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.3.1/
   micrometer-spring-legacy:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.3.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.3.1/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -172,7 +172,7 @@ io.netty:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.26.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.27.Final' }
 
 io.projectreactor:
   reactor-core:
@@ -189,7 +189,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.13'
+    version: '2.2.14'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -245,10 +245,10 @@ log4j:
   log4j: { version: '1.2.17' }
 
 me.champeau.gradle:
-  jmh-gradle-plugin: { version: '0.5.0-rc-2' }
+  jmh-gradle-plugin: { version: '0.5.0' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.10.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.11.1' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -312,7 +312,7 @@ org.apache.zookeeper:
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.13.2' }
+  assertj-core: { version: '3.14.0' }
 
 org.awaitility:
   awaitility: { version: '4.0.1' }
@@ -355,7 +355,7 @@ org.hamcrest:
   hamcrest-library: { version: *HAMCREST_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.17.Final' }
+  hibernate-validator: { version: '6.1.0.Final' }
 
 org.jctools:
   jctools-core:
@@ -375,7 +375,7 @@ org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.9' }
 
 org.openjdk.jmh:
-  jmh-core: { version: &JMH_VERSION '1.21' }
+  jmh-core: { version: &JMH_VERSION '1.22' }
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.opensaml:
@@ -402,7 +402,7 @@ org.reflections:
       to: com.linecorp.armeria.internal.shaded.reflections
 
 org.slf4j:
-  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.28' }
+  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.29' }
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
   slf4j-api:
@@ -413,7 +413,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.9.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.10.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

@@ -21,8 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.function.ToLongFunction;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 
-public class StickyEndpointSelectionStrategyTest {
+class StickyEndpointSelectionStrategyTest {
 
     private static final String STICKY_HEADER_NAME = "USER_COOKIE";
 
@@ -43,7 +43,7 @@ public class StickyEndpointSelectionStrategyTest {
 
     final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
 
-    private static final EndpointGroup STATIC_ENDPOINT_GROUP = new StaticEndpointGroup(
+    private static final EndpointGroup STATIC_ENDPOINT_GROUP = EndpointGroup.of(
             Endpoint.parse("localhost:1234"),
             Endpoint.parse("localhost:2345"),
             Endpoint.parse("localhost:3333"),
@@ -55,14 +55,14 @@ public class StickyEndpointSelectionStrategyTest {
 
     private static final DynamicEndpointGroup DYNAMIC_ENDPOINT_GROUP = new DynamicEndpointGroup();
 
-    @Before
-    public void setup() {
+    @BeforeEach
+    void setup() {
         EndpointGroupRegistry.register("static", STATIC_ENDPOINT_GROUP, strategy);
         EndpointGroupRegistry.register("dynamic", DYNAMIC_ENDPOINT_GROUP, strategy);
     }
 
     @Test
-    public void select() {
+    void select() {
         assertThat(strategy.newSelector(STATIC_ENDPOINT_GROUP)).isNotNull();
         final int selectTime = 5;
 
