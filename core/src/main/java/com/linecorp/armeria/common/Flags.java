@@ -61,6 +61,7 @@ import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.DefaultAddressResolverGroup;
+import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -852,7 +853,8 @@ public final class Flags {
      * Enables {@link DefaultAddressResolverGroup} that resolves domain name using JDK's built-in domain name
      * lookup mechanism.
      * Note that JDK's built-in resolver performs a blocking name lookup from the caller thread, and thus
-     * this flag should be enabled only when the default asynchronous resolver does not work as expected.
+     * this flag should be enabled only when the default asynchronous resolver does not work as expected,
+     * for example by always throwing a {@link DnsNameResolverTimeoutException}.
      *
      * <p>This flag is disabled by default.
      * Specify the {@code -Dcom.linecorp.armeria.useJdkDnsResolver=true} JVM option
