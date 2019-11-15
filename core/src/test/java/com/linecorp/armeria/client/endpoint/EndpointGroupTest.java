@@ -58,7 +58,7 @@ class EndpointGroupTest {
         group1.setEndpoints(ImmutableList.of(FOO, BAR));
         final DynamicEndpointGroup group2 = new DynamicEndpointGroup();
         group2.setEndpoints(ImmutableList.of(CAT, DOG));
-        final StaticEndpointGroup group3 = new StaticEndpointGroup(HELLO, WORLD);
+        final EndpointGroup group3 = EndpointGroup.of(HELLO, WORLD);
 
         final EndpointGroup composite = EndpointGroup.of(group1, group2, group3, GITHUB);
         assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR, CAT, DOG, HELLO, WORLD, GITHUB);

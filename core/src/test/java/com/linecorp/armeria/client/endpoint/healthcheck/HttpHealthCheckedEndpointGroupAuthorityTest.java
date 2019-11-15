@@ -27,7 +27,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.RequestHeaders;
 
@@ -107,8 +106,8 @@ class HttpHealthCheckedEndpointGroupAuthorityTest {
     private HealthCheckedEndpointGroup build(Endpoint endpoint,
                                              Consumer<HealthCheckedEndpointGroupBuilder> customizer) {
 
-        final HealthCheckedEndpointGroupBuilder builder = HealthCheckedEndpointGroup.builder(
-                new StaticEndpointGroup(endpoint), HEALTH_CHECK_PATH);
+        final HealthCheckedEndpointGroupBuilder builder =
+                HealthCheckedEndpointGroup.builder(endpoint, HEALTH_CHECK_PATH);
         builder.withClientOptions(b -> {
             b.decorator(LoggingClient.newDecorator());
             b.decorator((delegate, ctx, req) -> {

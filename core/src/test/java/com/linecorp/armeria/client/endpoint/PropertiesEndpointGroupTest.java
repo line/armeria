@@ -246,8 +246,8 @@ public class PropertiesEndpointGroupTest {
 
         final PropertiesEndpointGroup propertiesEndpointGroup = PropertiesEndpointGroup.of(
                 file.toPath(), "serverA.hosts");
-        final StaticEndpointGroup staticEndpointGroup = new StaticEndpointGroup(Endpoint.of("127.0.0.1", 8081));
-        final EndpointGroup endpointGroup = propertiesEndpointGroup.orElse(staticEndpointGroup);
+        final EndpointGroup fallbackEndpointGroup = Endpoint.of("127.0.0.1", 8081);
+        final EndpointGroup endpointGroup = propertiesEndpointGroup.orElse(fallbackEndpointGroup);
 
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSize(2));
 
