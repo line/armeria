@@ -90,7 +90,7 @@ class HttpClientResponseTimeoutHandlerTest {
         });
 
         if (useResponseTimeoutHandler) {
-            assertThat(invokeResponseTimeoutHandler).isTrue();
+            await().untilTrue(invokeResponseTimeoutHandler);
             assertThat(logHolder.get().requestCause()).isSameAs(reqCause);
             assertThatThrownBy(() -> response.aggregate().join())
                     .isInstanceOf(CompletionException.class)
