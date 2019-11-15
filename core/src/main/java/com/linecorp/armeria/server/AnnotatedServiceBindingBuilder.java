@@ -121,8 +121,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     /**
      * Adds the given {@link RequestConverterFunction} to this {@link AnnotatedServiceBindingBuilder}.
      */
-    public AnnotatedServiceBindingBuilder requestConverter(
-            RequestConverterFunction requestConverterFunction) {
+    public AnnotatedServiceBindingBuilder requestConverter(RequestConverterFunction requestConverterFunction) {
         requireNonNull(requestConverterFunction, "requestConverterFunction");
         requestConverterFunctionBuilder.add(requestConverterFunction);
         return this;

@@ -205,7 +205,7 @@ public final class ServerBuilder {
         virtualHostTemplate.requestContentPreviewerFactory(ContentPreviewerFactory.disabled());
         virtualHostTemplate.responseContentPreviewerFactory(ContentPreviewerFactory.disabled());
         virtualHostTemplate.accessLogger(
-                host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
+                    host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
     }
 

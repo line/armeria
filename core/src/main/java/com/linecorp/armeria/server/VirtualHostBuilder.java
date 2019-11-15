@@ -100,8 +100,7 @@ public final class VirtualHostBuilder {
             serverEngine.setNeedClientAuth(false);
 
             final SslContext sslContextClient =
-                    buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {
-                    });
+                    buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {});
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
 
@@ -636,9 +635,9 @@ public final class VirtualHostBuilder {
         final List<ServiceConfigBuilder> serviceConfigBuilders;
         if (defaultVirtualHostBuilder != null) {
             serviceConfigBuilders = ImmutableList.<ServiceConfigBuilder>builder()
-                    .addAll(this.serviceConfigBuilders)
-                    .addAll(defaultVirtualHostBuilder.serviceConfigBuilders)
-                    .build();
+                                                 .addAll(this.serviceConfigBuilders)
+                                                 .addAll(defaultVirtualHostBuilder.serviceConfigBuilders)
+                                                 .build();
         } else {
             serviceConfigBuilders = ImmutableList.copyOf(this.serviceConfigBuilders);
         }

@@ -195,12 +195,10 @@ public final class AnnotatedHttpServiceFactory {
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions) {
         final List<Method> methods = requestMappingMethods(object);
-
         return methods.stream()
                       .flatMap((Method method) ->
                                        create(pathPrefix, object, method, exceptionHandlerFunctions,
-                                              requestConverterFunctions,
-                                              responseConverterFunctions).stream())
+                                              requestConverterFunctions, responseConverterFunctions).stream())
                       .collect(toImmutableList());
     }
 
@@ -247,11 +245,10 @@ public final class AnnotatedHttpServiceFactory {
      * created per each {@link Route} associated with the {@code method}.
      */
     @VisibleForTesting
-    static List<AnnotatedHttpServiceElement> create(
-            String pathPrefix, Object object, Method method,
-            List<ExceptionHandlerFunction> exceptionHandlerFunctions,
-            List<RequestConverterFunction> requestConverterFunctions,
-            List<ResponseConverterFunction> responseConverterFunctions) {
+    static List<AnnotatedHttpServiceElement> create(String pathPrefix, Object object, Method method,
+                                                    List<ExceptionHandlerFunction> baseExceptionHandlers,
+                                                    List<RequestConverterFunction> baseRequestConverters,
+                                                    List<ResponseConverterFunction> baseResponseConverters) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
@@ -280,13 +277,13 @@ public final class AnnotatedHttpServiceFactory {
 
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
-                        .addAll(exceptionHandlerFunctions).add(defaultExceptionHandler).build();
+                        .addAll(baseExceptionHandlers).add(defaultExceptionHandler).build();
         final List<RequestConverterFunction> req =
                 getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class)
-                        .addAll(requestConverterFunctions).build();
+                        .addAll(baseRequestConverters).build();
         final List<ResponseConverterFunction> res =
                 getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
-                        .addAll(responseConverterFunctions).build();
+                        .addAll(baseResponseConverters).build();
 
         final Optional<HttpStatus> defaultResponseStatus = findFirst(method, StatusCode.class)
                 .map(code -> {
@@ -337,7 +334,7 @@ public final class AnnotatedHttpServiceFactory {
      * we handle it specially.
      */
     private static Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
-    getInitialDecorator(Set<HttpMethod> httpMethods) {
+            getInitialDecorator(Set<HttpMethod> httpMethods) {
         if (httpMethods.contains(HttpMethod.OPTIONS)) {
             return Function.identity();
         }
