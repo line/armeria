@@ -467,8 +467,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder annotatedService(
             Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator,
+            Function<? super HttpService, ? extends HttpService> decorator,
             Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
         return annotatedService("/", service, decorator, customizer);
     }
@@ -542,8 +541,7 @@ public final class VirtualHostBuilder {
      *                                       {@link ResponseConverterFunction}
      */
     public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
-                                               Function<Service<HttpRequest, HttpResponse>,
-                                                       ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                               Function<? super HttpService, ? extends HttpService> decorator,
                                                Iterable<?> exceptionHandlersAndConverters) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");

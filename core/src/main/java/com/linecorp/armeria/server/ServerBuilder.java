@@ -994,8 +994,7 @@ public final class ServerBuilder {
      * @param customizer the {@link AnnotatedHttpServiceConfiguratorSetters}.
      */
     public ServerBuilder annotatedService(Object service,
-                                          Function<Service<HttpRequest, HttpResponse>,
-                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                          Function<? super HttpService, ? extends HttpService> decorator,
                                           Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
         return annotatedService("/", service, decorator, requireNonNull(customizer, "customizer"));
     }
@@ -1028,8 +1027,7 @@ public final class ServerBuilder {
      *                   {@link AnnotatedHttpServiceConfiguratorSetters}
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Function<Service<HttpRequest, HttpResponse>,
-                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                          Function<? super HttpService, ? extends HttpService> decorator,
                                           Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
