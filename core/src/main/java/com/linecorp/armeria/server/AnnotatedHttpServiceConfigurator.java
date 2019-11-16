@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.annotation;
+package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
@@ -23,6 +23,7 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -31,12 +32,12 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * A configurator to configure {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
  * or {@link ResponseConverterFunction}s for an {@link AnnotatedHttpService}.
  */
-public final class AnnotatedHttpServiceConfigurator {
+final class AnnotatedHttpServiceConfigurator {
 
     /**
      * Creates a new instance with the specified {@code exceptionHandlersAndConverters}.
      */
-    public static AnnotatedHttpServiceConfigurator ofExceptionHandlersAndConverters(
+    static AnnotatedHttpServiceConfigurator ofExceptionHandlersAndConverters(
             Iterable<?> exceptionHandlersAndConverters) {
 
         Builder<ExceptionHandlerFunction> exceptionHandlers = null;
@@ -87,7 +88,7 @@ public final class AnnotatedHttpServiceConfigurator {
      * Creates a new instance with the specified {@link ExceptionHandlerFunction}s,
      * {@link RequestConverterFunction}s and {@link ResponseConverterFunction}s.
      */
-    public static AnnotatedHttpServiceConfigurator ofExceptionHandlersAndConverters(
+    static AnnotatedHttpServiceConfigurator ofExceptionHandlersAndConverters(
             List<ExceptionHandlerFunction> exceptionHandlerFunctions,
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions) {
@@ -117,7 +118,7 @@ public final class AnnotatedHttpServiceConfigurator {
     /**
      * Configures the specified {@link ExceptionHandlerFunction}s with the annotated service.
      */
-    public void configureExceptionHandlers(List<ExceptionHandlerFunction> exceptionHandlers) {
+    void configureExceptionHandlers(List<ExceptionHandlerFunction> exceptionHandlers) {
         requireNonNull(exceptionHandlers, "exceptionHandlers");
         this.exceptionHandlers = ImmutableList.<ExceptionHandlerFunction>builder()
                 .addAll(this.exceptionHandlers)
@@ -128,14 +129,14 @@ public final class AnnotatedHttpServiceConfigurator {
     /**
      * Returns the specified {@link ExceptionHandlerFunction}s with the annotated service.
      */
-    public List<ExceptionHandlerFunction> exceptionHandlers() {
+    List<ExceptionHandlerFunction> exceptionHandlers() {
         return exceptionHandlers;
     }
 
     /**
      * Configures the specified {@link RequestConverterFunction}s with the annotated service.
      */
-    public void configureRequestConverters(List<RequestConverterFunction> requestConverters) {
+    void configureRequestConverters(List<RequestConverterFunction> requestConverters) {
         requireNonNull(requestConverters, "requestConverters");
         this.requestConverters = ImmutableList.<RequestConverterFunction>builder()
                 .addAll(this.requestConverters)
@@ -146,14 +147,14 @@ public final class AnnotatedHttpServiceConfigurator {
     /**
      * Returns the specified {@link RequestConverterFunction}s with the annotated service.
      */
-    public List<RequestConverterFunction> requestConverters() {
+    List<RequestConverterFunction> requestConverters() {
         return requestConverters;
     }
 
     /**
      * Configures the specified {@link ResponseConverterFunction}s with the annotated service.
      */
-    public void configureResponseConverters(List<ResponseConverterFunction> responseConverters) {
+    void configureResponseConverters(List<ResponseConverterFunction> responseConverters) {
         requireNonNull(responseConverters, "responseConverters");
         this.responseConverters = ImmutableList.<ResponseConverterFunction>builder()
                 .addAll(this.responseConverters)
@@ -164,7 +165,7 @@ public final class AnnotatedHttpServiceConfigurator {
     /**
      * Returns the specified {@link ResponseConverterFunction}s with the annotated service.
      */
-    public List<ResponseConverterFunction> responseConverters() {
+    List<ResponseConverterFunction> responseConverters() {
         return responseConverters;
     }
 }

@@ -53,7 +53,6 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfigurator;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
