@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -184,15 +185,16 @@ public class RequestContextTest {
     }
 
     @Test
-    public void contextAwareScheduledExecutorService() throws InterruptedException {
+    public void contextAwareScheduledExecutorService() throws Exception {
         final RequestContext context = createContext();
         final ScheduledExecutorService executor = context.makeContextAware(
                 Executors.newSingleThreadScheduledExecutor());
-        executor.schedule(() -> {
+        final ScheduledFuture<?> future = executor.schedule(() -> {
             assertCurrentContext(context);
             assertDepth(1);
         }, 100, TimeUnit.MILLISECONDS);
-        await().until(ctxStack::isEmpty);
+        future.get();
+        assertDepth(0);
     }
 
     @Test
