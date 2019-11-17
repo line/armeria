@@ -15,67 +15,106 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.RoutingPredicate.parsePredicate;
+import static com.linecorp.armeria.server.RoutingPredicate.CONTAIN_PATTERN;
+import static com.linecorp.armeria.server.RoutingPredicate.ParsedComparingPredicate.parse;
+import static com.linecorp.armeria.server.RoutingPredicate.ofHeaders;
+import static com.linecorp.armeria.server.RoutingPredicate.ofParams;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.regex.Matcher;
+
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.server.RoutingPredicate.ParsedPredicate;
+import com.linecorp.armeria.server.RoutingPredicate.ParsedComparingPredicate;
 
 class RoutingPredicateTest {
 
     @Test
     void equal() {
-        final ParsedPredicate p = parsePredicate("a=b b");
-        assertThat(p.isNegated).isFalse();
+        final ParsedComparingPredicate p = parse("a=b b");
         assertThat(p.name).isEqualTo("a");
+        assertThat(p.comparator).isEqualTo("=");
         assertThat(p.value).isEqualTo("b b");
     }
 
     @Test
     void notEqual() {
-        final ParsedPredicate p = parsePredicate("a!=b b");
-        assertThat(p.isNegated).isTrue();
+        final ParsedComparingPredicate p = parse("a!=b b");
         assertThat(p.name).isEqualTo("a");
+        assertThat(p.comparator).isEqualTo("!=");
         assertThat(p.value).isEqualTo("b b");
     }
 
     @Test
-    void contain() {
-        final ParsedPredicate p = parsePredicate("a");
-        assertThat(p.isNegated).isFalse();
+    void greaterThan() {
+        final ParsedComparingPredicate p = parse("a>1");
         assertThat(p.name).isEqualTo("a");
-        assertThat(p.value).isNull();
+        assertThat(p.comparator).isEqualTo(">");
+        assertThat(p.value).isEqualTo("1");
+    }
+
+    @Test
+    void greaterThanOrEquals() {
+        final ParsedComparingPredicate p = parse("a>=1");
+        assertThat(p.name).isEqualTo("a");
+        assertThat(p.comparator).isEqualTo(">=");
+        assertThat(p.value).isEqualTo("1");
+    }
+
+    @Test
+    void lessThan() {
+        final ParsedComparingPredicate p = parse("a<1");
+        assertThat(p.name).isEqualTo("a");
+        assertThat(p.comparator).isEqualTo("<");
+        assertThat(p.value).isEqualTo("1");
+    }
+
+    @Test
+    void lessThanOrEquals() {
+        final ParsedComparingPredicate p = parse("a<=1");
+        assertThat(p.name).isEqualTo("a");
+        assertThat(p.comparator).isEqualTo("<=");
+        assertThat(p.value).isEqualTo("1");
+    }
+
+    @Test
+    void contain() {
+        final Matcher m = CONTAIN_PATTERN.matcher("a");
+        assertThat(m.matches()).isTrue();
+        assertThat(m.group(1)).isEqualTo("");
+        assertThat(m.group(2)).isEqualTo("a");
     }
 
     @Test
     void doesNotContain() {
-        final ParsedPredicate p = parsePredicate("!a");
-        assertThat(p.isNegated).isTrue();
-        assertThat(p.name).isEqualTo("a");
-        assertThat(p.value).isNull();
+        final Matcher m = CONTAIN_PATTERN.matcher("!a");
+        assertThat(m.matches()).isTrue();
+        assertThat(m.group(1)).isEqualTo("!");
+        assertThat(m.group(2)).isEqualTo("a");
     }
 
     @Test
     void preserveSpacesInValue() {
-        assertThat(parsePredicate("a=b")).isNotEqualTo(parsePredicate("a= b"));
-        assertThat(parsePredicate("a= b")).isNotEqualTo(parsePredicate("a=b "));
-        assertThat(parsePredicate("a!= b")).isNotEqualTo(parsePredicate("a!=b "));
+        assertThat(parse("a=b")).isNotEqualTo(parse("a= b"));
+        assertThat(parse("a= b")).isNotEqualTo(parse("a=b "));
+        assertThat(parse("a!= b")).isNotEqualTo(parse("a!=b "));
     }
 
     @Test
     void notPreserveSpacesInName() {
-        assertThat(parsePredicate("a=b")).isEqualTo(parsePredicate("a =b"));
-        assertThat(parsePredicate(" a=b")).isEqualTo(parsePredicate("a =b"));
-        assertThat(parsePredicate(" a!=b")).isEqualTo(parsePredicate("a !=b"));
-        assertThat(parsePredicate(" !a")).isEqualTo(parsePredicate("!a "));
+        assertThat(parse("a=b")).isEqualTo(parse("a =b"));
+        assertThat(parse(" a=b")).isEqualTo(parse("a =b"));
+        assertThat(parse(" a!=b")).isEqualTo(parse("a !=b"));
     }
 
     @Test
     void invalidPredicates() {
-        assertThatThrownBy(() -> parsePredicate("!a=b")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> parsePredicate("!!a")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> parsePredicate("!")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofHeaders("!a=b")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofHeaders("!!a")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofHeaders("!")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("!a=b")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("!!a")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ofParams("!")).isInstanceOf(IllegalArgumentException.class);
     }
 }

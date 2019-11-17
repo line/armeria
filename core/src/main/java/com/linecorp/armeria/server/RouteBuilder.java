@@ -64,7 +64,7 @@ public final class RouteBuilder {
 
     private Set<MediaType> produces = ImmutableSet.of();
 
-    private List<? extends String> paramPredicates = ImmutableList.of();
+    private List<String> paramPredicates = ImmutableList.of();
 
     private List<? extends CharSequence> headerPredicates = ImmutableList.of();
 
@@ -373,7 +373,7 @@ public final class RouteBuilder {
      *
      * @see ConditionalParam
      */
-    public RouteBuilder matchesParamPredicates(Iterable<? extends String> paramPredicates) {
+    public RouteBuilder matchesParamPredicates(Iterable<String> paramPredicates) {
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
         return this;
     }

@@ -21,7 +21,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -42,6 +42,22 @@ class HttpServerHeaderPredicatesMatchingTest {
               .build((ctx, req) -> HttpResponse.of("my-header!=my-value"))
               .route().get("/doesNotMatch")
               .build((ctx, req) -> HttpResponse.of("fallback"))
+              .route().get("/greaterThan").matchesHeaderPredicates("my-header>10")
+              .build((ctx, req) -> HttpResponse.of("my-header>10"))
+              .route().get("/greaterThan")
+              .build((ctx, req) -> HttpResponse.of("fallback"))
+              .route().get("/greaterThanOrEquals").matchesHeaderPredicates("my-header>=10")
+              .build((ctx, req) -> HttpResponse.of("my-header>=10"))
+              .route().get("/greaterThanOrEquals")
+              .build((ctx, req) -> HttpResponse.of("fallback"))
+              .route().get("/lessThan").matchesHeaderPredicates("my-header<10")
+              .build((ctx, req) -> HttpResponse.of("my-header<10"))
+              .route().get("/lessThan")
+              .build((ctx, req) -> HttpResponse.of("fallback"))
+              .route().get("/lessThanOrEquals").matchesHeaderPredicates("my-header<=10")
+              .build((ctx, req) -> HttpResponse.of("my-header<=10"))
+              .route().get("/lessThanOrEquals")
+              .build((ctx, req) -> HttpResponse.of("fallback"))
               .route().get("/contains").matchesHeaderPredicates("my-header")
               .build((ctx, req) -> HttpResponse.of("my-header"))
               .route().get("/contains")
@@ -59,11 +75,11 @@ class HttpServerHeaderPredicatesMatchingTest {
         }
     };
 
-    private static HttpClient client;
+    private static WebClient client;
 
     @BeforeAll
     public static void beforeAll() {
-        client = HttpClient.of(extension.uri("/"));
+        client = WebClient.of(extension.uri("/"));
     }
 
     @Test
@@ -83,6 +99,26 @@ class HttpServerHeaderPredicatesMatchingTest {
                          .aggregate().join().contentUtf8()).isEqualTo("my-header!=my-value");
         assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
                 HttpMethod.GET, "/doesNotMatch", "my-header", "my-value")))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void greaterThan() {
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/greaterThan", "my-header", "11")))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-header>10");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/greaterThan", "my-header", "10")))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void greaterThanOrEquals() {
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/greaterThan", "my-header", "10")))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-header>=10");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/greaterThan", "my-header", "9")))
                          .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 

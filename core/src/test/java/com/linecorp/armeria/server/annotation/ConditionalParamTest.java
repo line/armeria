@@ -21,7 +21,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -93,11 +93,11 @@ class ConditionalParamTest {
         }
     };
 
-    private static HttpClient client;
+    private static WebClient client;
 
     @BeforeAll
     public static void beforeAll() {
-        client = HttpClient.of(extension.uri("/"));
+        client = WebClient.of(extension.uri("/"));
     }
 
     @Test
