@@ -28,7 +28,7 @@ class RoutingPredicateTest {
     @Test
     void equal() {
         final ParsedPredicate p = parsePredicate("a=b b");
-        assertThat(p.isInverted).isFalse();
+        assertThat(p.isNegated).isFalse();
         assertThat(p.name).isEqualTo("a");
         assertThat(p.value).isEqualTo("b b");
     }
@@ -36,7 +36,7 @@ class RoutingPredicateTest {
     @Test
     void notEqual() {
         final ParsedPredicate p = parsePredicate("a!=b b");
-        assertThat(p.isInverted).isTrue();
+        assertThat(p.isNegated).isTrue();
         assertThat(p.name).isEqualTo("a");
         assertThat(p.value).isEqualTo("b b");
     }
@@ -44,7 +44,7 @@ class RoutingPredicateTest {
     @Test
     void contain() {
         final ParsedPredicate p = parsePredicate("a");
-        assertThat(p.isInverted).isFalse();
+        assertThat(p.isNegated).isFalse();
         assertThat(p.name).isEqualTo("a");
         assertThat(p.value).isNull();
     }
@@ -52,7 +52,7 @@ class RoutingPredicateTest {
     @Test
     void doesNotContain() {
         final ParsedPredicate p = parsePredicate("!a");
-        assertThat(p.isInverted).isTrue();
+        assertThat(p.isNegated).isTrue();
         assertThat(p.name).isEqualTo("a");
         assertThat(p.value).isNull();
     }

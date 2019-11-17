@@ -23,6 +23,9 @@ import java.lang.annotation.Target;
 
 import com.linecorp.armeria.server.RouteBuilder;
 
+/**
+ * Specifies a predicate which evaluates whether a request can be accepted by a service method.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Repeatable(ConditionalHeaders.class)
 @Target({ ElementType.TYPE, ElementType.METHOD })

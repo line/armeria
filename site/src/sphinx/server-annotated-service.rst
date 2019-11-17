@@ -132,6 +132,29 @@ you can use :api:`@StatusCode` annotation as follows.
         public void deleteUser(@Param("name") String name) { ... }
     }
 
+A service method can receive a request only if it contains a header or parameter the method requires.
+The following methods are bound to the same path ``/users`` but a request may be routed based on the
+``client-type`` header.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        // Handles a request which contains 'client-type: android' header.
+        @Get("/users")
+        @ConditionalHeader("client-type=android")
+        public User getUsers1() { ... }
+
+        // Handles a request which contains 'client-type' header. Any values of the 'client-type' header are welcomed.
+        @Get("/users")
+        @ConditionalHeader("client-type")
+        public User getUsers2() { ... }
+
+        // Handles a request which doesn't contain 'client-type: android' header.
+        @Get("/users")
+        public User getUsers3() { ... }
+    }
+
 .. _parameter-injection:
 
 Parameter injection

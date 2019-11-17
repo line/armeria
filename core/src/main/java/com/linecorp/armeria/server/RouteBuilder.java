@@ -30,7 +30,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -65,7 +64,7 @@ public final class RouteBuilder {
 
     private Set<MediaType> produces = ImmutableSet.of();
 
-    private List<? extends CharSequence> paramPredicates = ImmutableList.of();
+    private List<? extends String> paramPredicates = ImmutableList.of();
 
     private List<? extends CharSequence> headerPredicates = ImmutableList.of();
 
@@ -351,7 +350,7 @@ public final class RouteBuilder {
      *
      * @see ConditionalParam
      */
-    public RouteBuilder matchesParamPredicates(CharSequence... paramPredicates) {
+    public RouteBuilder matchesParamPredicates(String... paramPredicates) {
         return matchesParamPredicates(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
     }
 
@@ -374,7 +373,7 @@ public final class RouteBuilder {
      *
      * @see ConditionalParam
      */
-    public RouteBuilder matchesParamPredicates(Iterable<? extends CharSequence> paramPredicates) {
+    public RouteBuilder matchesParamPredicates(Iterable<? extends String> paramPredicates) {
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
         return this;
     }
@@ -416,20 +415,6 @@ public final class RouteBuilder {
      */
     public RouteBuilder matchesHeaderPredicates(Iterable<? extends CharSequence> headerPredicates) {
         this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
-        return this;
-    }
-
-    /**
-     * TODO(hyangtack) Is this useful?.
-     *
-     * @param id the identifier of the specified {@code headersPredicate} which is used for logging or
-     *           metric collection
-     * @param headerPredicate the predicates to be used when accepting a request by a {@link Route}
-     */
-    public RouteBuilder matchesHeaderPredicates(String id, Predicate<HttpHeaders> headerPredicate) {
-        requireNonNull(id, "id");
-        requireNonNull(headerPredicate, "headerPredicate");
-        // FIXME(hyangtack) Not implemented yet.
         return this;
     }
 

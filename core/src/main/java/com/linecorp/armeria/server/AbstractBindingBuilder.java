@@ -56,7 +56,7 @@ abstract class AbstractBindingBuilder {
     private Set<HttpMethod> methods = ImmutableSet.of();
     private Set<MediaType> consumeTypes = ImmutableSet.of();
     private Set<MediaType> produceTypes = ImmutableSet.of();
-    private Iterable<? extends CharSequence> paramPredicates = ImmutableList.of();
+    private Iterable<? extends String> paramPredicates = ImmutableList.of();
     private Iterable<? extends CharSequence> headerPredicates = ImmutableList.of();
     private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();
@@ -313,7 +313,7 @@ abstract class AbstractBindingBuilder {
      *
      * @see ConditionalParam
      */
-    public AbstractBindingBuilder matchesParamPredicates(CharSequence... paramPredicates) {
+    public AbstractBindingBuilder matchesParamPredicates(String... paramPredicates) {
         return matchesParamPredicates(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
     }
 
@@ -336,7 +336,7 @@ abstract class AbstractBindingBuilder {
      *
      * @see ConditionalParam
      */
-    public AbstractBindingBuilder matchesParamPredicates(Iterable<? extends CharSequence> paramPredicates) {
+    public AbstractBindingBuilder matchesParamPredicates(Iterable<? extends String> paramPredicates) {
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
         return this;
     }

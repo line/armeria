@@ -77,7 +77,7 @@ final class RoutingPredicate<T> implements Predicate<T> {
         } else {
             predicate = headers -> headers.contains(parsed.name);
         }
-        return new RoutingPredicate<>(headersPredicate, parsed.isInverted ? predicate.negate() : predicate);
+        return new RoutingPredicate<>(headersPredicate, parsed.isNegated ? predicate.negate() : predicate);
     }
 
     /**
@@ -93,7 +93,7 @@ final class RoutingPredicate<T> implements Predicate<T> {
         } else {
             predicate = params -> params.contains(parsed.name);
         }
-        return new RoutingPredicate<>(paramsPredicate, parsed.isInverted ? predicate.negate() : predicate);
+        return new RoutingPredicate<>(paramsPredicate, parsed.isNegated ? predicate.negate() : predicate);
     }
 
     @VisibleForTesting
@@ -155,13 +155,13 @@ final class RoutingPredicate<T> implements Predicate<T> {
 
     @VisibleForTesting
     static final class ParsedPredicate {
-        final boolean isInverted;
+        final boolean isNegated;
         final String name;
         @Nullable
         final String value;
 
-        private ParsedPredicate(boolean isInverted, String name, @Nullable String value) {
-            this.isInverted = isInverted;
+        private ParsedPredicate(boolean isNegated, String name, @Nullable String value) {
+            this.isNegated = isNegated;
             this.name = name;
             this.value = value;
         }
@@ -177,20 +177,20 @@ final class RoutingPredicate<T> implements Predicate<T> {
             }
 
             final ParsedPredicate that = (ParsedPredicate) o;
-            return isInverted == that.isInverted &&
+            return isNegated == that.isNegated &&
                    name.equals(that.name) &&
                    Objects.equals(value, that.value);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(isInverted, name, value);
+            return Objects.hash(isNegated, name, value);
         }
 
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this).omitNullValues()
-                              .add("isInverted", isInverted)
+                              .add("isInverted", isNegated)
                               .add("name", name)
                               .add("value", value)
                               .toString();

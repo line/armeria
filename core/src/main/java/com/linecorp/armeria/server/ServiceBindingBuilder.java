@@ -160,12 +160,12 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public ServiceBindingBuilder matchesParamPredicates(CharSequence... paramPredicates) {
+    public ServiceBindingBuilder matchesParamPredicates(String... paramPredicates) {
         return (ServiceBindingBuilder) super.matchesParamPredicates(paramPredicates);
     }
 
     @Override
-    public ServiceBindingBuilder matchesParamPredicates(Iterable<? extends CharSequence> paramPredicates) {
+    public ServiceBindingBuilder matchesParamPredicates(Iterable<? extends String> paramPredicates) {
         return (ServiceBindingBuilder) super.matchesParamPredicates(paramPredicates);
     }
 

@@ -23,6 +23,9 @@ import java.lang.annotation.Target;
 
 import com.linecorp.armeria.server.RouteBuilder;
 
+/**
+ * Specifies a predicate which evaluates whether a request can be accepted by a service method.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Repeatable(ConditionalParams.class)
 @Target({ ElementType.TYPE, ElementType.METHOD })
@@ -30,7 +33,7 @@ public @interface ConditionalParam {
     /**
      * The predicate which evaluates whether a request can be accepted by a service method.
      *
-     * @see RouteBuilder#matchesParamPredicates(CharSequence...)
+     * @see RouteBuilder#matchesParamPredicates(String...)
      * @see RouteBuilder#matchesParamPredicates(Iterable)
      */
     String value();

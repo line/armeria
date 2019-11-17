@@ -313,7 +313,7 @@ public final class AnnotatedServiceFactory {
                     decorator(method, clazz));
         }).collect(toImmutableList());
     }
-    
+
     private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
                                                                            Route route, Method method,
                                                                            Class<?> clazz) {
