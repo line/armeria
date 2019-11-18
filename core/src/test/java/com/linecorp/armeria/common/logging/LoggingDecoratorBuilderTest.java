@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import java.util.function.Function;
@@ -29,140 +28,149 @@ import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.HttpHeaders;
 
-public class LoggingDecoratorBuilderTest {
+class LoggingDecoratorBuilderTest {
+
+    private static final Function<? super HttpHeaders, ?> HEADER_SANITIZER = header -> "dummy header sanitizer";
+    private static final Function<Object, ?> CONTENT_SANITIZER = object -> "dummy content sanitizer";
+    private static final Function<? super Throwable, ?> CAUSE_SANITIZER = object -> "dummy cause sanitizer";
 
     private Builder builder;
-    private Function<? super HttpHeaders, ?> headerSanitizer;
-    private Function<Object, ?> contentSanitizer;
-    private Function<? super Throwable, ?> causeSanitizer;
 
     @BeforeEach
     void setUp() {
         builder = new Builder();
-
-        headerSanitizer = header -> "dummy header sanitizer";
-        contentSanitizer = object -> "dummy content sanitizer";
-        causeSanitizer = object -> "dummy cause sanitizer";
     }
 
     @Test
     void logger() {
-        assertThrows(NullPointerException.class, () -> builder.logger(null));
-        assertNull(builder.logger());
+        assertThatThrownBy(() -> builder.logger(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.logger()).isNull();
 
         final Logger logger = mock(Logger.class);
         builder.logger(logger);
-        assertEquals(logger, builder.logger());
+        assertThat(builder.logger()).isEqualTo(logger);
     }
 
     @Test
     void requestLog() {
-        assertThrows(NullPointerException.class, () -> builder.requestLogLevel(null));
-        assertEquals(LogLevel.TRACE, builder.requestLogLevel());
+        assertThatThrownBy(() -> builder.requestLogLevel(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.requestLogLevel()).isEqualTo(LogLevel.TRACE);
 
         builder.requestLogLevel(LogLevel.ERROR);
-        assertEquals(LogLevel.ERROR, builder.requestLogLevel());
+        assertThat(builder.requestLogLevel()).isEqualTo(LogLevel.ERROR);
     }
 
     @Test
     public void successfulResponseLogLevel() {
-        assertThrows(NullPointerException.class, () -> builder.successfulResponseLogLevel(null));
-        assertEquals(LogLevel.TRACE, builder.successfulResponseLogLevel());
+        assertThatThrownBy(() -> builder.successfulResponseLogLevel(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.successfulResponseLogLevel()).isEqualTo(LogLevel.TRACE);
 
         builder.successfulResponseLogLevel(LogLevel.ERROR);
-        assertEquals(LogLevel.ERROR, builder.successfulResponseLogLevel());
+        assertThat(builder.successfulResponseLogLevel()).isEqualTo(LogLevel.ERROR);
     }
 
     @Test
     void failureResponseLogLevel() {
-        assertThrows(NullPointerException.class, () -> builder.failureResponseLogLevel(null));
-        assertEquals(LogLevel.WARN, builder.failedResponseLogLevel());
+        assertThatThrownBy(() -> builder.failureResponseLogLevel(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.failedResponseLogLevel()).isEqualTo(LogLevel.WARN);
 
         builder.failureResponseLogLevel(LogLevel.ERROR);
-        assertEquals(LogLevel.ERROR, builder.failedResponseLogLevel());
+        assertThat(builder.failedResponseLogLevel()).isEqualTo(LogLevel.ERROR);
     }
 
     @Test
     void requestHeadersSanitizer() {
-        assertThrows(NullPointerException.class, () -> builder.requestHeadersSanitizer(null));
-        assertEquals(Function.identity(), builder.requestHeadersSanitizer());
+        assertThatThrownBy(() -> builder.requestHeadersSanitizer(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.requestHeadersSanitizer()).isEqualTo(Function.identity());
 
-        builder.requestHeadersSanitizer(headerSanitizer);
-        assertEquals(headerSanitizer, builder.requestHeadersSanitizer());
+        builder.requestHeadersSanitizer(HEADER_SANITIZER);
+        assertThat(builder.requestHeadersSanitizer()).isEqualTo(HEADER_SANITIZER);
     }
 
     @Test
     void responseHeadersSanitizer() {
-        assertThrows(NullPointerException.class, () -> builder.responseHeadersSanitizer(null));
-        assertEquals(Function.identity(), builder.responseHeadersSanitizer());
+        assertThatThrownBy(() -> builder.responseHeadersSanitizer(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.responseHeadersSanitizer()).isEqualTo(Function.identity());
 
-        builder.responseHeadersSanitizer(headerSanitizer);
-        assertEquals(headerSanitizer, builder.responseHeadersSanitizer());
+        builder.responseHeadersSanitizer(HEADER_SANITIZER);
+        assertThat(builder.responseHeadersSanitizer()).isEqualTo(HEADER_SANITIZER);
     }
 
     @Test
     void requestTrailersSanitizer() {
-        assertThrows(NullPointerException.class, () -> builder.requestTrailersSanitizer(null));
-        assertEquals(Function.identity(), builder.requestTrailersSanitizer());
+        assertThatThrownBy(() -> builder.requestTrailersSanitizer(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.requestTrailersSanitizer()).isEqualTo(Function.identity());
 
-        builder.requestTrailersSanitizer(headerSanitizer);
-        assertEquals(headerSanitizer, builder.requestTrailersSanitizer());
+        builder.requestTrailersSanitizer(HEADER_SANITIZER);
+        assertThat(builder.requestTrailersSanitizer()).isEqualTo(HEADER_SANITIZER);
     }
 
     @Test
     void responseTrailersSanitizer() {
-        assertThrows(NullPointerException.class, () -> builder.responseTrailersSanitizer(null));
-        assertEquals(Function.identity(), builder.responseTrailersSanitizer());
+        assertThatThrownBy(() -> builder.responseTrailersSanitizer(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.responseTrailersSanitizer()).isEqualTo(Function.identity());
 
-        builder.responseTrailersSanitizer(headerSanitizer);
-        assertEquals(headerSanitizer, builder.responseTrailersSanitizer());
+        builder.responseTrailersSanitizer(HEADER_SANITIZER);
+        assertThat(builder.responseTrailersSanitizer()).isEqualTo(HEADER_SANITIZER);
     }
 
     @Test
     void headerSanitizer() {
-        assertThrows(NullPointerException.class, () -> builder.headersSanitizer(null));
+        assertThatThrownBy(() -> builder.headersSanitizer(null))
+                .isInstanceOf(NullPointerException.class);
 
-        builder.headersSanitizer(headerSanitizer);
-        assertEquals(headerSanitizer, builder.requestHeadersSanitizer());
-        assertEquals(headerSanitizer, builder.responseHeadersSanitizer());
-        assertEquals(headerSanitizer, builder.requestTrailersSanitizer());
-        assertEquals(headerSanitizer, builder.responseTrailersSanitizer());
+        builder.headersSanitizer(HEADER_SANITIZER);
+        assertThat(builder.requestHeadersSanitizer()).isEqualTo(HEADER_SANITIZER);
+        assertThat(builder.responseHeadersSanitizer()).isEqualTo(HEADER_SANITIZER);
+        assertThat(builder.requestTrailersSanitizer()).isEqualTo(HEADER_SANITIZER);
+        assertThat(builder.responseTrailersSanitizer()).isEqualTo(HEADER_SANITIZER);
     }
 
     @Test
     void requestContentSanitizer() {
-        assertThrows(NullPointerException.class, () -> builder.requestContentSanitizer(null));
-        assertEquals(Function.identity(), builder.requestContentSanitizer());
+        assertThatThrownBy(() -> builder.requestContentSanitizer(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.requestContentSanitizer()).isEqualTo(Function.identity());
 
-        builder.requestContentSanitizer(contentSanitizer);
-        assertEquals(contentSanitizer, builder.requestContentSanitizer());
+        builder.requestContentSanitizer(CONTENT_SANITIZER);
+        assertThat(builder.requestContentSanitizer()).isEqualTo(CONTENT_SANITIZER);
     }
 
     @Test
     void responseContentSanitizer() {
-        assertThrows(NullPointerException.class, () -> builder.responseContentSanitizer(null));
-        assertEquals(Function.identity(), builder.responseContentSanitizer());
+        assertThatThrownBy(() -> builder.responseContentSanitizer(null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.responseContentSanitizer()).isEqualTo(Function.identity());
 
-        builder.responseContentSanitizer(contentSanitizer);
-        assertEquals(contentSanitizer, builder.responseContentSanitizer());
+        builder.responseContentSanitizer(CONTENT_SANITIZER);
+        assertThat(builder.responseContentSanitizer()).isEqualTo(CONTENT_SANITIZER);
     }
 
     @Test
     void contentSanitizer() {
-        assertThrows(NullPointerException.class, () -> builder.contentSanitizer(null));
+        assertThatThrownBy(() -> builder.contentSanitizer(null))
+                .isInstanceOf(NullPointerException.class);
 
-        builder.contentSanitizer(contentSanitizer);
-        assertEquals(contentSanitizer, builder.requestContentSanitizer());
-        assertEquals(contentSanitizer, builder.responseContentSanitizer());
+        builder.contentSanitizer(CONTENT_SANITIZER);
+        assertThat(builder.requestContentSanitizer()).isEqualTo(CONTENT_SANITIZER);
+        assertThat(builder.responseContentSanitizer()).isEqualTo(CONTENT_SANITIZER);
     }
 
     @Test
     void responseCauseSanitizer() {
-        assertThrows(NullPointerException.class, () -> builder.responseCauseSanitizer(null));
-        assertEquals(Function.identity(), builder.responseCauseSanitizer());
+        assertThatThrownBy(() -> builder.responseCauseSanitizer(null)).isInstanceOf(NullPointerException.class);
+        assertThat(builder.responseCauseSanitizer()).isEqualTo(Function.identity());
 
-        builder.responseCauseSanitizer(causeSanitizer);
-        assertEquals(causeSanitizer, builder.responseCauseSanitizer());
+        builder.responseCauseSanitizer(CAUSE_SANITIZER);
+        assertThat(builder.responseCauseSanitizer()).isEqualTo(CAUSE_SANITIZER);
     }
 
     private static final class Builder extends LoggingDecoratorBuilder<Builder> {
