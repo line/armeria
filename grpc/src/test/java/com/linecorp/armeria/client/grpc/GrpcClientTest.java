@@ -59,7 +59,7 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.DecoratingClientFunction;
+import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -68,7 +68,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -201,7 +200,7 @@ public class GrpcClientTest {
     @Before
     public void setUp() {
         requestLogQueue.clear();
-        final DecoratingClientFunction<HttpRequest, HttpResponse> requestLogRecorder = (delegate, ctx, req) -> {
+        final DecoratingHttpClientFunction requestLogRecorder = (delegate, ctx, req) -> {
             ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
             return delegate.execute(ctx, req);
         };

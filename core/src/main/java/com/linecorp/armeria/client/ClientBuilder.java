@@ -28,8 +28,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
  * methods in {@link Clients} if you do not have many options to override. If you are creating an
- * {@link HttpClient}, it is recommended to use the {@link HttpClientBuilder} or
- * factory methods in {@link HttpClient}.
+ * {@link WebClient}, it is recommended to use the {@link WebClientBuilder} or
+ * factory methods in {@link WebClient}.
  *
  * <h3>How are decorators and HTTP headers configured?</h3>
  *

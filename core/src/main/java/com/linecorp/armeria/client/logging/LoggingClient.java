@@ -16,46 +16,36 @@
 
 package com.linecorp.armeria.client.logging;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.internal.logging.LoggingDecorators.logRequest;
-import static com.linecorp.armeria.internal.logging.LoggingDecorators.logResponse;
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
- * Decorates a {@link Client} to log {@link Request}s and {@link Response}s.
- *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
+ * Decorates an {@link HttpClient} to log {@link Request}s and {@link Response}s.
  */
-public final class LoggingClient<I extends Request, O extends Response> extends SimpleDecoratingClient<I, O> {
-
-    private static final Logger defaultLogger = LoggerFactory.getLogger(LoggingClient.class);
+public final class LoggingClient extends AbstractLoggingClient<HttpRequest, HttpResponse>
+        implements HttpClient {
 
     /**
-     * Returns a new {@link Client} decorator that logs {@link Request}s and {@link Response}s at
+     * Returns a new {@link HttpClient} decorator that logs {@link Request}s and {@link Response}s at
      * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
      *
      * @see LoggingClientBuilder for more information on the default settings.
      */
-    public static <I extends Request, O extends Response>
-    Function<Client<I, O>, LoggingClient<I, O>> newDecorator() {
+    public static Function<? super HttpClient, LoggingClient> newDecorator() {
         return builder().requestLogLevel(LogLevel.INFO)
                         .successfulResponseLogLevel(LogLevel.INFO)
                         .failureResponseLogLevel(LogLevel.WARN)
@@ -63,15 +53,14 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     }
 
     /**
-     * Returns a new {@link Client} decorator that logs {@link Request}s and {@link Response}s.
+     * Returns a new {@link HttpClient} decorator that logs {@link Request}s and {@link Response}s.
      *
      * @param level the log level
      * @deprecated Use {@link LoggingClient#builder()}.
      */
     @Deprecated
-    public static <I extends Request, O extends Response>
-    Function<Client<I, O>, LoggingClient<I, O>> newDecorator(LogLevel level) {
-        return delegate -> new LoggingClient<>(delegate, level);
+    public static Function<? super HttpClient, LoggingClient> newDecorator(LogLevel level) {
+        return delegate -> new LoggingClient(delegate, level);
     }
 
     /**
@@ -81,27 +70,13 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
         return new LoggingClientBuilder();
     }
 
-    private final Logger logger;
-    private final LogLevel requestLogLevel;
-    private final LogLevel successfulResponseLogLevel;
-    private final LogLevel failedResponseLogLevel;
-    private final Function<? super HttpHeaders, ?> requestHeadersSanitizer;
-    private final Function<Object, ?> requestContentSanitizer;
-    private final Function<? super HttpHeaders, ?> requestTrailersSanitizer;
-
-    private final Function<? super HttpHeaders, ?> responseHeadersSanitizer;
-    private final Function<Object, ?> responseContentSanitizer;
-    private final Function<? super HttpHeaders, ?> responseTrailersSanitizer;
-    private final Function<? super Throwable, ?> responseCauseSanitizer;
-    private final Sampler<? super ClientRequestContext> sampler;
-
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
      *
      * @deprecated Use {@link LoggingClient#newDecorator()}.
      */
     @Deprecated
-    public LoggingClient(Client<I, O> delegate) {
+    public LoggingClient(HttpClient delegate) {
         this(delegate, LogLevel.INFO);
     }
 
@@ -112,20 +87,8 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
      * @deprecated Use {@link LoggingClientBuilder}.
      */
     @Deprecated
-    public LoggingClient(Client<I, O> delegate, LogLevel level) {
-        this(delegate,
-             null,
-             level,
-             level,
-             level,
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Sampler.always());
+    public LoggingClient(HttpClient delegate, LogLevel level) {
+        super(delegate, level);
     }
 
     /**
@@ -133,11 +96,10 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
      * {@link LogLevel}s with the specified sanitizers.
      * If the logger is null, it means that the default logger is used.
      */
-    LoggingClient(Client<I, O> delegate,
+    LoggingClient(HttpClient delegate,
                   @Nullable Logger logger,
-                  LogLevel requestLogLevel,
-                  LogLevel successfulResponseLogLevel,
-                  LogLevel failedResponseLogLevel,
+                  Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+                  Function<? super RequestLog, LogLevel> responseLogLevelMapper,
                   Function<? super HttpHeaders, ?> requestHeadersSanitizer,
                   Function<Object, ?> requestContentSanitizer,
                   Function<? super HttpHeaders, ?> requestTrailersSanitizer,
@@ -146,42 +108,9 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
                   Function<? super HttpHeaders, ?> responseTrailersSanitizer,
                   Function<? super Throwable, ?> responseCauseSanitizer,
                   Sampler<? super ClientRequestContext> sampler) {
-        super(requireNonNull(delegate, "delegate"));
-        this.logger = firstNonNull(logger, defaultLogger);
-        this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
-        this.successfulResponseLogLevel = requireNonNull(successfulResponseLogLevel,
-                                                         "successfulResponseLogLevel");
-        this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
-        this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
-        this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
-        this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
-
-        this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
-        this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
-        this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
-        this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        this.sampler = requireNonNull(sampler, "sampler");
-    }
-
-    @Override
-    public O execute(ClientRequestContext ctx, I req) throws Exception {
-        if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
-                                                    requestHeadersSanitizer,
-                                                    requestContentSanitizer, requestTrailersSanitizer),
-                                  RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(log -> logResponse(logger, log, requestLogLevel,
-                                                     requestHeadersSanitizer,
-                                                     requestContentSanitizer,
-                                                     requestHeadersSanitizer,
-                                                     successfulResponseLogLevel,
-                                                     failedResponseLogLevel,
-                                                     responseHeadersSanitizer,
-                                                     responseContentSanitizer,
-                                                     responseTrailersSanitizer,
-                                                     responseCauseSanitizer),
-                                  RequestLogAvailability.COMPLETE);
-        }
-        return delegate().execute(ctx, req);
+        super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
+              requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
+              responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
+              responseCauseSanitizer, sampler);
     }
 }

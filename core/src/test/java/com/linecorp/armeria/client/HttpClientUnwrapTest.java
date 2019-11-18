@@ -29,12 +29,13 @@ class HttpClientUnwrapTest {
 
     @Test
     void test() {
-        final HttpClient client = HttpClient.builder()
-                                            .decorator(LoggingClient.newDecorator())
-                                            .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
-                                            .build();
+        final WebClient client =
+                WebClient.builder()
+                         .decorator(LoggingClient.newDecorator())
+                         .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
+                         .build();
 
-        assertThat(client.as(HttpClient.class)).containsSame(client);
+        assertThat(client.as(WebClient.class)).containsSame(client);
 
         assertThat(client.as(RetryingHttpClient.class)).containsInstanceOf(RetryingHttpClient.class);
         assertThat(client.as(LoggingClient.class)).containsInstanceOf(LoggingClient.class);
@@ -42,7 +43,7 @@ class HttpClientUnwrapTest {
         // The outermost decorator of the client must be returned,
         // because the search begins from outside to inside.
         // In the current setup, the outermost `Unwrappable` and `Client` are
-        // `client` and `RetryingHttpClient` respectively.
+        // `client` and `RetryingClient` respectively.
         assertThat(client.as(Unwrappable.class)).containsSame(client);
         assertThat(client.as(Client.class)).containsInstanceOf(RetryingHttpClient.class);
 
@@ -50,7 +51,7 @@ class HttpClientUnwrapTest {
 
         final ClientFactory factory = client.factory();
 
-        assertThat(factory.unwrap(client, HttpClient.class)).containsSame(client);
+        assertThat(factory.unwrap(client, WebClient.class)).containsSame(client);
 
         assertThat(factory.unwrap(client, RetryingHttpClient.class))
                 .containsInstanceOf(RetryingHttpClient.class);

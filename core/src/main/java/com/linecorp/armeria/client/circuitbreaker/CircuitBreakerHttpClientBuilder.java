@@ -18,15 +18,13 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * Builds a new {@link CircuitBreakerHttpClient} or its decorator function.
  */
-public final class CircuitBreakerHttpClientBuilder
-        extends CircuitBreakerClientBuilder<CircuitBreakerHttpClient, HttpRequest, HttpResponse> {
+public final class CircuitBreakerHttpClientBuilder extends AbstractCircuitBreakerClientBuilder<HttpResponse> {
 
     private final boolean needsContentInStrategy;
 
@@ -53,8 +51,10 @@ public final class CircuitBreakerHttpClientBuilder
         needsContentInStrategy = true;
     }
 
-    @Override
-    public CircuitBreakerHttpClient build(Client<HttpRequest, HttpResponse> delegate) {
+    /**
+     * Returns a newly-created {@link CircuitBreakerHttpClient} based on the properties of this builder.
+     */
+    public CircuitBreakerHttpClient build(HttpClient delegate) {
         if (needsContentInStrategy) {
             return new CircuitBreakerHttpClient(delegate, mapping(), strategyWithContent());
         }
@@ -62,8 +62,11 @@ public final class CircuitBreakerHttpClientBuilder
         return new CircuitBreakerHttpClient(delegate, mapping(), strategy());
     }
 
-    @Override
-    public Function<Client<HttpRequest, HttpResponse>, CircuitBreakerHttpClient> newDecorator() {
+    /**
+     * Returns a newly-created decorator that decorates an {@link HttpClient} with a new
+     * {@link CircuitBreakerHttpClient} based on the properties of this builder.
+     */
+    public Function<? super HttpClient, CircuitBreakerHttpClient> newDecorator() {
         return this::build;
     }
 

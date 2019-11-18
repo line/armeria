@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -89,8 +89,8 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
     @Test
     void testServiceDecoration_shouldCatchException() throws Exception {
         final Endpoint endpoint = Endpoint.of(TEST_HOST, server.httpPort()).withIpAddr("127.0.0.1");
-        final HttpClient httpClientTest = HttpClient.of(SessionProtocol.HTTP, endpoint);
-        final AggregatedHttpResponse join = httpClientTest.get("/foo/bar").aggregate().join();
+        final WebClient webClientTest = WebClient.of(SessionProtocol.HTTP, endpoint);
+        final AggregatedHttpResponse join = webClientTest.get("/foo/bar").aggregate().join();
 
         assertThat(join.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
     }

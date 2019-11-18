@@ -21,28 +21,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 
-public class EndpointGroupRegistryTest {
+class EndpointGroupRegistryTest {
 
-    @Before
-    @After
-    public void setUp() {
+    @BeforeEach
+    @AfterEach
+    void setUp() {
         // Just in case the group 'foo3' was registered somewhere else.
         EndpointGroupRegistry.unregister("foo3");
     }
 
     @Test
-    public void testRegistration() throws Exception {
+    void testRegistration() throws Exception {
         // Unregister a non-existent group.
         assertThat(EndpointGroupRegistry.unregister("foo3")).isFalse();
 
-        final EndpointGroup group1 = new StaticEndpointGroup(Endpoint.of("a.com"));
-        final EndpointGroup group2 = new StaticEndpointGroup(Endpoint.of("b.com"));
+        final EndpointGroup group1 = Endpoint.of("a.com");
+        final EndpointGroup group2 = Endpoint.of("b.com");
 
         // Register a new group.
         assertThat(EndpointGroupRegistry.register("foo3", group1, WEIGHTED_ROUND_ROBIN)).isTrue();
@@ -59,7 +59,7 @@ public class EndpointGroupRegistryTest {
     }
 
     @Test
-    public void testBadGroupNames() throws Exception {
+    void testBadGroupNames() throws Exception {
         final EndpointGroup g = mock(EndpointGroup.class);
         final EndpointSelectionStrategy s = EndpointSelectionStrategy.ROUND_ROBIN;
         assertThatThrownBy(() -> EndpointGroupRegistry.register("a:b", g, s))

@@ -84,7 +84,7 @@ sensible defaults. By applying them, you can:
        }
        dependencies {
            classpath 'com.google.gradle:osdetector-gradle-plugin:1.6.2'
-           classpath 'io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE'
+           classpath 'io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE'
        }
    }
 
@@ -172,7 +172,7 @@ buildscript {
     }
     dependencies {
         classpath "com.google.gradle:osdetector-gradle-plugin:1.6.2"
-        classpath 'io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE'
+        classpath 'io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE'
     }
 }
 

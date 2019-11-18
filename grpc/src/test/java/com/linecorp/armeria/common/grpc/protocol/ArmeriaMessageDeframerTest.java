@@ -22,7 +22,6 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.io.InputStream;
 import java.util.Arrays;
@@ -87,7 +86,7 @@ class ArmeriaMessageDeframerTest {
     void deframe_noRequests() throws Exception {
         deframer.deframe(HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())), false);
         assertThat(deframer.isStalled()).isFalse();
-        verifyZeroInteractions(listener);
+        verifyNoMoreInteractions(listener);
 
         deframer.request(1);
         verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));
@@ -112,7 +111,7 @@ class ArmeriaMessageDeframerTest {
         // Only the last fragment should notify the listener.
         for (int i = 0; i < frameBytes.length - 1; i++) {
             deframer.deframe(HttpData.wrap(new byte[] { frameBytes[i] }), false);
-            verifyZeroInteractions(listener);
+            verifyNoMoreInteractions(listener);
             assertThat(deframer.isStalled()).isTrue();
         }
 
@@ -129,7 +128,7 @@ class ArmeriaMessageDeframerTest {
 
         // Frame is split into two fragments - header and body.
         deframer.deframe(HttpData.wrap(Arrays.copyOfRange(frameBytes, 0, 5)), false);
-        verifyZeroInteractions(listener);
+        verifyNoMoreInteractions(listener);
         assertThat(deframer.isStalled()).isTrue();
         deframer.deframe(HttpData.wrap(Arrays.copyOfRange(frameBytes, 5, frameBytes.length)), false);
         verifyAndReleaseMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0));

@@ -137,6 +137,11 @@ public interface ClientFactory extends AutoCloseable {
     void setMeterRegistry(MeterRegistry meterRegistry);
 
     /**
+     * Returns the {@link ClientFactoryOptions} that has been used to create this {@link ClientFactory}.
+     */
+    ClientFactoryOptions options();
+
+    /**
      * Creates a new client that connects to the specified {@code uri}.
      *
      * @param uri the URI of the server endpoint
@@ -232,10 +237,10 @@ public interface ClientFactory extends AutoCloseable {
      * Unwraps the specified {@code client} object into the object of the specified {@code type}. For example,
      * <pre>{@code
      * ClientFactory clientFactory = ...;
-     * HttpClient client = new HttpClientBuilder()
-     *     .factory(clientFactory)
-     *     .decorator(LoggingClient.newDecorator())
-     *     .build();
+     * WebClient client = WebClient.builder(...)
+     *                             .factory(clientFactory)
+     *                             .decorator(LoggingClient.newDecorator())
+     *                             .build();
      *
      * LoggingClient unwrapped = clientFactory.unwrap(client, LoggingClient.class).get();
      *

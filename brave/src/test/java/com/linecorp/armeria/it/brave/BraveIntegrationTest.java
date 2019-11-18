@@ -53,9 +53,9 @@ import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -95,7 +95,7 @@ class BraveIntegrationTest {
     private static HelloService.AsyncIface barClient;
     private static HelloService.AsyncIface quxClient;
     private static HelloService.Iface zipClient;
-    private static HttpClient poolHttpClient;
+    private static WebClient poolWebClient;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension(true) {
@@ -202,7 +202,7 @@ class BraveIntegrationTest {
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
-        poolHttpClient = HttpClient.of(server.uri("/"));
+        poolWebClient = WebClient.of(server.uri("/"));
         timeoutClient = new ClientBuilder(server.uri(BINARY, "/timeout"))
                 .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
                 .build(HelloService.Iface.class);
@@ -396,7 +396,7 @@ class BraveIntegrationTest {
     @Test
     @Timeout(10000)
     void testSpanInThreadPoolHasSameTraceId() throws Exception {
-        poolHttpClient.get("pool").aggregate().get();
+        poolWebClient.get("pool").aggregate().get();
         final Span[] spans = spanReporter.take(5);
         assertThat(Arrays.stream(spans).map(Span::traceId).collect(toImmutableSet())).hasSize(1);
         assertThat(Arrays.stream(spans).map(Span::parentId)

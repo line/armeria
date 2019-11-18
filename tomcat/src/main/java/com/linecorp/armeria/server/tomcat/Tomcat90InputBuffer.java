@@ -56,7 +56,7 @@ class Tomcat90InputBuffer implements InputBuffer {
         read = true;
 
         final int readableBytes = content.length();
-        handler.setByteBuffer(ByteBuffer.wrap(content.array(), content.offset(), readableBytes));
+        handler.setByteBuffer(ByteBuffer.wrap(content.array(), 0, readableBytes));
         return readableBytes;
     }
 

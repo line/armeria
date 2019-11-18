@@ -8,7 +8,7 @@ function addBadge(parent, src, href) {
     var a = document.createElement('a');
     a.href = href;
     a.target = '_blank';
-    a.rel = 'noopener';
+    a.rel = 'nofollow noopener';
     a.appendChild(obj);
     parent.appendChild(a);
   } else {

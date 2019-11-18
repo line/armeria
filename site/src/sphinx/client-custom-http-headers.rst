@@ -77,7 +77,7 @@ If you want more freedom on how you manipulate the request headers, use a decora
     ClientBuilder cb = new ClientBuilder("tbinary+http://example.com/hello");
 
     // Add a decorator that inserts the custom header.
-    cb.decorator((delegate, ctx, req) -> { // See DecoratingClientFunction.
+    cb.decorator((delegate, ctx, req) -> { // See DecoratingHttpClientFunction and DecoratingRpcClientFunction.
         req.headers().set(AUTHORIZATION, credential);
         return delegate.execute(ctx, req);
     });

@@ -39,7 +39,7 @@ import io.netty.util.concurrent.Future;
 /**
  * Provides methods that are useful for creating an {@link EventLoopGroup}.
  *
- * @see EventLoopThreadFactory
+ * @see ThreadFactories#newEventLoopThreadFactory(String, boolean)
  */
 public final class EventLoopGroups {
 
