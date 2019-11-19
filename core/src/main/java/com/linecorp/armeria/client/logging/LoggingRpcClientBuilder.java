@@ -36,7 +36,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder<
      */
     public LoggingRpcClient build(RpcClient delegate) {
         return new LoggingRpcClient(delegate,
-                                    null,
+                                    logger(),
                                     requestLogLevelMapper(),
                                     responseLogLevelMapper(),
                                     requestHeadersSanitizer(),
