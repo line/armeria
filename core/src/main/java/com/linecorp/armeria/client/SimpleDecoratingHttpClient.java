@@ -22,15 +22,15 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * Decorates an HTTP {@link Client}. Use {@link DecoratingClient} if your {@link Client} has different
+ * Decorates an {@link HttpClient}. Use {@link DecoratingClient} if your {@link Client} has different
  * {@link Request} or {@link Response} type from the {@link Client} being decorated.
  */
-public abstract class SimpleDecoratingHttpClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
-
+public abstract class SimpleDecoratingHttpClient extends SimpleDecoratingClient<HttpRequest, HttpResponse>
+        implements HttpClient {
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    protected SimpleDecoratingHttpClient(Client<HttpRequest, HttpResponse> delegate) {
+    protected SimpleDecoratingHttpClient(HttpClient delegate) {
         super(delegate);
     }
 }

@@ -22,15 +22,16 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
 /**
- * Decorates an RPC {@link Client}. Use {@link DecoratingClient} if your {@link Client} has different
+ * Decorates an {@link RpcClient}. Use {@link DecoratingClient} if your {@link Client} has different
  * {@link Request} or {@link Response} type from the {@link Client} being decorated.
  */
-public abstract class SimpleDecoratingRpcClient extends SimpleDecoratingClient<RpcRequest, RpcResponse> {
+public abstract class SimpleDecoratingRpcClient extends SimpleDecoratingClient<RpcRequest, RpcResponse>
+        implements RpcClient {
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that decorates the specified {@link RpcClient}.
      */
-    protected SimpleDecoratingRpcClient(Client<RpcRequest, RpcResponse> delegate) {
+    protected SimpleDecoratingRpcClient(RpcClient delegate) {
         super(delegate);
     }
 }

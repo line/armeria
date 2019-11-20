@@ -22,20 +22,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientDecoration.Entry;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
-
 /**
  * Creates a new {@link ClientDecoration} using the builder pattern.
  */
 public final class ClientDecorationBuilder {
 
-    private final List<Entry<?, ?>> entries = new ArrayList<>();
+    private final List<Function<? super HttpClient, ? extends HttpClient>> decorators = new ArrayList<>();
+    private final List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators = new ArrayList<>();
 
     /**
      * Creates a new instance.
@@ -46,137 +39,47 @@ public final class ClientDecorationBuilder {
     public ClientDecorationBuilder() {}
 
     /**
-     * Adds a new decorator {@link Function}.
+     * Adds the specified HTTP-level {@code decorator}.
      *
-     * @param requestType the type of the {@link Request} that the {@code decorator} is interested in
-     * @param responseType the type of the {@link Response} that the {@code decorator} is interested in
-     * @param decorator the {@link Function} that transforms a {@link Client} to another
-     * @param <T> the type of the {@link Client} being decorated
-     * @param <R> the type of the {@link Client} produced by the {@code decorator}
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
-     *
-     * @deprecated Use {@link #add(Function)} or {@link #addRpc(Function)}.
+     * @param decorator the {@link Function} that transforms an {@link HttpClient} to another
      */
-    @Deprecated
-    public <T extends Client<I, O>, R extends Client<I, O>, I extends Request, O extends Response>
-    ClientDecorationBuilder add(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
-        return add0(requestType, responseType, decorator);
-    }
-
-    /**
-     * Adds a new {@link DecoratingClientFunction}.
-     *
-     * @param requestType the type of the {@link Request} that the {@code decorator} is interested in
-     * @param responseType the type of the {@link Response} that the {@code decorator} is interested in
-     * @param decorator the {@link DecoratingClientFunction} that intercepts an invocation
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
-     *
-     * @deprecated Use {@link #add(DecoratingClientFunction)} or {@link #addRpc(DecoratingClientFunction)}.
-     */
-    @Deprecated
-    public <I extends Request, O extends Response> ClientDecorationBuilder add(
-            Class<I> requestType, Class<O> responseType, DecoratingClientFunction<I, O> decorator) {
-        return add0(requestType, responseType, decorator);
+    public ClientDecorationBuilder add(Function<? super HttpClient, ? extends HttpClient> decorator) {
+        decorators.add(requireNonNull(decorator, "decorator"));
+        return this;
     }
 
     /**
      * Adds the specified HTTP-level {@code decorator}.
      *
-     * @param decorator the {@link Function} that transforms a {@link Client} to another
-     * @param <T> the type of the {@link Client} being decorated
-     * @param <R> the type of the {@link Client} produced by the {@code decorator}
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
+     * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
-    public <T extends Client<I, O>, R extends Client<I, O>, I extends HttpRequest, O extends HttpResponse>
-    ClientDecorationBuilder add(Function<T, R> decorator) {
-        @SuppressWarnings("unchecked")
-        final Function<Client<HttpRequest, HttpResponse>, Client<HttpRequest, HttpResponse>> cast =
-                (Function<Client<HttpRequest, HttpResponse>, Client<HttpRequest, HttpResponse>>) decorator;
-        return add0(HttpRequest.class, HttpResponse.class, cast);
-    }
-
-    /**
-     * Adds the specified HTTP-level {@code decorator}.
-     *
-     * @param decorator the {@link DecoratingClientFunction} that intercepts an invocation
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
-     */
-    public <I extends HttpRequest, O extends HttpResponse>
-    ClientDecorationBuilder add(DecoratingClientFunction<I, O> decorator) {
-        @SuppressWarnings("unchecked")
-        final DecoratingClientFunction<HttpRequest, HttpResponse> cast =
-                (DecoratingClientFunction<HttpRequest, HttpResponse>) decorator;
-        return add0(HttpRequest.class, HttpResponse.class, cast);
+    public ClientDecorationBuilder add(DecoratingHttpClientFunction decorator) {
+        return add(delegate -> new FunctionalDecoratingHttpClient(delegate, decorator));
     }
 
     /**
      * Adds the specified RPC-level {@code decorator}.
      *
-     * @param decorator the {@link Function} that transforms a {@link Client} to another
-     * @param <T> the type of the {@link Client} being decorated
-     * @param <R> the type of the {@link Client} produced by the {@code decorator}
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
+     * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
      */
-    public <T extends Client<I, O>, R extends Client<I, O>, I extends RpcRequest, O extends RpcResponse>
-    ClientDecorationBuilder addRpc(Function<T, R> decorator) {
-        @SuppressWarnings("unchecked")
-        final Function<Client<RpcRequest, RpcResponse>, Client<RpcRequest, RpcResponse>> cast =
-                (Function<Client<RpcRequest, RpcResponse>, Client<RpcRequest, RpcResponse>>) decorator;
-        return add0(RpcRequest.class, RpcResponse.class, cast);
+    public ClientDecorationBuilder addRpc(Function<? super RpcClient, ? extends RpcClient> decorator) {
+        rpcDecorators.add(requireNonNull(decorator, "decorator"));
+        return this;
     }
 
     /**
      * Adds the specified RPC-level {@code decorator}.
      *
-     * @param decorator the {@link DecoratingClientFunction} that intercepts an invocation
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
+     * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
-    public <I extends RpcRequest, O extends RpcResponse>
-    ClientDecorationBuilder addRpc(DecoratingClientFunction<I, O> decorator) {
-        @SuppressWarnings("unchecked")
-        final DecoratingClientFunction<RpcRequest, RpcResponse> cast =
-                (DecoratingClientFunction<RpcRequest, RpcResponse>) decorator;
-        return add0(RpcRequest.class, RpcResponse.class, cast);
-    }
-
-    <T extends Client<I, O>, R extends Client<I, O>, I extends Request, O extends Response>
-    ClientDecorationBuilder add0(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
-        requireNonNull(requestType, "requestType");
-        requireNonNull(responseType, "responseType");
-        requireNonNull(decorator, "decorator");
-
-        if (!(requestType == HttpRequest.class && responseType == HttpResponse.class ||
-              requestType == RpcRequest.class && responseType == RpcResponse.class)) {
-            throw new IllegalArgumentException(
-                    "requestType and responseType must be HttpRequest and HttpResponse or " +
-                    "RpcRequest and RpcResponse: " + requestType.getName() + " and " + responseType.getName());
-        }
-
-        entries.add(new Entry<>(requestType, responseType, decorator));
-        return this;
-    }
-
-    private <I extends Request, O extends Response> ClientDecorationBuilder add0(
-            Class<I> requestType, Class<O> responseType, DecoratingClientFunction<I, O> decorator) {
-        requireNonNull(requestType, "requestType");
-        requireNonNull(responseType, "responseType");
-        requireNonNull(decorator, "decorator");
-
-        entries.add(new Entry<>(requestType, responseType,
-                                delegate -> new FunctionalDecoratingClient<>(delegate, decorator)));
-        return this;
+    public ClientDecorationBuilder addRpc(DecoratingRpcClientFunction decorator) {
+        return addRpc(delegate -> new FunctionalDecoratingRpcClient(delegate, decorator));
     }
 
     /**
      * Returns a newly-created {@link ClientDecoration} based on the decorators added to this builder.
      */
     public ClientDecoration build() {
-        return new ClientDecoration(entries);
+        return new ClientDecoration(decorators, rpcDecorators);
     }
 }

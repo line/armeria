@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
@@ -65,9 +66,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
 
     @Nullable
     private final Logger logger;
-    private final LogLevel requestLogLevel;
-    private final LogLevel successfulResponseLogLevel;
-    private final LogLevel failedResponseLogLevel;
+    private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
+    private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
     private final Function<? super RequestHeaders, ?> requestHeadersSanitizer;
     private final Function<Object, ?> requestContentSanitizer;
     private final Function<? super HttpHeaders, ?> requestTrailersSanitizer;
@@ -86,9 +86,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     LoggingService(
             HttpService delegate,
             @Nullable Logger logger,
-            LogLevel requestLogLevel,
-            LogLevel successfulResponseLogLevel,
-            LogLevel failedResponseLogLevel,
+            Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             Function<? super RequestHeaders, ?> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ?> requestTrailersSanitizer,
@@ -99,10 +98,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             Sampler<? super ServiceRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
         this.logger = logger;
-        this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
-        this.successfulResponseLogLevel =
-                requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
-        this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
+        this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
+        this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
@@ -119,23 +116,22 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         if (sampler.isSampled(ctx)) {
             final Logger logger = firstNonNull(this.logger, ctx.logger());
 
-            ctx.log().addListener(log -> logRequest(logger,
-                                                    log, requestLogLevel, requestHeadersSanitizer,
+            ctx.log().addListener(log -> logRequest(logger, log,
+                                                    requestLogLevelMapper,
+                                                    requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(
-                    log -> logResponse(logger, log,
-                                       requestLogLevel,
-                                       requestHeadersSanitizer,
-                                       requestContentSanitizer,
-                                       requestTrailersSanitizer,
-                                       successfulResponseLogLevel,
-                                       failedResponseLogLevel,
-                                       responseHeadersSanitizer,
-                                       responseContentSanitizer,
-                                       responseTrailersSanitizer,
-                                       responseCauseSanitizer),
-                    RequestLogAvailability.COMPLETE);
+            ctx.log().addListener(log -> logResponse(logger, log,
+                                                     requestLogLevelMapper,
+                                                     responseLogLevelMapper,
+                                                     requestHeadersSanitizer,
+                                                     requestContentSanitizer,
+                                                     requestTrailersSanitizer,
+                                                     responseHeadersSanitizer,
+                                                     responseContentSanitizer,
+                                                     responseTrailersSanitizer,
+                                                     responseCauseSanitizer),
+                                  RequestLogAvailability.COMPLETE);
         }
         return delegate().serve(ctx, req);
     }

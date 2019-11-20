@@ -22,7 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.IdentityHashMap;
@@ -153,7 +153,7 @@ public class ArmeriaServerCallTest {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.messageRead(new DeframedMessage(buf, 0));
 
-        verifyZeroInteractions(buffersAttr);
+        verifyNoMoreInteractions(buffersAttr);
     }
 
     @Test

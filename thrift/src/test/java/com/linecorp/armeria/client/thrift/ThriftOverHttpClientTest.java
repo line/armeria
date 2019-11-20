@@ -54,7 +54,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
-import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
@@ -235,7 +235,7 @@ class ThriftOverHttpClientTest {
         });
 
         if (ENABLE_LOGGING_DECORATORS) {
-            decoBuilder.addRpc(LoggingClient.newDecorator());
+            decoBuilder.addRpc(LoggingRpcClient.newDecorator());
         }
 
         clientOptions = ClientOptions.of(ClientOption.DECORATION.newValue(decoBuilder.build()));

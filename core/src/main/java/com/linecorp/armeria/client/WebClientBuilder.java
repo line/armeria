@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -29,14 +30,14 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
- * Creates a new HTTP client that connects to the specified {@link URI} using the builder pattern.
- * Use the factory methods in {@link HttpClient} if you do not have many options to override.
+ * Creates a new web client that connects to the specified {@link URI} using the builder pattern.
+ * Use the factory methods in {@link WebClient} if you do not have many options to override.
  * Please refer to {@link ClientBuilder} for how decorators and HTTP headers are configured
  */
-public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpClientBuilder> {
+public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClientBuilder> {
 
     /**
-     * An undefined {@link URI} to create {@link HttpClient} without specifying {@link URI}.
+     * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
      */
     private static final URI UNDEFINED_URI = URI.create("http://undefined");
 
@@ -59,11 +60,8 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
 
     /**
      * Creates a new instance.
-     *
-     * @deprecated Use {@link HttpClient#builder()}.
      */
-    @Deprecated
-    public HttpClientBuilder() {
+    WebClientBuilder() {
         uri = UNDEFINED_URI;
         scheme = null;
         endpoint = null;
@@ -73,25 +71,9 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      * Creates a new instance.
      *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
-     *                                  in {@link SessionProtocol} or the uri violates RFC 2396
-     *
-     * @deprecated Use {@link HttpClient#builder(String)}.
-     */
-    @Deprecated
-    public HttpClientBuilder(String uri) {
-        this(URI.create(requireNonNull(uri, "uri")));
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
-     *
-     * @deprecated Use {@link HttpClient#builder(URI)}.
      */
-    @Deprecated
-    public HttpClientBuilder(URI uri) {
+    WebClientBuilder(URI uri) {
         if (isUndefinedUri(uri)) {
             this.uri = uri;
         } else {
@@ -107,11 +89,8 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
-     *
-     * @deprecated Use {@link HttpClient#builder(SessionProtocol, Endpoint)}.
      */
-    @Deprecated
-    public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+    WebClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
         validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
 
         uri = null;
@@ -132,7 +111,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     /**
      * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#ofDefault()}.
      */
-    public HttpClientBuilder factory(ClientFactory factory) {
+    public WebClientBuilder factory(ClientFactory factory) {
         this.factory = requireNonNull(factory, "factory");
         return this;
     }
@@ -140,25 +119,35 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     /**
      * Sets the {@code path} of the client.
      */
-    public HttpClientBuilder path(String path) {
+    public WebClientBuilder path(String path) {
         this.path = requireNonNull(path, "path");
         return this;
     }
 
     /**
-     * Returns a newly-created HTTP client based on the properties of this builder.
+     * Returns a newly-created web client based on the properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
-     *                                  {@link HttpClient#builder(String)} or {@link HttpClient#builder(URI)}
-     *                                  is not an HTTP scheme
+     *                                  {@link WebClient#builder(String)} or
+     *                                  {@link WebClient#builder(URI)} is not an HTTP scheme
      */
-    public HttpClient build() {
+    public WebClient build() {
         if (uri != null) {
-            return factory.newClient(uri, HttpClient.class, buildOptions());
+            return factory.newClient(uri, WebClient.class, buildOptions());
         } else if (path != null) {
-            return factory.newClient(scheme, endpoint, path, HttpClient.class, buildOptions());
+            return factory.newClient(scheme, endpoint, path, WebClient.class, buildOptions());
         } else {
-            return factory.newClient(scheme, endpoint, HttpClient.class, buildOptions());
+            return factory.newClient(scheme, endpoint, WebClient.class, buildOptions());
         }
+    }
+
+    @Override
+    public WebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
+        throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
+    }
+
+    @Override
+    public WebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
+        throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
     }
 }

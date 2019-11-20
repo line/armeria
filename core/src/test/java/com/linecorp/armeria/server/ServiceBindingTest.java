@@ -28,7 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -124,7 +124,7 @@ class ServiceBindingTest {
 
     @Test
     void routeService() throws InterruptedException {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         AggregatedHttpResponse res = client.get("/greet/armeria").aggregate().join();
         propertyCheckLatch.await();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
@@ -143,7 +143,7 @@ class ServiceBindingTest {
 
     @Test
     void consumesAndProduces() throws IOException {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
                                            .aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
@@ -179,7 +179,7 @@ class ServiceBindingTest {
 
     @Test
     void accessLogWriter() throws InterruptedException {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
               .aggregate().join();
 

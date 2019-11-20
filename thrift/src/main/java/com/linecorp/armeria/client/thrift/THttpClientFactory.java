@@ -27,16 +27,13 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.DefaultClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -93,8 +90,7 @@ final class THttpClientFactory extends DecoratingClientFactory {
                             ClientOptions options) {
         final SerializationFormat serializationFormat = scheme.serializationFormat();
 
-        final Client<RpcRequest, RpcResponse> delegate = options.decoration().decorate(
-                RpcRequest.class, RpcResponse.class,
+        final RpcClient delegate = options.decoration().rpcDecorate(
                 new THttpClientDelegate(newHttpClient(uri, scheme, options),
                                         serializationFormat));
 
@@ -124,13 +120,12 @@ final class THttpClientFactory extends DecoratingClientFactory {
         }
     }
 
-    private Client<HttpRequest, HttpResponse> newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
+    private HttpClient newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
         try {
-            @SuppressWarnings("unchecked")
-            final Client<HttpRequest, HttpResponse> client = delegate().newClient(
+            final HttpClient client = delegate().newClient(
                     new URI(Scheme.of(SerializationFormat.NONE, scheme.sessionProtocol()).uriText(),
                             uri.getRawAuthority(), null, null, null),
-                    Client.class, options);
+                    HttpClient.class, options);
             return client;
         } catch (URISyntaxException e) {
             throw new Error(e); // Should never happen.

@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
@@ -31,10 +30,9 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapMaker;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -88,43 +86,45 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     private volatile boolean closed;
 
-    HttpClientFactory(
-            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnClose,
-            EventLoopScheduler eventLoopScheduler, Map<ChannelOption<?>, Object> channelOptions,
-            Consumer<? super SslContextBuilder> sslContextCustomizer,
-            AddressResolverGroup<InetSocketAddress> addressResolverGroup,
-            int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize, int http2MaxFrameSize,
-            long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
-            int http1MaxChunkSize, long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
-            ConnectionPoolListener connectionPoolListener, MeterRegistry meterRegistry) {
-        final Bootstrap baseBootstrap = new Bootstrap();
-        baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
-        baseBootstrap.resolver(addressResolverGroup);
+    private final ClientFactoryOptions options;
 
-        channelOptions.forEach((option, value) -> {
+    HttpClientFactory(ClientFactoryOptions options) {
+        workerGroup = options.workerGroup();
+
+        @SuppressWarnings("unchecked")
+        final AddressResolverGroup<InetSocketAddress> group =
+                (AddressResolverGroup<InetSocketAddress>) options.addressResolverGroupFactory()
+                                                                 .apply(workerGroup);
+        addressResolverGroup = group;
+
+        final Bootstrap bootstrap = new Bootstrap();
+        bootstrap.channel(TransportType.socketChannelType(workerGroup));
+        bootstrap.resolver(addressResolverGroup);
+
+        options.channelOptions().forEach((option, value) -> {
             @SuppressWarnings("unchecked")
             final ChannelOption<Object> castOption = (ChannelOption<Object>) option;
-            baseBootstrap.option(castOption, value);
+            bootstrap.option(castOption, value);
         });
 
-        this.workerGroup = workerGroup;
-        this.shutdownWorkerGroupOnClose = shutdownWorkerGroupOnClose;
-        this.eventLoopScheduler = eventLoopScheduler;
-        this.baseBootstrap = baseBootstrap;
-        this.sslContextCustomizer = sslContextCustomizer;
-        this.addressResolverGroup = addressResolverGroup;
-        this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
-        this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
-        this.http2MaxFrameSize = http2MaxFrameSize;
-        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
-        this.http1MaxInitialLineLength = http1MaxInitialLineLength;
-        this.http1MaxHeaderSize = http1MaxHeaderSize;
-        this.http1MaxChunkSize = http1MaxChunkSize;
-        this.idleTimeoutMillis = idleTimeoutMillis;
-        this.useHttp2Preface = useHttp2Preface;
-        this.useHttp1Pipelining = useHttp1Pipelining;
-        this.connectionPoolListener = connectionPoolListener;
-        this.meterRegistry = meterRegistry;
+        shutdownWorkerGroupOnClose = options.shutdownWorkerGroupOnClose();
+        eventLoopScheduler = options.eventLoopSchedulerFactory().apply(workerGroup);
+        baseBootstrap = bootstrap;
+        sslContextCustomizer = options.sslContextCustomizer();
+        http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
+        http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
+        http2MaxFrameSize = options.http2MaxFrameSize();
+        http2MaxHeaderListSize = options.http2MaxHeaderListSize();
+        http1MaxInitialLineLength = options.http1MaxInitialLineLength();
+        http1MaxHeaderSize = options.http1MaxHeaderSize();
+        http1MaxChunkSize = options.http1MaxChunkSize();
+        idleTimeoutMillis = options.idleTimeoutMillis();
+        useHttp2Preface = options.useHttp2Preface();
+        useHttp1Pipelining = options.useHttp1Pipelining();
+        connectionPoolListener = options.connectionPoolListener();
+        meterRegistry = options.meterRegistry();
+
+        this.options = options;
 
         clientDelegate = new HttpClientDelegate(this, addressResolverGroup);
     }
@@ -185,6 +185,11 @@ final class HttpClientFactory extends AbstractClientFactory {
         return connectionPoolListener;
     }
 
+    @VisibleForTesting
+    AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
+        return addressResolverGroup;
+    }
+
     @Override
     public Set<Scheme> supportedSchemes() {
         return SUPPORTED_SCHEMES;
@@ -216,6 +221,11 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public ClientFactoryOptions options() {
+        return options;
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
         final Endpoint endpoint = newEndpoint(uri);
@@ -234,17 +244,16 @@ final class HttpClientFactory extends AbstractClientFactory {
                             ClientOptions options) {
         validateClientType(clientType);
 
-        final Client<HttpRequest, HttpResponse> delegate = options.decoration().decorate(
-                HttpRequest.class, HttpResponse.class, clientDelegate);
+        final HttpClient delegate = options.decoration().decorate(clientDelegate);
 
-        if (clientType == Client.class) {
+        if (clientType == HttpClient.class) {
             @SuppressWarnings("unchecked")
             final T castClient = (T) delegate;
             return castClient;
         }
 
-        if (clientType == HttpClient.class) {
-            final HttpClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
+        if (clientType == WebClient.class) {
+            final WebClient client = newWebClient(uri, scheme, endpoint, options, delegate);
 
             @SuppressWarnings("unchecked")
             final T castClient = (T) client;
@@ -254,19 +263,19 @@ final class HttpClientFactory extends AbstractClientFactory {
         }
     }
 
-    private DefaultHttpClient newHttpClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
-                                            Client<HttpRequest, HttpResponse> delegate) {
-        return new DefaultHttpClient(
-                new DefaultClientBuilderParams(this, uri, HttpClient.class, options),
+    private DefaultWebClient newWebClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
+                                          HttpClient delegate) {
+        return new DefaultWebClient(
+                new DefaultClientBuilderParams(this, uri, WebClient.class, options),
                 delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
     }
 
     private static void validateClientType(Class<?> clientType) {
-        if (clientType != HttpClient.class && clientType != Client.class) {
+        if (clientType != WebClient.class && clientType != HttpClient.class) {
             throw new IllegalArgumentException(
                     "clientType: " + clientType +
-                    " (expected: " + HttpClient.class.getSimpleName() + " or " +
-                    Client.class.getSimpleName() + ')');
+                    " (expected: " + WebClient.class.getSimpleName() + " or " +
+                    HttpClient.class.getSimpleName() + ')');
         }
     }
 

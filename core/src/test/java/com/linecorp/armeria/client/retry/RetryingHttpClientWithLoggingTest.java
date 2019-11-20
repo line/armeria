@@ -29,10 +29,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -47,7 +47,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
-public class RetryingClientWithLoggingTest {
+public class RetryingHttpClientWithLoggingTest {
 
     @Rule
     public final ServerRule server = new ServerRule() {
@@ -93,7 +93,7 @@ public class RetryingClientWithLoggingTest {
         logResult.clear();
     }
 
-    // HttpClient -> RetryingClient -> LoggingClient -> HttpClientDelegate
+    // WebClient -> RetryingClient -> LoggingClient -> HttpClientDelegate
     // In this case, all of the requests and responses are logged.
     @Test
     public void retryingThenLogging() {
@@ -105,27 +105,27 @@ public class RetryingClientWithLoggingTest {
                     }
                     return Backoff.ofDefault();
                 });
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .decorator(loggingDecorator())
-                                            .decorator(RetryingHttpClient.builder(retryStrategy)
-                                                                         .newDecorator())
-                                            .build();
+        final WebClient client = WebClient.builder(server.uri("/"))
+                                          .decorator(loggingDecorator())
+                                          .decorator(RetryingHttpClient.builder(retryStrategy)
+                                                                       .newDecorator())
+                                          .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 6 logs(3 requests and 3 responses) are called back
         await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
     }
 
-    // HttpClient -> LoggingClient -> RetryingClient -> HttpClientDelegate
+    // WebClient -> LoggingClient -> RetryingClient -> HttpClientDelegate
     // In this case, only the first request and the last response are logged.
     @Test
     public void loggingThenRetrying() throws Exception {
         successLogIndex = 1;
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .decorator(RetryingHttpClient.newDecorator(
-                                                    RetryStrategy.onServerErrorStatus()))
-                                            .decorator(loggingDecorator())
-                                            .build();
+        final WebClient client = WebClient.builder(server.uri("/"))
+                                          .decorator(RetryingHttpClient.newDecorator(
+                                                  RetryStrategy.onServerErrorStatus()))
+                                          .decorator(loggingDecorator())
+                                          .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 2 logs are called back
@@ -135,8 +135,7 @@ public class RetryingClientWithLoggingTest {
         assertThat(logResult.get(0).toStringRequestOnly()).isEqualTo(logResult.get(1).toStringRequestOnly());
     }
 
-    private Function<Client<HttpRequest, HttpResponse>, Client<HttpRequest, HttpResponse>>
-    loggingDecorator() {
+    private Function<? super HttpClient, ? extends HttpClient> loggingDecorator() {
         return delegate -> new SimpleDecoratingHttpClient(delegate) {
             @Override
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {

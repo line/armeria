@@ -47,7 +47,7 @@ class GrpcClientUnwrapTest {
         // The outermost decorator of the client must be returned,
         // because the search begins from outside to inside.
         // In the current setup, the outermost `Unwrappable` and `Client` are
-        // `ArmeriaChannel` and `RetryingHttpClient` respectively.
+        // `ArmeriaChannel` and `RetryingClient` respectively.
         assertThat(Clients.unwrap(client, Unwrappable.class)).containsInstanceOf(ArmeriaChannel.class);
         assertThat(Clients.unwrap(client, Client.class)).containsInstanceOf(RetryingHttpClient.class);
 

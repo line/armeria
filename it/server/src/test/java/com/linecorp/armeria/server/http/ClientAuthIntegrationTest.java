@@ -22,7 +22,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -67,10 +67,10 @@ public class ClientAuthIntegrationTest {
                                      .keyManager(clientCert.certificateFile(), clientCert.privateKeyFile())
                                      .trustManager(InsecureTrustManagerFactory.INSTANCE))
                              .build();
-        final HttpClient client = HttpClient.builder(rule.httpsUri("/"))
-                                            .factory(clientFactory)
-                                            .decorator(LoggingClient.builder().newDecorator())
-                                            .build();
+        final WebClient client = WebClient.builder(rule.httpsUri("/"))
+                                          .factory(clientFactory)
+                                          .decorator(LoggingClient.builder().newDecorator())
+                                          .build();
         assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
     }
 }

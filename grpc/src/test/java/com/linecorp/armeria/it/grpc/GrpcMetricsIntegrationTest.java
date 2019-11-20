@@ -36,7 +36,7 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
@@ -210,10 +210,10 @@ public class GrpcMetricsIntegrationTest {
     }
 
     private static void makeUnframedRequest(String name) throws Exception {
-        final HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
+        final WebClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
                 .factory(clientFactory)
                 .addHttpHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
-                .build(HttpClient.class);
+                .build(WebClient.class);
 
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
