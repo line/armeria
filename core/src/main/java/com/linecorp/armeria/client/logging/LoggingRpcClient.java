@@ -18,6 +18,10 @@ package com.linecorp.armeria.client.logging;
 
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -60,6 +64,7 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
      * {@link LogLevel}s with the specified sanitizers.
      */
     LoggingRpcClient(RpcClient delegate,
+                     @Nullable Logger logger,
                      Function<? super RequestLog, LogLevel> requestLogLevelMapper,
                      Function<? super RequestLog, LogLevel> responseLogLevelMapper,
                      Function<? super HttpHeaders, ?> requestHeadersSanitizer,
@@ -70,7 +75,7 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
                      Function<? super HttpHeaders, ?> responseTrailersSanitizer,
                      Function<? super Throwable, ?> responseCauseSanitizer,
                      Sampler<? super ClientRequestContext> sampler) {
-        super(delegate, requestLogLevelMapper, responseLogLevelMapper,
+        super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
               requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
               responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
               responseCauseSanitizer, sampler);

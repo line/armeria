@@ -16,69 +16,57 @@
 
 package com.linecorp.armeria.client.logging;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.logging.RequestLogListener;
 
-public class LoggingClientTest {
-    private static final String REQUEST_FORMAT = "Request: {}";
-    private static final String RESPONSE_FORMAT = "Response: {}";
-
-    private static final String REQUEST_LOG = "requestLog";
-    private static final String RESPONSE_LOG = "responseLog";
+class LoggingClientTest {
 
     @Mock
     private Logger logger;
 
-    @Mock
     private HttpRequest request;
 
-    @Mock
     private ClientRequestContext context;
 
-    @Mock
-    private RequestLog log;
-
-    @Mock
-    private Client<HttpRequest, HttpResponse> delegate;
+    private HttpClient delegate;
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.initMocks(this);
         when(logger.isInfoEnabled()).thenReturn(true);
 
-        when(context.log()).thenReturn(log);
-
-        doAnswer(invocation -> {
-            final RequestLogListener listener = invocation.getArgument(0);
-            listener.onRequestLog(log);
-            return null;
-        }).when(log).addListener(isA(RequestLogListener.class), isA(RequestLogAvailability.class));
-
-        when(log.toStringRequestOnly(any(), any(), any())).thenReturn(REQUEST_LOG);
-        when(log.toStringResponseOnly(any(), any(), any())).thenReturn(RESPONSE_LOG);
+        request = HttpRequest.of(HttpMethod.GET, "/");
+        context = ClientRequestContext.of(request);
+        delegate = (ctx, req) -> {
+            ctx.logBuilder().endRequest();
+            ctx.logBuilder().endResponse();
+            return HttpResponse.of(HttpStatus.NO_CONTENT);
+        };
     }
 
     @Test
     void logger() throws Exception {
-        final LoggingClient<HttpRequest, HttpResponse> customLoggerClient =
+        // use custom logger
+        final LoggingClient customLoggerClient =
                 LoggingClient.builder()
                              .logger(logger)
                              .requestLogLevel(LogLevel.INFO)
@@ -87,11 +75,20 @@ public class LoggingClientTest {
 
         customLoggerClient.execute(context, request);
 
-        verify(logger).info(REQUEST_FORMAT, REQUEST_LOG);
-        verify(logger).info(RESPONSE_FORMAT, RESPONSE_LOG);
+        // verify request log
+        verify(logger).info(eq("Request: {}"), argThat((ArgumentMatcher<Object>) argument -> {
+            final String actLog = (String) argument;
+            return actLog.endsWith("headers=[:method=GET, :path=/]}");
+        }));
+
+        // verify response log
+        verify(logger).info(eq("Response: {}"), argThat((ArgumentMatcher<Object>) argument -> {
+            final String actLog = (String) argument;
+            return actLog.endsWith("duration=0ns, headers=[:status=0]}");
+        }));
 
         // use default logger
-        final LoggingClient<HttpRequest, HttpResponse> defaultLoggerClient =
+        final LoggingClient defaultLoggerClient =
                 LoggingClient.builder()
                              .requestLogLevel(LogLevel.INFO)
                              .successfulResponseLogLevel(LogLevel.INFO)
