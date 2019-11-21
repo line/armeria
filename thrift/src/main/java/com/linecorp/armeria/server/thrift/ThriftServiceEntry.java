@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
@@ -43,6 +45,15 @@ public final class ThriftServiceEntry {
 
         requireNonNull(name, "implementations contains an entry with null key.");
         requireNonNull(implementation, "implementations['" + name + "']");
+
+        this.name = name;
+        this.implementation = implementation;
+        metadata = new ThriftServiceMetadata(implementation);
+    }
+
+    ThriftServiceEntry(String name, Object implementation) {
+        requireNonNull(name, "name");
+        requireNonNull(implementation, "implementation");
 
         this.name = name;
         this.implementation = implementation;
