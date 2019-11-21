@@ -1,83 +1,95 @@
-import React, { Dispatch, SetStateAction, useContext } from 'react';
-
 import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
-import {
-  CreateDefaultRow,
-  Row,
-  ValueListContext,
-} from '../KeyValueEditor/valueListContext';
-import { KeyValueTableRow } from '../KeyValueRow';
+import React from 'react';
 
-interface Props {
-  defaultKeyValueList?: Row[];
-  keyName?: string;
-  valueName?: string;
-}
+function KeyValueTable() {
+  const columns = React.useMemo(
+    () => [
+      {
+        Header: 'Name',
+        columns: [
+          {
+            Header: 'First Name',
+            accessor: 'firstName',
+          },
+          {
+            Header: 'Last Name',
+            accessor: 'lastName',
+          },
+        ],
+      },
+      {
+        Header: 'Info',
+        columns: [
+          {
+            Header: 'Age',
+            accessor: 'age',
+          },
+          {
+            Header: 'Visits',
+            accessor: 'visits',
+          },
+          {
+            Header: 'Status',
+            accessor: 'status',
+          },
+          {
+            Header: 'Profile Progress',
+            accessor: 'progress',
+          },
+        ],
+      },
+    ],
+    [],
+  );
 
-const KeyValueTable: React.FunctionComponent<Props> = ({
-  defaultKeyValueList,
-  keyName,
-  valueName,
-}) => {
-  const resultArr:
-    | [Row[], Dispatch<SetStateAction<Row[]>>]
-    | undefined = useContext(ValueListContext);
+  const [data, setData] = React.useState(() => makeData(20));
+  const [originalData] = React.useState(data);
+  const [skipPageReset, setSkipPageReset] = React.useState(false);
 
-  if (!resultArr) throw new Error("KeyValueTable : There's no RowList");
+  // We need to keep the table from resetting the pageIndex when we
+  // Update data. So we can keep track of that flag with a ref.
 
-  const [rowList, setRowList] = resultArr;
-  if (defaultKeyValueList) setRowList(defaultKeyValueList);
-
-  const onRowRemove = (index: number) => {
-    if (rowList.length === 1) return;
-    setRowList(
-      rowList.filter((_, i) => i !== index).map((v, i) => ({ ...v, index: i })),
+  // When our cell renderer calls updateMyData, we'll use
+  // the rowIndex, columnID and new value to update the
+  // original data
+  const updateMyData = (rowIndex, columnID, value) => {
+    // We also turn on the flag to not reset the page
+    setSkipPageReset(true);
+    setData((old) =>
+      old.map((row, index) => {
+        if (index === rowIndex) {
+          return {
+            ...old[rowIndex],
+            [columnID]: value,
+          };
+        }
+        return row;
+      }),
     );
   };
 
-  const onRowChange = (index: number, name: string, value: string) => {
-    if (!rowList) return;
+  // After data chagnes, we turn the flag back off
+  // so that if data actually changes when we're not
+  // editing it, the page is reset
+  React.useEffect(() => {
+    setSkipPageReset(false);
+  }, [data]);
 
-    const newRowList = rowList.map((row, i) =>
-      i === index ? { ...row, [name]: value } : row,
-    );
-    if (index === rowList.length - 1) {
-      newRowList.push(CreateDefaultRow());
-    }
-
-    setRowList(newRowList);
-  };
+  // Let's add a data resetter/randomizer to help
+  // illustrate that flow...
+  const resetData = () => setData(originalData);
 
   return (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell>{keyName}</TableCell>
-          <TableCell>{valueName}</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {rowList &&
-          rowList.map((v, i) => (
-            <KeyValueTableRow
-              key={i}
-              index={i}
-              row={{
-                key: v.key,
-                value: v.value,
-              }}
-              onRowChange={onRowChange}
-              onRowRemove={onRowRemove}
-              isRemovable={Boolean(rowList.length - 1 !== i)}
-            />
-          ))}
-      </TableBody>
-    </Table>
+    <Styles>
+      <button onClick={resetData}>Reset Data</button>
+      <Table
+        columns={columns}
+        data={data}
+        updateMyData={updateMyData}
+        skipPageReset={skipPageReset}
+      />
+    </Styles>
   );
-};
+}
 
-export default React.memo(KeyValueTable);
+export default KeyValueTable;

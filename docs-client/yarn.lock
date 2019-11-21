@@ -2522,6 +2522,13 @@
   dependencies:
     "@types/react" "*"
 
+"@types/react-table@^6.8.5":
+  version "6.8.5"
+  resolved "https://registry.yarnpkg.com/@types/react-table/-/react-table-6.8.5.tgz#deb2bf2fcedcfb81e9020edbb7df0d8459ca348b"
+  integrity sha512-ueCsAadG1IwuuAZM+MWf2SoxbccSWweyQa9YG6xGN5cOVK3SayPOJW4MsUHGpY0V/Q+iZWgohpasliiao29O6g==
+  dependencies:
+    "@types/react" "*"
+
 "@types/react-textarea-autosize@^4.3.3":
   version "4.3.5"
   resolved "https://registry.yarnpkg.com/@types/react-textarea-autosize/-/react-textarea-autosize-4.3.5.tgz#6c4d2753fa1864c98c0b2b517f67bb1f6e4c46de"
@@ -9092,6 +9099,11 @@ react-syntax-highlighter@^8.0.1:
     lowlight "~1.9.1"
     prismjs "^1.8.4"
     refractor "^2.4.1"
+
+react-table@^7.0.0-beta.14:
+  version "7.0.0-beta.14"
+  resolved "https://registry.yarnpkg.com/react-table/-/react-table-7.0.0-beta.14.tgz#17824db22de1b082ed9fdb8e3bcb21612abd6523"
+  integrity sha512-5pUAq+Dv/Dwo/iMZHRjxlBpphOclgDDJ0BBW26MgzWPZY+PfhqzIWVk7HnIFa8GJW8dzpMu20/jiWRhwav1N/A==
 
 react-textarea-autosize@^7.1.0:
   version "7.1.2"
