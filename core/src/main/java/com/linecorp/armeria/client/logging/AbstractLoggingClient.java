@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.client.logging;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,8 +48,9 @@ import com.linecorp.armeria.common.util.Sampler;
 abstract class AbstractLoggingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractLoggingClient.class);
+    private static final Logger defaultLogger = LoggerFactory.getLogger(AbstractLoggingClient.class);
 
+    private final Logger logger;
     private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
     private final Function<? super HttpHeaders, ?> requestHeadersSanitizer;
@@ -65,6 +69,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
      */
     AbstractLoggingClient(Client<I, O> delegate, LogLevel level) {
         this(delegate,
+             null,
              log -> level,
              log -> level,
              Function.identity(),
@@ -82,6 +87,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
      * {@link LogLevel}s with the specified sanitizers.
      */
     AbstractLoggingClient(Client<I, O> delegate,
+                          @Nullable Logger logger,
                           Function<? super RequestLog, LogLevel> requestLogLevelMapper,
                           Function<? super RequestLog, LogLevel> responseLogLevelMapper,
                           Function<? super HttpHeaders, ?> requestHeadersSanitizer,
@@ -93,6 +99,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
                           Function<? super Throwable, ?> responseCauseSanitizer,
                           Sampler<? super ClientRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
+        this.logger = firstNonNull(logger, defaultLogger);
         this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
 
