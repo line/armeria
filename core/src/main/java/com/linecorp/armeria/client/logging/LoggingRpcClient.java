@@ -62,6 +62,7 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
      * {@link LogLevel}s with the specified sanitizers.
+     * If the logger is null, it means that the default logger is used.
      */
     LoggingRpcClient(RpcClient delegate,
                      @Nullable Logger logger,
