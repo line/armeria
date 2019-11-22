@@ -68,6 +68,11 @@ This product contains a modified part of Brave, distributed by Zipkin.io:
   * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/openzipkin/brave
 
+This product contains a modified part of dnsjava, distributed by Brian Wellington:
+
+  * License: license/LICENSE.dnsjava.bsd2.txt (BSD 2-Clause)
+  * Homepage: https://github.com/dnsjava/dnsjava
+
 This product contains a modified part of gRPC, distributed by Google:
 
   * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)

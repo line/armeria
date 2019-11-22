@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
@@ -765,6 +766,14 @@ class HttpClientIntegrationTest {
         assertThatThrownBy(() -> response.aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCause(badState);
+    }
+
+    // Make sure the client can access external hosts.
+    @Test
+    void externalHost() {
+        // Just use assumption to avoid the CI becoming flaky due to dependency on the external host.
+        assumeThat(WebClient.of("https://github.com").get("/").aggregate().join().status())
+                .isEqualTo(HttpStatus.OK);
     }
 
     @Nested

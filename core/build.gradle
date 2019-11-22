@@ -114,6 +114,9 @@ dependencies {
     compile "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     compile 'io.netty:netty-tcnative-boringssl-static'
 
+    // TODO(anuraaga): Remove after https://github.com/netty/netty/issues/9796
+    compile 'net.java.dev.jna:jna-platform'
+
     // Project Reactor
     testCompile 'io.projectreactor:reactor-test'
 

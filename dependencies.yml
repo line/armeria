@@ -247,6 +247,9 @@ log4j:
 me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.5.0' }
 
+net.java.dev.jna:
+  jna-platform: { version: '5.5.0' }
+
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '2.11.1' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }

@@ -28,7 +28,10 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.util.OsType;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.TransportType;
+import com.linecorp.armeria.internal.dns.WindowsDnsServerAddressStreamProvider;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolver;
@@ -323,9 +326,15 @@ public final class DnsResolverGroupBuilder {
             if (hostsFileEntriesResolver != null) {
                 builder.hostsFileEntriesResolver(hostsFileEntriesResolver);
             }
+
             if (dnsServerAddressStreamProvider != null) {
                 builder.nameServerProvider(dnsServerAddressStreamProvider);
+            } else if (SystemInfo.osType() == OsType.WINDOWS) {
+                // Netty's default addresses don't work well on Windows and we have a workaround.
+                // TODO(anuraaga): Remove after https://github.com/netty/netty/issues/9796
+                builder.nameServerProvider(WindowsDnsServerAddressStreamProvider.get());
             }
+
             if (dnsQueryLifecycleObserverFactory != null) {
                 builder.dnsQueryLifecycleObserverFactory(dnsQueryLifecycleObserverFactory);
             }
