@@ -1,3 +1,4 @@
+/*
 import { Button } from '@material-ui/core';
 import TextField from '@material-ui/core/TextField';
 import parseLoosely from 'jsonic';
@@ -111,3 +112,4 @@ const KeyValueEditor: React.FunctionComponent<Props> = ({
   );
 };
 export default React.memo(KeyValueEditor);
+*/

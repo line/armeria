@@ -5,48 +5,44 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import React from 'react';
 import { useTable } from 'react-table';
-import { CustomTableCell } from '../CustomTableCell';
-
-interface Props {
-  columns: any;
-  data: any;
-  updateMyData: any;
-}
+import { KeyValueTableCellRenderer } from '../KeyValueTableCellRenderer';
 
 // Set our editable cell renderer as the default Cell renderer
 const defaultColumn = {
-  Cell: CustomTableCell,
+  Cell: KeyValueTableCellRenderer,
 };
 
-const CustomTable: React.FunctionComponent<Props> = ({
+// Set our editable cell renderer as the default Cell renderer
+// const defaultColumn = CustomTableCell;
+const CustomTable: ({
   columns,
   data,
-  updateMyData,
-}) => {
+  updateData,
+}: {
+  columns: any;
+  data: any;
+  updateData: any;
+}) => any = ({ columns, data, updateData }) => {
   const {
     getTableProps,
     getTableBodyProps,
     headerGroups,
+    rows,
     prepareRow,
   } = useTable({
+    defaultColumn,
+    updateData,
     columns,
     data,
-    defaultColumn,
-    // updateMyData isn't part of the API, but
-    // anything we put into these options will
-    // automatically be available on the instance.
-    // That way we can call this function from our
-    // cell renderer!
-    updateMyData,
   });
 
   return (
     <Table {...getTableProps}>
       <TableHead>
-        {headerGroups.map((headerGroup) => (
-          <TableRow {...headerGroup.getHeaderGroupProps()}>
-            {headerGroup.headers.map((column) => (
-              <TableCell {...column.getHeaderProps()}>
+        {headerGroups.map((headerGroup, i1) => (
+          <TableRow key={i1} {...headerGroup.getHeaderGroupProps()}>
+            {headerGroup.headers.map((column, i2) => (
+              <TableCell key={i2} {...column.getHeaderProps()}>
                 {column.render('Header')}
               </TableCell>
             ))}
@@ -54,17 +50,19 @@ const CustomTable: React.FunctionComponent<Props> = ({
         ))}
       </TableHead>
       <TableBody {...getTableBodyProps()}>
-        {columns &&
-          columns.map((row, i) => {
+        {rows &&
+          rows.map((row, i1) => {
             prepareRow(row);
             return (
-              <tr {...row.getRowProps()}>
-                {row.cells.map((cell) => {
+              <TableRow key={i1} {...row.getRowProps()}>
+                {row.cells.map((cell, i2) => {
                   return (
-                    <td {...cell.getCellProps()}>{cell.render('Cell')}</td>
+                    <td key={i2} {...cell.getCellProps()}>
+                      {cell.render('Cell')}
+                    </td>
                   );
                 })}
-              </tr>
+              </TableRow>
             );
           })}
       </TableBody>
