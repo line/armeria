@@ -49,7 +49,6 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
@@ -110,7 +109,7 @@ public final class HttpFileService extends AbstractHttpService {
 
     HttpFileService(HttpFileServiceConfig config) {
         this.config = requireNonNull(config, "config");
-        if (config.maxCacheEntries() != 0) {
+        if (config.entryCacheSpec().isPresent()) {
             cache = newCache(config);
         } else {
             cache = null;
@@ -118,9 +117,8 @@ public final class HttpFileService extends AbstractHttpService {
     }
 
     private static Cache<PathAndEncoding, AggregatedHttpFile> newCache(HttpFileServiceConfig config) {
-        final Caffeine<Object, Object> b = Caffeine.newBuilder();
-        b.maximumSize(config.maxCacheEntries())
-         .recordStats()
+        final Caffeine<Object, Object> b = Caffeine.from(config.entryCacheSpec().get());
+        b.recordStats()
          .removalListener((RemovalListener<PathAndEncoding, AggregatedHttpFile>) (key, value, cause) -> {
              if (value != null) {
                  final HttpData content = value.content();
@@ -303,7 +301,7 @@ public final class HttpFileService extends AbstractHttpService {
      *
      * @param nextService the {@link HttpService} to try secondly
      */
-    public HttpService orElse(Service<HttpRequest, HttpResponse> nextService) {
+    public HttpService orElse(HttpService nextService) {
         requireNonNull(nextService, "nextService");
         return new OrElseHttpService(this, nextService);
     }
@@ -311,9 +309,9 @@ public final class HttpFileService extends AbstractHttpService {
     private static final class OrElseHttpService extends AbstractHttpService {
 
         private final HttpFileService first;
-        private final Service<HttpRequest, HttpResponse> second;
+        private final HttpService second;
 
-        OrElseHttpService(HttpFileService first, Service<HttpRequest, HttpResponse> second) {
+        OrElseHttpService(HttpFileService first, HttpService second) {
             this.first = first;
             this.second = second;
         }
@@ -373,7 +371,7 @@ public final class HttpFileService extends AbstractHttpService {
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(@Nullable Object obj) {
             if (this == obj) {
                 return true;
             }

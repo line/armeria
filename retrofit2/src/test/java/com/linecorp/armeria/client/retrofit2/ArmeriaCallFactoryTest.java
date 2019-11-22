@@ -46,7 +46,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
-import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -91,7 +90,7 @@ class ArmeriaCallFactoryTest {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (o == this) {
                 return true;
             }
@@ -440,7 +439,7 @@ class ArmeriaCallFactoryTest {
     @Test
     void respectsHttpClientUri_endpointGroup() throws Exception {
         EndpointGroupRegistry.register("foo",
-                                       new StaticEndpointGroup(Endpoint.of("127.0.0.1", server.httpPort())),
+                                       Endpoint.of("127.0.0.1", server.httpPort()),
                                        ROUND_ROBIN);
         final Service service = new ArmeriaRetrofitBuilder()
                 .baseUrl("http://group:foo/")
@@ -459,7 +458,7 @@ class ArmeriaCallFactoryTest {
     @Test
     void urlAnnotation() throws Exception {
         EndpointGroupRegistry.register("bar",
-                                       new StaticEndpointGroup(Endpoint.of("127.0.0.1", server.httpPort())),
+                                       Endpoint.of("127.0.0.1", server.httpPort()),
                                        ROUND_ROBIN);
         final Service service = new ArmeriaRetrofitBuilder()
                 .baseUrl("http://group:foo/")
@@ -474,7 +473,7 @@ class ArmeriaCallFactoryTest {
     @ArgumentsSource(ServiceProvider.class)
     void urlAnnotation_uriWithoutScheme(Service service) throws Exception {
         EndpointGroupRegistry.register("bar",
-                                       new StaticEndpointGroup(Endpoint.of("127.0.0.1", server.httpPort())),
+                                       Endpoint.of("127.0.0.1", server.httpPort()),
                                        ROUND_ROBIN);
         assertThat(service.fullUrl("//localhost:" + server.httpPort() + "/nest/pojo").get()).isEqualTo(
                 new Pojo("Leonard", 21));

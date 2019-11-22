@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -67,7 +66,7 @@ final class DefaultRoutingContext implements RoutingContext {
     private final boolean isCorsPreflight;
     private final List<Object> summary;
     @Nullable
-    private Throwable delayedCause;
+    private HttpStatusException deferredCause;
 
     DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
                           String path, @Nullable String query, boolean isCorsPreflight) {
@@ -133,14 +132,14 @@ final class DefaultRoutingContext implements RoutingContext {
     }
 
     @Override
-    public void delayThrowable(Throwable delayedCause) {
+    public void deferStatusException(HttpStatusException deferredCause) {
         // Update with the last cause
-        this.delayedCause = requireNonNull(delayedCause, "delayedCause");
+        this.deferredCause = requireNonNull(deferredCause, "deferredCause");
     }
 
     @Override
-    public Optional<Throwable> delayedThrowable() {
-        return Optional.ofNullable(delayedCause);
+    public HttpStatusException deferredStatusException() {
+        return deferredCause;
     }
 
     @Override
@@ -149,7 +148,7 @@ final class DefaultRoutingContext implements RoutingContext {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         return obj instanceof DefaultRoutingContext &&
                (this == obj || summary().equals(((DefaultRoutingContext) obj).summary()));
     }

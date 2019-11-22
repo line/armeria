@@ -45,89 +45,6 @@ interface OwnProps {
   specification: Specification;
 }
 
-type Props = OwnProps &
-  RouteComponentProps<{
-    serviceName: string;
-    methodName: string;
-    httpMethod: string;
-  }>;
-
-const MethodPage: React.SFC<Props> = (props) => {
-  const service = props.specification.getServiceByName(
-    props.match.params.serviceName,
-  );
-  if (!service) {
-    return <>Not found.</>;
-  }
-  const method = service.methods.find(
-    (m) => m.name === props.match.params.methodName,
-  );
-  if (!method) {
-    return <>Not found.</>;
-  }
-
-  const debugTransport = TRANSPORTS.getDebugTransport(method);
-  const isAnnotatedHttpService =
-    debugTransport !== undefined &&
-    debugTransport.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
-
-  return (
-    <>
-      <Typography variant="h5" paragraph>
-        <code>{`${simpleName(service.name)}.${method.name}()`}</code>
-      </Typography>
-      <Typography variant="body2" paragraph>
-        {method.docString}
-      </Typography>
-      <Section>
-        <VariableList
-          key={method.name}
-          title="Parameters"
-          variables={method.parameters}
-          hasLocation={isAnnotatedHttpService}
-          specification={props.specification}
-        />
-      </Section>
-      <Section>
-        <Typography variant="h6">Return Type</Typography>
-        <Table>
-          <TableBody>
-            <TableRow>
-              <TableCell>
-                <code>
-                  {props.specification.getTypeSignatureHtml(
-                    method.returnTypeSignature,
-                  )}
-                </code>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </Section>
-      {!isAnnotatedHttpService && (
-        <Exceptions method={method} specification={props.specification} />
-      )}
-      <Endpoints method={method} />
-      {debugTransport && (
-        <DebugPage
-          {...props}
-          method={method}
-          isAnnotatedHttpService={isAnnotatedHttpService}
-          exampleHeaders={getExampleHeaders(
-            props.specification,
-            service,
-            method,
-          )}
-          exactPathMapping={
-            isAnnotatedHttpService ? isExactPathMapping(method) : false
-          }
-          useRequestBody={useRequestBody(props.match.params.httpMethod)}
-        />
-      )}
-    </>
-  );
-};
-
 function getExampleHeaders(
   specification: Specification,
   service: Service,
@@ -162,18 +79,99 @@ function removeBrackets(headers: string): string {
   return headers.substring(1, length - 1).trim();
 }
 
-function isExactPathMapping(method: Method): boolean {
+function isSingleExactPathMapping(method: Method): boolean {
   const endpoints = method.endpoints;
-  if (endpoints.length !== 1) {
-    throw new Error(`
-    Endpoints size should be 1 to determine prefix or regex. size: ${endpoints.length}`);
-  }
-  const endpoint = endpoints[0];
-  return endpoint.pathMapping.startsWith('exact:');
+  return (
+    method.endpoints.length === 1 &&
+    endpoints[0].pathMapping.startsWith('exact:')
+  );
 }
 
 function useRequestBody(httpMethod: string) {
   return httpMethod === 'POST' || httpMethod === 'PUT';
 }
 
-export default MethodPage;
+type Props = OwnProps &
+  RouteComponentProps<{
+    serviceName: string;
+    methodName: string;
+    httpMethod: string;
+  }>;
+
+const MethodPage: React.FunctionComponent<Props> = (props) => {
+  const service = props.specification.getServiceByName(
+    props.match.params.serviceName,
+  );
+  if (!service) {
+    return <>Not found.</>;
+  }
+
+  const method = service.methods.find(
+    (m) => m.name === props.match.params.methodName,
+  );
+  if (!method) {
+    return <>Not found.</>;
+  }
+
+  const debugTransport = TRANSPORTS.getDebugTransport(method);
+  const isAnnotatedHttpService =
+    debugTransport !== undefined &&
+    debugTransport.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
+
+  return (
+    <>
+      <Typography variant="h5" paragraph>
+        <code>{`${simpleName(service.name)}.${method.name}()`}</code>
+      </Typography>
+      <Typography variant="body2" paragraph>
+        {method.docString}
+      </Typography>
+      <Section>
+        <VariableList
+          key={method.name}
+          title="Parameters"
+          variables={method.parameters}
+          specification={props.specification}
+        />
+      </Section>
+      <Section>
+        <Typography variant="h6">Return Type</Typography>
+        <Table>
+          <TableBody>
+            <TableRow>
+              <TableCell>
+                <code>
+                  {props.specification.getTypeSignatureHtml(
+                    method.returnTypeSignature,
+                  )}
+                </code>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Section>
+      {!isAnnotatedHttpService && (
+        <Exceptions method={method} specification={props.specification} />
+      )}
+      <Endpoints method={method} />
+      {debugTransport && (
+        <DebugPage
+          {...props}
+          method={method}
+          isAnnotatedHttpService={isAnnotatedHttpService}
+          exampleHeaders={getExampleHeaders(
+            props.specification,
+            service,
+            method,
+          )}
+          exactPathMapping={
+            isAnnotatedHttpService ? isSingleExactPathMapping(method) : false
+          }
+          useRequestBody={useRequestBody(props.match.params.httpMethod)}
+        />
+      )}
+    </>
+  );
+};
+
+export default React.memo(MethodPage);

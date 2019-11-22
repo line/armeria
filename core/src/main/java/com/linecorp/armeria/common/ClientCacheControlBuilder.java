@@ -41,7 +41,10 @@ public final class ClientCacheControlBuilder extends CacheControlBuilder {
 
     /**
      * Creates a new builder with all directives disabled initially.
+     *
+     * @deprecated Use {@link ClientCacheControl#builder()}.
      */
+    @Deprecated
     public ClientCacheControlBuilder() {}
 
     ClientCacheControlBuilder(ClientCacheControl c) {

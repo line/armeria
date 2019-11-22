@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
@@ -62,12 +62,14 @@ public class JsonTextSequencesTest {
                                new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)))
               .service("/seq/single",
                        (ctx, req) -> JsonTextSequences.fromObject("foo"));
+            sb.disableServerHeader();
+            sb.disableDateHeader();
         }
     };
 
     @Test
     public void fromPublisherOrStream() {
-        final HttpClient client = HttpClient.of(rule.uri("/seq"));
+        final WebClient client = WebClient.of(rule.uri("/seq"));
         for (final String path : ImmutableList.of("/publisher", "/stream", "/custom-mapper")) {
             final HttpResponse response = client.get(path);
             StepVerifier.create(response)
@@ -86,7 +88,7 @@ public class JsonTextSequencesTest {
     @Test
     public void singleSequence() {
         final AggregatedHttpResponse response =
-                HttpClient.of(rule.uri("/seq")).get("/single").aggregate().join();
+                WebClient.of(rule.uri("/seq")).get("/single").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().contentType()).isEqualTo(MediaType.JSON_SEQ);
         // Check whether the content is serialized as a JSON Text Sequence format.

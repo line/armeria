@@ -198,10 +198,10 @@ request and response properties, you need to use :api:`ClientConnectionTimings` 
 .. code-block:: java
 
     import com.linecorp.armeria.client.ClientConnectionTimings;
-    import com.linecorp.armeria.client.HttpClient;
-    import com.linecorp.armeria.client.HttpClientBuilder;
+    import com.linecorp.armeria.client.WebClient;
 
-    final HttpClient client = new HttpClientBuilder("http://armeria.com")
+    WebClient client = WebClient
+            .builder("http://armeria.com")
             .decorator((delegate, ctx, req) -> {
                 ctx.log().addListener(
                         log -> {
@@ -280,13 +280,13 @@ Enabling content previews
 Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`
 to retrieve the textual representation of the first N bytes of the request and response content.
 However, the properties are disabled by default due to performance overhead and thus they always return ``null``.
-You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`Client`.
+You can enable it when you configure :api:`Server`, :api:`VirtualHost` or client.
 
 .. code-block:: java
 
     import com.linecorp.armeria.server.ServerBuilder;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
     // Enable previewing the content with the maximum length of 100 for textual content.
     sb.contentPreview(100);
@@ -299,9 +299,9 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.HttpClientBuilder;
+    import com.linecorp.armeria.client.WebClientBuilder;
 
-    HttpClientBuilder cb = new HttpClientBuilder();
+    WebClientBuilder cb = WebClient.builder();
     ...
     cb.contentPreview(100);
 
@@ -323,7 +323,7 @@ and the hex dump preview of first 100 bytes for other types:
     import com.linecorp.armeria.common.MediaType;
     import com.linecorp.armeria.common.logging.ContentPreviewer;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
 
     sb.contentPreviewerFactory((ctx, headers) -> {
         MediaType contentType = headers.contentType();
@@ -378,7 +378,7 @@ You can write your own :api:`ContentPreviewer` to change the way to make the pre
         }
     }
     ...
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
     sb.contentPreviewerFactory((ctx, headers) -> new HexDumpContentPreviewer());
 

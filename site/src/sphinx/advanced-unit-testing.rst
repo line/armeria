@@ -3,7 +3,7 @@
 Unit-testing ``Client`` and ``Service``
 =======================================
 
-A unit test of a :api:`Client` or a :api:`Service` will require you to prepare two objects:
+A unit test of a client or a service will require you to prepare two objects:
 
 - :api:`ClientRequestContext` or :api:`ServiceRequestContext`
 - :api:`HttpRequest` or :api:`RpcRequest`

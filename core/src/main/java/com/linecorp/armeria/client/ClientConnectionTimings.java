@@ -81,6 +81,13 @@ public final class ClientConnectionTimings {
         return null;
     }
 
+    /**
+     * Returns a newly created {@link ClientConnectionTimingsBuilder}.
+     */
+    public static ClientConnectionTimingsBuilder builder() {
+        return new ClientConnectionTimingsBuilder();
+    }
+
     ClientConnectionTimings(long connectionAcquisitionStartTimeMicros, long connectionAcquisitionDurationNanos,
                             long dnsResolutionStartTimeMicros, long dnsResolutionDurationNanos,
                             long socketConnectStartTimeMicros, long socketConnectDurationNanos,

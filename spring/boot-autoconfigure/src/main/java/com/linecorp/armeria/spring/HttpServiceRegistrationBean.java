@@ -15,12 +15,13 @@
  */
 package com.linecorp.armeria.spring;
 
+import java.util.Collection;
+
 import javax.validation.constraints.NotNull;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 
 /**
  * A bean with information for registering a http service.
@@ -36,9 +37,8 @@ import com.linecorp.armeria.server.Service;
  * > }
  * }</pre>
  */
-public class HttpServiceRegistrationBean
-        extends
-        AbstractServiceRegistrationBean<Service<HttpRequest, HttpResponse>, HttpServiceRegistrationBean> {
+public class HttpServiceRegistrationBean extends AbstractServiceRegistrationBean<
+        HttpService, HttpServiceRegistrationBean, Object, HttpHeaders> {
 
     /**
      * The {@link Route} for the http service.
@@ -67,5 +67,69 @@ public class HttpServiceRegistrationBean
      */
     public HttpServiceRegistrationBean setPathPattern(@NotNull String pathPattern) {
         return setRoute(Route.builder().path(pathPattern).build());
+    }
+
+    @Override
+    public HttpServiceRegistrationBean setExampleRequests(
+            @NotNull Collection<? extends Object> exampleRequests) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean setExampleRequests(@NotNull Iterable<? extends Object> exampleRequests) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean setExampleRequests(Object... exampleRequests) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean addExampleRequests(@NotNull Iterable<? extends Object> exampleRequests) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean addExampleRequests(Object... exampleRequests) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean addExampleRequests(@NotNull Object exampleRequest) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean setExampleHeaders(
+            @NotNull Collection<? extends HttpHeaders> exampleHeaders) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean setExampleHeaders(
+            @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean setExampleHeaders(@NotNull HttpHeaders... exampleHeaders) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean addExampleHeaders(
+            @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean addExampleHeaders(HttpHeaders... exampleHeaders) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public HttpServiceRegistrationBean addExampleHeaders(HttpHeaders exampleHeaders) {
+        throw new UnsupportedOperationException();
     }
 }

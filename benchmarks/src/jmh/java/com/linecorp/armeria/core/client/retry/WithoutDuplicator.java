@@ -19,18 +19,17 @@ package com.linecorp.armeria.core.client.retry;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 
 @State(Scope.Benchmark)
-public class WithoutDuplicator extends RetryingHttpClientBase {
+public class WithoutDuplicator extends RetryingClientBase {
 
     @Override
-    protected HttpClient newClient() {
-        return new HttpClientBuilder(baseUrl())
-                .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
-                .build();
+    protected WebClient newClient() {
+        return WebClient.builder(baseUrl())
+                        .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
+                        .build();
     }
 }

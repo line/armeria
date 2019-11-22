@@ -97,8 +97,8 @@ public interface Backoff extends Unwrappable {
      * Creates a new {@link Backoff} that computes backoff delay using one of
      * {@link #exponential(long, long, double)}, {@link #fibonacci(long, long)}, {@link #fixed(long)}
      * and {@link #random(long, long)} chaining with {@link #withJitter(double, double)} and
-     * {@link #withMaxAttempts(int)} from the {@code specification}.
-     * This is the format for the {@code specification}:
+     * {@link #withMaxAttempts(int)} from the {@code specification} string that conforms to
+     * the following format:
      * <ul>
      *   <li>{@code exponential=[initialDelayMillis:maxDelayMillis:multiplier]} is for
      *       {@link Backoff#exponential(long, long, double)} (multiplier will be 2.0 if it's omitted)</li>
@@ -112,8 +112,7 @@ public interface Backoff extends Unwrappable {
      * </ul>
      * The order of options does not matter, and the {@code specification} needs at least one option.
      * If you don't specify the base option exponential backoff will be used. If you only specify
-     * a base option, jitter and maxAttempts will be set by default values.
-     * These are a few examples:
+     * a base option, jitter and maxAttempts will be set by default values. For example:
      * <ul>
      *   <li>{@code exponential=200:10000:2.0,jitter=0.2} (default)</li>
      *   <li>{@code exponential=200:10000,jitter=0.2,maxAttempts=50} (multiplier omitted)</li>
@@ -122,7 +121,7 @@ public interface Backoff extends Unwrappable {
      *   <li>{@code random=200:1000} (jitter and maxAttempts will be set by default values)</li>
      * </ul>
      *
-     * @param specification the specification used to create the {@link Backoff}
+     * @param specification the specification used to create a {@link Backoff}
      */
     static Backoff of(String specification) {
         return BackoffSpec.parse(specification).build();

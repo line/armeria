@@ -59,7 +59,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
  * >
  * >   @Test
  * >   void checkSomething() {
- * >       HttpClient client = HttpClient.of(server.httpUri("/"));
+ * >       WebClient client = WebClient.of(server.httpUri("/"));
  * >
  * >       server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK));
  * >       server.enqueue(AggregatedHttpResponse.of(HttpStatus.FORBIDDEN));
@@ -117,7 +117,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
         boolean interrupted = false;
         try {
             long remainingNanos = unit.toNanos(amount);
-            long end = System.nanoTime() + remainingNanos;
+            final long end = System.nanoTime() + remainingNanos;
 
             while (true) {
                 try {

@@ -49,7 +49,6 @@ import java.util.zip.InflaterInputStream;
 
 import javax.annotation.Nullable;
 
-import org.junit.Test;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,9 +65,8 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.DefaultHttpData;
@@ -106,11 +104,12 @@ class HttpServerTest {
 
     private static final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(1);
 
-    private static final ClientFactory clientFactory = new ClientFactoryBuilder()
-            .workerGroup(workerGroup, false) // Will be shut down by the Server.
-            .idleTimeout(Duration.ofSeconds(3))
-            .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-            .build();
+    private static final ClientFactory clientFactory =
+            ClientFactory.builder()
+                         .workerGroup(workerGroup, false) // Will be shut down by the Server.
+                         .idleTimeout(Duration.ofSeconds(3))
+                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .build();
 
     private static final long MAX_CONTENT_LENGTH = 65536;
 
@@ -386,7 +385,7 @@ class HttpServerTest {
 
             sb.service("/additional-trailers-no-other-trailers", (ctx, req) -> {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
-                String payload = "foobar";
+                final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
                                                            true));
@@ -394,7 +393,7 @@ class HttpServerTest {
 
             sb.service("/additional-trailers-no-eos", (ctx, req) -> {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
-                String payload = "foobar";
+                final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
                                                            false));
@@ -402,7 +401,7 @@ class HttpServerTest {
 
             sb.serviceUnder("/not-cached-paths", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
-            sb.serviceUnder("/cached-paths", new Service<HttpRequest, HttpResponse>() {
+            sb.serviceUnder("/cached-paths", new HttpService() {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(HttpStatus.OK);
@@ -416,7 +415,7 @@ class HttpServerTest {
 
             sb.service("/cached-exact-path", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
-            final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
+            final Function<? super HttpService, ? extends HttpService> decorator =
                     s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
@@ -434,6 +433,9 @@ class HttpServerTest {
 
             sb.maxRequestLength(MAX_CONTENT_LENGTH);
             sb.idleTimeout(Duration.ofSeconds(5));
+
+            sb.disableServerHeader();
+            sb.disableDateHeader();
         }
     };
 
@@ -466,7 +468,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testGet(HttpClient client) throws Exception {
+    void testGet(WebClient client) throws Exception {
         withTimeout(() -> {
             final AggregatedHttpResponse res = client.get("/path/foo").aggregate().get();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -476,7 +478,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testHead(HttpClient client) throws Exception {
+    void testHead(WebClient client) throws Exception {
         withTimeout(() -> {
             final AggregatedHttpResponse res = client.head("/path/blah").aggregate().get();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -487,7 +489,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testPost(HttpClient client) throws Exception {
+    void testPost(WebClient client) throws Exception {
         withTimeout(() -> {
             final AggregatedHttpResponse res = client.post("/echo", "foo").aggregate().get();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -497,7 +499,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTimeout(HttpClient client) throws Exception {
+    void testTimeout(WebClient client) throws Exception {
         withTimeout(() -> {
             serverRequestTimeoutMillis = 100L;
             final AggregatedHttpResponse res = client.get("/delay/2000").aggregate().get();
@@ -510,7 +512,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTimeout_deferred(HttpClient client) throws Exception {
+    void testTimeout_deferred(WebClient client) throws Exception {
         withTimeout(() -> {
             serverRequestTimeoutMillis = 100L;
             final AggregatedHttpResponse res = client.get("/delay-deferred/2000").aggregate().get();
@@ -523,7 +525,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTimeout_customHandler(HttpClient client) throws Exception {
+    void testTimeout_customHandler(WebClient client) throws Exception {
         withTimeout(() -> {
             serverRequestTimeoutMillis = 100L;
             final AggregatedHttpResponse res = client.get("/delay-custom/2000").aggregate().get();
@@ -536,7 +538,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTimeout_customHandler_deferred(HttpClient client) throws Exception {
+    void testTimeout_customHandler_deferred(WebClient client) throws Exception {
         withTimeout(() -> {
             serverRequestTimeoutMillis = 100L;
             final AggregatedHttpResponse res = client.get("/delay-custom-deferred/2000").aggregate().get();
@@ -549,7 +551,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTimeoutAfterInformationals(HttpClient client) throws Exception {
+    void testTimeoutAfterInformationals(WebClient client) throws Exception {
         withTimeout(() -> {
             serverRequestTimeoutMillis = 1000L;
             final AggregatedHttpResponse res = client.get("/informed_delay/2000").aggregate().get();
@@ -568,7 +570,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTimeoutAfterPartialContent(HttpClient client) throws Exception {
+    void testTimeoutAfterPartialContent(WebClient client) throws Exception {
         withTimeout(() -> {
             serverRequestTimeoutMillis = 1000L;
             final CompletableFuture<AggregatedHttpResponse> f = client.get("/content_delay/2000").aggregate();
@@ -585,12 +587,12 @@ class HttpServerTest {
     }
 
     /**
-     * Similar to {@link #testTimeoutAfterPartialContent()}, but tests the case where the service produces
-     * a pooled buffers.
+     * Similar to {@link #testTimeoutAfterPartialContent(WebClient)}, but tests the case where the service
+     * produces a pooled buffers.
      */
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTimeoutAfterPartialContentWithPooling(HttpClient client) throws Exception {
+    void testTimeoutAfterPartialContentWithPooling(WebClient client) throws Exception {
         withTimeout(() -> {
             serverRequestTimeoutMillis = 1000L;
             final CompletableFuture<AggregatedHttpResponse> f =
@@ -609,7 +611,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTooLargeContentToNonExistentService(HttpClient client) throws Exception {
+    void testTooLargeContentToNonExistentService(WebClient client) throws Exception {
         withTimeout(() -> {
             final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
             final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
@@ -620,7 +622,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testStrings_noAcceptEncoding(HttpClient client) throws Exception {
+    void testStrings_noAcceptEncoding(WebClient client) throws Exception {
         withTimeout(() -> {
             final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings");
             final CompletableFuture<AggregatedHttpResponse> f = client.execute(req).aggregate();
@@ -636,7 +638,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testStrings_acceptEncodingGzip(HttpClient client) throws Exception {
+    void testStrings_acceptEncodingGzip(WebClient client) throws Exception {
         withTimeout(() -> {
             final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "gzip");
@@ -661,7 +663,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testStrings_acceptEncodingGzip_imageContentType(HttpClient client) throws Exception {
+    void testStrings_acceptEncodingGzip_imageContentType(WebClient client) throws Exception {
         withTimeout(() -> {
             final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/images",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "gzip");
@@ -678,7 +680,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testStrings_acceptEncodingGzip_smallFixedContent(HttpClient client) throws Exception {
+    void testStrings_acceptEncodingGzip_smallFixedContent(WebClient client) throws Exception {
         withTimeout(() -> {
             final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/small",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "gzip");
@@ -695,7 +697,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testStrings_acceptEncodingGzip_largeFixedContent(HttpClient client) throws Exception {
+    void testStrings_acceptEncodingGzip_largeFixedContent(WebClient client) throws Exception {
         withTimeout(() -> {
             final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/large",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "gzip");
@@ -718,7 +720,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testStrings_acceptEncodingDeflate(HttpClient client) throws Exception {
+    void testStrings_acceptEncodingDeflate(WebClient client) throws Exception {
         withTimeout(() -> {
             final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "deflate");
@@ -741,7 +743,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testStrings_acceptEncodingUnknown(HttpClient client) throws Exception {
+    void testStrings_acceptEncodingUnknown(WebClient client) throws Exception {
         withTimeout(() -> {
             final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
                                                          HttpHeaderNames.ACCEPT_ENCODING, "piedpiper");
@@ -758,7 +760,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testSslSession(HttpClient client) throws Exception {
+    void testSslSession(WebClient client) throws Exception {
         withTimeout(() -> {
             final CompletableFuture<AggregatedHttpResponse> f = client.get("/sslsession").aggregate();
 
@@ -768,8 +770,9 @@ class HttpServerTest {
         });
     }
 
-    @Test
-    void testHeadHeadersOnly(HttpClient client, SessionProtocol protocol) throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(ClientAndProtocolProvider.class)
+    void testHeadHeadersOnly(WebClient client, SessionProtocol protocol) throws Exception {
         assumeThat(protocol).isSameAs(H1C);
 
         withTimeout(() -> {
@@ -791,7 +794,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testExpect100Continue(HttpClient client) throws Exception {
+    void testExpect100Continue(WebClient client) throws Exception {
         withTimeout(() -> {
             // Makes sure the server sends a '100 Continue' response if 'expect: 100-continue' header exists.
             final AggregatedHttpResponse res =
@@ -818,7 +821,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testExpect100ContinueDoesNotBreakHttp1Decoder(HttpClient client, SessionProtocol protocol)
+    void testExpect100ContinueDoesNotBreakHttp1Decoder(WebClient client, SessionProtocol protocol)
             throws Exception {
         assumeThat(protocol).isSameAs(H1C);
 
@@ -847,8 +850,9 @@ class HttpServerTest {
         });
     }
 
-    @Test(timeout = 30000)
-    void testStreamRequestLongerThanTimeout(HttpClient client) throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(ClientAndProtocolProvider.class)
+    void testStreamRequestLongerThanTimeout(WebClient client) throws Exception {
         withTimeout(() -> {
             // Disable timeouts and length limits so that test does not fail due to slow transfer.
             clientWriteTimeoutMillis = 0;
@@ -874,7 +878,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testHeaders(HttpClient client) throws Exception {
+    void testHeaders(WebClient client) throws Exception {
         withTimeout(() -> {
             final CompletableFuture<AggregatedHttpResponse> f = client.get("/headers").aggregate();
 
@@ -896,7 +900,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTrailers(HttpClient client) throws Exception {
+    void testTrailers(WebClient client) throws Exception {
         withTimeout(() -> {
             final CompletableFuture<AggregatedHttpResponse> f = client.get("/trailers").aggregate();
 
@@ -907,7 +911,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testExactPathCached(HttpClient client) throws Exception {
+    void testExactPathCached(WebClient client) throws Exception {
         withTimeout(() -> {
             assertThat(client.get("/cached-exact-path")
                              .aggregate().get().status()).isEqualTo(HttpStatus.OK);
@@ -917,7 +921,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testPrefixPathNotCached(HttpClient client) throws Exception {
+    void testPrefixPathNotCached(WebClient client) throws Exception {
         withTimeout(() -> {
             assertThat(client.get("/not-cached-paths/hoge")
                              .aggregate().get().status()).isEqualTo(HttpStatus.OK);
@@ -927,7 +931,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testPrefixPath_cacheForced(HttpClient client) throws Exception {
+    void testPrefixPath_cacheForced(WebClient client) throws Exception {
         withTimeout(() -> {
             assertThat(client.get("/cached-paths/hoge")
                              .aggregate().get().status()).isEqualTo(HttpStatus.OK);
@@ -937,7 +941,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testAdditionalTrailersOtherTrailers(HttpClient client, SessionProtocol protocol) {
+    void testAdditionalTrailersOtherTrailers(WebClient client, SessionProtocol protocol) {
         assumeThat(protocol.isMultiplex()).isTrue();
 
         withTimeout(() -> {
@@ -950,7 +954,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testAdditionalTrailersNoEndOfStream(HttpClient client, SessionProtocol protocol) {
+    void testAdditionalTrailersNoEndOfStream(WebClient client, SessionProtocol protocol) {
         assumeThat(protocol.isMultiplex()).isTrue();
 
         withTimeout(() -> {
@@ -962,7 +966,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testAdditionalTrailersNoOtherTrailers(HttpClient client, SessionProtocol protocol) {
+    void testAdditionalTrailersNoOtherTrailers(WebClient client, SessionProtocol protocol) {
         assumeThat(protocol.isMultiplex()).isTrue();
 
         withTimeout(() -> {
@@ -977,7 +981,7 @@ class HttpServerTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H1, H2C, H2)
                          .map(protocol -> {
-                             final HttpClientBuilder builder = new HttpClientBuilder(
+                             final WebClientBuilder builder = WebClient.builder(
                                      protocol.uriText() + "://127.0.0.1:" +
                                      (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 

@@ -23,6 +23,9 @@ import org.openjdk.jmh.annotations.State;
 
 import com.linecorp.armeria.client.retry.Backoff;
 
+/**
+ * Microbenchmarks of an {@link Backoff#exponential(long, long, double) expontational backoff}.
+ */
 @State(Scope.Benchmark)
 public class BackoffBenchmark {
 

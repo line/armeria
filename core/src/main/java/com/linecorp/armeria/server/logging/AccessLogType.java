@@ -26,6 +26,7 @@ import java.util.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.AttributeMap;
@@ -105,7 +106,11 @@ enum AccessLogType {
     /**
      * A plain text which would be written to access log message.
      */
-    TEXT('%', false, NO);
+    TEXT('%', false, NO),
+    /**
+     * {@code "%I"} - the {@link RequestId}. Use {@code "%{short}I"} to get the short form.
+     */
+    REQUEST_ID('I', false, OPTIONAL);
 
     private static final Map<Character, AccessLogType> tokenToEnum;
 

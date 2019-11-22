@@ -21,9 +21,6 @@ you get the following benefits:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.Clients;
-    import com.linecorp.armeria.client.HttpClient;
-
     import retrofit2.Retrofit;
     import retrofit2.converter.jackson.JacksonConverterFactory;
     import retrofit2.http.GET;

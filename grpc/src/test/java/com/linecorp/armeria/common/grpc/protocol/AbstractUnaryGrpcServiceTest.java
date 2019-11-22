@@ -28,7 +28,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
@@ -57,9 +57,9 @@ public class AbstractUnaryGrpcServiceTest {
             } catch (InvalidProtocolBufferException e) {
                 throw new UncheckedIOException(e);
             }
-            SimpleResponse response = SimpleResponse.newBuilder()
-                                                    .setPayload(request.getPayload())
-                                                    .build();
+            final SimpleResponse response = SimpleResponse.newBuilder()
+                                                          .setPayload(request.getPayload())
+                                                          .build();
             return CompletableFuture.completedFuture(response.toByteArray());
         }
     }
@@ -74,7 +74,7 @@ public class AbstractUnaryGrpcServiceTest {
 
     @Test
     public void normal_downstream() {
-        TestServiceBlockingStub stub =
+        final TestServiceBlockingStub stub =
                 Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO, "/"),
                                   TestServiceBlockingStub.class);
         assertThat(stub.unaryCall(SimpleRequest.newBuilder()
@@ -83,17 +83,17 @@ public class AbstractUnaryGrpcServiceTest {
                                                                           ByteString.copyFromUtf8("hello"))
                                                                   .build())
                                                .build()).getPayload().getBody().toStringUtf8())
-                  .isEqualTo("hello");
+                .isEqualTo("hello");
     }
 
     @Test
     public void normal_upstream() {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
-                             .usePlaintext()
-                             .build();
+        final ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
+                                                            .usePlaintext()
+                                                            .build();
 
         try {
-            TestServiceBlockingStub stub = TestServiceGrpc.newBlockingStub(channel);
+            final TestServiceBlockingStub stub = TestServiceGrpc.newBlockingStub(channel);
 
             assertThat(stub.unaryCall(SimpleRequest.newBuilder()
                                                    .setPayload(Payload.newBuilder()
@@ -109,7 +109,7 @@ public class AbstractUnaryGrpcServiceTest {
 
     @Test
     public void invalidPayload() {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri("/"));
 
         final AggregatedHttpResponse message =
                 client.post("/armeria.grpc.testing.TestService/UnaryCall", "foobarbreak").aggregate().join();

@@ -98,7 +98,7 @@ You may use one of the pre-defined log formats.
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Use NCSA common log format.
     sb.accessLogWriter(AccessLogWriter.common(), true);
     // Use NCSA combined log format.
@@ -111,7 +111,7 @@ You can have different :apiplural:`AccessLogWriter` for :apiplural:`VirtualHost`
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     AccessLogWriter fallbackLogWriter = ...
     sb.accessLogWriter(fallbackLogWriter);
 
@@ -159,6 +159,9 @@ Tokens for the log format are listed in the following table.
 +---------------------------+-------------------+----------------------------------------------------+
 | ``%h``                    | No                | the remote hostname or IP address if DNS           |
 |                           |                   | hostname lookup is not available                   |
++---------------------------+-------------------+----------------------------------------------------+
+| ``%I``                    | No                | the request ID. Use ``%{short}I`` format string to |
+|                           |                   | get the short form.                                |
 +---------------------------+-------------------+----------------------------------------------------+
 | ``%l``                    | No                | the remote logname of the user                     |
 |                           |                   | (not supported yet, always write ``-``)            |
@@ -334,7 +337,7 @@ You can specify your own log writer which implements a ``Consumer`` of :api:`Req
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.accessLogWriter(requestLog -> {
         // Write your access log with the given RequestLog instance.
         ....
@@ -354,7 +357,7 @@ Alternatively, you can specify your own mapper or logger for a :api:`VirtualHost
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
 
     // Using the specific logger name.
     sb.accessLogger("com.example.my.access.logs");

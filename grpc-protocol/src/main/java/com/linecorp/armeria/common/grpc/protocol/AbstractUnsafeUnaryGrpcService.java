@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -76,7 +76,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                    .exceptionally(t -> {
                        final HttpHeadersBuilder trailers;
                        if (t instanceof ArmeriaStatusException) {
-                           ArmeriaStatusException statusException = (ArmeriaStatusException) t;
+                           final ArmeriaStatusException statusException = (ArmeriaStatusException) t;
                            trailers = GrpcTrailersUtil.statusToTrailers(
                                    statusException.getCode(), statusException.getMessage(), false);
                        } else {
@@ -94,7 +94,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
         try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 new Listener() {
                     @Override
-                    public void messageRead(ByteBufOrStream message) {
+                    public void messageRead(DeframedMessage message) {
                         // Compression not supported.
                         assert message.buf() != null;
                         deframed.complete(message.buf());

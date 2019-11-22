@@ -42,7 +42,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -116,15 +118,30 @@ public interface ServiceRequestContext extends RequestContext {
      * @see ServiceRequestContextBuilder
      */
     static ServiceRequestContext of(HttpRequest request) {
-        return ServiceRequestContextBuilder.of(request).build();
+        return builder(request).build();
+    }
+
+    /**
+     * Returns a new {@link ServiceRequestContextBuilder} created from the specified {@link HttpRequest}.
+     */
+    static ServiceRequestContextBuilder builder(HttpRequest request) {
+        return new ServiceRequestContextBuilder(request);
     }
 
     /**
      * Returns the {@link HttpRequest} associated with this context.
      */
+    @Nonnull
     @Override
-    @SuppressWarnings("unchecked")
     HttpRequest request();
+
+    /**
+     * {@inheritDoc} For example, this method will return {@code null} when the request being handled is
+     * 1) not an RPC request or 2) not decoded into an RPC request yet.
+     */
+    @Nullable
+    @Override
+    RpcRequest rpcRequest();
 
     /**
      * Returns the remote address of this request.
@@ -149,10 +166,9 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     @Override
-    ServiceRequestContext newDerivedContext();
-
-    @Override
-    ServiceRequestContext newDerivedContext(Request request);
+    ServiceRequestContext newDerivedContext(RequestId id,
+                                            @Nullable HttpRequest req,
+                                            @Nullable RpcRequest rpcReq);
 
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.
@@ -190,9 +206,9 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the {@link Service} that is handling the current {@link Request}.
+     * Returns the {@link HttpService} that is handling the current {@link Request}.
      */
-    <T extends Service<HttpRequest, HttpResponse>> T service();
+    HttpService service();
 
     /**
      * Returns the {@link ExecutorService} that could be used for executing a potentially long-running task.
@@ -264,6 +280,14 @@ public interface ServiceRequestContext extends RequestContext {
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      */
     void setRequestTimeout(Duration requestTimeout);
+
+    /**
+     * Returns {@link Request} timeout handler which is executed when
+     * receiving the current {@link Request} and sending the corresponding {@link Response}
+     * is not completely received within the allowed {@link #requestTimeoutMillis()}.
+     */
+    @Nullable
+    Runnable requestTimeoutHandler();
 
     /**
      * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,

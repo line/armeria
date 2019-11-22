@@ -29,6 +29,7 @@ import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONS
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_HEADERS;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_START;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.SCHEME;
+import static com.linecorp.armeria.common.logging.RequestLogListenerInvoker.invokeOnRequestLog;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -53,6 +54,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -342,7 +344,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         if (isAvailable(interestedFlags)) {
             // No need to add to 'listeners'.
-            RequestLogListenerInvoker.invokeOnRequestLog(listener, this);
+            invokeOnRequestLog(listener, this);
             return;
         }
 
@@ -352,7 +354,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             listeners.add(e);
             satisfiedListeners = removeSatisfiedListeners();
         }
-        notifyListeners(satisfiedListeners);
+        if (satisfiedListeners != null) {
+            invokeOnRequestLog(satisfiedListeners, this);
+        }
     }
 
     private static int getterFlags(RequestLogAvailability[] availabilities) {
@@ -600,6 +604,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
         updateAvailability(REQUEST_CONTENT);
+
+        if (requestContent instanceof RpcRequest && ctx.rpcRequest() == null) {
+            ctx.updateRpcRequest((RpcRequest) requestContent);
+        }
     }
 
     @Override
@@ -990,7 +998,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                     synchronized (listeners) {
                         satisfiedListeners = removeSatisfiedListeners();
                     }
-                    notifyListeners(satisfiedListeners);
+                    if (satisfiedListeners != null) {
+                        invokeOnRequestLog(satisfiedListeners, this);
+                    }
                 }
                 break;
             }
@@ -1022,19 +1032,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } while (i.hasNext());
 
         return satisfied;
-    }
-
-    private void notifyListeners(@Nullable RequestLogListener[] listeners) {
-        if (listeners == null) {
-            return;
-        }
-
-        for (RequestLogListener l : listeners) {
-            if (l == null) {
-                break;
-            }
-            RequestLogListenerInvoker.invokeOnRequestLog(l, this);
-        }
     }
 
     @Override

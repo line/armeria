@@ -81,12 +81,12 @@ a :api:`GrpcServiceBuilder` and add it to the :api:`ServerBuilder`:
 
     import com.linecorp.armeria.server.Server;
     import com.linecorp.armeria.server.ServerBuilder;
-    import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
-    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
-                                       .build());
+    sb.service(GrpcService.builder()
+                          .addService(new MyHelloService())
+                          .build());
     ...
     Server server = sb.build();
     server.start();
@@ -94,31 +94,32 @@ a :api:`GrpcServiceBuilder` and add it to the :api:`ServerBuilder`:
 .. note::
 
     We bound the :api:`GrpcService` without specifying any path. It is because :api:`GrpcService`
-    implements :api:`ServiceWithRoutes`, which dynamically provides :apiplural:`Route` by itself.
+    implements :api:`HttpServiceWithRoutes`, which dynamically provides :apiplural:`Route` by itself.
 
 .. _server-grpc-decorator:
 
 Decorating a ``GrpcService``
 ----------------------------
 
-Unlike a usual Armeria :api:`Service`, :api:`GrpcService` implements a special interface called
-:api:`ServiceWithRoutes`. Therefore, it is recommended to decorate a :api:`GrpcService` by specifying
+Unlike a usual Armeria service, :api:`GrpcService` implements a special interface called
+:api:`HttpServiceWithRoutes`. Therefore, it is recommended to decorate a :api:`GrpcService` by specifying
 decorator functions as extra parameters rather than using ``Service.decorate()``:
 
 .. code-block:: java
 
     import com.linecorp.armeria.server.logging.LoggingService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
-    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
-                                       .build(),
+    sb.service(GrpcService.builder()
+                          .addService(new MyHelloService())
+                          .build(),
                LoggingService.newDecorator());
     ...
     Server server = sb.build();
     server.start();
 
-See :ref:`server-decorator-service-with-routes` for more information about :api:`ServiceWithRoutes`.
+See :ref:`server-decorator-service-with-routes` for more information about :api:`HttpServiceWithRoutes`.
 
 ``gRPC-Web``
 ------------
@@ -132,11 +133,12 @@ to just pass ``GrpcSerializationFormats.values()``.
 
     import com.linecorp.armeria.server.grpc.GrpcSerializationFormats;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
-    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
-                                       .supportedSerializationFormats(GrpcSerializationFormats.values())
-                                       .build());
+    sb.service(GrpcService.builder()
+                          .addService(new MyHelloService())
+                          .supportedSerializationFormats(GrpcSerializationFormats.values())
+                          .build());
     ...
     Server server = sb.build();
     server.start();
@@ -155,7 +157,7 @@ you build a :api:`GrpcService`:
     import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
     import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
 
     final CorsServiceBuilder corsBuilder =
@@ -169,9 +171,10 @@ you build a :api:`GrpcService`:
                                              GrpcHeaderNames.GRPC_MESSAGE,
                                              GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
 
-    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
-                                       .supportedSerializationFormats(GrpcSerializationFormats.values())
-                                       .build(),
+    sb.service(GrpcService.builder()
+                          .addService(new MyHelloService())
+                          .supportedSerializationFormats(GrpcSerializationFormats.values())
+                          .build(),
                corsBuilder.newDecorator(),
                LoggingService.newDecorator());
     ...
@@ -190,14 +193,15 @@ can be used.
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
-    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
-                                       .enableUnframedRequests(true)
-                                       // Needed to support JSON in addition to binary
-                                       .supportedSerializationFormats(GrpcSerializationFormats.PROTO,
-                                                                      GrpcSerializationFormats.JSON)
-                                       .build());
+    sb.service(GrpcService.builder()
+                          .addService(new MyHelloService())
+                          .enableUnframedRequests(true)
+                          // Needed to support JSON in addition to binary
+                          .supportedSerializationFormats(GrpcSerializationFormats.PROTO,
+                                                         GrpcSerializationFormats.JSON)
+                          .build());
     ...
     Server server = sb.build();
     server.start();
@@ -239,7 +243,6 @@ and lifecycle callbacks.
 
     import com.linecorp.armeria.common.RequestContext;
     import com.linecorp.armeria.server.ServiceRequestContext;
-    import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
     public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
         @Override
@@ -253,12 +256,13 @@ and lifecycle callbacks.
         }
     }
 
-    ServerBuilder sb = new ServerBuilder();
-    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
-                                       // All service methods will be run within
-                                       // the blocking executor.
-                                       .useBlockingTaskExecutor(true)
-                                       .build());
+    ServerBuilder sb = Server.builder();
+    sb.service(GrpcService.builder()
+                          .addService(new MyHelloService())
+                          // All service methods will be run within
+                          // the blocking executor.
+                          .useBlockingTaskExecutor(true)
+                          .build());
 
 Exception propagation
 ---------------------
@@ -281,11 +285,12 @@ Armeria supports gRPC server reflection - just add an instance of ``ProtoReflect
 
     import io.grpc.protobuf.services.ProtoReflectionService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
-    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
-                                       .addService(ProtoReflectionService.newInstance())
-                                       .build());
+    sb.service(GrpcService.builder()
+                          .addService(new MyHelloService())
+                          .addService(ProtoReflectionService.newInstance())
+                          .build());
     ...
     Server server = sb.build();
     server.start();

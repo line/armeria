@@ -17,7 +17,7 @@ Use :api:`HttpFileService` to serve static files under a certain directory. :api
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.file.HttpFileService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.serviceUnder("/images/",
                     HttpFileService.forFileSystem("/var/lib/www/images"));
 
@@ -84,13 +84,17 @@ By default, :api:`HttpFileService` caches up to 1024 files whose length is less 
             HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
 
     // Cache up to 4096 files.
-    fsb.maxCacheEntries(4096);
+    fsb.entryCacheSpec("maximumSize=4096");
     // Cache files whose length is less than or equal to 1 MiB.
     fsb.maxCacheEntrySizeBytes(1048576);
 
     HttpFileService fs = fsb.build();
 
-The cache can also be disabled by specifying ``0`` for ``maxCacheEntries()``.
+The cache can be disabled by specifying ``0`` for ``maxCacheEntries()``.
+You can also specify a custom cache specification using ``entryCacheSpec()``,
+as defined in `Caffeine documentation <https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.8.0/com/github/benmanes/caffeine/cache/CaffeineSpec.html>`_.
+Or, you can override the default cache specification of ``maximumSize=1024`` using
+the JVM property ``-Dcom.linecorp.armeria.fileServiceCache=<spec>``.
 
 Serving pre-compressed files
 ----------------------------
@@ -156,7 +160,7 @@ based on ``If-None-Match`` and ``If-Modified-Since`` header values.
 
     HttpFile favicon = HttpFile.of(new File("/var/lib/www/favicon.ico"));
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Serve the favicon.ico file by converting an HttpFile into a service.
     sb.service("/favicon.ico", favicon.asService());
 
@@ -167,7 +171,7 @@ path, which is useful when serving a frontend application with client-side routi
 
     HttpFile index = HttpFile.of(new File("/var/lib/www/index.html"));
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Register the file service for assets.
     sb.serviceUnder("/node_modules",
                     HttpFileService.forFileSystem("/var/lib/www/node_modules"));

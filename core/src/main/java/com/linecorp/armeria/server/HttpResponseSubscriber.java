@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted;
+
 import java.nio.channels.ClosedChannelException;
+import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -27,10 +30,13 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
@@ -40,12 +46,15 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
+import com.linecorp.armeria.internal.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
+import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
 final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutChangeListener {
@@ -57,6 +66,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private static final AggregatedHttpResponse SERVICE_UNAVAILABLE_MESSAGE =
             AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
 
+    private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
+            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
+
+    private static final String SERVER_HEADER =
+            "Armeria/" + Version.identify(HttpResponseSubscriber.class.getClassLoader()).get("armeria")
+                                .artifactVersion();
+
     enum State {
         NEEDS_HEADERS,
         NEEDS_DATA_OR_TRAILERS,
@@ -67,6 +83,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final HttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
     private final DefaultServiceRequestContext reqCtx;
+    private final boolean enableServerHeader;
+    private final boolean enableDateHeader;
     private final long startTimeNanos;
 
     @Nullable
@@ -79,15 +97,18 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private boolean loggedResponseHeadersFirstBytesTransferred;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
-                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
+                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                           boolean enableServerHeader, boolean enableDateHeader) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
+        this.enableServerHeader = enableServerHeader;
+        this.enableDateHeader = enableDateHeader;
         startTimeNanos = System.nanoTime();
     }
 
-    private Service<?, ?> service() {
+    private HttpService service() {
         return reqCtx.service();
     }
 
@@ -178,8 +199,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
                 final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
 
-                if (endOfStream && !additionalTrailers.isEmpty()) {
-                    newHeaders.setIfAbsent(additionalTrailers);
+                if (endOfStream) {
+                    fillAdditionalTrailers(newHeaders, additionalTrailers);
                 }
 
                 if (newHeaders.contains(HttpHeaderNames.CONTENT_LENGTH) &&
@@ -188,6 +209,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     // prevent the trailers from being sent so we go ahead and remove content-length to force
                     // chunked encoding.
                     newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+                }
+
+                if (enableServerHeader && !newHeaders.contains(HttpHeaderNames.SERVER)) {
+                    newHeaders.add(HttpHeaderNames.SERVER, SERVER_HEADER);
+                }
+
+                if (enableDateHeader && !newHeaders.contains(HttpHeaderNames.DATE)) {
+                    newHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
                 }
 
                 headers = newHeaders.build();
@@ -280,7 +309,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         if (state != State.DONE) {
-            final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+            final HttpHeaders additionalTrailers =
+                    fillAdditionalTrailers(HttpHeaders.of(), reqCtx.additionalResponseTrailers());
             if (!additionalTrailers.isEmpty()) {
                 write(additionalTrailers, true);
             } else {
@@ -436,11 +466,17 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private static ResponseHeadersBuilder fillAdditionalHeaders(ResponseHeaders headers,
                                                                 HttpHeaders additionalHeaders) {
-        if (additionalHeaders.isEmpty()) {
-            return headers.toBuilder();
+        final ResponseHeadersBuilder builder = headers.toBuilder();
+        if (!additionalHeaders.isEmpty()) {
+            for (AsciiString name : additionalHeaders.names()) {
+                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name)) {
+                    builder.remove(name);
+                    additionalHeaders.forEachValue(name, value -> builder.add(name, value));
+                }
+            }
         }
 
-        return headers.toBuilder().setIfAbsent(additionalHeaders);
+        return builder;
     }
 
     private static HttpHeaders fillAdditionalTrailers(HttpHeaders trailers, HttpHeaders additionalTrailers) {
@@ -448,7 +484,22 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             return trailers;
         }
 
-        return trailers.toBuilder().setIfAbsent(additionalTrailers).build();
+        return fillAdditionalTrailers(trailers.toBuilder(), additionalTrailers).build();
+    }
+
+    private static HttpHeadersBuilder fillAdditionalTrailers(HttpHeadersBuilder builder,
+                                                             HttpHeaders additionalTrailers) {
+        if (!additionalTrailers.isEmpty()) {
+            for (AsciiString name : additionalTrailers.names()) {
+                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name) &&
+                    !isTrailerBlacklisted(name)) {
+                    builder.remove(name);
+                    additionalTrailers.forEachValue(name, value -> builder.add(name, value));
+                }
+            }
+        }
+
+        return builder;
     }
 
     private boolean cancelTimeout() {

@@ -45,9 +45,8 @@ import com.linecorp.armeria.common.brave.SpanCollectingReporter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import brave.Tracing;
 import brave.http.HttpTracing;
@@ -167,9 +166,9 @@ class BraveServiceTest {
                                                    .build();
 
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
-        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
-                                                                      .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(req).build();
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, trustin!");
@@ -178,8 +177,7 @@ class BraveServiceTest {
         logBuilder.endRequest();
 
         try (SafeCloseable ignored = ctx.push()) {
-            @SuppressWarnings("unchecked")
-            final Service<HttpRequest, HttpResponse> delegate = mock(Service.class);
+            final HttpService delegate = mock(HttpService.class);
             final BraveService service = BraveService.newDecorator(httpTracing).apply(delegate);
             when(delegate.serve(ctx, req)).thenReturn(res);
 

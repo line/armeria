@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -37,6 +36,14 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
+    private Function<? super RequestLog, LogLevel> requestLogLevelMapper =
+            log -> requestLogLevel();
+    private Function<? super RequestLog, LogLevel> responseLogLevelMapper =
+            log -> log.responseCause() == null ? successfulResponseLogLevel() : failedResponseLogLevel();
+    private boolean isRequestLogLevelSet;
+    private boolean isResponseLogLevelSet;
+    private boolean isRequestLogLevelMapperSet;
+    private boolean isResponseLogLevelMapperSet;
     private Function<? super HttpHeaders, ?> requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, ?> requestContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private Function<? super HttpHeaders, ?> requestTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
@@ -44,20 +51,26 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private Function<? super HttpHeaders, ?> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, ?> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private Function<? super Throwable, ?> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
-    private float samplingRate = 1.0f;
     private Function<? super HttpHeaders, ?> responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
      */
     public T requestLogLevel(LogLevel requestLogLevel) {
+        if (isRequestLogLevelMapperSet) {
+            throw new IllegalStateException("requestLogLevelMapper has been set already.");
+        }
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
+        isRequestLogLevelSet = true;
         return self();
     }
 
     /**
      * Returns the {@link LogLevel} to use when logging requests.
+     *
+     * @deprecated It will be removed in the future.
      */
+    @Deprecated
     protected LogLevel requestLogLevel() {
         return requestLogLevel;
     }
@@ -67,14 +80,21 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * If unset, will use {@link LogLevel#TRACE}.
      */
     public T successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
+        if (isResponseLogLevelMapperSet) {
+            throw new IllegalStateException("responseLogLevelMapper has been set already.");
+        }
         this.successfulResponseLogLevel =
                 requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
+        isResponseLogLevelSet = true;
         return self();
     }
 
     /**
      * Returns the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
+     *
+     * @deprecated It will be removed in the future.
      */
+    @Deprecated
     protected LogLevel successfulResponseLogLevel() {
         return successfulResponseLogLevel;
     }
@@ -84,15 +104,61 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * If unset, will use {@link LogLevel#WARN}. The request will be logged too if it was not otherwise.
      */
     public T failureResponseLogLevel(LogLevel failedResponseLogLevel) {
+        if (isResponseLogLevelMapperSet) {
+            throw new IllegalStateException("responseLogLevelMapper has been set already.");
+        }
         this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
+        isResponseLogLevelSet = true;
         return self();
     }
 
     /**
      * Returns the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
+     *
+     * @deprecated It will be removed in the future.
      */
+    @Deprecated
     protected LogLevel failedResponseLogLevel() {
         return failedResponseLogLevel;
+    }
+
+    /**
+     * Sets the {@link Function} to use when mapping the log level of request logs.
+     */
+    public T requestLogLevelMapper(Function<? super RequestLog, LogLevel> requestLogLevelMapper) {
+        if (isRequestLogLevelSet) {
+            throw new IllegalStateException("requestLogLevel has been set already.");
+        }
+        this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
+        isRequestLogLevelMapperSet = true;
+        return self();
+    }
+
+    /**
+     * Returns the {@link LogLevel} to use when logging request logs.
+     */
+    protected Function<? super RequestLog, LogLevel> requestLogLevelMapper() {
+        return requestLogLevelMapper;
+    }
+
+    /**
+     * Sets the {@link Function} to use when mapping the log level of response logs.
+     */
+    public T responseLogLevelMapper(Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        if (isResponseLogLevelSet) {
+            throw new IllegalStateException(
+                    "successfulResponseLogLevel or failedResponseLogLevel has been set already.");
+        }
+        this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
+        isResponseLogLevelMapperSet = true;
+        return self();
+    }
+
+    /**
+     * Returns the {@link LogLevel} to use when logging response logs.
+     */
+    protected Function<? super RequestLog, LogLevel> responseLogLevelMapper() {
+        return responseLogLevelMapper;
     }
 
     /**
@@ -257,24 +323,6 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
         return responseCauseSanitizer;
     }
 
-    /**
-     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
-     * cause a random sample of the requests to be logged. The random sampling is appropriate for low-traffic
-     * (ex servers that each receive &lt;100K requests). If unset, all requests will be logged.
-     */
-    public T samplingRate(float samplingRate) {
-        checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, "samplingRate must be between 0.0 and 1.0");
-        this.samplingRate = samplingRate;
-        return self();
-    }
-
-    /**
-     * Returns the rate at which to sample requests to log.
-     */
-    protected float samplingRate() {
-        return samplingRate;
-    }
-
     @SuppressWarnings("unchecked")
     private T self() {
         return (T) this;
@@ -283,9 +331,10 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     @Override
     public String toString() {
         return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
+                        requestLogLevelMapper, responseLogLevelMapper,
+                        isRequestLogLevelMapperSet, isResponseLogLevelMapperSet,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
-                        responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-                        samplingRate);
+                        responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer);
     }
 
     private static <T extends LoggingDecoratorBuilder<T>> String toString(
@@ -293,18 +342,30 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failureResponseLogLevel,
+            Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
+            boolean isRequestLogLevelMapperSet,
+            boolean isResponseLogLevelMapperSet,
             Function<? super HttpHeaders, ?> requestHeadersSanitizer,
             Function<?, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ?> requestTrailersSanitizer,
             Function<? super HttpHeaders, ?> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
-            Function<? super HttpHeaders, ?> responseTrailersSanitizer,
-            float samplingRate) {
-        final ToStringHelper helper = MoreObjects.toStringHelper(self)
-                                                 .add("requestLogLevel", requestLogLevel)
-                                                 .add("successfulResponseLogLevel", successfulResponseLogLevel)
-                                                 .add("failedResponseLogLevel", failureResponseLogLevel)
-                                                 .add("samplingRate", samplingRate);
+            Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
+        final ToStringHelper helper = MoreObjects.toStringHelper(self);
+
+        if (isRequestLogLevelMapperSet) {
+            helper.add("requestLogLevelMapper", requestLogLevelMapper);
+        } else {
+            helper.add("requestLogLevel", requestLogLevel);
+        }
+        if (isResponseLogLevelMapperSet) {
+            helper.add("responseLogLevelMapper", responseLogLevelMapper);
+        } else {
+            helper.add("successfulResponseLogLevel", successfulResponseLogLevel);
+            helper.add("failureResponseLogLevel", failureResponseLogLevel);
+        }
+
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);
         }

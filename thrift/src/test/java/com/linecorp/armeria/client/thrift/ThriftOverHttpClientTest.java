@@ -44,9 +44,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
@@ -54,10 +54,9 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
-import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
@@ -70,8 +69,8 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -126,7 +125,7 @@ class ThriftOverHttpClientTest {
     };
 
     private static final BinaryService.Iface binaryHandler = data -> {
-        ByteBuffer result = ByteBuffer.allocate(data.remaining());
+        final ByteBuffer result = ByteBuffer.allocate(data.remaining());
         for (int i = data.position(), j = 0; i < data.limit(); i++, j++) {
             result.put(j, (byte) (data.get(i) + 1));
         }
@@ -194,8 +193,7 @@ class ThriftOverHttpClientTest {
 
             for (Handlers h : Handlers.values()) {
                 for (SerializationFormat defaultSerializationFormat : ThriftSerializationFormats.values()) {
-                    Service<HttpRequest, HttpResponse> service =
-                            THttpService.of(h.handler(), defaultSerializationFormat);
+                    HttpService service = THttpService.of(h.handler(), defaultSerializationFormat);
                     if (ENABLE_LOGGING_DECORATORS) {
                         service = service.decorate(LoggingService.newDecorator());
                     }
@@ -216,19 +214,19 @@ class ThriftOverHttpClientTest {
                 ENABLE_CONNECTION_POOL_LOGGING ? new ConnectionPoolLoggingListener()
                                                : ConnectionPoolListener.noop();
 
-        clientFactoryWithUseHttp2Preface = new ClientFactoryBuilder()
-                .sslContextCustomizer(sslContextCustomizer)
-                .connectionPoolListener(connectionPoolListener)
-                .useHttp2Preface(true)
-                .build();
+        clientFactoryWithUseHttp2Preface = ClientFactory.builder()
+                                                        .sslContextCustomizer(sslContextCustomizer)
+                                                        .connectionPoolListener(connectionPoolListener)
+                                                        .useHttp2Preface(true)
+                                                        .build();
 
-        clientFactoryWithoutUseHttp2Preface = new ClientFactoryBuilder()
-                .sslContextCustomizer(sslContextCustomizer)
-                .connectionPoolListener(connectionPoolListener)
-                .useHttp2Preface(false)
-                .build();
+        clientFactoryWithoutUseHttp2Preface = ClientFactory.builder()
+                                                           .sslContextCustomizer(sslContextCustomizer)
+                                                           .connectionPoolListener(connectionPoolListener)
+                                                           .useHttp2Preface(false)
+                                                           .build();
 
-        final ClientDecorationBuilder decoBuilder = new ClientDecorationBuilder();
+        final ClientDecorationBuilder decoBuilder = ClientDecoration.builder();
         decoBuilder.addRpc((delegate, ctx, req) -> {
             if (recordMessageLogs) {
                 ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
@@ -237,7 +235,7 @@ class ThriftOverHttpClientTest {
         });
 
         if (ENABLE_LOGGING_DECORATORS) {
-            decoBuilder.addRpc(LoggingClient.newDecorator());
+            decoBuilder.addRpc(LoggingRpcClient.newDecorator());
         }
 
         clientOptions = ClientOptions.of(ClientOption.DECORATION.newValue(decoBuilder.build()));

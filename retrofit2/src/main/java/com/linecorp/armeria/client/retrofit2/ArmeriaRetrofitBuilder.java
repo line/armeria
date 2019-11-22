@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Scheme;
@@ -89,7 +89,7 @@ public final class ArmeriaRetrofitBuilder {
      * Creates a {@link ArmeriaRetrofitBuilder} with the default {@link ClientFactory}.
      */
     public ArmeriaRetrofitBuilder() {
-        this(ClientFactory.DEFAULT);
+        this(ClientFactory.ofDefault());
     }
 
     /**
@@ -127,11 +127,11 @@ public final class ArmeriaRetrofitBuilder {
     }
 
     /**
-     * Sets the {@link ClientOptions} that customizes the underlying {@link HttpClient}.
+     * Sets the {@link ClientOptions} that customizes the underlying {@link WebClient}.
      * This method can be useful if you already have an Armeria client and want to reuse its configuration,
      * such as using the same decorators.
      * <pre>{@code
-     * HttpClient myClient = ...;
+     * WebClient myClient = ...;
      * // Use the same settings and decorators with `myClient` when sending requests.
      * builder.clientOptions(myClient.options());
      * }</pre>
@@ -142,7 +142,7 @@ public final class ArmeriaRetrofitBuilder {
     }
 
     /**
-     * Sets the {@link BiFunction} that customizes the underlying {@link HttpClient}.
+     * Sets the {@link BiFunction} that customizes the underlying {@link WebClient}.
      * <pre>{@code
      * builder.withClientOptions((uri, b) -> {
      *     if (uri.startsWith("https://foo.com/")) {
@@ -234,8 +234,8 @@ public final class ArmeriaRetrofitBuilder {
         checkState(baseUrl != null, "baseUrl not set");
         final URI uri = URI.create(baseUrl);
         final String fullUri = SessionProtocol.of(uri.getScheme()) + "://" + uri.getAuthority();
-        final HttpClient baseHttpClient = HttpClient.of(
-                clientFactory, fullUri, configurator.apply(fullUri, new ClientOptionsBuilder()).build());
+        final WebClient baseHttpClient = WebClient.of(
+                clientFactory, fullUri, configurator.apply(fullUri, ClientOptions.builder()).build());
         return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, uri.getPath(), GROUP_PREFIX))
                               .callFactory(new ArmeriaCallFactory(
                                       baseHttpClient, clientFactory, configurator,
@@ -244,7 +244,8 @@ public final class ArmeriaRetrofitBuilder {
                               .build();
     }
 
-    private static HttpUrl convertToOkHttpUrl(HttpClient baseHttpClient, String basePath, String groupPrefix) {
+    private static HttpUrl convertToOkHttpUrl(WebClient baseHttpClient, String basePath,
+                                              String groupPrefix) {
         final URI uri = baseHttpClient.uri();
         final SessionProtocol sessionProtocol = Scheme.tryParse(uri.getScheme())
                                                       .map(Scheme::sessionProtocol)

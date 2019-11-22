@@ -50,7 +50,6 @@ import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverC
 import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.RoutingResultBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
@@ -100,9 +99,9 @@ public class AnnotatedValueResolverTest {
                                                          .query(query);
         pathParams.forEach(param -> builder.rawParam(param, param));
 
-        context = ServiceRequestContextBuilder.of(request)
-                                              .routingResult(builder.build())
-                                              .build();
+        context = ServiceRequestContext.builder(request)
+                                       .routingResult(builder.build())
+                                       .build();
 
         resolverContext = new ResolverContext(context, request, null);
     }

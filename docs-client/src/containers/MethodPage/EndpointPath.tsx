@@ -24,35 +24,33 @@ const endpointPathPlaceHolder = '/foo/bar';
 interface Props {
   endpointPathOpen: boolean;
   endpointPath: string;
-  onEditEndpointPathClick: () => void;
+  onEditEndpointPathClick: React.Dispatch<unknown>;
   onEndpointPathChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
-const EndpointPath: React.SFC<Props> = (props) => {
-  return (
-    <>
-      <Typography variant="body2" paragraph />
-      <Button color="secondary" onClick={props.onEditEndpointPathClick}>
-        Endpoint path
-      </Button>
-      <Typography variant="body2" paragraph />
-      {props.endpointPathOpen && (
-        <>
-          <TextField
-            multiline
-            fullWidth
-            rows={1}
-            value={props.endpointPath}
-            placeholder={endpointPathPlaceHolder}
-            onChange={props.onEndpointPathChange}
-            inputProps={{
-              className: 'code',
-            }}
-          />
-        </>
-      )}
-    </>
-  );
-};
+const EndpointPath: React.FunctionComponent<Props> = (props) => (
+  <>
+    <Typography variant="body2" paragraph />
+    <Button color="secondary" onClick={props.onEditEndpointPathClick}>
+      Endpoint path
+    </Button>
+    <Typography variant="body2" paragraph />
+    {props.endpointPathOpen && (
+      <>
+        <TextField
+          multiline
+          fullWidth
+          rows={1}
+          value={props.endpointPath}
+          placeholder={endpointPathPlaceHolder}
+          onChange={props.onEndpointPathChange}
+          inputProps={{
+            className: 'code',
+          }}
+        />
+      </>
+    )}
+  </>
+);
 
-export default EndpointPath;
+export default React.memo(EndpointPath);

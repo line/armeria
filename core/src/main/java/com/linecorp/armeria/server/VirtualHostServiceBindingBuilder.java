@@ -24,21 +24,20 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * A builder class for binding a {@link Service} fluently. This class can be instantiated through
- * {@link VirtualHostBuilder#route()}. You can also configure a {@link Service} using
+ * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
+ * {@link VirtualHostBuilder#route()}. You can also configure an {@link HttpService} using
  * {@link VirtualHostBuilder#withRoute(Consumer)}.
  *
- * <p>Call {@link #build(Service)} to build the {@link Service} and return to the {@link VirtualHostBuilder}.
+ * <p>Call {@link #build(HttpService)} to build the {@link HttpService} and return to the
+ * {@link VirtualHostBuilder}.
  *
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.virtualHost("example.com")
  *   .route()                                      // Configure the first service in "example.com".
  *   .post("/foo/bar")
@@ -71,9 +70,19 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
         return (VirtualHostServiceBindingBuilder) super.path(pathPattern);
     }
 
+    /**
+     * {@inheritDoc}
+     * @deprecated Use {@link #pathPrefix(String)}.
+     */
     @Override
+    @Deprecated
     public VirtualHostServiceBindingBuilder pathUnder(String prefix) {
-        return (VirtualHostServiceBindingBuilder) super.pathUnder(prefix);
+        return (VirtualHostServiceBindingBuilder) super.pathPrefix(prefix);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder pathPrefix(String prefix) {
+        return (VirtualHostServiceBindingBuilder) super.pathPrefix(prefix);
     }
 
     @Override
@@ -197,30 +206,35 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder accessLogFormat(String accessLogFormat) {
+        return (VirtualHostServiceBindingBuilder) super.accessLogFormat(accessLogFormat);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
                                                             boolean shutdownOnStop) {
         return (VirtualHostServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    VirtualHostServiceBindingBuilder decorator(Function<T, R> decorator) {
+    public VirtualHostServiceBindingBuilder decorator(
+            Function<? super HttpService, ? extends HttpService> decorator) {
         return (VirtualHostServiceBindingBuilder) super.decorator(decorator);
     }
 
     /**
-     * Sets the {@link Service} and returns the {@link VirtualHostBuilder} that this
+     * Sets the {@link HttpService} and returns the {@link VirtualHostBuilder} that this
      * {@link VirtualHostServiceBindingBuilder} was created from.
      *
-     * @throws IllegalStateException if the path that the {@link Service} will be bound to is not specified
+     * @throws IllegalStateException if the path that the {@link HttpService} will be bound to is not specified
      */
-    public VirtualHostBuilder build(Service<HttpRequest, HttpResponse> service) {
+    public VirtualHostBuilder build(HttpService service) {
         build0(service);
         return virtualHostBuilder;
     }
 
     @Override
     void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
-        virtualHostBuilder.serviceConfigBuilder(serviceConfigBuilder);
+        virtualHostBuilder.addServiceConfigBuilder(serviceConfigBuilder);
     }
 }

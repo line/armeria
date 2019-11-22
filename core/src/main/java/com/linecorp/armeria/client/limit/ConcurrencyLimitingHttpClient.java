@@ -20,15 +20,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
 import io.netty.channel.EventLoop;
 
 /**
- * A {@link Client} decorator that limits the concurrent number of active HTTP requests.
+ * An {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
  *
  * <p>For example:
  * <pre>{@code
@@ -38,31 +38,32 @@ import io.netty.channel.EventLoop;
  * }</pre>
  *
  */
-public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClient<HttpRequest, HttpResponse> {
+public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClient<HttpRequest, HttpResponse>
+        implements HttpClient {
 
     /**
-     * Creates a new {@link Client} decorator that limits the concurrent number of active HTTP requests.
+     * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, ConcurrencyLimitingHttpClient>
+    public static Function<? super HttpClient, ConcurrencyLimitingHttpClient>
     newDecorator(int maxConcurrency) {
         validateMaxConcurrency(maxConcurrency);
         return delegate -> new ConcurrencyLimitingHttpClient(delegate, maxConcurrency);
     }
 
     /**
-     * Creates a new {@link Client} decorator that limits the concurrent number of active HTTP requests.
+     * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, ConcurrencyLimitingHttpClient> newDecorator(
+    public static Function<? super HttpClient, ConcurrencyLimitingHttpClient> newDecorator(
             int maxConcurrency, long timeout, TimeUnit unit) {
         validateAll(maxConcurrency, timeout, unit);
         return delegate -> new ConcurrencyLimitingHttpClient(delegate, maxConcurrency, timeout, unit);
     }
 
-    private ConcurrencyLimitingHttpClient(Client<HttpRequest, HttpResponse> delegate, int maxConcurrency) {
+    private ConcurrencyLimitingHttpClient(HttpClient delegate, int maxConcurrency) {
         super(delegate, maxConcurrency);
     }
 
-    private ConcurrencyLimitingHttpClient(Client<HttpRequest, HttpResponse> delegate,
+    private ConcurrencyLimitingHttpClient(HttpClient delegate,
                                           int maxConcurrency, long timeout, TimeUnit unit) {
         super(delegate, maxConcurrency, timeout, unit);
     }

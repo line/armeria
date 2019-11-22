@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newEnumInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newExceptionInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newFieldInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newStructInfo;
@@ -36,7 +37,7 @@ import org.apache.thrift.TFieldRequirementType;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.meta_data.FieldValueMetaData;
 import org.apache.thrift.protocol.TType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -45,14 +46,12 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
-import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
+import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
@@ -67,7 +66,7 @@ import com.linecorp.armeria.service.test.thrift.main.FooUnion;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 
-public class ThriftDocServicePluginTest {
+class ThriftDocServicePluginTest {
 
     private static final String HELLO_NAME = HelloService.class.getName();
 
@@ -76,7 +75,7 @@ public class ThriftDocServicePluginTest {
     private static final ThriftDocServicePlugin generator = new ThriftDocServicePlugin();
 
     @Test
-    public void servicesTest() {
+    void servicesTest() {
         final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
                                                            (plugin, service, method) -> false);
 
@@ -98,12 +97,12 @@ public class ThriftDocServicePluginTest {
         final MethodInfo bar4 = methods.get("bar4");
         assertThat(bar4.exampleRequests()).isEmpty();
         assertThat(bar4.endpoints())
-                .containsExactly(new EndpointInfoBuilder("*", "/foo")
-                                         .defaultFormat(ThriftSerializationFormats.COMPACT).build());
+                .containsExactly(EndpointInfo.builder("*", "/foo")
+                                             .defaultFormat(ThriftSerializationFormats.COMPACT).build());
     }
 
     @Test
-    public void include() {
+    void include() {
 
         // 1. Nothing specified: include all.
         // 2. Exclude specified: include all except the methods which the exclude filter returns true.
@@ -160,12 +159,18 @@ public class ThriftDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final Server server = new ServerBuilder()
-                .service(Route.builder().exact("/hello").build(), THttpService.of(mock(AsyncIface.class)))
-                .service(Route.builder().exact("/foo").build(),
-                         THttpService.ofFormats(mock(FooService.AsyncIface.class),
-                                                ThriftSerializationFormats.COMPACT))
-                .build();
+        final Server server =
+                Server.builder()
+                      .service(Route.builder()
+                                    .exact("/hello")
+                                    .build(),
+                               THttpService.of(mock(AsyncIface.class)))
+                      .service(Route.builder()
+                                    .exact("/foo")
+                                    .build(),
+                               THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                      ThriftSerializationFormats.COMPACT))
+                      .build();
 
         // Generate the specification with the ServiceConfigs.
         final ServiceSpecification specification = generator.generateSpecification(
@@ -186,17 +191,17 @@ public class ThriftDocServicePluginTest {
     }
 
     @Test
-    public void testNewEnumInfo() {
-        final EnumInfo enumInfo = new EnumInfo(FooEnum.class);
+    void testNewEnumInfo() {
+        final EnumInfo enumInfo = newEnumInfo(FooEnum.class);
 
         assertThat(enumInfo).isEqualTo(new EnumInfo(FooEnum.class.getName(),
-                                                    Arrays.asList(new EnumValueInfo("VAL1"),
-                                                                  new EnumValueInfo("VAL2"),
-                                                                  new EnumValueInfo("VAL3"))));
+                                                    Arrays.asList(new EnumValueInfo("VAL1", 1),
+                                                                  new EnumValueInfo("VAL2", 2),
+                                                                  new EnumValueInfo("VAL3", 3))));
     }
 
     @Test
-    public void testNewExceptionInfo() {
+    void testNewExceptionInfo() {
         final ExceptionInfo exception = newExceptionInfo(FooServiceException.class);
 
         assertThat(exception).isEqualTo(new ExceptionInfo(
@@ -208,15 +213,15 @@ public class ThriftDocServicePluginTest {
     }
 
     @Test
-    public void testNewServiceInfo() {
+    void testNewServiceInfo() {
         final ServiceInfo service = generator.newServiceInfo(
                 FooService.class,
-                ImmutableList.of(new EndpointInfoBuilder("*", "/foo")
-                                         .fragment("a").defaultFormat(ThriftSerializationFormats.BINARY)
-                                         .build(),
-                                 new EndpointInfoBuilder("*", "/debug/foo")
-                                         .fragment("b").defaultFormat(ThriftSerializationFormats.TEXT)
-                                         .build()),
+                ImmutableList.of(EndpointInfo.builder("*", "/foo")
+                                             .fragment("a").defaultFormat(ThriftSerializationFormats.BINARY)
+                                             .build(),
+                                 EndpointInfo.builder("*", "/debug/foo")
+                                             .fragment("b").defaultFormat(ThriftSerializationFormats.TEXT)
+                                             .build()),
                 (pluginName, serviceName, methodName) -> true);
 
         final Map<String, MethodInfo> methods =
@@ -229,14 +234,14 @@ public class ThriftDocServicePluginTest {
         assertThat(bar1.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar1.exampleRequests()).isEmpty();
         assertThat(bar1.endpoints()).containsExactlyInAnyOrder(
-                new EndpointInfoBuilder("*", "/foo")
-                        .fragment("a")
-                        .defaultFormat(ThriftSerializationFormats.BINARY)
-                        .build(),
-                new EndpointInfoBuilder("*", "/debug/foo")
-                        .fragment("b")
-                        .defaultFormat(ThriftSerializationFormats.TEXT)
-                        .build());
+                EndpointInfo.builder("*", "/foo")
+                            .fragment("a")
+                            .defaultFormat(ThriftSerializationFormats.BINARY)
+                            .build(),
+                EndpointInfo.builder("*", "/debug/foo")
+                            .fragment("b")
+                            .defaultFormat(ThriftSerializationFormats.TEXT)
+                            .build());
 
         final TypeSignature string = TypeSignature.ofBase("string");
         final MethodInfo bar2 = methods.get("bar2");
@@ -289,7 +294,7 @@ public class ThriftDocServicePluginTest {
     }
 
     @Test
-    public void testNewStructInfoTest() throws Exception {
+    void testNewStructInfoTest() throws Exception {
         final TypeSignature string = TypeSignature.ofBase("string");
         final List<FieldInfo> fields = new ArrayList<>();
         fields.add(FieldInfo.of("boolVal", TypeSignature.ofBase("bool")));
@@ -306,15 +311,15 @@ public class ThriftDocServicePluginTest {
                 string, TypeSignature.ofNamed(FooEnum.class))));
         fields.add(FieldInfo.of("setVal", TypeSignature.ofSet(FooUnion.class)));
         fields.add(FieldInfo.of("listVal", TypeSignature.ofList(string)));
-        fields.add(new FieldInfoBuilder("selfRef", TypeSignature.ofNamed(FooStruct.class))
-                           .requirement(FieldRequirement.OPTIONAL).build());
+        fields.add(FieldInfo.builder("selfRef", TypeSignature.ofNamed(FooStruct.class))
+                            .requirement(FieldRequirement.OPTIONAL).build());
 
         final StructInfo fooStruct = newStructInfo(FooStruct.class);
         assertThat(fooStruct).isEqualTo(new StructInfo(FooStruct.class.getName(), fields));
     }
 
     @Test
-    public void incompleteStructMetadata() throws Exception {
+    void incompleteStructMetadata() throws Exception {
         assertThat(toTypeSignature(new FieldValueMetaData(TType.STRUCT)))
                 .isEqualTo(TypeSignature.ofUnresolved("unknown"));
     }

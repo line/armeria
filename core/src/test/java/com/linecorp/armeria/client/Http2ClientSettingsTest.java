@@ -64,17 +64,20 @@ public class Http2ClientSettingsTest {
     @Test
     public void initialConnectionAndStreamWindowSize() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
-             ClientFactory clientFactory = new ClientFactoryBuilder()
-                     .useHttp2Preface(true)
-                     // Client sends a WINDOW_UPDATE frame for connection when it receives 64 * 1024 bytes.
-                     .http2InitialConnectionWindowSize(128 * 1024)
-                     // Client sends a WINDOW_UPDATE frame for stream when it receives 48 * 1024 bytes.
-                     .http2InitialStreamWindowSize(96 * 1024)
-                     .build()) {
+             ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .useHttp2Preface(true)
+                                  // Client sends a WINDOW_UPDATE frame for connection
+                                  // when it receives 64 * 1024 bytes.
+                                  .http2InitialConnectionWindowSize(128 * 1024)
+                                  // Client sends a WINDOW_UPDATE frame for stream
+                                  // when it receives 48 * 1024 bytes.
+                                  .http2InitialStreamWindowSize(96 * 1024)
+                                  .build()) {
 
             final int port = ss.getLocalPort();
 
-            final HttpClient client = HttpClient.of(clientFactory, "h2c://127.0.0.1:" + port);
+            final WebClient client = WebClient.of(clientFactory, "h2c://127.0.0.1:" + port);
             final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {
@@ -141,16 +144,17 @@ public class Http2ClientSettingsTest {
     @Test
     public void maxFrameSize() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
-             ClientFactory clientFactory = new ClientFactoryBuilder()
-                     .useHttp2Preface(true)
-                     // Set the window size to the HTTP/2 default values to simplify the traffic.
-                     .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                     .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                     .http2MaxFrameSize(DEFAULT_MAX_FRAME_SIZE * 2) // == 16384 * 2
-                     .build()) {
+             ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .useHttp2Preface(true)
+                                  // Set the window size to the HTTP/2 default values to simplify the traffic.
+                                  .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+                                  .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+                                  .http2MaxFrameSize(DEFAULT_MAX_FRAME_SIZE * 2) // == 16384 * 2
+                                  .build()) {
 
             final int port = ss.getLocalPort();
-            final HttpClient client = HttpClient.of(clientFactory, "http://127.0.0.1:" + port);
+            final WebClient client = WebClient.of(clientFactory, "http://127.0.0.1:" + port);
             client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {

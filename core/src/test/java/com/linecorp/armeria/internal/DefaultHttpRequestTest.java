@@ -53,7 +53,7 @@ class DefaultHttpRequestTest {
      */
     @ParameterizedTest
     @ArgumentsSource(ParametersProvider.class)
-    void abortedAggregation(boolean executorSpecified, boolean withPooledObjects) {
+    void abortedAggregation(boolean executorSpecified, boolean withPooledObjects, Throwable abortCause) {
         withTimeout(() -> {
             final Thread mainThread = Thread.currentThread();
             final DefaultHttpRequest req = new DefaultHttpRequest(RequestHeaders.of(HttpMethod.GET, "/foo"));
@@ -77,12 +77,21 @@ class DefaultHttpRequestTest {
 
             final AtomicReference<Thread> callbackThread = new AtomicReference<>();
 
-            assertThatThrownBy(() -> {
-                final CompletableFuture<AggregatedHttpRequest> f =
-                        future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
-                req.abort();
-                f.join();
-            }).hasCauseInstanceOf(AbortedStreamException.class);
+            if (abortCause == null) {
+                assertThatThrownBy(() -> {
+                    final CompletableFuture<AggregatedHttpRequest> f =
+                            future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
+                    req.abort();
+                    f.join();
+                }).hasCauseInstanceOf(AbortedStreamException.class);
+            } else {
+                assertThatThrownBy(() -> {
+                    final CompletableFuture<AggregatedHttpRequest> f =
+                            future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
+                    req.abort(abortCause);
+                    f.join();
+                }).hasCauseInstanceOf(abortCause.getClass());
+            }
 
             assertThat(callbackThread.get()).isNotSameAs(mainThread);
         });
@@ -113,10 +122,10 @@ class DefaultHttpRequestTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(
-                    arguments(true, true),
-                    arguments(true, false),
-                    arguments(false, true),
-                    arguments(false, false));
+                    arguments(true, true, null),
+                    arguments(true, false, new IllegalStateException("abort stream with a specified cause")),
+                    arguments(false, true, new IllegalStateException("abort stream with a specified cause")),
+                    arguments(false, false, null));
         }
     }
 }

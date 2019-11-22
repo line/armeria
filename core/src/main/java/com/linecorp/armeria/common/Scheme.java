@@ -78,8 +78,12 @@ public final class Scheme implements Comparable<Scheme> {
         if (scheme == null) {
             return Optional.empty();
         }
-
-        return Optional.ofNullable(SCHEMES.get(Ascii.toLowerCase(scheme)));
+        final String lowercaseScheme = Ascii.toLowerCase(scheme);
+        final Scheme parsedScheme = SCHEMES.get(lowercaseScheme);
+        if (parsedScheme != null) {
+            return Optional.of(parsedScheme);
+        }
+        return Optional.ofNullable(SCHEMES.get(SerializationFormat.NONE.uriText() + '+' + lowercaseScheme));
     }
 
     /**
@@ -90,12 +94,8 @@ public final class Scheme implements Comparable<Scheme> {
      *                                  there is no such {@link Scheme} available
      */
     public static Scheme parse(String scheme) {
-        final Scheme res = SCHEMES.get(Ascii.toLowerCase(requireNonNull(scheme, "scheme")));
-        if (res == null) {
-            throw new IllegalArgumentException("scheme: " + scheme);
-        }
-
-        return res;
+        final Optional<Scheme> parsedScheme = tryParse(requireNonNull(scheme, "scheme"));
+        return parsedScheme.orElseThrow(() -> new IllegalArgumentException("scheme: " + scheme));
     }
 
     /**
@@ -145,7 +145,7 @@ public final class Scheme implements Comparable<Scheme> {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         return this == obj;
     }
 

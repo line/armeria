@@ -22,10 +22,8 @@ import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 
 /**
  * Details of an annotated HTTP service method.
@@ -36,13 +34,11 @@ public final class AnnotatedHttpServiceElement {
 
     private final AnnotatedHttpService service;
 
-    private final Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> decorator;
+    private final Function<? super HttpService, ? extends HttpService> decorator;
 
     AnnotatedHttpServiceElement(Route route,
                                 AnnotatedHttpService service,
-                                Function<Service<HttpRequest, HttpResponse>,
-                                        ? extends Service<HttpRequest, HttpResponse>> decorator) {
+                                Function<? super HttpService, ? extends HttpService> decorator) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
         this.decorator = requireNonNull(decorator, "decorator");
@@ -66,9 +62,28 @@ public final class AnnotatedHttpServiceElement {
      * Returns the decorator of the {@link AnnotatedHttpService} which will be evaluated at service
      * registration time.
      */
-    public Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> decorator() {
+    public Function<? super HttpService, ? extends HttpService> decorator() {
         return decorator;
+    }
+
+    /**
+     * Builds a safe decorated {@link HttpService} by wrapping the localDecorator with
+     * exceptionHandlingDecorators.
+     *
+     * @param localDecorator a decorator to decorate the service with.
+     */
+    public HttpService buildSafeDecoratedService(
+            Function<? super HttpService, ? extends HttpService> localDecorator) {
+        // Apply decorators which are specified in the service class.
+        HttpService decoratedService = decorator.apply(service);
+        // Apply localDecorator passed in through method parameter
+        decoratedService = decoratedService.decorate(localDecorator);
+        // If there is a decorator, we should add one more decorator which handles an exception
+        // raised from decorators.
+        if (decoratedService != service) {
+            decoratedService = service.exceptionHandlingDecorator().apply(decoratedService);
+        }
+        return decoratedService;
     }
 
     @Override

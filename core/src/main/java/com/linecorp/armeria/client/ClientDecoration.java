@@ -16,12 +16,10 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.google.common.collect.ImmutableList;
 
 /**
  * A set of {@link Function}s that transforms a {@link Client} into another.
@@ -30,125 +28,82 @@ public final class ClientDecoration {
 
     /**
      * A {@link ClientDecoration} that decorates no {@link Client}.
+     *
+     * @deprecated Use {@link #of()}.
      */
-    public static final ClientDecoration NONE = new ClientDecoration(Collections.emptyList());
+    @Deprecated
+    public static final ClientDecoration NONE = new ClientDecoration(ImmutableList.of(), ImmutableList.of());
+
+    /**
+     * Returns an empty {@link ClientDecoration} which does not decorate a {@link Client}.
+     */
+    public static ClientDecoration of() {
+        return NONE;
+    }
 
     /**
      * Creates a new instance from a single decorator {@link Function}.
      *
-     * @param requestType the type of the {@link Request} that the {@code decorator} is interested in
-     * @param responseType the type of the {@link Response} that the {@code decorator} is interested in
-     * @param decorator the {@link Function} that transforms a {@link Client} to another
-     * @param <T> the type of the {@link Client} being decorated
-     * @param <R> the type of the {@link Client} produced by the {@code decorator}
+     * @param decorator the {@link Function} that transforms an {@link HttpClient} to another
      */
-    public static <T extends Client<I, O>, R extends Client<I, O>, I extends Request, O extends Response>
-    ClientDecoration of(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
-        return new ClientDecorationBuilder().add(requestType, responseType, decorator).build();
-    }
-
-    private final List<Entry<?, ?>> entries;
-
-    ClientDecoration(List<Entry<?, ?>> entries) {
-        this.entries = Collections.unmodifiableList(entries);
-    }
-
-    List<Entry<?, ?>> entries() {
-        return entries;
+    public static ClientDecoration of(Function<? super HttpClient, ? extends HttpClient> decorator) {
+        return builder().add(decorator).build();
     }
 
     /**
-     * Decorates the specified {@link Client} using the decorator with matching {@code requestType} and
-     * {@code responseType}.
+     * Creates a new instance from a single decorator {@link Function}.
      *
-     * @param requestType the type of the {@link Request} the specified {@link Client} accepts
-     * @param responseType the type of the {@link Response} the specified {@link Client} produces
-     * @param client the {@link Client} being decorated
-     * @param <I> {@code requestType}
-     * @param <O> {@code responseType}
+     * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
      */
-    public <I extends Request, O extends Response> Client<I, O> decorate(
-            Class<I> requestType, Class<O> responseType, Client<I, O> client) {
+    public static ClientDecoration ofRpc(Function<? super RpcClient, ? extends RpcClient> decorator) {
+        return builder().addRpc(decorator).build();
+    }
 
-        for (Entry<?, ?> e : entries) {
-            if (!requestType.isAssignableFrom(e.requestType()) ||
-                !responseType.isAssignableFrom(e.responseType())) {
-                continue;
-            }
+    /**
+     * Returns a newly created {@link ClientDecorationBuilder}.
+     */
+    public static ClientDecorationBuilder builder() {
+        return new ClientDecorationBuilder();
+    }
 
-            @SuppressWarnings("unchecked")
-            final Function<Client<I, O>, Client<I, O>> decorator = ((Entry<I, O>) e).decorator();
+    private final List<Function<? super HttpClient, ? extends HttpClient>> decorators;
+    private final List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators;
+
+    ClientDecoration(List<Function<? super HttpClient, ? extends HttpClient>> decorators,
+                     List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators) {
+        this.decorators = ImmutableList.copyOf(decorators);
+        this.rpcDecorators = ImmutableList.copyOf(rpcDecorators);
+    }
+
+    List<Function<? super HttpClient, ? extends HttpClient>> decorators() {
+        return decorators;
+    }
+
+    List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators() {
+        return rpcDecorators;
+    }
+
+    /**
+     * Decorates the specified {@link HttpClient} using the decorator.
+     *
+     * @param client the {@link HttpClient} being decorated
+     */
+    public HttpClient decorate(HttpClient client) {
+        for (Function<? super HttpClient, ? extends HttpClient> decorator : decorators) {
             client = decorator.apply(client);
         }
-
         return client;
     }
 
-    static final class Entry<I extends Request, O extends Response> {
-        private final Class<I> requestType;
-        private final Class<O> responseType;
-        private final Function<Client<I, O>, Client<I, O>> decorator;
-
-        Entry(Class<I> requestType, Class<O> responseType,
-              Function<? extends Client<I, O>, ? extends Client<I, O>> decorator) {
-            this.requestType = requestType;
-            this.responseType = responseType;
-
-            @SuppressWarnings("unchecked")
-            final Function<Client<I, O>, Client<I, O>> castDecorator =
-                    (Function<Client<I, O>, Client<I, O>>) decorator;
-            this.decorator = castDecorator;
+    /**
+     * Decorates the specified {@link RpcClient} using the decorator.
+     *
+     * @param client the {@link RpcClient} being decorated
+     */
+    public RpcClient rpcDecorate(RpcClient client) {
+        for (Function<? super RpcClient, ? extends RpcClient> decorator : rpcDecorators) {
+            client = decorator.apply(client);
         }
-
-        Class<I> requestType() {
-            return requestType;
-        }
-
-        Class<O> responseType() {
-            return responseType;
-        }
-
-        Function<Client<I, O>, Client<I, O>> decorator() {
-            return decorator;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (!(o instanceof Entry)) {
-                return false;
-            }
-
-            final Entry<?, ?> entry = (Entry<?, ?>) o;
-
-            if (!requestType.equals(entry.requestType)) {
-                return false;
-            }
-            if (!responseType.equals(entry.responseType)) {
-                return false;
-            }
-
-            final Function<?, ?> decorator = this.decorator;
-            return decorator == entry.decorator;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = requestType.hashCode();
-            result = 31 * result + responseType.hashCode();
-            result = 31 * result + System.identityHashCode(decorator);
-            return result;
-        }
-
-        @Override
-        public String toString() {
-            return '(' +
-                   requestType.getSimpleName() + ", " +
-                   responseType.getSimpleName() + ", " +
-                   decorator +
-                   ')';
-        }
+        return client;
     }
 }

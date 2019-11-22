@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.grpc;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Base64;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
@@ -29,23 +28,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.grpc.StatusCauseException;
-import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
-import io.grpc.Metadata;
 import io.grpc.Status;
 
 /**
@@ -137,25 +131,9 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
 
             final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
             if (grpcStatus != null) {
-                Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
-                if (status.getCode() == Status.OK.getCode()) {
-                    // Successful response, finish delivering messages before returning the status.
-                    closeDeframer();
-                }
-                final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
-                if (grpcMessage != null) {
-                    status = status.withDescription(StatusMessageEscaper.unescape(grpcMessage));
-                }
-                final String grpcThrowable = headers.get(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
-                if (grpcThrowable != null) {
-                    status = addCause(status, grpcThrowable);
-                }
-
-                Metadata metadata = MetadataUtil.copyFromHeaders(headers);
-
-                transportStatusListener.transportReportStatus(status, metadata);
-                return;
+                GrpcStatus.reportStatus(headers, this, transportStatusListener);
             }
+
             // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
             // messages.
             final String grpcEncoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
@@ -220,7 +198,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
         }
     }
 
-    private void closeDeframer() {
+    void closeDeframer() {
         if (!deframer.isClosed()) {
             deframer.deframe(HttpData.EMPTY_DATA, true);
             deframer.closeWhenComplete();
@@ -232,23 +210,5 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
         if (deframer.isStalled()) {
             subscription.request(1);
         }
-    }
-
-    private static Status addCause(Status status, String serializedThrowableProto) {
-        final byte[] decoded;
-        try {
-            decoded = Base64.getDecoder().decode(serializedThrowableProto);
-        } catch (IllegalArgumentException e) {
-            logger.warn("Invalid Base64 in status cause proto, ignoring.", e);
-            return status;
-        }
-        final ThrowableProto grpcThrowableProto;
-        try {
-            grpcThrowableProto = ThrowableProto.parseFrom(decoded);
-        } catch (InvalidProtocolBufferException e) {
-            logger.warn("Invalid serialized status cause proto, ignoring.", e);
-            return status;
-        }
-        return status.withCause(new StatusCauseException(grpcThrowableProto));
     }
 }

@@ -31,8 +31,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.web.server.LocalServerPort;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 
@@ -58,40 +57,52 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
         final AtomicReference<String> actualKeyName = new AtomicReference<>();
 
         // Create a new ClientFactory with a TrustManager that records the received certificate.
-        try (ClientFactory clientFactory = new ClientFactoryBuilder()
-                .sslContextCustomizer(b -> b.trustManager(new SimpleTrustManagerFactory() {
-                    @Override
-                    protected void engineInit(KeyStore keyStore) {}
-
-                    @Override
-                    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {}
-
-                    @Override
-                    protected TrustManager[] engineGetTrustManagers() {
-                        return new TrustManager[] {
-                                new X509TrustManager() {
-                                    @Override
-                                    public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-
-                                    @Override
-                                    public void checkServerTrusted(X509Certificate[] chain, String authType) {
-                                        actualKeyName.set(chain[0].getSubjectX500Principal().getName());
-                                    }
-
-                                    @Override
-                                    public X509Certificate[] getAcceptedIssuers() {
-                                        return EMPTY_CERTIFICATES;
-                                    }
-                                }
-                        };
-                    }
-                })).build()) {
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .sslContextCustomizer(b -> {
+                                      b.trustManager(new TrustManagerFactoryImpl(actualKeyName));
+                                  })
+                                  .build()) {
 
             // Send a request to make the TrustManager record the certificate.
-            final HttpClient client = HttpClient.of(clientFactory, "h2://127.0.0.1:" + port);
+            final WebClient client = WebClient.of(clientFactory, "h2://127.0.0.1:" + port);
             client.get("/").drainAll().join();
 
             assertThat(actualKeyName).hasValue(expectedKeyName);
+        }
+    }
+
+    private static class TrustManagerFactoryImpl extends SimpleTrustManagerFactory {
+        private final AtomicReference<String> actualKeyName;
+
+        TrustManagerFactoryImpl(AtomicReference<String> actualKeyName) {
+            this.actualKeyName = actualKeyName;
+        }
+
+        @Override
+        protected void engineInit(KeyStore keyStore) {}
+
+        @Override
+        protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {}
+
+        @Override
+        protected TrustManager[] engineGetTrustManagers() {
+            return new TrustManager[] {
+                    new X509TrustManager() {
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                            actualKeyName.set(chain[0].getSubjectX500Principal().getName());
+                        }
+
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return EMPTY_CERTIFICATES;
+                        }
+                    }
+            };
         }
     }
 }

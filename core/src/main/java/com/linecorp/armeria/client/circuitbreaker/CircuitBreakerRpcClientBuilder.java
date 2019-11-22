@@ -18,30 +18,37 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcResponse;
 
 /**
  * Builds a new {@link CircuitBreakerRpcClient} or its decorator function.
  */
 public final class CircuitBreakerRpcClientBuilder
-        extends CircuitBreakerClientBuilder<CircuitBreakerRpcClient, RpcRequest, RpcResponse> {
+        extends AbstractCircuitBreakerClientBuilder<RpcResponse> {
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerStrategyWithContent}.
+     *
+     * @deprecated {@link CircuitBreakerRpcClient#builder(CircuitBreakerStrategyWithContent)}.
      */
+    @Deprecated
     public CircuitBreakerRpcClientBuilder(CircuitBreakerStrategyWithContent<RpcResponse> strategyWithContent) {
         super(strategyWithContent);
     }
 
-    @Override
-    public CircuitBreakerRpcClient build(Client<RpcRequest, RpcResponse> delegate) {
+    /**
+     * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
+     */
+    public CircuitBreakerRpcClient build(RpcClient delegate) {
         return new CircuitBreakerRpcClient(delegate, mapping(), strategyWithContent());
     }
 
-    @Override
-    public Function<Client<RpcRequest, RpcResponse>, CircuitBreakerRpcClient> newDecorator() {
+    /**
+     * Returns a newly-created decorator that decorates an {@link RpcClient} with a new
+     * {@link CircuitBreakerRpcClient} based on the properties of this builder.
+     */
+    public Function<? super RpcClient, CircuitBreakerRpcClient> newDecorator() {
         return this::build;
     }
 

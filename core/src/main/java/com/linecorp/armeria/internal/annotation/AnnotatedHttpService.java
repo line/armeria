@@ -54,7 +54,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -65,7 +64,6 @@ import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverC
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
@@ -79,7 +77,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 /**
- * A {@link Service} which is defined by a {@link Path} or HTTP method annotations.
+ * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
  * This class is not supposed to be instantiated by a user. Please check out the documentation
  * <a href="https://line.github.io/armeria/server-annotated-service.html#annotated-http-service">
  * Annotated HTTP Service</a> to use this.
@@ -112,6 +110,7 @@ public class AnnotatedHttpService implements HttpService {
     private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
+    private final boolean useBlockingTaskExecutor;
 
     AnnotatedHttpService(Object object, Method method,
                          List<AnnotatedValueResolver> resolvers,
@@ -119,7 +118,8 @@ public class AnnotatedHttpService implements HttpService {
                          List<ResponseConverterFunction> responseConverters,
                          Route route,
                          ResponseHeaders defaultHttpHeaders,
-                         HttpHeaders defaultHttpTrailers) {
+                         HttpHeaders defaultHttpTrailers,
+                         boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -133,6 +133,7 @@ public class AnnotatedHttpService implements HttpService {
 
         this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders");
         this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers");
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         final Class<?> returnType = method.getReturnType();
         if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
@@ -233,19 +234,45 @@ public class AnnotatedHttpService implements HttpService {
 
         switch (responseType) {
             case HTTP_RESPONSE:
-                return f.thenApply(
-                        msg -> new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) invoke(ctx, req, msg),
-                                                                 exceptionHandler));
+                if (useBlockingTaskExecutor) {
+                    return f.thenApplyAsync(
+                            msg -> new ExceptionFilteredHttpResponse(ctx, req,
+                                                                     (HttpResponse) invoke(ctx, req, msg),
+                                                                     exceptionHandler),
+                            ctx.blockingTaskExecutor());
+                } else {
+                    return f.thenApply(
+                            msg -> new ExceptionFilteredHttpResponse(ctx, req,
+                                                                     (HttpResponse) invoke(ctx, req, msg),
+                                                                     exceptionHandler));
+                }
+
             case COMPLETION_STAGE:
-                return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
-                        .handle((result, cause) -> cause == null ? convertResponse(ctx, req, null, result,
-                                                                                   HttpHeaders.of())
-                                                                 : exceptionHandler.handleException(ctx, req,
-                                                                                                    cause));
+                if (useBlockingTaskExecutor) {
+                    return f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
+                                              ctx.blockingTaskExecutor())
+                            .handle((result, cause) ->
+                                            cause == null ? convertResponse(ctx, req, null, result,
+                                                                            HttpHeaders.of())
+                                                          : exceptionHandler.handleException(ctx, req, cause));
+                } else {
+                    return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
+                            .handle((result, cause) ->
+                                            cause == null ? convertResponse(ctx, req, null, result,
+                                                                            HttpHeaders.of())
+                                                          : exceptionHandler.handleException(ctx, req, cause));
+                }
+
             default:
-                return f.thenApplyAsync(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                               HttpHeaders.of()),
-                                        ctx.blockingTaskExecutor());
+                if (useBlockingTaskExecutor) {
+                    return f.thenApplyAsync(
+                            msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
+                                                   HttpHeaders.of()),
+                            ctx.blockingTaskExecutor());
+                } else {
+                    return f.thenApply(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
+                                                              HttpHeaders.of()));
+                }
         }
     }
 
@@ -348,11 +375,10 @@ public class AnnotatedHttpService implements HttpService {
     }
 
     /**
-     * Returns a {@link Function} which produces a {@link Service} wrapped with an
+     * Returns a {@link Function} which produces an {@link HttpService} wrapped with an
      * {@link ExceptionFilteredHttpResponseDecorator}.
      */
-    public Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> exceptionHandlingDecorator() {
+    public Function<? super HttpService, ? extends HttpService> exceptionHandlingDecorator() {
         return ExceptionFilteredHttpResponseDecorator::new;
     }
 
@@ -364,7 +390,7 @@ public class AnnotatedHttpService implements HttpService {
      */
     private class ExceptionFilteredHttpResponseDecorator extends SimpleDecoratingHttpService {
 
-        ExceptionFilteredHttpResponseDecorator(Service<HttpRequest, HttpResponse> delegate) {
+        ExceptionFilteredHttpResponseDecorator(HttpService delegate) {
             super(delegate);
         }
 
@@ -475,7 +501,7 @@ public class AnnotatedHttpService implements HttpService {
         }
 
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             final Throwable peeledCause = Exceptions.peel(cause);
 
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&

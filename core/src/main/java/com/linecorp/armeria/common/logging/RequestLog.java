@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
@@ -166,6 +167,13 @@ public interface RequestLog extends AttributeMap {
      * This method returns non-{@code null} regardless the current {@link RequestLogAvailability}.
      */
     RequestContext context();
+
+    /**
+     * Returns the {@link RequestId}. This method is a shortcut to {@code context().id()}.
+     */
+    default RequestId id() {
+        return context().id();
+    }
 
     /**
      * Returns the method of the {@link Request}. This method is a shortcut to {@code context().method()}.

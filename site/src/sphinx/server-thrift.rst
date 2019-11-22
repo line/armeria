@@ -66,7 +66,7 @@ and add it to the :api:`ServerBuilder`:
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
     sb.service("/hello", THttpService.of(new MyHelloService()));
     ...
@@ -105,7 +105,7 @@ To change the default serialization format from TBINARY to something else, speci
 
     import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Use TCOMPACT as the default serialization format.
     sb.service("/hello", THttpService.of(new MyHelloService(),
                                          ThriftSerializationFormats.COMPACT));
@@ -114,7 +114,7 @@ You can also choose the list of allowed serialization formats:
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Use TBINARY as the default serialization format.
     // Allow TBINARY and TCOMPACT only.
     sb.service("/hello", THttpService.of(new MyHelloService(),

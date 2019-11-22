@@ -79,7 +79,7 @@ public abstract class ServerRuleDelegate {
             return oldServer;
         }
 
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         try {
             configure(sb);
         } catch (Exception e) {

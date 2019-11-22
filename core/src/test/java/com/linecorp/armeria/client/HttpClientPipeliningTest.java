@@ -98,15 +98,15 @@ public class HttpClientPipeliningTest {
     public static void initClientFactory() {
         // Ensure only a single event loop is used so that there's only one connection pool.
         // Note: Each event loop has its own connection pool.
-        factoryWithPipelining = new ClientFactoryBuilder()
-                .workerGroup(eventLoopGroup.get(), false)
-                .useHttp1Pipelining(true)
-                .build();
+        factoryWithPipelining = ClientFactory.builder()
+                                             .workerGroup(eventLoopGroup.get(), false)
+                                             .useHttp1Pipelining(true)
+                                             .build();
 
-        factoryWithoutPipelining = new ClientFactoryBuilder()
-                .workerGroup(eventLoopGroup.get(), false)
-                .useHttp1Pipelining(false)
-                .build();
+        factoryWithoutPipelining = ClientFactory.builder()
+                                                .workerGroup(eventLoopGroup.get(), false)
+                                                .useHttp1Pipelining(false)
+                                                .build();
     }
 
     @AfterClass
@@ -125,7 +125,7 @@ public class HttpClientPipeliningTest {
 
     @Test
     public void withoutPipelining() throws Exception {
-        final HttpClient client = HttpClient.of(
+        final WebClient client = WebClient.of(
                 factoryWithoutPipelining, "h1c://127.0.0.1:" + server.httpPort());
 
         final HttpResponse res1 = client.get("/");
@@ -146,7 +146,7 @@ public class HttpClientPipeliningTest {
 
     @Test
     public void withPipelining() throws Exception {
-        final HttpClient client = HttpClient.of(
+        final WebClient client = WebClient.of(
                 factoryWithPipelining, "h1c://127.0.0.1:" + server.httpPort());
 
         final HttpResponse res1;

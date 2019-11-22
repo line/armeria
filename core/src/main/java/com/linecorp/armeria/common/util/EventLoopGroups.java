@@ -39,7 +39,7 @@ import io.netty.util.concurrent.Future;
 /**
  * Provides methods that are useful for creating an {@link EventLoopGroup}.
  *
- * @see EventLoopThreadFactory
+ * @see ThreadFactories#newEventLoopThreadFactory(String, boolean)
  */
 public final class EventLoopGroups {
 
@@ -89,7 +89,8 @@ public final class EventLoopGroups {
 
         final TransportType type = TransportType.detectTransportType();
         final String prefix = threadNamePrefix + '-' + type.lowerCasedName();
-        return newEventLoopGroup(numThreads, new EventLoopThreadFactory(prefix, useDaemonThreads));
+        return newEventLoopGroup(numThreads, ThreadFactories.newEventLoopThreadFactory(prefix,
+                                                                                       useDaemonThreads));
     }
 
     /**

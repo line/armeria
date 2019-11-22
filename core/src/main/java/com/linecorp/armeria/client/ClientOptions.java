@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.ClientOption.DECORATION;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
 import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
+import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
 import static com.linecorp.armeria.client.ClientOption.REQ_CONTENT_PREVIEWER_FACTORY;
 import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOption.RES_CONTENT_PREVIEWER_FACTORY;
@@ -31,10 +32,14 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
+
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.AbstractOptions;
@@ -71,31 +76,40 @@ public final class ClientOptions extends AbstractOptions {
             WRITE_TIMEOUT_MILLIS.newValue(Flags.defaultWriteTimeoutMillis()),
             RESPONSE_TIMEOUT_MILLIS.newValue(Flags.defaultResponseTimeoutMillis()),
             MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
-            DECORATION.newValue(ClientDecoration.NONE),
-            HTTP_HEADERS.newValue(HttpHeaders.of())
+            DECORATION.newValue(ClientDecoration.of()),
+            HTTP_HEADERS.newValue(HttpHeaders.of()),
+            REQ_CONTENT_PREVIEWER_FACTORY.newValue(ContentPreviewerFactory.disabled()),
+            RES_CONTENT_PREVIEWER_FACTORY.newValue(ContentPreviewerFactory.disabled()),
+            REQUEST_ID_GENERATOR.newValue(RequestId::random)
     };
 
     /**
      * The default {@link ClientOptions}.
+     *
+     * @deprecated Use {@link #of()}.
      */
+    @Deprecated
     public static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
+
+    /**
+     * Returns the {@link ClientOptions} with the default options only.
+     */
+    public static ClientOptions of() {
+        return DEFAULT;
+    }
 
     /**
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
     public static ClientOptions of(ClientOptionValue<?>... options) {
-        requireNonNull(options, "options");
-        if (options.length == 0) {
-            return DEFAULT;
-        }
-        return new ClientOptions(DEFAULT, options);
+        return of(of(), requireNonNull(options, "options"));
     }
 
     /**
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
     public static ClientOptions of(Iterable<ClientOptionValue<?>> options) {
-        return new ClientOptions(DEFAULT, options);
+        return of(of(), requireNonNull(options, "options"));
     }
 
     /**
@@ -122,6 +136,9 @@ public final class ClientOptions extends AbstractOptions {
         // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(options, "options");
+        if (Iterables.isEmpty(options)) {
+            return baseOptions;
+        }
         return new ClientOptions(baseOptions, options);
     }
 
@@ -135,6 +152,13 @@ public final class ClientOptions extends AbstractOptions {
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(options, "options");
         return new ClientOptions(baseOptions, options);
+    }
+
+    /**
+     * Returns a newly created {@link ClientOptionsBuilder}.
+     */
+    public static ClientOptionsBuilder builder() {
+        return new ClientOptionsBuilder();
     }
 
     private static <T> ClientOptionValue<T> filterValue(ClientOptionValue<T> optionValue) {
@@ -223,7 +247,7 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the timeout of a socket write.
      */
     public long writeTimeoutMillis() {
-        return getOrElse(WRITE_TIMEOUT_MILLIS, Flags.defaultWriteTimeoutMillis());
+        return get(WRITE_TIMEOUT_MILLIS).get();
     }
 
     /**
@@ -240,7 +264,7 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the timeout of a server reply to a client call.
      */
     public long responseTimeoutMillis() {
-        return getOrElse(RESPONSE_TIMEOUT_MILLIS, Flags.defaultResponseTimeoutMillis());
+        return get(RESPONSE_TIMEOUT_MILLIS).get();
     }
 
     /**
@@ -257,14 +281,14 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the maximum allowed length of a server response.
      */
     public long maxResponseLength() {
-        return getOrElse(MAX_RESPONSE_LENGTH, Flags.defaultMaxResponseLength());
+        return get(MAX_RESPONSE_LENGTH).get();
     }
 
     /**
      * Returns the {@link Function}s that decorate the components of a client.
      */
     public ClientDecoration decoration() {
-        return getOrElse(DECORATION, ClientDecoration.NONE);
+        return get(DECORATION).get();
     }
 
     /**
@@ -272,14 +296,34 @@ public final class ClientOptions extends AbstractOptions {
      * {@link SessionProtocol} is HTTP.
      */
     public HttpHeaders httpHeaders() {
-        return getOrElse(HTTP_HEADERS, HttpHeaders.of());
+        return get(HTTP_HEADERS).get();
     }
 
+    /**
+     * Returns the request {@link ContentPreviewerFactory}.
+     */
     public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return getOrElse(REQ_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
+        return get(REQ_CONTENT_PREVIEWER_FACTORY).get();
     }
 
+    /**
+     * Returns the response {@link ContentPreviewerFactory}.
+     */
     public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return getOrElse(RES_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
+        return get(RES_CONTENT_PREVIEWER_FACTORY).get();
+    }
+
+    /**
+     * Returns the {@link Supplier} that generates a {@link RequestId}.
+     */
+    public Supplier<RequestId> requestIdGenerator() {
+        return get(REQUEST_ID_GENERATOR).get();
+    }
+
+    /**
+     * Returns a new {@link ClientOptionsBuilder} created from this {@link ClientOptions}.
+     */
+    public ClientOptionsBuilder toBuilder() {
+        return new ClientOptionsBuilder(this);
     }
 }

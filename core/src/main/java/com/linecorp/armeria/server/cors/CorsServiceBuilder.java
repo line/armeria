@@ -34,15 +34,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 
 /**
  * Builds a new {@link CorsService} or its decorator function.
  * <h2>Example</h2>
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.service("/cors", myService.decorate(
  *          CorsServiceBuilder.forOrigins("http://example.com", "http://example2.com")
  *                            .shortCircuit()
@@ -428,7 +426,7 @@ public final class CorsServiceBuilder {
     /**
      * Returns a newly-created {@link CorsService} based on the properties of this builder.
      */
-    public CorsService build(Service<HttpRequest, HttpResponse> delegate) {
+    public CorsService build(HttpService delegate) {
         if (delegate.as(CorsService.class).isPresent()) {
             throw new IllegalArgumentException(
                     "decorated with a " + CorsService.class.getSimpleName() + " already: " +
@@ -439,10 +437,10 @@ public final class CorsServiceBuilder {
     }
 
     /**
-     * Returns a newly-created decorator that decorates a {@link Service} with a new {@link CorsService}
+     * Returns a newly-created decorator that decorates an {@link HttpService} with a new {@link CorsService}
      * based on the properties of this builder.
      */
-    public Function<Service<HttpRequest, HttpResponse>, CorsService> newDecorator() {
+    public Function<? super HttpService, CorsService> newDecorator() {
         return this::build;
     }
 

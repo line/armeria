@@ -24,9 +24,11 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 
+/**
+ * The {@link SimpleBenchmarkBase} contains the shared logic for benchmarking retrofit2.
+ */
 @State(Scope.Benchmark)
 public abstract class SimpleBenchmarkBase {
 
@@ -35,11 +37,11 @@ public abstract class SimpleBenchmarkBase {
 
     @Setup
     public void start() throws Exception {
-        server = new ServerBuilder()
-                .https(0)
-                .service("/empty", (ctx, req) -> HttpResponse.of("\"\""))
-                .tlsSelfSigned()
-                .build();
+        server = Server.builder()
+                       .https(0)
+                       .service("/empty", (ctx, req) -> HttpResponse.of("\"\""))
+                       .tlsSelfSigned()
+                       .build();
         server.start().join();
         client = newClient();
     }

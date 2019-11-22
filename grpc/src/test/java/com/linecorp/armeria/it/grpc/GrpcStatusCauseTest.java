@@ -18,6 +18,7 @@ package com.linecorp.armeria.it.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assume.assumeTrue;
 
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -32,7 +33,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.Status;
@@ -44,17 +45,17 @@ public class GrpcStatusCauseTest {
     private static class TestServiceImpl extends TestServiceImplBase {
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            IllegalStateException e1 = new IllegalStateException("Exception 1");
-            IllegalArgumentException e2 = new IllegalArgumentException();
-            AssertionError e3 = new AssertionError("Exception 3");
+            final IllegalStateException e1 = new IllegalStateException("Exception 1");
+            final IllegalArgumentException e2 = new IllegalArgumentException();
+            final AssertionError e3 = new AssertionError("Exception 3");
             Exceptions.clearTrace(e3);
-            RuntimeException e4 = new RuntimeException("Exception 4");
+            final RuntimeException e4 = new RuntimeException("Exception 4");
 
             e1.initCause(e2);
             e2.initCause(e3);
             e3.initCause(e4);
 
-            Status status = Status.ABORTED.withCause(e1);
+            final Status status = Status.ABORTED.withCause(e1);
             responseObserver.onError(status.asRuntimeException());
         }
     }
@@ -63,9 +64,10 @@ public class GrpcStatusCauseTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(new TestServiceImpl())
-                    .build());
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(new TestServiceImpl())
+                                       .build());
         }
     };
 
@@ -78,10 +80,9 @@ public class GrpcStatusCauseTest {
 
     @Test
     public void normal() {
-        if (!Flags.verboseExceptions()) {
-            // This test doesn't do anything if verbose exceptions aren't enabled.
-            return;
-        }
+        // This test doesn't work if verbose exceptions aren't fully enabled.
+        assumeTrue("always".equals(Flags.verboseExceptionSamplerSpec()));
+
         assertThatThrownBy(() -> stub.unaryCall(SimpleRequest.getDefaultInstance()))
                 .isInstanceOfSatisfying(StatusRuntimeException.class, t -> {
                     assertThat(t.getCause()).isInstanceOfSatisfying(

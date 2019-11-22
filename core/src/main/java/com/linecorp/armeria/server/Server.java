@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Iterables;
@@ -58,13 +59,16 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.StartStopSupport;
+import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.internal.TransportType;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -86,6 +90,13 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 public final class Server implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
+
+    /**
+     * Creates a new {@link ServerBuilder}.
+     */
+    public static ServerBuilder builder() {
+        return new ServerBuilder();
+    }
 
     private final ServerConfig config;
     @Nullable
@@ -110,6 +121,8 @@ public final class Server implements AutoCloseable {
         // Server-wide cache metrics.
         final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsedPathCache");
         PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
+
+        setupVersionMetrics();
 
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
@@ -250,7 +263,7 @@ public final class Server implements AutoCloseable {
      * Note that the startup procedure is asynchronous and thus this method returns immediately. To wait until
      * this {@link Server} is fully started up, wait for the returned {@link CompletableFuture}:
      * <pre>{@code
-     * ServerBuilder builder = new ServerBuilder();
+     * ServerBuilder builder = Server.builder();
      * ...
      * Server server = builder.build();
      * server.start().get();
@@ -296,6 +309,27 @@ public final class Server implements AutoCloseable {
      */
     public int numConnections() {
         return connectionLimitingHandler.numConnections();
+    }
+
+    /**
+     * Sets up the version metrics.
+     */
+    @VisibleForTesting
+    void setupVersionMetrics() {
+        final MeterRegistry meterRegistry = config().meterRegistry();
+        final Map<String, Version> map = Version.identify(getClass().getClassLoader());
+        final Version versionInfo = map.get("armeria");
+        final String version = versionInfo.artifactVersion();
+        final String commit = versionInfo.longCommitHash();
+        final String repositoryStatus = versionInfo.repositoryStatus();
+        final List<Tag> tags = ImmutableList.of(Tag.of("version", version),
+                                                Tag.of("commit", commit),
+                                                Tag.of("repoStatus", repositoryStatus));
+        Gauge.builder("armeria.build.info", () -> 1)
+             .tags(tags)
+             .description("A metric with a constant '1' value labeled by version and commit hash" +
+                          " from which Armeria was built.")
+             .register(meterRegistry);
     }
 
     @Override
@@ -522,15 +556,7 @@ public final class Server implements AutoCloseable {
                 }
             }
 
-            if (!config.shutdownAccessLogWriterOnStop()) {
-                future.complete(null);
-                return;
-            }
-
             final Builder<AccessLogWriter> builder = ImmutableSet.builder();
-            if (config.shutdownAccessLogWriterOnStop()) {
-                builder.add(config.accessLogWriter());
-            }
             config.virtualHosts()
                   .stream()
                   .filter(VirtualHost::shutdownAccessLogWriterOnStop)

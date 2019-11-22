@@ -24,16 +24,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
@@ -41,18 +37,18 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
-    private final ClientDecorationBuilder decoration = new ClientDecorationBuilder();
+    private final ClientDecorationBuilder decoration = ClientDecoration.builder();
     private final HttpHeadersBuilder httpHeaders = HttpHeaders.builder();
 
     /**
      * Creates a new instance with the default options.
      */
-    protected AbstractClientOptionsBuilder() {}
+    AbstractClientOptionsBuilder() {}
 
     /**
      * Creates a new instance with the specified base options.
      */
-    protected AbstractClientOptionsBuilder(ClientOptions options) {
+    AbstractClientOptionsBuilder(ClientOptions options) {
         requireNonNull(options, "options");
         options(options);
     }
@@ -105,14 +101,13 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
     /**
      * Adds the specified {@link ClientOptionValue}.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     public <T> B option(ClientOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
         final ClientOption<?> opt = optionValue.option();
         if (opt == ClientOption.DECORATION) {
             final ClientDecoration d = (ClientDecoration) optionValue.value();
-            d.entries().forEach(e -> decoration.add0(e.requestType(), e.responseType(),
-                                                     (Function) e.decorator()));
+            d.decorators().forEach(decoration::add);
+            d.rpcDecorators().forEach(decoration::addRpc);
         } else if (opt == ClientOption.HTTP_HEADERS) {
             final HttpHeaders h = (HttpHeaders) optionValue.value();
             setHttpHeaders(h);
@@ -290,55 +285,18 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
     }
 
     /**
-     * Adds the specified {@code decorator}.
-     *
-     * @param requestType the type of the {@link Request} that the {@code decorator} is interested in
-     * @param responseType the type of the {@link Response} that the {@code decorator} is interested in
-     * @param decorator the {@link Function} that transforms a {@link Client} to another
-     * @param <T> the type of the {@link Client} being decorated
-     * @param <R> the type of the {@link Client} produced by the {@code decorator}
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
-     *
-     * @deprecated Use {@link #decorator(Function)} or {@link #rpcDecorator(Function)}.
+     * Sets the {@link Supplier} that generates a {@link RequestId}.
      */
-    @Deprecated
-    public <T extends Client<I, O>, R extends Client<I, O>, I extends Request, O extends Response>
-    B decorator(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
-        decoration.add(requestType, responseType, decorator);
-        return self();
-    }
-
-    /**
-     * Adds the specified {@code decorator}.
-     *
-     * @param requestType the type of the {@link Request} that the {@code decorator} is interested in
-     * @param responseType the type of the {@link Response} that the {@code decorator} is interested in
-     * @param decorator the {@link DecoratingClientFunction} that intercepts an invocation
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
-     *
-     * @deprecated Use {@link #decorator(DecoratingClientFunction)} or
-     *             {@link #rpcDecorator(DecoratingClientFunction)}.
-     */
-    @Deprecated
-    public <I extends Request, O extends Response>
-    B decorator(Class<I> requestType, Class<O> responseType, DecoratingClientFunction<I, O> decorator) {
-        decoration.add(requestType, responseType, decorator);
-        return self();
+    public B requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
+       return option(ClientOption.REQUEST_ID_GENERATOR, requestIdGenerator);
     }
 
     /**
      * Adds the specified HTTP-level {@code decorator}.
      *
-     * @param decorator the {@link Function} that transforms a {@link Client} to another
-     * @param <T> the type of the {@link Client} being decorated
-     * @param <R> the type of the {@link Client} produced by the {@code decorator}
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
+     * @param decorator the {@link Function} that transforms an {@link HttpClient} to another
      */
-    public <T extends Client<I, O>, R extends Client<I, O>, I extends HttpRequest, O extends HttpResponse>
-    B decorator(Function<T, R> decorator) {
+    public B decorator(Function<? super HttpClient, ? extends HttpClient> decorator) {
         decoration.add(decorator);
         return self();
     }
@@ -346,12 +304,9 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
     /**
      * Adds the specified HTTP-level {@code decorator}.
      *
-     * @param decorator the {@link DecoratingClientFunction} that intercepts an invocation
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
+     * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
-    public <I extends HttpRequest, O extends HttpResponse>
-    B decorator(DecoratingClientFunction<I, O> decorator) {
+    public B decorator(DecoratingHttpClientFunction decorator) {
         decoration.add(decorator);
         return self();
     }
@@ -359,14 +314,9 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
     /**
      * Adds the specified RPC-level {@code decorator}.
      *
-     * @param decorator the {@link Function} that transforms a {@link Client} to another
-     * @param <T> the type of the {@link Client} being decorated
-     * @param <R> the type of the {@link Client} produced by the {@code decorator}
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
+     * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
      */
-    public <T extends Client<I, O>, R extends Client<I, O>, I extends RpcRequest, O extends RpcResponse>
-    B rpcDecorator(Function<T, R> decorator) {
+    public B rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
         decoration.addRpc(decorator);
         return self();
     }
@@ -374,12 +324,9 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
     /**
      * Adds the specified RPC-level {@code decorator}.
      *
-     * @param decorator the {@link DecoratingClientFunction} that intercepts an invocation
-     * @param <I> the {@link Request} type of the {@link Client} being decorated
-     * @param <O> the {@link Response} type of the {@link Client} being decorated
+     * @param decorator the {@link DecoratingRpcClientFunction} that intercepts an invocation
      */
-    public <I extends RpcRequest, O extends RpcResponse>
-    B rpcDecorator(DecoratingClientFunction<I, O> decorator) {
+    public B rpcDecorator(DecoratingRpcClientFunction decorator) {
         decoration.addRpc(decorator);
         return self();
     }

@@ -19,40 +19,56 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
-public class DynamicEndpointGroupTest {
+class DynamicEndpointGroupTest {
 
     @Test
-    public void updateEndpoints() {
+    void updateEndpoints() {
         final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final AtomicInteger updateListenerCalled = new AtomicInteger(0);
         endpointGroup.addListener(l -> updateListenerCalled.incrementAndGet());
-
         assertThat(updateListenerCalled.get()).isEqualTo(0);
+
+        // Start with two endpoints.
         endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 3333),
                                                     Endpoint.of("127.0.0.1", 1111)));
         assertThat(endpointGroup.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 1111),
                                                               Endpoint.of("127.0.0.1", 3333));
         assertThat(updateListenerCalled.get()).isEqualTo(1);
+
+        // Set the same two endpoints. Nothing should happen.
         endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111),
                                                     Endpoint.of("127.0.0.1", 3333)));
-        // Same endpoints, nothing happens.
         assertThat(updateListenerCalled.get()).isEqualTo(1);
 
+        // Make sure the order of endpoints does not matter. Nothing should happen.
+        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 3333),
+                                                    Endpoint.of("127.0.0.1", 1111)));
+        assertThat(updateListenerCalled.get()).isEqualTo(1);
+
+        // Add a new endpoint.
         endpointGroup.addEndpoint(Endpoint.of("127.0.0.1", 2222));
         assertThat(updateListenerCalled.get()).isEqualTo(2);
         assertThat(endpointGroup.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 1111),
                                                               Endpoint.of("127.0.0.1", 2222),
                                                               Endpoint.of("127.0.0.1", 3333));
 
+        // Remove the added endpoint.
         endpointGroup.removeEndpoint(Endpoint.of("127.0.0.1", 2222));
         assertThat(updateListenerCalled.get()).isEqualTo(3);
         assertThat(endpointGroup.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 1111),
                                                               Endpoint.of("127.0.0.1", 3333));
+
+        // Update the weight of one of the endpoints.
+        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111),
+                                                    Endpoint.of("127.0.0.1", 3333).withWeight(500)));
+        assertThat(updateListenerCalled.get()).isEqualTo(4);
+        assertThat(endpointGroup.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 1111),
+                                                              Endpoint.of("127.0.0.1", 3333).withWeight(500));
     }
 }

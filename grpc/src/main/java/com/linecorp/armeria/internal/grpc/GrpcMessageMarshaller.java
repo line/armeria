@@ -35,7 +35,7 @@ import com.google.protobuf.UnsafeByteOperations;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.Marshaller;
@@ -97,7 +97,7 @@ public class GrpcMessageMarshaller<I, O> {
         }
     }
 
-    public I deserializeRequest(ByteBufOrStream message) throws IOException {
+    public I deserializeRequest(DeframedMessage message) throws IOException {
         InputStream messageStream = message.stream();
         if (message.buf() != null) {
             try {
@@ -139,7 +139,7 @@ public class GrpcMessageMarshaller<I, O> {
         }
     }
 
-    public O deserializeResponse(ByteBufOrStream message) throws IOException {
+    public O deserializeResponse(DeframedMessage message) throws IOException {
         InputStream messageStream = message.stream();
         if (message.buf() != null) {
             try {

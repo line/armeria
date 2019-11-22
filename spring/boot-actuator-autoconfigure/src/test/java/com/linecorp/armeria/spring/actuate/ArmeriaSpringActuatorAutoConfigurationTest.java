@@ -33,11 +33,13 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -46,9 +48,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.ClientOptionsBuilder;
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -59,13 +60,15 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
+import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationTest.TestConfiguration;
 
 import io.prometheus.client.exporter.common.TextFormat;
 import reactor.test.StepVerifier;
 
 /**
  * This uses {@link com.linecorp.armeria.spring.ArmeriaAutoConfiguration} for integration tests.
- * application-autoConfTest.yml will be loaded with minimal settings to make it work.
+ * {@code application-autoConfTest.yml} will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
@@ -85,20 +88,52 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     @SuppressWarnings("unused")
     private static final Logger TEST_LOGGER = LoggerFactory.getLogger(TEST_LOGGER_NAME);
 
+    static class SettableHealthIndicator implements HealthIndicator {
+
+        private volatile Health health = Health.up().build();
+
+        void setHealth(Health health) {
+            this.health = health;
+        }
+
+        @Override
+        public Health health() {
+            return health;
+        }
+    }
+
     @SpringBootApplication
-    public static class TestConfiguration {}
+    public static class TestConfiguration {
+        @Bean
+        public SettableHealthIndicator settableHealth() {
+            return new SettableHealthIndicator();
+        }
+
+        @Bean
+        public ArmeriaServerConfigurator serverConfigurator() {
+            return sb -> sb.requestTimeoutMillis(TIMEOUT_MILLIS);
+        }
+    }
+
+    private static final long TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(30);
 
     @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS));
 
     @Inject
     private Server server;
 
-    private HttpClient client;
+    @Inject
+    private SettableHealthIndicator settableHealth;
+
+    private WebClient client;
 
     @Before
     public void setUp() {
-        client = HttpClient.of(newUrl("h2c"));
+        client = WebClient.of(newUrl("h2c"),
+                              ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(TIMEOUT_MILLIS),
+                              ClientOption.MAX_RESPONSE_LENGTH.newValue(0L));
+        settableHealth.setHealth(Health.up().build());
     }
 
     private String newUrl(String scheme) {
@@ -110,9 +145,20 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     public void testHealth() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
 
         final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsEntry("status", "UP");
+    }
+
+    @Test
+    public void testHealth_down() throws Exception {
+        settableHealth.setHealth(Health.down().build());
+        final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+
+        final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
+        assertThat(values).containsEntry("status", "DOWN");
     }
 
     @Test
@@ -127,6 +173,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         AggregatedHttpResponse res = client.get(loggerPath).aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
 
         Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsEntry("effectiveLevel", "DEBUG");
@@ -154,11 +201,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
-    public void testHeapdump() throws Exception {
-        final HttpClient client = Clients.newDerivedClient(this.client, options -> {
-            return new ClientOptionsBuilder(options).maxResponseLength(0).build();
-        });
-
+    public void testHeapDump() throws Exception {
         final HttpResponse res = client.get("/internal/actuator/heapdump");
         final AtomicLong remainingBytes = new AtomicLong();
         StepVerifier.create(res)
@@ -169,7 +212,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
                         assertThat(headers.contentType()).isEqualTo(MediaType.OCTET_STREAM);
                         assertThat(headers.get(HttpHeaderNames.CONTENT_DISPOSITION))
                                 .startsWith("attachment;filename=heapdump");
-                        final Long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH);
+                        final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1);
                         assertThat(contentLength).isPositive();
                         remainingBytes.set(contentLength);
                     })
@@ -190,6 +233,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     public void testLinks() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
         final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsKey("_links");
     }

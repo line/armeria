@@ -45,7 +45,7 @@ public class HttpClientTimeoutTest {
 
     @BeforeClass
     public static void init() {
-        factory = new ClientFactoryBuilder().useHttp2Preface(true).build();
+        factory = ClientFactory.builder().useHttp2Preface(true).build();
     }
 
     @AfterClass
@@ -59,8 +59,10 @@ public class HttpClientTimeoutTest {
     @Test
     public void responseTimeoutH1C() throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
-            final HttpClient client = new HttpClientBuilder("h1c://127.0.0.1:" + ss.getLocalPort())
-                    .factory(factory).responseTimeout(Duration.ofSeconds(1)).build();
+            final WebClient client = WebClient.builder("h1c://127.0.0.1:" + ss.getLocalPort())
+                                              .factory(factory)
+                                              .responseTimeout(Duration.ofSeconds(1))
+                                              .build();
 
             final HttpResponse res = client.get("/");
             try (Socket s = ss.accept()) {
@@ -83,8 +85,10 @@ public class HttpClientTimeoutTest {
     @Test
     public void responseTimeoutH2C() throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
-            final HttpClient client = new HttpClientBuilder("h2c://127.0.0.1:" + ss.getLocalPort())
-                    .factory(factory).responseTimeout(Duration.ofSeconds(1)).build();
+            final WebClient client = WebClient.builder("h2c://127.0.0.1:" + ss.getLocalPort())
+                                              .factory(factory)
+                                              .responseTimeout(Duration.ofSeconds(1))
+                                              .build();
 
             final HttpResponse res = client.get("/");
             try (Socket s = ss.accept()) {

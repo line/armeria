@@ -19,11 +19,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A handler that is invoked when a {@link ServerBuilder} rejects to bind a {@link Service} at
+ * A handler that is invoked when a {@link ServerBuilder} rejects to bind an {@link HttpService} at
  * a certain {@link Route}. For example, the following code will trigger this handler:
  *
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.service("/hello", serviceA);
  * sb.service("/hello", serviceB); // Tried to bind at the same path again.
  * sb.build();
@@ -78,7 +78,7 @@ public interface RejectedRouteHandler {
     };
 
     /**
-     * Invoked when a user attempts to bind a {@link Service} at the {@link Route} that conflicts with
+     * Invoked when a user attempts to bind an {@link HttpService} at the {@link Route} that conflicts with
      * an existing {@link Route}.
      * @param virtualHost   the {@link VirtualHost} where the {@link Route} belongs to
      * @param route         the {@link Route} being added

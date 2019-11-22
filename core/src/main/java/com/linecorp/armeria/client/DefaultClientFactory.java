@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.WebClientBuilder.isUndefinedUri;
+
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,17 +33,20 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.resolver.AddressResolverGroup;
 
 /**
  * A {@link ClientFactory} which combines all discovered {@link ClientFactory} implementations.
@@ -126,8 +132,14 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public ClientFactoryOptions options() {
+        return httpClientFactory.options();
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
+        uri = normalizeUri(uri, scheme);
         return clientFactories.get(scheme).newClient(uri, clientType, options);
     }
 
@@ -159,7 +171,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
     @Override
     public void close() {
         // The global default should never be closed.
-        if (this == ClientFactory.DEFAULT) {
+        if (this == ClientFactory.ofDefault()) {
             logger.debug("Refusing to close the default {}; must be closed via closeDefault()",
                          ClientFactory.class.getSimpleName());
             return;
@@ -170,5 +182,26 @@ final class DefaultClientFactory extends AbstractClientFactory {
 
     void doClose() {
         clientFactoriesToClose.forEach(ClientFactory::close);
+    }
+
+    @VisibleForTesting
+    AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
+        return httpClientFactory.addressResolverGroup();
+    }
+
+    private URI normalizeUri(URI uri, Scheme scheme) {
+        if (isUndefinedUri(uri)) {
+            // We use a special singleton marker URI for clients that do not explicitly define a
+            // host or scheme at construction time.
+            // As this isn't created by users, we don't need to normalize it.
+            return uri;
+        }
+
+        if (scheme.serializationFormat() != SerializationFormat.NONE) {
+            return uri;
+        }
+
+        return URI.create(scheme.sessionProtocol().uriText() +
+                          uri.toString().substring(uri.getScheme().length()));
     }
 }

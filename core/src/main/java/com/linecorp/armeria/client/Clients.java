@@ -33,8 +33,8 @@ import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
- * If you are creating an {@link HttpClient}, it is recommended to use the factory methods in
- * {@link HttpClient}.
+ * If you are creating an {@link WebClient}, it is recommended to use the factory methods in
+ * {@link WebClient}.
  */
 public final class Clients {
 
@@ -50,7 +50,7 @@ public final class Clients {
      *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
+        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
     }
 
     /**
@@ -65,7 +65,7 @@ public final class Clients {
      *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptions options) {
-        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
+        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
     }
 
     /**
@@ -115,7 +115,7 @@ public final class Clients {
      *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
+        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
     }
 
     /**
@@ -130,7 +130,7 @@ public final class Clients {
      *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
+        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
     }
 
     /**
@@ -182,7 +182,7 @@ public final class Clients {
      */
     public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
                                   Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.DEFAULT, protocol, format, endpoint, clientType, options);
+        return newClient(ClientFactory.ofDefault(), protocol, format, endpoint, clientType, options);
     }
 
     /**
@@ -201,7 +201,7 @@ public final class Clients {
      */
     public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
                                   Class<T> clientType, ClientOptions options) {
-        return newClient(ClientFactory.DEFAULT, protocol, format, endpoint, clientType, options);
+        return newClient(ClientFactory.ofDefault(), protocol, format, endpoint, clientType, options);
     }
 
     /**
@@ -258,7 +258,7 @@ public final class Clients {
      */
     public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.DEFAULT, scheme, endpoint, clientType, options);
+        return newClient(ClientFactory.ofDefault(), scheme, endpoint, clientType, options);
     }
 
     /**
@@ -275,7 +275,7 @@ public final class Clients {
      */
     public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptions options) {
-        return newClient(ClientFactory.DEFAULT, scheme, endpoint, clientType, options);
+        return newClient(ClientFactory.ofDefault(), scheme, endpoint, clientType, options);
     }
 
     /**
@@ -349,7 +349,7 @@ public final class Clients {
      * but with different {@link ClientOption}s. For example:
      *
      * <pre>{@code
-     * HttpClient derivedHttpClient = Clients.newDerivedClient(httpClient, options -> {
+     * WebClient derivedWebClient = Clients.newDerivedClient(webClient, options -> {
      *     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
      *     builder.decorator(...);  // Add a decorator.
      *     builder.addHttpHeader(...); // Add an HTTP header.
@@ -389,7 +389,7 @@ public final class Clients {
 
     private static ClientBuilderParams builderParams(Object client) {
         requireNonNull(client, "client");
-        final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
+        final Optional<ClientBuilderParams> params = ClientFactory.ofDefault().clientBuilderParams(client);
         if (params.isPresent()) {
             return params.get();
         }
@@ -401,9 +401,9 @@ public final class Clients {
      * Unwraps the specified client into the object of the specified {@code type}.
      * Use this method instead of an explicit downcast. For example:
      * <pre>{@code
-     * HttpClient client = new HttpClientBuilder()
-     *     .decorator(LoggingClient.newDecorator())
-     *     .build();
+     * WebClient client = WebClient.builder(...)
+     *                             .decorator(LoggingClient.newDecorator())
+     *                             .build();
      *
      * LoggingClient unwrapped = Clients.unwrap(client, LoggingClient.class).get();
      *
@@ -419,7 +419,7 @@ public final class Clients {
      * @see Unwrappable
      */
     public static <T> Optional<T> unwrap(Object client, Class<T> type) {
-        final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
+        final Optional<ClientBuilderParams> params = ClientFactory.ofDefault().clientBuilderParams(client);
         if (!params.isPresent()) {
             return Optional.empty();
         }

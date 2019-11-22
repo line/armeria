@@ -32,8 +32,8 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -120,11 +120,10 @@ class CircuitBreakerRpcClientTest {
 
     @Test
     void testDelegate() throws Exception {
-        final CircuitBreaker circuitBreaker = new CircuitBreakerBuilder(remoteServiceName).ticker(() -> 0)
-                                                                                          .build();
-
-        @SuppressWarnings("unchecked")
-        final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
+        final CircuitBreaker circuitBreaker = CircuitBreaker.builder(remoteServiceName)
+                                                            .ticker(() -> 0)
+                                                            .build();
+        final RpcClient delegate = mock(RpcClient.class);
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         final CircuitBreakerRpcClient stub =
@@ -137,8 +136,7 @@ class CircuitBreakerRpcClientTest {
 
     @Test
     void testDelegateIfFailToGetCircuitBreaker() throws Exception {
-        @SuppressWarnings("unchecked")
-        final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
+        final RpcClient delegate = mock(RpcClient.class);
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         final CircuitBreakerMapping mapping = (ctx, req) -> {
@@ -157,8 +155,7 @@ class CircuitBreakerRpcClientTest {
         final AtomicLong ticker = new AtomicLong();
         final CircuitBreaker circuitBreaker = buildCircuitBreaker(ticker::get);
 
-        @SuppressWarnings("unchecked")
-        final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
+        final RpcClient delegate = mock(RpcClient.class);
         // return failed future
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
 
@@ -193,8 +190,7 @@ class CircuitBreakerRpcClientTest {
         final AtomicLong ticker = new AtomicLong();
         final CircuitBreaker circuitBreaker = buildCircuitBreaker(ticker::get);
 
-        @SuppressWarnings("unchecked")
-        final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
+        final RpcClient delegate = mock(RpcClient.class);
         // Always return failed future for methodA
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
 
@@ -225,8 +221,7 @@ class CircuitBreakerRpcClientTest {
         final AtomicLong ticker = new AtomicLong();
         final Function<String, CircuitBreaker> factory = method -> buildCircuitBreaker(ticker::get);
 
-        @SuppressWarnings("unchecked")
-        final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
+        final RpcClient delegate = mock(RpcClient.class);
         // Always return failed future for methodA
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
         // Always return success future for methodB
@@ -252,30 +247,26 @@ class CircuitBreakerRpcClientTest {
     }
 
     private static CircuitBreaker buildCircuitBreaker(Ticker ticker) {
-        return new CircuitBreakerBuilder(remoteServiceName)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .counterSlidingWindow(counterSlidingWindow)
-                .counterUpdateInterval(counterUpdateInterval)
-                .ticker(ticker)
-                .build();
+        return CircuitBreaker.builder(remoteServiceName)
+                             .minimumRequestThreshold(minimumRequestThreshold)
+                             .circuitOpenWindow(circuitOpenWindow)
+                             .counterSlidingWindow(counterSlidingWindow)
+                             .counterUpdateInterval(counterUpdateInterval)
+                             .ticker(ticker)
+                             .build();
     }
 
-    private static void failFastInvocation(
-            Function<Client<RpcRequest, RpcResponse>, CircuitBreakerRpcClient> decorator,
-            int count) {
-
+    private static void failFastInvocation(Function<? super RpcClient, CircuitBreakerRpcClient> decorator,
+                                           int count) {
         for (int i = 0; i < count; i++) {
             assertThatThrownBy(() -> invoke(decorator)).isInstanceOf(FailFastException.class);
         }
     }
 
-    private static void invoke(
-            Function<Client<RpcRequest, RpcResponse>, CircuitBreakerRpcClient> decorator) throws Exception {
-
-        @SuppressWarnings("unchecked")
-        final Client<RpcRequest, RpcResponse> client = mock(Client.class);
-        final Client<RpcRequest, RpcResponse> decorated = decorator.apply(client);
+    private static void invoke(Function<? super RpcClient, CircuitBreakerRpcClient> decorator)
+            throws Exception {
+        final RpcClient client = mock(RpcClient.class);
+        final RpcClient decorated = decorator.apply(client);
 
         decorated.execute(ctxA, reqA);
     }

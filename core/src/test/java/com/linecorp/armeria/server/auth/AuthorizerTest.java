@@ -24,7 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletionException;
@@ -40,7 +40,6 @@ import org.junit.Test;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 public class AuthorizerTest {
@@ -53,9 +52,9 @@ public class AuthorizerTest {
 
     @BeforeClass
     public static void setServiceContext() {
-        serviceCtx = ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
-                                                 .eventLoop(eventLoop.get())
-                                                 .build();
+        serviceCtx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                          .eventLoop(eventLoop.get())
+                                          .build();
     }
 
     @AfterClass
@@ -91,7 +90,7 @@ public class AuthorizerTest {
                 .isInstanceOf(CompletionException.class)
                 .hasCause(expected);
         verify(a, times(1)).authorize(serviceCtx, "data");
-        verifyZeroInteractions(b);
+        verifyNoMoreInteractions(b);
     }
 
     /**
@@ -108,7 +107,7 @@ public class AuthorizerTest {
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(NullPointerException.class);
         verify(a, times(1)).authorize(serviceCtx, "data");
-        verifyZeroInteractions(b);
+        verifyNoMoreInteractions(b);
     }
 
     @Test

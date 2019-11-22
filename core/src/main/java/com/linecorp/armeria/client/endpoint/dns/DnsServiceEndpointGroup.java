@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.internal.dns.DnsQuestionWithoutTrailingDot;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -52,14 +53,23 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
      * @param hostname the hostname to query DNS queries for.
      */
     public static DnsServiceEndpointGroup of(String hostname) {
-        return new DnsServiceEndpointGroupBuilder(hostname).build();
+        return builder(hostname).build();
+    }
+
+    /**
+     * Returns a new {@link DnsServiceEndpointGroupBuilder} with the specified hostname.
+     *
+     * @param hostname the hostname to query DNS queries for
+     */
+    public static DnsServiceEndpointGroupBuilder builder(String hostname) {
+        return new DnsServiceEndpointGroupBuilder(hostname);
     }
 
     DnsServiceEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
                             DnsServerAddressStreamProvider serverAddressStreamProvider,
                             Backoff backoff, String hostname) {
         super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
-              ImmutableList.of(new DnsQuestionWithoutTrailingDot(hostname, DnsRecordType.SRV)),
+              ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.SRV)),
               unused -> {});
         start();
     }

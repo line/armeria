@@ -28,10 +28,7 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -40,6 +37,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
+
+import com.linecorp.armeria.internal.JavaVersionSpecific;
 
 /**
  * Provides utilities for accessing the information about the current system and process.
@@ -51,6 +50,8 @@ public final class SystemInfo {
     private static final int JAVA_VERSION;
 
     private static boolean JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
+
+    private static final OsType osType;
 
     static {
         int javaVersion = -1;
@@ -110,6 +111,17 @@ public final class SystemInfo {
                 JETTY_ALPN_OPTIONAL_OR_AVAILABLE = false;
             }
         }
+
+        final String osName = Ascii.toUpperCase(System.getProperty("os.name", ""));
+        if (osName.startsWith("WINDOWS")) {
+            osType = OsType.WINDOWS;
+        } else if (osName.startsWith("LINUX")) {
+            osType = OsType.LINUX;
+        } else if (osName.startsWith("MAC")) {
+            osType = OsType.MAC;
+        } else {
+            osType = OsType.OTHERS;
+        }
     }
 
     /**
@@ -152,18 +164,21 @@ public final class SystemInfo {
      * Java 8.
      */
     public static long currentTimeMicros() {
-        if (javaVersion() == 8) {
-            return TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis());
-        } else {
-            // Java 9+ support higher precision wall time.
-            final Instant now = Clock.systemUTC().instant();
-            return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
-                    now.getNano());
-        }
+        return JavaVersionSpecific.get().currentTimeMicros();
     }
 
-    private static boolean isLinux() {
-        return Ascii.toLowerCase(System.getProperty("os.name", "")).startsWith("linux");
+    /**
+     * Returns the operating system for the currently running process.
+     */
+    public static OsType osType() {
+        return osType;
+    }
+
+    /**
+     * Returns {@code true} if the operating system is Linux.
+     */
+    public static boolean isLinux() {
+        return osType == OsType.LINUX;
     }
 
     private SystemInfo() {}

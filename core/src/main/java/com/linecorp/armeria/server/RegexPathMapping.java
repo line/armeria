@@ -66,7 +66,7 @@ final class RegexPathMapping extends AbstractPathMapping {
             return null;
         }
 
-        final RoutingResultBuilder builder = RoutingResult.builder()
+        final RoutingResultBuilder builder = RoutingResult.builderWithExpectedNumParams(paramNames.size())
                                                           .path(routingCtx.path())
                                                           .query(routingCtx.query());
         for (String name : paramNames) {
@@ -127,7 +127,7 @@ final class RegexPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         return obj instanceof RegexPathMapping &&
                (this == obj || regex.pattern().equals(((RegexPathMapping) obj).regex.pattern()));
     }

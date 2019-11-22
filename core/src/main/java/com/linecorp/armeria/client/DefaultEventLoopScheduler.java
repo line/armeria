@@ -29,6 +29,11 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.ToIntFunction;
 
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
@@ -40,6 +45,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
 final class DefaultEventLoopScheduler implements EventLoopScheduler {
+    private static final Logger logger = LoggerFactory.getLogger(DefaultEventLoopScheduler.class);
 
     private static final AtomicLongFieldUpdater<DefaultEventLoopScheduler> lastCleanupTimeNanosUpdater =
             AtomicLongFieldUpdater.newUpdater(DefaultEventLoopScheduler.class, "lastCleanupTimeNanos");
@@ -148,7 +154,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
         }
 
         final int port = endpoint.hasPort() ? endpoint.port() : sessionProtocol.defaultPort();
-        final boolean isHttp1 = isHttp1(sessionProtocol);
+        final Endpoint endpointWithPort = endpoint.withPort(port);
+        final boolean isHttp1 = isHttp1(sessionProtocol, endpointWithPort);
         final StateKey firstKey = new StateKey(firstTryHost, port, isHttp1);
         AbstractEventLoopState state = states.get(firstKey);
         if (state != null) {
@@ -164,15 +171,15 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
         }
 
         // Try with the endpoint which has a port first.
-        int maxNumEventLoopsCandidate = maxNumEventLoopsCandidate(endpoint.withPort(port));
-        if (maxNumEventLoopsCandidate <= 0 && !endpoint.hasPort()) {
+        int maxNumEventLoopsCandidate = maxNumEventLoopsCandidate(endpointWithPort);
+        if (maxNumEventLoopsCandidate <= 0 && !endpointWithPort.equals(endpoint)) {
             // Try without the port second.
             maxNumEventLoopsCandidate = maxNumEventLoopsCandidate(endpoint);
         }
 
         final int maxNumEventLoops =
                 maxNumEventLoopsCandidate > 0 ? Math.min(maxNumEventLoopsCandidate, eventLoops.size())
-                                              : maxNumEventLoops(sessionProtocol);
+                                              : maxNumEventLoops(sessionProtocol, endpointWithPort);
         return states.computeIfAbsent(firstKey,
                                       unused -> AbstractEventLoopState.of(eventLoops, maxNumEventLoops, this));
     }
@@ -181,21 +188,32 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
         for (ToIntFunction<Endpoint> function : maxNumEventLoopsFunctions) {
             final int maxNumEventLoopsCandidate = function.applyAsInt(endpoint);
             if (maxNumEventLoopsCandidate > 0) {
+                logger.debug("maxNumEventLoops: {}, for the endpoint: {}", maxNumEventLoopsCandidate, endpoint);
                 return maxNumEventLoopsCandidate;
             }
         }
         return 0;
     }
 
-    private int maxNumEventLoops(SessionProtocol sessionProtocol) {
-        return isHttp1(sessionProtocol) ? maxNumEventLoopsPerHttp1Endpoint
-                                        : maxNumEventLoopsPerEndpoint;
+    private int maxNumEventLoops(SessionProtocol sessionProtocol, Endpoint endpointWithPort) {
+        return isHttp1(sessionProtocol, endpointWithPort) ? maxNumEventLoopsPerHttp1Endpoint
+                                                          : maxNumEventLoopsPerEndpoint;
     }
 
-    // TODO(minwoox) Use SessionProtocolNegotiationCache and enpoint to bring the protocol version when the
-    //               SessionProtocol is HTTP and HTTPS.
-    private static boolean isHttp1(SessionProtocol sessionProtocol) {
-        return sessionProtocol == SessionProtocol.H1C || sessionProtocol == SessionProtocol.H1;
+    private static boolean isHttp1(SessionProtocol sessionProtocol, Endpoint endpointWithPort) {
+        if (sessionProtocol == SessionProtocol.H1C || sessionProtocol == SessionProtocol.H1) {
+            return true;
+        }
+
+        if (sessionProtocol == SessionProtocol.HTTP) {
+            return SessionProtocolNegotiationCache.isUnsupported(endpointWithPort, SessionProtocol.H2C);
+        }
+
+        if (sessionProtocol == SessionProtocol.HTTPS) {
+            return SessionProtocolNegotiationCache.isUnsupported(endpointWithPort, SessionProtocol.H2);
+        }
+
+        return false;
     }
 
     /**
@@ -246,7 +264,7 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(@Nullable Object obj) {
             if (this == obj) {
                 return true;
             }

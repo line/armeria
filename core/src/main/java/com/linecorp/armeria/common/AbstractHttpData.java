@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
 /**
  * Support APIs for creating well-behaved {@link HttpData} objects. {@link HttpData} generally should extend
  * {@link AbstractHttpData} to interact with other {@link HttpData} implementations, via, e.g., {@code equals}.
@@ -37,7 +39,7 @@ public abstract class AbstractHttpData implements HttpData {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (!(obj instanceof AbstractHttpData)) {
             return false;
         }

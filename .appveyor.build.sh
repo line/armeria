@@ -1,0 +1,160 @@
+#!/bin/bash
+set -eo pipefail
+
+BUILD_JDK_URL='https://github.com/AdoptOpenJDK/openjdk12-binaries/releases/download/jdk-12.0.2%2B10/OpenJDK12U-jdk_x64_linux_hotspot_12.0.2_10.tar.gz'
+JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u222-b10/OpenJDK8U-jre_x64_linux_hotspot_8u222b10.tar.gz'
+JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.4%2B11/OpenJDK11U-jre_x64_linux_hotspot_11.0.4_11.tar.gz'
+JRE13_URL='https://github.com/AdoptOpenJDK/openjdk13-binaries/releases/download/jdk-13%2B33/OpenJDK13U-jre_x64_linux_hotspot_13_33.tar.gz'
+
+function msg() {
+  echo -ne "\033[1;32m"
+  echo -n "$@"
+  echo -e "\033[0m"
+}
+
+function echo_and_run() {
+  echo -ne "\033[36m"
+  echo -n "$@"
+  echo -e "\033[0m"
+  "$@"
+}
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 <profile>" >&2
+  exit 1
+fi
+
+# Prepare the environment variables based on the specified profile.
+PROFILE="$1"
+case "$PROFILE" in
+java8)
+  TEST_JRE_URL="$JRE8_URL"
+  TEST_JAVA_VERSION='8'
+  COVERAGE=0
+  ;;
+java11)
+  TEST_JRE_URL="$JRE11_URL"
+  TEST_JAVA_VERSION='11'
+  COVERAGE=1
+  ;;
+java13)
+  TEST_JRE_URL="$JRE13_URL"
+  TEST_JAVA_VERSION='13'
+  COVERAGE=0
+  ;;
+*)
+  echo "Unknown profile: $PROFILE" >&2
+  exit 1
+  ;;
+esac
+
+export TEST_JAVA_VERSION
+export JAVA_HOME="$HOME/jdk/build"
+export JAVA_TEST_HOME="$HOME/jdk/test-$TEST_JAVA_VERSION"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+# Restore the home directory from the cache if necessary.
+if [[ -d /var/cache/appveyor ]] && \
+   [[ -n "$APPVEYOR_ACCOUNT_NAME" ]] && \
+   [[ -n "$APPVEYOR_PROJECT_SLUG" ]] && \
+   [[ -n "$APPVEYOR_REPO_BRANCH" ]]; then
+
+  # Purge the cache directories not touched for last 7 days.
+  msg "Purging the build cache directories not touched for last 7 days .."
+  find /var/cache/appveyor -mindepth 4 -maxdepth 4 -type d -mtime +7 \
+      -exec echo 'Purging:' {} ';' \
+      -exec rm -fr {} ';'
+  # Delete the empty directories.
+  msg "Deleting the empty directories in the build cache .."
+  find /var/cache/appveyor -mindepth 1 -maxdepth 4 -type d -empty \
+      -exec echo 'Deleting:' {} ';' \
+      -delete
+
+  if [[ "$PURGE_CACHE" != '1' ]]; then
+    # Restore the home directory from the cache.
+    BRANCH_CACHE_DIR="/var/cache/appveyor/$APPVEYOR_ACCOUNT_NAME/$APPVEYOR_PROJECT_SLUG/branches/$APPVEYOR_REPO_BRANCH"
+    if [[ -z "$APPVEYOR_PULL_REQUEST_NUMBER" ]]; then
+      CACHE_DIR="$BRANCH_CACHE_DIR"
+    else
+      CACHE_DIR="/var/cache/appveyor/$APPVEYOR_ACCOUNT_NAME/$APPVEYOR_PROJECT_SLUG/pulls/$APPVEYOR_PULL_REQUEST_NUMBER"
+    fi
+
+    # Fetch the home directory from the cache directory.
+    if [[ -d "$CACHE_DIR" ]]; then
+      touch "$CACHE_DIR"
+      msg "Restoring $HOME from the build cache: $CACHE_DIR .."
+      echo_and_run rsync -a --stats "$CACHE_DIR/" "$HOME"
+    elif [[ -d "$BRANCH_CACHE_DIR" ]]; then
+      touch "$BRANCH_CACHE_DIR"
+      msg "Restoring $HOME from the branch build cache: $BRANCH_CACHE_DIR .."
+      echo_and_run rsync -a --stats "$BRANCH_CACHE_DIR/" "$HOME"
+    fi
+  else
+    # Purge the cache directory if 'PURGE_CACHE' is '1'.
+    BRANCH_CACHE_DIR=''
+    CACHE_DIR=''
+    msg "Purging the build cache of the entire project .."
+    echo_and_run rm -fr "/var/cache/appveyor/$APPVEYOR_ACCOUNT_NAME/$APPVEYOR_PROJECT_SLUG"
+  fi
+else
+  BRANCH_CACHE_DIR=''
+  CACHE_DIR=''
+fi
+
+# Download build JDK if necessary.
+if [[ ! -x "$JAVA_HOME/bin/javac" ]]; then
+  msg "Downloading the build JDK .."
+  echo_and_run mkdir -p "$HOME/jdk/downloads"
+  echo_and_run curl -L -o "$HOME/jdk/downloads/build.tgz" "$BUILD_JDK_URL"
+  echo_and_run rm -fr "$JAVA_HOME" "$JAVA_HOME.tmp"
+  echo_and_run mkdir -p "$JAVA_HOME.tmp"
+  echo_and_run tar xf "$HOME/jdk/downloads/build.tgz" --strip-components=1 -C "$JAVA_HOME.tmp"
+  echo_and_run mv "$JAVA_HOME.tmp" "$JAVA_HOME"
+fi
+
+# Download test JRE if necessary.
+if [[ ! -x "$JAVA_TEST_HOME/bin/java" ]]; then
+  msg "Downloading the test JRE .."
+  echo_and_run mkdir -p "$HOME/jdk/downloads"
+  echo_and_run curl -L -o "$HOME/jdk/downloads/test-$TEST_JAVA_VERSION.tgz" "$TEST_JRE_URL"
+  echo_and_run rm -fr "$JAVA_TEST_HOME" "$JAVA_TEST_HOME.tmp"
+  echo_and_run mkdir -p "$JAVA_TEST_HOME.tmp"
+  echo_and_run tar xf "$HOME/jdk/downloads/test-$TEST_JAVA_VERSION.tgz" --strip-components=1 -C "$JAVA_TEST_HOME.tmp"
+  echo_and_run mv "$JAVA_TEST_HOME.tmp" "$JAVA_TEST_HOME"
+fi
+
+# Print the version information.
+msg "Version information:"
+echo_and_run "$JAVA_HOME/bin/java" -version
+echo_and_run "$JAVA_TEST_HOME/bin/java" -version
+echo_and_run ./gradlew -version
+
+# Run the build.
+if [[ "$COVERAGE" -eq 1 ]]; then
+  GRADLE_CLI_OPTS="$GRADLE_CLI_OPTS -Pcoverage"
+fi
+
+msg "Building .."
+echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 checkstyle build
+
+if [[ "$COVERAGE" -eq 1 ]]; then
+  # Send coverage reports to CodeCov.io.
+  # Note: In Linux, AppVeyor sets 'true' to 'CI' and 'APPVEYOR',
+  #       but CodeCov expects them to be 'True', so we set 'True' to them.
+  export CI=True
+  export APPVEYOR=True
+  msg "Sending the test coverage report .."
+  bash <(curl -s https://codecov.io/bash) || true
+fi
+
+# Update the cache directory.
+if [[ -n "$CACHE_DIR" ]]; then
+  msg "Updating the build cache: $CACHE_DIR .."
+  echo_and_run mkdir -p "$CACHE_DIR"
+  if [[ ! -d "$CACHE_DIR" ]] && [[ -n "$BRANCH_CACHE_DIR" ]] && [[ -d "$BRANCH_CACHE_DIR" ]]; then
+    # Create a hard link to make a differential copy and save disk space.
+    echo_and_run cp -al "$BRANCH_CACHE_DIR" "$CACHE_DIR"
+  fi
+  echo_and_run rsync -a --stats --delete "$HOME/" "$CACHE_DIR" || true
+  echo_and_run touch "$CACHE_DIR"
+fi

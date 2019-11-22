@@ -34,14 +34,12 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.DefaultClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -132,7 +130,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                                                clientType);
         }
 
-        final Client<HttpRequest, HttpResponse> httpClient = newHttpClient(uri, scheme, options);
+        final HttpClient httpClient = newHttpClient(uri, scheme, options);
 
         final MessageMarshaller jsonMarshaller =
                 GrpcSerializationFormats.isJson(serializationFormat) ?
@@ -195,15 +193,12 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         return ImmutableList.copyOf(descriptor.getMethods());
     }
 
-    private Client<HttpRequest, HttpResponse> newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
+    private HttpClient newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
         try {
-            @SuppressWarnings("unchecked")
-            final Client<HttpRequest, HttpResponse> client = delegate().newClient(
+            return delegate().newClient(
                     new URI(Scheme.of(SerializationFormat.NONE, scheme.sessionProtocol()).uriText(),
                             uri.getAuthority(), null, null, null),
-                    Client.class,
-                    options);
-            return client;
+                    HttpClient.class, options);
         } catch (URISyntaxException e) {
             throw new Error(e); // Should never happen.
         }

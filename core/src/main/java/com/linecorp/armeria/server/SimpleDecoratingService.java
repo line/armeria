@@ -27,7 +27,8 @@ import com.linecorp.armeria.common.Response;
  * @param <I> the {@link Request} type of the {@link Service} being decorated
  * @param <O> the {@link Response} type of the {@link Service} being decorated
  *
- * @see Service#decorate(DecoratingServiceFunction)
+ * @see HttpService#decorate(DecoratingHttpServiceFunction)
+ * @see RpcService#decorate(DecoratingRpcServiceFunction)
  */
 public abstract class SimpleDecoratingService<I extends Request, O extends Response>
         extends DecoratingService<I, O, I, O> {

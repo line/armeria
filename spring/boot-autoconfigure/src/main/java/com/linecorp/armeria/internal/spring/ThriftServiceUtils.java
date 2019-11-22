@@ -29,9 +29,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.thrift.THttpService;
 
 /**
@@ -70,7 +68,7 @@ final class ThriftServiceUtils {
     /**
      * Retrieves thrift service names of {@code service} using reflection.
      */
-    static Set<String> serviceNames(Service<HttpRequest, HttpResponse> service) {
+    static Set<String> serviceNames(HttpService service) {
         if (thriftServiceClass == null || entriesMethod == null || interfacesMethod == null) {
             return ImmutableSet.of();
         }

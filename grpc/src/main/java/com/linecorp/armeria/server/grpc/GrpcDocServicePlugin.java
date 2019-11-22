@@ -60,7 +60,6 @@ import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
@@ -180,12 +179,12 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
             for (ServerServiceDefinition service : grpcService.services()) {
                 final String serviceName = service.getServiceDescriptor().getName();
                 map.get(serviceName).endpoint(
-                        new EndpointInfoBuilder(serviceConfig.virtualHost().hostnamePattern(),
-                                                // Only the URL prefix, each method is served
-                                                // at a different path.
-                                                pathPrefix + serviceName + '/')
-                                .availableMimeTypes(supportedMediaTypes)
-                                .build());
+                        EndpointInfo.builder(serviceConfig.virtualHost().hostnamePattern(),
+                                             // Only the URL prefix, each method is served
+                                             // at a different path.
+                                             pathPrefix + serviceName + '/')
+                                    .availableMimeTypes(supportedMediaTypes)
+                                    .build());
             }
         }
         return generate(map.values().stream().map(ServiceEntryBuilder::build).collect(toImmutableList()),
@@ -256,7 +255,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         final Set<EndpointInfo> methodEndpoints =
                 service.endpointInfos.stream()
                                      .map(e -> {
-                                         final EndpointInfoBuilder builder = new EndpointInfoBuilder(
+                                         final EndpointInfoBuilder builder = EndpointInfo.builder(
                                                  e.hostnamePattern(), e.pathMapping() + method.getName());
                                          if (e.fragment() != null) {
                                              builder.fragment(e.fragment());
@@ -271,8 +270,8 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                 method.getName(),
                 namedMessageSignature(method.getOutputType()),
                 // gRPC methods always take a single request parameter of message type.
-                ImmutableList.of(new FieldInfoBuilder("request", namedMessageSignature(method.getInputType()))
-                                         .requirement(FieldRequirement.REQUIRED).build()),
+                ImmutableList.of(FieldInfo.builder("request", namedMessageSignature(method.getInputType()))
+                                          .requirement(FieldRequirement.REQUIRED).build()),
                 ImmutableList.of(),
                 methodEndpoints);
     }
@@ -287,10 +286,10 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     private static FieldInfo newFieldInfo(FieldDescriptor fieldDescriptor) {
-        return new FieldInfoBuilder(fieldDescriptor.getName(), newFieldTypeInfo(fieldDescriptor))
-                .requirement(fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED
-                                                          : FieldRequirement.OPTIONAL)
-                .build();
+        return FieldInfo.builder(fieldDescriptor.getName(), newFieldTypeInfo(fieldDescriptor))
+                        .requirement(fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED
+                                                                  : FieldRequirement.OPTIONAL)
+                        .build();
     }
 
     @VisibleForTesting
@@ -372,7 +371,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         return new EnumInfo(
                 enumDescriptor.getFullName(),
                 enumDescriptor.getValues().stream()
-                              .map(d -> new EnumValueInfo(d.getName()))
+                              .map(d -> new EnumValueInfo(d.getName(), d.getNumber()))
                               .collect(toImmutableList()));
     }
 

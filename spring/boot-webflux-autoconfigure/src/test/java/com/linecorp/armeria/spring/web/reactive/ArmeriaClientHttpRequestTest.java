@@ -29,7 +29,7 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpMethod;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -45,16 +45,16 @@ public class ArmeriaClientHttpRequestTest {
 
     private static final String TEST_PATH_AND_QUERY = "/index.html?q=1";
 
-    static HttpClient httpClient;
+    static WebClient webClient;
 
     @BeforeClass
     public static void beforeClass() {
-        httpClient = mock(HttpClient.class);
-        when(httpClient.execute((HttpRequest) any())).thenReturn(HttpResponse.of(HttpStatus.OK));
+        webClient = mock(WebClient.class);
+        when(webClient.execute((HttpRequest) any())).thenReturn(HttpResponse.of(HttpStatus.OK));
     }
 
     private static ArmeriaClientHttpRequest request() {
-        return new ArmeriaClientHttpRequest(httpClient, HttpMethod.GET, TEST_PATH_AND_QUERY,
+        return new ArmeriaClientHttpRequest(webClient, HttpMethod.GET, TEST_PATH_AND_QUERY,
                                             URI.create("http://localhost"), DataBufferFactoryWrapper.DEFAULT);
     }
 

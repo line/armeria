@@ -20,7 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.annotation.Nullable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
@@ -35,10 +36,10 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 
-public class MeterIdPrefixFunctionTest {
+class MeterIdPrefixFunctionTest {
 
     @Test
-    public void testWithTags() {
+    void testWithTags() {
         final MeterIdPrefixFunction f =
                 (registry, log) -> new MeterIdPrefix("requests_total", "region", "us-west");
 
@@ -48,7 +49,7 @@ public class MeterIdPrefixFunctionTest {
     }
 
     @Test
-    public void testWithUnzippedTags() {
+    void testWithUnzippedTags() {
         final MeterIdPrefixFunction f =
                 (registry, log) -> new MeterIdPrefix("requests_total", "region", "us-east");
 
@@ -57,7 +58,7 @@ public class MeterIdPrefixFunctionTest {
     }
 
     @Test
-    public void testAndThen() {
+    void testAndThen() {
         final MeterIdPrefixFunction f = new MeterIdPrefixFunction() {
             @Override
             public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
@@ -77,7 +78,7 @@ public class MeterIdPrefixFunctionTest {
     }
 
     @Test
-    public void defaultApply() {
+    void defaultApply() {
         final MeterRegistry registry = NoopMeterRegistry.get();
         final MeterIdPrefixFunction f = MeterIdPrefixFunction.ofDefault("foo");
 
@@ -115,7 +116,7 @@ public class MeterIdPrefixFunctionTest {
     }
 
     @Test
-    public void defaultActiveRequestPrefix() {
+    void defaultActiveRequestPrefix() {
         final MeterRegistry registry = NoopMeterRegistry.get();
         final MeterIdPrefixFunction f = MeterIdPrefixFunction.ofDefault("foo");
 
@@ -147,6 +148,40 @@ public class MeterIdPrefixFunctionTest {
         assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
                                                Tag.of("method", "GET"),
                                                Tag.of("route", "exact:/get"));
+    }
+
+    @Nested
+    class EqualsAndHashCode {
+        @Test
+        void noTags() {
+            final MeterIdPrefix prefix1 = new MeterIdPrefix("name");
+            final MeterIdPrefix prefix2 = new MeterIdPrefix("name");
+            final MeterIdPrefix prefix3 = new MeterIdPrefix("name2");
+
+            assertThat(prefix1).isEqualTo(prefix2);
+            assertThat(prefix1.hashCode()).isEqualTo(prefix2.hashCode());
+            assertThat(prefix1).isNotEqualTo(prefix3);
+        }
+
+        @Test
+        void tagsSameOrder() {
+            final MeterIdPrefix prefix1 = new MeterIdPrefix("name", "animal", "cat", "sound", "meow");
+            final MeterIdPrefix prefix2 = new MeterIdPrefix("name", "animal", "cat", "sound", "meow");
+            final MeterIdPrefix prefix3 = new MeterIdPrefix("name", "animal", "dog", "sound", "bowwow");
+
+            assertThat(prefix1).isEqualTo(prefix2);
+            assertThat(prefix1.hashCode()).isEqualTo(prefix2.hashCode());
+            assertThat(prefix1).isNotEqualTo(prefix3);
+        }
+
+        @Test
+        void tagsDifferentOrder() {
+            final MeterIdPrefix prefix1 = new MeterIdPrefix("name", "animal", "cat", "sound", "meow");
+            final MeterIdPrefix prefix2 = new MeterIdPrefix("name", "sound", "meow", "animal", "cat");
+
+            assertThat(prefix1).isEqualTo(prefix2);
+            assertThat(prefix1.hashCode()).isEqualTo(prefix2.hashCode());
+        }
     }
 
     private static RequestContext newContext(HttpMethod method, String path, @Nullable Object requestContent) {

@@ -39,7 +39,11 @@ final class DefaultResponseHeadersBuilder
 
         final HttpHeadersBase parent = parent();
         if (parent != null) {
-            return (ResponseHeaders) parent;
+            if (parent instanceof ResponseHeaders) {
+                return (ResponseHeaders) parent;
+            } else {
+                return updateParent(new DefaultResponseHeaders(parent));
+            }
         }
 
         // No headers were set.

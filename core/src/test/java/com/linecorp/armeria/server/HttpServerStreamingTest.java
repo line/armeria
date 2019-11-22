@@ -45,9 +45,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -75,11 +74,12 @@ class HttpServerStreamingTest {
 
     private static final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(1);
 
-    private static final ClientFactory clientFactory = new ClientFactoryBuilder()
-            .workerGroup(workerGroup, false) // Will be shut down by the Server.
-            .idleTimeout(Duration.ofSeconds(3))
-            .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-            .build();
+    private static final ClientFactory clientFactory =
+            ClientFactory.builder()
+                         .workerGroup(workerGroup, false) // Will be shut down by the Server.
+                         .idleTimeout(Duration.ofSeconds(3))
+                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .build();
 
     // Stream as much as twice of the heap.
     private static final long STREAMING_CONTENT_LENGTH = Runtime.getRuntime().maxMemory() * 2;
@@ -114,8 +114,7 @@ class HttpServerStreamingTest {
                 }
             });
 
-            final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>
-                    decorator =
+            final Function<? super HttpService, ? extends HttpService> decorator =
                     s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
@@ -143,7 +142,7 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testTooLargeContent(HttpClient client) throws Exception {
+    void testTooLargeContent(WebClient client) throws Exception {
         withTimeout(() -> {
             final int maxContentLength = 65536;
             serverMaxRequestLength = maxContentLength;
@@ -163,7 +162,7 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testTooLargeContentToNonExistentService(HttpClient client) throws Exception {
+    void testTooLargeContentToNonExistentService(WebClient client) throws Exception {
         withTimeout(() -> {
             final int maxContentLength = 65536;
             serverMaxRequestLength = maxContentLength;
@@ -177,13 +176,13 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingRequest(HttpClient client) throws Exception {
+    void testStreamingRequest(WebClient client) throws Exception {
         withTimeout(() -> runStreamingRequestTest(client, "/count"), Duration.ofSeconds(60));
     }
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingRequestWithSlowService(HttpClient client) throws Exception {
+    void testStreamingRequestWithSlowService(WebClient client) throws Exception {
         withTimeout(() -> {
             final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
             runStreamingRequestTest(client, "/slow_count");
@@ -194,7 +193,7 @@ class HttpServerStreamingTest {
         }, Duration.ofSeconds(120));
     }
 
-    private void runStreamingRequestTest(HttpClient client, String path)
+    private void runStreamingRequestTest(WebClient client, String path)
             throws InterruptedException, ExecutionException {
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, path);
         final CompletableFuture<AggregatedHttpResponse> f = client.execute(req).aggregate();
@@ -220,13 +219,13 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingResponse(HttpClient client) throws Exception {
+    void testStreamingResponse(WebClient client) throws Exception {
         withTimeout(() -> runStreamingResponseTest(client, false), Duration.ofSeconds(60));
     }
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingResponseWithSlowClient(HttpClient client) throws Exception {
+    void testStreamingResponseWithSlowClient(WebClient client) throws Exception {
         withTimeout(() -> {
             final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
             runStreamingResponseTest(client, true);
@@ -237,7 +236,7 @@ class HttpServerStreamingTest {
         }, Duration.ofSeconds(120));
     }
 
-    private void runStreamingResponseTest(HttpClient client, boolean slowClient)
+    private void runStreamingResponseTest(WebClient client, boolean slowClient)
             throws InterruptedException, ExecutionException {
         final HttpResponse res = client.get("/zeroes/" + STREAMING_CONTENT_LENGTH);
         final AtomicReference<HttpStatus> status = new AtomicReference<>();
@@ -293,18 +292,18 @@ class HttpServerStreamingTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H2C, H1, H2)
-                    .map(protocol -> {
-                        final HttpClientBuilder builder = new HttpClientBuilder(
-                                protocol.uriText() + "://127.0.0.1:" +
-                                (protocol.isTls() ? server.httpsPort() : server.httpPort()));
+                         .map(protocol -> {
+                             final WebClientBuilder builder = WebClient.builder(
+                                     protocol.uriText() + "://127.0.0.1:" +
+                                     (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 
-                        builder.factory(clientFactory);
-                        builder.responseTimeoutMillis(0);
-                        builder.maxResponseLength(0);
+                             builder.factory(clientFactory);
+                             builder.responseTimeoutMillis(0);
+                             builder.maxResponseLength(0);
 
-                        return builder.build();
-                    })
-                    .map(Arguments::of);
+                             return builder.build();
+                         })
+                         .map(Arguments::of);
         }
     }
 

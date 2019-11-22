@@ -21,18 +21,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+
+import io.netty.resolver.DefaultAddressResolverGroup;
 
 class ClientFactoryBuilderTest {
 
     @Test
     void addressResolverGroupFactoryAndDomainNameResolverCustomizerAreMutuallyExclusive() {
-        final ClientFactoryBuilder builder1 = new ClientFactoryBuilder();
+        final ClientFactoryBuilder builder1 = ClientFactory.builder();
         builder1.addressResolverGroupFactory(eventLoopGroup -> null);
         assertThatThrownBy(() -> builder1.domainNameResolverCustomizer(b -> {}))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("mutually exclusive");
 
-        final ClientFactoryBuilder builder2 = new ClientFactoryBuilder();
+        final ClientFactoryBuilder builder2 = ClientFactory.builder();
         builder2.domainNameResolverCustomizer(b -> {});
         assertThatThrownBy(() -> builder2.addressResolverGroupFactory(eventLoopGroup -> null))
                 .isInstanceOf(IllegalStateException.class)
@@ -41,18 +45,54 @@ class ClientFactoryBuilderTest {
 
     @Test
     void maxNumEventLoopsAndEventLoopSchedulerFactoryAreMutuallyExclusive() {
-        final ClientFactoryBuilder builder1 = new ClientFactoryBuilder();
+        final ClientFactoryBuilder builder1 = ClientFactory.builder();
         builder1.maxNumEventLoopsPerEndpoint(2);
 
         assertThrows(IllegalStateException.class,
                      () -> builder1.eventLoopSchedulerFactory(
                              eventLoopGroup -> mock(EventLoopScheduler.class)));
 
-        final ClientFactoryBuilder builder2 = new ClientFactoryBuilder();
+        final ClientFactoryBuilder builder2 = ClientFactory.builder();
         builder2.eventLoopSchedulerFactory(eventLoopGroup -> mock(EventLoopScheduler.class));
 
         final IllegalStateException cause = assertThrows(IllegalStateException.class,
                                                          () -> builder2.maxNumEventLoopsPerEndpoint(2));
         assertThat(cause).hasMessageContaining("mutually exclusive");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void shouldInheritClientFactoryOptions() {
+        final ClientFactory factory1 = ClientFactory.builder()
+                                                    .maxNumEventLoopsPerEndpoint(2)
+                                                    .connectTimeoutMillis(5000)
+                                                    .build();
+
+        final ClientFactory factory2 = ClientFactory.builder()
+                                                    .options(factory1.options())
+                                                    .idleTimeoutMillis(30000)
+                                                    .build();
+
+        assertThat(factory2.options().asMap()).allSatisfy((opt, optVal) -> {
+            if (opt.compareTo(ClientFactoryOption.IDLE_TIMEOUT_MILLIS) == 0) {
+                assertThat(optVal.value()).isNotEqualTo(factory1.options().asMap().get(opt).value());
+            } else {
+                assertThat(optVal.value()).isEqualTo(factory1.options().asMap().get(opt).value());
+            }
+        });
+    }
+
+    @Test
+    @EnabledIfSystemProperty(named = "com.linecorp.armeria.useJdkDnsResolver", matches = "true")
+    void useDefaultAddressResolverGroup() {
+        final DefaultClientFactory clientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
+        assertThat(clientFactory.addressResolverGroup()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+    }
+
+    @Test
+    @DisabledIfSystemProperty(named = "com.linecorp.armeria.useJdkDnsResolver",  matches = "true")
+    void useRefreshingAddressResolverGroup() {
+        final DefaultClientFactory clientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
+        assertThat(clientFactory.addressResolverGroup()).isInstanceOf(RefreshingAddressResolverGroup.class);
     }
 }

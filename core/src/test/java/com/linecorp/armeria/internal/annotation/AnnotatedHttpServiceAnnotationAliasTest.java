@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -37,13 +37,12 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
@@ -142,7 +141,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
 
     static class MyExceptionHandler1 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             if (cause instanceof IllegalArgumentException) {
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
                                        "Cause:" + IllegalArgumentException.class.getSimpleName());
@@ -153,7 +152,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
 
     static class MyExceptionHandler2 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             if (cause instanceof IllegalStateException) {
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
                                        "Cause:" + IllegalStateException.class.getSimpleName());
@@ -162,19 +161,19 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         }
     }
 
-    static class MyDecorator1 implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    static class MyDecorator1 implements DecoratingHttpServiceFunction {
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
-                                  ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        public HttpResponse serve(
+                HttpService delegate, ServiceRequestContext ctx, HttpRequest req) throws Exception {
             appendAttribute(ctx, " (decorated-1)");
             return delegate.serve(ctx, req);
         }
     }
 
-    static class MyDecorator2 implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    static class MyDecorator2 implements DecoratingHttpServiceFunction {
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
-                                  ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        public HttpResponse serve(
+                HttpService delegate, ServiceRequestContext ctx, HttpRequest req) throws Exception {
             appendAttribute(ctx, " (decorated-2)");
             return delegate.serve(ctx, req);
         }
@@ -186,8 +185,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
 
     static class MyDecorator3Factory implements DecoratorFactoryFunction<MyDecorator3> {
         @Override
-        public Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> newDecorator(MyDecorator3 parameter) {
+        public Function<? super HttpService, ? extends HttpService> newDecorator(MyDecorator3 parameter) {
             return delegate -> new SimpleDecoratingHttpService(delegate) {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
@@ -236,12 +234,13 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @Test
     public void metaAnnotations() {
         final AggregatedHttpResponse msg =
-                HttpClient.of(rule.uri("/"))
-                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
-                                                     HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
-                                                     HttpHeaderNames.ACCEPT, "text/*"),
-                                   HttpData.ofUtf8("Armeria"))
-                          .aggregate().join();
+                WebClient.of(rule.uri("/"))
+                         .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                                    HttpHeaderNames.CONTENT_TYPE,
+                                                    MediaType.PLAIN_TEXT_UTF_8,
+                                                    HttpHeaderNames.ACCEPT, "text/*"),
+                                  HttpData.ofUtf8("Armeria"))
+                         .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
         assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
@@ -255,12 +254,14 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @Test
     public void metaOfMetaAnnotation_ProducesJson() {
         final AggregatedHttpResponse msg =
-                HttpClient.of(rule.uri("/"))
-                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
-                                                     HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
-                                                     HttpHeaderNames.ACCEPT, "application/json; charset=utf-8"),
-                                   HttpData.ofUtf8("Armeria"))
-                          .aggregate().join();
+                WebClient.of(rule.uri("/"))
+                         .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                                    HttpHeaderNames.CONTENT_TYPE,
+                                                    MediaType.PLAIN_TEXT_UTF_8,
+                                                    HttpHeaderNames.ACCEPT,
+                                                    "application/json; charset=utf-8"),
+                                  HttpData.ofUtf8("Armeria"))
+                         .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
         assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
@@ -274,7 +275,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @Test
     public void exception1() {
         final AggregatedHttpResponse msg =
-                HttpClient.of(rule.uri("/")).get("/exception1").aggregate().join();
+                WebClient.of(rule.uri("/")).get("/exception1").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.
@@ -287,7 +288,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @Test
     public void exception2() {
         final AggregatedHttpResponse msg =
-                HttpClient.of(rule.uri("/")).get("/exception2").aggregate().join();
+                WebClient.of(rule.uri("/")).get("/exception2").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.

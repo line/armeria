@@ -69,8 +69,8 @@ public class DefaultAttributeMapTest {
 
     @Test
     public void testGetSetString() {
-        AttributeKey<String> key = AttributeKey.valueOf("Nothing");
-        Attribute<String> one = map.attr(key);
+        final AttributeKey<String> key = AttributeKey.valueOf("Nothing");
+        final Attribute<String> one = map.attr(key);
 
         assertSame(one, map.attr(key));
 
@@ -86,8 +86,8 @@ public class DefaultAttributeMapTest {
 
     @Test
     public void testGetSetInt() {
-        AttributeKey<Integer> key = AttributeKey.valueOf("Nada");
-        Attribute<Integer> one = map.attr(key);
+        final AttributeKey<Integer> key = AttributeKey.valueOf("Nada");
+        final Attribute<Integer> one = map.attr(key);
 
         assertSame(one, map.attr(key));
 
@@ -104,13 +104,13 @@ public class DefaultAttributeMapTest {
     // See https://github.com/netty/netty/issues/2523
     @Test
     public void testSetRemove() {
-        AttributeKey<Integer> key = AttributeKey.valueOf("key");
+        final AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
-        Attribute<Integer> attr = map.attr(key);
+        final Attribute<Integer> attr = map.attr(key);
         attr.set(1);
         assertSame(1, attr.getAndRemove());
 
-        Attribute<Integer> attr2 = map.attr(key);
+        final Attribute<Integer> attr2 = map.attr(key);
         attr2.set(2);
         assertSame(2, attr2.get());
         assertNotSame(attr, attr2);
@@ -118,13 +118,13 @@ public class DefaultAttributeMapTest {
 
     @Test
     public void testGetAndSetWithNull() {
-        AttributeKey<Integer> key = AttributeKey.valueOf("key");
+        final AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
-        Attribute<Integer> attr = map.attr(key);
+        final Attribute<Integer> attr = map.attr(key);
         attr.set(1);
         assertSame(1, attr.getAndSet(null));
 
-        Attribute<Integer> attr2 = map.attr(key);
+        final Attribute<Integer> attr2 = map.attr(key);
         attr2.set(2);
         assertSame(2, attr2.get());
         assertSame(attr, attr2);
@@ -167,7 +167,7 @@ public class DefaultAttributeMapTest {
 
         // Make sure the Iterator does not yield the attributes whose 'removed' property is 'true'.
         for (int i = 0; i < map.attributes.length(); i++) {
-            Attribute<?> a = map.attributes.get(i);
+            final Attribute<?> a = map.attributes.get(i);
             a.remove();
 
             // A head attribute is never removed from the linked list.
@@ -182,8 +182,8 @@ public class DefaultAttributeMapTest {
 
     private List<AttributeKey<?>> actualKeys() {
         return Lists.newArrayList(map.attrs()).stream().sorted((a, b) -> {
-            Integer aVal = a.key().id();
-            Integer bVal = b.key().id();
+            final Integer aVal = a.key().id();
+            final Integer bVal = b.key().id();
             return aVal.compareTo(bVal);
         }).map(Attribute::key).collect(Collectors.toList());
     }

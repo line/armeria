@@ -15,17 +15,14 @@
  */
 package com.linecorp.armeria.spring;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import javax.validation.constraints.NotNull;
 
 import org.apache.thrift.TBase;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
@@ -39,34 +36,19 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setPath("/my_service")
  * >             .setService(new MyThriftService())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .setExampleHeaders(ImmutableList.of(HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a")))
- * >             .setExampleRequests(ImmutableList.of(new MyThriftService.hello_args("Armeria")))
+ * >             .addExampleRequests(new MyThriftService.hello_args("Armeria"))
+ * >             .addExampleHeaders(ExampleHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"));
  * > }
  * }</pre>
  */
-public class ThriftServiceRegistrationBean
-        extends
-        AbstractServiceRegistrationBean<Service<HttpRequest, HttpResponse>, ThriftServiceRegistrationBean> {
+public class ThriftServiceRegistrationBean extends AbstractServiceRegistrationBean<
+        HttpService, ThriftServiceRegistrationBean, TBase<?, ?>, ExampleHeaders> {
 
     /**
      * The url path to register the service at. If not specified, defaults to {@code /api}.
      */
     @NotNull
     private String path = "/api";
-
-    /**
-     * Sample requests to populate debug forms in {@link DocService}.
-     * This should be a list of request objects (e.g., methodName_args) which correspond to methods
-     * in this thrift service.
-     */
-    @NotNull
-    private Collection<? extends TBase<?, ?>> exampleRequests = new ArrayList<>();
-
-    /**
-     * Example {@link HttpHeaders} being used in debug forms.
-     */
-    @NotNull
-    private Collection<HttpHeaders> exampleHeaders = new ArrayList<>();
 
     /**
      * Returns the url path this service map to.
@@ -85,35 +67,40 @@ public class ThriftServiceRegistrationBean
     }
 
     /**
-     * Returns sample requests of {@link #getService()}.
+     * Adds an example HTTP header for all service methods.
      */
-    @NotNull
-    public Collection<? extends TBase<?, ?>> getExampleRequests() {
-        return exampleRequests;
+    public ThriftServiceRegistrationBean addExampleHeaders(CharSequence name, String value) {
+        return addExampleHeaders(ExampleHeaders.of(HttpHeaders.of(name, value)));
     }
 
     /**
-     * Sets sample requests for {@link #getService()}.
+     * Adds an example HTTP header for the specified method.
      */
-    public ThriftServiceRegistrationBean setExampleRequests(
-            @NotNull Collection<? extends TBase<?, ?>> exampleRequests) {
-        this.exampleRequests = exampleRequests;
+    public ThriftServiceRegistrationBean addExampleHeaders(String methodName, HttpHeaders exampleHeaders) {
+        return addExampleHeaders(ExampleHeaders.of(methodName, exampleHeaders));
+    }
+
+    /**
+     * Adds an example HTTP header for the specified method.
+     */
+    public ThriftServiceRegistrationBean addExampleHeaders(String methodName, CharSequence name, String value) {
+        return addExampleHeaders(ExampleHeaders.of(methodName, HttpHeaders.of(name, value)));
+    }
+
+    /**
+     * Adds example HTTP headers for the specified method.
+     */
+    public ThriftServiceRegistrationBean addExampleHeaders(
+            String methodName, @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+        exampleHeaders.forEach(h -> addExampleHeaders(methodName, h));
         return this;
     }
 
     /**
-     * Returns example {@link HttpHeaders}.
+     * Adds example HTTP headers for the specified method.
      */
-    @NotNull
-    public Collection<HttpHeaders> getExampleHeaders() {
-        return exampleHeaders;
-    }
-
-    /**
-     * Sets example {@link HttpHeaders}.
-     */
-    public ThriftServiceRegistrationBean setExampleHeaders(@NotNull Collection<HttpHeaders> exampleHeaders) {
-        this.exampleHeaders = exampleHeaders;
-        return this;
+    public ThriftServiceRegistrationBean addExampleHeaders(String methodName,
+                                                           @NotNull HttpHeaders... exampleHeaders) {
+        return addExampleHeaders(methodName, ImmutableList.copyOf(exampleHeaders));
     }
 }

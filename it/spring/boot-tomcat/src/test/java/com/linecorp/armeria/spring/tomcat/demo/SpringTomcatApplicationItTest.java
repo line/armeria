@@ -82,7 +82,7 @@ public class SpringTomcatApplicationItTest {
     public void verifySingleConnector() {
         // Relevant to Tomcat 9.0
         assertThat(applicationContext).isInstanceOf(WebServerApplicationContext.class);
-        WebServer webServer = ((WebServerApplicationContext) applicationContext).getWebServer();
+        final WebServer webServer = ((WebServerApplicationContext) applicationContext).getWebServer();
         assertThat(webServer).isInstanceOf(TomcatWebServer.class);
         assertThat(((TomcatWebServer) webServer).getTomcat()
                                                 .getEngine()

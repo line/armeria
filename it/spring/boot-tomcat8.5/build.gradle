@@ -13,7 +13,7 @@ apply plugin: 'org.springframework.boot'
 dependencyManagement {
     // Override Tomcat versions.
     dependencies {
-        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.43') {
+        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.47') {
             entry 'tomcat-embed-core'
             entry 'tomcat-embed-jasper'
             entry 'tomcat-embed-el'
@@ -44,5 +44,6 @@ tasks.sourceJar.from "${tomcatProjectDir}/src/main/resources"
 tasks.javadoc.source "${tomcatProjectDir}/src/main/java"
 
 // Disable checkstyle because it's checked by ':it:spring:boot-tomcat'.
-tasks.checkstyleMain.onlyIf { false }
-tasks.checkstyleTest.onlyIf { false }
+tasks.withType(Checkstyle) {
+    onlyIf { false }
+}

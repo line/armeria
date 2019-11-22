@@ -63,7 +63,7 @@ at construction time:
 
 Registering an ``EndointGroup``
 -------------------------------
-An :api:`EndpointGroup` becomes visible by a client such as :api:`HttpClient` only after it's registered in
+An :api:`EndpointGroup` becomes visible by a client such as :api:`WebClient` only after it's registered in
 :api:`EndpointGroupRegistry`. You need to specify 2 more elements to register an :api:`EndpointGroup`:
 
 - The name of the :api:`EndpointGroup`
@@ -105,7 +105,7 @@ Once an :api:`EndpointGroup` is registered, you can use its name in the authorit
 .. code-block:: java
 
     // Create an HTTP client that sends requests to the 'search_engines' group.
-    HttpClient client = HttpClient.of("https://group:search_engines/");
+    WebClient client = WebClient.of("https://group:search_engines/");
 
     // Send a GET request to each search engine.
     List<CompletableFuture<?>> futures = new ArrayList<>();
@@ -197,11 +197,11 @@ They refresh the :api:`Endpoint` list automatically, respecting TTL values, and 
 .. code-block:: java
 
     DnsAddressEndpointGroup group =
-            new DnsAddressEndpointGroupBuilder("www.google.com")
-                    // Refresh more often than every 10 seconds and
-                    // less often than every 60 seconds even if DNS server asks otherwise.
-                    .ttl(/* minTtl */ 10, /* maxTtl */ 60)
-                    .build();
+            DnsAddressEndpointGroup.builder("www.google.com")
+                                   // Refresh more often than every 10 seconds and
+                                   // less often than every 60 seconds even if DNS server asks otherwise.
+                                   .ttl(/* minTtl */ 10, /* maxTtl */ 60)
+                                   .build();
 
     // Wait until the initial DNS queries are finished.
     group.awaitInitialEndpoints();
@@ -213,10 +213,10 @@ environments that leverage DNS for service discovery such as Kubernetes:
 .. code-block:: java
 
     DnsServiceEndpointGroup group =
-            new DnsServiceEndpointGroupBuilder("_http._tcp.example.com")
-                    // Custom backoff strategy.
-                    .backoff(Backoff.exponential(1000, 16000).withJitter(0.3))
-                    .build();
+            DnsServiceEndpointGroup.builder("_http._tcp.example.com")
+                                   // Custom backoff strategy.
+                                   .backoff(Backoff.exponential(1000, 16000).withJitter(0.3))
+                                   .build();
 
     // Wait until the initial DNS queries are finished.
     group.awaitInitialEndpoints();

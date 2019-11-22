@@ -1,4 +1,88 @@
+String releaseFlagFromVersion(String src) {
+    // Java 9+ are 9, 10, etc, before was 1.8, 1.7, etc.
+    if (src.contains('.')) {
+        src.substring(src.lastIndexOf('.')+1)
+    } else {
+        src
+    }
+}
+
+def mrJarVersions = [9]
+
+mrJarVersions.each { version->
+    sourceSets {
+        "java${version}" {
+            java {
+                srcDirs = ["src/main/java${version}"]
+            }
+        }
+        "java${version}Test" {
+            java {
+                srcDirs = ["src/test/java${version}"]
+            }
+        }
+    }
+
+    "compileJava${version}Java" {
+        sourceCompatibility = version
+        targetCompatibility = version
+    }
+
+    "compileJava${version}TestJava" {
+        sourceCompatibility = version
+        targetCompatibility = version
+    }
+
+    task "testJava${version}"(type: Test, group: 'Verification', description: "Runs unit tests for Java ${version} source set") {
+        testClassesDirs = sourceSets."java${version}Test".output.classesDirs
+        classpath = sourceSets."java${version}Test".runtimeClasspath
+
+        enabled = (Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version) &&
+                (!System.env.TEST_JAVA_VERSION || Integer.parseInt(System.env.TEST_JAVA_VERSION) >= version)
+    }
+    
+    configurations."java${version}Implementation".extendsFrom configurations.implementation
+    configurations."java${version}TestImplementation".extendsFrom configurations.testImplementation
+    configurations."java${version}TestRuntimeClasspath".extendsFrom configurations.testRuntimeClasspath
+
+    check.dependsOn "testJava${version}"
+}
+
+tasks.withType(JavaCompile) {
+    def version = releaseFlagFromVersion(sourceCompatibility)
+    options.compilerArgs.addAll(['--release', version])
+}
+
+tasks.withType(Jar) {
+    mrJarVersions.each { version->
+        into("META-INF/versions/${version}") {
+            from sourceSets."java${version}".output
+        }
+    }
+    manifest.attributes(
+            'Multi-Release': 'true'
+    )
+}
+
+// Proguard can't handle multi-release jars so we recreate it here.
+tasks.trimShadedJar.doLast {
+    // outjars is a file, so only one jar generated for sure
+    def trimmed = tasks.trimShadedJar.outJarFiles[0].toPath()
+    ant.jar(destfile: trimmed.toString(), update: true) {
+        zipfileset(src: tasks.shadedJar.archivePath) {
+            include(name: 'META-INF/versions/**')
+        }
+    }
+}
+
+tasks.shadedTest.exclude 'META-INF/versions/**'
+
 dependencies {
+    mrJarVersions.each { version->
+        // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
+        "java${version}Implementation" files(sourceSets.main.output.classesDirs) { builtBy compileJava }
+    }
+
     // cglib
     testCompile 'cglib:cglib'
 
@@ -33,6 +117,9 @@ dependencies {
     // Project Reactor
     testCompile 'io.projectreactor:reactor-test'
 
+    // TestNG
+    testCompile 'org.testng:testng'
+
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'
     testCompile 'org.reactivestreams:reactive-streams-tck'
@@ -44,9 +131,11 @@ dependencies {
     testCompile 'org.eclipse.jetty:jetty-webapp'
 }
 
-sourceSets {
-    main {
-        output.dir project(':docs-client').file('build/javaweb'), builtBy: ':docs-client:copyWeb'
+if (!rootProject.hasProperty('noWeb')) {
+    sourceSets {
+        main {
+            output.dir project(':docs-client').file('build/javaweb'), builtBy: ':docs-client:copyWeb'
+        }
     }
 }
 
@@ -98,5 +187,7 @@ if (tasks.findByName('trimShadedJar')) {
         // Do not optimize the dependencies that access some fields via sun.misc.Unsafe or reflection only.
         keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }"
         keep "class com.linecorp.armeria.internal.shaded.jctools.** { *; }"
+
+        dontnote
     }
 }

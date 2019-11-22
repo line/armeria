@@ -174,19 +174,19 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final List<String> paths = route.paths();
         switch (pathType) {
             case EXACT:
-                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.EXACT + paths.get(0));
+                builder = EndpointInfo.builder(hostnamePattern, RouteUtil.EXACT + paths.get(0));
                 break;
             case PREFIX:
-                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.PREFIX + paths.get(0));
+                builder = EndpointInfo.builder(hostnamePattern, RouteUtil.PREFIX + paths.get(0));
                 break;
             case PARAMETERIZED:
-                builder = new EndpointInfoBuilder(hostnamePattern, normalizeParameterized(route));
+                builder = EndpointInfo.builder(hostnamePattern, normalizeParameterized(route));
                 break;
             case REGEX:
-                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + paths.get(0));
+                builder = EndpointInfo.builder(hostnamePattern, RouteUtil.REGEX + paths.get(0));
                 break;
             case REGEX_WITH_PREFIX:
-                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + paths.get(0));
+                builder = EndpointInfo.builder(hostnamePattern, RouteUtil.REGEX + paths.get(0));
                 builder.regexPathPrefix(RouteUtil.PREFIX + paths.get(1));
                 break;
             default:
@@ -255,7 +255,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                 final List<AnnotatedValueResolver> resolvers = builder.build();
                 if (!resolvers.isEmpty()) {
                     // Just use the simple name of the bean class as the field name.
-                    return new FieldInfoBuilder(beanFactoryId.type().getSimpleName(), BEAN,
+                    return FieldInfo.builder(beanFactoryId.type().getSimpleName(), BEAN,
                                                 fieldInfos(resolvers)).build();
                 }
             }
@@ -284,10 +284,11 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final String name = resolver.httpElementName();
         assert name != null;
 
-        final FieldInfoBuilder builder = new FieldInfoBuilder(name, signature)
-                .location(location(resolver))
-                .requirement(resolver.shouldExist() ? FieldRequirement.REQUIRED
-                                                    : FieldRequirement.OPTIONAL);
+        final FieldInfoBuilder builder =
+                FieldInfo.builder(name, signature)
+                         .location(location(resolver))
+                         .requirement(resolver.shouldExist() ? FieldRequirement.REQUIRED
+                                                             : FieldRequirement.OPTIONAL);
         if (resolver.description() != null) {
             builder.docString(resolver.description());
         }

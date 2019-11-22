@@ -63,7 +63,7 @@ public class Http2GoAwayTest {
 
             final int port = ss.getLocalPort();
 
-            final HttpClient client = HttpClient.of(clientFactory, "h2c://127.0.0.1:" + port);
+            final WebClient client = WebClient.of(clientFactory, "h2c://127.0.0.1:" + port);
             final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {
@@ -109,7 +109,7 @@ public class Http2GoAwayTest {
 
             final int port = ss.getLocalPort();
 
-            final HttpClient client = HttpClient.of(clientFactory, "h2c://127.0.0.1:" + port);
+            final WebClient client = WebClient.of(clientFactory, "h2c://127.0.0.1:" + port);
             final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {
@@ -156,7 +156,7 @@ public class Http2GoAwayTest {
 
             final int port = ss.getLocalPort();
 
-            final HttpClient client = HttpClient.of(clientFactory, "h2c://127.0.0.1:" + port);
+            final WebClient client = WebClient.of(clientFactory, "h2c://127.0.0.1:" + port);
             final CompletableFuture<AggregatedHttpResponse> future1 = client.get("/").aggregate();
             try (Socket s = ss.accept()) {
 
@@ -210,13 +210,13 @@ public class Http2GoAwayTest {
     }
 
     private static ClientFactory newClientFactory() {
-        return new ClientFactoryBuilder()
-                .useHttp2Preface(true)
-                // Set the window size to the HTTP/2 default values to simplify the traffic.
-                .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                .workerGroup(eventLoop.get(), false)
-                .build();
+        return ClientFactory.builder()
+                            .useHttp2Preface(true)
+                            // Set the window size to the HTTP/2 default values to simplify the traffic.
+                            .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+                            .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+                            .workerGroup(eventLoop.get(), false)
+                            .build();
     }
 
     private static void handleInitialExchange(InputStream in, BufferedOutputStream out) throws IOException {

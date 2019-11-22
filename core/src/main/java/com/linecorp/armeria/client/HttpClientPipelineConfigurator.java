@@ -45,7 +45,6 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.Http1ClientCodec;
@@ -148,7 +147,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
-        p.addLast(ReadSuppressingHandler.INSTANCE);
+        p.addLast(ReadSuppressingAndChannelDeactivatingHandler.INSTANCE);
 
         try {
             if (sslCtx != null) {
@@ -448,7 +447,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }, ctx.channel().eventLoop());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, null, res, RequestLogBuilder.NOOP, 0, UPGRADE_RESPONSE_MAX_LENGTH);
+            responseDecoder.addResponse(0, res, null, 0, UPGRADE_RESPONSE_MAX_LENGTH);
             ctx.fireChannelActive();
         }
 
@@ -628,13 +627,23 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     private static Http1ClientCodec newHttp1Codec(
             int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize) {
-        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize) {
-            @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                HttpSession.get(ctx.channel()).deactivate();
-                super.close(ctx, promise);
-            }
-        };
+        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize);
+    }
+
+    /**
+     * Suppresses unnecessary read calls and deactivates the {@link HttpSession} associated with a channel when
+     * it is closed to ensure it isn't used anymore.
+     */
+    private static final class ReadSuppressingAndChannelDeactivatingHandler extends ReadSuppressingHandler {
+
+        private static final ReadSuppressingAndChannelDeactivatingHandler
+                INSTANCE = new ReadSuppressingAndChannelDeactivatingHandler();
+
+        @Override
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            HttpSession.get(ctx.channel()).deactivate();
+            super.close(ctx, promise);
+        }
     }
 
     /**

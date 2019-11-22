@@ -16,46 +16,35 @@
 
 package com.linecorp.armeria.server.composition;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 
 /**
  * A general purpose {@link AbstractCompositeServiceBuilder} implementation. Useful when you do not want to
- * define a new dedicated {@link Service} builder type.
- *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
+ * define a new dedicated {@link HttpService} builder type.
  */
-public final class SimpleCompositeServiceBuilder<I extends Request, O extends Response>
-        extends AbstractCompositeServiceBuilder<I, O> {
+public final class SimpleCompositeServiceBuilder extends AbstractCompositeServiceBuilder<HttpService> {
 
     @Override
-    public SimpleCompositeServiceBuilder<I, O> serviceAt(String pathPattern, Service<I, O> service) {
-        return (SimpleCompositeServiceBuilder<I, O>) super.service(pathPattern, service);
+    public SimpleCompositeServiceBuilder serviceUnder(String pathPrefix, HttpService  service) {
+        return (SimpleCompositeServiceBuilder) super.serviceUnder(pathPrefix, service);
     }
 
     @Override
-    public SimpleCompositeServiceBuilder<I, O> serviceUnder(String pathPrefix, Service<I, O>  service) {
-        return (SimpleCompositeServiceBuilder<I, O>) super.serviceUnder(pathPrefix, service);
+    public SimpleCompositeServiceBuilder service(String pathPattern, HttpService service) {
+        return (SimpleCompositeServiceBuilder) super.service(pathPattern, service);
     }
 
     @Override
-    public SimpleCompositeServiceBuilder<I, O> service(String pathPattern, Service<I, O> service) {
-        return (SimpleCompositeServiceBuilder<I, O>) super.service(pathPattern, service);
-    }
-
-    @Override
-    public SimpleCompositeServiceBuilder<I, O> service(Route route, Service<I, O>  service) {
-        return (SimpleCompositeServiceBuilder<I, O>) super.service(route, service);
+    public SimpleCompositeServiceBuilder service(Route route, HttpService  service) {
+        return (SimpleCompositeServiceBuilder) super.service(route, service);
     }
 
     /**
-     * Returns a newly-created {@link SimpleCompositeService} based on the {@link Service}s added to this
+     * Returns a newly-created {@link SimpleCompositeService} based on the {@link HttpService}s added to this
      * builder.
      */
-    public SimpleCompositeService<I, O> build() {
-        return new SimpleCompositeService<>(services());
+    public SimpleCompositeService build() {
+        return new SimpleCompositeService(services());
     }
 }

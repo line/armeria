@@ -33,6 +33,8 @@ import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.internal.ThreadLocalByteArray;
+
 import io.netty.util.internal.ThreadLocalRandom;
 
 /**
@@ -112,7 +114,7 @@ final class JwtBasedSamlRequestIdManager implements SamlRequestIdManager {
     private static String getUniquifierPrefix() {
         // To make a request ID globally unique, we will add MAC-based machine ID and a random number.
         // The random number tries to make this instance unique in the same machine and process.
-        final byte[] r = new byte[6];
+        final byte[] r = ThreadLocalByteArray.get(6);
         ThreadLocalRandom.current().nextBytes(r);
         final Encoder encoder = Base64.getEncoder();
         return new StringBuilder().append(encoder.encodeToString(defaultMachineId()))

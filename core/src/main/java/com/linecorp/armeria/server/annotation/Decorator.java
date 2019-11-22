@@ -23,11 +23,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 
 /**
- * Specifies a {@link DecoratingServiceFunction} class which handles an {@link HttpRequest} before invoking
+ * Specifies a {@link DecoratingHttpServiceFunction} class which handles an {@link HttpRequest} before invoking
  * an annotated service method.
  */
 @Repeatable(Decorators.class)
@@ -36,10 +35,10 @@ import com.linecorp.armeria.server.DecoratingServiceFunction;
 public @interface Decorator {
 
     /**
-     * {@link DecoratingServiceFunction} implementation type. The specified class must have an accessible
+     * {@link DecoratingHttpServiceFunction} implementation type. The specified class must have an accessible
      * default constructor.
      */
-    Class<? extends DecoratingServiceFunction<HttpRequest, HttpResponse>> value();
+    Class<? extends DecoratingHttpServiceFunction> value();
 
     /**
      * The order of decoration, where a {@link Decorator} of lower value will be applied first.

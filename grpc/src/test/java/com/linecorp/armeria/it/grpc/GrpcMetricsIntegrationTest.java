@@ -36,8 +36,7 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
@@ -53,7 +52,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -93,16 +92,17 @@ public class GrpcMetricsIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.meterRegistry(registry);
-            sb.service(new GrpcServiceBuilder().addService(new TestServiceImpl())
-                                               .enableUnframedRequests(true)
-                                               .build(),
+            sb.service(GrpcService.builder()
+                                  .addService(new TestServiceImpl())
+                                  .enableUnframedRequests(true)
+                                  .build(),
                        MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("server")),
                        LoggingService.newDecorator());
         }
     };
 
     private static final ClientFactory clientFactory =
-            new ClientFactoryBuilder().meterRegistry(registry).build();
+            ClientFactory.builder().meterRegistry(registry).build();
 
     @AfterClass
     public static void closeClientFactory() {
@@ -210,10 +210,10 @@ public class GrpcMetricsIntegrationTest {
     }
 
     private static void makeUnframedRequest(String name) throws Exception {
-        final HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
+        final WebClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
                 .factory(clientFactory)
                 .addHttpHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
-                .build(HttpClient.class);
+                .build(WebClient.class);
 
         final SimpleRequest request =
                 SimpleRequest.newBuilder()

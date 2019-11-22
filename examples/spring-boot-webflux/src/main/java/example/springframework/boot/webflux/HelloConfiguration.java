@@ -3,10 +3,9 @@ package example.springframework.boot.webflux;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
@@ -42,7 +41,7 @@ public class HelloConfiguration {
             // You can also bind annotated HTTP services and asynchronous RPC services such as Thrift and gRPC:
             // builder.annotatedService("/rest", service);
             // builder.service("/thrift", THttpService.of(...));
-            // builder.service(new GrpcServiceBuilder()...build());
+            // builder.service(GrpcService.builder()...build());
         };
     }
 
@@ -55,20 +54,21 @@ public class HelloConfiguration {
      */
     @Bean
     public ClientFactory clientFactory() {
-        return new ClientFactoryBuilder().sslContextCustomizer(
+        return ClientFactory.builder().sslContextCustomizer(
                 b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
     }
 
     /**
-     * A user can configure a {@link Client} by providing an {@link ArmeriaClientConfigurator} bean.
+     * A user can configure an {@link HttpClient} by providing an {@link ArmeriaClientConfigurator} bean.
      */
     @Bean
     public ArmeriaClientConfigurator armeriaClientConfigurator(ClientFactory clientFactory) {
-        // Customize the client using the given HttpClientBuilder. For example:
+        // Customize the client using the given WebClientBuilder. For example:
         return builder -> {
             // Use a circuit breaker for each remote host.
             final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-            builder.decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator());
+            builder.decorator(CircuitBreakerHttpClient.builder(strategy)
+                                                      .newDecorator());
 
             // Set a custom client factory.
             builder.factory(clientFactory);

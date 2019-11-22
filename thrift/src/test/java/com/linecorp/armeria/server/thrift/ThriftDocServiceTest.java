@@ -40,7 +40,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -50,7 +50,7 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
-import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
+import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.EntryBuilder;
@@ -131,32 +131,38 @@ public class ThriftDocServiceTest {
         final Set<SerializationFormat> allThriftFormats = ThriftSerializationFormats.values();
         final List<Entry> entries = ImmutableList.of(
                 new EntryBuilder(HelloService.class)
-                        .endpoint(new EndpointInfoBuilder("*", "/").fragment("hello").defaultFormat(BINARY)
-                                                                   .availableFormats(allThriftFormats)
-                                                                   .build())
+                        .endpoint(EndpointInfo.builder("*", "/")
+                                              .fragment("hello")
+                                              .defaultFormat(BINARY)
+                                              .availableFormats(allThriftFormats)
+                                              .build())
                         .build(),
                 new EntryBuilder(SleepService.class)
-                        .endpoint(new EndpointInfoBuilder("*", "/").fragment("sleep").defaultFormat(BINARY)
-                                                                   .availableFormats(allThriftFormats)
-                                                                   .build())
+                        .endpoint(EndpointInfo.builder("*", "/")
+                                              .fragment("sleep")
+                                              .defaultFormat(BINARY)
+                                              .availableFormats(allThriftFormats)
+                                              .build())
                         .build(),
                 new EntryBuilder(FooService.class)
-                        .endpoint(new EndpointInfoBuilder("*", "/foo").defaultFormat(COMPACT).build())
-                        .endpoint(new EndpointInfoBuilder("*", "/foo/").defaultFormat(COMPACT).build())
+                        .endpoint(EndpointInfo.builder("*", "/foo").defaultFormat(COMPACT).build())
+                        .endpoint(EndpointInfo.builder("*", "/foo/").defaultFormat(COMPACT).build())
                         .build(),
                 new EntryBuilder(Cassandra.class)
-                        .endpoint(new EndpointInfoBuilder("*", "/cassandra").defaultFormat(BINARY).build())
-                        .endpoint(new EndpointInfoBuilder("*", "/cassandra/debug").defaultFormat(TEXT).build())
+                        .endpoint(EndpointInfo.builder("*", "/cassandra").defaultFormat(BINARY).build())
+                        .endpoint(EndpointInfo.builder("*", "/cassandra/debug").defaultFormat(TEXT).build())
                         .build(),
                 new EntryBuilder(Hbase.class)
-                        .endpoint(new EndpointInfoBuilder("*", "/hbase").defaultFormat(BINARY)
-                                                                        .availableFormats(allThriftFormats)
-                                                                        .build())
+                        .endpoint(EndpointInfo.builder("*", "/hbase")
+                                              .defaultFormat(BINARY)
+                                              .availableFormats(allThriftFormats)
+                                              .build())
                         .build(),
                 new EntryBuilder(OnewayHelloService.class)
-                        .endpoint(new EndpointInfoBuilder("*", "/oneway").defaultFormat(BINARY)
-                                                                         .availableFormats(allThriftFormats)
-                                                                         .build())
+                        .endpoint(EndpointInfo.builder("*", "/oneway")
+                                              .defaultFormat(BINARY)
+                                              .availableFormats(allThriftFormats)
+                                              .build())
                         .build());
 
         final JsonNode expectedJson = mapper.valueToTree(
@@ -166,7 +172,7 @@ public class ThriftDocServiceTest {
         // when building a DocService, so we add them manually here.
         addExamples(expectedJson);
 
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
@@ -224,7 +230,7 @@ public class ThriftDocServiceTest {
 
     @Test
     public void excludeAllServices() throws IOException {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());

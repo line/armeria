@@ -24,15 +24,13 @@ import java.util.function.Function;
 
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * Builds a new {@link RetryingHttpClient} or its decorator function.
  */
-public class RetryingHttpClientBuilder
-        extends RetryingClientBuilder<RetryingHttpClient, HttpRequest, HttpResponse> {
+public final class RetryingHttpClientBuilder extends RetryingClientBuilder<HttpResponse> {
 
     private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = Integer.MAX_VALUE;
 
@@ -44,7 +42,10 @@ public class RetryingHttpClientBuilder
 
     /**
      * Creates a new builder with the specified {@link RetryStrategy}.
+     *
+     * @deprecated Use {@link RetryingHttpClient#builder(RetryStrategy)}.
      */
+    @Deprecated
     public RetryingHttpClientBuilder(RetryStrategy retryStrategy) {
         super(retryStrategy);
         needsContentInStrategy = false;
@@ -52,7 +53,10 @@ public class RetryingHttpClientBuilder
 
     /**
      * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     *
+     * @deprecated Use {@link RetryingHttpClient#builder(RetryStrategyWithContent)}.
      */
+    @Deprecated
     public RetryingHttpClientBuilder(RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
         super(retryStrategyWithContent);
         needsContentInStrategy = true;
@@ -101,8 +105,7 @@ public class RetryingHttpClientBuilder
     /**
      * Returns a newly-created {@link RetryingHttpClient} based on the properties of this builder.
      */
-    @Override
-    public RetryingHttpClient build(Client<HttpRequest, HttpResponse> delegate) {
+    public RetryingHttpClient build(HttpClient delegate) {
         if (needsContentInStrategy) {
             return new RetryingHttpClient(delegate, retryStrategyWithContent(), maxTotalAttempts(),
                                           responseTimeoutMillisForEachAttempt(), useRetryAfter,
@@ -114,11 +117,10 @@ public class RetryingHttpClientBuilder
     }
 
     /**
-     * Returns a newly-created decorator that decorates a {@link Client} with a new {@link RetryingHttpClient}
-     * based on the properties of this builder.
+     * Returns a newly-created decorator that decorates an {@link HttpClient} with a new
+     * {@link RetryingHttpClient} based on the properties of this builder.
      */
-    @Override
-    public Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient> newDecorator() {
+    public Function<? super HttpClient, RetryingHttpClient> newDecorator() {
         return this::build;
     }
 

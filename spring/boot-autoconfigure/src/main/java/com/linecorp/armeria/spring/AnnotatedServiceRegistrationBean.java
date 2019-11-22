@@ -22,6 +22,7 @@ import javax.validation.constraints.NotNull;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -39,12 +40,15 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * >             .setDecorators(LoggingService.newDecorator())
  * >             .setExceptionHandlers(new MyExceptionHandler())
  * >             .setRequestConverters(new MyRequestConverter())
- * >             .setResponseConverters(new MyResponseConverter());
+ * >             .setResponseConverters(new MyResponseConverter())
+ * >             .addExampleRequests(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}"))
+ * >             .addExampleHeaders(ExampleHeaders.of("my-header", "headerVal"));
  * > }
  * }</pre>
  */
 public class AnnotatedServiceRegistrationBean
-        extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean> {
+        extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean,
+        AnnotatedExampleRequest, ExampleHeaders> {
 
     /**
      * The path prefix of the annotated service object.
@@ -156,5 +160,52 @@ public class AnnotatedServiceRegistrationBean
     public AnnotatedServiceRegistrationBean setResponseConverters(
             ResponseConverterFunction... responseConverters) {
         return setResponseConverters(ImmutableList.copyOf(responseConverters));
+    }
+
+    /**
+     * Adds an example request for {@link #getService()}.
+     */
+    public AnnotatedServiceRegistrationBean addExampleRequests(@NotNull String methodName,
+                                                               @NotNull Object exampleRequest) {
+        return addExampleRequests(AnnotatedExampleRequest.of(methodName, exampleRequest));
+    }
+
+    /**
+     * Adds an example HTTP header for all service methods.
+     */
+    public AnnotatedServiceRegistrationBean addExampleHeaders(CharSequence name, String value) {
+        return addExampleHeaders(ExampleHeaders.of(name, value));
+    }
+
+    /**
+     * Adds an example HTTP header for the specified method.
+     */
+    public AnnotatedServiceRegistrationBean addExampleHeaders(String methodName, HttpHeaders exampleHeaders) {
+        return addExampleHeaders(ExampleHeaders.of(methodName, exampleHeaders));
+    }
+
+    /**
+     * Adds an example HTTP header for the specified method.
+     */
+    public AnnotatedServiceRegistrationBean addExampleHeaders(String methodName, CharSequence name,
+                                                              String value) {
+        return addExampleHeaders(ExampleHeaders.of(methodName, name, value));
+    }
+
+    /**
+     * Adds example HTTP headers for the specified method.
+     */
+    public AnnotatedServiceRegistrationBean addExampleHeaders(
+            String methodName, @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+        exampleHeaders.forEach(h -> addExampleHeaders(methodName, h));
+        return this;
+    }
+
+    /**
+     * Adds example HTTP headers for the specified method.
+     */
+    public AnnotatedServiceRegistrationBean addExampleHeaders(String methodName,
+                                                              @NotNull HttpHeaders... exampleHeaders) {
+        return addExampleHeaders(methodName, ImmutableList.copyOf(exampleHeaders));
     }
 }

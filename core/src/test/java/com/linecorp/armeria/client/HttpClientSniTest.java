@@ -16,23 +16,22 @@
 
 package com.linecorp.armeria.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.security.cert.X509Certificate;
 import java.util.concurrent.CompletableFuture;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
@@ -44,7 +43,7 @@ import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
-public class HttpClientSniTest {
+class HttpClientSniTest {
 
     private static final Server server;
 
@@ -55,7 +54,7 @@ public class HttpClientSniTest {
 
     static {
         try {
-            final ServerBuilder sb = new ServerBuilder();
+            final ServerBuilder sb = Server.builder();
             sscA = new SelfSignedCertificate("a.com");
             sscB = new SelfSignedCertificate("b.com");
 
@@ -74,20 +73,21 @@ public class HttpClientSniTest {
         }
     }
 
-    @BeforeClass
-    public static void init() throws Exception {
+    @BeforeAll
+    static void init() throws Exception {
         server.start().get();
         httpsPort = server.activePorts().values().stream()
                           .filter(ServerPort::hasHttps).findAny().get().localAddress()
                           .getPort();
-        clientFactory = new ClientFactoryBuilder()
-                .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
-                .build();
+        clientFactory =
+                ClientFactory.builder()
+                             .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
+                             .build();
     }
 
-    @AfterClass
-    public static void destroy() throws Exception {
+    @AfterAll
+    static void destroy() throws Exception {
         CompletableFuture.runAsync(() -> {
             clientFactory.close();
             server.stop();
@@ -97,53 +97,55 @@ public class HttpClientSniTest {
     }
 
     @Test
-    public void testMatch() throws Exception {
+    void testMatch() throws Exception {
         testMatch("a.com");
         testMatch("b.com");
     }
 
     private static void testMatch(String fqdn) throws Exception {
-        assertEquals(fqdn + ": CN=" + fqdn, get(fqdn));
+        assertThat(get(fqdn)).isEqualTo(fqdn + ": CN=" + fqdn);
     }
 
     @Test
-    public void testMismatch() throws Exception {
+    void testMismatch() throws Exception {
         testMismatch("127.0.0.1");
         testMismatch("mismatch.com");
     }
 
     private static void testMismatch(String fqdn) throws Exception {
-        assertEquals("b.com: CN=b.com", get(fqdn));
+        assertThat(get(fqdn)).isEqualTo("b.com: CN=b.com");
     }
 
     private static String get(String fqdn) throws Exception {
-        final HttpClient client = HttpClient.of(clientFactory, "https://" + fqdn + ':' + httpsPort);
+        final WebClient client = WebClient.of(clientFactory, "https://" + fqdn + ':' + httpsPort);
 
         final AggregatedHttpResponse response = client.get("/").aggregate().get();
 
-        assertEquals(HttpStatus.OK, response.status());
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
         return response.contentUtf8();
     }
 
     @Test
-    public void testCustomAuthority() throws Exception {
-        final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/",
-                                                 HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort))
-                      .aggregate().get();
+    void testCustomAuthority() throws Exception {
+        final WebClient client = WebClient.builder(SessionProtocol.HTTPS,
+                                                   Endpoint.of("a.com", httpsPort)
+                                                           .withIpAddr("127.0.0.1"))
+                                          .factory(clientFactory)
+                                          .build();
 
-        assertEquals(HttpStatus.OK, response.status());
-        assertEquals("a.com: CN=a.com", response.contentUtf8());
+        final AggregatedHttpResponse response = client.get("/").aggregate().get();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("a.com: CN=a.com");
     }
 
     @Test
-    public void testCustomAuthorityWithAdditionalHeaders() throws Exception {
-        final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
+    void testCustomAuthorityWithAdditionalHeaders() throws Exception {
+        final WebClient client = WebClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
         try (SafeCloseable unused = Clients.withHttpHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
             final AggregatedHttpResponse response = client.get("/").aggregate().get();
-            assertEquals(HttpStatus.OK, response.status());
-            assertEquals("a.com: CN=a.com", response.contentUtf8());
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo("a.com: CN=a.com");
         }
     }
 

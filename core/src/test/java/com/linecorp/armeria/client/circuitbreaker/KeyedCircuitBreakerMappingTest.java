@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -37,8 +36,8 @@ class KeyedCircuitBreakerMappingTest {
     }
 
     private static ClientRequestContext context(Endpoint endpoint) {
-        return ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
-                                          .endpoint(endpoint)
-                                          .build();
+        return ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                   .endpoint(endpoint)
+                                   .build();
     }
 }

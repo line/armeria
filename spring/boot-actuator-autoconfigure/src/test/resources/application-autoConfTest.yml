@@ -9,4 +9,9 @@ armeria:
       port: 0
       protocol: HTTP
 
-management.endpoints.web.base-path: /internal/actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, heapdump, loggers, prometheus
+      base-path: /internal/actuator

@@ -43,10 +43,10 @@ import io.netty.channel.EventLoopGroup;
  *
  * <h3>Life cycle of the default {@link ClientFactory}</h3>
  * <p>
- * {@link Clients} or {@link ClientBuilder} uses {@link #DEFAULT}, the default {@link ClientFactory},
- * unless you specified a {@link ClientFactory} explicitly. Calling {@link #close()} on the default
- * {@link ClientFactory} will neither terminate its I/O threads nor release other related resources unlike
- * other {@link ClientFactory} to protect itself from accidental premature termination.
+ * {@link Clients} or {@link ClientBuilder} uses the default {@link ClientFactory} returned by
+ * {@link #ofDefault()}, unless you specified a {@link ClientFactory} explicitly. Calling {@link #close()}
+ * on the default {@link ClientFactory} will neither terminate its I/O threads nor release other related
+ * resources unlike other {@link ClientFactory} to protect itself from accidental premature termination.
  * </p><p>
  * Instead, when the current {@link ClassLoader} is {@linkplain ClassLoader#getSystemClassLoader() the system
  * class loader}, a {@linkplain Runtime#addShutdownHook(Thread) shutdown hook} is registered so that they are
@@ -60,8 +60,25 @@ public interface ClientFactory extends AutoCloseable {
 
     /**
      * The default {@link ClientFactory} implementation.
+     *
+     * @deprecated Use {@link #ofDefault()}.
      */
-    ClientFactory DEFAULT = new ClientFactoryBuilder().build();
+    @Deprecated
+    ClientFactory DEFAULT = builder().build();
+
+    /**
+     * Returns the default {@link ClientFactory} implementation.
+     */
+    static ClientFactory ofDefault() {
+        return DEFAULT;
+    }
+
+    /**
+     * Returns a newly created {@link ClientFactoryBuilder}.
+     */
+    static ClientFactoryBuilder builder() {
+        return new ClientFactoryBuilder();
+    }
 
     /**
      * Closes the default {@link ClientFactory}.
@@ -69,12 +86,12 @@ public interface ClientFactory extends AutoCloseable {
     static void closeDefault() {
         LoggerFactory.getLogger(ClientFactory.class).debug(
                 "Closing the default {}", ClientFactory.class.getSimpleName());
-        ((DefaultClientFactory) DEFAULT).doClose();
+        ((DefaultClientFactory) ofDefault()).doClose();
     }
 
     /**
      * Disables the {@linkplain Runtime#addShutdownHook(Thread) shutdown hook} which closes
-     * {@linkplain #DEFAULT the default <code>ClientFactory</code>}. This method is useful when you need
+     * {@linkplain #ofDefault() the default <code>ClientFactory</code>}. This method is useful when you need
      * full control over the life cycle of the default {@link ClientFactory}.
      */
     static void disableShutdownHook() {
@@ -118,6 +135,11 @@ public interface ClientFactory extends AutoCloseable {
      * started to export stats to the old {@link MeterRegistry} may result in undocumented behavior.
      */
     void setMeterRegistry(MeterRegistry meterRegistry);
+
+    /**
+     * Returns the {@link ClientFactoryOptions} that has been used to create this {@link ClientFactory}.
+     */
+    ClientFactoryOptions options();
 
     /**
      * Creates a new client that connects to the specified {@code uri}.
@@ -215,10 +237,10 @@ public interface ClientFactory extends AutoCloseable {
      * Unwraps the specified {@code client} object into the object of the specified {@code type}. For example,
      * <pre>{@code
      * ClientFactory clientFactory = ...;
-     * HttpClient client = new HttpClientBuilder()
-     *     .factory(clientFactory)
-     *     .decorator(LoggingClient.newDecorator())
-     *     .build();
+     * WebClient client = WebClient.builder(...)
+     *                             .factory(clientFactory)
+     *                             .decorator(LoggingClient.newDecorator())
+     *                             .build();
      *
      * LoggingClient unwrapped = clientFactory.unwrap(client, LoggingClient.class).get();
      *

@@ -38,15 +38,15 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -73,8 +73,7 @@ import io.netty.buffer.ByteBufHolder;
  *     </li>
  * </ul>
  */
-class UnframedGrpcService extends SimpleDecoratingHttpService
-        implements ServiceWithRoutes<HttpRequest, HttpResponse> {
+class UnframedGrpcService extends SimpleDecoratingHttpService implements HttpServiceWithRoutes {
 
     private static final char LINE_SEPARATOR = '\n';
 
@@ -82,9 +81,9 @@ class UnframedGrpcService extends SimpleDecoratingHttpService
     private final GrpcService delegateGrpcService;
 
     /**
-     * Creates a new instance that decorates the specified {@link Service}.
+     * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    UnframedGrpcService(Service<HttpRequest, HttpResponse> delegate) {
+    UnframedGrpcService(HttpService delegate) {
         super(delegate);
         delegateGrpcService =
                 delegate.as(GrpcService.class)
@@ -259,7 +258,7 @@ class UnframedGrpcService extends SimpleDecoratingHttpService
         try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 new Listener() {
                     @Override
-                    public void messageRead(ByteBufOrStream message) {
+                    public void messageRead(DeframedMessage message) {
                         // We know that we don't support compression, so this is always a ByteBuffer.
                         final HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());

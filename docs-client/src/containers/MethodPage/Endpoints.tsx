@@ -32,51 +32,47 @@ interface Props {
   method: Method;
 }
 
-const Endpoints: React.SFC<Props> = (props) => {
-  return (
-    <Section>
-      <Typography variant="h6">Endpoints</Typography>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Hostname</TableCell>
-            <TableCell>Path</TableCell>
-            <TableCell>MIME types</TableCell>
+const Endpoints: React.FunctionComponent<Props> = (props) => (
+  <Section>
+    <Typography variant="h6">Endpoints</Typography>
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell>Hostname</TableCell>
+          <TableCell>Path</TableCell>
+          <TableCell>MIME types</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {props.method.endpoints.map((endpoint) => (
+          <TableRow key={`${endpoint.hostnamePattern}/${endpoint.pathMapping}`}>
+            <TableCell>{endpoint.hostnamePattern}</TableCell>
+            <TableCell>{endpointPathString(endpoint)}</TableCell>
+            <TableCell>
+              <List dense>
+                {endpoint.availableMimeTypes.map((mimeType) => (
+                  <ListItem key={mimeType}>
+                    <ListItemText
+                      primary={mimeType}
+                      primaryTypographyProps={{
+                        style: {
+                          fontWeight:
+                            mimeType === endpoint.defaultMimeType
+                              ? 'bold'
+                              : 'normal',
+                        },
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </TableCell>
           </TableRow>
-        </TableHead>
-        <TableBody>
-          {props.method.endpoints.map((endpoint) => (
-            <TableRow
-              key={`${endpoint.hostnamePattern}/${endpoint.pathMapping}`}
-            >
-              <TableCell>{endpoint.hostnamePattern}</TableCell>
-              <TableCell>{endpointPathString(endpoint)}</TableCell>
-              <TableCell>
-                <List dense>
-                  {endpoint.availableMimeTypes.map((mimeType) => (
-                    <ListItem key={mimeType}>
-                      <ListItemText
-                        primary={mimeType}
-                        primaryTypographyProps={{
-                          style: {
-                            fontWeight:
-                              mimeType === endpoint.defaultMimeType
-                                ? 'bold'
-                                : 'normal',
-                          },
-                        }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Section>
-  );
-};
+        ))}
+      </TableBody>
+    </Table>
+  </Section>
+);
 
 function endpointPathString(endpoint: Endpoint): string {
   if (endpoint.regexPathPrefix) {
@@ -85,4 +81,4 @@ function endpointPathString(endpoint: Endpoint): string {
   return endpoint.pathMapping;
 }
 
-export default Endpoints;
+export default React.memo(Endpoints);

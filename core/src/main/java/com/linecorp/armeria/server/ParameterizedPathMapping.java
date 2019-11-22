@@ -200,7 +200,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
             return null;
         }
 
-        final RoutingResultBuilder builder = RoutingResult.builder()
+        final RoutingResultBuilder builder = RoutingResult.builderWithExpectedNumParams(paramNameArray.length)
                                                           .path(routingCtx.path())
                                                           .query(routingCtx.query());
 
@@ -211,7 +211,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

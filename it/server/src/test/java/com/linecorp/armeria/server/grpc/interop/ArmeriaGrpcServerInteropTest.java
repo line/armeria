@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc.interop;
 
+import static org.junit.Assume.assumeFalse;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -31,9 +33,10 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 import com.squareup.okhttp.ConnectionSpec;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit4.server.SelfSignedCertificateRule;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -66,6 +69,11 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     public static final ServerRule server = new ServerRule() {
 
         private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
+        private final HttpServiceWithRoutes grpcService =
+                GrpcService.builder()
+                           .addService(ServerInterceptors.intercept(new TestServiceImpl(executor),
+                                                                    TestServiceImpl.interceptors()))
+                           .build();
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
@@ -78,14 +86,10 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
                 }
             });
             sb.maxRequestLength(16 * 1024 * 1024);
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(ServerInterceptors.intercept(
-                            new TestServiceImpl(executor), TestServiceImpl.interceptors()))
-                    .build()
-                    .decorate((delegate, ctx, req) -> {
-                        ctxCapture.set(ctx);
-                        return delegate.serve(ctx, req);
-                    }));
+            sb.serviceUnder("/", grpcService.decorate((delegate, ctx, req) -> {
+                ctxCapture.set(ctx);
+                return delegate.serve(ctx, req);
+            }));
         }
     };
 
@@ -116,6 +120,14 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     protected boolean metricsExpected() {
         // Armeria handles metrics using micrometer and does not support opencensus.
         return false;
+    }
+
+    @Override
+    public void deadlineExceeded() throws Exception {
+        // FIXME(trustin): Re-enable this test on Windows once we fix #2008
+        //                 https://github.com/line/armeria/issues/2008
+        assumeFalse(System.getProperty("os.name", "").startsWith("Win"));
+        super.deadlineExceeded();
     }
 
     // This base implementation is to check that the client sends the timeout as a request header, not that the

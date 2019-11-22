@@ -37,7 +37,7 @@ import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.TransientService;
+import com.linecorp.armeria.server.TransientHttpService;
 
 /**
  * An {@link HttpService} that responds with HTTP status {@code "200 OK"} if the server is healthy and can
@@ -50,10 +50,10 @@ import com.linecorp.armeria.server.TransientService;
  *
  * <h2>Example:</h2>
  * <pre>{@code
- * Server server = new ServerBuilder()
- *         .service("/services", myService)
- *         .service("/health", new HttpHealthCheckService())
- *         .build();
+ * Server server = Server.builder()
+ *                       .service("/services", myService)
+ *                       .service("/health", new HttpHealthCheckService())
+ *                       .build();
  * }</pre>
  *
  * <p>You can also specify additional {@link HealthChecker}s at construction time. It will respond with a
@@ -63,17 +63,16 @@ import com.linecorp.armeria.server.TransientService;
  *
  * <pre>{@code
  * SettableHealthChecker healthChecker = new SettableHealthChecker();
- * Server server = new ServerBuilder()
- *         .service("/services", myService)
- *         .service("/health", new HttpHealthCheckService(healthChecker))
- *         .build();
+ * Server server = Server.builder()
+ *                       .service("/services", myService)
+ *                       .service("/health", new HttpHealthCheckService(healthChecker))
+ *                       .build();
  * }</pre>
  *
  * @deprecated Use {@link HealthCheckService}.
  */
 @Deprecated
-public class HttpHealthCheckService extends AbstractHttpService
-        implements TransientService<HttpRequest, HttpResponse> {
+public class HttpHealthCheckService extends AbstractHttpService implements TransientHttpService {
 
     private static final HttpData RES_OK = HttpData.ofUtf8("ok");
     private static final HttpData RES_NOT_OK = HttpData.ofUtf8("not ok");

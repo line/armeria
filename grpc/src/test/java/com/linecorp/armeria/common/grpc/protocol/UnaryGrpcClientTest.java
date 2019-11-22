@@ -29,7 +29,7 @@ import org.junit.Test;
 
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -53,12 +53,12 @@ public class UnaryGrpcClientTest {
             final String payload = request.getPayload().getBody().toStringUtf8();
             if ("peanuts".equals(payload)) {
                 responseObserver.onError(
-                    new StatusException(Status.UNAVAILABLE.withDescription("we don't sell peanuts"))
+                        new StatusException(Status.UNAVAILABLE.withDescription("we don't sell peanuts"))
                 );
             } else if ("ice cream".equals(payload)) {
                 responseObserver.onNext(response); // Note: we error after the response, so trailers
                 responseObserver.onError(
-                    new StatusException(Status.UNAVAILABLE.withDescription("no more ice cream"))
+                        new StatusException(Status.UNAVAILABLE.withDescription("no more ice cream"))
                 );
             } else {
                 responseObserver.onNext(response);
@@ -86,15 +86,15 @@ public class UnaryGrpcClientTest {
 
     @Before
     public void setUp() {
-        client = new UnaryGrpcClient(HttpClient.of("http://127.0.0.1:" + server.getPort()));
+        client = new UnaryGrpcClient(WebClient.of("http://127.0.0.1:" + server.getPort()));
     }
 
     @Test
     public void normal() throws Exception {
         final SimpleRequest request = SimpleRequest.newBuilder()
                                                    .setPayload(Payload.newBuilder()
-                                                                .setBody(ByteString.copyFromUtf8("hello"))
-                                                                .build())
+                                                                      .setBody(ByteString.copyFromUtf8("hello"))
+                                                                      .build())
                                                    .build();
 
         final byte[] responseBytes =
@@ -107,34 +107,36 @@ public class UnaryGrpcClientTest {
     @Test
     public void statusException() {
         final SimpleRequest request = SimpleRequest.newBuilder()
-            .setPayload(Payload.newBuilder()
-                .setBody(ByteString.copyFromUtf8("peanuts"))
-                .build())
-            .build();
+                                                   .setPayload(Payload.newBuilder()
+                                                                      .setBody(ByteString
+                                                                                       .copyFromUtf8("peanuts"))
+                                                                      .build())
+                                                   .build();
 
         assertThatThrownBy(
-            () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
-                request.toByteArray()).join())
-            .isInstanceOf(CompletionException.class)
-            .hasCauseInstanceOf(ArmeriaStatusException.class)
-            .hasMessageContaining("we don't sell peanuts");
+                () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                                     request.toByteArray()).join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(ArmeriaStatusException.class)
+                .hasMessageContaining("we don't sell peanuts");
     }
 
     /** This shows we can handle status that happens in trailers. */
     @Test
     public void lateStatusException() {
         final SimpleRequest request = SimpleRequest.newBuilder()
-            .setPayload(Payload.newBuilder()
-                .setBody(ByteString.copyFromUtf8("ice cream"))
-                .build())
-            .build();
+                                                   .setPayload(Payload.newBuilder()
+                                                                      .setBody(ByteString.copyFromUtf8(
+                                                                              "ice cream"))
+                                                                      .build())
+                                                   .build();
 
         assertThatThrownBy(
-            () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
-                request.toByteArray()).join())
-            .isInstanceOf(CompletionException.class)
-            .hasCauseInstanceOf(ArmeriaStatusException.class)
-            .hasMessageContaining("no more ice cream");
+                () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                                     request.toByteArray()).join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(ArmeriaStatusException.class)
+                .hasMessageContaining("no more ice cream");
     }
 
     @Test

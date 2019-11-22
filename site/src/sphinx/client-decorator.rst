@@ -13,15 +13,16 @@ distributed tracing are implemented as decorators and you will also find it usef
 
 There are basically two ways to write a decorating client:
 
-- Implementing :api:`DecoratingClientFunction`
+- Implementing :api:`DecoratingHttpClientFunction` and :api:`DecoratingRpcClientFunction`
 - Extending :api:`SimpleDecoratingClient`
 
 
-Implementing ``DecoratingClientFunction``
------------------------------------------
+Implementing ``DecoratingHttpClientFunction`` and ``DecoratingRpcClientFunction``
+---------------------------------------------------------------------------------
 
-:api:`DecoratingClientFunction` is a functional interface that greatly simplifies the implementation of a
-decorating client. It enables you to write a decorating client with a single lambda expression:
+:api:`DecoratingHttpClientFunction` and :api:`DecoratingRpcClientFunction` are functional interfaces that
+greatly simplify the implementation of a decorating client.
+They enable you to write a decorating client with a single lambda expression:
 
 .. code-block:: java
 
@@ -37,16 +38,20 @@ decorating client. It enables you to write a decorating client with a single lam
 
     MyService.Iface client = cb.build(MyService.Iface.class);
 
-Extending ``SimpleDecoratingClient``
-------------------------------------
+Extending ``SimpleDecoratingHttpClient`` and ``SimpleDecoratingRpcClient``
+--------------------------------------------------------------------------
 
 If your decorator is expected to be reusable, it is recommended to define a new top-level class that extends
-:api:`SimpleDecoratingClient`:
+:api:`SimpleDecoratingHttpClient` or :api:`SimpleDecoratingRpcClient` depending on whether you are decorating an
+:api:`HttpClient` or an :api:`RpcClient`:
 
 .. code-block:: java
 
-    public class AuditClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
-        public AuditClient(Service<HttpRequest, HttpResponse> delegate) {
+    import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
+
+    public class AuditClient extends SimpleDecoratingHttpClient {
+        public AuditClient(HttpClient delegate) {
             super(delegate);
         }
 

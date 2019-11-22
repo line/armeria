@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
@@ -24,6 +25,7 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -78,8 +80,10 @@ public final class ClientUtil {
 
     private static <I extends Request, O extends Response, U extends Client<I, O>>
     O pushAndExecute(U delegate, ClientRequestContext ctx) throws Exception {
+        @SuppressWarnings("unchecked")
+        final I req = (I) firstNonNull(ctx.request(), ctx.rpcRequest());
         try (SafeCloseable ignored = ctx.push()) {
-            return delegate.execute(ctx, ctx.request());
+            return delegate.execute(ctx, req);
         }
     }
 
@@ -94,9 +98,9 @@ public final class ClientUtil {
             // so end the request with the exception.
             logBuilder.endRequest(cause);
 
-            final Request req = ctx.request();
-            if (req instanceof StreamMessage) {
-                ((StreamMessage<?>) req).abort();
+            final HttpRequest req = ctx.request();
+            if (req != null) {
+                req.abort(cause);
             }
         }
         logBuilder.endResponse(cause);

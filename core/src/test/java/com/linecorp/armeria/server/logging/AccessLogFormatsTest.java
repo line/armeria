@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.logging;
 
 import static com.linecorp.armeria.server.logging.AccessLogComponent.TimestampComponent.defaultDateTimeFormatter;
@@ -43,9 +42,10 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -54,12 +54,12 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.CommonComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.HttpHeaderComponent;
@@ -67,7 +67,7 @@ import com.linecorp.armeria.server.logging.AccessLogComponent.HttpHeaderComponen
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 
-public class AccessLogFormatsTest {
+class AccessLogFormatsTest {
 
     private static final Duration duration = Duration.ofMillis(1000000000L);
 
@@ -78,7 +78,7 @@ public class AccessLogFormatsTest {
     private static final long requestEndTimeNanos = requestStartTimeNanos + duration.toNanos();
 
     @Test
-    public void parseSuccess() {
+    void parseSuccess() {
         List<AccessLogComponent> format;
         AccessLogComponent entry;
         HttpHeaderComponent headerEntry;
@@ -135,7 +135,7 @@ public class AccessLogFormatsTest {
 
         format = AccessLogFormats.parseCustom(
                 "%{com.linecorp.armeria.server.logging.AccessLogFormatsTest$Attr#KEY" +
-                ":com.linecorp.armeria.server.logging.AccessLogFormatsTest$AttributeStringfier}j");
+                ":com.linecorp.armeria.server.logging.AccessLogFormatsTest$AttributeStringifier}j");
         assertThat(format.size()).isOne();
         entry = format.get(0);
         assertThat(entry).isInstanceOf(AttributeComponent.class);
@@ -159,7 +159,7 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void parseFailure() {
+    void parseFailure() {
         assertThatThrownBy(() -> AccessLogFormats.parseCustom("%x"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> AccessLogFormats.parseCustom("%!{abc}i"))
@@ -179,16 +179,18 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void formatMessage() {
+    void formatMessage() {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.GET, "/armeria/log",
                                   HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
                                   HttpHeaderNames.REFERER, "http://log.example.com",
                                   HttpHeaderNames.COOKIE, "a=1;b=2"));
+        final RequestId id = RequestId.random();
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(req)
-                                            .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
-                                            .build();
+                ServiceRequestContext.builder(req)
+                                     .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                     .id(id)
+                                     .build();
         ctx.attr(Attr.ATTR_KEY).set(new Attr("line"));
 
         final RequestLog log = ctx.log();
@@ -240,7 +242,7 @@ public class AccessLogFormatsTest {
 
         format = AccessLogFormats.parseCustom(
                 "%{com.linecorp.armeria.server.logging.AccessLogFormatsTest$Attr#KEY" +
-                ":com.linecorp.armeria.server.logging.AccessLogFormatsTest$AttributeStringfier}j");
+                ":com.linecorp.armeria.server.logging.AccessLogFormatsTest$AttributeStringifier}j");
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo("(line)");
 
@@ -251,16 +253,22 @@ public class AccessLogFormatsTest {
 
         format = AccessLogFormats.parseCustom("%{content-type}o");
         assertThat(AccessLogger.format(format, log)).isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
+
+        format = AccessLogFormats.parseCustom("%I");
+        assertThat(AccessLogger.format(format, log)).isEqualTo(id.text());
+
+        format = AccessLogFormats.parseCustom("%{short}I");
+        assertThat(AccessLogger.format(format, log)).isEqualTo(id.shortText());
     }
 
     @Test
-    public void logClientAddress() throws Exception {
+    void logClientAddress() throws Exception {
         final InetSocketAddress remote = new InetSocketAddress(InetAddress.getByName("10.1.0.1"), 5000);
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
-                                            .remoteAddress(remote)
-                                            .clientAddress(InetAddress.getByName("10.0.0.1"))
-                                            .build();
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .remoteAddress(remote)
+                                     .clientAddress(InetAddress.getByName("10.0.0.1"))
+                                     .build();
 
         List<AccessLogComponent> format;
 
@@ -274,10 +282,10 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void requestLogAvailabilityException() {
-        final String expectedLogMessage = "\"GET /armeria/log#rpcMethod h2\" 200 1024";
+    void requestLogAvailabilityException() {
+        final String expectedLogMessage = "\"GET /armeria/log#rpcMethod h2c\" 200 1024";
 
-        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/armeria/log",
                                                  HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
                                                  HttpHeaderNames.REFERER, "http://log.example.com",
@@ -286,8 +294,8 @@ public class AccessLogFormatsTest {
         final RequestLogBuilder logBuilder = ctx.logBuilder();
 
         // AccessLogger#format will be called after response is finished.
-        log.addListener(l -> assertThat(AccessLogger.format(AccessLogFormats.COMMON, l))
-                .endsWith(expectedLogMessage), RequestLogAvailability.COMPLETE);
+        final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
+        log.addListener(logHolder::set, RequestLogAvailability.COMPLETE);
 
         // RequestLogAvailabilityException will be raised inside AccessLogger#format before injecting each
         // component to RequestLog. So we cannot get the expected log message here.
@@ -301,14 +309,16 @@ public class AccessLogFormatsTest {
         logBuilder.responseLength(1024);
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
         logBuilder.endResponse();
+
+        assertThat(AccessLogger.format(AccessLogFormats.COMMON, logHolder.get())).endsWith(expectedLogMessage);
     }
 
     @Test
-    public void requestLogComponent() {
+    void requestLogComponent() {
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/armeria/log"))
-                                            .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
-                                            .build();
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/armeria/log"))
+                                     .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                     .build();
 
         final RequestLog log = ctx.log();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
@@ -360,7 +370,7 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void requestLogWithEmptyCause() {
+    void requestLogWithEmptyCause() {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
         final RequestLog log = ctx.log();
@@ -376,11 +386,11 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void timestamp() {
+    void timestamp() {
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
-                                            .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
-                                            .build();
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                     .build();
         final RequestLog log = ctx.log();
 
         assertThat(AccessLogger.format(AccessLogFormats.parseCustom("%t"), log))
@@ -423,7 +433,7 @@ public class AccessLogFormatsTest {
         return formatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis), defaultZoneId));
     }
 
-    public static class Attr {
+    static class Attr {
         static final AttributeKey<Attr> ATTR_KEY = AttributeKey.valueOf(Attr.class, "KEY");
 
         private final String member;
@@ -432,7 +442,7 @@ public class AccessLogFormatsTest {
             this.member = member;
         }
 
-        public String member() {
+        String member() {
             return member;
         }
 
@@ -442,7 +452,7 @@ public class AccessLogFormatsTest {
         }
     }
 
-    public static class AttributeStringfier implements Function<Attr, String> {
+    static class AttributeStringifier implements Function<Attr, String> {
         @Override
         public String apply(Attr attr) {
             return '(' + attr.member() + ')';

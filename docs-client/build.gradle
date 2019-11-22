@@ -1,50 +1,24 @@
-import java.nio.file.FileVisitOption
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.SimpleFileVisitor
-
 buildscript {
     repositories {
         gradlePluginPortal()
     }
     dependencies {
-        classpath "com.moowork.gradle:gradle-node-plugin:${managedVersions['com.moowork.gradle:gradle-node-plugin']}"
+        classpath "com.github.node-gradle:gradle-node-plugin:${managedVersions['com.github.node-gradle:gradle-node-plugin']}"
     }
+}
+
+// Do not build if 'noWeb' property exists.
+if (rootProject.hasProperty('noWeb')) {
+    return
 }
 
 apply plugin: 'base'
-apply plugin: 'com.moowork.node'
+apply plugin: 'com.github.node-gradle.node'
 
-tasks.yarn.doFirst {
-    deleteBrokenSymlinks()
-}
+tasks.yarn.args += ['--frozen-lockfile']
 
-tasks.yarn.doLast {
-    deleteBrokenSymlinks()
-}
-
-def deleteBrokenSymlinks() {
-    // Delete the broken symlinks so that Gradle does not fail the build.
-    // - https://github.com/gradle/gradle/issues/1365
-    // Note that this is primarily due to a bug in Yarn 1.11+:
-    // - https://github.com/yarnpkg/yarn/issues/6585
-    // - https://github.com/yarnpkg/yarn/issues/6615
-    // TODO(trustin): Remove the workaround once Yarn fixes yarnpkg/yarn#6585.
-
-    def visitor = new SimpleFileVisitor<java.nio.file.Path>() {
-        @Override
-        FileVisitResult visitFileFailed(java.nio.file.Path file, IOException exc) throws IOException {
-            logger.warn("Removing a broken symlink: ${file}")
-            Files.delete(file);
-            return FileVisitResult.CONTINUE
-        }
-    }
-
-    Files.walkFileTree(
-            project.file("${projectDir}/node_modules").toPath(),
-            [FileVisitOption.FOLLOW_LINKS] as Set,
-            Integer.MAX_VALUE,
-            visitor)
+task yarnUpdate(type: YarnTask) {
+    args = ['install']
 }
 
 task buildWeb(type: YarnTask) {

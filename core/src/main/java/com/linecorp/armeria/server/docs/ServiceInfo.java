@@ -19,8 +19,10 @@ package com.linecorp.armeria.server.docs;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -29,12 +31,15 @@ import javax.annotation.Nullable;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -74,11 +79,7 @@ public final class ServiceInfo {
                        @Nullable String docString) {
 
         this.name = requireNonNull(name, "name");
-
-        requireNonNull(methods, "methods");
-
-        this.methods = ImmutableSortedSet.copyOf(comparing(MethodInfo::name)
-                                                         .thenComparing(MethodInfo::httpMethod), methods);
+        this.methods = mergeEndpoints(requireNonNull(methods));
         this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
                                                                       "exampleHttpHeaders"));
         this.docString = Strings.emptyToNull(docString);
@@ -98,6 +99,37 @@ public final class ServiceInfo {
     @JsonProperty
     public Set<MethodInfo> methods() {
         return methods;
+    }
+
+    /**
+     * Merges the {@link MethodInfo}s with the same method name and {@link HttpMethod} pair
+     * into a single {@link MethodInfo}. Note that only the {@link EndpointInfo}s are merged
+     * because the {@link MethodInfo}s being merged always have the same
+     * {@code exampleHttpHeaders} and {@code exampleRequests}.
+     */
+    @VisibleForTesting
+    static Set<MethodInfo> mergeEndpoints(Iterable<MethodInfo> methodInfos) {
+        final Map<List<Object>, MethodInfo> methodInfoMap = new HashMap<>();
+        for (MethodInfo methodInfo : methodInfos) {
+            final List<Object> mergeKey = ImmutableList.of(methodInfo.name(), methodInfo.httpMethod());
+            methodInfoMap.compute(mergeKey, (key, value) -> {
+                if (value == null) {
+                    return methodInfo;
+                } else {
+                    final Set<EndpointInfo> endpointInfos =
+                            Sets.union(value.endpoints(), methodInfo.endpoints());
+                    return new MethodInfo(value.name(), value.returnTypeSignature(),
+                                          value.parameters(), value.exceptionTypeSignatures(),
+                                          endpointInfos, value.exampleHttpHeaders(),
+                                          value.exampleRequests(), value.httpMethod(),
+                                          value.docString());
+                }
+            });
+        }
+        return ImmutableSortedSet
+                .orderedBy(comparing(MethodInfo::name).thenComparing(MethodInfo::httpMethod))
+                .addAll(methodInfoMap.values())
+                .build();
     }
 
     /**
@@ -143,7 +175,7 @@ public final class ServiceInfo {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

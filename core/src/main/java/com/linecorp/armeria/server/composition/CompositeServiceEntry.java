@@ -20,19 +20,16 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.regex.Pattern;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.Service;
 
 /**
- * A pair of a {@link Route} and a {@link Service} bound to it.
+ * A pair of a {@link Route} and an {@link Service} bound to it.
  *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
+ * @param <T> the {@link Service} type
  */
-public final class CompositeServiceEntry<I extends Request, O extends Response> {
+public final class CompositeServiceEntry<T extends Service<?, ?>> {
 
     /**
      * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound at the path that matches
@@ -40,8 +37,7 @@ public final class CompositeServiceEntry<I extends Request, O extends Response> 
      *
      * @see RouteBuilder#regex(Pattern)
      */
-    public static <I extends Request, O extends Response>
-    CompositeServiceEntry<I, O> ofRegex(Pattern regex, Service<I, O> service) {
+    public static <T extends Service<?, ?>> CompositeServiceEntry<T> ofRegex(Pattern regex, T service) {
         return new CompositeServiceEntry<>(Route.builder().regex(regex).build(), service);
     }
 
@@ -51,8 +47,7 @@ public final class CompositeServiceEntry<I extends Request, O extends Response> 
      *
      * @see RouteBuilder#glob(String)
      */
-    public static <I extends Request, O extends Response>
-    CompositeServiceEntry<I, O> ofGlob(String glob, Service<I, O> service) {
+    public static <T extends Service<?, ?>> CompositeServiceEntry<T> ofGlob(String glob, T service) {
         return new CompositeServiceEntry<>(Route.builder().glob(glob).build(), service);
     }
 
@@ -60,54 +55,51 @@ public final class CompositeServiceEntry<I extends Request, O extends Response> 
      * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound under the specified
      * directory.
      *
-     * @see RouteBuilder#prefix(String)
+     * @see RouteBuilder#pathPrefix(String)
      */
-    public static <I extends Request, O extends Response>
-    CompositeServiceEntry<I, O> ofPrefix(String pathPrefix, Service<I, O> service) {
-        return new CompositeServiceEntry<>(Route.builder().prefix(pathPrefix).build(), service);
+    public static <T extends Service<?, ?>> CompositeServiceEntry<T> ofPrefix(String pathPrefix, T service) {
+        return new CompositeServiceEntry<>(Route.builder().pathPrefix(pathPrefix).build(), service);
     }
 
     /**
-     * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound at the specified exact path.
+     * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound at the specified
+     * exact path.
      *
      * @see RouteBuilder#exact(String)
      */
-    public static <I extends Request, O extends Response>
-    CompositeServiceEntry<I, O> ofExact(String exactPath, Service<I, O> service) {
+    public static <T extends Service<?, ?>> CompositeServiceEntry<T> ofExact(String exactPath, T service) {
         return new CompositeServiceEntry<>(Route.builder().exact(exactPath).build(), service);
     }
 
     /**
      * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound at
-     * {@linkplain RouteBuilder#catchAll() the catch-all path mapping}.
+     * {@linkplain Route#ofCatchAll() the catch-all path mapping}.
      */
-    public static <I extends Request, O extends Response>
-    CompositeServiceEntry<I, O> ofCatchAll(Service<I, O> service) {
-        return new CompositeServiceEntry<>(Route.builder().catchAll().build(), service);
+    public static <T extends Service<?, ?>> CompositeServiceEntry<T> ofCatchAll(T service) {
+        return new CompositeServiceEntry<>(Route.ofCatchAll(), service);
     }
 
     /**
-     * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound at the specified path pattern.
+     * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound at the specified
+     * path pattern.
      *
      * @see RouteBuilder#path(String)
      */
-    public static <I extends Request, O extends Response>
-    CompositeServiceEntry<I, O> of(String pathPattern, Service<I, O> service) {
+    public static <T extends Service<?, ?>> CompositeServiceEntry<T> of(String pathPattern, T service) {
         return new CompositeServiceEntry<>(Route.builder().path(pathPattern).build(), service);
     }
 
     /**
      * Creates a new {@link CompositeServiceEntry} with the specified {@link Route} and {@link Service}.
      */
-    public static <I extends Request, O extends Response>
-    CompositeServiceEntry<I, O> of(Route route, Service<I, O> service) {
+    public static <T extends Service<?, ?>> CompositeServiceEntry<T> of(Route route, T service) {
         return new CompositeServiceEntry<>(route, service);
     }
 
     private final Route route;
-    private final Service<I, O> service;
+    private final T service;
 
-    private CompositeServiceEntry(Route route, Service<I, O> service) {
+    private CompositeServiceEntry(Route route, T service) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
     }
@@ -122,7 +114,7 @@ public final class CompositeServiceEntry<I extends Request, O extends Response> 
     /**
      * Returns the {@link Service}.
      */
-    public Service<I, O> service() {
+    public T service() {
         return service;
     }
 

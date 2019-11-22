@@ -20,29 +20,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.ClientDecoration.Entry;
+import com.linecorp.armeria.client.encoding.HttpDecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.RequestId;
 
-public class ClientOptionsBuilderTest {
+class ClientOptionsBuilderTest {
     @Test
-    public void testBaseOptions() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder(
-                ClientOptions.of(ClientOption.MAX_RESPONSE_LENGTH.newValue(42L)));
+    void testBaseOptions() {
+        final ClientOptionsBuilder b =
+                ClientOptions.of(ClientOption.MAX_RESPONSE_LENGTH.newValue(42L)).toBuilder();
         assertThat(b.build().maxResponseLength()).isEqualTo(42);
     }
 
     @Test
-    public void testOptions() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder();
+    void testOptions() {
+        final ClientOptionsBuilder b = ClientOptions.builder();
         b.options(ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(42L)));
         assertThat(b.build().responseTimeoutMillis()).isEqualTo(42);
 
@@ -52,39 +53,55 @@ public class ClientOptionsBuilderTest {
     }
 
     @Test
-    public void testOption() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder();
+    void testOption() {
+        final ClientOptionsBuilder b = ClientOptions.builder();
         b.option(ClientOption.MAX_RESPONSE_LENGTH, 123L);
         assertThat(b.build().maxResponseLength()).isEqualTo(123);
     }
 
     @Test
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    public void testDecorators() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder();
-        final Function decorator = LoggingClient.newDecorator();
-
-        b.option(ClientOption.DECORATION.newValue(
-                new ClientDecorationBuilder()
-                        .add(HttpRequest.class, HttpResponse.class, decorator)
-                        .build()));
-
-        assertThat(b.build().decoration().entries()).containsExactly(
-                new Entry<>(HttpRequest.class, HttpResponse.class, decorator));
-
-        // Add another decorator to ensure that the builder does not replace the previous one.
-        b.option(ClientOption.DECORATION.newValue(
-                new ClientDecorationBuilder()
-                        .add(RpcRequest.class, RpcResponse.class, decorator)
-                        .build()));
-        assertThat(b.build().decoration().entries()).containsExactly(
-                new Entry<>(HttpRequest.class, HttpResponse.class, decorator),
-                new Entry<>(RpcRequest.class, RpcResponse.class, decorator));
+    void testIdGenerator() {
+        final Supplier<RequestId> expected = () -> null;
+        final ClientOptionsBuilder b = ClientOptions.builder();
+        b.requestIdGenerator(expected);
+        final ClientOptions options = b.build();
+        assertThat(options.requestIdGenerator()).isSameAs(expected);
     }
 
     @Test
-    public void testHttpHeaders() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder();
+    void testDecorators() {
+        final ClientOptionsBuilder b = ClientOptions.builder();
+        final Function<? super HttpClient, ? extends HttpClient> decorator =
+                LoggingClient.newDecorator();
+
+        b.option(ClientOption.DECORATION.newValue(ClientDecoration.builder()
+                                                                  .add(decorator)
+                                                                  .build()));
+
+        assertThat(b.build().decoration().decorators()).containsExactly(decorator);
+
+        // Add another decorator to ensure that the builder does not replace the previous one.
+        final Function<? super HttpClient, ? extends HttpClient> decorator2 =
+                HttpDecodingClient.newDecorator();
+        b.option(ClientOption.DECORATION.newValue(ClientDecoration.builder()
+                                                                  .add(decorator2)
+                                                                  .build()));
+        assertThat(b.build().decoration().decorators()).containsExactly(decorator, decorator2);
+
+        // Add an RPC decorator.
+        final Function<? super RpcClient, ? extends RpcClient> rpcDecorator =
+                LoggingRpcClient.newDecorator();
+        b.option(ClientOption.DECORATION.newValue(ClientDecoration.builder()
+                                                                  .addRpc(rpcDecorator)
+                                                                  .build()));
+
+        assertThat(b.build().decoration().decorators()).containsExactly(decorator, decorator2);
+        assertThat(b.build().decoration().rpcDecorators()).containsExactly(rpcDecorator);
+    }
+
+    @Test
+    void testHttpHeaders() {
+        final ClientOptionsBuilder b = ClientOptions.builder();
 
         b.option(ClientOption.HTTP_HEADERS.newValue(HttpHeaders.of(HttpHeaderNames.ACCEPT, "*/*")));
 
@@ -97,8 +114,8 @@ public class ClientOptionsBuilderTest {
     }
 
     @Test
-    public void testSetHttpHeaders() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder();
+    void testSetHttpHeaders() {
+        final ClientOptionsBuilder b = ClientOptions.builder();
         b.setHttpHeaders(HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l"));
 
         assertThat(b.build().httpHeaders().get(HttpHeaderNames.AUTHORIZATION))
@@ -106,8 +123,8 @@ public class ClientOptionsBuilderTest {
     }
 
     @Test
-    public void testSetHttpHeader() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder();
+    void testSetHttpHeader() {
+        final ClientOptionsBuilder b = ClientOptions.builder();
         // Ensure setHttpHeader replaces instead of adding.
         b.setHttpHeader(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l");
         b.setHttpHeader(HttpHeaderNames.AUTHORIZATION, "Lost token");
@@ -116,8 +133,8 @@ public class ClientOptionsBuilderTest {
     }
 
     @Test
-    public void testAddHttpHeaders() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder();
+    void testAddHttpHeaders() {
+        final ClientOptionsBuilder b = ClientOptions.builder();
         b.addHttpHeaders(HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l"));
 
         assertThat(b.build().httpHeaders().get(HttpHeaderNames.AUTHORIZATION))
@@ -125,8 +142,8 @@ public class ClientOptionsBuilderTest {
     }
 
     @Test
-    public void testAddHttpHeader() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder();
+    void testAddHttpHeader() {
+        final ClientOptionsBuilder b = ClientOptions.builder();
         // Ensure addHttpHeader does not replace.
         b.addHttpHeader(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l");
         b.addHttpHeader(HttpHeaderNames.AUTHORIZATION, "Lost token");
@@ -136,8 +153,8 @@ public class ClientOptionsBuilderTest {
     }
 
     @Test
-    public void testShortcutMethods() {
-        final ClientOptionsBuilder b = new ClientOptionsBuilder();
+    void testShortcutMethods() {
+        final ClientOptionsBuilder b = ClientOptions.builder();
         b.writeTimeout(Duration.ofSeconds(1));
         b.responseTimeout(Duration.ofSeconds(2));
         b.maxResponseLength(3000);
@@ -149,7 +166,7 @@ public class ClientOptionsBuilderTest {
     }
 
     @Test
-    public void testDecoratorDowncast() {
+    void testDecoratorDowncast() {
         final FooClient inner = new FooClient();
         final FooDecorator outer = new FooDecorator(inner);
 
@@ -167,7 +184,7 @@ public class ClientOptionsBuilderTest {
         assertThat(outer.as(LoggingClient.class).isPresent()).isFalse();
     }
 
-    private static final class FooClient implements Client<HttpRequest, HttpResponse> {
+    private static final class FooClient implements HttpClient {
         FooClient() { }
 
         @Override
@@ -177,8 +194,8 @@ public class ClientOptionsBuilderTest {
         }
     }
 
-    private static final class FooDecorator extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
-        FooDecorator(Client<HttpRequest, HttpResponse> delegate) {
+    private static final class FooDecorator extends SimpleDecoratingHttpClient {
+        FooDecorator(HttpClient delegate) {
             super(delegate);
         }
 

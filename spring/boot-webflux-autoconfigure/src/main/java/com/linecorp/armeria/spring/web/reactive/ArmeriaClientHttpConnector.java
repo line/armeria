@@ -31,8 +31,8 @@ import org.springframework.http.client.reactive.ClientHttpResponse;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 
 import reactor.core.publisher.Mono;
@@ -57,7 +57,7 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
      * Creates an {@link ArmeriaClientHttpConnector} with the specified
      * {@link ArmeriaClientConfigurator} and the default {@link DataBufferFactoryWrapper}.
      *
-     * @param configurator the configurator to be used to build an {@link HttpClient}
+     * @param configurator the configurator to be used to build an {@link WebClient}
      */
     public ArmeriaClientHttpConnector(ArmeriaClientConfigurator configurator) {
         this(ImmutableList.of(requireNonNull(configurator, "configurator")),
@@ -67,7 +67,8 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
     /**
      * Creates an {@link ArmeriaClientHttpConnector}.
      *
-     * @param configurators the {@link ArmeriaClientConfigurator}s to be used to build an {@link HttpClient}
+     * @param configurators the {@link ArmeriaClientConfigurator}s to be used to build an
+     *                      {@link WebClient}
      * @param factoryWrapper the factory wrapper to be used to create a {@link DataBuffer}
      */
     public ArmeriaClientHttpConnector(Iterable<ArmeriaClientConfigurator> configurators,
@@ -88,7 +89,7 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
             return requestCallback.apply(request)
                                   .then(Mono.fromFuture(request.future()))
                                   .map(ArmeriaHttpClientResponseSubscriber::new)
-                                  .flatMap(s -> Mono.fromFuture(s.httpHeadersFuture())
+                                  .flatMap(s -> Mono.fromFuture(s.headersFuture())
                                                     .map(headers -> createResponse(headers, s)));
         } catch (NullPointerException | IllegalArgumentException e) {
             return Mono.error(e);
@@ -105,7 +106,7 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
         checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: " + uri);
 
         final URI baseUri = URI.create(Strings.isNullOrEmpty(scheme) ? authority : scheme + "://" + authority);
-        final HttpClientBuilder builder = new HttpClientBuilder(baseUri);
+        final WebClientBuilder builder = WebClient.builder(baseUri);
         configurators.forEach(c -> c.configure(builder));
 
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;

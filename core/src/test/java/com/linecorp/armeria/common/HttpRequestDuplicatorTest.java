@@ -22,10 +22,41 @@ import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class HttpRequestDuplicatorTest {
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.client.retry.RetryStrategy;
+import com.linecorp.armeria.client.retry.RetryingHttpClient;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
+
+class HttpRequestDuplicatorTest {
+
+    @RegisterExtension
+    static final EventLoopExtension eventLoop = new EventLoopExtension();
+
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/long_streaming", (ctx, req) -> {
+                final HttpResponseWriter response = HttpResponse.streaming();
+                response.write(ResponseHeaders.of(200));
+                req.aggregate().handle((aggregatedReq, cause) -> {
+                    response.write(HttpData.ofUtf8("Hello"));
+                    // Close response after receiving all requests
+                    response.close();
+                    return null;
+                });
+                return response;
+            });
+        }
+    };
 
     @Test
     void aggregateTwice() {
@@ -55,5 +86,29 @@ public class HttpRequestDuplicatorTest {
         assertThat(req2.trailers()).isEqualTo(
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
         reqDuplicator.close();
+    }
+
+    @Test
+    void longLivedRequest() {
+        final WebClient client =
+                WebClient.builder(server.uri("/"))
+                         .decorator(RetryingHttpClient.newDecorator(
+                                 RetryStrategy.onServerErrorStatus(Backoff.withoutDelay())))
+                         .build();
+
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/long_streaming");
+        writeStreamingRequest(req, 0);
+        final AggregatedHttpResponse res = client.execute(req).aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Hello");
+    }
+
+    private static void writeStreamingRequest(HttpRequestWriter req, int index) {
+        if (index == 10) {
+            req.close();
+            return;
+        }
+        req.write(HttpData.ofUtf8(String.valueOf(index)));
+        req.onDemand(() -> eventLoop.get().schedule(() -> writeStreamingRequest(req, index + 1),
+                                                    300, TimeUnit.MILLISECONDS));
     }
 }

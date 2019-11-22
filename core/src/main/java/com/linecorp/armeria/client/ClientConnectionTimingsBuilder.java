@@ -47,7 +47,10 @@ public final class ClientConnectionTimingsBuilder {
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link ClientConnectionTimings#builder()}.
      */
+    @Deprecated
     public ClientConnectionTimingsBuilder() {
         connectionAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
         connectionAcquisitionStartNanos = System.nanoTime();

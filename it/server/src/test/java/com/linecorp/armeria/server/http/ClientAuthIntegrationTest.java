@@ -21,14 +21,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.client.logging.LoggingClientBuilder;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.logging.LoggingServiceBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.SelfSignedCertificateRule;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -56,20 +55,22 @@ public class ClientAuthIntegrationTest {
                                      .build();
             sb.tls(sslContext)
               .service("/", (ctx, req) -> HttpResponse.of("success"))
-              .decorator(new LoggingServiceBuilder().newDecorator());
+              .decorator(LoggingService.builder().newDecorator());
         }
     };
 
     @Test
     public void normal() {
-        final HttpClient client = new HttpClientBuilder(rule.httpsUri("/"))
-                .factory(new ClientFactoryBuilder()
-                                 .sslContextCustomizer(ctx -> ctx
-                                         .keyManager(clientCert.certificateFile(), clientCert.privateKeyFile())
-                                         .trustManager(InsecureTrustManagerFactory.INSTANCE))
-                                 .build())
-                .decorator(new LoggingClientBuilder().newDecorator())
-                .build();
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .sslContextCustomizer(ctx -> ctx
+                                     .keyManager(clientCert.certificateFile(), clientCert.privateKeyFile())
+                                     .trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .build();
+        final WebClient client = WebClient.builder(rule.httpsUri("/"))
+                                          .factory(clientFactory)
+                                          .decorator(LoggingClient.builder().newDecorator())
+                                          .build();
         assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
     }
 }

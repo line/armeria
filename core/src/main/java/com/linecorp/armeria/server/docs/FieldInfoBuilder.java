@@ -29,7 +29,7 @@ import com.google.common.collect.Iterables;
 /**
  * Creates a new {@link FieldInfo} using the builder pattern.
  */
-public class FieldInfoBuilder {
+public final class FieldInfoBuilder {
 
     private final String name;
     private final TypeSignature typeSignature;
@@ -42,7 +42,10 @@ public class FieldInfoBuilder {
 
     /**
      * Creates a new {@link FieldInfoBuilder}.
+     *
+     * @deprecated Use {@link FieldInfo#builder(String, TypeSignature)}.
      */
+    @Deprecated
     public FieldInfoBuilder(String name, TypeSignature typeSignature) {
         this.name = requireNonNull(name, "name");
         this.typeSignature = requireNonNull(typeSignature, "typeSignature");
@@ -51,14 +54,20 @@ public class FieldInfoBuilder {
 
     /**
      * Creates a new {@link FieldInfoBuilder}.
+     *
+     * @deprecated Use {@link FieldInfo#builder(String, TypeSignature, FieldInfo...)}.
      */
+    @Deprecated
     public FieldInfoBuilder(String name, TypeSignature typeSignature, FieldInfo... childFieldInfos) {
         this(name, typeSignature, ImmutableList.copyOf(childFieldInfos));
     }
 
     /**
      * Creates a new {@link FieldInfoBuilder}.
+     *
+     * @deprecated Use {@link FieldInfo#builder(String, TypeSignature, Iterable)}.
      */
+    @Deprecated
     public FieldInfoBuilder(String name, TypeSignature typeSignature, Iterable<FieldInfo> childFieldInfos) {
         this.name = requireNonNull(name, "name");
         this.typeSignature = typeSignature;

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.RouteCache.wrapCompositeServiceRouter;
+import static com.linecorp.armeria.server.RouteCache.wrapRouteDecoratingServiceRouter;
 import static com.linecorp.armeria.server.RouteCache.wrapVirtualHostRouter;
 import static java.util.Objects.requireNonNull;
 
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -40,8 +42,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.RoutingTrie.Builder;
 import com.linecorp.armeria.server.composition.CompositeServiceEntry;
 
@@ -77,11 +77,11 @@ public final class Routers {
     /**
      * Returns the default implementation of the {@link Router} to find a {@link CompositeServiceEntry}.
      */
-    public static <I extends Request, O extends Response> Router<Service<I, O>> ofCompositeService(
-            List<CompositeServiceEntry<I, O>> entries) {
+    public static <T extends Service<?, ?>> Router<T> ofCompositeService(
+            List<CompositeServiceEntry<T>> entries) {
         requireNonNull(entries, "entries");
 
-        final Router<CompositeServiceEntry<I, O>> delegate = wrapCompositeServiceRouter(defaultRouter(
+        final Router<CompositeServiceEntry<T>> delegate = wrapCompositeServiceRouter(defaultRouter(
                 entries, CompositeServiceEntry::route,
                 (mapping, existingMapping) -> {
                     final String a = mapping.toString();
@@ -100,6 +100,15 @@ public final class Routers {
                 result.isPresent() ? Routed.of(result.route(), result.routingResult(),
                                                result.value().service())
                                    : Routed.empty());
+    }
+
+    /**
+     * Returns the default implementation of the {@link Router} to find a {@link RouteDecoratingService}.
+     */
+    public static Router<RouteDecoratingService> ofRouteDecoratingService(
+            List<RouteDecoratingService> routeDecoratingServices) {
+        return wrapRouteDecoratingServiceRouter(
+                defaultRouter(routeDecoratingServices, RouteDecoratingService::route, (route1, route2) -> {}));
     }
 
     /**
@@ -286,6 +295,20 @@ public final class Routers {
         return result;
     }
 
+    private static <V> Stream<Routed<V>> findAll(RoutingContext routingCtx, List<V> values,
+                                                 Function<V, Route> routeResolver) {
+        final Stream.Builder<Routed<V>> builder = Stream.builder();
+
+        for (V value : values) {
+            final Route route = routeResolver.apply(value);
+            final RoutingResult routingResult = route.apply(routingCtx);
+            if (routingResult.isPresent()) {
+                builder.add(Routed.of(route, routingResult, value));
+            }
+        }
+        return builder.build();
+    }
+
     private static final class TrieRouter<V> implements Router<V> {
 
         private final RoutingTrie<V> trie;
@@ -299,6 +322,11 @@ public final class Routers {
         @Override
         public Routed<V> find(RoutingContext routingCtx) {
             return findBest(routingCtx, trie.find(routingCtx.path()), routeResolver);
+        }
+
+        @Override
+        public Stream<Routed<V>> findAll(RoutingContext routingCtx) {
+            return Routers.findAll(routingCtx, trie.findAll(routingCtx.path()), routeResolver);
         }
 
         @Override
@@ -320,6 +348,11 @@ public final class Routers {
         @Override
         public Routed<V> find(RoutingContext routingCtx) {
             return findBest(routingCtx, values, routeResolver);
+        }
+
+        @Override
+        public Stream<Routed<V>> findAll(RoutingContext routingCtx) {
+            return Routers.findAll(routingCtx, values, routeResolver);
         }
 
         @Override

@@ -23,7 +23,6 @@ import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import org.junit.Before;
@@ -72,14 +71,14 @@ public class HttpStreamReaderTest {
     @Test
     public void subscribe_noServerRequests() {
         reader.onSubscribe(subscription);
-        verifyZeroInteractions(subscription);
+        verifyNoMoreInteractions(subscription);
     }
 
     @Test
     public void subscribe_hasServerRequests_subscribeFirst() {
         when(deframer.isStalled()).thenReturn(true);
         reader.onSubscribe(subscription);
-        verifyZeroInteractions(subscription);
+        verifyNoMoreInteractions(subscription);
         reader.request(1);
         verify(subscription).request(1);
         verifyNoMoreInteractions(subscription);
@@ -97,7 +96,7 @@ public class HttpStreamReaderTest {
     @Test
     public void onHeaders() {
         reader.onSubscribe(subscription);
-        verifyZeroInteractions(subscription);
+        verifyNoMoreInteractions(subscription);
         when(deframer.isStalled()).thenReturn(true);
         reader.onNext(HEADERS);
         verify(subscription).request(1);
@@ -108,7 +107,7 @@ public class HttpStreamReaderTest {
         reader.onSubscribe(subscription);
         when(deframer.isStalled()).thenReturn(true);
         reader.onNext(TRAILERS);
-        verifyZeroInteractions(subscription);
+        verifyNoMoreInteractions(subscription);
     }
 
     @Test
@@ -116,7 +115,7 @@ public class HttpStreamReaderTest {
         reader.onSubscribe(subscription);
         reader.onNext(DATA);
         verify(deframer).deframe(DATA, false);
-        verifyZeroInteractions(subscription);
+        verifyNoMoreInteractions(subscription);
     }
 
     @Test
@@ -167,10 +166,10 @@ public class HttpStreamReaderTest {
     @Test
     public void httpNotOk() {
         reader.onSubscribe(subscription);
-        verifyZeroInteractions(subscription);
+        verifyNoMoreInteractions(subscription);
         reader.onNext(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
-        verifyZeroInteractions(subscription);
-        verifyZeroInteractions(deframer);
+        verifyNoMoreInteractions(subscription);
+        verifyNoMoreInteractions(deframer);
 
         verify(transportStatusListener).transportReportStatus(
                 argThat(s -> s.getCode() == Status.UNAUTHENTICATED.getCode()));

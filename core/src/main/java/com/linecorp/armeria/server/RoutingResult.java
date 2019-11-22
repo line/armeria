@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server;
 
 import java.util.Map;
@@ -35,12 +34,12 @@ public final class RoutingResult {
     static final int HIGHEST_SCORE = Integer.MAX_VALUE;
 
     private static final RoutingResult EMPTY =
-            new RoutingResult(null, null, ImmutableMap.of(), LOWEST_SCORE, null);
+            new RoutingResult(RoutingResultType.NOT_MATCHED, null, null, ImmutableMap.of(), LOWEST_SCORE, null);
 
     /**
-     * The empty {@link RoutingResult} whose {@link #isPresent()} returns {@code false}. It is returned by
-     * {@link Route#apply(RoutingContext)} when the {@link RoutingContext} did not match the
-     * conditions in the {@link Route}.
+     * The empty {@link RoutingResult} whose {@link #type()} is {@link RoutingResultType#NOT_MATCHED} and
+     * {@link #isPresent()} returns {@code false}. It is returned by {@link Route#apply(RoutingContext)}
+     * when the {@link RoutingContext} did not match the conditions in the {@link Route}.
      */
     public static RoutingResult empty() {
         return EMPTY;
@@ -53,6 +52,14 @@ public final class RoutingResult {
         return new RoutingResultBuilder();
     }
 
+    /**
+     * Returns a new builder, with a hint on the number of path params that will be added.
+     */
+    static RoutingResultBuilder builderWithExpectedNumParams(int numParams) {
+        return new RoutingResultBuilder(numParams);
+    }
+
+    private final RoutingResultType type;
     @Nullable
     private final String path;
     @Nullable
@@ -67,15 +74,23 @@ public final class RoutingResult {
     @Nullable
     private final MediaType negotiatedResponseMediaType;
 
-    RoutingResult(@Nullable String path, @Nullable String query, Map<String, String> pathParams,
-                  int score, @Nullable MediaType negotiatedResponseMediaType) {
-        assert path != null || query == null && pathParams.isEmpty();
+    RoutingResult(RoutingResultType type, @Nullable String path, @Nullable String query,
+                  Map<String, String> pathParams, int score, @Nullable MediaType negotiatedResponseMediaType) {
+        assert type != RoutingResultType.NOT_MATCHED || path == null && query == null && pathParams.isEmpty();
 
+        this.type = type;
         this.path = path;
         this.query = query;
         this.pathParams = ImmutableMap.copyOf(pathParams);
         this.score = score;
         this.negotiatedResponseMediaType = negotiatedResponseMediaType;
+    }
+
+    /**
+     * Returns the type of this result.
+     */
+    public RoutingResultType type() {
+        return type;
     }
 
     /**
@@ -181,6 +196,7 @@ public final class RoutingResult {
                 score += " (lowest)";
             }
             return MoreObjects.toStringHelper(this).omitNullValues()
+                              .add("type", type)
                               .add("path", path)
                               .add("query", query)
                               .add("pathParams", pathParams)

@@ -31,22 +31,26 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A {@link HttpHealthCheckService} which allows overriding its status via a PUT request.
+ * An {@link HttpHealthCheckService} which allows overriding its status via a PUT request.
  *
  * <h2>Example</h2>
  * <pre>{@code
- * Server server = new ServerBuilder().serviceUnder("/health", new ManagedHttpHealthCheckService())
- *                                    .build();
+ * Server server = Server.builder()
+ *                       .serviceUnder("/health", new ManagedHttpHealthCheckService())
+ *                       .build();
  * }</pre>
  *
  * <p>Default config uses content on or off. You can also use your own path matching.
  * <pre>{@code
- * > Server server = new ServerBuilder().serviceUnder("health", new ManagedHttpHealthCheckService() {
- * >         @Override
- * >         public CompletionStage<Optional<Boolean>> mode(HttpRequest req) {
- * >             return CompletableFuture.completedFuture(Optional.empty());
- * >         }
- * >     }).build();
+ * > Server server =
+ * >     Server.builder()
+ * >           .serviceUnder("health", new ManagedHttpHealthCheckService() {
+ * >               @Override
+ * >               public CompletionStage<Optional<Boolean>> mode(HttpRequest req) {
+ * >                   return CompletableFuture.completedFuture(Optional.empty());
+ * >               }
+ * >           })
+ * >           .build();
  * }</pre>
  *
  * @deprecated Use {@link HealthCheckService}.

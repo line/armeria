@@ -38,6 +38,14 @@ public class ServerSentEventBuilder {
     private String data;
 
     /**
+     * Creates a new instance.
+     *
+     * @deprecated Use {@link ServerSentEvent#builder()}.
+     */
+    @Deprecated
+    public ServerSentEventBuilder() {}
+
+    /**
      * Sets the specified {@code id}.
      */
     public ServerSentEventBuilder id(String id) {

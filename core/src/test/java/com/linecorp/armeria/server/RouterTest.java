@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -25,9 +26,13 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.assertj.core.util.Lists;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +42,7 @@ import com.google.common.collect.Maps;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 
-public class RouterTest {
+class RouterTest {
     private static final Logger logger = LoggerFactory.getLogger(RouterTest.class);
 
     private static final BiConsumer<Route, Route> REJECT = (a, b) -> {
@@ -45,7 +50,7 @@ public class RouterTest {
     };
 
     @Test
-    public void testRouters() {
+    void testRouters() {
         final List<Route> routes = Lists.newArrayList(
                 Route.builder().path("exact:/a").build(),         // router 1
                 Route.builder().path("/b/{var}").build(),
@@ -84,22 +89,57 @@ public class RouterTest {
         });
     }
 
+    @ParameterizedTest
+    @MethodSource("generateRouteMatchData")
+    void testFindAllMatchedRouters(String path, int expectForFind, List<Integer> expectForFindAll) {
+        final List<Route> routes = Lists.newArrayList(
+                Route.builder().path("prefix:/a").build(),
+                Route.builder().path("/a/{var}").build(),
+                Route.builder().path("prefix:/c").build(),
+                Route.builder().path("regex:/d/([^/]+)").build(),
+                Route.builder().path("glob:/d/**").build(),
+                Route.builder().path("exact:/e").build(),
+                Route.builder().path("glob:/h/**/z").build(),
+                Route.builder().path("prefix:/h").build()
+        );
+        final List<Router<Route>> routers = Routers.routers(routes, Function.identity(), REJECT);
+        final CompositeRouter<Route, Route> router = new CompositeRouter<>(routers, Function.identity());
+        final RoutingContext mock = mock(RoutingContext.class);
+
+        when(mock.path()).thenReturn(path);
+        assertThat(router.find(mock).route()).isEqualTo(routes.get(expectForFind));
+
+        final List<Route> matched = router.findAll(mock).map(Routed::route).collect(toImmutableList());
+        final List<Route> expected = expectForFindAll.stream().map(routes::get).collect(toImmutableList());
+        assertThat(matched).containsAll(expected);
+    }
+
+    static Stream<Arguments> generateRouteMatchData() {
+        return Stream.of(
+                Arguments.of("/a/1", 1, ImmutableList.of(0, 1)),
+                Arguments.of("/c/1", 2, ImmutableList.of(2)),
+                Arguments.of("/d/12", 3, ImmutableList.of(3, 4)),
+                Arguments.of("/e", 5, ImmutableList.of(5)),
+                Arguments.of("/h/1/2/3/z", 6, ImmutableList.of(6, 7))
+        );
+    }
+
     @Test
-    public void duplicateRoutes() {
+    void duplicateRoutes() {
         // Simple cases
         testDuplicateRoutes(Route.builder().path("exact:/a").build(),
                             Route.builder().path("exact:/a").build());
         testDuplicateRoutes(Route.builder().path("exact:/a").build(),
                             Route.builder().path("/a").build());
         testDuplicateRoutes(Route.builder().path("prefix:/").build(),
-                            Route.builder().catchAll().build());
+                            Route.ofCatchAll());
     }
 
     /**
      * Should detect the duplicates even if the mappings are split into more than one router.
      */
     @Test
-    public void duplicateMappingsWithRegex() {
+    void duplicateMappingsWithRegex() {
         // Ensure that 3 routers are created first really.
         assertThat(Routers.routers(ImmutableList.of(Route.builder().path("/foo/:bar").build(),
                                                     Route.builder().regex("not-trie-compatible").build(),
@@ -112,7 +152,7 @@ public class RouterTest {
     }
 
     @Test
-    public void duplicatePathWithHeaders() {
+    void duplicatePathWithHeaders() {
         // Not a duplicate if complexity is different.
         testNonDuplicateRoutes(Route.builder().path("/foo").build(),
                                Route.builder().path("/foo").methods(HttpMethod.GET).build());

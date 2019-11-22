@@ -24,9 +24,8 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.client.ClientConnectionTimingsBuilder;
+import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
@@ -40,7 +39,6 @@ import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
@@ -92,13 +90,14 @@ public class RequestMetricSupportTest {
     }
 
     private static void setConnectionTimings(ClientRequestContext ctx) {
-        new ClientConnectionTimingsBuilder().dnsResolutionEnd()
-                                            .socketConnectStart()
-                                            .socketConnectEnd()
-                                            .pendingAcquisitionStart()
-                                            .pendingAcquisitionEnd()
-                                            .build()
-                                            .setTo(ctx);
+        ClientConnectionTimings.builder()
+                               .dnsResolutionEnd()
+                               .socketConnectStart()
+                               .socketConnectEnd()
+                               .pendingAcquisitionStart()
+                               .pendingAcquisitionEnd()
+                               .build()
+                               .setTo(ctx);
     }
 
     @Test
@@ -215,10 +214,10 @@ public class RequestMetricSupportTest {
 
     private static ClientRequestContext setupClientRequestCtx(MeterRegistry registry) {
         final ClientRequestContext ctx =
-                ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.POST, "/foo"))
-                                           .meterRegistry(registry)
-                                           .endpoint(Endpoint.of("example.com", 8080))
-                                           .build();
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
+                                    .meterRegistry(registry)
+                                    .endpoint(Endpoint.of("example.com", 8080))
+                                    .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
 
@@ -228,7 +227,9 @@ public class RequestMetricSupportTest {
     }
 
     private static void addLogInfoInDerivedCtx(ClientRequestContext ctx) {
-        final ClientRequestContext derivedCtx = ctx.newDerivedContext();
+        final ClientRequestContext derivedCtx =
+                ctx.newDerivedContext(ctx.id(), ctx.request(), ctx.rpcRequest());
+
         ctx.logBuilder().addChild(derivedCtx.log());
 
         setConnectionTimings(derivedCtx);
@@ -248,9 +249,9 @@ public class RequestMetricSupportTest {
     public void requestTimedOutInServerSide() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.POST, "/foo"))
-                                            .meterRegistry(registry)
-                                            .build();
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
+                                     .meterRegistry(registry)
+                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
 
@@ -287,10 +288,10 @@ public class RequestMetricSupportTest {
     public void rpc() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx =
-                ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.POST, "/bar"))
-                                           .meterRegistry(registry)
-                                           .endpoint(Endpoint.of("example.com", 8080))
-                                           .build();
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/bar"))
+                                    .meterRegistry(registry)
+                                    .endpoint(Endpoint.of("example.com", 8080))
+                                    .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
 

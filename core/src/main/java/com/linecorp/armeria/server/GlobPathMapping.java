@@ -89,7 +89,7 @@ final class GlobPathMapping extends AbstractPathMapping {
             return null;
         }
 
-        final RoutingResultBuilder builder = RoutingResult.builder()
+        final RoutingResultBuilder builder = RoutingResult.builderWithExpectedNumParams(numParams)
                                                           .path(routingCtx.path())
                                                           .query(routingCtx.query());
         for (int i = 1; i <= numParams; i++) {
@@ -131,7 +131,7 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         return obj instanceof GlobPathMapping &&
                (this == obj || glob.equals(((GlobPathMapping) obj).glob));
     }

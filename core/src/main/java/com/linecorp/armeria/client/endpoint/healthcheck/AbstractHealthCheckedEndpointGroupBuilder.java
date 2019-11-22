@@ -42,7 +42,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     private SessionProtocol protocol = SessionProtocol.HTTP;
     private Backoff retryBackoff = DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
-    private ClientFactory clientFactory = ClientFactory.DEFAULT;
+    private ClientFactory clientFactory = ClientFactory.ofDefault();
     private Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator = Function.identity();
     private int port;
 
@@ -129,7 +129,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * This method can be useful if you already have an Armeria client and want to reuse its configuration,
      * such as using the same decorators.
      * <pre>{@code
-     * HttpClient myClient = ...;
+     * WebClient myClient = ...;
      * // Use the same settings and decorators with `myClient` when sending health check requests.
      * builder.clientOptions(myClient.options());
      * }</pre>

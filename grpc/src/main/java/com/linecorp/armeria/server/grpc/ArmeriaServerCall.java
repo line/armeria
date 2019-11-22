@@ -45,14 +45,12 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponseWriter;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -76,6 +74,7 @@ import io.grpc.Codec.Identity;
 import io.grpc.Compressor;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.InternalMetadata;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
@@ -119,6 +118,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final String advertisedEncodingsHeader;
     @Nullable
     private final Executor blockingExecutor;
+    private final ResponseHeaders defaultHeaders;
 
     // Only set once.
     @Nullable
@@ -157,11 +157,13 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       @Nullable MessageMarshaller jsonMarshaller,
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
-                      String advertisedEncodingsHeader) {
+                      String advertisedEncodingsHeader,
+                      ResponseHeaders defaultHeaders) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
+        this.defaultHeaders = requireNonNull(defaultHeaders, "defaultHeaders");
         messageReader = new HttpStreamReader(
                 requireNonNull(decompressorRegistry, "decompressorRegistry"),
                 new ArmeriaMessageDeframer(
@@ -216,10 +218,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(!sendHeadersCalled, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
-        final ResponseHeadersBuilder headers = ResponseHeaders.builder(HttpStatus.OK);
-
-        headers.contentType(serializationFormat.mediaType());
-
         if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
             compressor = Codec.Identity.NONE;
         } else {
@@ -232,17 +230,19 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
         messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
 
-        // Always put compressor, even if it's identity.
-        headers.add(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
+        ResponseHeaders headers = defaultHeaders;
 
-        if (!advertisedEncodingsHeader.isEmpty()) {
-            headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
+        if (compressor != Codec.Identity.NONE || InternalMetadata.headerCount(metadata) > 0) {
+            headers = headers.withMutations(builder -> {
+                if (compressor != Codec.Identity.NONE) {
+                    builder.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
+                }
+                MetadataUtil.fillHeaders(metadata, builder);
+            });
         }
 
-        MetadataUtil.fillHeaders(metadata, headers);
-
         sendHeadersCalled = true;
-        res.write(headers.build());
+        res.write(headers);
     }
 
     @Override
@@ -364,7 +364,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     @Override
-    public void messageRead(ByteBufOrStream message) {
+    public void messageRead(DeframedMessage message) {
 
         final I request;
 

@@ -35,9 +35,9 @@ import com.google.common.base.Strings;
 import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.client.logging.LoggingClientBuilder;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -59,25 +59,29 @@ import io.netty.buffer.Unpooled;
 public class ContentPreviewerTest {
 
     static class MyHttpClient {
-        private final HttpClient client;
+        private final WebClient client;
         @Nullable
         private volatile CompletableFuture<RequestLog> waitingFuture;
 
         MyHttpClient(String uri, int reqLength, int resLength) {
-            client = new HttpClientBuilder(serverRule.uri(uri))
-                    .requestContentPreviewerFactory(
-                            ContentPreviewerFactory.ofText(reqLength, StandardCharsets.UTF_8))
-                    .responseContentPreviewerFactory(
-                            ContentPreviewerFactory.ofText(resLength, StandardCharsets.UTF_8))
-                    .decorator(new LoggingClientBuilder().requestLogLevel(LogLevel.INFO)
-                                                         .successfulResponseLogLevel(LogLevel.INFO)
-                                                         .newDecorator())
-                    .decorator((delegate, ctx, req) -> {
-                        if (waitingFuture != null) {
-                            ctx.log().addListener(waitingFuture::complete, RequestLogAvailability.COMPLETE);
-                        }
-                        return delegate.execute(ctx, req);
-                    }).build();
+            final WebClientBuilder builder = WebClient.builder(serverRule.uri(uri));
+            final ContentPreviewerFactory reqPreviewerFactory =
+                    ContentPreviewerFactory.ofText(reqLength, StandardCharsets.UTF_8);
+            final ContentPreviewerFactory resPreviewerFactory =
+                    ContentPreviewerFactory.ofText(resLength, StandardCharsets.UTF_8);
+            client = builder.requestContentPreviewerFactory(reqPreviewerFactory)
+                            .responseContentPreviewerFactory(resPreviewerFactory)
+                            .decorator(LoggingClient.builder()
+                                                    .requestLogLevel(LogLevel.INFO)
+                                                    .successfulResponseLogLevel(LogLevel.INFO)
+                                                    .newDecorator())
+                            .decorator((delegate, ctx, req) -> {
+                                if (waitingFuture != null) {
+                                    ctx.log().addListener(waitingFuture::complete,
+                                                          RequestLogAvailability.COMPLETE);
+                                }
+                                return delegate.execute(ctx, req);
+                            }).build();
         }
 
         public RequestLog get(String path) throws Exception {
@@ -135,10 +139,10 @@ public class ContentPreviewerTest {
         }
 
         class Client {
-            private final HttpClient client;
+            private final WebClient client;
 
             Client(String path) {
-                client = HttpClient.of(ClientFactory.DEFAULT, serverRule.uri(path));
+                client = WebClient.of(ClientFactory.ofDefault(), serverRule.uri(path));
             }
 
             public RequestLog get(String path) throws Exception {

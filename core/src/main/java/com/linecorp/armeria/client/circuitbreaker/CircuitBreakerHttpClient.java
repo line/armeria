@@ -18,8 +18,8 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -27,9 +27,10 @@ import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 /**
- * A {@link Client} decorator that handles failures of HTTP requests based on circuit breaker pattern.
+ * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
  */
-public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpRequest, HttpResponse> {
+public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpRequest, HttpResponse>
+        implements HttpClient {
 
     /**
      * Creates a new decorator using the specified {@link CircuitBreaker} instance and
@@ -38,7 +39,7 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, CircuitBreakerHttpClient>
+    public static Function<? super HttpClient, CircuitBreakerHttpClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerStrategy strategy) {
         return newDecorator((ctx, req) -> circuitBreaker, strategy);
     }
@@ -50,7 +51,7 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, CircuitBreakerHttpClient>
+    public static Function<? super HttpClient, CircuitBreakerHttpClient>
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerStrategy strategy) {
         return delegate -> new CircuitBreakerHttpClient(delegate, mapping, strategy);
     }
@@ -62,9 +63,9 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
-     * @param factory a function that takes a {@link HttpMethod} and creates a new {@link CircuitBreaker}
+     * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}
      */
-    public static Function<Client<HttpRequest, HttpResponse>, CircuitBreakerHttpClient>
+    public static Function<? super HttpClient, CircuitBreakerHttpClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory,
                           CircuitBreakerStrategy strategy) {
         return newDecorator(CircuitBreakerMapping.perMethod(factory), strategy);
@@ -79,7 +80,7 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      *
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}
      */
-    public static Function<Client<HttpRequest, HttpResponse>, CircuitBreakerHttpClient>
+    public static Function<? super HttpClient, CircuitBreakerHttpClient>
     newPerHostDecorator(Function<String, CircuitBreaker> factory,
                         CircuitBreakerStrategy strategy) {
         return newDecorator(CircuitBreakerMapping.perHost(factory), strategy);
@@ -94,27 +95,44 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}
      */
-    public static Function<Client<HttpRequest, HttpResponse>, CircuitBreakerHttpClient>
+    public static Function<? super HttpClient, CircuitBreakerHttpClient>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
                                  CircuitBreakerStrategy strategy) {
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), strategy);
     }
 
+    /**
+     * Returns a new {@link CircuitBreakerHttpClientBuilder} with
+     * the specified {@link CircuitBreakerStrategy}.
+     */
+    public static CircuitBreakerHttpClientBuilder builder(CircuitBreakerStrategy strategy) {
+        return new CircuitBreakerHttpClientBuilder(strategy);
+    }
+
+    /**
+     * Returns a new {@link CircuitBreakerHttpClientBuilder} with
+     * the specified {@link CircuitBreakerStrategyWithContent}.
+     */
+    public static CircuitBreakerHttpClientBuilder builder(
+            CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
+        return new CircuitBreakerHttpClientBuilder(strategyWithContent);
+    }
+
     private final boolean needsContentInStrategy;
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerHttpClient(Client<HttpRequest, HttpResponse> delegate, CircuitBreakerMapping mapping,
+    CircuitBreakerHttpClient(HttpClient delegate, CircuitBreakerMapping mapping,
                              CircuitBreakerStrategy strategy) {
         super(delegate, mapping, strategy);
         needsContentInStrategy = false;
     }
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerHttpClient(Client<HttpRequest, HttpResponse> delegate, CircuitBreakerMapping mapping,
+    CircuitBreakerHttpClient(HttpClient delegate, CircuitBreakerMapping mapping,
                              CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
         super(delegate, mapping, strategyWithContent);
         needsContentInStrategy = true;

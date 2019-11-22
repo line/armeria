@@ -27,8 +27,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -44,7 +43,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 class PortUnificationServerTest {
 
     private static final ClientFactory clientFactory =
-            new ClientFactoryBuilder().sslContextCustomizer(
+            ClientFactory.builder().sslContextCustomizer(
                     b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
 
     @RegisterExtension
@@ -71,7 +70,7 @@ class PortUnificationServerTest {
     @ParameterizedTest
     @ArgumentsSource(UniqueProtocolsProvider.class)
     void test(SessionProtocol protocol) throws Exception {
-        final HttpClient client = HttpClient.of(clientFactory, server.uri(protocol, "/"));
+        final WebClient client = WebClient.of(clientFactory, server.uri(protocol, "/"));
         final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))
                                                       .aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo(protocol.name());

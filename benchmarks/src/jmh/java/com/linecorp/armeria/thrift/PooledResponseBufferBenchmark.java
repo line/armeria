@@ -32,12 +32,13 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.thrift.services.HelloService;
 import com.linecorp.armeria.thrift.services.HelloService.AsyncIface;
@@ -62,10 +63,9 @@ public class PooledResponseBufferBenchmark {
     private static final int RESPONSE_SIZE = 500 * 1024;
     private static final String RESPONSE = Strings.repeat('a', RESPONSE_SIZE);
 
-    private static final class PooledDecoratingService
-            extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+    private static final class PooledDecoratingService extends SimpleDecoratingHttpService {
 
-        private PooledDecoratingService(Service<HttpRequest, HttpResponse> delegate) {
+        private PooledDecoratingService(HttpService delegate) {
             super(delegate);
         }
 
@@ -98,10 +98,9 @@ public class PooledResponseBufferBenchmark {
         }
     }
 
-    private static final class UnpooledDecoratingService
-            extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+    private static final class UnpooledDecoratingService extends SimpleDecoratingHttpService {
 
-        private UnpooledDecoratingService(Service<HttpRequest, HttpResponse> delegate) {
+        private UnpooledDecoratingService(HttpService delegate) {
             super(delegate);
         }
 
@@ -140,11 +139,12 @@ public class PooledResponseBufferBenchmark {
 
     @Setup
     public void startServer() throws Exception {
-        final ServerBuilder sb = new ServerBuilder()
-                .service("/a", THttpService.of((AsyncIface) (name, cb) -> cb.onComplete(RESPONSE))
-                                           .decorate(PooledDecoratingService::new))
-                .service("/b", THttpService.of((AsyncIface) (name, cb) -> cb.onComplete(RESPONSE))
-                                           .decorate(UnpooledDecoratingService::new));
+        final ServerBuilder sb =
+                Server.builder()
+                      .service("/a", THttpService.of((AsyncIface) (name, cb) -> cb.onComplete(RESPONSE))
+                                                 .decorate(PooledDecoratingService::new))
+                      .service("/b", THttpService.of((AsyncIface) (name, cb) -> cb.onComplete(RESPONSE))
+                                                 .decorate(UnpooledDecoratingService::new));
         server = sb.build();
         server.start().join();
 

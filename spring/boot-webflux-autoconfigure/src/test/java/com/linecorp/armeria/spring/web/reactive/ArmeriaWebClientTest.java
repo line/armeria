@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
+import javax.annotation.Nullable;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -43,7 +45,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
@@ -99,10 +101,11 @@ public class ArmeriaWebClientTest {
 
     static WebClient webClient = WebClient.builder().clientConnector(
             new ArmeriaClientHttpConnector(builder -> builder.factory(
-                    new ClientFactoryBuilder()
-                            .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                            .addressResolverGroupFactory(unused -> MockAddressResolverGroup.localhost())
-                            .build()))).build();
+                    ClientFactory.builder()
+                                 .sslContextCustomizer(
+                                         b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                                 .addressResolverGroupFactory(unused -> MockAddressResolverGroup.localhost())
+                                 .build()))).build();
 
     private String uri(String path) {
         return "https://example.com:" + port + path;
@@ -132,6 +135,20 @@ public class ArmeriaWebClientTest {
         StepVerifier.create(response)
                     .assertNext(r -> assertThat(r.statusCode()).isEqualTo(HttpStatus.CONFLICT))
                     .expectComplete()
+                    .verify(Duration.ofSeconds(10));
+    }
+
+    @Test
+    public void getConflictUsingBodyToMono() {
+        final Mono<String> response =
+                webClient.get()
+                         .uri(uri("/conflict"))
+                         .retrieve()
+                         .onStatus(HttpStatus::isError,
+                                   resp -> resp.bodyToMono(String.class).map(Exception::new))
+                         .bodyToMono(String.class);
+        StepVerifier.create(response)
+                    .expectError()
                     .verify(Duration.ofSeconds(10));
     }
 
@@ -187,7 +204,7 @@ public class ArmeriaWebClientTest {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (this == o) {
                 return true;
             }

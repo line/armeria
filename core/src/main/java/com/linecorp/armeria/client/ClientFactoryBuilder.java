@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -28,9 +27,9 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -39,22 +38,19 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -75,52 +71,23 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  */
 public final class ClientFactoryBuilder {
 
-    private static final ConnectionPoolListener DEFAULT_CONNECTION_POOL_LISTENER =
-            ConnectionPoolListener.noop();
-
-    private static final Consumer<SslContextBuilder> DEFAULT_SSL_CONTEXT_CUSTOMIZER = b -> { /* no-op */ };
-
-    // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
-    @SuppressWarnings("deprecation")
-    private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
-            ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
-            ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
-            ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-            EpollChannelOption.EPOLL_MODE);
+    private final Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> options = new LinkedHashMap<>();
 
     // Netty-related properties:
-    private EventLoopGroup workerGroup = CommonPools.workerGroup();
-    private boolean shutdownWorkerGroupOnClose;
-    private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
-    private Consumer<? super SslContextBuilder> sslContextCustomizer = DEFAULT_SSL_CONTEXT_CUSTOMIZER;
     @Nullable
-    private Function<? super EventLoopGroup,
-            ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory;
-    @Nullable
-    private List<Consumer<? super DnsNameResolverBuilder>> domainNameResolverCustomizers;
-    private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
-    private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
-    private int http2MaxFrameSize = Flags.defaultHttp2MaxFrameSize();
-    private long http2MaxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
-    private int http1MaxInitialLineLength = Flags.defaultHttp1MaxInitialLineLength();
-    private int http1MaxHeaderSize = Flags.defaultHttp1MaxHeaderSize();
-    private int http1MaxChunkSize = Flags.defaultHttp1MaxChunkSize();
+    private List<Consumer<? super DnsResolverGroupBuilder>> dnsResolverGroupCustomizers;
 
     // Armeria-related properties:
-    @Nullable
-    private Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory;
     private int maxNumEventLoopsPerEndpoint;
     private int maxNumEventLoopsPerHttp1Endpoint;
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
-    private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
-    private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
-    private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
-    private ConnectionPoolListener connectionPoolListener = DEFAULT_CONNECTION_POOL_LISTENER;
-    private MeterRegistry meterRegistry = Metrics.globalRegistry;
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link ClientFactory#builder()}.
      */
+    @Deprecated
     public ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
     }
@@ -134,8 +101,8 @@ public final class ClientFactoryBuilder {
      *                        when the {@link ClientFactory} is closed
      */
     public ClientFactoryBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnClose) {
-        this.workerGroup = requireNonNull(workerGroup, "workerGroup");
-        shutdownWorkerGroupOnClose = shutdownOnClose;
+        option(ClientFactoryOption.WORKER_GROUP, requireNonNull(workerGroup, "workerGroup"));
+        option(ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE, shutdownOnClose);
         return this;
     }
 
@@ -145,10 +112,11 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder eventLoopSchedulerFactory(
             Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory) {
+        requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
         checkState(maxNumEventLoopsPerHttp1Endpoint == 0 && maxNumEventLoopsPerEndpoint == 0 &&
                    maxNumEventLoopsFunctions.isEmpty(),
                    "Cannot set eventLoopSchedulerFactory when maxEventLoop per endpoint is specified.");
-        this.eventLoopSchedulerFactory = requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
+        option(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY, eventLoopSchedulerFactory);
         return this;
     }
 
@@ -177,7 +145,7 @@ public final class ClientFactoryBuilder {
     private void validateMaxNumEventLoopsPerEndpoint(int maxNumEventLoopsPerEndpoint) {
         checkArgument(maxNumEventLoopsPerEndpoint > 0,
                       "maxNumEventLoopsPerEndpoint: %s (expected: > 0)", maxNumEventLoopsPerEndpoint);
-        checkState(eventLoopSchedulerFactory == null,
+        checkState(!options.containsKey(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY),
                    "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
     }
 
@@ -198,7 +166,7 @@ public final class ClientFactoryBuilder {
      * }</pre>
      */
     public ClientFactoryBuilder maxNumEventLoopsFunction(ToIntFunction<Endpoint> maxNumEventLoopsFunction) {
-        checkState(eventLoopSchedulerFactory == null,
+        checkState(!options.containsKey(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY),
                    "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
         maxNumEventLoopsFunctions.add(requireNonNull(maxNumEventLoopsFunction, "maxNumEventLoopsFunction"));
         return this;
@@ -239,10 +207,15 @@ public final class ClientFactoryBuilder {
      */
     public <T> ClientFactoryBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
-        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
-                      "prohibited socket option: %s", option);
+        requireNonNull(value, "value");
 
-        channelOptions.put(option, requireNonNull(value, "value"));
+        @SuppressWarnings("unchecked")
+        final Map<ChannelOption<?>, Object> channelOptions =
+                (Map<ChannelOption<?>, Object>) options.computeIfAbsent(
+                        ClientFactoryOption.CHANNEL_OPTIONS,
+                        k -> ClientFactoryOption.CHANNEL_OPTIONS.newValue(
+                                new Object2ObjectArrayMap<>())).value();
+        channelOptions.put(option, value);
         return this;
     }
 
@@ -253,7 +226,8 @@ public final class ClientFactoryBuilder {
      * authorization.
      */
     public ClientFactoryBuilder sslContextCustomizer(Consumer<? super SslContextBuilder> sslContextCustomizer) {
-        this.sslContextCustomizer = requireNonNull(sslContextCustomizer, "sslContextCustomizer");
+        option(ClientFactoryOption.SSL_CONTEXT_CUSTOMIZER,
+               requireNonNull(sslContextCustomizer, "sslContextCustomizer"));
         return this;
     }
 
@@ -267,9 +241,9 @@ public final class ClientFactoryBuilder {
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory) {
         requireNonNull(addressResolverGroupFactory, "addressResolverGroupFactory");
-        checkState(domainNameResolverCustomizers == null,
+        checkState(dnsResolverGroupCustomizers == null,
                    "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
-        this.addressResolverGroupFactory = addressResolverGroupFactory;
+        option(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY, addressResolverGroupFactory);
         return this;
     }
 
@@ -281,14 +255,14 @@ public final class ClientFactoryBuilder {
      * @throws IllegalStateException if {@link #addressResolverGroupFactory(Function)} was called already.
      */
     public ClientFactoryBuilder domainNameResolverCustomizer(
-            Consumer<? super DnsNameResolverBuilder> domainNameResolverCustomizer) {
-        requireNonNull(domainNameResolverCustomizer, "domainNameResolverCustomizer");
-        checkState(addressResolverGroupFactory == null,
+            Consumer<? super DnsResolverGroupBuilder> dnsResolverGroupCustomizer) {
+        requireNonNull(dnsResolverGroupCustomizer, "dnsResolverGroupCustomizer");
+        checkState(!options.containsKey(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY),
                    "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
-        if (domainNameResolverCustomizers == null) {
-            domainNameResolverCustomizers = new ArrayList<>();
+        if (dnsResolverGroupCustomizers == null) {
+            dnsResolverGroupCustomizers = new ArrayList<>();
         }
-        domainNameResolverCustomizers.add(domainNameResolverCustomizer);
+        dnsResolverGroupCustomizers.add(dnsResolverGroupCustomizer);
         return this;
     }
 
@@ -305,7 +279,7 @@ public final class ClientFactoryBuilder {
         checkArgument(http2InitialConnectionWindowSize >= DEFAULT_WINDOW_SIZE,
                       "http2InitialConnectionWindowSize: %s (expected: >= %s and <= %s)",
                       http2InitialConnectionWindowSize, DEFAULT_WINDOW_SIZE, MAX_INITIAL_WINDOW_SIZE);
-        this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
+        option(ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE, http2InitialConnectionWindowSize);
         return this;
     }
 
@@ -320,7 +294,7 @@ public final class ClientFactoryBuilder {
         checkArgument(http2InitialStreamWindowSize > 0,
                       "http2InitialStreamWindowSize: %s (expected: > 0 and <= %s)",
                       http2InitialStreamWindowSize, MAX_INITIAL_WINDOW_SIZE);
-        this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
+        option(ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE, http2InitialStreamWindowSize);
         return this;
     }
 
@@ -333,7 +307,7 @@ public final class ClientFactoryBuilder {
                       http2MaxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND,
                       "http2MaxFrameSize: %s (expected: >= %s and <= %s)",
                       http2MaxFrameSize, MAX_FRAME_SIZE_LOWER_BOUND, MAX_FRAME_SIZE_UPPER_BOUND);
-        this.http2MaxFrameSize = http2MaxFrameSize;
+        option(ClientFactoryOption.HTTP2_MAX_FRAME_SIZE, http2MaxFrameSize);
         return this;
     }
 
@@ -346,7 +320,7 @@ public final class ClientFactoryBuilder {
                       http2MaxHeaderListSize <= 0xFFFFFFFFL,
                       "http2MaxHeaderListSize: %s (expected: a positive 32-bit unsigned integer)",
                       http2MaxHeaderListSize);
-        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
+        option(ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE, http2MaxHeaderListSize);
         return this;
     }
 
@@ -357,7 +331,7 @@ public final class ClientFactoryBuilder {
         checkArgument(http1MaxInitialLineLength >= 0,
                       "http1MaxInitialLineLength: %s (expected: >= 0)",
                       http1MaxInitialLineLength);
-        this.http1MaxInitialLineLength = http1MaxInitialLineLength;
+        option(ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH, http1MaxInitialLineLength);
         return this;
     }
 
@@ -368,7 +342,7 @@ public final class ClientFactoryBuilder {
         checkArgument(http1MaxHeaderSize >= 0,
                       "http1MaxHeaderSize: %s (expected: >= 0)",
                       http1MaxHeaderSize);
-        this.http1MaxHeaderSize = http1MaxHeaderSize;
+        option(ClientFactoryOption.HTTP1_MAX_HEADER_SIZE, http1MaxHeaderSize);
         return this;
     }
 
@@ -381,7 +355,7 @@ public final class ClientFactoryBuilder {
         checkArgument(http1MaxChunkSize >= 0,
                       "http1MaxChunkSize: %s (expected: >= 0)",
                       http1MaxChunkSize);
-        this.http1MaxChunkSize = http1MaxChunkSize;
+        option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, http1MaxChunkSize);
         return this;
     }
 
@@ -401,7 +375,7 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis) {
         checkArgument(idleTimeoutMillis >= 0, "idleTimeoutMillis: %s (expected: >= 0)", idleTimeoutMillis);
-        this.idleTimeoutMillis = idleTimeoutMillis;
+        option(ClientFactoryOption.IDLE_TIMEOUT_MILLIS, idleTimeoutMillis);
         return this;
     }
 
@@ -410,7 +384,7 @@ public final class ClientFactoryBuilder {
      * the protocol version of a cleartext HTTP connection.
      */
     public ClientFactoryBuilder useHttp2Preface(boolean useHttp2Preface) {
-        this.useHttp2Preface = useHttp2Preface;
+        option(ClientFactoryOption.USE_HTTP2_PREFACE, useHttp2Preface);
         return this;
     }
 
@@ -419,7 +393,7 @@ public final class ClientFactoryBuilder {
      * HTTP/1 connections. This does not affect HTTP/2 connections. This option is disabled by default.
      */
     public ClientFactoryBuilder useHttp1Pipelining(boolean useHttp1Pipelining) {
-        this.useHttp1Pipelining = useHttp1Pipelining;
+        option(ClientFactoryOption.USE_HTTP1_PIPELINING, useHttp1Pipelining);
         return this;
     }
 
@@ -428,7 +402,8 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder connectionPoolListener(
             ConnectionPoolListener connectionPoolListener) {
-        this.connectionPoolListener = requireNonNull(connectionPoolListener, "connectionPoolListener");
+        option(ClientFactoryOption.CONNECTION_POOL_LISTENER,
+               requireNonNull(connectionPoolListener, "connectionPoolListener"));
         return this;
     }
 
@@ -436,88 +411,89 @@ public final class ClientFactoryBuilder {
      * Sets the {@link MeterRegistry} which collects various stats.
      */
     public ClientFactoryBuilder meterRegistry(MeterRegistry meterRegistry) {
-        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        option(ClientFactoryOption.METER_REGISTRY, requireNonNull(meterRegistry, "meterRegistry"));
         return this;
+    }
+
+    /**
+     * Adds the specified {@link ClientFactoryOption} and its {@code value}.
+     */
+    public <T> ClientFactoryBuilder option(ClientFactoryOption<T> option, T value) {
+        requireNonNull(option, "option");
+        requireNonNull(value, "value");
+        return option(option.newValue(value));
+    }
+
+    /**
+     * Adds the specified {@link ClientFactoryOptionValue}.
+     */
+    public <T> ClientFactoryBuilder option(ClientFactoryOptionValue<T> optionValue) {
+        requireNonNull(optionValue, "optionValue");
+        options.put(optionValue.option(), optionValue);
+        return this;
+    }
+
+    /**
+     * Adds the specified {@link ClientFactoryOptions}.
+     */
+    public ClientFactoryBuilder options(ClientFactoryOptions options) {
+        requireNonNull(options, "options");
+        options.asMap().values().forEach(this::option);
+        return this;
+    }
+
+    private ClientFactoryOptions buildOptions() {
+        options.computeIfAbsent(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY, k -> {
+           final Function<? super EventLoopGroup, ? extends EventLoopScheduler>  eventLoopSchedulerFactory =
+                   eventLoopGroup -> new DefaultEventLoopScheduler(
+                           eventLoopGroup, maxNumEventLoopsPerEndpoint, maxNumEventLoopsPerHttp1Endpoint,
+                           maxNumEventLoopsFunctions);
+           return ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY.newValue(eventLoopSchedulerFactory);
+        });
+
+        options.computeIfAbsent(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY, k -> {
+            final Function<? super EventLoopGroup,
+                    ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory =
+                    eventLoopGroup -> {
+                        // FIXME(ikhoon): Remove DefaultAddressResolverGroup registration after fixing Window
+                        //                domain name resolution failure.
+                        //                https://github.com/line/armeria/issues/2243
+                        if (Flags.useJdkDnsResolver() && dnsResolverGroupCustomizers == null) {
+                            return DefaultAddressResolverGroup.INSTANCE;
+                        }
+                        final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder();
+                        if (dnsResolverGroupCustomizers != null) {
+                            dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
+                        }
+                        return builder.build(eventLoopGroup);
+                    };
+            return ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
+        });
+
+        return ClientFactoryOptions.of(options.values());
     }
 
     /**
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
-        final EventLoopScheduler eventLoopScheduler;
-        if (eventLoopSchedulerFactory != null) {
-            eventLoopScheduler = eventLoopSchedulerFactory.apply(workerGroup);
-        } else {
-            eventLoopScheduler = new DefaultEventLoopScheduler(workerGroup, maxNumEventLoopsPerEndpoint,
-                                                               maxNumEventLoopsPerHttp1Endpoint,
-                                                               maxNumEventLoopsFunctions);
-        }
-
-        final Function<? super EventLoopGroup,
-                       ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory;
-        if (this.addressResolverGroupFactory != null) {
-            addressResolverGroupFactory = this.addressResolverGroupFactory;
-        } else {
-            addressResolverGroupFactory = new DefaultAddressResolverGroupFactory(
-                    firstNonNull(domainNameResolverCustomizers, ImmutableList.of()));
-        }
-
-        @SuppressWarnings("unchecked")
-        final AddressResolverGroup<InetSocketAddress> addressResolverGroup =
-                (AddressResolverGroup<InetSocketAddress>) addressResolverGroupFactory.apply(workerGroup);
-
-        return new DefaultClientFactory(new HttpClientFactory(
-                workerGroup, shutdownWorkerGroupOnClose, eventLoopScheduler, channelOptions,
-                sslContextCustomizer, addressResolverGroup,
-                http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
-                http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
-                http1MaxChunkSize, idleTimeoutMillis, useHttp2Preface,
-                useHttp1Pipelining, connectionPoolListener, meterRegistry));
+        return new DefaultClientFactory(new HttpClientFactory(buildOptions()));
     }
 
     @Override
     public String toString() {
         final ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
-        helper.add("workerGroup", workerGroup + " (shutdownOnClose=" + shutdownWorkerGroupOnClose + ')')
-              .add("channelOptions", channelOptions)
-              .add("http2InitialConnectionWindowSize", http2InitialConnectionWindowSize)
-              .add("http2InitialStreamWindowSize", http2InitialStreamWindowSize)
-              .add("http2MaxFrameSize", http2MaxFrameSize)
-              .add("http2MaxHeaderListSize", http2MaxHeaderListSize)
-              .add("http1MaxInitialLineLength", http1MaxInitialLineLength)
-              .add("http1MaxHeaderSize", http1MaxHeaderSize)
-              .add("http1MaxChunkSize", http1MaxChunkSize)
-              .add("idleTimeoutMillis", idleTimeoutMillis)
-              .add("useHttp2Preface", useHttp2Preface)
-              .add("useHttp1Pipelining", useHttp1Pipelining);
+        helper.add("options", options);
 
-        if (eventLoopSchedulerFactory != null) {
-            helper.add("eventLoopSchedulerFactory", eventLoopSchedulerFactory);
-        } else {
-            if (maxNumEventLoopsPerHttp1Endpoint > 0) {
-                helper.add("maxNumEventLoopsPerHttp1Endpoint", maxNumEventLoopsPerHttp1Endpoint);
-            }
-            if (maxNumEventLoopsPerEndpoint > 0) {
-                helper.add("maxNumEventLoopsPerEndpoint", maxNumEventLoopsPerEndpoint);
-            }
-            if (!maxNumEventLoopsFunctions.isEmpty()) {
-                helper.add("maxNumEventLoopsFunctions", maxNumEventLoopsFunctions);
-            }
+        if (maxNumEventLoopsPerHttp1Endpoint > 0) {
+            helper.add("maxNumEventLoopsPerHttp1Endpoint", maxNumEventLoopsPerHttp1Endpoint);
         }
-
-        if (connectionPoolListener != DEFAULT_CONNECTION_POOL_LISTENER) {
-            helper.add("connectionPoolListener", connectionPoolListener);
+        if (maxNumEventLoopsPerEndpoint > 0) {
+            helper.add("maxNumEventLoopsPerEndpoint", maxNumEventLoopsPerEndpoint);
         }
-
-        if (sslContextCustomizer != DEFAULT_SSL_CONTEXT_CUSTOMIZER) {
-            helper.add("sslContextCustomizer", sslContextCustomizer);
+        if (!maxNumEventLoopsFunctions.isEmpty()) {
+            helper.add("maxNumEventLoopsFunctions", maxNumEventLoopsFunctions);
         }
-
-        if (!(addressResolverGroupFactory instanceof DefaultAddressResolverGroupFactory)) {
-            helper.add("addressResolverGroupFactory", addressResolverGroupFactory);
-        }
-
-        helper.add("meterRegistry", meterRegistry);
 
         return helper.toString();
     }

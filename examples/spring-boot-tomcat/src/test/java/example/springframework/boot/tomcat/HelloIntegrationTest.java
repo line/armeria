@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
@@ -31,12 +31,12 @@ public class HelloIntegrationTest {
 
     @Inject
     private Server server;
-    private HttpClient client;
+    private WebClient client;
 
     @Before
     public void initClient() {
         if (client == null) {
-            client = HttpClient.of("http://127.0.0.1:" + server.activeLocalPort());
+            client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
         }
     }
 
@@ -58,6 +58,6 @@ public class HelloIntegrationTest {
     public void healthCheck() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/healthcheck").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("ok");
+        assertThat(res.contentUtf8()).isEqualTo("{\"healthy\":true}");
     }
 }

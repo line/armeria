@@ -82,7 +82,7 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         return obj instanceof ExactPathMapping &&
                (this == obj || exactPath.equals(((ExactPathMapping) obj).exactPath));
     }

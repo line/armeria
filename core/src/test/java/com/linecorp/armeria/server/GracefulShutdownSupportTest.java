@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -29,6 +30,7 @@ import java.time.Duration;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.After;
 import org.junit.Before;
@@ -40,7 +42,7 @@ import org.mockito.junit.MockitoRule;
 
 import com.google.common.base.Ticker;
 
-import com.linecorp.armeria.common.util.EventLoopThreadFactory;
+import com.linecorp.armeria.common.util.ThreadFactories;
 
 public class GracefulShutdownSupportTest {
 
@@ -59,7 +61,7 @@ public class GracefulShutdownSupportTest {
     public void setUp() {
         executor = new ThreadPoolExecutor(
                 0, 1, 1, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
-                new EventLoopThreadFactory("graceful-shutdown-test", true));
+                ThreadFactories.newEventLoopThreadFactory("graceful-shutdown-test", true));
 
         support = GracefulShutdownSupport.create(Duration.ofNanos(QUIET_PERIOD_NANOS), executor, ticker);
     }
@@ -224,12 +226,15 @@ public class GracefulShutdownSupportTest {
     }
 
     private void submitLongTask() {
+        final AtomicBoolean running = new AtomicBoolean();
         executor.execute(() -> {
+            running.set(true);
             try {
-                Thread.sleep(10000);
+                Thread.sleep(100000);
             } catch (InterruptedException ignored) {
                 // Ignored
             }
         });
+        await().untilTrue(running);
     }
 }

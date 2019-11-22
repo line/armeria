@@ -27,7 +27,7 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -198,7 +197,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class MethodLevelExceptionHandler implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             assertThat(exceptionCounter.getAndIncrement()).isZero();
             return ExceptionHandlerFunction.fallthrough();
         }
@@ -206,7 +205,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class ClassLevelExceptionHandler implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             assertThat(exceptionCounter.getAndIncrement()).isOne();
             return ExceptionHandlerFunction.fallthrough();
         }
@@ -214,7 +213,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class ServiceLevelExceptionHandler implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             assertThat(exceptionCounter.getAndIncrement()).isEqualTo(2);
             return ExceptionHandlerFunction.fallthrough();
         }
@@ -267,7 +266,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
     }
 
     private static AggregatedHttpResponse executeRequest(AggregatedHttpRequest req) {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         return client.execute(req).aggregate().join();
     }
 }

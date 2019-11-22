@@ -130,7 +130,8 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     /**
      * Sets the specified {@link HttpResponse} which responds to this request. This is always called
-     * by the {@link HttpServerHandler} after the handler gets the {@link HttpResponse} from a {@link Service}.
+     * by the {@link HttpServerHandler} after the handler gets the {@link HttpResponse} from an
+     * {@link HttpService}.
      */
     void setResponse(HttpResponse response) {
         if (isResponseAborted) {
@@ -153,7 +154,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
         // Try to close the request first, then abort the response if it is already closed.
         if (!tryClose(cause) &&
             response != null && !response.isComplete()) {
-            response.abort();
+            response.abort(cause);
         }
     }
 }

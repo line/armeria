@@ -49,7 +49,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -78,9 +78,7 @@ import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
@@ -134,13 +132,14 @@ public class AnnotatedHttpDocServiceTest {
         addPrefixMethodInfo(methodInfos);
         addConsumesMethodInfo(methodInfos);
         addBeanMethodInfo(methodInfos);
+        addMultiMethodInfo(methodInfos);
         final Map<Class<?>, String> serviceDescription = ImmutableMap.of(MyService.class, "My service class");
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedHttpDocServicePlugin.generate(
                 serviceDescription, methodInfos));
         addExamples(expectedJson);
 
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("no-cache, must-revalidate");
@@ -148,15 +147,16 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/foo")
-                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/foo")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfoBuilder("header", INT).requirement(REQUIRED)
-                                                   .location(FieldLocation.HEADER)
-                                                   .docString("header parameter").build(),
-                new FieldInfoBuilder("query", LONG).requirement(REQUIRED)
-                                                   .location(QUERY)
-                                                   .docString("query parameter").build());
+                FieldInfo.builder("header", INT).requirement(REQUIRED)
+                         .location(FieldLocation.HEADER)
+                         .docString("header parameter").build(),
+                FieldInfo.builder("query", LONG).requirement(REQUIRED)
+                         .location(QUERY)
+                         .docString("query parameter").build());
         final MethodInfo methodInfo = new MethodInfo(
                 "foo", TypeSignature.ofBase("T"), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, "foo method");
@@ -164,8 +164,9 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private static void addAllMethodsMethodInfos(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/allMethods")
-                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/allMethods")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         Stream.of(HttpMethod.values())
               .filter(httpMethod -> httpMethod != HttpMethod.CONNECT && httpMethod != HttpMethod.UNKNOWN)
               .forEach(httpMethod -> {
@@ -180,11 +181,12 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private static void addIntsMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/ints")
-                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/ints")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfoBuilder("ints", TypeSignature.ofList(INT)).requirement(REQUIRED)
-                                                                       .location(QUERY).build());
+                FieldInfo.builder("ints", TypeSignature.ofList(INT)).requirement(REQUIRED)
+                         .location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "ints", TypeSignature.ofList(INT),
                 fieldInfos, ImmutableList.of(),
@@ -193,11 +195,12 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private static void addPathParamsMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "/service/hello1/{hello2}/hello3/{hello4}")
-                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "/service/hello1/{hello2}/hello3/{hello4}")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfoBuilder("hello2", STRING).requirement(REQUIRED).location(PATH).build(),
-                new FieldInfoBuilder("hello4", STRING).requirement(REQUIRED).location(PATH).build());
+                FieldInfo.builder("hello2", STRING).requirement(REQUIRED).location(PATH).build(),
+                FieldInfo.builder("hello4", STRING).requirement(REQUIRED).location(PATH).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "pathParams", STRING, fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
@@ -205,11 +208,15 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private static void addRegexMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "regex:/(bar|baz)")
-                .regexPathPrefix("prefix:/service/").availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "regex:/(bar|baz)")
+                                                  .regexPathPrefix("prefix:/service/")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                new FieldInfoBuilder("myEnum", toTypeSignature(MyEnum.class))
-                        .requirement(REQUIRED).location(QUERY).build());
+                FieldInfo.builder("myEnum", toTypeSignature(MyEnum.class))
+                         .requirement(REQUIRED)
+                         .location(QUERY)
+                         .build());
         final MethodInfo methodInfo = new MethodInfo(
                 "regex", TypeSignature.ofList(TypeSignature.ofList(STRING)), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
@@ -217,8 +224,9 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private static void addPrefixMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "prefix:/service/prefix/")
-                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "prefix:/service/prefix/")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final MethodInfo methodInfo = new MethodInfo(
                 "prefix", STRING, ImmutableList.of(), ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
@@ -226,8 +234,10 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private static void addConsumesMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/consumes")
-                .availableMimeTypes(MediaType.APPLICATION_BINARY, MediaType.JSON_UTF_8).build();
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/consumes")
+                                                  .availableMimeTypes(MediaType.APPLICATION_BINARY,
+                                                                      MediaType.JSON_UTF_8)
+                                                  .build();
         final MethodInfo methodInfo = new MethodInfo(
                 "consumes", TypeSignature.ofContainer("BiFunction", TypeSignature.ofBase("JsonNode"),
                                                       TypeSignature.ofUnresolved(""), STRING),
@@ -236,12 +246,26 @@ public class AnnotatedHttpDocServiceTest {
     }
 
     private static void addBeanMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", "exact:/service/bean")
-                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/bean")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(compositeBean());
         final MethodInfo methodInfo = new MethodInfo(
                 "bean", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
+    private static void addMultiMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint1 = EndpointInfo.builder("*", "exact:/service/multi")
+                                                   .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                   .build();
+        final EndpointInfo endpoint2 = EndpointInfo.builder("*", "prefix:/service/multi2/")
+                                                   .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                   .build();
+        final MethodInfo methodInfo = new MethodInfo(
+                "multi", TypeSignature.ofBase("HttpResponse"), ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(endpoint1, endpoint2), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -275,7 +299,7 @@ public class AnnotatedHttpDocServiceTest {
 
     @Test
     public void excludeAllServices() throws IOException {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
@@ -370,6 +394,13 @@ public class AnnotatedHttpDocServiceTest {
 
         @Get("/exclude2")
         public HttpResponse exclude2() {
+            return HttpResponse.of(200);
+        }
+
+        @Get
+        @Path("/multi")
+        @Path("prefix:/multi2")
+        public HttpResponse multi() {
             return HttpResponse.of(200);
         }
     }

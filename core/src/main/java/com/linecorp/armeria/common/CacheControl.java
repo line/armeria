@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
 /**
  * Directives for HTTP caching mechanisms in requests or responses. Use {@link ServerCacheControl} for
  * response-side and {@link ClientCacheControl} for request-side.
@@ -115,7 +117,7 @@ public abstract class CacheControl {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

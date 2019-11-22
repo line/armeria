@@ -17,6 +17,8 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.net.URI;
+
 import javax.annotation.Nullable;
 
 final class DefaultRequestHeadersBuilder
@@ -40,11 +42,22 @@ final class DefaultRequestHeadersBuilder
 
         final HttpHeadersBase parent = parent();
         if (parent != null) {
-            return (RequestHeaders) parent;
+            if (parent instanceof RequestHeaders) {
+                return (RequestHeaders) parent;
+            } else {
+                return updateParent(new DefaultRequestHeaders(parent));
+            }
         }
 
         // No headers were set.
         throw new IllegalStateException("must set ':method' and ':path' headers");
+    }
+
+    @Override
+    public URI uri() {
+        final HttpHeadersBase getters = getters();
+        checkState(getters != null, "must set ':scheme', ':authority' and ':path' headers");
+        return getters.uri();
     }
 
     @Override

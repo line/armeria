@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
 import java.util.Locale;
@@ -258,10 +259,10 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     /**
      * Creates a new instance from an existing {@link HttpRequest} replacing its {@link RequestHeaders}
      * with the specified {@code newHeaders}. Make sure to update {@link RequestContext#request()} with
-     * {@link RequestContext#updateRequest(Request)} if you are intercepting an {@link HttpRequest}
+     * {@link RequestContext#updateRequest(HttpRequest)} if you are intercepting an {@link HttpRequest}
      * in a decorator. For example:
      * <pre>{@code
-     * > public class MyService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+     * > public class MyService extends SimpleDecoratingHttpService {
      * >     @Override
      * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
      * >         // Create a new request with an additional header.
@@ -302,6 +303,13 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Returns the initial HTTP/2 headers of this request.
      */
     RequestHeaders headers();
+
+    /**
+     * Returns the URI of this request. This method is a shortcut of {@code headers().uri()}.
+     */
+    default URI uri() {
+        return headers().uri();
+    }
 
     /**
      * Returns the scheme of this request. This method is a shortcut of {@code headers().scheme()}.

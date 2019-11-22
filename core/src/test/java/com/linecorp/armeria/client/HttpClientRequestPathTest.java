@@ -67,14 +67,14 @@ class HttpClientRequestPathTest {
     @EnumSource(value = HttpMethod.class, mode = Mode.EXCLUDE, names = "UNKNOWN")
     void default_withAbsolutePath(HttpMethod method) {
         final HttpRequest request = HttpRequest.of(method, server2.uri("/simple-client"));
-        final HttpResponse response = HttpClient.of().execute(request);
+        final HttpResponse response = WebClient.of().execute(request);
         assertThat(response.aggregate().join().status()).isEqualTo(OK);
     }
 
     @Test
     void default_withRelativePath() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/simple-client");
-        final HttpResponse response = HttpClient.of().execute(request);
+        final HttpResponse response = WebClient.of().execute(request);
         assertThatThrownBy(() -> response.aggregate().join())
                 .hasCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("no authority");
@@ -82,7 +82,7 @@ class HttpClientRequestPathTest {
 
     @Test
     void custom_withAbsolutePath() {
-        final HttpClient client = HttpClient.of(server1.uri("/"));
+        final WebClient client = WebClient.of(server1.uri("/"));
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, server2.uri("/simple-client"));
         final HttpResponse response = client.execute(request);
         assertThat(response.aggregate().join().status()).isEqualTo(OK);
@@ -90,7 +90,7 @@ class HttpClientRequestPathTest {
 
     @Test
     void custom_withRelativePath() {
-        final HttpClient client = HttpClient.of(server2.uri("/"));
+        final WebClient client = WebClient.of(server2.uri("/"));
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/simple-client");
         final HttpResponse response = client.execute(request);
         assertThat(response.aggregate().join().status()).isEqualTo(OK);
@@ -98,7 +98,7 @@ class HttpClientRequestPathTest {
 
     @Test
     void redirect() {
-        final HttpClient client = HttpClient.of(server2.uri("/"));
+        final WebClient client = WebClient.of(server2.uri("/"));
         final AggregatedHttpResponse redirected = client.get("/redirect").aggregate().join();
         final String location = redirected.headers().get(LOCATION);
         assertThat(location).isNotNull();
