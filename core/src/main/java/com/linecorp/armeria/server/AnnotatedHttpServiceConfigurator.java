@@ -45,29 +45,22 @@ final class AnnotatedHttpServiceConfigurator {
         Builder<ResponseConverterFunction> responseConverters = null;
 
         for (final Object o : exceptionHandlersAndConverters) {
-            boolean added = false;
             if (o instanceof ExceptionHandlerFunction) {
                 if (exceptionHandlers == null) {
                     exceptionHandlers = ImmutableList.builder();
                 }
                 exceptionHandlers.add((ExceptionHandlerFunction) o);
-                added = true;
-            }
-            if (o instanceof RequestConverterFunction) {
+            } else if (o instanceof RequestConverterFunction) {
                 if (requestConverters == null) {
                     requestConverters = ImmutableList.builder();
                 }
                 requestConverters.add((RequestConverterFunction) o);
-                added = true;
-            }
-            if (o instanceof ResponseConverterFunction) {
+            } else if (o instanceof ResponseConverterFunction) {
                 if (responseConverters == null) {
                     responseConverters = ImmutableList.builder();
                 }
                 responseConverters.add((ResponseConverterFunction) o);
-                added = true;
-            }
-            if (!added) {
+            } else {
                 throw new IllegalArgumentException(o.getClass().getName() +
                                                    " is neither an exception handler nor a converter.");
             }
