@@ -916,17 +916,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Binds the specified annotated service object under the path prefix {@code "/"}.
-     *
-     * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
-     */
-    public ServerBuilder annotatedService(Object service,
-                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        return annotatedService("/", service, Function.identity(), requireNonNull(customizer, "customizer"));
-    }
-
-    /**
      * Binds the specified annotated service object under the specified path prefix.
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service) {
@@ -945,18 +934,6 @@ public final class ServerBuilder {
         return annotatedService(pathPrefix, service, Function.identity(),
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
                                                                     "exceptionHandlersAndConverters")));
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
-     * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
-     */
-    public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        return annotatedService(pathPrefix, service, Function.identity(),
-                                requireNonNull(customizer, "customizer"));
     }
 
     /**
@@ -988,17 +965,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Binds the specified annotated service object under the path prefix {@code "/"}.
-     *
-     * @param customizer the {@link AnnotatedHttpServiceConfiguratorSetters}.
-     */
-    public ServerBuilder annotatedService(Object service,
-                                          Function<? super HttpService, ? extends HttpService> decorator,
-                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        return annotatedService("/", service, decorator, requireNonNull(customizer, "customizer"));
-    }
-
-    /**
      * Binds the specified annotated service object under the specified path prefix.
      *
      * @param exceptionHandlersAndConverters an iterable object of {@link ExceptionHandlerFunction},
@@ -1015,26 +981,6 @@ public final class ServerBuilder {
         final AnnotatedHttpServiceConfigurator configurator =
                 AnnotatedHttpServiceConfigurator
                         .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
-        return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
-                                configurator.requestConverters(), configurator.responseConverters());
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
-     * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
-     */
-    public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Function<? super HttpService, ? extends HttpService> decorator,
-                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(customizer, "customizer");
-        final AnnotatedHttpServiceConfiguratorSetters setters = new AnnotatedHttpServiceConfiguratorSetters();
-        customizer.accept(setters);
-        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
         return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
                                 configurator.requestConverters(), configurator.responseConverters());
     }

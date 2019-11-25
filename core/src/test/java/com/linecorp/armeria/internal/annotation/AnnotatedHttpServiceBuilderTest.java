@@ -27,7 +27,6 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
@@ -135,20 +134,6 @@ class AnnotatedHttpServiceBuilderTest {
                                           new JacksonRequestConverterFunction(),
                                           new ByteArrayRequestConverterFunction(),
                                           new DummyExceptionHandler());
-
-        Server.builder().annotatedService(new Object() {
-                                              @Get("/")
-                                              public void root(@Param("a") byte a) {}
-                                          },
-                                          setters -> {
-                                              setters.configureRequestConverters(ImmutableList.of(
-                                                      new JacksonRequestConverterFunction(),
-                                                      new ByteArrayRequestConverterFunction()
-                                              ));
-                                              setters.configureExceptionHandlers(ImmutableList.of(
-                                                      new DummyExceptionHandler()
-                                              ));
-                                          });
 
         Server.builder().annotatedService(new Object() {
                                               @Get("/")

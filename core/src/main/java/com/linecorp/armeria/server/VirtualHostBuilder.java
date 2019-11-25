@@ -435,17 +435,6 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      *
-     * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
-     */
-    public VirtualHostBuilder annotatedService(Object service,
-                                               Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        return annotatedService("/", service, Function.identity(), customizer);
-    }
-
-    /**
-     * Binds the specified annotated service object under the path prefix {@code "/"}.
-     *
      * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
      *                                       {@link RequestConverterFunction} and/or
      *                                       {@link ResponseConverterFunction}
@@ -456,19 +445,6 @@ public final class VirtualHostBuilder {
         return annotatedService("/", service, decorator,
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
                                                                     "exceptionHandlersAndConverters")));
-    }
-
-    /**
-     * Binds the specified annotated service object under the path prefix {@code "/"}.
-     *
-     * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
-     */
-    public VirtualHostBuilder annotatedService(
-            Object service,
-            Function<? super HttpService, ? extends HttpService> decorator,
-            Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        return annotatedService("/", service, decorator, customizer);
     }
 
     /**
@@ -509,17 +485,6 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified annotated service object under the specified path prefix.
      *
-     * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
-     */
-    public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
-                                               Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        return annotatedService(pathPrefix, service, Function.identity(), customizer);
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
      * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
      *                                       {@link RequestConverterFunction} and/or
      *                                       {@link ResponseConverterFunction}
@@ -549,27 +514,6 @@ public final class VirtualHostBuilder {
         final AnnotatedHttpServiceConfigurator configurator =
                 AnnotatedHttpServiceConfigurator
                         .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
-        return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
-                                configurator.requestConverters(), configurator.responseConverters());
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
-     * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
-     */
-    public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
-                                               Function<? super HttpService,
-                                                       ? extends HttpService> decorator,
-                                               Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(customizer, "customizer");
-        final AnnotatedHttpServiceConfiguratorSetters setters = new AnnotatedHttpServiceConfiguratorSetters();
-        customizer.accept(setters);
-        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
         return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
                                 configurator.requestConverters(), configurator.responseConverters());
     }
