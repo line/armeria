@@ -150,10 +150,7 @@ declare module 'react-table' {
     setAllFilters: () => any;
   }
 
-  export function useTable<D>(
-    props: TableOptions<D>,
-    ...plugins: any[]
-  ): TableInstance<D>;
+  export function useTable<D>(props: any, ...plugins: any[]): TableInstance<D>;
 
   export function useColumns<D>(
     props: TableOptions<D>,

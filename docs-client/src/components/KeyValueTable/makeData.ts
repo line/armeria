@@ -1,6 +1,6 @@
 export interface Data {
-  header: string;
-  value: string;
+  fieldName: string;
+  fieldValue: string;
 }
 
 const range = (len: number) => {
@@ -11,8 +11,8 @@ const range = (len: number) => {
 
 const newRow: () => Data = () => {
   return {
-    header: '',
-    value: '',
+    fieldName: '',
+    fieldValue: '',
   };
 };
 

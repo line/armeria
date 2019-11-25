@@ -1,23 +1,21 @@
 import React from 'react';
 import { HeaderColumn } from 'react-table';
 import CustomTable from '../CustomTable';
-import { KeyValueTableCell } from '../KeyValueTableCellRenderer';
+import { KeyValueTableCellRenderer } from '../KeyValueTableCellRenderer';
 import makeData, { Data } from './makeData';
 
 function KeyValueTable() {
   const columns: HeaderColumn<Data, keyof Data>[] = React.useMemo(
     () => [
       {
-        id: 0,
-        accessor: 'header',
-        Header: 'Header',
-        cell: KeyValueTableCell,
+        accessor: 'fieldName',
+        Header: 'fieldName',
+        cell: KeyValueTableCellRenderer,
       },
       {
-        id: 1,
-        accessor: 'value',
-        Header: 'Value',
-        cell: KeyValueTableCell,
+        accessor: 'fieldValue',
+        Header: 'fieldValue',
+        cell: KeyValueTableCellRenderer,
       },
     ],
     [],
@@ -26,16 +24,9 @@ function KeyValueTable() {
   const [data, setData] = React.useState(() => makeData(1));
   const [originalData] = React.useState(data);
 
-  // We need to keep the table from resetting the pageIndex when we
-  // Update data. So we can keep track of that flag with a ref.
-
-  // When our cell renderer calls updateMyData, we'll use
-  // the rowIndex, columnID and new value to update the
-  // original data
   const updateData = (rowIndex: number, columnID: string, value: string) => {
-    // We also turn on the flag to not reset the page
-    setData((old) =>
-      old.map((row, index) => {
+    setData((old) => {
+      const arr = old.map((row, index) => {
         if (index === rowIndex) {
           return {
             ...old[rowIndex],
@@ -43,10 +34,12 @@ function KeyValueTable() {
           };
         }
         return row;
-      }),
-    );
-    // tslint:disable-next-line:no-console
-    console.log(data);
+      });
+
+      arr.concat(...makeData(1));
+
+      return arr;
+    });
   };
 
   // Let's add a data resetter/randomizer to help
@@ -56,7 +49,12 @@ function KeyValueTable() {
   return (
     <div>
       <button onClick={resetData}>Reset Data</button>
-      <CustomTable columns={columns} data={data} updateData={updateData} />
+      <CustomTable
+        cellRenderer={KeyValueTableCellRenderer}
+        columns={columns}
+        data={data}
+        updateData={updateData}
+      />
     </div>
   );
 }

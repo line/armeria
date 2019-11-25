@@ -5,12 +5,6 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import React from 'react';
 import { useTable } from 'react-table';
-import { KeyValueTableCellRenderer } from '../KeyValueTableCellRenderer';
-
-// Set our editable cell renderer as the default Cell renderer
-const defaultColumn = {
-  Cell: KeyValueTableCellRenderer,
-};
 
 // Set our editable cell renderer as the default Cell renderer
 // const defaultColumn = CustomTableCell;
@@ -18,11 +12,18 @@ const CustomTable: ({
   columns,
   data,
   updateData,
+  cellRenderer,
 }: {
   columns: any;
   data: any;
   updateData: any;
-}) => any = ({ columns, data, updateData }) => {
+  cellRenderer: any;
+}) => any = ({ columns, data, updateData, cellRenderer }) => {
+  // Set our editable cell renderer as the default Cell renderer
+  const defaultColumn = {
+    Cell: cellRenderer,
+  };
+
   const {
     getTableProps,
     getTableBodyProps,

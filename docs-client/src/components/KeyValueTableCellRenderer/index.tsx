@@ -1,12 +1,23 @@
 import React from 'react';
-import { Cell } from 'react-table';
-import { Data } from '../KeyValueTable/makeData';
 
-export const KeyValueTableCellRenderer: Cell<Data> = ({
+interface Props {
+  cell: {
+    value: string;
+  };
+  row: {
+    index: number;
+  };
+  column: {
+    id: number;
+  };
+  updateData: (...args: any) => void;
+}
+
+export const KeyValueTableCellRenderer: React.FC<Props> = ({
   cell: { value: initialValue },
   row: { index },
   column: { id },
-  updateMyData,
+  updateData,
 }) => {
   // We need to keep and update the state of the cell normally
   const [value, setValue] = React.useState();
@@ -26,5 +37,5 @@ export const KeyValueTableCellRenderer: Cell<Data> = ({
   }, [initialValue]);
 
   // we'll use native input because input of material-ui doesn't have onBlur property
-  return <input value={value} onChange={onChange} onBlur={onBlur} />;
+  return <input value={value || ''} onChange={onChange} onBlur={onBlur} />;
 };
