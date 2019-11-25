@@ -25,9 +25,7 @@ import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -51,7 +49,6 @@ class LoggingClientTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.initMocks(this);
         when(logger.isInfoEnabled()).thenReturn(true);
 
         request = HttpRequest.of(HttpMethod.GET, "/");
@@ -76,16 +73,12 @@ class LoggingClientTest {
         customLoggerClient.execute(context, request);
 
         // verify request log
-        verify(logger).info(eq("Request: {}"), argThat((ArgumentMatcher<Object>) argument -> {
-            final String actLog = (String) argument;
-            return actLog.endsWith("headers=[:method=GET, :path=/]}");
-        }));
+        verify(logger).info(eq("Request: {}"), argThat((String actLog) -> actLog
+                .endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).info(eq("Response: {}"), argThat((ArgumentMatcher<Object>) argument -> {
-            final String actLog = (String) argument;
-            return actLog.endsWith("duration=0ns, headers=[:status=0]}");
-        }));
+        verify(logger).info(eq("Response: {}"), argThat((String actLog) -> actLog
+                .endsWith("duration=0ns, headers=[:status=0]}")));
 
         // use default logger
         final LoggingClient defaultLoggerClient =

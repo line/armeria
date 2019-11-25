@@ -61,7 +61,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
 
     /**
      * Sets the {@link Logger} to use when logging.
-     * If unset, will use default logger that each logging implementation has.
+     * If unset, a default {@link Logger} will be used.
      */
     public T logger(Logger logger) {
         this.logger = requireNonNull(logger, "logger");
@@ -69,7 +69,8 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     }
 
     /**
-     * Returns the nullable {@link Logger} to use when logging.
+     * Returns the {@link Logger} the user specified to use,
+     * or {@code null} if not set and a default logger should be used.
      */
     @Nullable
     protected Logger logger() {
