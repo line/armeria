@@ -172,7 +172,7 @@ io.netty:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.27.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.26.Final' }
 
 io.projectreactor:
   reactor-core:
