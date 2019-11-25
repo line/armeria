@@ -57,12 +57,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
@@ -117,8 +116,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             WebEndpointsSupplier endpointsSupplier,
             EndpointMediaTypes mediaTypes,
             WebEndpointProperties properties,
+            HealthStatusHttpMapper healthMapper,
             CorsEndpointProperties corsProperties) {
-            HealthStatusHttpMapper healthMapper) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
@@ -165,7 +164,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                    path,
                                                    predicate.getConsumes(),
                                                    predicate.getProduces());
-                         sb.service(route, new WebOperationHttpService(operation));
+                         sb.service(route, new WebOperationHttpService(operation, healthMapper));
                          if (cors != null) {
                              cors.route(path);
                          }
@@ -178,7 +177,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                         ImmutableList.of(),
                         mediaTypes.getProduced()
                 );
-                Service<HttpRequest, HttpResponse> linksService = (ctx, req) -> {
+                final HttpService linksService = (ctx, req) -> {
                     final Map<String, Link> links =
                             new EndpointLinksResolver(endpoints).resolveLinks(req.path());
                     return HttpResponse.of(
@@ -193,7 +192,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 }
             }
             if (cors != null) {
-                sb.decorator(cors.newDecorator());
+                sb.routeDecorator().pathPrefix("/").build(cors.newDecorator());
             }
         };
     }

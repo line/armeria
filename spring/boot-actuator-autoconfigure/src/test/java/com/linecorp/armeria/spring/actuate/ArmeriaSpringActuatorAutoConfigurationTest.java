@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.spring.actuate;
 
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
@@ -54,6 +55,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -276,11 +278,11 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         @Inject
         private Server server;
 
-        private HttpClient client;
+        private WebClient client;
 
         @Before
         public void setUp() {
-            client = HttpClient.of(newUrl("h2c"));
+            client = WebClient.of(newUrl("h2c"));
         }
 
         private String newUrl(String scheme) {
@@ -289,8 +291,18 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         }
 
         @Test
-        public void testOptions() throws Exception {
-            final AggregatedHttpResponse res = client.options("/internal/actuator/health").aggregate().get();
+        public void testOptions() {
+            final HttpRequest req = HttpRequest.of(RequestHeaders.of(
+                    HttpMethod.OPTIONS, "/internal/actuator/health",
+                    HttpHeaderNames.ORIGIN, "https://example.com",
+                    HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET"));
+            final AggregatedHttpResponse res = client.execute(req).aggregate().join();
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
+            assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
+                    .isEqualTo("https://example.com");
+            assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS))
+                    .isEqualTo("GET,POST");
+            assertThat(res.headers().contains(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE)).isTrue();
             assertThat(res.status()).isNotEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
         }
     }

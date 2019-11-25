@@ -15,7 +15,17 @@ if (rootProject.hasProperty('noWeb')) {
 apply plugin: 'base'
 apply plugin: 'com.github.node-gradle.node'
 
-tasks.yarn.args += ['--frozen-lockfile']
+tasks.yarn {
+    args += ['--frozen-lockfile']
+
+    // gradle-node-plugin sets node_modules as an output directory for up-to-date checking.
+    // This makes sense in principal but Gradle often handles up-to-date checking much more
+    // slowly than yarn itself for a large node_modules, so we go ahead and remove it all
+    // from up-to-date checking.
+    nodeModulesOutputFilter = {
+        it.exclude("**/*")
+    }
+}
 
 task yarnUpdate(type: YarnTask) {
     args = ['install']

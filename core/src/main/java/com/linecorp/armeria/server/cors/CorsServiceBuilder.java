@@ -86,7 +86,7 @@ public final class CorsServiceBuilder {
      */
     public static CorsServiceBuilder forOrigins(Iterable<String> origins) {
         requireNonNull(origins, "origins");
-        List<String> copied = ImmutableList.copyOf(origins);
+        final List<String> copied = ImmutableList.copyOf(origins);
         if (copied.contains(ANY_ORIGIN)) {
             if (copied.size() > 1) {
                 logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
