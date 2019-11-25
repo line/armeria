@@ -78,8 +78,8 @@ If you want more freedom on how you manipulate the request headers, use a decora
 
     // Add a decorator that inserts the custom header.
     cb.decorator((delegate, ctx, req) -> { // See DecoratingHttpClientFunction and DecoratingRpcClientFunction.
-        RequestHeaders req0 = req.headers().set(AUTHORIZATION, credential).toBuilder().build();
-        return delegate.execute(ctx, HttpRequest.of(req0, req));
+        RequestHeaders authorized = req.headers().toBuilder().set(AUTHORIZATION, credential).build();
+        return delegate.execute(ctx, HttpRequest.of(req, authorized));
     });
 
     HelloService.Iface client = cb.build(HelloService.Iface.class);
