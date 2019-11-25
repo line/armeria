@@ -304,7 +304,7 @@ public final class CorsServiceBuilder {
      */
     public CorsServiceBuilder allowRequestMethods(HttpMethod... methods) {
         requireNonNull(methods, "methods");
-        return allowRequestMethods(methods);
+        return allowRequestMethods(ImmutableList.copyOf(methods));
     }
 
     /**
