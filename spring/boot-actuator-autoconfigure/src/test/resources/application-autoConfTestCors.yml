@@ -1,0 +1,2 @@
+management.endpoints.web.cors.allowed-origins: https://example.com
+management.endpoints.web.cors.allowed-methods: GET,POST

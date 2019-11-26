@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.cors;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+
 /**
  * Builds a new {@link CorsPolicy}.
  *
@@ -34,7 +36,7 @@ public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedC
         serviceBuilder = builder;
     }
 
-    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, String... origins) {
+    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, List<String> origins) {
         super(origins);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
