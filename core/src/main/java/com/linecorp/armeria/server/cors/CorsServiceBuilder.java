@@ -230,8 +230,8 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder maxAge(Duration maxAge) {
-        firstPolicyBuilder.maxAge(TimeUnit.MILLISECONDS.toSeconds(maxAge.toMillis()));
-        return this;
+        requireNonNull(maxAge, "maxAge");
+        return maxAge(TimeUnit.MILLISECONDS.toSeconds(maxAge.toMillis()));
     }
 
     /**
@@ -338,6 +338,7 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder allowRequestHeaders(CharSequence... headers) {
+        requireNonNull(headers, "headers");
         return allowRequestHeaders(ImmutableList.copyOf(headers));
     }
 
