@@ -21,7 +21,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -112,7 +112,7 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ExecutorService blockingTaskExecutor() {
+    public ScheduledExecutorService blockingTaskExecutor() {
         return delegate().blockingTaskExecutor();
     }
 

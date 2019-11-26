@@ -20,15 +20,18 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.server.HttpService;
@@ -75,15 +78,25 @@ public final class CorsServiceBuilder {
      */
     public static CorsServiceBuilder forOrigins(String... origins) {
         requireNonNull(origins, "origins");
-        if (Arrays.asList(origins).contains(ANY_ORIGIN)) {
-            if (origins.length > 1) {
+        return forOrigins(ImmutableList.copyOf(origins));
+    }
+
+    /**
+     * Creates a new builder with the specified origins.
+     */
+    public static CorsServiceBuilder forOrigins(Iterable<String> origins) {
+        requireNonNull(origins, "origins");
+        final List<String> copied = ImmutableList.copyOf(origins);
+        if (copied.contains(ANY_ORIGIN)) {
+            if (copied.size() > 1) {
                 logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
-                            Arrays.stream(origins).filter(c -> !ANY_ORIGIN.equals(c))
+                            copied.stream()
+                                  .filter(c -> !ANY_ORIGIN.equals(c))
                                   .collect(Collectors.joining(",")));
             }
             return forAnyOrigin();
         }
-        return new CorsServiceBuilder(origins);
+        return new CorsServiceBuilder(copied);
     }
 
     final boolean anyOriginSupported;
@@ -96,7 +109,7 @@ public final class CorsServiceBuilder {
      * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing {@code origins}.
      *
      */
-    CorsServiceBuilder(String... origins) {
+    CorsServiceBuilder(List<String> origins) {
         anyOriginSupported = false;
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, origins);
     }
@@ -130,6 +143,7 @@ public final class CorsServiceBuilder {
      * @throws IllegalArgumentException if the path pattern is not valid
      */
     public CorsServiceBuilder route(String pathPattern) {
+        requireNonNull(pathPattern, "pathPattern");
         firstPolicyBuilder.route(pathPattern);
         return this;
     }
@@ -208,6 +222,19 @@ public final class CorsServiceBuilder {
     }
 
     /**
+     * Sets the CORS {@code "Access-Control-Max-Age"} response header and enables the
+     * caching of the preflight response for the specified time. During this time no preflight
+     * request will be made.
+     *
+     * @param maxAge the maximum time that the preflight response may be cached. Rounded to seconds.
+     * @return {@link CorsServiceBuilder} to support method chaining.
+     */
+    public CorsServiceBuilder maxAge(Duration maxAge) {
+        requireNonNull(maxAge, "maxAge");
+        return maxAge(TimeUnit.MILLISECONDS.toSeconds(maxAge.toMillis()));
+    }
+
+    /**
      * Specifies the headers to be exposed to calling clients.
      *
      * <p>During a simple CORS request, only certain response headers are made available by the
@@ -233,6 +260,37 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder exposeHeaders(CharSequence... headers) {
+        requireNonNull(headers, "headers");
+        return exposeHeaders(ImmutableList.copyOf(headers));
+    }
+
+    /**
+     * Specifies the headers to be exposed to calling clients.
+     *
+     * <p>During a simple CORS request, only certain response headers are made available by the
+     * browser, for example using:
+     * <pre>{@code
+     * xhr.getResponseHeader("Content-Type");
+     * }</pre>
+     *
+     * <p>The headers that are available by default are:
+     * <ul>
+     *   <li>{@code Cache-Control}</li>
+     *   <li>{@code Content-Language}</li>
+     *   <li>{@code Content-Type}</li>
+     *   <li>{@code Expires}</li>
+     *   <li>{@code Last-Modified}</li>
+     *   <li>{@code Pragma}</li>
+     * </ul>
+     *
+     * <p>To expose other headers they need to be specified which is what this method enables by
+     * adding the headers to the CORS {@code "Access-Control-Expose-Headers"} response header.
+     *
+     * @param headers the values to be added to the {@code "Access-Control-Expose-Headers"} response header
+     * @return {@link CorsServiceBuilder} to support method chaining.
+     */
+    public CorsServiceBuilder exposeHeaders(Iterable<? extends CharSequence> headers) {
+        requireNonNull(headers, "headers");
         firstPolicyBuilder.exposeHeaders(headers);
         return this;
     }
@@ -245,6 +303,19 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder allowRequestMethods(HttpMethod... methods) {
+        requireNonNull(methods, "methods");
+        return allowRequestMethods(ImmutableList.copyOf(methods));
+    }
+
+    /**
+     * Specifies the allowed set of HTTP request methods that should be returned in the
+     * CORS {@code "Access-Control-Allow-Methods"} response header.
+     *
+     * @param methods the {@link HttpMethod}s that should be allowed.
+     * @return {@link CorsServiceBuilder} to support method chaining.
+     */
+    public CorsServiceBuilder allowRequestMethods(Iterable<HttpMethod> methods) {
+        requireNonNull(methods, "methods");
         firstPolicyBuilder.allowRequestMethods(methods);
         return this;
     }
@@ -267,6 +338,29 @@ public final class CorsServiceBuilder {
      * @return {@link CorsServiceBuilder} to support method chaining.
      */
     public CorsServiceBuilder allowRequestHeaders(CharSequence... headers) {
+        requireNonNull(headers, "headers");
+        return allowRequestHeaders(ImmutableList.copyOf(headers));
+    }
+
+    /**
+     * Specifies the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
+     * response header.
+     *
+     * <p>If a client specifies headers on the request, for example by calling:
+     * <pre>{@code
+     * xhr.setRequestHeader('My-Custom-Header', 'SomeValue');
+     * }</pre>
+     * the server will receive the above header name in the {@code "Access-Control-Request-Headers"} of the
+     * preflight request. The server will then decide if it allows this header to be sent for the
+     * real request (remember that a preflight is not the real request but a request asking the server
+     * if it allows a request).
+     *
+     * @param headers the headers to be added to the preflight
+     *                {@code "Access-Control-Allow-Headers"} response header.
+     * @return {@link CorsServiceBuilder} to support method chaining.
+     */
+    public CorsServiceBuilder allowRequestHeaders(Iterable<? extends CharSequence> headers) {
+        requireNonNull(headers, "headers");
         firstPolicyBuilder.allowRequestHeaders(headers);
         return this;
     }
@@ -357,8 +451,19 @@ public final class CorsServiceBuilder {
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
     public ChainedCorsPolicyBuilder andForOrigins(String... origins) {
+        requireNonNull(origins, "origins");
+        return andForOrigins(ImmutableList.copyOf(origins));
+    }
+
+    /**
+     * Creates a new builder instance for a new {@link CorsPolicy}.
+     *
+     * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
+     */
+    public ChainedCorsPolicyBuilder andForOrigins(Iterable<String> origins) {
+        requireNonNull(origins, "origins");
         ensureForNewPolicy();
-        return new ChainedCorsPolicyBuilder(this, origins);
+        return new ChainedCorsPolicyBuilder(this, ImmutableList.copyOf(origins));
     }
 
     /**
@@ -367,7 +472,7 @@ public final class CorsServiceBuilder {
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
     public ChainedCorsPolicyBuilder andForOrigin(String origin) {
-        return andForOrigins(origin);
+        return andForOrigins(ImmutableList.of(origin));
     }
 
     @Override

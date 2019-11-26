@@ -16,21 +16,19 @@
 package com.linecorp.armeria.server.annotation;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -42,23 +40,19 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-public class ByteArrayResponseConverterFunctionTest {
+class ByteArrayResponseConverterFunctionTest {
 
     private static final ResponseConverterFunction function = new ByteArrayResponseConverterFunction();
-    private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+    private static final ServiceRequestContext ctx = ServiceRequestContext.builder(
+            HttpRequest.of(HttpMethod.GET, "/")).build();
 
     private static final ResponseHeaders OCTET_STREAM_HEADERS =
             ResponseHeaders.of(HttpStatus.OK,
                                HttpHeaderNames.CONTENT_TYPE, MediaType.OCTET_STREAM);
     private static final HttpHeaders DEFAULT_TRAILERS = HttpHeaders.of();
 
-    @BeforeClass
-    public static void setup() {
-        when(ctx.blockingTaskExecutor()).thenReturn(MoreExecutors.newDirectExecutorService());
-    }
-
     @Test
-    public void streaming_HttpData() throws Exception {
+    void streaming_HttpData() throws Exception {
         final List<HttpData> contents = ImmutableList.of(HttpData.ofUtf8("foo"),
                                                          HttpData.ofUtf8("bar"),
                                                          HttpData.ofUtf8("baz"));
@@ -83,7 +77,7 @@ public class ByteArrayResponseConverterFunctionTest {
     }
 
     @Test
-    public void streaming_byteArray() throws Exception {
+    void streaming_byteArray() throws Exception {
         final List<byte[]> contents = ImmutableList.of("foo".getBytes(),
                                                        "bar".getBytes(),
                                                        "baz".getBytes());
@@ -108,7 +102,7 @@ public class ByteArrayResponseConverterFunctionTest {
     }
 
     @Test
-    public void streaming_unsupportedType() throws Exception {
+    void streaming_unsupportedType() throws Exception {
         final String unsupported = "Unsupported type.";
 
         StepVerifier.create(from(Mono.just(unsupported)))
@@ -127,7 +121,7 @@ public class ByteArrayResponseConverterFunctionTest {
     }
 
     @Test
-    public void withoutContentType() throws Exception {
+    void withoutContentType() throws Exception {
         StepVerifier.create(function.convertResponse(ctx, ResponseHeaders.of(HttpStatus.OK),
                                                      HttpData.ofUtf8("foo"), DEFAULT_TRAILERS))
                     // 'application/octet-stream' should be added.

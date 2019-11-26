@@ -21,15 +21,15 @@ You may want to consider the following options before putting your Armeria appli
 
 - Specify an alternative ``blockingTaskExecutor`` based on expected workload if your server has
   a service that uses it, such as :api:`TomcatService`, :api:`JettyService` and :api:`THttpService` with
-  synchronous service implementation. The default is a simple ``ThreadPoolExecutor`` with 200 threads and an
-  *unbounded* queue, provided by :api:`CommonPools`.
+  synchronous service implementation. The default is a simple ``ScheduledThreadPoolExecutor`` with maximum
+  200 threads, provided by :api:`CommonPools`.
 
   .. code-block:: java
 
       import com.linecorp.armeria.server.ServerBuilder;
 
       ServerBuilder sb = Server.builder();
-      sb.blockingTaskExecutor(myBoundedExecutor);
+      sb.blockingTaskExecutor(myScheduledExecutorService);
 
 - Specify the default limits of an HTTP request or response.
 

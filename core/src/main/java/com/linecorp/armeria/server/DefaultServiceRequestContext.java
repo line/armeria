@@ -26,7 +26,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
@@ -86,7 +86,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private final Logger logger;
 
     @Nullable
-    private ExecutorService blockingTaskExecutor;
+    private ScheduledExecutorService blockingTaskExecutor;
 
     private long requestTimeoutMillis;
     @Nullable
@@ -309,7 +309,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public ExecutorService blockingTaskExecutor() {
+    public ScheduledExecutorService blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }

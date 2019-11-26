@@ -35,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -406,7 +407,7 @@ public class ServerTest {
 
     @Test
     public void gracefulShutdownBlockingTaskExecutor() {
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
         final Server server = Server.builder()
                                     .blockingTaskExecutor(executor, true)
@@ -431,7 +432,7 @@ public class ServerTest {
 
     @Test
     public void notGracefulShutdownBlockingTaskExecutor() {
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
         final Server server = Server.builder()
                                     .blockingTaskExecutor(executor, false)

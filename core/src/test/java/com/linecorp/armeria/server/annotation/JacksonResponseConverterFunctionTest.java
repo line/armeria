@@ -16,21 +16,18 @@
 package com.linecorp.armeria.server.annotation;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.stream.Stream;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import com.google.common.util.concurrent.MoreExecutors;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -44,10 +41,11 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import reactor.test.StepVerifier.Step;
 
-public class JacksonResponseConverterFunctionTest {
+class JacksonResponseConverterFunctionTest {
 
     private static final ResponseConverterFunction function = new JacksonResponseConverterFunction();
-    private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+    private static final ServiceRequestContext ctx = ServiceRequestContext.builder(
+            HttpRequest.of(HttpMethod.GET, "/")).build();
 
     // Copied from JsonTextSequences class.
     private static final byte RECORD_SEPARATOR = 0x1E;
@@ -78,13 +76,8 @@ public class JacksonResponseConverterFunctionTest {
             HttpData.wrap(new byte[] { RECORD_SEPARATOR, '\"', 'q', 'u', 'x', '\"', LINE_FEED })
     };
 
-    @BeforeClass
-    public static void setup() {
-        when(ctx.blockingTaskExecutor()).thenReturn(MoreExecutors.newDirectExecutorService());
-    }
-
     @Test
-    public void aggregatedJson() throws Exception {
+    void aggregatedJson() throws Exception {
         expectAggregatedJson(Stream.of(TEST_STRINGS))
                 .expectComplete()
                 .verify();
@@ -101,7 +94,7 @@ public class JacksonResponseConverterFunctionTest {
     }
 
     @Test
-    public void aggregatedJson_streamError() throws Exception {
+    void aggregatedJson_streamError() throws Exception {
         final Stream<String> stream = Stream.of(TEST_STRINGS).map(s -> {
             throw new AnticipatedException();
         });
@@ -113,7 +106,7 @@ public class JacksonResponseConverterFunctionTest {
     }
 
     @Test
-    public void aggregatedJson_otherTypes() throws Exception {
+    void aggregatedJson_otherTypes() throws Exception {
         StepVerifier.create(function.convertResponse(
                 ctx, JSON_HEADERS, "abc", DEFAULT_TRAILERS))
                     .expectNext(JSON_HEADERS.toBuilder()
@@ -155,7 +148,7 @@ public class JacksonResponseConverterFunctionTest {
     }
 
     @Test
-    public void jsonTextSequences_stream() throws Exception {
+    void jsonTextSequences_stream() throws Exception {
         expectJsonSeqContents(Stream.of(TEST_STRINGS))
                 .expectComplete()
                 .verify();
@@ -167,7 +160,7 @@ public class JacksonResponseConverterFunctionTest {
     }
 
     @Test
-    public void jsonTextSequences_streamError() throws Exception {
+    void jsonTextSequences_streamError() throws Exception {
         final Stream<String> stream = Stream.of(TEST_STRINGS).map(s -> {
             throw new AnticipatedException();
         });
@@ -179,7 +172,7 @@ public class JacksonResponseConverterFunctionTest {
     }
 
     @Test
-    public void jsonTextSequences_publisher() throws Exception {
+    void jsonTextSequences_publisher() throws Exception {
         expectJsonSeqContents(Flux.fromArray(TEST_STRINGS))
                 .expectComplete()
                 .verify();
@@ -193,7 +186,7 @@ public class JacksonResponseConverterFunctionTest {
     }
 
     @Test
-    public void jsonTextSequences_publisherError() throws Exception {
+    void jsonTextSequences_publisherError() throws Exception {
         StepVerifier.create(Mono.error(new AnticipatedException()))
                     .expectError(AnticipatedException.class)
                     .verify();
@@ -206,7 +199,7 @@ public class JacksonResponseConverterFunctionTest {
     }
 
     @Test
-    public void jsonTextSequences_otherTypes() throws Exception {
+    void jsonTextSequences_otherTypes() throws Exception {
         StepVerifier.create(function.convertResponse(
                 ctx, JSON_SEQ_HEADERS, "abc", DEFAULT_TRAILERS))
                     .expectNext(JSON_SEQ_HEADERS.toBuilder()

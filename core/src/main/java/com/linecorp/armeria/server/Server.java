@@ -534,10 +534,11 @@ public final class Server implements AutoCloseable {
 
         private void finishDoStop(CompletableFuture<Void> future) {
             if (config.shutdownBlockingTaskExecutorOnStop()) {
-                final ExecutorService executor;
-                final ExecutorService blockingTaskExecutor = config.blockingTaskExecutor();
-                if (blockingTaskExecutor instanceof InterminableExecutorService) {
-                    executor = ((InterminableExecutorService) blockingTaskExecutor).getExecutorService();
+                final ScheduledExecutorService executor;
+                final ScheduledExecutorService blockingTaskExecutor = config.blockingTaskExecutor();
+                if (blockingTaskExecutor instanceof UnstoppableScheduledExecutorService) {
+                    executor =
+                            ((UnstoppableScheduledExecutorService) blockingTaskExecutor).getExecutorService();
                 } else {
                     executor = blockingTaskExecutor;
                 }

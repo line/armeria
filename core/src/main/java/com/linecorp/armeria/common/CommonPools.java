@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedTransferQueue;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -33,28 +32,27 @@ import io.netty.channel.EventLoopGroup;
  */
 public final class CommonPools {
 
-    private static final Executor BLOCKING_TASK_EXECUTOR;
+    private static final ScheduledExecutorService BLOCKING_TASK_EXECUTOR;
     private static final EventLoopGroup WORKER_GROUP;
 
     static {
         // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
-        final ThreadPoolExecutor blockingTaskExecutor = new ThreadPoolExecutor(
-                Flags.numCommonBlockingTaskThreads(), Flags.numCommonBlockingTaskThreads(),
-                60, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
+        final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(
+                Flags.numCommonBlockingTaskThreads(),
                 ThreadFactories.newThreadFactory("armeria-common-blocking-tasks", true));
-
-        blockingTaskExecutor.allowCoreThreadTimeOut(true);
-        BLOCKING_TASK_EXECUTOR = blockingTaskExecutor;
+        scheduledThreadPoolExecutor.setKeepAliveTime(60, TimeUnit.SECONDS);
+        scheduledThreadPoolExecutor.allowCoreThreadTimeOut(true);
+        BLOCKING_TASK_EXECUTOR = scheduledThreadPoolExecutor;
 
         WORKER_GROUP = EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(),
                                                          "armeria-common-worker", true);
     }
 
     /**
-     * Returns the default common blocking task {@link Executor} which is used for
+     * Returns the default common blocking task {@link ScheduledExecutorService} which is used for
      * potentially long-running tasks which may block I/O threads.
      */
-    public static Executor blockingTaskExecutor() {
+    public static ScheduledExecutorService blockingTaskExecutor() {
         return BLOCKING_TASK_EXECUTOR;
     }
 
