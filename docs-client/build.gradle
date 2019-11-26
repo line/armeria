@@ -27,8 +27,6 @@ tasks.yarn {
     }
 }
 
-
-
 task yarnUpdate(type: YarnTask) {
     args = ['install']
 }

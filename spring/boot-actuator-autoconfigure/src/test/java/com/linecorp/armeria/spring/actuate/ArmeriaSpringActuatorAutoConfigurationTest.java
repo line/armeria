@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -162,6 +163,13 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
+    public void testOptions() throws Exception {
+        final AggregatedHttpResponse res = client.options("/internal/actuator/health").aggregate().get();
+        // CORS not enabled by default.
+        assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @Test
     public void testLoggers() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         AggregatedHttpResponse res = client.get(loggerPath).aggregate().get();
@@ -250,5 +258,51 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
                                OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "info")))
                       .aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    @RunWith(SpringRunner.class)
+    @SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
+    @ActiveProfiles({ "local", "autoConfTest", "autoConfTestCors" })
+    @DirtiesContext
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    public static class ArmeriaSpringActuatorAutoConfigurationCorsTest {
+
+        @SpringBootApplication
+        public static class TestConfiguration {}
+
+        @Rule
+        public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+
+        @Inject
+        private Server server;
+
+        private WebClient client;
+
+        @Before
+        public void setUp() {
+            client = WebClient.of(newUrl("h2c"));
+        }
+
+        private String newUrl(String scheme) {
+            final int port = server.activeLocalPort();
+            return scheme + "://127.0.0.1:" + port;
+        }
+
+        @Test
+        public void testOptions() {
+            final HttpRequest req = HttpRequest.of(RequestHeaders.of(
+                    HttpMethod.OPTIONS, "/internal/actuator/health",
+                    HttpHeaderNames.ORIGIN, "https://example.com",
+                    HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET"));
+            final AggregatedHttpResponse res = client.execute(req).aggregate().join();
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
+            assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
+                    .isEqualTo("https://example.com");
+            assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS))
+                    .isEqualTo("GET,POST");
+            assertThat(res.headers().contains(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE)).isTrue();
+            assertThat(res.status()).isNotEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        }
     }
 }

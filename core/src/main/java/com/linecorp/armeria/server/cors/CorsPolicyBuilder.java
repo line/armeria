@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.cors;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * Builds a new {@link CorsPolicy}.
  * <h2>Example</h2>
@@ -33,7 +35,14 @@ public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder<CorsPolic
      * Creates a new instance with the specified {@code origins}.
      */
     public CorsPolicyBuilder(String... origins) {
-        super(origins);
+        super(ImmutableList.copyOf(origins));
+    }
+
+    /**
+     * Creates a new instance with the specified {@code origins}.
+     */
+    public CorsPolicyBuilder(Iterable<String> origins) {
+        super(ImmutableList.copyOf(origins));
     }
 
     /**
