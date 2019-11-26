@@ -11,14 +11,16 @@ import { useTable } from 'react-table';
 const CustomTable: ({
   columns,
   data,
-  updateData,
+  updateCell,
   cellRenderer,
+  removeRow,
 }: {
   columns: any;
   data: any;
-  updateData: any;
+  updateCell: any;
   cellRenderer: any;
-}) => any = ({ columns, data, updateData, cellRenderer }) => {
+  removeRow: any;
+}) => any = ({ columns, data, updateCell, cellRenderer, removeRow }) => {
   // Set our editable cell renderer as the default Cell renderer
   const defaultColumn = {
     Cell: cellRenderer,
@@ -32,9 +34,9 @@ const CustomTable: ({
     prepareRow,
   } = useTable({
     defaultColumn,
-    updateData,
     columns,
     data,
+    updateCell, // custom user props
   });
 
   return (
@@ -53,16 +55,21 @@ const CustomTable: ({
       <TableBody {...getTableBodyProps()}>
         {rows &&
           rows.map((row, i1) => {
+            const isLastRow = i1 === rows.length - 1;
             prepareRow(row);
             return (
               <TableRow key={i1} {...row.getRowProps()}>
                 {row.cells.map((cell, i2) => {
+                  const isLastCell = i2 === row.cells.length - 1;
                   return (
-                    <td key={i2} {...cell.getCellProps()}>
+                    <TableCell key={i2} {...cell.getCellProps()}>
                       {cell.render('Cell', {
-                        isLastRow: i1 === rows.length - 1,
+                        isLastRow,
                       })}
-                    </td>
+                      {!isLastRow && isLastCell && (
+                        <button onClick={() => removeRow(i1)} />
+                      )}
+                    </TableCell>
                   );
                 })}
               </TableRow>

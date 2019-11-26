@@ -1,10 +1,20 @@
-import React from 'react';
+import React, { Dispatch, SetStateAction } from 'react';
 import { HeaderColumn } from 'react-table';
 import CustomTable from '../CustomTable';
 import { KeyValueTableCellRenderer } from '../KeyValueTableCellRenderer';
 import makeData, { Data } from './makeData';
 
-function KeyValueTable() {
+interface Props {
+  data: Data[];
+  setData: Dispatch<SetStateAction<Data[]>>;
+  resetData: () => void;
+}
+
+const KeyValueTable: React.FunctionComponent<Props> = ({
+  data,
+  setData,
+  resetData,
+}) => {
   const columns: HeaderColumn<Data, keyof Data>[] = React.useMemo(
     () => [
       {
@@ -21,10 +31,7 @@ function KeyValueTable() {
     [],
   );
 
-  const [data, setData] = React.useState(() => makeData(1));
-  const [originalData] = React.useState(data);
-
-  const updateData = (
+  const updateCell = (
     rowIndex: number,
     columnID: string,
     value: string,
@@ -45,9 +52,9 @@ function KeyValueTable() {
     });
   };
 
-  // Let's add a data resetter/randomizer to help
-  // illustrate that flow...
-  const resetData = () => setData(originalData);
+  const removeRow = (rowIndex: number) => {
+    setData((old) => old.filter((_, i) => rowIndex !== i));
+  };
 
   return (
     <div>
@@ -56,10 +63,11 @@ function KeyValueTable() {
         cellRenderer={KeyValueTableCellRenderer}
         columns={columns}
         data={data}
-        updateData={updateData}
+        updateCell={updateCell}
+        removeRow={removeRow}
       />
     </div>
   );
-}
+};
 
 export default KeyValueTable;

@@ -16,7 +16,7 @@ const newRow: () => Data = () => {
   };
 };
 
-export default function makeData(...lens: number[]) {
+export default function makeData(...lens: number[]): Data[] {
   const makeDataLevel = (depth = 0) => {
     const len = lens[depth];
     return range(len).map(() => {

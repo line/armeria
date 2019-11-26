@@ -1,3 +1,4 @@
+import { createStyles, makeStyles, Theme } from '@material-ui/core';
 import React from 'react';
 
 interface Props {
@@ -10,17 +11,30 @@ interface Props {
   column: {
     id: number;
   };
-  updateData: (...args: any) => void;
+  updateCell: (...args: any) => void;
   isLastRow: boolean;
 }
+
+const useStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    input: {
+      padding: theme.spacing(1),
+      border: 'none',
+      borderBottom: `1px solid ${theme.palette.primary.dark}`,
+      background: '#fff',
+      width: '100%',
+    },
+  }),
+);
 
 export const KeyValueTableCellRenderer: React.FC<Props> = ({
   cell: { value: initialValue },
   row: { index },
   column: { id },
-  updateData,
+  updateCell,
   isLastRow,
 }) => {
+  const classes = useStyles();
   // We need to keep and update the state of the cell normally
   const [value, setValue] = React.useState();
 
@@ -29,7 +43,7 @@ export const KeyValueTableCellRenderer: React.FC<Props> = ({
   };
   // We'll only update the external data when the input is blurred
   const onBlur = () => {
-    updateData(index, id, value, isLastRow);
+    updateCell(index, id, value, isLastRow);
   };
 
   // If the initialValue is changed externall, sync it up with our state
@@ -38,5 +52,12 @@ export const KeyValueTableCellRenderer: React.FC<Props> = ({
   }, [initialValue]);
 
   // we'll use native input because input of material-ui doesn't have onBlur property
-  return <input value={value || ''} onChange={onChange} onBlur={onBlur} />;
+  return (
+    <input
+      className={classes.input}
+      value={value || ''}
+      onChange={onChange}
+      onBlur={onBlur}
+    />
+  );
 };
