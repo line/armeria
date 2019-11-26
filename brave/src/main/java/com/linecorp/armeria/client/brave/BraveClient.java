@@ -138,18 +138,21 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
 
             final ClientConnectionTimings timings = ClientConnectionTimings.get(ctx);
             if (timings != null) {
-                logTiming(span, "connection-acquire", timings.connectionAcquisitionStartTimeMicros(),
+                logTiming(span, "connection-acquire.start", "connection-acquire.end",
+                          timings.connectionAcquisitionStartTimeMicros(),
                           timings.connectionAcquisitionDurationNanos());
                 if (timings.dnsResolutionDurationNanos() != -1) {
-                    logTiming(span, "dns-resolve", timings.dnsResolutionStartTimeMicros(),
+                    logTiming(span, "dns-resolve.start", "dns-resolve.end",
+                              timings.dnsResolutionStartTimeMicros(),
                               timings.dnsResolutionDurationNanos());
                 }
                 if (timings.socketConnectDurationNanos() != -1) {
-                    logTiming(span, "socket-connect", timings.socketConnectStartTimeMicros(),
+                    logTiming(span, "socket-connect.start", "socket-connect.end",
+                              timings.socketConnectStartTimeMicros(),
                               timings.socketConnectDurationNanos());
                 }
                 if (timings.pendingAcquisitionDurationNanos() != -1) {
-                    logTiming(span, "connection-reuse",
+                    logTiming(span, "connection-reuse.start", "connection-reuse.end",
                               timings.pendingAcquisitionStartTimeMicros(),
                               timings.pendingAcquisitionDurationNanos());
                 }
@@ -164,8 +167,9 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         }
     }
 
-    private void logTiming(Span span, String prefix, long startTimeMicros, long durationNanos) {
-        span.annotate(startTimeMicros, prefix + ".start");
-        span.annotate(startTimeMicros + TimeUnit.NANOSECONDS.toMicros(durationNanos), prefix + ".end");
+    private void logTiming(Span span, String startName, String endName, long startTimeMicros,
+                           long durationNanos) {
+        span.annotate(startTimeMicros, startName);
+        span.annotate(startTimeMicros + TimeUnit.NANOSECONDS.toMicros(durationNanos), endName);
     }
 }
