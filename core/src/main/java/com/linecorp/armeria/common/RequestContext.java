@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -385,6 +386,14 @@ public interface RequestContext extends AttributeMap {
      */
     default ExecutorService makeContextAware(ExecutorService executor) {
         return new RequestContextAwareExecutorService(this, executor);
+    }
+
+    /**
+     * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
+     * making sure to propagate the current {@link RequestContext} into the callback execution.
+     */
+    default ScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
+        return new RequestContextAwareScheduledExecutorService(this, executor);
     }
 
     /**

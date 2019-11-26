@@ -33,6 +33,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -179,6 +181,19 @@ public class RequestContextTest {
             assertCurrentContext(context);
             assertDepth(1);
         }).run();
+        assertDepth(0);
+    }
+
+    @Test
+    public void contextAwareScheduledExecutorService() throws Exception {
+        final RequestContext context = createContext();
+        final ScheduledExecutorService executor = context.makeContextAware(
+                Executors.newSingleThreadScheduledExecutor());
+        final ScheduledFuture<?> future = executor.schedule(() -> {
+            assertCurrentContext(context);
+            assertDepth(1);
+        }, 100, TimeUnit.MILLISECONDS);
+        future.get();
         assertDepth(0);
     }
 

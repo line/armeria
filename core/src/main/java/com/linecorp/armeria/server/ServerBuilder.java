@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -177,7 +178,7 @@ public final class ServerBuilder {
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
-    private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
+    private ScheduledExecutorService blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
@@ -624,24 +625,14 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link Executor} dedicated to the execution of blocking tasks or invocations.
+     * Sets the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
      * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
      *
-     * @deprecated Use {@link #blockingTaskExecutor(Executor, boolean)}.
-     *
+     * @param shutdownOnStop whether to shut down the {@link ScheduledExecutorService} when the
+     *                       {@link Server} stops
      */
-    @Deprecated
-    public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
-        return blockingTaskExecutor(blockingTaskExecutor, false);
-    }
-
-    /**
-     * Sets the {@link Executor} dedicated to the execution of blocking tasks or invocations.
-     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
-     *
-     * @param shutdownOnStop whether to shut down the {@link Executor} when the {@link Server} stops
-     */
-    public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor, boolean shutdownOnStop) {
+    public ServerBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                              boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
         return this;

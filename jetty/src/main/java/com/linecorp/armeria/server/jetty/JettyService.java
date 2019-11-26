@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Queue;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -101,7 +101,7 @@ public final class JettyService implements HttpService {
     }
 
     static JettyService forConfig(JettyServiceConfig config) {
-        final Function<ExecutorService, Server> serverFactory = blockingTaskExecutor -> {
+        final Function<ScheduledExecutorService, Server> serverFactory = blockingTaskExecutor -> {
             final Server server = new Server(new ArmeriaThreadPool(blockingTaskExecutor));
 
             config.dumpAfterStart().ifPresent(server::setDumpAfterStart);
@@ -144,7 +144,7 @@ public final class JettyService implements HttpService {
         return new JettyService(config.hostname().orElse(null), serverFactory, postStopTask);
     }
 
-    private final Function<ExecutorService, Server> serverFactory;
+    private final Function<ScheduledExecutorService, Server> serverFactory;
     private final Consumer<Server> postStopTask;
     private final Configurator configurator;
 
@@ -158,12 +158,12 @@ public final class JettyService implements HttpService {
     private com.linecorp.armeria.server.Server armeriaServer;
     private boolean startedServer;
 
-    private JettyService(@Nullable String hostname, Function<ExecutorService, Server> serverSupplier) {
+    private JettyService(@Nullable String hostname, Function<ScheduledExecutorService, Server> serverSupplier) {
         this(hostname, serverSupplier, unused -> { /* unused */ });
     }
 
     private JettyService(@Nullable String hostname,
-                         Function<ExecutorService, Server> serverFactory,
+                         Function<ScheduledExecutorService, Server> serverFactory,
                          Consumer<Server> postStopTask) {
 
         this.hostname = hostname;
