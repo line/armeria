@@ -9,7 +9,7 @@ declare module 'react-table' {
   import { Dispatch, ReactNode, SetStateAction } from 'react';
 
   export interface Cell<D> {
-    render: (type: string) => any;
+    render: (type: string, userProps?: object) => any;
     getCellProps: () => any;
     column: Column<D>;
     row: Row<D>;

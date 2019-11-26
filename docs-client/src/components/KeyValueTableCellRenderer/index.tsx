@@ -11,6 +11,7 @@ interface Props {
     id: number;
   };
   updateData: (...args: any) => void;
+  isLastRow: boolean;
 }
 
 export const KeyValueTableCellRenderer: React.FC<Props> = ({
@@ -18,6 +19,7 @@ export const KeyValueTableCellRenderer: React.FC<Props> = ({
   row: { index },
   column: { id },
   updateData,
+  isLastRow,
 }) => {
   // We need to keep and update the state of the cell normally
   const [value, setValue] = React.useState();
@@ -25,10 +27,9 @@ export const KeyValueTableCellRenderer: React.FC<Props> = ({
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value);
   };
-
   // We'll only update the external data when the input is blurred
   const onBlur = () => {
-    updateData(index, id, value);
+    updateData(index, id, value, isLastRow);
   };
 
   // If the initialValue is changed externall, sync it up with our state

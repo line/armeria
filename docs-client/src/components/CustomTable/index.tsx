@@ -59,7 +59,9 @@ const CustomTable: ({
                 {row.cells.map((cell, i2) => {
                   return (
                     <td key={i2} {...cell.getCellProps()}>
-                      {cell.render('Cell')}
+                      {cell.render('Cell', {
+                        isLastRow: i1 === rows.length - 1,
+                      })}
                     </td>
                   );
                 })}

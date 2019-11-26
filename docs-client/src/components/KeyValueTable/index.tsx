@@ -24,9 +24,14 @@ function KeyValueTable() {
   const [data, setData] = React.useState(() => makeData(1));
   const [originalData] = React.useState(data);
 
-  const updateData = (rowIndex: number, columnID: string, value: string) => {
+  const updateData = (
+    rowIndex: number,
+    columnID: string,
+    value: string,
+    isLastRow: boolean,
+  ) => {
     setData((old) => {
-      const arr = old.map((row, index) => {
+      let tmp = old.map((row, index) => {
         if (index === rowIndex) {
           return {
             ...old[rowIndex],
@@ -35,10 +40,8 @@ function KeyValueTable() {
         }
         return row;
       });
-
-      arr.concat(...makeData(1));
-
-      return arr;
+      if (isLastRow) tmp = tmp.concat([...makeData(1)]);
+      return tmp;
     });
   };
 
