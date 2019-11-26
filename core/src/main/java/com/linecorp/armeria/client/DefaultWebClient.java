@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.PathAndQuery;
@@ -68,8 +67,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
         if (uri != null) {
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
-            final RequestHeaders newHeaders = req.headers().toBuilder().path(uri.getRawPath()).build();
-            final HttpRequest newReq = req.withHeaders(newHeaders);
+            final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(uri.getRawPath()));
             return execute(eventLoop, endpoint, newReq);
         }
 

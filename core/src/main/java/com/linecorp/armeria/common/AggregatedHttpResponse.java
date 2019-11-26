@@ -231,9 +231,9 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
     HttpStatus status();
 
     /**
-     * Converts this request into a new complete {@link HttpResponse}.
+     * Converts this response into a new complete {@link HttpResponse}.
      *
-     * @return the new {@link HttpResponse} converted from this request.
+     * @return the new {@link HttpResponse} converted from this response.
      */
     default HttpResponse toHttpResponse() {
         final List<ResponseHeaders> informationals = informationals();

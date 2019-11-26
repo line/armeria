@@ -16,7 +16,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -124,10 +123,8 @@ public final class ProxyService extends AbstractHttpService {
         sb.append(", host: ").append(req.authority());
         sb.append(", proto: ").append(ctx.sessionProtocol());
 
-        final RequestHeaders newHeaders = req.headers().toBuilder()
-                                             .add(HttpHeaderNames.FORWARDED, sb.toString())
-                                             .build();
-        return req.withHeaders(newHeaders);
+        return req.withHeaders(req.headers().toBuilder()
+                                  .add(HttpHeaderNames.FORWARDED, sb.toString()));
     }
 
     private static HttpResponse addViaHeader(HttpResponse res) {

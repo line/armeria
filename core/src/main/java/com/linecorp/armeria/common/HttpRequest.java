@@ -294,6 +294,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * }</pre>
      *
      * @see #withHeaders(RequestHeaders)
+     * @see #withHeaders(RequestHeadersBuilder)
      */
     static HttpRequest of(RequestHeaders newHeaders, HttpRequest request) {
         requireNonNull(request, "request");
@@ -329,7 +330,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * > }
      * }</pre>
      *
-     * @deprecated Use {@link #withHeaders(RequestHeaders)} or {@link #of(RequestHeaders, HttpRequest)}.
+     * @deprecated Use {@link #withHeaders(RequestHeaders)}, {@link #withHeaders(RequestHeadersBuilder)} or
+     *             {@link #of(RequestHeaders, HttpRequest)}.
      */
     @Deprecated
     static HttpRequest of(HttpRequest request, RequestHeaders newHeaders) {
@@ -422,6 +424,37 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         }
 
         return new HeaderOverridingHttpRequest(this, newHeaders);
+    }
+
+    /**
+     * Returns a new {@link HttpRequest} derived from this {@link HttpRequest} by replacing its
+     * {@link RequestHeaders} with what's built from the specified {@code newHeaders}. Note that the content
+     * stream and trailers of this {@link HttpRequest} is not duplicated, which means you can subscribe
+     * to only one of the two {@link HttpRequest}s.
+     *
+     * <p>If you are using this method for intercepting an {@link HttpRequest} in a decorator, make sure to
+     * update {@link RequestContext#request()} with {@link RequestContext#updateRequest(HttpRequest)}, e.g.
+     * <pre>{@code
+     * > public class MyService extends SimpleDecoratingHttpService {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+     * >         // Create a new request with an additional header.
+     * >         final HttpRequest newReq =
+     * >                 req.withHeaders(req.headers().toBuilder()
+     * >                                    .set("x-custom-header", "value"));
+     * >
+     * >         // Update the ctx.request.
+     * >         ctx.updateRequest(newReq);
+     * >
+     * >         // Delegate the new request with the updated context.
+     * >         return delegate().serve(ctx, newReq);
+     * >     }
+     * > }
+     * }</pre>
+     */
+    default HttpRequest withHeaders(RequestHeadersBuilder newHeadersBuilder) {
+        requireNonNull(newHeadersBuilder, "newHeadersBuilder");
+        return withHeaders(newHeadersBuilder.build());
     }
 
     /**

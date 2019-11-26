@@ -246,8 +246,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         if (headers.scheme() == null || !authority.equals(headers.authority())) {
             unsafeUpdateRequest(req.withHeaders(headers.toBuilder()
                                                        .authority(authority)
-                                                       .scheme(sessionProtocol())
-                                                       .build()));
+                                                       .scheme(sessionProtocol())));
         }
     }
 

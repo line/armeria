@@ -134,6 +134,7 @@ public interface RequestContext extends AttributeMap {
      * because the properties of this context, such as {@link #path()}, are unaffected by such an attempt.</p>
      *
      * @see HttpRequest#withHeaders(RequestHeaders)
+     * @see HttpRequest#withHeaders(RequestHeadersBuilder)
      */
     void updateRequest(HttpRequest req);
 
