@@ -70,7 +70,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
 
     AbstractCorsPolicyBuilder(List<String> origins) {
         requireNonNull(origins, "origins");
-        checkArgument(origins.size() > 0, "origins is empty.");
+        checkArgument(!origins.isEmpty(), "origins is empty.");
         for (int i = 0; i < origins.size(); i++) {
             if (origins.get(i) == null) {
                 throw new NullPointerException("origins[" + i + ']');
