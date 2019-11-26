@@ -29,7 +29,7 @@ You may want to consider the following options before putting your Armeria appli
       import com.linecorp.armeria.server.ServerBuilder;
 
       ServerBuilder sb = Server.builder();
-      sb.blockingTaskExecutor(my600ThreadsExecutor);
+      sb.blockingTaskExecutor(myScheduledExecutorService);
 
 - Specify the default limits of an HTTP request or response.
 
