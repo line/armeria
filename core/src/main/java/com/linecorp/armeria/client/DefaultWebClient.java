@@ -82,7 +82,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         final HttpRequest newReq;
         // newPath and originalPath should be the same reference if uri().getRawPath() can be ignorable
         if (newPath != originalPath) {
-            newReq = HttpRequest.of(req, req.headers().toBuilder().path(newPath).build());
+            newReq = req.withHeaders(req.headers().toBuilder().path(newPath));
         } else {
             newReq = req;
         }
