@@ -219,7 +219,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator, originalReq,
                                                      returnedRes, future, response, originalResClosingTask));
             }
-        }, RequestLogAvailability.RESPONSE_HEADERS);
+        }, false, RequestLogAvailability.RESPONSE_HEADERS);
     }
 
     private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,

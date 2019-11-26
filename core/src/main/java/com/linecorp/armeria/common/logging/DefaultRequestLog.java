@@ -318,38 +318,54 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void addListener(RequestLogListener listener, RequestLogAvailability availability) {
-        requireNonNull(listener, "listener");
+        addListener(listener, true, availability);
+    }
+
+    @Override
+    public void addListener(RequestLogListener listener, boolean pushContext,
+                            RequestLogAvailability availability) {
         requireNonNull(availability, "availability");
-        addListener(listener, availability.getterFlags());
+        addListener(listener, pushContext, availability.getterFlags());
     }
 
     @Override
     public void addListener(RequestLogListener listener, RequestLogAvailability... availabilities) {
-        requireNonNull(listener, "listener");
+        addListener(listener, true, availabilities);
+    }
+
+    @Override
+    public void addListener(RequestLogListener listener, boolean pushContext,
+                            RequestLogAvailability... availabilities) {
         requireNonNull(availabilities, "availabilities");
-        addListener(listener, getterFlags(availabilities));
+        addListener(listener, pushContext, getterFlags(availabilities));
     }
 
     @Override
     public void addListener(RequestLogListener listener, Iterable<RequestLogAvailability> availabilities) {
-        requireNonNull(listener, "listener");
-        requireNonNull(availabilities, "availabilities");
-        addListener(listener, getterFlags(availabilities));
+        addListener(listener, true, availabilities);
     }
 
-    private void addListener(RequestLogListener listener, int interestedFlags) {
+    @Override
+    public void addListener(RequestLogListener listener, boolean pushContext,
+                            Iterable<RequestLogAvailability> availabilities) {
+        requireNonNull(availabilities, "availabilities");
+        addListener(listener, true, getterFlags(availabilities));
+    }
+
+    private void addListener(RequestLogListener listener, boolean pushContext, int interestedFlags) {
+        requireNonNull(listener, "listener");
         if (interestedFlags == 0) {
             throw new IllegalArgumentException("no availability specified");
         }
 
         if (isAvailable(interestedFlags)) {
             // No need to add to 'listeners'.
-            invokeOnRequestLog(listener, this);
+            invokeOnRequestLog(listener, this, pushContext);
             return;
         }
 
-        final ListenerEntry e = new ListenerEntry(listener, interestedFlags);
-        final RequestLogListener[] satisfiedListeners;
+        final ListenerEntry e = new ListenerEntry(listener, pushContext, interestedFlags);
+        final ListenerEntry[] satisfiedListeners;
         synchronized (listeners) {
             listeners.add(e);
             satisfiedListeners = removeSatisfiedListeners();
@@ -994,7 +1010,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             final int newAvailability = oldAvailability | flags;
             if (flagsUpdater.compareAndSet(this, oldAvailability, newAvailability)) {
                 if (oldAvailability != newAvailability) {
-                    final RequestLogListener[] satisfiedListeners;
+                    final ListenerEntry[] satisfiedListeners;
                     synchronized (listeners) {
                         satisfiedListeners = removeSatisfiedListeners();
                     }
@@ -1008,7 +1024,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Nullable
-    private RequestLogListener[] removeSatisfiedListeners() {
+    private ListenerEntry[] removeSatisfiedListeners() {
         if (listeners.isEmpty()) {
             return null;
         }
@@ -1016,7 +1032,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final int flags = this.flags;
         final int maxNumListeners = listeners.size();
         final Iterator<ListenerEntry> i = listeners.iterator();
-        RequestLogListener[] satisfied = null;
+        ListenerEntry[] satisfied = null;
         int numSatisfied = 0;
 
         do {
@@ -1025,9 +1041,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             if ((flags & interestedFlags) == interestedFlags) {
                 i.remove();
                 if (satisfied == null) {
-                    satisfied = new RequestLogListener[maxNumListeners];
+                    satisfied = new ListenerEntry[maxNumListeners];
                 }
-                satisfied[numSatisfied++] = e.listener;
+                satisfied[numSatisfied++] = e;
             }
         } while (i.hasNext());
 
@@ -1298,13 +1314,27 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return sanitized != null ? sanitized.toString() : "<sanitized>";
     }
 
-    private static final class ListenerEntry {
-        final RequestLogListener listener;
-        final int interestedFlags;
+    static final class ListenerEntry {
+        private final RequestLogListener listener;
+        private final boolean pushContext;
+        private final int interestedFlags;
 
-        ListenerEntry(RequestLogListener listener, int interestedFlags) {
+        ListenerEntry(RequestLogListener listener, boolean pushContext, int interestedFlags) {
             this.listener = listener;
+            this.pushContext = pushContext;
             this.interestedFlags = interestedFlags;
+        }
+
+        RequestLogListener listener() {
+            return listener;
+        }
+
+        boolean pushContext() {
+            return pushContext;
+        }
+
+        int interestedFlags() {
+            return interestedFlags;
         }
     }
 }

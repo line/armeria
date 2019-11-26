@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.logging.DefaultRequestLog.ListenerEntry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -36,34 +37,66 @@ public final class RequestLogListenerInvoker {
      * Invokes {@link RequestLogListener#onRequestLog(RequestLog)}.
      */
     public static void invokeOnRequestLog(RequestLogListener listener, RequestLog log) {
+        invokeOnRequestLog(listener, log, true);
+    }
+
+    /**
+     * Invokes {@link RequestLogListener#onRequestLog(RequestLog)}.
+     */
+    static void invokeOnRequestLog(RequestLogListener listener, RequestLog log, boolean pushContext) {
         requireNonNull(listener, "listener");
         requireNonNull(log, "log");
-        try (SafeCloseable ignored = log.context().push()) {
-            listener.onRequestLog(log);
-        } catch (Throwable e) {
-            logger.warn("onRequestLog() failed with an exception:", e);
+        if (pushContext) {
+            try (SafeCloseable ignored = log.context().push()) {
+                listener.onRequestLog(log);
+            } catch (Throwable e) {
+                logger.warn("onRequestLog() failed with an exception:", e);
+            }
+        } else {
+            try {
+                listener.onRequestLog(log);
+            } catch (Throwable e) {
+                logger.warn("onRequestLog() failed with an exception:", e);
+            }
         }
     }
 
     /**
      * Invokes {@link RequestLogListener#onRequestLog(RequestLog)}.
      */
-    static void invokeOnRequestLog(RequestLogListener[] listeners, RequestLog log) {
-        requireNonNull(listeners, "listeners");
+    static void invokeOnRequestLog(ListenerEntry[] entries, RequestLog log) {
+        requireNonNull(entries, "entries");
         requireNonNull(log, "log");
-        if (listeners.length == 0) {
+        if (entries.length == 0) {
             return;
         }
 
-        try (SafeCloseable ignored = log.context().push()) {
-            for (RequestLogListener listener : listeners) {
-                if (listener == null) {
-                    break;
-                }
+        for (int i = 0; i < entries.length;) {
+            if (entries[i] == null) {
+                return;
+            }
+            if (!entries[i].pushContext()) {
                 try {
-                    listener.onRequestLog(log);
+                    entries[i].listener().onRequestLog(log);
                 } catch (Throwable e) {
                     logger.warn("onRequestLog() failed with an exception:", e);
+                }
+                i++;
+            } else {
+                try (SafeCloseable ignored = log.context().push()) {
+                    for (; i < entries.length; i++) {
+                        if (entries[i] == null) {
+                            return;
+                        }
+                        if (!entries[i].pushContext()) {
+                            break;
+                        }
+                        try {
+                            entries[i].listener().onRequestLog(log);
+                        } catch (Throwable e) {
+                            logger.warn("onRequestLog() failed with an exception:", e);
+                        }
+                    }
                 }
             }
         }

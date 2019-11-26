@@ -24,26 +24,41 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 class RequestLogListenerInvokerTest {
 
     @Test
     void testInvokeOnRequestLog() throws InterruptedException {
         final AtomicInteger counter = new AtomicInteger();
-        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
-                                                                      .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                               .build();
         ctx.onEnter(c -> counter.incrementAndGet());
         final RequestLog log = ctx.log();
+
+        log.addListener(l -> { /* no-op */ }, RequestLogAvailability.RESPONSE_HEADERS);
+        log.addListener(l -> { /* no-op */ }, RequestLogAvailability.RESPONSE_HEADERS);
+        log.addListener(l -> { /* no-op */ }, false, RequestLogAvailability.RESPONSE_HEADERS);
+        log.addListener(l -> { /* no-op */ }, RequestLogAvailability.RESPONSE_HEADERS);
+
         log.addListener(l -> { /* no-op */ }, RequestLogAvailability.COMPLETE);
         log.addListener(l -> { /* no-op */ }, RequestLogAvailability.COMPLETE);
+        log.addListener(l -> { /* no-op */ }, false, RequestLogAvailability.COMPLETE);
+        log.addListener(l -> { /* no-op */ }, RequestLogAvailability.COMPLETE);
+        log.addListener(l -> { /* no-op */ }, false, RequestLogAvailability.COMPLETE);
+        log.addListener(l -> { /* no-op */ }, RequestLogAvailability.COMPLETE);
+        log.addListener(l -> { /* no-op */ }, false, RequestLogAvailability.COMPLETE);
 
         ctx.logBuilder().endRequest();
         // There's no listener for RequestLogAvailability.REQUEST_END, so onEnter is not called.
         assertThat(counter.get()).isZero();
 
+        ctx.logBuilder().startResponse();
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
+        assertThat(counter.get()).isEqualTo(2);
+
         ctx.logBuilder().endResponse();
-        assertThat(counter.get()).isOne();
+        assertThat(counter.get()).isEqualTo(5); // 2 + 3
     }
 }

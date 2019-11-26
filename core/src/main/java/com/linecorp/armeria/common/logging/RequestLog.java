@@ -146,21 +146,74 @@ public interface RequestLog extends AttributeMap {
 
     /**
      * Adds the specified {@link RequestLogListener} so that it's notified when the specified
-     * {@link RequestLogAvailability} is satisfied.
+     * {@link RequestLogAvailability} is satisfied. Note that the {@link #context()} is pushed into the
+     * thread-local stack when {@link RequestLogListener#onRequestLog(RequestLog)} is invoked. If you don't
+     * want it, use {@link #addListener(RequestLogListener, boolean, RequestLogAvailability)} specifying
+     * {@code pushContext} as {@code true}.
+     *
+     * @param listener the {@link RequestLogListener} that is invoked when {@link RequestLog} meets
+     *                 the specified {@link RequestLogAvailability}
      */
     void addListener(RequestLogListener listener, RequestLogAvailability availability);
 
     /**
+     * Adds the specified {@link RequestLogListener} so that it's notified when the specified
+     * {@link RequestLogAvailability} is satisfied.
+     *
+     * @param listener the {@link RequestLogListener} that is invoked when {@link RequestLog} meets
+     *                 the specified {@link RequestLogAvailability}
+     * @param pushContext if {@code true}, {@link #context()} is pushed into the thread-local stack when
+     *                    {@link RequestLogListener#onRequestLog(RequestLog)} is invoked
+     */
+    void addListener(RequestLogListener listener, boolean pushContext, RequestLogAvailability availability);
+
+    /**
      * Adds the specified {@link RequestLogListener} so that it's notified when all of the specified
-     * {@link RequestLogAvailability}s are satisfied.
+     * {@link RequestLogAvailability}s are satisfied. Note that the {@link #context()} is pushed into the
+     * thread-local stack when {@link RequestLogListener#onRequestLog(RequestLog)} is invoked. If you don't
+     * want it, use {@link #addListener(RequestLogListener, boolean, RequestLogAvailability...)} specifying
+     * {@code pushContext} as {@code true}.
+     *
+     * @param listener the {@link RequestLogListener} that is invoked when {@link RequestLog} meets
+     *                 all of the specified {@link RequestLogAvailability}s
      */
     void addListener(RequestLogListener listener, RequestLogAvailability... availabilities);
 
     /**
      * Adds the specified {@link RequestLogListener} so that it's notified when all of the specified
      * {@link RequestLogAvailability}s are satisfied.
+     *
+     * @param listener the {@link RequestLogListener} that is invoked when {@link RequestLog} meets
+     *                 all of the specified {@link RequestLogAvailability}s
+     * @param pushContext if {@code true}, {@link #context()} is pushed into the thread-local stack when
+     *                    {@link RequestLogListener#onRequestLog(RequestLog)} is invoked
+     */
+    void addListener(RequestLogListener listener, boolean pushContext,
+                     RequestLogAvailability... availabilities);
+
+    /**
+     * Adds the specified {@link RequestLogListener} so that it's notified when all of the specified
+     * {@link RequestLogAvailability}s are satisfied. Note that the {@link #context()} is pushed into the
+     * thread-local stack when {@link RequestLogListener#onRequestLog(RequestLog)} is invoked. If you don't
+     * want it, use {@link #addListener(RequestLogListener, boolean, Iterable)} specifying
+     * {@code pushContext} as {@code true}.
+     *
+     * @param listener the {@link RequestLogListener} that is invoked when {@link RequestLog} meets
+     *                 all of the specified {@link RequestLogAvailability}s
      */
     void addListener(RequestLogListener listener, Iterable<RequestLogAvailability> availabilities);
+
+    /**
+     * Adds the specified {@link RequestLogListener} so that it's notified when all of the specified
+     * {@link RequestLogAvailability}s are satisfied.
+     *
+     * @param listener the {@link RequestLogListener} that is invoked when {@link RequestLog} meets
+     *                 all of the specified {@link RequestLogAvailability}s
+     * @param pushContext if {@code true}, {@link #context()} is pushed into the thread-local stack when
+     *                    {@link RequestLogListener#onRequestLog(RequestLog)} is invoked
+     */
+    void addListener(RequestLogListener listener, boolean pushContext,
+                     Iterable<RequestLogAvailability> availabilities);
 
     /**
      * Returns the {@link RequestContext} associated with the {@link Request} being handled.

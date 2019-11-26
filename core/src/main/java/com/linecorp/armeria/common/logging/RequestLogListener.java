@@ -42,7 +42,7 @@ public interface RequestLogListener extends EventListener {
         final RequestLogListener second = other;
 
         return log -> {
-            RequestLogListenerInvoker.invokeOnRequestLog(first, log);
+            RequestLogListenerInvoker.invokeOnRequestLog(first, log, true);
             second.onRequestLog(log);
         };
     }

@@ -80,6 +80,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     // Only accessed from subscription's executor.
     private long pendingDemand;
 
+    @Nullable
     private volatile Throwable abortCause;
 
     // Only accessed from subscription's executor.
