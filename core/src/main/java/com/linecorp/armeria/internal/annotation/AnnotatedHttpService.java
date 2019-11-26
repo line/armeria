@@ -314,7 +314,7 @@ public class AnnotatedHttpService implements HttpService {
             return new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) result, exceptionHandler);
         }
         if (result instanceof AggregatedHttpResponse) {
-            return HttpResponse.of((AggregatedHttpResponse) result);
+            return ((AggregatedHttpResponse) result).toHttpResponse();
         }
         if (result instanceof CompletionStage) {
             return HttpResponse.from(

@@ -133,7 +133,7 @@ public interface RequestContext extends AttributeMap {
      * {@code ":path"}, {@code ":scheme"} and {@code ":authority"}) when replacing an {@link HttpRequest},
      * because the properties of this context, such as {@link #path()}, are unaffected by such an attempt.</p>
      *
-     * @see HttpRequest#of(HttpRequest, RequestHeaders)
+     * @see HttpRequest#withHeaders(RequestHeaders)
      */
     void updateRequest(HttpRequest req);
 

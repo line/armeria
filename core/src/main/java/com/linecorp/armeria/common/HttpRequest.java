@@ -242,34 +242,47 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Converts the {@link AggregatedHttpRequest} into a new {@link HttpRequest} and closes the stream.
+     * Converts the {@link AggregatedHttpRequest} into a new complete {@link HttpRequest}.
+     *
+     * @deprecated Use {@link AggregatedHttpRequest#toHttpRequest()}.
      */
+    @Deprecated
     static HttpRequest of(AggregatedHttpRequest request) {
-        return of(request.headers(), request.content(), request.trailers());
+        requireNonNull(request, "request");
+        return request.toHttpRequest();
     }
 
     /**
      * Creates a new instance from an existing {@link RequestHeaders} and {@link Publisher}.
      */
     static HttpRequest of(RequestHeaders headers, Publisher<? extends HttpObject> publisher) {
+        requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
-        return new PublisherBasedHttpRequest(headers, publisher);
+        if (publisher instanceof HttpRequest) {
+            return ((HttpRequest) publisher).withHeaders(headers);
+        } else {
+            return new PublisherBasedHttpRequest(headers, publisher);
+        }
     }
 
     /**
-     * Creates a new instance from an existing {@link HttpRequest} replacing its {@link RequestHeaders}
-     * with the specified {@code newHeaders}. Make sure to update {@link RequestContext#request()} with
-     * {@link RequestContext#updateRequest(HttpRequest)} if you are intercepting an {@link HttpRequest}
-     * in a decorator. For example:
+     * Returns a new {@link HttpRequest} derived from an existing {@link HttpRequest} by replacing its
+     * {@link RequestHeaders} with the specified {@code newHeaders}. Note that the content stream and trailers
+     * of the specified {@link HttpRequest} is not duplicated, which means you can subscribe to only one of
+     * the two {@link HttpRequest}s.
+     *
+     * <p>If you are using this method for intercepting an {@link HttpRequest} in a decorator, make sure to
+     * update {@link RequestContext#request()} with {@link RequestContext#updateRequest(HttpRequest)}, e.g.
      * <pre>{@code
      * > public class MyService extends SimpleDecoratingHttpService {
      * >     @Override
      * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
      * >         // Create a new request with an additional header.
-     * >         final HttpRequest newReq = HttpRequest.of(
-     * >                 req, req.headers().toBuilder()
-     * >                         .set("x-custom-header", "value")
-     * >                         .build());
+     * >         final HttpRequest newReq =
+     * >                 HttpRequest.of(req.headers().toBuilder()
+     * >                                   .set("x-custom-header", "value")
+     * >                                   .build(),
+     * >                                req);
      * >
      * >         // Update the ctx.request.
      * >         ctx.updateRequest(newReq);
@@ -279,24 +292,48 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * >     }
      * > }
      * }</pre>
+     *
+     * @see #withHeaders(RequestHeaders)
      */
-    static HttpRequest of(HttpRequest request, RequestHeaders newHeaders) {
+    static HttpRequest of(RequestHeaders newHeaders, HttpRequest request) {
         requireNonNull(request, "request");
         requireNonNull(newHeaders, "newHeaders");
-        if (request.headers() == newHeaders) {
-            // Just check the reference only to avoid heavy comparison.
-            return request;
-        }
+        return request.withHeaders(newHeaders);
+    }
 
-        if (request instanceof HeaderOverridingHttpRequest) {
-            request = ((HeaderOverridingHttpRequest) request).unwrap();
-        }
-
-        if (request.headers() == newHeaders) {
-            return request;
-        }
-
-        return new HeaderOverridingHttpRequest(request, newHeaders);
+    /**
+     * Returns a new {@link HttpRequest} derived from an existing {@link HttpRequest} by replacing its
+     * {@link RequestHeaders} with the specified {@code newHeaders}. Note that the content stream and trailers
+     * of the specified {@link HttpRequest} is not duplicated, which means you can subscribe to only one of
+     * the two {@link HttpRequest}s.
+     *
+     * <p>If you are using this method for intercepting an {@link HttpRequest} in a decorator, make sure to
+     * update {@link RequestContext#request()} with {@link RequestContext#updateRequest(HttpRequest)}, e.g.
+     * <pre>{@code
+     * > public class MyService extends SimpleDecoratingHttpService {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+     * >         // Create a new request with an additional header.
+     * >         final HttpRequest newReq =
+     * >                 HttpRequest.of(req,
+     * >                                req.headers().toBuilder()
+     * >                                   .set("x-custom-header", "value")
+     * >                                   .build());
+     * >
+     * >         // Update the ctx.request.
+     * >         ctx.updateRequest(newReq);
+     * >
+     * >         // Delegate the new request with the updated context.
+     * >         return delegate().serve(ctx, newReq);
+     * >     }
+     * > }
+     * }</pre>
+     *
+     * @deprecated Use {@link #withHeaders(RequestHeaders)} or {@link #of(RequestHeaders, HttpRequest)}.
+     */
+    @Deprecated
+    static HttpRequest of(HttpRequest request, RequestHeaders newHeaders) {
+        return of(newHeaders, request);
     }
 
     /**
@@ -348,6 +385,43 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     @Nullable
     default MediaType contentType() {
         return headers().contentType();
+    }
+
+    /**
+     * Returns a new {@link HttpRequest} derived from this {@link HttpRequest} by replacing its
+     * {@link RequestHeaders} with the specified {@code newHeaders}. Note that the content stream and trailers
+     * of this {@link HttpRequest} is not duplicated, which means you can subscribe to only one of the two
+     * {@link HttpRequest}s.
+     *
+     * <p>If you are using this method for intercepting an {@link HttpRequest} in a decorator, make sure to
+     * update {@link RequestContext#request()} with {@link RequestContext#updateRequest(HttpRequest)}, e.g.
+     * <pre>{@code
+     * > public class MyService extends SimpleDecoratingHttpService {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+     * >         // Create a new request with an additional header.
+     * >         final HttpRequest newReq =
+     * >                 req.withHeaders(req.headers().toBuilder()
+     * >                                    .set("x-custom-header", "value")
+     * >                                    .build());
+     * >
+     * >         // Update the ctx.request.
+     * >         ctx.updateRequest(newReq);
+     * >
+     * >         // Delegate the new request with the updated context.
+     * >         return delegate().serve(ctx, newReq);
+     * >     }
+     * > }
+     * }</pre>
+     */
+    default HttpRequest withHeaders(RequestHeaders newHeaders) {
+        requireNonNull(newHeaders, "newHeaders");
+        if (headers() == newHeaders) {
+            // Just check the reference only to avoid heavy comparison.
+            return this;
+        }
+
+        return new HeaderOverridingHttpRequest(this, newHeaders);
     }
 
     /**

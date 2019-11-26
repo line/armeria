@@ -67,7 +67,7 @@ public class ManagedHttpHealthCheckService extends HttpHealthCheckService {
     @Override
     protected HttpResponse doPut(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         return HttpResponse.from(
-                updateHealthStatus(ctx, req).thenApply(HttpResponse::of)
+                updateHealthStatus(ctx, req).thenApply(AggregatedHttpResponse::toHttpResponse)
                                             .exceptionally(HttpResponse::ofFailure));
     }
 

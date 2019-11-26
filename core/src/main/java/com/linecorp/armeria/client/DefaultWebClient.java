@@ -69,7 +69,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         if (uri != null) {
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final RequestHeaders newHeaders = req.headers().toBuilder().path(uri.getRawPath()).build();
-            final HttpRequest newReq = HttpRequest.of(req, newHeaders);
+            final HttpRequest newReq = req.withHeaders(newHeaders);
             return execute(eventLoop, endpoint, newReq);
         }
 
@@ -120,6 +120,6 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     }
 
     HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpRequest aggregatedReq) {
-        return execute(eventLoop, HttpRequest.of(aggregatedReq));
+        return execute(eventLoop, aggregatedReq.toHttpRequest());
     }
 }

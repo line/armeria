@@ -362,7 +362,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         MetadataUtil.fillHeaders(metadata, newHeaders);
 
-        final HttpRequest newReq = HttpRequest.of(req, newHeaders.build());
+        final HttpRequest newReq = req.withHeaders(newHeaders.build());
         ctx.updateRequest(newReq);
     }
 

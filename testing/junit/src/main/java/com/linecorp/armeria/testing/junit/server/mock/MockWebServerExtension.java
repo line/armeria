@@ -94,7 +94,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      */
     public MockWebServerExtension enqueue(AggregatedHttpResponse response) {
         requireNonNull(response, "response");
-        mockResponses.add(HttpResponse.of(response));
+        mockResponses.add(response.toHttpResponse());
         return this;
     }
 

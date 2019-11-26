@@ -46,8 +46,18 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
         this.headers = headers;
     }
 
-    HttpRequest unwrap() {
-        return delegate;
+    @Override
+    public HttpRequest withHeaders(RequestHeaders newHeaders) {
+        requireNonNull(newHeaders, "newHeaders");
+        if (headers == newHeaders) {
+            return this;
+        }
+
+        if (delegate.headers() == newHeaders) {
+            return delegate;
+        }
+
+        return delegate.withHeaders(newHeaders);
     }
 
     @Override

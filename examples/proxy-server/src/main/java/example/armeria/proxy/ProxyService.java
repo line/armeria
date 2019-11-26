@@ -127,7 +127,7 @@ public final class ProxyService extends AbstractHttpService {
         final RequestHeaders newHeaders = req.headers().toBuilder()
                                              .add(HttpHeaderNames.FORWARDED, sb.toString())
                                              .build();
-        return HttpRequest.of(req, newHeaders);
+        return req.withHeaders(newHeaders);
     }
 
     private static HttpResponse addViaHeader(HttpResponse res) {

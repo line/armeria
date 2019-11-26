@@ -230,4 +230,13 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      */
     @Nullable
     String authority();
+
+    /**
+     * Converts this request into a new complete {@link HttpRequest}.
+     *
+     * @return the new {@link HttpRequest} converted from this request.
+     */
+    default HttpRequest toHttpRequest() {
+        return HttpRequest.of(headers(), content(), trailers());
+    }
 }
