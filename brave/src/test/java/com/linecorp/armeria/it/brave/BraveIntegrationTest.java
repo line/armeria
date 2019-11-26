@@ -52,6 +52,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -59,6 +60,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.brave.HelloService;
@@ -80,9 +82,11 @@ import brave.Tracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
+import zipkin2.Annotation;
 import zipkin2.Span;
 import zipkin2.reporter.Reporter;
 
+@Timeout(10000)
 class BraveIntegrationTest {
 
     private static final ReporterImpl spanReporter = new ReporterImpl();
@@ -188,6 +192,8 @@ class BraveIntegrationTest {
                     // This service never calls the handler and will timeout.
                     (AsyncIface) (name, resultHandler) -> {
                     })));
+
+            sb.service("/http", (req, ctx) -> HttpResponse.of(OK));
         }
     };
 
@@ -251,7 +257,35 @@ class BraveIntegrationTest {
     }
 
     @Test
-    @Timeout(10000)
+    void testTimingAnnotations() {
+        // Use separate client factory to make sure connection is created.
+        final ClientFactory clientFactory = ClientFactory.builder().build();
+        final WebClient client = WebClient.builder(server.httpUri("/"))
+                                          .factory(clientFactory)
+                                          .decorator(BraveClient.newDecorator(newTracing("timed-client")))
+                                          .build();
+        assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        final Span[] initialConnectSpans = spanReporter.take(1);
+        assertThat(initialConnectSpans[0].annotations())
+                .extracting(Annotation::value).containsExactlyInAnyOrder(
+                "connection-acquire.start",
+                "socket-connect.start",
+                "socket-connect.end",
+                "connection-acquire.end",
+                "ws",
+                "wr");
+
+        // Make another request which will reuse the connection so no connection timing.
+        assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+
+        final Span[] secondConnectSpans = spanReporter.take(1);
+        assertThat(secondConnectSpans[0].annotations())
+                .extracting(Annotation::value).containsExactlyInAnyOrder(
+                "ws",
+                "wr");
+    }
+
+    @Test
     void testServiceHasMultipleClientRequests() throws Exception {
         assertThat(zipClient.hello("Lee")).isEqualTo("Hello, Lee!, and Hello, Lee!");
 
@@ -261,7 +295,6 @@ class BraveIntegrationTest {
     }
 
     @Test
-    @Timeout(10000)
     void testClientInitiatedTrace() throws Exception {
         assertThat(fooClient.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
@@ -351,7 +384,6 @@ class BraveIntegrationTest {
     }
 
     @Test
-    @Timeout(10000)
     void testServiceInitiatedTrace() throws Exception {
         assertThat(fooClientWithoutTracing.hello("Lee")).isEqualTo("Hello, Ms. Lee!");
 
@@ -394,7 +426,6 @@ class BraveIntegrationTest {
     }
 
     @Test
-    @Timeout(10000)
     void testSpanInThreadPoolHasSameTraceId() throws Exception {
         poolWebClient.get("pool").aggregate().get();
         final Span[] spans = spanReporter.take(5);
@@ -405,7 +436,6 @@ class BraveIntegrationTest {
     }
 
     @Test
-    @Timeout(10000)
     void testServerTimesOut() throws Exception {
         assertThatThrownBy(() -> timeoutClient.hello("name"))
                 .isInstanceOf(InvalidResponseHeadersException.class);
@@ -421,7 +451,6 @@ class BraveIntegrationTest {
     }
 
     @Test
-    @Timeout(10000)
     void testClientTimesOut() throws Exception {
         assertThatThrownBy(() -> timeoutClientClientTimesOut.hello("name"))
                 .isInstanceOf(ResponseTimeoutException.class);
@@ -438,7 +467,6 @@ class BraveIntegrationTest {
     }
 
     @Test
-    @Timeout(10000)
     void testHttp1ClientTimesOut() throws Exception {
         assertThatThrownBy(() -> http1TimeoutClientClientTimesOut.hello("name"))
                 .isInstanceOf(ResponseTimeoutException.class);
@@ -451,11 +479,10 @@ class BraveIntegrationTest {
         // There is a wire send in the server and no wire receive in the client.
         assertThat(serverSpan.annotations()).hasSize(2);
         assertThat(serverSpan.annotations().get(1).value()).isEqualTo("ws");
-        assertThat(clientSpan.annotations()).hasSize(1);
+        assertThat(clientSpan.annotations()).hasSizeGreaterThanOrEqualTo(1);
     }
 
     @Test
-    @Timeout(10000)
     void testNoRequestContextTraceable() throws Exception {
         RequestContextCurrentTraceContext.setCurrentThreadNotRequestThread(true);
         try {
@@ -475,7 +502,6 @@ class BraveIntegrationTest {
     }
 
     @Test
-    @Timeout(10000)
     void testNonRequestContextThreadPatternTraceable() throws Exception {
         final CountDownLatch done = new CountDownLatch(1);
         ThreadFactories.builder("nonrequest-").eventLoop(false)

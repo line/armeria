@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.brave;
 
 import static com.linecorp.armeria.internal.brave.TraceContextUtil.ensureScopeUsesRequestContext;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -25,6 +26,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -133,6 +135,29 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                 SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
             SpanTags.updateRemoteEndpoint(span, ctx);
+
+            final ClientConnectionTimings timings = ClientConnectionTimings.get(ctx);
+            if (timings != null) {
+                logTiming(span, "connection-acquire.start", "connection-acquire.end",
+                          timings.connectionAcquisitionStartTimeMicros(),
+                          timings.connectionAcquisitionDurationNanos());
+                if (timings.dnsResolutionDurationNanos() != -1) {
+                    logTiming(span, "dns-resolve.start", "dns-resolve.end",
+                              timings.dnsResolutionStartTimeMicros(),
+                              timings.dnsResolutionDurationNanos());
+                }
+                if (timings.socketConnectDurationNanos() != -1) {
+                    logTiming(span, "socket-connect.start", "socket-connect.end",
+                              timings.socketConnectStartTimeMicros(),
+                              timings.socketConnectDurationNanos());
+                }
+                if (timings.pendingAcquisitionDurationNanos() != -1) {
+                    logTiming(span, "connection-reuse.start", "connection-reuse.end",
+                              timings.pendingAcquisitionStartTimeMicros(),
+                              timings.pendingAcquisitionDurationNanos());
+                }
+            }
+
             final HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(ctx);
             handler.handleReceive(response, log.responseCause(), span);
         }, RequestLogAvailability.COMPLETE);
@@ -140,5 +165,11 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().execute(ctx, req);
         }
+    }
+
+    private void logTiming(Span span, String startName, String endName, long startTimeMicros,
+                           long durationNanos) {
+        span.annotate(startTimeMicros, startName);
+        span.annotate(startTimeMicros + TimeUnit.NANOSECONDS.toMicros(durationNanos), endName);
     }
 }
