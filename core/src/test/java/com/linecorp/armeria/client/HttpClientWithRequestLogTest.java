@@ -75,8 +75,7 @@ class HttpClientWithRequestLogTest {
         final WebClient client =
                 WebClient.builder(LOCAL_HOST)
                          .decorator((delegate, ctx, req) -> {
-                             final HttpRequest badReq = HttpRequest.of(
-                                     req, req.headers().toBuilder().path("/%").build());
+                             final HttpRequest badReq = req.withHeaders(req.headers().toBuilder().path("/%"));
                              return delegate.execute(ctx, badReq);
                          })
                          .decorator(new ExceptionHoldingDecorator())

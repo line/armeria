@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.PathAndQuery;
@@ -68,8 +67,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
         if (uri != null) {
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
-            final RequestHeaders newHeaders = req.headers().toBuilder().path(uri.getRawPath()).build();
-            final HttpRequest newReq = HttpRequest.of(req, newHeaders);
+            final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(uri.getRawPath()));
             return execute(eventLoop, endpoint, newReq);
         }
 
@@ -84,7 +82,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         final HttpRequest newReq;
         // newPath and originalPath should be the same reference if uri().getRawPath() can be ignorable
         if (newPath != originalPath) {
-            newReq = HttpRequest.of(req, req.headers().toBuilder().path(newPath).build());
+            newReq = req.withHeaders(req.headers().toBuilder().path(newPath));
         } else {
             newReq = req;
         }
@@ -120,6 +118,6 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     }
 
     HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpRequest aggregatedReq) {
-        return execute(eventLoop, HttpRequest.of(aggregatedReq));
+        return execute(eventLoop, aggregatedReq.toHttpRequest());
     }
 }

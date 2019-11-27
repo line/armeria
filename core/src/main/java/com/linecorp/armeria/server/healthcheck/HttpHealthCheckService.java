@@ -145,7 +145,7 @@ public class HttpHealthCheckService extends AbstractHttpService implements Trans
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-        return HttpResponse.of(newResponse(ctx, req));
+        return newResponse(ctx, req).toHttpResponse();
     }
 
     private AggregatedHttpResponse newResponse(ServiceRequestContext ctx, HttpRequest req) {

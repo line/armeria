@@ -36,7 +36,7 @@ class DefaultAggregatedHttpResponseTest {
     void toHttpResponse() {
         final AggregatedHttpResponse aRes = AggregatedHttpResponse.of(
                 HttpStatus.OK, PLAIN_TEXT_UTF_8, "alice");
-        final HttpResponse res = HttpResponse.of(aRes);
+        final HttpResponse res = aRes.toHttpResponse();
         final List<HttpObject> drained = res.drainAll().join();
 
         assertThat(drained).containsExactly(
@@ -50,7 +50,7 @@ class DefaultAggregatedHttpResponseTest {
     void toHttpResponseWithoutContent() {
         final AggregatedHttpResponse aRes = AggregatedHttpResponse.of(HttpStatus.OK, PLAIN_TEXT_UTF_8,
                                                                       HttpData.EMPTY_DATA);
-        final HttpResponse res = HttpResponse.of(aRes);
+        final HttpResponse res = aRes.toHttpResponse();
         final List<HttpObject> drained = res.drainAll().join();
 
         assertThat(drained).containsExactly(
@@ -64,7 +64,7 @@ class DefaultAggregatedHttpResponseTest {
         final AggregatedHttpResponse aRes = AggregatedHttpResponse.of(
                 HttpStatus.OK, PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bob"),
                 HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        final HttpResponse res = HttpResponse.of(aRes);
+        final HttpResponse res = aRes.toHttpResponse();
         final List<HttpObject> drained = res.drainAll().join();
 
         assertThat(drained).containsExactly(
@@ -80,7 +80,7 @@ class DefaultAggregatedHttpResponseTest {
                 ImmutableList.of(ResponseHeaders.of(HttpStatus.CONTINUE)),
                 ResponseHeaders.of(HttpStatus.OK), HttpData.EMPTY_DATA, HttpHeaders.of());
 
-        final HttpResponse res = HttpResponse.of(aRes);
+        final HttpResponse res = aRes.toHttpResponse();
         final List<HttpObject> drained = res.drainAll().join();
 
         assertThat(drained).containsExactly(

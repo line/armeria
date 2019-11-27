@@ -50,7 +50,7 @@ public class HttpResponseException extends RuntimeException {
      * Returns a new {@link HttpResponseException} instance with the specified {@link AggregatedHttpResponse}.
      */
     public static HttpResponseException of(AggregatedHttpResponse aggregatedResponse) {
-        return of(HttpResponse.of(requireNonNull(aggregatedResponse, "aggregatedResponse")));
+        return of(requireNonNull(aggregatedResponse, "aggregatedResponse").toHttpResponse());
     }
 
     /**

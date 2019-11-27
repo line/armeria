@@ -414,7 +414,7 @@ public final class HealthCheckService implements TransientHttpService {
         if (method == HttpMethod.HEAD) {
             return HttpResponse.of(aRes.headers());
         } else {
-            return HttpResponse.of(aRes);
+            return aRes.toHttpResponse();
         }
     }
 

@@ -222,8 +222,8 @@ public class DefaultRequestLogTest {
         final RequestHeaders reqHeaders =
                 RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
-        final HttpRequest req = HttpRequest.of(
-                AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
+        final HttpRequest req = AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING))
+                                                     .toHttpRequest();
         final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
@@ -249,8 +249,8 @@ public class DefaultRequestLogTest {
         final RequestHeaders reqHeaders =
                 RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
-        final HttpRequest req = HttpRequest.of(
-                AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
+        final HttpRequest req = AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING))
+                                                     .toHttpRequest();
         final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.endRequest();
@@ -280,8 +280,8 @@ public class DefaultRequestLogTest {
         final RequestHeaders reqHeaders =
                 RequestHeaders.of(HttpMethod.POST, "/armeria/id",
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
-        final HttpRequest req = HttpRequest.of(
-                AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
+        final HttpRequest req = AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING))
+                                                     .toHttpRequest();
         final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
         assertThat(cctx.log().id()).isNotNull();
         assertThat(cctx.log().id()).isEqualTo(cctx.id());

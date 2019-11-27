@@ -33,7 +33,7 @@ class DefaultAggregatedHttpRequestTest {
     void toHttpRequest() {
         final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
                 HttpMethod.POST, "/foo", PLAIN_TEXT_UTF_8, "bar");
-        final HttpRequest req = HttpRequest.of(aReq);
+        final HttpRequest req = aReq.toHttpRequest();
         final List<HttpObject> drained = req.drainAll().join();
 
         assertThat(req.headers()).isEqualTo(RequestHeaders.of(HttpMethod.POST, "/foo",
@@ -45,7 +45,7 @@ class DefaultAggregatedHttpRequestTest {
     @Test
     void toHttpRequestWithoutContent() {
         final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(HttpMethod.GET, "/bar");
-        final HttpRequest req = HttpRequest.of(aReq);
+        final HttpRequest req = aReq.toHttpRequest();
         final List<HttpObject> drained = req.drainAll().join();
 
         assertThat(req.headers()).isEqualTo(RequestHeaders.of(HttpMethod.GET, "/bar"));
@@ -57,7 +57,7 @@ class DefaultAggregatedHttpRequestTest {
         final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
                 HttpMethod.PUT, "/baz", PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bar"),
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
-        final HttpRequest req = HttpRequest.of(aReq);
+        final HttpRequest req = aReq.toHttpRequest();
         final List<HttpObject> drained = req.drainAll().join();
 
         assertThat(req.headers()).isEqualTo(RequestHeaders.of(HttpMethod.PUT, "/baz",

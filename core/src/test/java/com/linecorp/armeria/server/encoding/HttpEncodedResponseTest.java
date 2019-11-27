@@ -39,10 +39,10 @@ class HttpEncodedResponseTest {
         final ByteBuf buf = Unpooled.buffer();
         buf.writeCharSequence("foo", StandardCharsets.UTF_8);
 
-        final HttpResponse orig = HttpResponse.of(
+        final HttpResponse orig =
                 AggregatedHttpResponse.of(HttpStatus.OK,
                                           MediaType.PLAIN_TEXT_UTF_8,
-                                          new ByteBufHttpData(buf, true)));
+                                          new ByteBufHttpData(buf, true)).toHttpResponse();
         final HttpEncodedResponse encoded = new HttpEncodedResponse(
                 orig, HttpEncodingType.DEFLATE, mediaType -> true, 1);
 

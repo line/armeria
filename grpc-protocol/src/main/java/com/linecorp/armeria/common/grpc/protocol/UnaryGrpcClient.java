@@ -159,7 +159,7 @@ public class UnaryGrpcClient {
 
                            if (!status.equals(HttpStatus.OK) || msg.content().isEmpty()) {
                                // Nothing to deframe.
-                               return CompletableFuture.completedFuture(HttpResponse.of(msg));
+                               return CompletableFuture.completedFuture(msg.toHttpResponse());
                            }
 
                            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();

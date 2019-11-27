@@ -56,7 +56,7 @@ class MockWebServiceExtensionTest {
                                                .build();
 
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "hello"));
-        server.enqueue(HttpResponse.of(AggregatedHttpResponse.of(HttpStatus.FORBIDDEN)));
+        server.enqueue(AggregatedHttpResponse.of(HttpStatus.FORBIDDEN).toHttpResponse());
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.FOUND));
 
         assertThat(webClient.get("/").aggregate().join()).satisfies(response -> {
@@ -106,7 +106,7 @@ class MockWebServiceExtensionTest {
 
     @Test
     void delay() {
-        server.enqueue(HttpResponse.delayed(HttpResponse.of(AggregatedHttpResponse.of(HttpStatus.OK)),
+        server.enqueue(HttpResponse.delayed(AggregatedHttpResponse.of(HttpStatus.OK).toHttpResponse(),
                                             Duration.ofSeconds(1)));
         server.enqueue(HttpResponse.delayed(AggregatedHttpResponse.of(HttpStatus.OK), Duration.ofSeconds(1)));
 

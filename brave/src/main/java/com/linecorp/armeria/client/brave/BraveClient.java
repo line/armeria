@@ -109,7 +109,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
         final HttpClientRequest request = ClientRequestContextAdapter.asHttpClientRequest(ctx, newHeaders);
         final Span span = handler.handleSend(request);
-        req = HttpRequest.of(req, newHeaders.build());
+        req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
 
         // Ensure the trace context propagates to children

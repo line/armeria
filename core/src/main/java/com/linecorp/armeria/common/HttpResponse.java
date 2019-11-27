@@ -24,7 +24,6 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Formatter;
-import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -98,7 +97,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse delayed(AggregatedHttpResponse response, Duration delay) {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
-        return delayed(HttpResponse.of(response), delay);
+        return delayed(response.toHttpResponse(), delay);
     }
 
     /**
@@ -110,7 +109,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
-        return delayed(HttpResponse.of(response), delay, executor);
+        return delayed(response.toHttpResponse(), delay, executor);
     }
 
     /**
@@ -338,43 +337,25 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Converts the {@link AggregatedHttpResponse} into a new complete {@link HttpResponse}.
+     *
+     * @deprecated Use {@link AggregatedHttpResponse#toHttpResponse()}.
      */
+    @Deprecated
     static HttpResponse of(AggregatedHttpResponse res) {
         requireNonNull(res, "res");
-
-        final List<ResponseHeaders> informationals = res.informationals();
-        final ResponseHeaders headers = res.headers();
-        final HttpData content = res.content();
-        final HttpHeaders trailers = res.trailers();
-
-        if (informationals.isEmpty()) {
-            return of(headers, content, trailers);
-        }
-
-        final int numObjects = informationals.size() +
-                               1 /* headers */ +
-                               (!content.isEmpty() ? 1 : 0) +
-                               (!trailers.isEmpty() ? 1 : 0);
-        final HttpObject[] objs = new HttpObject[numObjects];
-        int writerIndex = 0;
-        for (ResponseHeaders informational : informationals) {
-            objs[writerIndex++] = informational;
-        }
-        objs[writerIndex++] = headers;
-        if (!content.isEmpty()) {
-            objs[writerIndex++] = content;
-        }
-        if (!trailers.isEmpty()) {
-            objs[writerIndex] = trailers;
-        }
-        return new RegularFixedHttpResponse(objs);
+        return res.toHttpResponse();
     }
 
     /**
      * Creates a new HTTP response whose stream is produced from an existing {@link Publisher}.
      */
     static HttpResponse of(Publisher<? extends HttpObject> publisher) {
-        return new PublisherBasedHttpResponse(publisher);
+        requireNonNull(publisher, "publisher");
+        if (publisher instanceof HttpResponse) {
+            return (HttpResponse) publisher;
+        } else {
+            return new PublisherBasedHttpResponse(publisher);
+        }
     }
 
     /**

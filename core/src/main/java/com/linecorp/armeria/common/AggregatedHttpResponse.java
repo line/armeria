@@ -26,6 +26,8 @@ import java.util.Locale;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
+
 /**
  * A complete HTTP response whose content is readily available as a single {@link HttpData}.
  */
@@ -227,4 +229,38 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * Returns the {@linkplain HttpHeaderNames#STATUS STATUS} of this response.
      */
     HttpStatus status();
+
+    /**
+     * Converts this response into a new complete {@link HttpResponse}.
+     *
+     * @return the new {@link HttpResponse} converted from this response.
+     */
+    default HttpResponse toHttpResponse() {
+        final List<ResponseHeaders> informationals = informationals();
+        final ResponseHeaders headers = headers();
+        final HttpData content = content();
+        final HttpHeaders trailers = trailers();
+
+        if (informationals.isEmpty()) {
+            return HttpResponse.of(headers, content, trailers);
+        }
+
+        final int numObjects = informationals.size() +
+                               1 /* headers */ +
+                               (!content.isEmpty() ? 1 : 0) +
+                               (!trailers.isEmpty() ? 1 : 0);
+        final HttpObject[] objs = new HttpObject[numObjects];
+        int writerIndex = 0;
+        for (ResponseHeaders informational : informationals) {
+            objs[writerIndex++] = informational;
+        }
+        objs[writerIndex++] = headers;
+        if (!content.isEmpty()) {
+            objs[writerIndex++] = content;
+        }
+        if (!trailers.isEmpty()) {
+            objs[writerIndex] = trailers;
+        }
+        return new RegularFixedHttpResponse(objs);
+    }
 }
