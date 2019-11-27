@@ -392,9 +392,9 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Returns a new {@link HttpRequest} derived from this {@link HttpRequest} by replacing its
-     * {@link RequestHeaders} with what's built from the specified {@code newHeaders}. Note that the content
-     * stream and trailers of this {@link HttpRequest} is not duplicated, which means you can subscribe
-     * to only one of the two {@link HttpRequest}s.
+     * {@link RequestHeaders} with what's built from the specified {@code newHeadersBuilder}.
+     * Note that the content stream and trailers of this {@link HttpRequest} is not duplicated,
+     * which means you can subscribe to only one of the two {@link HttpRequest}s.
      *
      * <p>If you are using this method for intercepting an {@link HttpRequest} in a decorator, make sure to
      * update {@link RequestContext#request()} with {@link RequestContext#updateRequest(HttpRequest)}, e.g.
