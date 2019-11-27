@@ -296,13 +296,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RequestHeaders headers = req.headers();
         final String hostname = hostname(headers);
         final VirtualHost virtualHost = config.findVirtualHost(hostname);
-        final InetAddress clientAddress = determineClientAddress(channel, headers);
+        final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
+        final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
         // Handle 'OPTIONS * HTTP/1.1'.
         final String originalPath = headers.path();
         if (originalPath.isEmpty() || originalPath.charAt(0) != '/') {
             final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost, clientAddress, null);
+                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
+                                                     proxiedAddresses, clientAddress, null);
             if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
                 handleOptions(ctx, reqCtx);
             } else {
@@ -315,7 +317,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final PathAndQuery pathAndQuery = PathAndQuery.parse(originalPath);
         if (pathAndQuery == null) {
             final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost, clientAddress, null);
+                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
+                                                     proxiedAddresses, clientAddress, null);
             rejectInvalidPath(ctx, reqCtx);
             return;
         }
@@ -330,8 +333,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         } catch (Throwable cause) {
             logger.warn("{} Unexpected exception: {}", ctx.channel(), req, cause);
             final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost, clientAddress,
-                                                     routingCtx);
+                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
+                                                     proxiedAddresses, clientAddress, routingCtx);
             respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
             return;
         }
@@ -432,14 +435,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private InetAddress determineClientAddress(Channel channel, RequestHeaders headers) {
-        final InetAddress remoteAddress = ((InetSocketAddress) channel.remoteAddress()).getAddress();
-        if (config.clientAddressTrustedProxyFilter().test(remoteAddress)) {
-            return HttpHeaderUtil.determineClientAddress(
+    private ProxiedAddresses determineProxiedAddresses(Channel channel, RequestHeaders headers) {
+        final InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
+        if (config.clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
+            return HttpHeaderUtil.determineProxiedAddresses(
                     headers, config.clientAddressSources(), proxiedAddresses,
                     remoteAddress, config.clientAddressFilter());
         } else {
-            return remoteAddress;
+            return proxiedAddresses != null ? proxiedAddresses : ProxiedAddresses.of(remoteAddress);
         }
     }
 
@@ -614,10 +617,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, HttpRequest req,
-                                                                   String hostname, VirtualHost virtualHost,
-                                                                   InetAddress clientAddress,
-                                                                   @Nullable RoutingContext routingCtx) {
+    private ServiceRequestContext newEarlyRespondingRequestContext(
+            Channel channel, HttpRequest req,
+            String hostname, VirtualHost virtualHost,
+            ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            @Nullable RoutingContext routingCtx) {
         if (routingCtx == null) {
             routingCtx = DefaultRoutingContext.of(virtualHost, hostname,
                                                   req.path(), /* query */ null,

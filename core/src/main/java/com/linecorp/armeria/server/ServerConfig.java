@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -100,6 +102,7 @@ public final class ServerConfig {
     private final List<ClientAddressSource> clientAddressSources;
     private final Predicate<InetAddress> clientAddressTrustedProxyFilter;
     private final Predicate<InetAddress> clientAddressFilter;
+    private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
     private final Supplier<? extends RequestId> requestIdGenerator;
@@ -124,6 +127,7 @@ public final class ServerConfig {
             List<ClientAddressSource> clientAddressSources,
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
             Predicate<InetAddress> clientAddressFilter,
+            Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
             Supplier<? extends RequestId> requestIdGenerator) {
 
@@ -174,6 +178,7 @@ public final class ServerConfig {
         this.clientAddressTrustedProxyFilter =
                 requireNonNull(clientAddressTrustedProxyFilter, "clientAddressTrustedProxyFilter");
         this.clientAddressFilter = requireNonNull(clientAddressFilter, "clientAddressFilter");
+        this.clientAddressMapper = requireNonNull(clientAddressMapper, "clientAddressMapper");
 
         // Set localAddresses.
         final List<ServerPort> portsCopy = new ArrayList<>();
@@ -627,6 +632,13 @@ public final class ServerConfig {
     }
 
     /**
+     * Returns a {@link Function} to use when determining the client address from {@link ProxiedAddresses}.
+     */
+    public Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper() {
+        return clientAddressMapper;
+    }
+
+    /**
      * Returns whether the response header will include default {@code "Server"} header.
      */
     public boolean isServerHeaderEnabled() {
@@ -663,6 +675,7 @@ public final class ServerConfig {
                     meterRegistry(), serviceLoggerPrefix(),
                     channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
+                    clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled());
         }
 
@@ -684,6 +697,7 @@ public final class ServerConfig {
             List<ClientAddressSource> clientAddressSources,
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
             Predicate<InetAddress> clientAddressFilter,
+            Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean serverHeaderEnabled, boolean dateHeaderEnabled) {
 
         final StringBuilder buf = new StringBuilder();
@@ -773,6 +787,8 @@ public final class ServerConfig {
         buf.append(clientAddressTrustedProxyFilter);
         buf.append(", clientAddressFilter: ");
         buf.append(clientAddressFilter);
+        buf.append(", clientAddressMapper: ");
+        buf.append(clientAddressMapper);
         buf.append(", serverHeader: ");
         buf.append(serverHeaderEnabled ? "enabled" : "disabled");
         buf.append(", dateHeader: ");

@@ -247,7 +247,6 @@ public class ServiceRequestContextWrapper
         return delegate().removeAdditionalResponseTrailer(name);
     }
 
-    @Nullable
     @Override
     public ProxiedAddresses proxiedAddresses() {
         return delegate().proxiedAddresses();

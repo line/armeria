@@ -419,8 +419,7 @@ public interface ServiceRequestContext extends RequestContext {
     boolean removeAdditionalResponseTrailer(CharSequence name);
 
     /**
-     * Returns the proxied addresses if the current {@link Request} is received through a proxy.
+     * Returns the proxied addresses of the current {@link Request}.
      */
-    @Nullable
     ProxiedAddresses proxiedAddresses();
 }

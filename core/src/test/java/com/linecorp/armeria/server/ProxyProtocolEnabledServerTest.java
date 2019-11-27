@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.util.List;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -74,11 +75,11 @@ public class ProxyProtocolEnabledServerTest {
                     final ProxiedAddresses proxyAddresses = ctx.proxiedAddresses();
                     assert proxyAddresses != null;
                     final InetSocketAddress src = proxyAddresses.sourceAddress();
-                    final InetSocketAddress dst = proxyAddresses.destinationAddress();
+                    final List<InetSocketAddress> dst = proxyAddresses.destinationAddresses();
                     return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
                                            String.format("%s:%d -> %s:%d\n",
                                                          src.getHostString(), src.getPort(),
-                                                         dst.getHostString(), dst.getPort()));
+                                                         dst.get(0).getHostString(), dst.get(0).getPort()));
                 }
             });
             sb.disableServerHeader();
