@@ -363,7 +363,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private final Set<SerializationFormat> allowedSerializationFormats;
     private final ThriftCallService thriftService;
 
-    private THttpService(RpcService delegate, SerializationFormat[] allowedSerializationFormatArray) {
+    THttpService(RpcService delegate, SerializationFormat[] allowedSerializationFormatArray) {
         super(delegate);
         thriftService = findThriftService(delegate);
 
@@ -383,7 +383,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      * @return a {@link Map} whose key is a service name, which could be an empty string if this service
      *         is not multiplexed
      */
-    public Map<String, ThriftServiceEntry> entries() {
+    public Map<String, List<ThriftServiceEntry>> entries() {
         return thriftService.entries();
     }
 
@@ -556,7 +556,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             }
 
             // Ensure that such a method exists.
-            final ThriftServiceEntry entry = entries().get(serviceName);
+            final ThriftServiceEntry entry = thriftService.getFirstService(serviceName);
             f = entry != null ? entry.metadata.function(methodName) : null;
             if (f == null) {
                 final TApplicationException cause = new TApplicationException(
