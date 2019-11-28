@@ -112,7 +112,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder responseConverters(
             List<ResponseConverterFunction> responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-        responseConverterFunctionBuilder.addAll(responseConverterFunctions);
+        responseConverterFunctionBuilder.addAll(ImmutableList.copyOf(responseConverterFunctions));
         return this;
     }
 
@@ -131,7 +131,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder requestConverters(
             List<RequestConverterFunction> requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requestConverterFunctionBuilder.addAll(requestConverterFunctions);
+        requestConverterFunctionBuilder.addAll(ImmutableList.copyOf(requestConverterFunctions));
         return this;
     }
 

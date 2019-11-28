@@ -99,7 +99,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     public VirtualHostAnnotatedServiceBindingBuilder exceptionHandlers(
             List<ExceptionHandlerFunction> exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        exceptionHandlerFunctionBuilder.addAll(exceptionHandlerFunctions);
+        exceptionHandlerFunctionBuilder.addAll(ImmutableList.copyOf(exceptionHandlerFunctions));
         return this;
     }
 
@@ -121,7 +121,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     public VirtualHostAnnotatedServiceBindingBuilder responseConverters(
             List<ResponseConverterFunction> responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-        responseConverterFunctionBuilder.addAll(responseConverterFunctions);
+        responseConverterFunctionBuilder.addAll(ImmutableList.copyOf(responseConverterFunctions));
         return this;
     }
 
@@ -143,7 +143,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     public VirtualHostAnnotatedServiceBindingBuilder requestConverters(
             List<RequestConverterFunction> requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requestConverterFunctionBuilder.addAll(requestConverterFunctions);
+        requestConverterFunctionBuilder.addAll(ImmutableList.copyOf(requestConverterFunctions));
         return this;
     }
 
