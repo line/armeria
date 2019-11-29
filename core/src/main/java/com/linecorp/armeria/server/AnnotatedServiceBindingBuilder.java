@@ -147,6 +147,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      *
      * @deprecated Use {@link #requestConverters(RequestConverterFunction...)}.
      */
+    @Deprecated
     public AnnotatedServiceBindingBuilder requestConverter(RequestConverterFunction requestConverterFunction) {
         requireNonNull(requestConverterFunction, "requestConverterFunction");
         requestConverterFunctionBuilder.add(requestConverterFunction);

@@ -159,6 +159,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      *
      * @deprecated Use {@link #requestConverters(RequestConverterFunction...)}.
      */
+    @Deprecated
     public VirtualHostAnnotatedServiceBindingBuilder requestConverter(
             RequestConverterFunction requestConverterFunction) {
         requireNonNull(requestConverterFunction, "requestConverterFunction");
