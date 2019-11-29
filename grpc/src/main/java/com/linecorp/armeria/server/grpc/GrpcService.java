@@ -35,6 +35,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,6 +111,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
     private final int maxOutboundMessageSizeBytes;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
+    private final boolean useClientTimeoutHeader;
     private final String advertisedEncodingsHeader;
     @Nullable
     private final ProtoReflectionService protoReflectionService;
@@ -123,10 +125,11 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
                 DecompressorRegistry decompressorRegistry,
                 CompressorRegistry compressorRegistry,
                 Set<SerializationFormat> supportedSerializationFormats,
-                Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer,
+                Consumer<Builder> jsonMarshallerCustomizer,
                 int maxOutboundMessageSizeBytes,
                 boolean useBlockingTaskExecutor,
                 boolean unsafeWrapRequestBuffers,
+                boolean useClientTimeoutHeader,
                 @Nullable ProtoReflectionService protoReflectionService,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
@@ -134,6 +137,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
+        this.useClientTimeoutHeader = useClientTimeoutHeader;
         this.protoReflectionService = protoReflectionService;
         jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats, jsonMarshallerCustomizer);
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
@@ -188,15 +192,17 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
                             false));
         }
 
-        final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
-        if (timeoutHeader != null) {
-            try {
-                final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
-                ctx.setRequestTimeout(Duration.ofNanos(timeout));
-            } catch (IllegalArgumentException e) {
-                return HttpResponse.of(
-                        ArmeriaServerCall.statusToTrailers(
-                                ctx, GrpcStatus.fromThrowable(e), new Metadata(), false));
+        if (useClientTimeoutHeader) {
+            final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
+            if (timeoutHeader != null) {
+                try {
+                    final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
+                    ctx.setRequestTimeout(Duration.ofNanos(timeout));
+                } catch (IllegalArgumentException e) {
+                    return HttpResponse.of(
+                            ArmeriaServerCall.statusToTrailers(
+                                    ctx, GrpcStatus.fromThrowable(e), new Metadata(), false));
+                }
             }
         }
 
@@ -207,6 +213,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
+
             ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, new Metadata()));
             req.subscribe(call.messageReader(), ctx.eventLoop(), WITH_POOLED_OBJECTS);
             req.completionFuture().handleAsync(call.messageReader(), ctx.eventLoop());

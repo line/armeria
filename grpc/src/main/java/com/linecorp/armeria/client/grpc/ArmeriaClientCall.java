@@ -69,6 +69,7 @@ import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.Status;
+import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ByteProcessor;
 import io.netty.util.ByteProcessor.IndexOfProcessor;
@@ -151,6 +152,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc()),
                 this);
         executor = callOptions.getExecutor();
+
         req.completionFuture().handle((unused1, unused2) -> {
             if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
                 // Can reach here if the request stream was empty.
@@ -180,6 +182,26 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
         prepareHeaders(compressor, metadata);
         listener = responseListener;
+
+        if (callOptions.getDeadline() != null) {
+            final long remainingMillis = callOptions.getDeadline().timeRemaining(TimeUnit.MILLISECONDS);
+            if (remainingMillis <= 0) {
+                final Status status = Status.DEADLINE_EXCEEDED
+                        .augmentDescription(
+                                "ClientCall started after deadline exceeded: " +
+                                callOptions.getDeadline());
+                close(status, new Metadata());
+            } else {
+                ctx.setResponseTimeoutMillis(remainingMillis);
+                ctx.setResponseTimeoutHandler(() -> {
+                    final Status status = Status.DEADLINE_EXCEEDED
+                            .augmentDescription(
+                                    "deadline exceeded after " +
+                                    TimeUnit.MILLISECONDS.toNanos(remainingMillis) + "ns.");
+                    close(status, new Metadata());
+                });
+            }
+        }
 
         final HttpResponse res = initContextAndExecuteWithFallback(
                 httpClient, ctx, endpoint,
@@ -367,8 +389,11 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void close(Status status, Metadata metadata) {
+        if (status.getCode() == Code.DEADLINE_EXCEEDED && status.getDescription() == null) {
+            status = status.withDescription("ClientCall was cancelled at or after deadline.");
+        }
         ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
-        req.abort();
+        req.abort(status.asRuntimeException(metadata));
         responseReader.cancel();
 
         try (SafeCloseable ignored = ctx.push()) {
