@@ -35,7 +35,6 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
-import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,7 +124,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
                 DecompressorRegistry decompressorRegistry,
                 CompressorRegistry compressorRegistry,
                 Set<SerializationFormat> supportedSerializationFormats,
-                Consumer<Builder> jsonMarshallerCustomizer,
+                Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer,
                 int maxOutboundMessageSizeBytes,
                 boolean useBlockingTaskExecutor,
                 boolean unsafeWrapRequestBuffers,
