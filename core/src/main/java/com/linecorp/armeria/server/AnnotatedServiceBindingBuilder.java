@@ -79,9 +79,12 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
 
     /**
      * Adds the given {@link ExceptionHandlerFunction} to this {@link AnnotatedServiceBindingBuilder}.
+     *
+     * @deprecated Use {@link #exceptionHandlers(ExceptionHandlerFunction...)}.
      */
+    @Deprecated
     public AnnotatedServiceBindingBuilder exceptionHandler(ExceptionHandlerFunction exceptionHandlerFunction) {
-        requireNonNull(exceptionHandlerFunction, "exceptionHandlerFunctions");
+        requireNonNull(exceptionHandlerFunction, "exceptionHandlerFunction");
         exceptionHandlerFunctionBuilder.add(exceptionHandlerFunction);
         return this;
     }
@@ -90,7 +93,17 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * Adds the given {@link ExceptionHandlerFunction}s to this {@link AnnotatedServiceBindingBuilder}.
      */
     public AnnotatedServiceBindingBuilder exceptionHandlers(
-            List<ExceptionHandlerFunction> exceptionHandlerFunctions) {
+            ExceptionHandlerFunction... exceptionHandlerFunctions) {
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        exceptionHandlerFunctionBuilder.addAll(ImmutableList.copyOf(exceptionHandlerFunctions));
+        return this;
+    }
+
+    /**
+     * Adds the given {@link ExceptionHandlerFunction}s to this {@link AnnotatedServiceBindingBuilder}.
+     */
+    public AnnotatedServiceBindingBuilder exceptionHandlers(
+            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
         exceptionHandlerFunctionBuilder.addAll(ImmutableList.copyOf(exceptionHandlerFunctions));
         return this;
@@ -98,7 +111,10 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
 
     /**
      * Adds the given {@link ResponseConverterFunction} to this {@link AnnotatedServiceBindingBuilder}.
+     *
+     * @deprecated Use {@link #responseConverters(ResponseConverterFunction...)}.
      */
+    @Deprecated
     public AnnotatedServiceBindingBuilder responseConverter(
             ResponseConverterFunction responseConverterFunction) {
         requireNonNull(responseConverterFunction, "responseConverterFunction");
@@ -110,7 +126,17 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * Adds the given {@link ResponseConverterFunction}s to this {@link AnnotatedServiceBindingBuilder}.
      */
     public AnnotatedServiceBindingBuilder responseConverters(
-            List<ResponseConverterFunction> responseConverterFunctions) {
+            ResponseConverterFunction... responseConverterFunctions) {
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+        responseConverterFunctionBuilder.addAll(ImmutableList.copyOf(responseConverterFunctions));
+        return this;
+    }
+
+    /**
+     * Adds the given {@link ResponseConverterFunction}s to this {@link AnnotatedServiceBindingBuilder}.
+     */
+    public AnnotatedServiceBindingBuilder responseConverters(
+            Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
         responseConverterFunctionBuilder.addAll(ImmutableList.copyOf(responseConverterFunctions));
         return this;
@@ -118,6 +144,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
 
     /**
      * Adds the given {@link RequestConverterFunction} to this {@link AnnotatedServiceBindingBuilder}.
+     *
+     * @deprecated Use {@link #requestConverters(RequestConverterFunction...)}.
      */
     public AnnotatedServiceBindingBuilder requestConverter(RequestConverterFunction requestConverterFunction) {
         requireNonNull(requestConverterFunction, "requestConverterFunction");
@@ -129,7 +157,17 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * Adds the given {@link RequestConverterFunction}s to this {@link AnnotatedServiceBindingBuilder}.
      */
     public AnnotatedServiceBindingBuilder requestConverters(
-            List<RequestConverterFunction> requestConverterFunctions) {
+            RequestConverterFunction... requestConverterFunctions) {
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requestConverterFunctionBuilder.addAll(ImmutableList.copyOf(requestConverterFunctions));
+        return this;
+    }
+
+    /**
+     * Adds the given {@link RequestConverterFunction}s to this {@link AnnotatedServiceBindingBuilder}.
+     */
+    public AnnotatedServiceBindingBuilder requestConverters(
+            Iterable<? extends RequestConverterFunction> requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
         requestConverterFunctionBuilder.addAll(ImmutableList.copyOf(requestConverterFunctions));
         return this;

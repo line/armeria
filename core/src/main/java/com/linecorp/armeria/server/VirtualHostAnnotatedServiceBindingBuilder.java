@@ -84,7 +84,10 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     /**
      * Adds the given {@link ExceptionHandlerFunction} to this
      * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     *
+     * @deprecated Use {@link #exceptionHandlers(ExceptionHandlerFunction...)}.
      */
+    @Deprecated
     public VirtualHostAnnotatedServiceBindingBuilder exceptionHandler(
             ExceptionHandlerFunction exceptionHandlerFunction) {
         requireNonNull(exceptionHandlerFunction, "exceptionHandlerFunction");
@@ -97,7 +100,18 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * {@link VirtualHostAnnotatedServiceBindingBuilder}.
      */
     public VirtualHostAnnotatedServiceBindingBuilder exceptionHandlers(
-            List<ExceptionHandlerFunction> exceptionHandlerFunctions) {
+            ExceptionHandlerFunction... exceptionHandlerFunctions) {
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        exceptionHandlerFunctionBuilder.addAll(ImmutableList.copyOf(exceptionHandlerFunctions));
+        return this;
+    }
+
+    /**
+     * Adds the given {@link ExceptionHandlerFunction}s to this
+     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     */
+    public VirtualHostAnnotatedServiceBindingBuilder exceptionHandlers(
+            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
         exceptionHandlerFunctionBuilder.addAll(ImmutableList.copyOf(exceptionHandlerFunctions));
         return this;
@@ -106,7 +120,10 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     /**
      * Adds the given {@link ResponseConverterFunction} to this
      * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     *
+     * @deprecated Use {@link #responseConverters(ResponseConverterFunction...)}.
      */
+    @Deprecated
     public VirtualHostAnnotatedServiceBindingBuilder responseConverter(
             ResponseConverterFunction responseConverterFunction) {
         requireNonNull(responseConverterFunction, "responseConverterFunction");
@@ -119,7 +136,18 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * {@link VirtualHostAnnotatedServiceBindingBuilder}.
      */
     public VirtualHostAnnotatedServiceBindingBuilder responseConverters(
-            List<ResponseConverterFunction> responseConverterFunctions) {
+            ResponseConverterFunction... responseConverterFunctions) {
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+        responseConverterFunctionBuilder.addAll(ImmutableList.copyOf(responseConverterFunctions));
+        return this;
+    }
+
+    /**
+     * Adds the given {@link ResponseConverterFunction}s to this
+     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     */
+    public VirtualHostAnnotatedServiceBindingBuilder responseConverters(
+            Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
         responseConverterFunctionBuilder.addAll(ImmutableList.copyOf(responseConverterFunctions));
         return this;
@@ -128,6 +156,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     /**
      * Adds the given {@link RequestConverterFunction} to this
      * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     *
+     * @deprecated Use {@link #requestConverters(RequestConverterFunction...)}.
      */
     public VirtualHostAnnotatedServiceBindingBuilder requestConverter(
             RequestConverterFunction requestConverterFunction) {
@@ -141,7 +171,18 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * {@link VirtualHostAnnotatedServiceBindingBuilder}.
      */
     public VirtualHostAnnotatedServiceBindingBuilder requestConverters(
-            List<RequestConverterFunction> requestConverterFunctions) {
+            RequestConverterFunction... requestConverterFunctions) {
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requestConverterFunctionBuilder.addAll(ImmutableList.copyOf(requestConverterFunctions));
+        return this;
+    }
+
+    /**
+     * Adds the given {@link RequestConverterFunction}s to this
+     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     */
+    public VirtualHostAnnotatedServiceBindingBuilder requestConverters(
+            Iterable<? extends RequestConverterFunction> requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
         requestConverterFunctionBuilder.addAll(ImmutableList.copyOf(requestConverterFunctions));
         return this;
