@@ -20,18 +20,25 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+/**
+ * Holds the {@link ThriftFunction} and the implementation for a given function name.
+ */
 public final class ThriftServiceAndFunctionHolder {
 
     private final ThriftFunction function;
 
+    private final String name;
+
     @Nullable
     private final Object implementation;
 
-    ThriftServiceAndFunctionHolder(ThriftFunction function, @Nullable Object implementation) {
+    ThriftServiceAndFunctionHolder(String name, ThriftFunction function, @Nullable Object implementation) {
         requireNonNull(function, "function");
+        requireNonNull(name, "name");
 
         this.function = function;
         this.implementation = implementation;
+        this.name = name;
     }
 
     public ThriftFunction function() {
@@ -41,5 +48,9 @@ public final class ThriftServiceAndFunctionHolder {
     @Nullable
     public Object implementation() {
         return implementation;
+    }
+
+    public String getName() {
+        return name;
     }
 }

@@ -210,7 +210,7 @@ public final class ThriftServiceMetadata {
             } else {
                 f = new ThriftFunction(iface, (AsyncProcessFunction) func);
             }
-            functions.put(name, new ThriftServiceAndFunctionHolder(f, implementation));
+            functions.put(name, new ThriftServiceAndFunctionHolder(name, f, implementation));
         } catch (Exception e) {
             throw new IllegalArgumentException("failed to retrieve function metadata: " +
                                                iface.getName() + '.' + name + "()", e);
