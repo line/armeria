@@ -213,7 +213,6 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
-
             ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, new Metadata()));
             req.subscribe(call.messageReader(), ctx.eventLoop(), WITH_POOLED_OBJECTS);
             req.completionFuture().handleAsync(call.messageReader(), ctx.eventLoop());
