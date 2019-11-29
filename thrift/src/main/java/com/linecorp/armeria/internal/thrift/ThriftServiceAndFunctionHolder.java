@@ -18,14 +18,17 @@ package com.linecorp.armeria.internal.thrift;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 public final class ThriftServiceAndFunctionHolder {
 
     private final ThriftFunction function;
+
+    @Nullable
     private final Object implementation;
 
-    ThriftServiceAndFunctionHolder(ThriftFunction function, Object implementation) {
+    ThriftServiceAndFunctionHolder(ThriftFunction function, @Nullable Object implementation) {
         requireNonNull(function, "function");
-        requireNonNull(implementation, "implementation");
 
         this.function = function;
         this.implementation = implementation;
@@ -35,6 +38,7 @@ public final class ThriftServiceAndFunctionHolder {
         return function;
     }
 
+    @Nullable
     public Object implementation() {
         return implementation;
     }

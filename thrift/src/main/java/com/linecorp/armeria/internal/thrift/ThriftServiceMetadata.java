@@ -196,7 +196,7 @@ public final class ThriftServiceMetadata {
 
     @SuppressWarnings("rawtypes")
     private void registerFunction(Set<String> methodNames, Class<?> iface, String name,
-                                  Object func, Object implementation) {
+                                  Object func, @Nullable Object implementation) {
         if (methodNames.contains(name)) {
             logger.warn("duplicate Thrift method name: " + name);
             return;
@@ -238,6 +238,9 @@ public final class ThriftServiceMetadata {
         return thriftServiceAndFunctionHolder.function();
     }
 
+    /**
+     * Returns a thrift service implementation for the given function if exists.
+     */
     @Nullable
     public Object implementation(String method) {
         final ThriftServiceAndFunctionHolder thriftServiceAndFunctionHolder = functions.get(method);
@@ -247,6 +250,10 @@ public final class ThriftServiceMetadata {
         return thriftServiceAndFunctionHolder.implementation();
     }
 
+    /**
+     * Returns {@link ThriftServiceAndFunctionHolder} that holds the {@link ThriftFunction} and a thrift
+     * service implementation, if exists.
+     */
     @Nullable
     public ThriftServiceAndFunctionHolder holder(String name) {
         return functions.get(name);

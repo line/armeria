@@ -127,6 +127,8 @@ public final class ThriftCallService implements RpcService {
             final ThriftServiceAndFunctionHolder holder = e.metadata.holder(method);
             if (holder != null) {
                 final DefaultRpcResponse reply = new DefaultRpcResponse();
+
+                // holder.implementation() is never null because of the way we constructed ThriftServiceMetadata
                 invoke(ctx, holder.implementation(), holder.function(), call.params(), reply);
                 return reply;
             }
