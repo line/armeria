@@ -393,7 +393,11 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             status = status.withDescription("ClientCall was cancelled at or after deadline.");
         }
         ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
-        req.abort(status.asRuntimeException(metadata));
+        if (status.isOk()) {
+            req.abort();
+        } else {
+            req.abort(status.asRuntimeException(metadata));
+        }
         responseReader.cancel();
 
         try (SafeCloseable ignored = ctx.push()) {
