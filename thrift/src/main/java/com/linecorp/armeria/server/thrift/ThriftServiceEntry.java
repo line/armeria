@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.thrift;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,28 +35,22 @@ import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
 public final class ThriftServiceEntry {
 
     final String name;
-    final Object implementation;
+    final List<Object> implementations;
     final ThriftServiceMetadata metadata;
 
-    ThriftServiceEntry(Map.Entry<String, ?> entry) {
+    ThriftServiceEntry(Map.Entry<String, List<Object>> entry) {
         final String name = entry.getKey();
-        final Object implementation = entry.getValue();
+        final List<Object> implementations = entry.getValue();
 
         requireNonNull(name, "implementations contains an entry with null key.");
-        requireNonNull(implementation, "implementations['" + name + "']");
+        requireNonNull(implementations, "implementations['" + name + "']");
+        if (implementations.isEmpty()) {
+            throw new IllegalArgumentException("empty implementation");
+        }
 
         this.name = name;
-        this.implementation = implementation;
-        metadata = new ThriftServiceMetadata(implementation);
-    }
-
-    ThriftServiceEntry(String name, Object implementation) {
-        requireNonNull(name, "name");
-        requireNonNull(implementation, "implementation");
-
-        this.name = name;
-        this.implementation = implementation;
-        metadata = new ThriftServiceMetadata(implementation);
+        this.implementations = implementations;
+        metadata = new ThriftServiceMetadata(implementations);
     }
 
     /**
@@ -70,8 +65,8 @@ public final class ThriftServiceEntry {
     /**
      * Returns the {@code *.AsyncIface} or {@code *.Iface} implementation.
      */
-    public Object implementation() {
-        return implementation;
+    public List<Object> implementation() {
+        return implementations;
     }
 
     /**

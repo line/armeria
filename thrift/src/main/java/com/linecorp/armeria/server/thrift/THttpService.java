@@ -383,7 +383,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      * @return a {@link Map} whose key is a service name, which could be an empty string if this service
      *         is not multiplexed
      */
-    public Map<String, List<ThriftServiceEntry>> entries() {
+    public Map<String, ThriftServiceEntry> entries() {
         return thriftService.entries();
     }
 
@@ -556,7 +556,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             }
 
             // Ensure that such a method exists.
-            final ThriftServiceEntry entry = thriftService.getFirstService(serviceName);
+            final ThriftServiceEntry entry = entries().get(serviceName);
             f = entry != null ? entry.metadata.function(methodName) : null;
             if (f == null) {
                 final TApplicationException cause = new TApplicationException(

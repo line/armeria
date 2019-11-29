@@ -22,6 +22,7 @@ import java.lang.reflect.Constructor;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,6 +34,10 @@ import org.apache.thrift.TBaseAsyncProcessor;
 import org.apache.thrift.TBaseProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
 
 import com.linecorp.armeria.internal.Types;
 
@@ -49,15 +54,31 @@ public final class ThriftServiceMetadata {
      * A map whose key is a method name and whose value is {@link AsyncProcessFunction} or
      * {@link ProcessFunction}.
      */
-    private final Map<String, ThriftFunction> functions = new HashMap<>();
+    private final Map<String, ThriftServiceAndFunctionHolder> functions = new HashMap<>();
 
     /**
      * Creates a new instance from a Thrift service implementation that implements one or more Thrift service
      * interfaces.
      */
     public ThriftServiceMetadata(Object implementation) {
-        requireNonNull(implementation, "implementation");
-        interfaces = init(implementation);
+        this(ImmutableList.of(implementation));
+    }
+
+    /**
+     * Creates a new instance from a list of Thrift service implementations, while each service can implement
+     * one or more Thrift service interfaces.
+     */
+    public ThriftServiceMetadata(List<Object> implementations) {
+        requireNonNull(implementations, "implementations");
+        if (implementations.isEmpty()) {
+            throw new IllegalArgumentException("empty implementations");
+        }
+
+        final Builder<Class<?>> interfaceBuilder = ImmutableSet.builder();
+        implementations.forEach(implementation -> {
+            interfaceBuilder.addAll(init(implementation));
+        });
+        interfaces = interfaceBuilder.build();
     }
 
     /**
@@ -84,7 +105,7 @@ public final class ThriftServiceMetadata {
             asyncProcessMap = getThriftAsyncProcessMap(implementation, iface);
             if (asyncProcessMap != null) {
                 asyncProcessMap.forEach(
-                        (name, func) -> registerFunction(methodNames, iface, name, func));
+                        (name, func) -> registerFunction(methodNames, iface, name, func, implementation));
                 interfaces.add(iface);
             }
 
@@ -92,7 +113,7 @@ public final class ThriftServiceMetadata {
             processMap = getThriftProcessMap(implementation, iface);
             if (processMap != null) {
                 processMap.forEach(
-                        (name, func) -> registerFunction(methodNames, iface, name, func));
+                        (name, func) -> registerFunction(methodNames, iface, name, func, implementation));
                 interfaces.add(iface);
             }
         }
@@ -174,7 +195,8 @@ public final class ThriftServiceMetadata {
     }
 
     @SuppressWarnings("rawtypes")
-    private void registerFunction(Set<String> methodNames, Class<?> iface, String name, Object func) {
+    private void registerFunction(Set<String> methodNames, Class<?> iface, String name,
+                                  Object func, Object implementation) {
         if (methodNames.contains(name)) {
             logger.warn("duplicate Thrift method name: " + name);
             return;
@@ -188,7 +210,7 @@ public final class ThriftServiceMetadata {
             } else {
                 f = new ThriftFunction(iface, (AsyncProcessFunction) func);
             }
-            functions.put(name, f);
+            functions.put(name, new ThriftServiceAndFunctionHolder(f, implementation));
         } catch (Exception e) {
             throw new IllegalArgumentException("failed to retrieve function metadata: " +
                                                iface.getName() + '.' + name + "()", e);
@@ -209,6 +231,24 @@ public final class ThriftServiceMetadata {
      */
     @Nullable
     public ThriftFunction function(String method) {
-        return functions.get(method);
+        final ThriftServiceAndFunctionHolder thriftServiceAndFunctionHolder = functions.get(method);
+        if (thriftServiceAndFunctionHolder == null) {
+            return null;
+        }
+        return thriftServiceAndFunctionHolder.function();
+    }
+
+    @Nullable
+    public Object implementation(String method) {
+        final ThriftServiceAndFunctionHolder thriftServiceAndFunctionHolder = functions.get(method);
+        if (thriftServiceAndFunctionHolder == null) {
+            return null;
+        }
+        return thriftServiceAndFunctionHolder.implementation();
+    }
+
+    @Nullable
+    public ThriftServiceAndFunctionHolder holder(String name) {
+        return functions.get(name);
     }
 }

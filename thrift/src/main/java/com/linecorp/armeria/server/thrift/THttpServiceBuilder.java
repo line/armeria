@@ -18,17 +18,14 @@ package com.linecorp.armeria.server.thrift;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.Multimaps;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -37,27 +34,18 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 public class THttpServiceBuilder {
 
     private static final SerializationFormat[] EMPTY_FORMATS = new SerializationFormat[0];
-    private final Map<String, List<?>> implementations = new HashMap<>();
+    private final ImmutableListMultimap.Builder<String, Object> implementationsBuilder =
+            ImmutableListMultimap.builder();
     private SerializationFormat defaultSerializationFormat = ThriftSerializationFormats.BINARY;
     private Set<SerializationFormat> otherSerializationFormats = ThriftSerializationFormats.values();
 
-    private static Map<String, List<?>> copyToImmutable(Map<String, List<?>> copy) {
-        final Builder<String, List<?>> builder = ImmutableMap.builder();
-
-        copy.forEach((name, implementations) -> {
-            builder.put(name, ImmutableList.copyOf(implementations));
-        });
-
-        return builder.build();
-    }
-
     public THttpServiceBuilder addService(String name, Object implementation) {
-        addByCreatingListIfNecessary(name, implementation);
+        implementationsBuilder.put(name, implementation);
         return this;
     }
 
     public THttpServiceBuilder addService(Object implementation) {
-        addByCreatingListIfNecessary("", implementation);
+        implementationsBuilder.put("", implementation);
         return this;
     }
 
@@ -77,25 +65,15 @@ public class THttpServiceBuilder {
     }
 
     public THttpService build() {
-        final ThriftCallService delegate = new ThriftCallService(copyToImmutable(implementations));
+
+        @SuppressWarnings("UnstableApiUsage")
+        final Map<String, List<Object>> implementations = Multimaps.asMap(implementationsBuilder.build());
+        final ThriftCallService delegate = ThriftCallService.of(implementations);
 
         final LinkedHashSet<SerializationFormat> combined = new LinkedHashSet<>();
         combined.add(defaultSerializationFormat);
         combined.addAll(otherSerializationFormats);
 
         return new THttpService(delegate, combined.toArray(EMPTY_FORMATS));
-    }
-
-    private void addByCreatingListIfNecessary(String name, Object implementation) {
-        requireNonNull(name, "name");
-        requireNonNull(implementation, "implementation");
-
-        List<?> implementationsList = implementations.get(name);
-
-        if (implementationsList == null) {
-            implementationsList = new ArrayList<>();
-        }
-
-        implementations.put(name, implementationsList);
     }
 }
