@@ -979,15 +979,15 @@ public final class ServerBuilder {
     /**
      * Binds the specified annotated service object under the specified path prefix.
      *
-     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}
-     * @param requestConverterFunctions a list of {@link RequestConverterFunction}
-     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}
+     * @param exceptionHandlerFunctions an iterable object of {@link ExceptionHandlerFunction}
+     * @param requestConverterFunctions an iterable object of {@link RequestConverterFunction}
+     * @param responseConverterFunctions an iterable object of {@link ResponseConverterFunction}
      */
-    public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Function<? super HttpService, ? extends HttpService> decorator,
-                                          List<ExceptionHandlerFunction> exceptionHandlerFunctions,
-                                          List<RequestConverterFunction> requestConverterFunctions,
-                                          List<ResponseConverterFunction> responseConverterFunctions) {
+    public ServerBuilder annotatedService(
+            String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
+            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
+            Iterable<? extends RequestConverterFunction> requestConverterFunctions,
+            Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
         requireNonNull(decorator, "decorator");
