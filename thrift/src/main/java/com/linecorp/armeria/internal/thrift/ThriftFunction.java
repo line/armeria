@@ -52,6 +52,8 @@ public final class ThriftFunction {
     private final Class<?> serviceType;
     private final String name;
     @Nullable
+    private final Object implementation;
+    @Nullable
     private final TBase<?, ?> result;
     private final TFieldIdEnum[] argFields;
     @Nullable
@@ -59,20 +61,31 @@ public final class ThriftFunction {
     private final Map<Class<Throwable>, TFieldIdEnum> exceptionFields;
     private final Class<?>[] declaredExceptions;
 
+    ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func, @Nullable Object implementation) throws Exception {
+        this(serviceType, func.getMethodName(), func, Type.SYNC,
+             getArgFields(func), getResult(func), getDeclaredExceptions(func), implementation);
+    }
+
     ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func) throws Exception {
         this(serviceType, func.getMethodName(), func, Type.SYNC,
-             getArgFields(func), getResult(func), getDeclaredExceptions(func));
+             getArgFields(func), getResult(func), getDeclaredExceptions(func), null);
     }
 
     ThriftFunction(Class<?> serviceType, AsyncProcessFunction<?, ?, ?> func) throws Exception {
         this(serviceType, func.getMethodName(), func, Type.ASYNC,
-             getArgFields(func), getResult(func), getDeclaredExceptions(func));
+             getArgFields(func), getResult(func), getDeclaredExceptions(func), null);
+    }
+
+    ThriftFunction(Class<?> serviceType, AsyncProcessFunction<?, ?, ?> func,
+                   @Nullable Object implementation) throws Exception {
+        this(serviceType, func.getMethodName(), func, Type.ASYNC,
+             getArgFields(func), getResult(func), getDeclaredExceptions(func), implementation);
     }
 
     private ThriftFunction(
             Class<?> serviceType, String name, Object func, Type type,
             TFieldIdEnum[] argFields, @Nullable TBase<?, ?> result,
-            Class<?>[] declaredExceptions) throws Exception {
+            Class<?>[] declaredExceptions, @Nullable Object implementation) throws Exception {
 
         this.func = func;
         this.type = type;
@@ -81,6 +94,7 @@ public final class ThriftFunction {
         this.argFields = argFields;
         this.result = result;
         this.declaredExceptions = declaredExceptions;
+        this.implementation = implementation;
 
         // Determine the success and exception fields of the function.
         final ImmutableMap.Builder<Class<Throwable>, TFieldIdEnum> exceptionFieldsBuilder =
@@ -192,6 +206,14 @@ public final class ThriftFunction {
      */
     public Class<?>[] declaredExceptions() {
         return declaredExceptions;
+    }
+
+    /**
+     * Returns the implementation that this function is associated with.
+     */
+    @Nullable
+    public Object implementation() {
+        return implementation;
     }
 
     /**

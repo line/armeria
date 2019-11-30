@@ -41,7 +41,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
-import com.linecorp.armeria.internal.thrift.ThriftServiceAndFunctionHolder;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -124,13 +123,16 @@ public final class ThriftCallService implements RpcService {
         final ThriftServiceEntry e = entries.get(serviceName);
         if (e != null) {
             // Ensure that such a method exists.
-            final ThriftServiceAndFunctionHolder holder = e.metadata.holder(method);
-            if (holder != null) {
-                final DefaultRpcResponse reply = new DefaultRpcResponse();
-
-                // holder.implementation() is never null because of the way we constructed ThriftServiceMetadata
-                invoke(ctx, holder.implementation(), holder.function(), call.params(), reply);
-                return reply;
+            final ThriftFunction f = e.metadata.function(method);
+            if (f != null) {
+                if (f.implementation() != null) {
+                    final DefaultRpcResponse reply = new DefaultRpcResponse();
+                    invoke(ctx, f.implementation(), f, call.params(), reply);
+                    return reply;
+                }
+                // Should never reach here because of the way ThriftServiceEntry is created
+                return new DefaultRpcResponse(new TApplicationException(
+                        TApplicationException.UNKNOWN, "null implementation: " + call.method()));
             }
         }
 

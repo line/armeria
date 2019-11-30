@@ -54,7 +54,7 @@ public final class ThriftServiceMetadata {
      * A map whose key is a method name and whose value is {@link AsyncProcessFunction} or
      * {@link ProcessFunction}.
      */
-    private final Map<String, ThriftServiceAndFunctionHolder> functions = new HashMap<>();
+    private final Map<String, ThriftFunction> functions = new HashMap<>();
 
     /**
      * Creates a new instance from a Thrift service implementation that implements one or more Thrift service
@@ -206,11 +206,11 @@ public final class ThriftServiceMetadata {
         try {
             final ThriftFunction f;
             if (func instanceof ProcessFunction) {
-                f = new ThriftFunction(iface, (ProcessFunction) func);
+                f = new ThriftFunction(iface, (ProcessFunction) func, implementation);
             } else {
-                f = new ThriftFunction(iface, (AsyncProcessFunction) func);
+                f = new ThriftFunction(iface, (AsyncProcessFunction) func, implementation);
             }
-            functions.put(name, new ThriftServiceAndFunctionHolder(name, f, implementation));
+            functions.put(name, f);
         } catch (Exception e) {
             throw new IllegalArgumentException("failed to retrieve function metadata: " +
                                                iface.getName() + '.' + name + "()", e);
@@ -231,31 +231,6 @@ public final class ThriftServiceMetadata {
      */
     @Nullable
     public ThriftFunction function(String method) {
-        final ThriftServiceAndFunctionHolder thriftServiceAndFunctionHolder = functions.get(method);
-        if (thriftServiceAndFunctionHolder == null) {
-            return null;
-        }
-        return thriftServiceAndFunctionHolder.function();
-    }
-
-    /**
-     * Returns a thrift service implementation for the given function if exists.
-     */
-    @Nullable
-    public Object implementation(String method) {
-        final ThriftServiceAndFunctionHolder thriftServiceAndFunctionHolder = functions.get(method);
-        if (thriftServiceAndFunctionHolder == null) {
-            return null;
-        }
-        return thriftServiceAndFunctionHolder.implementation();
-    }
-
-    /**
-     * Returns {@link ThriftServiceAndFunctionHolder} that holds the {@link ThriftFunction} and a thrift
-     * service implementation, if exists.
-     */
-    @Nullable
-    public ThriftServiceAndFunctionHolder holder(String name) {
-        return functions.get(name);
+        return functions.get(method);
     }
 }
