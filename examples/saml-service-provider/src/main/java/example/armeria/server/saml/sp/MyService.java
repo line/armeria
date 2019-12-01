@@ -1,12 +1,11 @@
 package example.armeria.server.saml.sp;
 
+import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.Cookies;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Get;
-
-import io.netty.handler.codec.http.cookie.Cookie;
 
 final class MyService {
     @Get("/welcome")

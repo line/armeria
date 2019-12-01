@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -23,15 +24,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ServerCookieDecoder;
+import com.linecorp.armeria.common.ServerCookieEncoder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.server.saml.SamlNameIdFormat;
 import com.linecorp.armeria.server.saml.SamlSingleSignOnHandler;
-
-import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.cookie.DefaultCookie;
-import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 
 /**
  * An example of an {@link Authorizer} and a {@link SamlSingleSignOnHandler}.
@@ -54,7 +52,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
             return CompletableFuture.completedFuture(false);
         }
 
-        final boolean authenticated = ServerCookieDecoder.LAX.decode(cookie).stream().anyMatch(
+        final boolean authenticated = ServerCookieDecoder.lax().decode(cookie).stream().anyMatch(
                 c -> "username".equals(c.name()) && !Strings.isNullOrEmpty(c.value()));
         return CompletableFuture.completedFuture(authenticated);
     }
@@ -79,15 +77,16 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
 
         logger.info("{} user '{}' has been logged in.", ctx, username);
 
-        final Cookie cookie = new DefaultCookie("username", username);
-        cookie.setHttpOnly(true);
-        cookie.setDomain("localhost");
-        cookie.setMaxAge(60);
-        cookie.setPath("/");
+        final Cookie cookie = Cookie.builder("username", username)
+                                    .httpOnly(true)
+                                    .domain("localhost")
+                                    .maxAge(60)
+                                    .path("/")
+                                    .build();
         return HttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8,
-                                   HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.LAX.encode(cookie)),
+                                   HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.lax().encode(cookie)),
                 HttpData.ofUtf8("<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
     }
 

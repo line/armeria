@@ -13,32 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 
+import com.google.common.collect.ForwardingSet;
 import com.google.common.collect.ImmutableSet;
 
-import io.netty.handler.codec.http.cookie.Cookie;
-
 /**
- * An interface which holds decoded {@link Cookie} instances for an HTTP request.
+ * A default implementation of {@link Cookies} interface.
  */
-public interface Cookies extends Set<Cookie> {
+final class DefaultCookies extends ForwardingSet<Cookie> implements Cookies {
 
-    /**
-     * Creates an instance with a copy of the specified set of {@link Cookie}s.
-     */
-    static Cookies of(Cookie... cookies) {
-        return new DefaultCookies(ImmutableSet.copyOf(requireNonNull(cookies, "cookies")));
+    static final DefaultCookies EMPTY = new DefaultCookies(ImmutableSet.of());
+
+    private final Set<Cookie> delegate;
+
+    DefaultCookies(ImmutableSet<Cookie> delegate) {
+        this.delegate = requireNonNull(delegate, "delegate");
     }
 
-    /**
-     * Creates an instance with a copy of the specified {@link Iterable} of {@link Cookie}s.
-     */
-    static Cookies copyOf(Iterable<? extends Cookie> cookies) {
-        return new DefaultCookies(ImmutableSet.copyOf(requireNonNull(cookies, "cookies")));
+    @Override
+    protected Set<Cookie> delegate() {
+        return delegate;
     }
 }
