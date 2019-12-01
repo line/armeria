@@ -23,11 +23,11 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
@@ -64,9 +64,9 @@ public interface RoutingContext {
     String query();
 
     /**
-     * Returns the query retrieved from the request as an {@link HttpParameters}.
+     * Returns the query parameters retrieved from the request path.
      */
-    HttpParameters httpParameters();
+    HttpParameters params();
 
     /**
      * Returns {@link MediaType} specified by 'Content-Type' header of the request.
@@ -82,9 +82,9 @@ public interface RoutingContext {
     List<MediaType> acceptTypes();
 
     /**
-     * Returns {@link HttpHeaders} of the request.
+     * Returns the {@link RequestHeaders} retrieved from the request.
      */
-    HttpHeaders headers();
+    RequestHeaders headers();
 
     /**
      * Defers throwing an {@link HttpStatusException} until reaching the end of the service list.

@@ -33,26 +33,32 @@ class HttpServerParamPredicatesMatchingTest {
     public static final ServerExtension extension = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.route().get("/matches").matchesParamPredicates("my-param=my-value")
+            sb.route().get("/matches").matchesParams("my-param=my-value")
               .build((ctx, req) -> HttpResponse.of("my-param=my-value"))
               .route().get("/matches")
               .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/doesNotMatch").matchesParamPredicates("my-param!=my-value")
+              .route().get("/doesNotMatch").matchesParams("my-param!=my-value")
               .build((ctx, req) -> HttpResponse.of("my-param!=my-value"))
               .route().get("/doesNotMatch")
               .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/contains").matchesParamPredicates("my-param")
+              .route().get("/contains").matchesParams("my-param")
               .build((ctx, req) -> HttpResponse.of("my-param"))
               .route().get("/contains")
               .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/doesNotContain").matchesParamPredicates("!my-param")
+              .route().get("/doesNotContain").matchesParams("!my-param")
               .build((ctx, req) -> HttpResponse.of("!my-param"))
               .route().get("/doesNotContain")
               .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/matches/percentEncoded").matchesParamPredicates("my-param=/")
+              .route().get("/matches/percentEncoded").matchesParams("my-param=/")
               .build((ctx, req) -> HttpResponse.of("my-param=/"))
-              .route().get("/matches/percentEncoded").matchesParamPredicates("my-param=%2F")
-              .build((ctx, req) -> HttpResponse.of("my-param=%2F"));
+              .route().get("/matches/percentEncoded").matchesParams("my-param=%2F")
+              .build((ctx, req) -> HttpResponse.of("my-param=%2F"))
+              .route().get("/custom").matchesParams(
+                    RoutingPredicate.ofParams("my-param",
+                                              value -> Integer.parseInt(value) > 100))
+              .build((ctx, req) -> HttpResponse.of("custom"))
+              .route().get("/custom")
+              .build((ctx, req) -> HttpResponse.of("fallback"));
         }
     };
 
@@ -103,5 +109,13 @@ class HttpServerParamPredicatesMatchingTest {
                          .aggregate().join().contentUtf8()).isEqualTo("my-param=/");
         assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/percentEncoded?my-param=%252F"))
                          .aggregate().join().contentUtf8()).isEqualTo("my-param=%2F");
+    }
+
+    @Test
+    void custom() {
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/custom?my-param=0101"))
+                         .aggregate().join().contentUtf8()).isEqualTo("custom");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/custom?my-param=2"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 }

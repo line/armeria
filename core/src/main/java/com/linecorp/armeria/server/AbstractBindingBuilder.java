@@ -44,6 +44,7 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.annotation.ConditionalHeader;
 import com.linecorp.armeria.server.annotation.ConditionalParam;
@@ -56,8 +57,8 @@ abstract class AbstractBindingBuilder {
     private Set<HttpMethod> methods = ImmutableSet.of();
     private Set<MediaType> consumeTypes = ImmutableSet.of();
     private Set<MediaType> produceTypes = ImmutableSet.of();
-    private Iterable<String> paramPredicates = ImmutableList.of();
-    private Iterable<? extends CharSequence> headerPredicates = ImmutableList.of();
+    private List<RoutingPredicate<HttpParameters>> paramPredicates = ImmutableList.of();
+    private List<RoutingPredicate<HttpHeaders>> headerPredicates = ImmutableList.of();
     private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();
 
@@ -313,8 +314,8 @@ abstract class AbstractBindingBuilder {
      *
      * @see ConditionalParam
      */
-    public AbstractBindingBuilder matchesParamPredicates(String... paramPredicates) {
-        return matchesParamPredicates(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
+    public AbstractBindingBuilder matchesParams(String... paramPredicates) {
+        return matchesParams(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
     }
 
     /**
@@ -336,8 +337,17 @@ abstract class AbstractBindingBuilder {
      *
      * @see ConditionalParam
      */
-    public AbstractBindingBuilder matchesParamPredicates(Iterable<String> paramPredicates) {
-        this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
+    public AbstractBindingBuilder matchesParams(Iterable<String> paramPredicates) {
+        this.paramPredicates = RoutingPredicate.copyOfParamPredicates(
+                requireNonNull(paramPredicates, "paramPredicates"));
+        return this;
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it the specified {@code predicate} returns {@code true}.
+     */
+    public AbstractBindingBuilder matchesParams(RoutingPredicate<HttpParameters> predicate) {
+        paramPredicates = ImmutableList.of(requireNonNull(predicate, "predicate"));
         return this;
     }
 
@@ -356,9 +366,8 @@ abstract class AbstractBindingBuilder {
      *
      * @see ConditionalHeader
      */
-    public AbstractBindingBuilder matchesHeaderPredicates(CharSequence... headerPredicates) {
-        return matchesHeaderPredicates(
-                ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates")));
+    public AbstractBindingBuilder matchesHeaders(String... headerPredicates) {
+        return matchesHeaders(ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates")));
     }
 
     /**
@@ -376,8 +385,17 @@ abstract class AbstractBindingBuilder {
      *
      * @see ConditionalHeader
      */
-    public AbstractBindingBuilder matchesHeaderPredicates(Iterable<? extends CharSequence> headerPredicates) {
-        this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
+    public AbstractBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
+        this.headerPredicates = RoutingPredicate.copyOfHeaderPredicates(
+                requireNonNull(headerPredicates, "headerPredicates"));
+        return this;
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it the specified {@code predicate} returns {@code true}.
+     */
+    public AbstractBindingBuilder matchesHeaders(RoutingPredicate<HttpHeaders> predicate) {
+        headerPredicates = ImmutableList.of(requireNonNull(predicate, "predicate"));
         return this;
     }
 
@@ -403,8 +421,8 @@ abstract class AbstractBindingBuilder {
             builder.add(routeBuilder.methods(routeMethods)
                                     .consumes(consumeTypes)
                                     .produces(produceTypes)
-                                    .matchesParamPredicates(paramPredicates)
-                                    .matchesHeaderPredicates(headerPredicates)
+                                    .matchesParams(paramPredicates)
+                                    .matchesHeaders(headerPredicates)
                                     .build());
         });
 

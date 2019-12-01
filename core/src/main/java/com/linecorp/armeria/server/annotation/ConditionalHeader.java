@@ -33,8 +33,8 @@ public @interface ConditionalHeader {
     /**
      * The predicate which evaluates whether a request can be accepted by a service method.
      *
-     * @see RouteBuilder#matchesHeaderPredicates(CharSequence...)
-     * @see RouteBuilder#matchesHeaderPredicates(Iterable)
+     * @see RouteBuilder#matchesHeaders(CharSequence...)
+     * @see RouteBuilder#matchesHeaders(Iterable)
      */
     String value();
 }

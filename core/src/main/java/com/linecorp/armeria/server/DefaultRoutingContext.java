@@ -111,7 +111,7 @@ final class DefaultRoutingContext implements RoutingContext {
     }
 
     @Override
-    public HttpParameters httpParameters() {
+    public HttpParameters params() {
         HttpParameters httpParameters = this.httpParameters;
         if (httpParameters == null) {
             if (query == null) {
@@ -141,7 +141,7 @@ final class DefaultRoutingContext implements RoutingContext {
     }
 
     @Override
-    public HttpHeaders headers() {
+    public RequestHeaders headers() {
         return headers;
     }
 

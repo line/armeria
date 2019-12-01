@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.RouteUtil.EXACT;
 import static com.linecorp.armeria.internal.RouteUtil.GLOB;
@@ -64,9 +63,9 @@ public final class RouteBuilder {
 
     private Set<MediaType> produces = ImmutableSet.of();
 
-    private List<String> paramPredicates = ImmutableList.of();
+    private List<RoutingPredicate<HttpParameters>> paramPredicates = ImmutableList.of();
 
-    private List<? extends CharSequence> headerPredicates = ImmutableList.of();
+    private List<RoutingPredicate<HttpHeaders>> headerPredicates = ImmutableList.of();
 
     RouteBuilder() {}
 
@@ -350,8 +349,8 @@ public final class RouteBuilder {
      *
      * @see ConditionalParam
      */
-    public RouteBuilder matchesParamPredicates(String... paramPredicates) {
-        return matchesParamPredicates(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
+    public RouteBuilder matchesParams(String... paramPredicates) {
+        return matchesParams(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
     }
 
     /**
@@ -373,8 +372,25 @@ public final class RouteBuilder {
      *
      * @see ConditionalParam
      */
-    public RouteBuilder matchesParamPredicates(Iterable<String> paramPredicates) {
-        this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
+    public RouteBuilder matchesParams(Iterable<String> paramPredicates) {
+        this.paramPredicates = RoutingPredicate.copyOfParamPredicates(
+                requireNonNull(paramPredicates, "paramPredicates"));
+        return this;
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it the specified {@code predicate} returns {@code true}.
+     */
+    public RouteBuilder matchesParams(RoutingPredicate<HttpParameters> predicate) {
+        paramPredicates = ImmutableList.of(requireNonNull(predicate, "predicate"));
+        return this;
+    }
+
+    /**
+     * Sets the pre-configured predicates of the {@link HttpParameters}.
+     */
+    RouteBuilder matchesParams(List<RoutingPredicate<HttpParameters>> paramPredicates) {
+        this.paramPredicates = requireNonNull(paramPredicates, "paramPredicates");
         return this;
     }
 
@@ -393,9 +409,8 @@ public final class RouteBuilder {
      *
      * @see ConditionalHeader
      */
-    public RouteBuilder matchesHeaderPredicates(CharSequence... headerPredicates) {
-        return matchesHeaderPredicates(
-                ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates")));
+    public RouteBuilder matchesHeaders(String... headerPredicates) {
+        return matchesHeaders(ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates")));
     }
 
     /**
@@ -413,8 +428,25 @@ public final class RouteBuilder {
      *
      * @see ConditionalHeader
      */
-    public RouteBuilder matchesHeaderPredicates(Iterable<? extends CharSequence> headerPredicates) {
-        this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
+    public RouteBuilder matchesHeaders(Iterable<String> headerPredicates) {
+        this.headerPredicates = RoutingPredicate.copyOfHeaderPredicates(
+                requireNonNull(headerPredicates, "headerPredicates"));
+        return this;
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it the specified {@code predicate} returns {@code true}.
+     */
+    public RouteBuilder matchesHeaders(RoutingPredicate<HttpHeaders> predicate) {
+        headerPredicates = ImmutableList.of(requireNonNull(predicate, "predicate"));
+        return this;
+    }
+
+    /**
+     * Sets the pre-configured predicates of the {@link HttpHeaders}.
+     */
+    RouteBuilder matchesHeaders(List<RoutingPredicate<HttpHeaders>> headerPredicates) {
+        this.headerPredicates = requireNonNull(headerPredicates, "headerPredicates");
         return this;
     }
 
@@ -427,14 +459,7 @@ public final class RouteBuilder {
             throw new IllegalStateException("Must set methods if consumes or produces is not empty." +
                                             " consumes: " + consumes + ", produces: " + produces);
         }
-        final ImmutableList<RoutingPredicate<HttpParameters>> paramPredicateList =
-                paramPredicates.stream().map(RoutingPredicate::ofParams)
-                               .collect(toImmutableList());
-        final ImmutableList<RoutingPredicate<HttpHeaders>> headerPredicateList =
-                headerPredicates.stream().map(RoutingPredicate::ofHeaders)
-                                .collect(toImmutableList());
-        return new DefaultRoute(pathMapping, methods, consumes, produces,
-                                paramPredicateList, headerPredicateList);
+        return new DefaultRoute(pathMapping, methods, consumes, produces, paramPredicates, headerPredicates);
     }
 
     @Override

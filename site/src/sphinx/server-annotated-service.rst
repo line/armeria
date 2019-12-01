@@ -145,12 +145,12 @@ The following methods are bound to the same path ``/users`` but a request may be
         @ConditionalHeader("client-type=android")
         public User getUsers1() { ... }
 
-        // Handles a request which contains 'client-type' header. Any values of the 'client-type' header are welcomed.
+        // Handles a request which contains 'client-type' header. Any values of the 'client-type' header are accepted.
         @Get("/users")
         @ConditionalHeader("client-type")
         public User getUsers2() { ... }
 
-        // Handles a request which doesn't contain 'client-type: android' header.
+        // Handles a request which doesn't contain 'client-type' header.
         @Get("/users")
         public User getUsers3() { ... }
     }

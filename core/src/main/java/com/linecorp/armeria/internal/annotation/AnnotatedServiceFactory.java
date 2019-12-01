@@ -251,10 +251,10 @@ public final class AnnotatedServiceFactory {
                                                 .methods(httpMethod)
                                                 .consumes(consumableMediaTypes)
                                                 .produces(producibleMediaTypes)
-                                                .matchesParamPredicates(
+                                                .matchesParams(
                                                         predicates(method, clazz, ConditionalParam.class,
                                                                    ConditionalParam::value))
-                                                .matchesHeaderPredicates(
+                                                .matchesHeaders(
                                                         predicates(method, clazz, ConditionalHeader.class,
                                                                    ConditionalHeader::value))
                                                 .build());

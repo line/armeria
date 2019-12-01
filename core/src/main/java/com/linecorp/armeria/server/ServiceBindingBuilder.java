@@ -23,7 +23,9 @@ import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -160,23 +162,33 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public ServiceBindingBuilder matchesParamPredicates(String... paramPredicates) {
-        return (ServiceBindingBuilder) super.matchesParamPredicates(paramPredicates);
+    public ServiceBindingBuilder matchesParams(String... paramPredicates) {
+        return (ServiceBindingBuilder) super.matchesParams(paramPredicates);
     }
 
     @Override
-    public ServiceBindingBuilder matchesParamPredicates(Iterable<String> paramPredicates) {
-        return (ServiceBindingBuilder) super.matchesParamPredicates(paramPredicates);
+    public ServiceBindingBuilder matchesParams(Iterable<String> paramPredicates) {
+        return (ServiceBindingBuilder) super.matchesParams(paramPredicates);
     }
 
     @Override
-    public ServiceBindingBuilder matchesHeaderPredicates(CharSequence... headerPredicates) {
-        return (ServiceBindingBuilder) super.matchesHeaderPredicates(headerPredicates);
+    public ServiceBindingBuilder matchesParams(RoutingPredicate<HttpParameters> predicate) {
+        return (ServiceBindingBuilder) super.matchesParams(predicate);
     }
 
     @Override
-    public ServiceBindingBuilder matchesHeaderPredicates(Iterable<? extends CharSequence> headerPredicates) {
-        return (ServiceBindingBuilder) super.matchesHeaderPredicates(headerPredicates);
+    public ServiceBindingBuilder matchesHeaders(String... headerPredicates) {
+        return (ServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
+        return (ServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesHeaders(RoutingPredicate<HttpHeaders> predicate) {
+        return (ServiceBindingBuilder) super.matchesHeaders(predicate);
     }
 
     @Override

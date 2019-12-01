@@ -33,8 +33,8 @@ public @interface ConditionalParam {
     /**
      * The predicate which evaluates whether a request can be accepted by a service method.
      *
-     * @see RouteBuilder#matchesParamPredicates(String...)
-     * @see RouteBuilder#matchesParamPredicates(Iterable)
+     * @see RouteBuilder#matchesParams(String...)
+     * @see RouteBuilder#matchesParams(Iterable)
      */
     String value();
 }

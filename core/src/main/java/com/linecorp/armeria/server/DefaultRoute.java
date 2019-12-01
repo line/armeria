@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -47,7 +46,7 @@ final class DefaultRoute implements Route {
     private final Set<MediaType> consumes;
     private final Set<MediaType> produces;
     private final List<RoutingPredicate<HttpParameters>> paramPredicates;
-    private final List<Predicate<HttpHeaders>> headerPredicates;
+    private final List<RoutingPredicate<HttpHeaders>> headerPredicates;
 
     private final String loggerName;
     private final String meterTag;
@@ -180,7 +179,7 @@ final class DefaultRoute implements Route {
         }
 
         if (!paramPredicates.isEmpty() &&
-            paramPredicates.stream().noneMatch(p -> p.test(routingCtx.httpParameters()))) {
+            paramPredicates.stream().noneMatch(p -> p.test(routingCtx.params()))) {
             return RoutingResult.empty();
         }
         if (!headerPredicates.isEmpty() &&
@@ -282,11 +281,11 @@ final class DefaultRoute implements Route {
         }
         if (!paramPredicates.isEmpty()) {
             name.add("params");
-            name.add(loggerNameJoiner.join(paramPredicates.stream().map(RoutingPredicate::id).iterator()));
+            name.add(loggerNameJoiner.join(paramPredicates.stream().map(RoutingPredicate::name).iterator()));
         }
         if (!headerPredicates.isEmpty()) {
             name.add("headers");
-            name.add(loggerNameJoiner.join(headerPredicates.stream().map(RoutingPredicate::id).iterator()));
+            name.add(loggerNameJoiner.join(headerPredicates.stream().map(RoutingPredicate::name).iterator()));
         }
         return name.toString();
     }
@@ -314,11 +313,11 @@ final class DefaultRoute implements Route {
 
         if (!paramPredicates.isEmpty()) {
             name.add("params");
-            name.add(meterTagJoiner.join(paramPredicates.stream().map(RoutingPredicate::id).iterator()));
+            name.add(meterTagJoiner.join(paramPredicates.stream().map(RoutingPredicate::name).iterator()));
         }
         if (!headerPredicates.isEmpty()) {
             name.add("headers");
-            name.add(meterTagJoiner.join(headerPredicates.stream().map(RoutingPredicate::id).iterator()));
+            name.add(meterTagJoiner.join(headerPredicates.stream().map(RoutingPredicate::name).iterator()));
         }
         return name.toString();
     }

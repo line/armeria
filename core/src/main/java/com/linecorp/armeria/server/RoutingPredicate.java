@@ -16,17 +16,24 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.RoutingPredicate.ParsedComparingPredicate.parse;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
 
@@ -36,7 +43,8 @@ import com.linecorp.armeria.common.HttpParameters;
  *
  * @param <T> the type of the object to be tested
  */
-final class RoutingPredicate<T> implements Predicate<T> {
+public final class RoutingPredicate<T> {
+    private static final Logger logger = LoggerFactory.getLogger(RoutingPredicate.class);
 
     /**
      * Patterns used to parse a given predicate. The predicate can be one of the following forms:
@@ -55,10 +63,23 @@ final class RoutingPredicate<T> implements Predicate<T> {
     static final Pattern CONTAIN_PATTERN = Pattern.compile("^\\s*([!]?)([^\\s=><!]+)\\s*$");
     private static final Pattern COMPARE_PATTERN = Pattern.compile("^\\s*([^\\s!><=]+)\\s*([><!]?=|>|<)(.*)$");
 
-    /**
-     * Returns a new {@link RoutingPredicate} for {@link HttpHeaders}.
-     */
-    static RoutingPredicate<HttpHeaders> ofHeaders(CharSequence headersPredicate) {
+    static List<RoutingPredicate<HttpHeaders>> copyOfHeaderPredicates(Iterable<String> predicates) {
+        return StreamSupport.stream(predicates.spliterator(), false)
+                            .map(RoutingPredicate::ofHeaders).collect(toImmutableList());
+    }
+
+    static List<RoutingPredicate<HttpParameters>> copyOfParamPredicates(Iterable<String> predicates) {
+        return StreamSupport.stream(predicates.spliterator(), false)
+                            .map(RoutingPredicate::ofParams).collect(toImmutableList());
+    }
+
+    static RoutingPredicate<HttpHeaders> ofHeaders(CharSequence headerName, Predicate<String> valuePredicate) {
+        return new RoutingPredicate<>(headerName,
+                                      headers -> headers.getAll(headerName).stream().anyMatch(valuePredicate));
+    }
+
+    @VisibleForTesting
+    static RoutingPredicate<HttpHeaders> ofHeaders(String headersPredicate) {
         requireNonNull(headersPredicate, "headersPredicate");
         final Matcher m = CONTAIN_PATTERN.matcher(headersPredicate);
         if (m.matches()) {
@@ -68,15 +89,24 @@ final class RoutingPredicate<T> implements Predicate<T> {
         }
 
         final ParsedComparingPredicate parsed = parse(headersPredicate);
-        final Predicate<HttpHeaders> predicate =
-                headers -> headers.getAll(parsed.name).stream()
-                                  .anyMatch(valueMatcher(parsed.comparator, parsed.value));
+        final Predicate<HttpHeaders> predicate;
+        if ("=".equals(parsed.comparator)) {
+            predicate = headers -> headers.getAll(parsed.name).stream()
+                                          .anyMatch(parsed.value::equals);
+        } else {
+            assert "!=".equals(parsed.comparator);
+            predicate = headers -> headers.getAll(parsed.name).stream()
+                                          .noneMatch(parsed.value::equals);
+        }
         return new RoutingPredicate<>(headersPredicate, predicate);
     }
 
-    /**
-     * Returns a new {@link RoutingPredicate} for {@link HttpParameters}.
-     */
+    static RoutingPredicate<HttpParameters> ofParams(String paramName, Predicate<String> valuePredicate) {
+        return new RoutingPredicate<>(paramName,
+                                      params -> params.getAll(paramName).stream().anyMatch(valuePredicate));
+    }
+
+    @VisibleForTesting
     static RoutingPredicate<HttpParameters> ofParams(String paramsPredicate) {
         requireNonNull(paramsPredicate, "paramsPredicate");
         final Matcher m = CONTAIN_PATTERN.matcher(paramsPredicate);
@@ -87,72 +117,31 @@ final class RoutingPredicate<T> implements Predicate<T> {
         }
 
         final ParsedComparingPredicate parsed = parse(paramsPredicate);
-        final Predicate<HttpParameters> predicate =
-                params -> params.getAll(parsed.name).stream()
-                                .anyMatch(valueMatcher(parsed.comparator, parsed.value));
+        final Predicate<HttpParameters> predicate;
+        if ("=".equals(parsed.comparator)) {
+            predicate = params -> params.getAll(parsed.name).stream()
+                                        .anyMatch(parsed.value::equals);
+        } else {
+            assert "!=".equals(parsed.comparator);
+            predicate = params -> params.getAll(parsed.name).stream()
+                                        .noneMatch(parsed.value::equals);
+        }
         return new RoutingPredicate<>(paramsPredicate, predicate);
     }
 
-    private static Predicate<String> valueMatcher(String comparator, String configuredValue) {
-        try {
-            final long longConfiguredValue = Long.parseLong(configuredValue);
-            switch (comparator) {
-                case "=":
-                    return longValueMatcher(value -> value == longConfiguredValue);
-                case "!=":
-                    return longValueMatcher(value -> value != longConfiguredValue);
-                case ">":
-                    return longValueMatcher(value -> value > longConfiguredValue);
-                case ">=":
-                    return longValueMatcher(value -> value >= longConfiguredValue);
-                case "<":
-                    return longValueMatcher(value -> value < longConfiguredValue);
-                case "<=":
-                    return longValueMatcher(value -> value <= longConfiguredValue);
-            }
-        } catch (NumberFormatException nfe) {
-            switch (comparator) {
-                case "=":
-                    return configuredValue::equals;
-                case "!=":
-                    return value -> !value.equals(configuredValue);
-                case ">":
-                    return value -> value.compareTo(configuredValue) > 0;
-                case ">=":
-                    return value -> value.compareTo(configuredValue) >= 0;
-                case "<":
-                    return value -> value.compareTo(configuredValue) < 0;
-                case "<=":
-                    return value -> value.compareTo(configuredValue) <= 0;
-            }
-        }
-        throw new IllegalStateException("Pattern has changed unexpectedly: " + COMPARE_PATTERN.pattern());
-    }
-
-    private static Predicate<String> longValueMatcher(Predicate<Long> comparator) {
-        return value -> {
-            try {
-                final long longValue = Long.parseLong(value);
-                return comparator.test(longValue);
-            } catch (Exception e) {
-                return false;
-            }
-        };
-    }
-
-    private final CharSequence id;
+    private final CharSequence name;
     private final Predicate<T> delegate;
 
-    RoutingPredicate(CharSequence id, Predicate<T> delegate) {
-        this.id = requireNonNull(id, "id");
+    RoutingPredicate(CharSequence name, Predicate<T> delegate) {
+        this.name = requireNonNull(name, "name");
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
     /**
-     * Returns the ID of this predicate. This may be the predicate that a user specified.
+     * Returns the name of this predicate. This may be the predicate that a user specified.
      */
-    CharSequence id() {
-        return id;
+    CharSequence name() {
+        return name;
     }
 
     /**
@@ -160,9 +149,48 @@ final class RoutingPredicate<T> implements Predicate<T> {
      *
      * @see DefaultRoute where this predicate is evalued
      */
-    @Override
     public boolean test(T t) {
-        return delegate.test(t);
+        try {
+            return delegate.test(t);
+        } catch (Throwable cause) {
+            if (Flags.verboseExceptionSampler().isSampled(cause.getClass())) {
+                logger.warn("Failed to evaluate the value of header or param '{}'. " +
+                            "This exception MUST be properly handled by a user.: " +
+                            "input={}", name, t, cause);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Returns a composed predicate that represents a logical AND of this predicate and {@code other}.
+     */
+    public RoutingPredicate<T> and(RoutingPredicate<T> other) {
+        requireNonNull(other, "other");
+        return new RoutingPredicate<>(name + "_and_" + other.name(), delegate.and(other.delegate));
+    }
+
+    /**
+     * Returns a composed predicate that represents a logical OR of this predicate and {@code other}.
+     */
+    public RoutingPredicate<T> or(RoutingPredicate<T> other) {
+        requireNonNull(other, "other");
+        return new RoutingPredicate<>(this.name + "_or_" + name, delegate.or(other.delegate));
+    }
+
+    /**
+     * Returns a predicate that represents a logical negation of this predicate.
+     */
+    public RoutingPredicate<T> negate() {
+        return new RoutingPredicate<>("not_" + name, delegate.negate());
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("name", name)
+                          .add("delegate", delegate)
+                          .toString();
     }
 
     @VisibleForTesting

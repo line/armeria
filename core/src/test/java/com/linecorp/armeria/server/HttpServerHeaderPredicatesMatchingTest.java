@@ -34,43 +34,39 @@ class HttpServerHeaderPredicatesMatchingTest {
     public static final ServerExtension extension = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.route().get("/matches").matchesHeaderPredicates("my-header=my-value")
+            sb.route().get("/matches").matchesHeaders("my-header=my-value")
               .build((ctx, req) -> HttpResponse.of("my-header=my-value"))
               .route().get("/matches")
               .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/doesNotMatch").matchesHeaderPredicates("my-header!=my-value")
+              .route().get("/doesNotMatch").matchesHeaders("my-header!=my-value")
               .build((ctx, req) -> HttpResponse.of("my-header!=my-value"))
               .route().get("/doesNotMatch")
               .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/greaterThan").matchesHeaderPredicates("my-header>10")
-              .build((ctx, req) -> HttpResponse.of("my-header>10"))
-              .route().get("/greaterThan")
-              .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/greaterThanOrEquals").matchesHeaderPredicates("my-header>=10")
-              .build((ctx, req) -> HttpResponse.of("my-header>=10"))
-              .route().get("/greaterThanOrEquals")
-              .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/lessThan").matchesHeaderPredicates("my-header<10")
-              .build((ctx, req) -> HttpResponse.of("my-header<10"))
-              .route().get("/lessThan")
-              .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/lessThanOrEquals").matchesHeaderPredicates("my-header<=10")
-              .build((ctx, req) -> HttpResponse.of("my-header<=10"))
-              .route().get("/lessThanOrEquals")
-              .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/contains").matchesHeaderPredicates("my-header")
+              .route().get("/contains").matchesHeaders("my-header")
               .build((ctx, req) -> HttpResponse.of("my-header"))
               .route().get("/contains")
               .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/doesNotContain").matchesHeaderPredicates("!my-header")
+              .route().get("/doesNotContain").matchesHeaders("!my-header")
               .build((ctx, req) -> HttpResponse.of("!my-header"))
               .route().get("/doesNotContain")
               .build((ctx, req) -> HttpResponse.of("fallback"))
               .route().get("/multiple")
-              .matchesHeaderPredicates("my-header=my-value")
-              .matchesHeaderPredicates("!your-header")
+              .matchesHeaders("my-header=my-value")
+              .matchesHeaders("!your-header")
               .build((ctx, req) -> HttpResponse.of("multiple"))
               .route().get("/multiple")
+              .build((ctx, req) -> HttpResponse.of("fallback"))
+              .route().get("/custom").matchesHeaders(
+                    RoutingPredicate.ofHeaders("my-header",
+                                               value -> Integer.parseInt(value) > 100))
+              .build((ctx, req) -> HttpResponse.of("custom"))
+              .route().get("/custom")
+              .build((ctx, req) -> HttpResponse.of("fallback"))
+              .route().get("/custom/composed").matchesHeaders(
+                    RoutingPredicate.ofHeaders("my-header", value -> Integer.parseInt(value) > 100)
+                                    .or(RoutingPredicate.ofHeaders("your-header", "ok"::equals)))
+              .build((ctx, req) -> HttpResponse.of("custom"))
+              .route().get("/custom/composed")
               .build((ctx, req) -> HttpResponse.of("fallback"));
         }
     };
@@ -103,26 +99,6 @@ class HttpServerHeaderPredicatesMatchingTest {
     }
 
     @Test
-    void greaterThan() {
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/greaterThan", "my-header", "11")))
-                         .aggregate().join().contentUtf8()).isEqualTo("my-header>10");
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/greaterThan", "my-header", "10")))
-                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
-    }
-
-    @Test
-    void greaterThanOrEquals() {
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/greaterThan", "my-header", "10")))
-                         .aggregate().join().contentUtf8()).isEqualTo("my-header>=10");
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/greaterThan", "my-header", "9")))
-                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
-    }
-
-    @Test
     void contains() {
         assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
                 HttpMethod.GET, "/contains", "my-header", "any-value")))
@@ -149,6 +125,29 @@ class HttpServerHeaderPredicatesMatchingTest {
                          .aggregate().join().contentUtf8()).isEqualTo("multiple");
         assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
                 HttpMethod.GET, "/multiple", "my-header", "my-value", "your-header", "your-value")))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void custom() {
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/custom", "my-header", "0101")))
+                         .aggregate().join().contentUtf8()).isEqualTo("custom");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/custom", "my-header", "2")))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void customComposed() {
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/custom/composed", "my-header", "0101")))
+                         .aggregate().join().contentUtf8()).isEqualTo("custom");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/custom/composed", "your-header", "ok")))
+                         .aggregate().join().contentUtf8()).isEqualTo("custom");
+        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/custom/composed", "my-header", "2", "your-header", "nok")))
                          .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 }

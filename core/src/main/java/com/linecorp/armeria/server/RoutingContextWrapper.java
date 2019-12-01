@@ -20,10 +20,10 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 
 class RoutingContextWrapper implements RoutingContext {
 
@@ -60,8 +60,8 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public HttpParameters httpParameters() {
-        return delegate.httpParameters();
+    public HttpParameters params() {
+        return delegate.params();
     }
 
     @Nullable
@@ -76,7 +76,7 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public HttpHeaders headers() {
+    public RequestHeaders headers() {
         return delegate.headers();
     }
 
