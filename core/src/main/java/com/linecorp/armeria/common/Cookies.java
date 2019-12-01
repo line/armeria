@@ -27,12 +27,19 @@ import com.google.common.collect.ImmutableSet;
 public interface Cookies extends Set<Cookie> {
 
     /**
+     * Returns an empty {@link Set} if {@link Cookie}s.
+     */
+    static Cookies empty() {
+        return DefaultCookies.EMPTY;
+    }
+
+    /**
      * Creates an instance with a copy of the specified set of {@link Cookie}s.
      */
     static Cookies of(Cookie... cookies) {
         requireNonNull(cookies, "cookies");
         if (cookies.length == 0) {
-            return DefaultCookies.EMPTY;
+            return empty();
         } else {
             return new DefaultCookies(ImmutableSet.copyOf(cookies));
         }
@@ -41,12 +48,22 @@ public interface Cookies extends Set<Cookie> {
     /**
      * Creates an instance with a copy of the specified {@link Iterable} of {@link Cookie}s.
      */
-    static Cookies copyOf(Iterable<? extends Cookie> cookies) {
+    static Cookies of(Iterable<? extends Cookie> cookies) {
         final ImmutableSet<Cookie> cookiesCopy = ImmutableSet.copyOf(requireNonNull(cookies, "cookies"));
         if (cookiesCopy.isEmpty()) {
-            return DefaultCookies.EMPTY;
+            return empty();
         } else {
             return new DefaultCookies(cookiesCopy);
         }
+    }
+
+    /**
+     * Creates an instance with a copy of the specified {@link Iterable} of {@link Cookie}s.
+     *
+     * @deprecated Use {@link #of(Iterable)}.
+     */
+    @Deprecated
+    static Cookies copyOf(Iterable<? extends Cookie> cookies) {
+        return of(cookies);
     }
 }
