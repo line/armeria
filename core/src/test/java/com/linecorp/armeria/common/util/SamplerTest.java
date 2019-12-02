@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.util.RateLimitingSampler.LessThan10;
@@ -48,11 +50,16 @@ class SamplerTest {
             assertThat(numTrues).isEqualTo(10);
         });
 
-        // 'rate-limited=<samples_per_sec>'
-        assertThat(Sampler.of("rate-limited=0")).isSameAs(Sampler.never());
-        assertThat(Sampler.of("rate-limited=1")).isInstanceOfSatisfying(RateLimitingSampler.class, sampler -> {
-            assertThat(sampler.maxFunction).isInstanceOfSatisfying(LessThan10.class, maxFunc -> {
-                assertThat(maxFunc.samplesPerSecond).isEqualTo(1);
+        // 'rate-limit=<samples_per_sec>'
+        Stream.of("rate-limit=0", "rate-limited=0", "rate-limiting=0").forEach(spec -> {
+            assertThat(Sampler.of(spec)).isSameAs(Sampler.never());
+        });
+
+        Stream.of("rate-limit=1", "rate-limited=1", "rate-limiting=1").forEach(spec -> {
+            assertThat(Sampler.of(spec)).isInstanceOfSatisfying(RateLimitingSampler.class, sampler -> {
+                assertThat(sampler.maxFunction).isInstanceOfSatisfying(LessThan10.class, maxFunc -> {
+                    assertThat(maxFunc.samplesPerSecond).isEqualTo(1);
+                });
             });
         });
     }
@@ -65,8 +72,14 @@ class SamplerTest {
         assertThatThrownBy(() -> Sampler.of("random")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Sampler.of("random=")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Sampler.of("random=x")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Sampler.of("rate-limit")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Sampler.of("rate-limit=")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Sampler.of("rate-limit=x")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Sampler.of("rate-limited")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Sampler.of("rate-limited=")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Sampler.of("rate-limited=x")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Sampler.of("rate-limiting")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Sampler.of("rate-limiting=")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Sampler.of("rate-limiting=x")).isInstanceOf(IllegalArgumentException.class);
     }
 }

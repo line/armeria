@@ -43,7 +43,7 @@ package com.linecorp.armeria.common.util;
 @FunctionalInterface
 public interface Sampler<T> {
     /**
-     * Returns a sampler, given a probability expressed as a floating point number
+     * Returns a probabilistic sampler which samples at the specified {@code probability}
      * between {@code 0.0} and {@code 1.0}.
      *
      * @param probability the probability expressed as a floating point number
@@ -54,12 +54,24 @@ public interface Sampler<T> {
     }
 
     /**
-     * Returns a sampler, given a rate-limited on a per-second interval.
+     * Returns a rate-limiting sampler which rate-limits up to the specified {@code samplesPerSecond}.
      *
      * @param samplesPerSecond an integer between {@code 0} and {@value Integer#MAX_VALUE}
      */
-    static <T> Sampler<T> rateLimited(int samplesPerSecond) {
+    static <T> Sampler<T> rateLimiting(int samplesPerSecond) {
         return RateLimitingSampler.create(samplesPerSecond);
+    }
+
+    /**
+     * Returns a rate-limiting sampler which rate-limits up to the specified {@code samplesPerSecond}.
+     *
+     * @param samplesPerSecond an integer between {@code 0} and {@value Integer#MAX_VALUE}
+     *
+     * @deprecated Use {@link #rateLimiting(int)}.
+     */
+    @Deprecated
+    static <T> Sampler<T> rateLimited(int samplesPerSecond) {
+        return rateLimiting(samplesPerSecond);
     }
 
     /**
