@@ -113,7 +113,6 @@ public final class Server implements AutoCloseable {
     @VisibleForTesting
     ServerBootstrap serverBootstrap;
 
-
     Server(ServerConfig config, @Nullable DomainNameMapping<SslContext> sslContexts) {
         this.config = requireNonNull(config, "config");
         this.sslContexts = sslContexts;
