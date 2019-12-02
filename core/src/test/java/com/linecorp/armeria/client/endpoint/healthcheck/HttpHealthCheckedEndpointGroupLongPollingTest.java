@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Stopwatch;
@@ -44,8 +45,10 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
+import com.linecorp.armeria.testing.internal.FailureLoggingExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
+@ExtendWith(FailureLoggingExtension.class)
 class HttpHealthCheckedEndpointGroupLongPollingTest {
 
     private static final Duration RETRY_INTERVAL = Duration.ofSeconds(3);

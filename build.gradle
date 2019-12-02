@@ -164,3 +164,12 @@ tasks.release.doFirst {
         throw new IllegalStateException("You must release using JDK 12.");
     }
 }
+
+tasks.register('collectTestReports', Copy) {
+    into('build/all-test-reports')
+    subprojects {project->
+        from(fileTree("${project.buildDir}/reports/tests")) {
+            into project.path.replace(':', '/').substring(1)
+        }
+    }
+}

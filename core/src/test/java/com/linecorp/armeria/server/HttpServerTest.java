@@ -915,7 +915,7 @@ class HttpServerTest {
         withTimeout(() -> {
             assertThat(client.get("/cached-exact-path")
                              .aggregate().get().status()).isEqualTo(HttpStatus.OK);
-            assertThat(PathAndQuery.cachedPaths()).contains("/cached-exact-path");
+            await().untilAsserted(() -> assertThat(PathAndQuery.cachedPaths()).contains("/cached-exact-path"));
         });
     }
 

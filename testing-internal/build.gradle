@@ -4,6 +4,7 @@ dependencies {
 
     compile 'org.apache.httpcomponents:httpclient'
     compile 'org.assertj:assertj-core'
+    compile 'org.awaitility:awaitility'
     compile 'org.junit.jupiter:junit-jupiter-params'
     compile 'org.mockito:mockito-junit-jupiter'
 }

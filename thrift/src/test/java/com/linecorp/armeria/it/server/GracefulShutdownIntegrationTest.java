@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Clients;
@@ -45,8 +46,11 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService.AsyncIface;
+import com.linecorp.armeria.testing.internal.FailureLoggingExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
+// Often fails on slow machines.
+@ExtendWith(FailureLoggingExtension.class)
 class GracefulShutdownIntegrationTest {
 
     private static final AtomicInteger accessLogWriterCounter1 = new AtomicInteger();

@@ -23,13 +23,16 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.testing.internal.FailureLoggingExtension;
 
+@ExtendWith(FailureLoggingExtension.class)
 class HttpHealthCheckedEndpointGroupAuthorityTest {
 
     private static final String HEALTH_CHECK_PATH = "/healthcheck";

@@ -1,0 +1,115 @@
+name: Continuous Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    env:
+      CI: true
+    strategy:
+      matrix:
+        os: 
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        jre: [13, 11, 8]
+        include:
+          - os: macos-latest
+            gradle_build_args: -PnoCheckstyle -PnoWeb :core:test :grpc:test :thrift:test :it:server:test
+          - os: windows-latest
+            gradle_build_args: -PnoCheckstyle -PnoWeb :core:test :grpc:test :thrift:test :it:server:test
+          - os: ubuntu-latest
+            gradle_build_args: -PnoCheckstyle -PnoWeb build
+          - os: ubuntu-latest
+            jre: 11
+            gradle_build_args: -Pcoverage checkstyle build
+        exclude: 
+          # We only test multiple JVM types on Linux to conserve resources. Unfortunately we cannot add jobs through include and
+          # must use many excludes instead.
+          - os: macos-latest
+            jre: 8
+          - os: macos-latest
+            jre: 13
+          - os: windows-latest
+            jre: 8
+          - os: windows-latest
+            jre: 13
+    steps:
+    - uses: actions/checkout@v1
+
+    # We can't reference env.HOME in jobs.*.env so we set variables that use it here.
+    # Setting an environment variable is documented at https://help.github.com/en/actions/automating-your-workflow-with-github-actions/development-tools-for-github-actions#set-an-environment-variable-set-env
+    - name: Export GRADLE_USER_HOME
+      # GitHub Actions Mac OS X workers have a populated .gradle directory. To make sure our build runs
+      # independently of it (and caches correctly), we go ahead and use a different directory than the normal
+      # ~/.gradle
+      # https://github.com/actions/cache/issues/115
+      run: echo "::set-env name=GRADLE_USER_HOME::$HOME/.gradle-home"
+      shell: bash
+    - name: Export YARN_CACHE_FOLDER
+      # Yarn default cache folder differs by OS. We go ahead and set it to a fixed location to simplify the
+      # scripts.
+      run: echo "::set-env name=YARN_CACHE_FOLDER::$HOME/.yarn"
+      shell: bash
+
+    - name: Cache Gradle Modules
+      uses: actions/cache@v1
+      with:
+        path: ${{ env.GRADLE_USER_HOME }}/caches
+        key: gradle-caches-v20191202-${{ hashFiles('**/build.gradle*') }}-${{ hashFiles('dependencies.yml') }}-${{ hashFiles('**/gradle-wrapper.properties') }}
+        restore-keys: |
+          gradle-caches-v20191202-
+    - name: Cache Gradle Wrapper
+      uses: actions/cache@v1
+      with:
+        path: ${{ env.GRADLE_USER_HOME }}/wrapper
+        key: gradle-wrapper-v20191202-${{ hashFiles('**/gradle-wrapper.properties') }}
+        restore-keys: |
+          gradle-wrapper-v20191202-
+    - name: Cache Yarn
+      uses: actions/cache@v1
+      with:
+       path: ${{ env.YARN_CACHE_FOLDER }}
+       key: yarn-v20191202-${{ hashFiles('**/yarn.lock') }}
+       restore-keys: |
+         yarn-v20191202-
+
+    - name: Set up JRE for running tests
+      uses: actions/setup-java@v1
+      with:
+        java-version: ${{ matrix.jre }}
+        architecture: x64
+    - name: Export JAVA_TEST_HOME
+      # https://help.github.com/en/actions/automating-your-workflow-with-github-actions/development-tools-for-github-actions#set-an-environment-variable-set-env
+      run: echo "::set-env name=JAVA_TEST_HOME::${{ env.JAVA_HOME }}"
+      shell: bash
+    - name: Set up JDK for building codebase
+      uses: actions/setup-java@v1
+      with:
+        java-version: 12
+
+    - name: Show Gradle environment
+      run: ./gradlew --version
+      shell: bash
+    - name: Build with Gradle
+      run: ./gradlew --console=plain --stacktrace --parallel --max-workers=4 ${{ matrix.gradle_build_args }}
+      shell: bash
+      env:
+        TEST_JAVA_VERSION: ${{ matrix.jre }}
+    - name: Collect test reports
+      run: ./gradlew :collectTestReports
+      shell: bash
+      if: failure()
+    - name: Upload test reports
+      uses: actions/upload-artifact@v1
+      with:
+        name: test-reports-${{ runner.os }}-${{ matrix.jre }}
+        path: build/all-test-reports
+      if: failure()
