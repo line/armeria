@@ -79,6 +79,7 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -199,8 +200,9 @@ public class ServerTest {
 
     @Test
     public void testChannelOptions() throws Exception {
-        assertThat(server.server().serverBootstrap.config()
-                                                  .options().get(ChannelOption.SO_BACKLOG)).isEqualTo(1024);
+        final ServerBootstrap bootstrap = server.server().serverBootstrap;
+        assertThat(bootstrap).isNotNull();
+        assertThat(bootstrap.config().options().get(ChannelOption.SO_BACKLOG)).isEqualTo(1024);
     }
 
     @Test
