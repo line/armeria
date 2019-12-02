@@ -207,7 +207,7 @@ public class ServerTest {
 
     @Test
     public void unsuccessfulStartupTerminatesBossGroup() {
-        final Predicate<ThreadInfo>  predicate = info -> {
+        final Predicate<ThreadInfo> predicate = info -> {
             final String name = info.getThreadName();
             return name.startsWith("armeria-boss-") && name.endsWith(":" + server.httpPort());
         };
