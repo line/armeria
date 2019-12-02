@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -42,7 +41,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.server.RoutingTrie.Builder;
 import com.linecorp.armeria.server.composition.CompositeServiceEntry;
 
 /**
@@ -71,7 +69,8 @@ public final class Routers {
             }
         };
 
-        return wrapVirtualHostRouter(defaultRouter(configs, ServiceConfig::route, rejectionConsumer));
+        return wrapVirtualHostRouter(defaultRouter(configs, virtualHost.fallbackServiceConfig(),
+                                                   ServiceConfig::route, rejectionConsumer));
     }
 
     /**
@@ -82,7 +81,7 @@ public final class Routers {
         requireNonNull(entries, "entries");
 
         final Router<CompositeServiceEntry<T>> delegate = wrapCompositeServiceRouter(defaultRouter(
-                entries, CompositeServiceEntry::route,
+                entries, /* fallbackValue */ null, CompositeServiceEntry::route,
                 (mapping, existingMapping) -> {
                     final String a = mapping.toString();
                     final String b = existingMapping.toString();
@@ -108,7 +107,9 @@ public final class Routers {
     public static Router<RouteDecoratingService> ofRouteDecoratingService(
             List<RouteDecoratingService> routeDecoratingServices) {
         return wrapRouteDecoratingServiceRouter(
-                defaultRouter(routeDecoratingServices, RouteDecoratingService::route, (route1, route2) -> {}));
+                defaultRouter(routeDecoratingServices, null,
+                              RouteDecoratingService::route,
+                              (route1, route2) -> {}));
     }
 
     /**
@@ -117,10 +118,10 @@ public final class Routers {
      * it is able to produce trie path string or not while traversing the list, then each group would be
      * transformed to a {@link Router}.
      */
-    private static <V> Router<V> defaultRouter(Iterable<V> values,
+    private static <V> Router<V> defaultRouter(Iterable<V> values, @Nullable V fallbackValue,
                                                Function<V, Route> routeResolver,
                                                BiConsumer<Route, Route> rejectionHandler) {
-        return new CompositeRouter<>(routers(values, routeResolver, rejectionHandler),
+        return new CompositeRouter<>(routers(values, fallbackValue, routeResolver, rejectionHandler),
                                      Function.identity());
     }
 
@@ -128,7 +129,8 @@ public final class Routers {
      * Returns a list of {@link Router}s.
      */
     @VisibleForTesting
-    static <V> List<Router<V>> routers(Iterable<V> values, Function<V, Route> routeResolver,
+    static <V> List<Router<V>> routers(Iterable<V> values, @Nullable V fallbackValue,
+                                       Function<V, Route> routeResolver,
                                        BiConsumer<Route, Route> rejectionHandler) {
         rejectDuplicateMapping(values, routeResolver, rejectionHandler);
 
@@ -148,13 +150,13 @@ public final class Routers {
 
             // Changed the router type.
             if (!group.isEmpty()) {
-                builder.add(router(addingTrie, group, routeResolver));
+                builder.add(router(addingTrie, group, fallbackValue, routeResolver));
             }
             addingTrie = !addingTrie;
             group.add(value);
         }
         if (!group.isEmpty()) {
-            builder.add(router(addingTrie, group, routeResolver));
+            builder.add(router(addingTrie, group, fallbackValue, routeResolver));
         }
         return builder.build();
     }
@@ -216,18 +218,45 @@ public final class Routers {
     /**
      * Returns a {@link Router} implementation which is using one of {@link RoutingTrie} and {@link List}.
      */
-    private static <V> Router<V> router(boolean isTrie, List<V> values,
+    private static <V> Router<V> router(boolean isTrie, List<V> values, @Nullable V fallbackValue,
                                         Function<V, Route> routeResolver) {
         final Comparator<V> valueComparator =
                 Comparator.comparingInt(e -> -1 * routeResolver.apply(e).complexity());
 
         final Router<V> router;
         if (isTrie) {
-            final RoutingTrie.Builder<V> builder = new Builder<>();
+            final RoutingTrieBuilder<V> builder = new RoutingTrieBuilder<>();
             // Set a comparator to sort services by the number of conditions to be checked in a descending
             // order.
             builder.comparator(valueComparator);
-            values.forEach(v -> builder.add(routeResolver.apply(v).paths().get(1), v));
+            values.forEach(v -> {
+                final Route route = routeResolver.apply(v);
+                final String path = route.paths().get(0);
+                final int pathLen = path.length();
+                if (fallbackValue != null && pathLen > 1) {
+                    // Add some extra routes to handle the case where a client sends a request
+                    // without a trailing slash. `PathMapping.apply()` will produce a `RoutingResult`
+                    // whose type is `NEEDS_REDIRECT`.
+                    switch (route.pathType()) {
+                        case EXACT:         // `/foo`   or `/foo/`
+                        case PARAMETERIZED: // `/foo/:` or `/foo/:/`
+                            if (path.charAt(pathLen - 1) == '/') {
+                                // Add an extra route without a trailing slash for a redirect.
+                                builder.add(path.substring(0, pathLen - 1),
+                                            fallbackValue, /* hasHighPrecedence */ false);
+                            }
+                            break;
+                        case PREFIX: // `/foo/*`
+                            // Add an extra route of an exact match.
+                            builder.add(path.substring(0, pathLen - 1),
+                                        fallbackValue, /* hasHighPrecedence */ false);
+                            break;
+                        default:
+                            throw new Error("Unexpected path type: " + route.pathType());
+                    }
+                }
+                builder.add(route.paths().get(1), v);
+            });
             router = new TrieRouter<>(builder.build(), routeResolver);
         } else {
             values.sort(valueComparator);
@@ -295,9 +324,9 @@ public final class Routers {
         return result;
     }
 
-    private static <V> Stream<Routed<V>> findAll(RoutingContext routingCtx, List<V> values,
-                                                 Function<V, Route> routeResolver) {
-        final Stream.Builder<Routed<V>> builder = Stream.builder();
+    private static <V> List<Routed<V>> findAll(RoutingContext routingCtx, List<V> values,
+                                               Function<V, Route> routeResolver) {
+        final ImmutableList.Builder<Routed<V>> builder = ImmutableList.builderWithExpectedSize(values.size());
 
         for (V value : values) {
             final Route route = routeResolver.apply(value);
@@ -325,7 +354,7 @@ public final class Routers {
         }
 
         @Override
-        public Stream<Routed<V>> findAll(RoutingContext routingCtx) {
+        public List<Routed<V>> findAll(RoutingContext routingCtx) {
             return Routers.findAll(routingCtx, trie.findAll(routingCtx.path()), routeResolver);
         }
 
@@ -351,7 +380,7 @@ public final class Routers {
         }
 
         @Override
-        public Stream<Routed<V>> findAll(RoutingContext routingCtx) {
+        public List<Routed<V>> findAll(RoutingContext routingCtx) {
             return Routers.findAll(routingCtx, values, routeResolver);
         }
 

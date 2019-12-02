@@ -37,7 +37,7 @@ class RoutingTrieTest {
 
     @Test
     void testTrieStructure() {
-        final RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
+        final RoutingTrieBuilder<Object> builder = new RoutingTrieBuilder<>();
 
         final Object value1 = new Object();
         final Object value2 = new Object();
@@ -70,7 +70,8 @@ class RoutingTrieTest {
 
         // Root node.
         found = trie.findNode("/abc/1");
-        assertThat(found.values().size()).isEqualTo(0);
+        assertThat(found).isNotNull();
+        assertThat(found.values).isEmpty();
         assertThat(found.parent()).isNull();
 
         testNodeWithFindParentNode(trie, "/abc/123", "/abc/12", value1);
@@ -94,7 +95,7 @@ class RoutingTrieTest {
 
     @Test
     void testParameterAndCatchAll() {
-        final RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
+        final RoutingTrieBuilder<Object> builder = new RoutingTrieBuilder<>();
 
         final Object value0 = new Object();
         final Object value1 = new Object();
@@ -169,7 +170,7 @@ class RoutingTrieTest {
             }
         }).collect(toImmutableList());
 
-        final RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
+        final RoutingTrieBuilder<Object> builder = new RoutingTrieBuilder<>();
         builder.add("/users/:", values.get(0));
         builder.add("/users/*", values.get(1));
         builder.add("/users/:/movies", values.get(2));
@@ -201,22 +202,22 @@ class RoutingTrieTest {
 
     @Test
     void testExceptionalCases() {
-        assertThatThrownBy(() -> new RoutingTrie.Builder<>().build())
+        assertThatThrownBy(() -> new RoutingTrieBuilder<>().build())
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThatThrownBy(() -> new RoutingTrieBuilder<>().add("*", new Object()))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new RoutingTrie.Builder<>().add("*", new Object()).build())
+        assertThatThrownBy(() -> new RoutingTrieBuilder<>().add("*012", new Object()))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new RoutingTrie.Builder<>().add("*012", new Object()).build())
+        assertThatThrownBy(() -> new RoutingTrieBuilder<>().add(":", new Object()))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new RoutingTrie.Builder<>().add(":", new Object()).build())
+        assertThatThrownBy(() -> new RoutingTrieBuilder<>().add(":012", new Object()))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new RoutingTrie.Builder<>().add(":012", new Object()).build())
-                .isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> new RoutingTrie.Builder<>().add("/*abc", new Object()).build())
+        assertThatThrownBy(() -> new RoutingTrieBuilder<>().add("/*abc", new Object()).build())
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -224,7 +225,9 @@ class RoutingTrieTest {
                                                           String targetPath, String parentPath,
                                                           Object... values) {
         final Node<?> found = trie.findNode(targetPath);
-        assertThat(found.parent().path()).isEqualTo(parentPath);
+        assertThat(found).isNotNull();
+        assertThat(found.parent()).isNotNull();
+        assertThat(found.parent().path).isEqualTo(parentPath);
         testValues(found, values);
         return found;
     }
@@ -233,23 +236,79 @@ class RoutingTrieTest {
                                                       String targetPath, String parentPath,
                                                       Object... values) {
         final Node<?> found = trie.findNode(targetPath);
-        assertThat(found.parent()).isEqualTo(trie.findNode(parentPath, true));
+        assertThat(found).isNotNull();
+        assertThat(found.parent()).isNotNull();
+        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true));
         testValues(found, values);
         return found;
     }
 
     private static Node<?> testIntermNode(RoutingTrie<?> trie, String targetPath, String parentPath) {
         final Node<?> found = trie.findNode(targetPath);
-        assertThat(found.values().size()).isEqualTo(0);
-        assertThat(found.parent()).isEqualTo(trie.findNode(parentPath, true));
+        assertThat(found).isNotNull();
+        assertThat(found.values).isEmpty();
+        assertThat(found.parent()).isNotNull();
+        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true));
         return found;
     }
 
     private static void testValues(Node<?> node, Object[] values) {
-        final List<?> v = node.values();
-        assertThat(v.size()).isEqualTo(values.length);
-        for (int i = 0; i < values.length; i++) {
-            assertThat(v.get(i)).isEqualTo(values[i]);
-        }
+        @SuppressWarnings("unchecked")
+        final List<Object> actualValues = (List<Object>) node.values;
+        assertThat(actualValues).containsExactly(values);
+
+        // Make sure the value list is immutable.
+        assertThatThrownBy(() -> actualValues.add(null))
+                .isInstanceOf(UnsupportedOperationException.class);
+
+        // Make sure the child map is immutable.
+        assertThatThrownBy(() -> node.children.put('0', null))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void redirectMustHaveLowPrecedence() {
+        final RoutingTrieBuilder<String> builder = new RoutingTrieBuilder<>();
+
+        final String high = "high";
+        final String low = "low";
+
+        builder.add("/foo", low, false);
+        builder.add("/foo", high);
+        builder.add("/bar/*", low, false);
+        builder.add("/bar/*", high);
+        builder.add("/baz/:", low, false);
+        builder.add("/baz/:", high);
+
+        builder.add("/foo_low_only", low, false);
+        builder.add("/bar_low_only/*", low, false);
+        builder.add("/baz_low_only/:", low, false);
+
+        final RoutingTrie<String> trie = builder.build();
+        Node<String> node;
+
+        node = trie.findNode("/foo");
+        assertThat(node).isNotNull();
+        assertThat(node.values).containsExactly(high, low);
+
+        node = trie.findNode("/bar/");
+        assertThat(node).isNotNull();
+        assertThat(node.values).containsExactly(high, low);
+
+        node = trie.findNode("/baz/1");
+        assertThat(node).isNotNull();
+        assertThat(node.values).containsExactly(high, low);
+
+        node = trie.findNode("/foo_low_only");
+        assertThat(node).isNotNull();
+        assertThat(node.values).containsExactly(low);
+
+        node = trie.findNode("/bar_low_only/");
+        assertThat(node).isNotNull();
+        assertThat(node.values).containsExactly(low);
+
+        node = trie.findNode("/baz_low_only/1");
+        assertThat(node).isNotNull();
+        assertThat(node.values).containsExactly(low);
     }
 }

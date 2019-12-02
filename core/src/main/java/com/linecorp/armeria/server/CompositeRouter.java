@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
 
@@ -59,11 +59,23 @@ final class CompositeRouter<I, O> implements Router<O> {
     }
 
     @Override
-    public Stream<Routed<O>> findAll(RoutingContext routingContext) {
-        return delegates.stream()
-                        .flatMap(delegate -> delegate.findAll(routingContext))
-                        .map(resultMapper)
-                        .distinct();
+    public List<Routed<O>> findAll(RoutingContext routingContext) {
+        // TODO(trustin): Optimize for the case where `delegates.size() == 0 or 1`
+        //                by using a different implementation instead of a dynamic switch.
+        final int numDelegates = delegates.size();
+        switch (numDelegates) {
+            case 0:
+                return ImmutableList.of();
+            case 1:
+                return delegates.get(0).findAll(routingContext).stream()
+                                .map(resultMapper)
+                                .collect(toImmutableList());
+            default:
+                return delegates.stream()
+                                .flatMap(delegate -> delegate.findAll(routingContext).stream())
+                                .map(resultMapper)
+                                .collect(toImmutableList());
+        }
     }
 
     @Override
