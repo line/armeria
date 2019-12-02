@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -30,7 +31,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,8 +105,7 @@ public final class Server implements AutoCloseable {
     private final DomainNameMapping<SslContext> sslContexts;
 
     private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
-    @VisibleForTesting
-    final Map<EventLoopGroup, ServerChannel> serverChannels = new ConcurrentHashMap<>();
+    private final Set<ServerChannel> serverChannels = new NonBlockingHashSet<>();
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;
 
@@ -483,7 +483,7 @@ public final class Server implements AutoCloseable {
             }
 
             // Close all server sockets.
-            final Set<Channel> serverChannels = ImmutableSet.copyOf(Server.this.serverChannels.values());
+            final Set<Channel> serverChannels = ImmutableSet.copyOf(Server.this.serverChannels);
             ChannelUtil.close(serverChannels).handle((unused1, unused2) -> {
                 // All server ports have been closed.
                 synchronized (activePorts) {
@@ -502,7 +502,9 @@ public final class Server implements AutoCloseable {
 
                     workerShutdownFuture.addListener(unused5 -> {
                         final Set<EventLoopGroup> bossGroups =
-                                ImmutableSet.copyOf(Server.this.serverChannels.keySet());
+                                Server.this.serverChannels.stream()
+                                                          .map(ch -> ch.eventLoop().parent())
+                                                          .collect(toImmutableSet());
 
                         // If started to shutdown before initializing a boss group,
                         // complete the future immediately.
@@ -639,9 +641,7 @@ public final class Server implements AutoCloseable {
         public void operationComplete(ChannelFuture f) {
             final ServerChannel ch = (ServerChannel) f.channel();
             assert ch.eventLoop().inEventLoop();
-
-            final EventLoopGroup bossGroup = ch.eventLoop().parent();
-            serverChannels.put(bossGroup, ch);
+            serverChannels.add(ch);
 
             if (f.isSuccess()) {
                 final InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
