@@ -30,8 +30,10 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
@@ -75,6 +77,8 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -194,8 +198,31 @@ public class ServerTest {
 
     @Test
     public void testChannelOptions() throws Exception {
-        assertThat(server.server().serverBootstrap().config()
-                         .options().get(ChannelOption.SO_BACKLOG)).isEqualTo(1024);
+        assertThat(server.server().serverBootstrap.config()
+                                                  .options().get(ChannelOption.SO_BACKLOG)).isEqualTo(1024);
+    }
+
+    @Test
+    public void testBossGroup() throws Exception {
+        assertThat(server.server().serverChannels).hasSize(1);
+        final Map.Entry<EventLoopGroup, ServerChannel> entry =
+                server.server().serverChannels.entrySet().iterator().next();
+        assertThat(entry.getValue().eventLoop().parent()).isSameAs(entry.getKey());
+    }
+
+    @Test
+    public void unsuccessfulStartupTerminatesBossGroup() {
+        final Server serverAtSamePort =
+                Server.builder()
+                      .http(server.httpPort())
+                      .service("/", (ctx, req) -> HttpResponse.of(200))
+                      .build();
+
+        assertThatThrownBy(() -> serverAtSamePort.start().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IOException.class);
+
+        assertThat(serverAtSamePort.serverChannels).isEmpty();
     }
 
     private static void testInvocation0(String path) throws IOException {
