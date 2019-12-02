@@ -747,11 +747,8 @@ class GrpcServiceServerTest {
                     .withDeadlineAfter(10, TimeUnit.SECONDS);
             assertThatThrownBy(() -> client.timesOut(
                     SimpleRequest.getDefaultInstance())).isInstanceOfSatisfying(
-                    StatusRuntimeException.class, t -> {
-                        assertThat(t.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
-                        assertThat(t.getStatus().getDescription())
-                                .isEqualTo("ClientCall was cancelled at or after deadline.");
-                    });
+                    StatusRuntimeException.class, t ->
+                            assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED));
         });
     }
 

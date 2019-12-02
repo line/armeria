@@ -65,6 +65,7 @@ import io.grpc.ClientCall;
 import io.grpc.Codec.Identity;
 import io.grpc.Compressor;
 import io.grpc.CompressorRegistry;
+import io.grpc.Deadline;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
@@ -389,8 +390,12 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void close(Status status, Metadata metadata) {
-        if (status.getCode() == Code.DEADLINE_EXCEEDED && status.getDescription() == null) {
-            status = status.withDescription("ClientCall was cancelled at or after deadline.");
+        final Deadline deadline = callOptions.getDeadline();
+        if (status.getCode() == Code.CANCELLED && deadline != null && deadline.isExpired()) {
+            status = Status.DEADLINE_EXCEEDED.augmentDescription(
+                    "ClientCall was cancelled at or after deadline.");
+            // Replace trailers to prevent mixing sources of status and trailers.
+            metadata = new Metadata();
         }
         ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
         if (status.isOk()) {
