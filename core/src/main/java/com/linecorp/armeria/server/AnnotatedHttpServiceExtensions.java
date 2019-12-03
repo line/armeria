@@ -29,8 +29,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * FIXME(heowc): update javadoc
- * A configurator to configure {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
+ * This class provides extension about {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
  * or {@link ResponseConverterFunction}s for an {@link AnnotatedHttpService}.
  */
 final class AnnotatedHttpServiceExtensions {

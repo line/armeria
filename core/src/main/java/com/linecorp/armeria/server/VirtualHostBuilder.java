@@ -421,9 +421,9 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      *
-     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
+     * @param exceptionHandlersAndConverters the {@link ExceptionHandlerFunction}s,
+     *                                       the {@link RequestConverterFunction}s and/or
+     *                                       the {@link ResponseConverterFunction}s
      */
     public VirtualHostBuilder annotatedService(Object service,
                                                Object... exceptionHandlersAndConverters) {
@@ -435,9 +435,9 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      *
-     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
+     * @param exceptionHandlersAndConverters the {@link ExceptionHandlerFunction}s,
+     *                                       the {@link RequestConverterFunction}s and/or
+     *                                       the {@link ResponseConverterFunction}s
      */
     public VirtualHostBuilder annotatedService(
             Object service, Function<? super HttpService, ? extends HttpService> decorator,
@@ -457,9 +457,9 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified annotated service object under the specified path prefix.
      *
-     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
+     * @param exceptionHandlersAndConverters the {@link ExceptionHandlerFunction}s,
+     *                                       the {@link RequestConverterFunction}s and/or
+     *                                       the {@link ResponseConverterFunction}s
      */
     public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
                                                Object... exceptionHandlersAndConverters) {
@@ -470,8 +470,8 @@ public final class VirtualHostBuilder {
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
-     * FIXME(heowc): update javadoc
-     * @param exceptionHandlersAndConverters an iterable object of {@link ExceptionHandlerFunction},
+     *
+     * @param exceptionHandlersAndConverters the {@link ExceptionHandlerFunction},
      *                                       {@link RequestConverterFunction} and/or
      *                                       {@link ResponseConverterFunction}
      */
@@ -485,9 +485,9 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified annotated service object under the specified path prefix.
      *
-     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
+     * @param exceptionHandlersAndConverters the {@link ExceptionHandlerFunction}s,
+     *                                       the {@link RequestConverterFunction}s and/or
+     *                                       the {@link ResponseConverterFunction}s
      */
     public VirtualHostBuilder annotatedService(
             String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
@@ -500,9 +500,9 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified annotated service object under the specified path prefix.
      *
-     * @param exceptionHandlersAndConverters an iterable object of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
+     * @param exceptionHandlersAndConverters the {@link ExceptionHandlerFunction}s,
+     *                                       the {@link RequestConverterFunction}s and/or
+     *                                       the {@link ResponseConverterFunction}s
      */
     public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
                                                Function<? super HttpService, ? extends HttpService> decorator,
@@ -520,10 +520,10 @@ public final class VirtualHostBuilder {
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
-     * FIXME(heowc): update javadoc
-     * @param exceptionHandlerFunctions an iterable object of the {@link ExceptionHandlerFunction}s
-     * @param requestConverterFunctions an iterable object of the {@link RequestConverterFunction}s
-     * @param responseConverterFunctions an iterable object of the {@link ResponseConverterFunction}s
+     *
+     * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
+     * @param requestConverterFunctions the {@link RequestConverterFunction}s
+     * @param responseConverterFunctions the {@link ResponseConverterFunction}s
      */
     public VirtualHostBuilder annotatedService(
             String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
