@@ -109,14 +109,15 @@ public interface Sampler<T> {
      *   <li>{@code "random=<probability>"} where {@code probability} is a floating point number
      *     between 0.0 and 1.0
      *     <ul>
-     *       <li>Returns the random {@link Sampler} that samples at the given probability.</li>
+     *       <li>Returns a probabilistic {@link Sampler} which samples at the specified probability.</li>
      *       <li>e.g. {@code "random=0.05"} to sample at 5% probability</li>
      *     </ul>
      *   </li>
-     *   <li>{@code "rate-limited=<samples_per_sec>"} where {@code samples_per_sec} is a non-negative integer
+     *   <li>{@code "rate-limit=<samples_per_sec>"} where {@code samples_per_sec} is a non-negative integer
      *     <ul>
-     *       <li>Returns the rate-limited {@link Sampler} that samples at the given rate.</li>
-     *       <li>e.g. {@code "rate-limited=10"} to sample 10 samples per second at most</li>
+     *       <li>Returns a rate-limiting {@link Sampler} which rate-limits up to the specified
+     *           samples per second.</li>
+     *       <li>e.g. {@code "rate-limit=10"} to sample 10 samples per second at most</li>
      *     </ul>
      *   </li>
      * </ul>
