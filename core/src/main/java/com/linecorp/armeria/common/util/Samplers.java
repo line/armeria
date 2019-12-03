@@ -84,8 +84,10 @@ final class Samplers {
             switch (key) {
                 case "random":
                     return Sampler.random(Double.parseDouble(value));
+                case "rate-limit":
+                case "rate-limiting":
                 case "rate-limited":
-                    return Sampler.rateLimited(Integer.parseInt(value));
+                    return Sampler.rateLimiting(Integer.parseInt(value));
                 default:
             }
         } catch (Exception e) {

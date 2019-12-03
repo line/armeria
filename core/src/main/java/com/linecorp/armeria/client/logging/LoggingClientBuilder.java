@@ -39,6 +39,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder<Log
      */
     public LoggingClient build(HttpClient delegate) {
         return new LoggingClient(delegate,
+                                 logger(),
                                  requestLogLevelMapper(),
                                  responseLogLevelMapper(),
                                  requestHeadersSanitizer(),
