@@ -77,7 +77,7 @@ public final class Flags {
 
     private static final int NUM_CPU_CORES = Runtime.getRuntime().availableProcessors();
 
-    private static final String DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limited=10";
+    private static final String DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limit=10";
     private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
     private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
 
