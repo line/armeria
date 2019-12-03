@@ -26,12 +26,16 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
@@ -40,6 +44,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -74,6 +79,7 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -194,8 +200,43 @@ public class ServerTest {
 
     @Test
     public void testChannelOptions() throws Exception {
-        assertThat(server.server().serverBootstrap().config()
-                         .options().get(ChannelOption.SO_BACKLOG)).isEqualTo(1024);
+        final ServerBootstrap bootstrap = server.server().serverBootstrap;
+        assertThat(bootstrap).isNotNull();
+        assertThat(bootstrap.config().options().get(ChannelOption.SO_BACKLOG)).isEqualTo(1024);
+    }
+
+    @Test
+    public void unsuccessfulStartupTerminatesBossGroup() {
+        final Predicate<ThreadInfo> predicate = info -> {
+            final String name = info.getThreadName();
+            return name.startsWith("armeria-boss-") && name.endsWith(":" + server.httpPort());
+        };
+
+        // When one port is open, there should be only one boss group thread.
+        final long oldNumBossThreads =
+                Arrays.stream(ManagementFactory.getThreadMXBean().dumpAllThreads(false, false))
+                      .filter(predicate)
+                      .count();
+        assertThat(oldNumBossThreads).isOne();
+
+        // Attempt to start another server at the same port.
+        final Server serverAtSamePort =
+                Server.builder()
+                      .http(server.httpPort())
+                      .service("/", (ctx, req) -> HttpResponse.of(200))
+                      .build();
+
+        // .. which will fail with an IOException.
+        assertThatThrownBy(() -> serverAtSamePort.start().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IOException.class);
+
+        // A failed bind attempt must not leave a dangling boss group thread.
+        final long numBossThreads =
+                Arrays.stream(ManagementFactory.getThreadMXBean().dumpAllThreads(false, false))
+                      .filter(predicate)
+                      .count();
+        assertThat(numBossThreads).isEqualTo(oldNumBossThreads);
     }
 
     private static void testInvocation0(String path) throws IOException {
