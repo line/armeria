@@ -49,7 +49,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
             sb.virtualHost(TEST_HOST)
               .annotatedService()
               .pathPrefix("/foo")
-              .exceptionHandler(handlerFunction)
+              .exceptionHandlers(handlerFunction)
               .build(new TestService());
         }
     };
@@ -67,7 +67,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .annotatedService()
                 .requestTimeout(requestTimeoutDuration)
                 .maxRequestLength(maxRequestLength)
-                .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
+                .exceptionHandlers((ctx, request, cause) -> HttpResponse.of(400))
                 .pathPrefix("/foo")
                 .accessLogWriter(accessLogWriter, shutdownOnStop)
                 .contentPreviewerFactory(factory)
