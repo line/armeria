@@ -32,12 +32,12 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * A configurator to configure {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
  * or {@link ResponseConverterFunction}s for an {@link AnnotatedHttpService}.
  */
-final class AnnotatedHttpServiceConfigurator {
+final class AnnotatedHttpServiceExtensions {
 
     /**
      * Creates a new instance with the specified {@code exceptionHandlersAndConverters}.
      */
-    static AnnotatedHttpServiceConfigurator ofExceptionHandlersAndConverters(
+    static AnnotatedHttpServiceExtensions ofExceptionHandlersAndConverters(
             Iterable<?> exceptionHandlersAndConverters) {
 
         final Builder<ExceptionHandlerFunction> exceptionHandlers = ImmutableList.builder();
@@ -57,8 +57,8 @@ final class AnnotatedHttpServiceConfigurator {
             }
         }
 
-        return new AnnotatedHttpServiceConfigurator(exceptionHandlers.build(), requestConverters.build(),
-                                                    responseConverters.build());
+        return new AnnotatedHttpServiceExtensions(exceptionHandlers.build(), requestConverters.build(),
+                                                  responseConverters.build());
     }
 
     /**
@@ -76,7 +76,7 @@ final class AnnotatedHttpServiceConfigurator {
      */
     private final List<ResponseConverterFunction> responseConverters;
 
-    AnnotatedHttpServiceConfigurator(
+    AnnotatedHttpServiceExtensions(
             List<ExceptionHandlerFunction> exceptionHandlers,
             List<RequestConverterFunction> requestConverters,
             List<ResponseConverterFunction> responseConverters) {

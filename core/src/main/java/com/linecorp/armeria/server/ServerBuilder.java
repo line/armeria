@@ -969,8 +969,8 @@ public final class ServerBuilder {
         requireNonNull(service, "service");
         requireNonNull(decorator, "decorator");
         requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
-        final AnnotatedHttpServiceConfigurator configurator =
-                AnnotatedHttpServiceConfigurator
+        final AnnotatedHttpServiceExtensions configurator =
+                AnnotatedHttpServiceExtensions
                         .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
         return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
                                 configurator.requestConverters(), configurator.responseConverters());
