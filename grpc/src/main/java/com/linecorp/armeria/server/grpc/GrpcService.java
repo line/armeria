@@ -184,7 +184,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
         final ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
         if (method == null) {
             return HttpResponse.of(
-                    ArmeriaServerCall.statusToTrailers(
+                    (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
                             ctx,
                             Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
                             new Metadata(),
@@ -199,7 +199,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
                     ctx.setRequestTimeout(Duration.ofNanos(timeout));
                 } catch (IllegalArgumentException e) {
                     return HttpResponse.of(
-                            ArmeriaServerCall.statusToTrailers(
+                            (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
                                     ctx, GrpcStatus.fromThrowable(e), new Metadata(), false));
                 }
             }
