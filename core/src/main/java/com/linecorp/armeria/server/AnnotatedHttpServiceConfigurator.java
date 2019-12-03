@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -55,46 +57,52 @@ final class AnnotatedHttpServiceConfigurator {
             }
         }
 
-        final AnnotatedHttpServiceConfigurator configurator = new AnnotatedHttpServiceConfigurator();
-        configurator.exceptionHandlers.addAll(exceptionHandlers.build());
-        configurator.requestConverters.addAll(requestConverters.build());
-        configurator.responseConverters.addAll(responseConverters.build());
-        return configurator;
+        return new AnnotatedHttpServiceConfigurator(exceptionHandlers.build(), requestConverters.build(),
+                                                    responseConverters.build());
     }
 
     /**
      * The exception handlers of the annotated service.
      */
-    private final Builder<ExceptionHandlerFunction> exceptionHandlers = ImmutableList.builder();
+    private final List<ExceptionHandlerFunction> exceptionHandlers;
 
     /**
      * The request converters of the annotated service.
      */
-    private final Builder<RequestConverterFunction> requestConverters = ImmutableList.builder();
+    private final List<RequestConverterFunction> requestConverters;
 
     /**
      * The response converters of the annotated service.
      */
-    private final Builder<ResponseConverterFunction> responseConverters = ImmutableList.builder();
+    private final List<ResponseConverterFunction> responseConverters;
+
+    AnnotatedHttpServiceConfigurator(
+            List<ExceptionHandlerFunction> exceptionHandlers,
+            List<RequestConverterFunction> requestConverters,
+            List<ResponseConverterFunction> responseConverters) {
+        this.exceptionHandlers = requireNonNull(exceptionHandlers, "exceptionHandlers");
+        this.requestConverters = requireNonNull(requestConverters, "requestConverters");
+        this.responseConverters = requireNonNull(responseConverters, "responseConverters");
+    }
 
     /**
      * Returns the specified {@link ExceptionHandlerFunction}s with the annotated service.
      */
     List<ExceptionHandlerFunction> exceptionHandlers() {
-        return exceptionHandlers.build();
+        return exceptionHandlers;
     }
 
     /**
      * Returns the specified {@link RequestConverterFunction}s with the annotated service.
      */
     List<RequestConverterFunction> requestConverters() {
-        return requestConverters.build();
+        return requestConverters;
     }
 
     /**
      * Returns the specified {@link ResponseConverterFunction}s with the annotated service.
      */
     List<ResponseConverterFunction> responseConverters() {
-        return responseConverters.build();
+        return responseConverters;
     }
 }
