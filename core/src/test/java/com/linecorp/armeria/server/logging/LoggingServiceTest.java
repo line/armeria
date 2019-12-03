@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -32,6 +33,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.slf4j.Logger;
@@ -138,6 +140,30 @@ public class LoggingServiceTest {
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
                             ", trailers: " + RESPONSE_TRAILERS,
                             cause);
+    }
+
+    @Test
+    public void logger() throws Exception {
+        final Logger customLogger = Mockito.mock(Logger.class);
+
+        when(customLogger.isInfoEnabled()).thenReturn(true);
+
+        final LoggingService service =
+                LoggingService.builder()
+                              .logger(customLogger)
+                              .requestLogLevel(LogLevel.INFO)
+                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .newDecorator().apply(delegate);
+
+        service.serve(ctx, REQUEST);
+        verify(customLogger).info(REQUEST_FORMAT,
+                                  "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
+                                  ", trailers: " + REQUEST_TRAILERS);
+        verify(customLogger).info(RESPONSE_FORMAT,
+                                  "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
+                                  ", trailers: " + RESPONSE_TRAILERS);
+
+        verify(logger, never()).info(anyString());
     }
 
     @Test

@@ -22,6 +22,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -59,6 +63,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         return new LoggingServiceBuilder();
     }
 
+    @Nullable
+    private final Logger logger;
     private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
     private final Function<? super RequestHeaders, ?> requestHeadersSanitizer;
@@ -74,9 +80,11 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     /**
      * Creates a new instance that logs {@link HttpRequest}s and {@link HttpResponse}s at the specified
      * {@link LogLevel}s with the specified sanitizers.
+     * If the logger is null, it means that the logger from {@link ServiceRequestContext#logger()} is used.
      */
     LoggingService(
             HttpService delegate,
+            @Nullable Logger logger,
             Function<? super RequestLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             Function<? super RequestHeaders, ?> requestHeadersSanitizer,
@@ -88,6 +96,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             Function<? super Throwable, ?> responseCauseSanitizer,
             Sampler<? super ServiceRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
+        this.logger = logger;
         this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
@@ -104,13 +113,13 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(log -> logRequest(((ServiceRequestContext) log.context()).logger(),
-                                                    log,
+            final Logger logger = this.logger != null ? this.logger : ctx.logger();
+            ctx.log().addListener(log -> logRequest(logger, log,
                                                     requestLogLevelMapper,
                                                     requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(log -> logResponse(((ServiceRequestContext) log.context()).logger(), log,
+            ctx.log().addListener(log -> logResponse(logger, log,
                                                      requestLogLevelMapper,
                                                      responseLogLevelMapper,
                                                      requestHeadersSanitizer,
