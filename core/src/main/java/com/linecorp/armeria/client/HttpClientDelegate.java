@@ -75,7 +75,7 @@ final class HttpClientDelegate implements HttpClient {
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
         final EventLoop eventLoop = ctx.eventLoop();
-        final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
+        final DecodedHttpResponse res = new DecodedHttpResponse(ctx, eventLoop);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 

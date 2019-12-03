@@ -106,6 +106,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
         startTimeNanos = System.nanoTime();
+        // Schedule the initial request timeout.
+        onRequestTimeoutChange(reqCtx.requestTimeoutMillis());
     }
 
     private HttpService service() {
@@ -152,10 +154,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     @Override
     public void onSubscribe(Subscription subscription) {
         assert this.subscription == null;
+        if (state == State.DONE) {
+            subscription.cancel();
+            return;
+        }
         this.subscription = subscription;
-
-        // Schedule the initial request timeout.
-        onRequestTimeoutChange(reqCtx.requestTimeoutMillis());
 
         // Start consuming.
         subscription.request(1);
@@ -393,7 +396,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         logBuilder().increaseResponseLength(content);
 
         final State oldState = setDone();
-        subscription.cancel();
+        if (subscription != null) {
+            subscription.cancel();
+        }
 
         final int id = req.id();
         final int streamId = req.streamId();

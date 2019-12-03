@@ -35,6 +35,7 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.PooledObjects;
 
 import io.netty.util.ReferenceCountUtil;
@@ -166,11 +167,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     }
 
     /**
-     * Returns the current demand.
-     */
-    abstract long demand();
-
-    /**
      * Callback invoked by {@link Subscription#request(long)} to add {@code n} to demand.
      */
     abstract void request(long n);
@@ -187,6 +183,15 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     abstract void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event);
 
     /**
+     * Pushes the context to the thread-local stack if this {@link StreamMessage} has it.
+     * This method is invoked before {@link Subscriber#onSubscribe(Subscription)},
+     * {@link Subscriber#onComplete()} and {@link Subscriber#onError(Throwable)} are called.
+     */
+    protected SafeCloseable pushContextIfExist() {
+        return () -> { /* no-op */};
+    }
+
+    /**
      * Invoked after an element is removed from the {@link StreamMessage} and before
      * {@link Subscriber#onNext(Object)} is invoked.
      *
@@ -194,18 +199,23 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      */
     protected void onRemoval(T obj) {}
 
-    static void failLateSubscriber(SubscriptionImpl subscription, Subscriber<?> lateSubscriber) {
+    private void failLateSubscriber(SubscriptionImpl subscription, Subscriber<?> lateSubscriber) {
         final Subscriber<?> oldSubscriber = subscription.subscriber();
         final Throwable cause = abortedOrLate(oldSubscriber);
 
         if (subscription.needsDirectInvocation()) {
-            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-            lateSubscriber.onError(cause);
+            failLateSubscriber0(lateSubscriber, cause);
         } else {
             subscription.executor().execute(() -> {
-                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-                lateSubscriber.onError(cause);
+                failLateSubscriber0(lateSubscriber, cause);
             });
+        }
+    }
+
+    private void failLateSubscriber0(Subscriber<?> lateSubscriber, Throwable cause) {
+        try (SafeCloseable ignored = pushContextIfExist()) {
+            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+            lateSubscriber.onError(cause);
         }
     }
 
@@ -347,7 +357,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         public String toString() {
             return MoreObjects.toStringHelper(Subscription.class)
                               .add("publisher", publisher)
-                              .add("demand", publisher.demand())
                               .add("executor", executor).toString();
         }
     }

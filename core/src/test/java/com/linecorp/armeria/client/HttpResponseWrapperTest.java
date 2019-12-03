@@ -38,9 +38,12 @@ import io.netty.channel.Channel;
 
 class HttpResponseWrapperTest {
 
+    private static final ClientRequestContext ctx = ClientRequestContext.builder(
+            HttpRequest.of(HttpMethod.GET, "/")).build();
+
     @Test
     void headersAndData() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final DecodedHttpResponse res = new DecodedHttpResponse(ctx, CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(
@@ -56,7 +59,7 @@ class HttpResponseWrapperTest {
 
     @Test
     void headersAndTrailers() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final DecodedHttpResponse res = new DecodedHttpResponse(ctx, CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
@@ -71,7 +74,7 @@ class HttpResponseWrapperTest {
 
     @Test
     void dataIsIgnoreAfterSecondHeaders() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final DecodedHttpResponse res = new DecodedHttpResponse(ctx, CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
@@ -88,7 +91,7 @@ class HttpResponseWrapperTest {
 
     @Test
     void splitTrailersIsIgnored() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final DecodedHttpResponse res = new DecodedHttpResponse(ctx, CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
@@ -104,7 +107,7 @@ class HttpResponseWrapperTest {
 
     @Test
     void splitTrailersAfterDataIsIgnored() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final DecodedHttpResponse res = new DecodedHttpResponse(ctx, CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(
@@ -123,7 +126,7 @@ class HttpResponseWrapperTest {
 
     @Test
     void informationalHeadersHeadersDataAndTrailers() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final DecodedHttpResponse res = new DecodedHttpResponse(ctx, CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(100))).isTrue();

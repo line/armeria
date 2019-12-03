@@ -22,9 +22,11 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageWrapper;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -53,6 +55,9 @@ import io.netty.util.concurrent.EventExecutor;
  */
 public class HttpResponseDuplicator
         extends AbstractStreamMessageDuplicator<HttpObject, HttpResponse> {
+
+    @Nullable
+    private ClientRequestContext ctx;
 
     /**
      * Creates a new instance wrapping an {@link HttpResponse} and publishing to multiple subscribers.
@@ -98,6 +103,22 @@ public class HttpResponseDuplicator
     @Override
     public HttpResponse duplicateStream(boolean lastStream) {
         return new DuplicateHttpResponse(super.duplicateStream(lastStream));
+    }
+
+    @Override
+    protected void onSubscribeCalled() {
+        final RequestContext ctx = RequestContext.currentOrNull();
+        if (ctx instanceof ClientRequestContext) {
+            this.ctx = (ClientRequestContext) ctx;
+        }
+    }
+
+    @Override
+    protected SafeCloseable pushContextIfExist() {
+        if (ctx != null) {
+            return ctx.push();
+        }
+        return super.pushContextIfExist();
     }
 
     private static class DuplicateHttpResponse

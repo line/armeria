@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -60,7 +61,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, Throwable>
             abortCauseUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                    DeferredStreamMessage.class, Throwable.class, "abortCause");
+            DeferredStreamMessage.class, Throwable.class, "abortCause");
 
     @Nullable
     @SuppressWarnings("unused") // Updated only via delegateUpdater
@@ -77,13 +78,11 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     @SuppressWarnings("unused") // Updated only via subscribedToDelegateUpdater
     private volatile int subscribedToDelegate;
 
-    // Only accessed from subscription's executor.
-    private long pendingDemand;
-
+    @Nullable
     private volatile Throwable abortCause;
 
     // Only accessed from subscription's executor.
-    private boolean cancelPending;
+    private boolean downstreamOnSubscribeCalled;
 
     /**
      * Sets the delegate {@link StreamMessage} which will actually publish the stream.
@@ -163,13 +162,14 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    long demand() {
-        return pendingDemand;
-    }
-
-    @Override
     void request(long n) {
+        if (abortCause != null) {
+            // This streamMessage is aborted already.
+            return;
+        }
+
         // A user cannot access subscription without subscribing.
+        final SubscriptionImpl subscription = this.subscription;
         assert subscription != null;
 
         if (subscription.needsDirectInvocation()) {
@@ -181,15 +181,17 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private void doRequest(long n) {
         final Subscription delegateSubscription = this.delegateSubscription;
-        if (delegateSubscription != null) {
-            delegateSubscription.request(n);
-        } else {
-            pendingDemand += n;
-        }
+        assert delegateSubscription != null;
+        delegateSubscription.request(n);
     }
 
     @Override
     void cancel() {
+        if (abortCause != null) {
+            // This streamMessage is aborted already.
+            return;
+        }
+
         // A user cannot access subscription without subscribing.
         final SubscriptionImpl subscription = this.subscription;
         assert subscription != null;
@@ -203,24 +205,21 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private void doCancel() {
         final Subscription delegateSubscription = this.delegateSubscription;
-        if (delegateSubscription != null) {
-            try {
-                delegateSubscription.cancel();
-            } finally {
-                // Clear the subscriber when we become sure that the delegate will not produce events anymore.
-                final StreamMessage<T> delegate = this.delegate;
-                assert delegate != null;
-                if (delegate.isComplete()) {
+        assert delegateSubscription != null;
+        try {
+            delegateSubscription.cancel();
+        } finally {
+            // Clear the subscriber when we become sure that the delegate will not produce events anymore.
+            final StreamMessage<T> delegate = this.delegate;
+            assert delegate != null;
+            if (delegate.isComplete()) {
+                subscription.clearSubscriber();
+            } else {
+                delegate.completionFuture().handle((u1, u2) -> {
                     subscription.clearSubscriber();
-                } else {
-                    delegate.completionFuture().handle((u1, u2) -> {
-                        subscription.clearSubscriber();
-                        return null;
-                    });
-                }
+                    return null;
+                });
             }
-        } else {
-            cancelPending = true;
         }
     }
 
@@ -237,21 +236,18 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return oldSubscription;
         }
 
-        final Subscriber<Object> subscriber = subscription.subscriber();
         if (subscription.needsDirectInvocation()) {
-            subscriber.onSubscribe(subscription);
             safeOnSubscribeToDelegate();
         } else {
-            subscription.executor().execute(() -> {
-                subscriber.onSubscribe(subscription);
-                safeOnSubscribeToDelegate();
-            });
+            subscription.executor().execute(this::safeOnSubscribeToDelegate);
         }
 
         return subscription;
     }
 
     private void safeOnSubscribeToDelegate() {
+        final StreamMessage<T> delegate = this.delegate;
+        final SubscriptionImpl subscription = this.subscription;
         if (delegate == null || subscription == null) {
             return;
         }
@@ -268,7 +264,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             builder.add(SubscriptionOption.NOTIFY_CANCELLATION);
         }
 
-        delegate.subscribe(new ForwardingSubscriber(),
+        delegate.subscribe(new ForwardingSubscriber(subscription),
                            subscription.executor(),
                            builder.build().toArray(new SubscriptionOption[0]));
     }
@@ -299,42 +295,104 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return;
         }
 
+        final SubscriptionImpl subscription = this.subscription;
+        assert subscription != null;
         final CloseEvent closeEvent = newCloseEvent(cause);
         if (subscription.needsDirectInvocation()) {
-            closeEvent.notifySubscriber(subscription, completionFuture());
+            abort1(subscription, closeEvent);
         } else {
             subscription.executor().execute(
                     () -> closeEvent.notifySubscriber(subscription, completionFuture()));
         }
     }
 
+    private void abort1(SubscriptionImpl subscription, CloseEvent closeEvent) {
+        try (SafeCloseable ignored = pushContextIfExist()) {
+            if (!downstreamOnSubscribeCalled) {
+                downstreamOnSubscribeCalled = true;
+                subscription.subscriber().onSubscribe(subscription);
+            }
+            closeEvent.notifySubscriber(subscription, completionFuture());
+        }
+    }
+
+    /**
+     * Invoked when {@link Subscriber#onSubscribe(Subscription)} is called by the
+     * {@linkplain StreamMessage delegate}. The subclass who wants to push the context before calling callbacks
+     * on {@link Subscriber} should override this method and store the context.
+     */
+    protected void onSubscribeCalled() {}
+
     private final class ForwardingSubscriber implements Subscriber<T> {
+        private final SubscriptionImpl downstreamSubscription;
+
+        ForwardingSubscriber(SubscriptionImpl downstreamSubscription) {
+            this.downstreamSubscription = downstreamSubscription;
+        }
 
         @Override
         public void onSubscribe(Subscription subscription) {
+            onSubscribeCalled();
             delegateSubscription = subscription;
+            final Subscriber<Object> subscriber = downstreamSubscription.subscriber();
+            if (downstreamSubscription.needsDirectInvocation()) {
+                onSubscribe0(subscriber);
+            } else {
+                downstreamSubscription.executor().execute(() -> {
+                    onSubscribe0(subscriber);
+                });
+            }
+        }
 
-            if (cancelPending) {
-                delegateSubscription.cancel();
-            } else if (pendingDemand > 0) {
-                delegateSubscription.request(pendingDemand);
-                pendingDemand = 0;
+        private void onSubscribe0(Subscriber<Object> subscriber) {
+            if (downstreamOnSubscribeCalled) {
+                // The stream message is aborted after the downstream subscribed and before the delegate calls
+                // Subscriber.onSubscribe().
+                return;
+            }
+            downstreamOnSubscribeCalled = true;
+            try (SafeCloseable ignored = pushContextIfExist()) {
+                subscriber.onSubscribe(downstreamSubscription);
             }
         }
 
         @Override
         public void onNext(T t) {
-            subscription.subscriber().onNext(t);
+            if (downstreamSubscription.needsDirectInvocation()) {
+                downstreamSubscription.subscriber().onNext(t);
+            } else {
+                downstreamSubscription.executor().execute(() -> downstreamSubscription.subscriber().onNext(t));
+            }
         }
 
         @Override
         public void onError(Throwable t) {
-            subscription.subscriber().onError(t);
+            if (downstreamSubscription.needsDirectInvocation()) {
+                onError0(t);
+            } else {
+                downstreamSubscription.executor().execute(() -> onError0(t));
+            }
+        }
+
+        public void onError0(Throwable t) {
+            try (SafeCloseable ignored = pushContextIfExist()) {
+                downstreamSubscription.subscriber().onError(t);
+            }
         }
 
         @Override
         public void onComplete() {
-            subscription.subscriber().onComplete();
+            if (downstreamSubscription.needsDirectInvocation()) {
+                onComplete0();
+            } else {
+                downstreamSubscription.executor().execute(this::onComplete0);
+            }
+        }
+
+        public void onComplete0() {
+            try (SafeCloseable ignored = pushContextIfExist()) {
+                downstreamSubscription.subscriber().onComplete();
+            }
         }
     }
 }

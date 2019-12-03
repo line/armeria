@@ -29,7 +29,7 @@ final class StreamMessageUtil {
             return ((AbortingSubscriber<?>) oldSubscriber).cause();
         }
 
-        return new IllegalStateException("subscribed by other subscriber already");
+        return new IllegalStateException("subscribed by another subscriber already");
     }
 
     static boolean containsWithPooledObjects(SubscriptionOption... options) {

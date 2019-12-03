@@ -92,11 +92,6 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    final long demand() {
-        return requested;
-    }
-
-    @Override
     public final boolean isOpen() {
         // Fixed streams are closed on construction.
         return false;

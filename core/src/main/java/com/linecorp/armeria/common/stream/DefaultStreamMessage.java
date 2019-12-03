@@ -28,6 +28,8 @@ import javax.annotation.Nullable;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.util.SafeCloseable;
+
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -114,16 +116,21 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         final Subscriber<Object> subscriber = subscription.subscriber();
         if (subscription.needsDirectInvocation()) {
-            invokedOnSubscribe = true;
-            subscriber.onSubscribe(subscription);
+            subscribe0(subscription, subscriber);
         } else {
             subscription.executor().execute(() -> {
-                invokedOnSubscribe = true;
-                subscriber.onSubscribe(subscription);
+                subscribe0(subscription, subscriber);
             });
         }
 
         return subscription;
+    }
+
+    private void subscribe0(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+        invokedOnSubscribe = true;
+        try (SafeCloseable ignored = pushContextIfExist()) {
+            subscriber.onSubscribe(subscription);
+        }
     }
 
     @Override
@@ -156,11 +163,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     void addObject(T obj) {
         wroteAny = true;
         addObjectOrEvent(obj);
-    }
-
-    @Override
-    long demand() {
-        return demand;
     }
 
     @Override
@@ -197,7 +199,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     @Override
     void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
         // Always called from the subscriber thread.
-        try {
+        try (SafeCloseable ignored = pushContextIfExist()) {
             event.notifySubscriber(subscription, completionFuture());
         } finally {
             subscription.clearSubscriber();

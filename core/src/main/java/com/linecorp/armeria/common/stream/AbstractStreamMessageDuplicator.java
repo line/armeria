@@ -107,7 +107,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             duplicatorExecutor = currentExecutor;
         }
 
-        processor = new StreamMessageProcessor<>(upstream, signalLengthGetter,
+        processor = new StreamMessageProcessor<>(this, upstream, signalLengthGetter,
                                                  duplicatorExecutor, maxSignalLength);
     }
 
@@ -171,6 +171,26 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         processor.abort(cause);
     }
 
+    /**
+     * Invoked when {@link Subscriber#onSubscribe(Subscription)} is called by the
+     * {@linkplain StreamMessage upstream}. The subclass who wants to push the context before calling callbacks
+     * on {@link Subscriber} should override this method and store the context.
+     *
+     * @see #pushContextIfExist()
+     */
+    protected void onSubscribeCalled() {}
+
+    /**
+     * Pushes the context to the thread-local stack if this {@link AbstractStreamMessageDuplicator} has it.
+     * This method is invoked before {@link Subscriber#onSubscribe(Subscription)},
+     * {@link Subscriber#onComplete()} and {@link Subscriber#onError(Throwable)} are called.
+     *
+     * @see #onSubscribeCalled()
+     */
+    protected SafeCloseable pushContextIfExist() {
+        return () -> { /* no-op */};
+    }
+
     @VisibleForTesting
     static class StreamMessageProcessor<T> implements Subscriber<T> {
 
@@ -190,6 +210,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             CLOSED
         }
 
+        private final AbstractStreamMessageDuplicator<?, ?> duplicator;
         private final StreamMessage<T> upstream;
         private final SignalQueue signals;
         private final SignalLengthGetter<Object> signalLengthGetter;
@@ -212,8 +233,10 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private volatile State state = State.DUPLICABLE;
 
         @SuppressWarnings("unchecked")
-        StreamMessageProcessor(StreamMessage<T> upstream, SignalLengthGetter<?> signalLengthGetter,
-                               EventExecutor executor, long maxSignalLength) {
+        StreamMessageProcessor(AbstractStreamMessageDuplicator<?, ?> duplicator, StreamMessage<T> upstream,
+                               SignalLengthGetter<?> signalLengthGetter, EventExecutor executor,
+                               long maxSignalLength) {
+            this.duplicator = duplicator;
             this.upstream = upstream;
             this.signalLengthGetter = (SignalLengthGetter<Object>) signalLengthGetter;
             processorExecutor = executor;
@@ -237,6 +260,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public void onSubscribe(Subscription s) {
+            duplicator.onSubscribeCalled();
             if (processorExecutor.inEventLoop()) {
                 doOnSubscribe(s);
             } else {
@@ -358,31 +382,33 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         private void doUnsubscribe(DownstreamSubscription<T> subscription, @Nullable Throwable cause) {
-            if (!downstreamSubscriptions.remove(subscription)) {
-                return;
-            }
+            try (SafeCloseable ignored = duplicator.pushContextIfExist()) {
+                if (!downstreamSubscriptions.remove(subscription)) {
+                    return;
+                }
 
-            final Subscriber<? super T> subscriber = subscription.subscriber();
-            subscription.clearSubscriber();
+                final Subscriber<? super T> subscriber = subscription.subscriber();
+                subscription.clearSubscriber();
 
-            final CompletableFuture<Void> completionFuture = subscription.completionFuture();
-            if (cause == null) {
+                final CompletableFuture<Void> completionFuture = subscription.completionFuture();
+                if (cause == null) {
+                    try {
+                        subscriber.onComplete();
+                    } finally {
+                        completionFuture.complete(null);
+                        doCleanupIfLastSubscription();
+                    }
+                    return;
+                }
+
                 try {
-                    subscriber.onComplete();
+                    if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
+                        subscriber.onError(cause);
+                    }
                 } finally {
-                    completionFuture.complete(null);
+                    completionFuture.completeExceptionally(cause);
                     doCleanupIfLastSubscription();
                 }
-                return;
-            }
-
-            try {
-                if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
-                    subscriber.onError(cause);
-                }
-            } finally {
-                completionFuture.completeExceptionally(cause);
-                doCleanupIfLastSubscription();
             }
         }
 
@@ -495,7 +521,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
                 ChildStreamMessage.class, DownstreamSubscription.class, "subscription");
 
-        private final AbstractStreamMessageDuplicator<T, ?> parent;
+        private final AbstractStreamMessageDuplicator<T, ?> duplicator;
         private final StreamMessageProcessor<T> processor;
         private final boolean lastStream;
 
@@ -505,9 +531,9 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
-        ChildStreamMessage(AbstractStreamMessageDuplicator<T, ?> parent,
+        ChildStreamMessage(AbstractStreamMessageDuplicator<T, ?> duplicator,
                            StreamMessageProcessor<T> processor, boolean lastStream) {
-            this.parent = parent;
+            this.duplicator = duplicator;
             this.processor = processor;
             this.lastStream = lastStream;
         }
@@ -533,12 +559,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber) {
-            subscribe(subscriber, parent.duplicatorExecutor());
+            subscribe(subscriber, duplicator.duplicatorExecutor());
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-            subscribe(subscriber, parent.duplicatorExecutor(), withPooledObjects, false);
+            subscribe(subscriber, duplicator.duplicatorExecutor(), withPooledObjects, false);
         }
 
         @Override
@@ -547,7 +573,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
             final boolean withPooledObjects = containsWithPooledObjects(options);
             final boolean notifyCancellation = containsNotifyCancellation(options);
-            subscribe(subscriber, parent.duplicatorExecutor(), withPooledObjects, notifyCancellation);
+            subscribe(subscriber, duplicator.duplicatorExecutor(), withPooledObjects, notifyCancellation);
         }
 
         @Override
@@ -576,7 +602,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             requireNonNull(subscriber, "subscriber");
             requireNonNull(executor, "executor");
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
-                    this, subscriber, processor, executor, withPooledObjects, notifyCancellation, lastStream);
+                    this, subscriber, duplicator, processor, executor, withPooledObjects,
+                    notifyCancellation, lastStream);
 
             if (!subscribe0(subscription)) {
                 final DownstreamSubscription<T> oldSubscription = this.subscription;
@@ -606,12 +633,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public CompletableFuture<List<T>> drainAll() {
-            return drainAll(parent.duplicatorExecutor());
+            return drainAll(duplicator.duplicatorExecutor());
         }
 
         @Override
         public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
-            return drainAll(parent.duplicatorExecutor(), withPooledObjects);
+            return drainAll(duplicator.duplicatorExecutor(), withPooledObjects);
         }
 
         @Override
@@ -619,7 +646,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             requireNonNull(options, "options");
 
             final boolean withPooledObjects = containsWithPooledObjects(options);
-            return drainAll(parent.duplicatorExecutor(), withPooledObjects);
+            return drainAll(duplicator.duplicatorExecutor(), withPooledObjects);
         }
 
         @Override
@@ -634,7 +661,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
             final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
-                    this, drainer, processor, executor, withPooledObjects,
+                    this, drainer, duplicator, processor, executor, withPooledObjects,
                     false, /* We do not call Subscription.cancel() in StreamMessageDrainer. */
                     lastStream);
             if (!subscribe0(subscription)) {
@@ -674,7 +701,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
 
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
-                    this, AbortingSubscriber.get(cause), processor, ImmediateEventExecutor.INSTANCE,
+                    this, AbortingSubscriber.get(cause), duplicator, processor, ImmediateEventExecutor.INSTANCE,
                     false, false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
                 newSubscription.completionFuture().completeExceptionally(cause);
@@ -700,6 +727,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         private final StreamMessage<T> streamMessage;
         private Subscriber<? super T> subscriber;
+        private AbstractStreamMessageDuplicator<T, ?> duplicator;
         private final StreamMessageProcessor<T> processor;
         private final EventExecutor executor;
         private final boolean withPooledObjects;
@@ -723,12 +751,14 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private long cumulativeDemand;
         private boolean inOnNext;
 
-        DownstreamSubscription(ChildStreamMessage<T> streamMessage,
-                               Subscriber<? super T> subscriber, StreamMessageProcessor<T> processor,
+        DownstreamSubscription(ChildStreamMessage<T> streamMessage, Subscriber<? super T> subscriber,
+                               AbstractStreamMessageDuplicator<T, ?> duplicator,
+                               StreamMessageProcessor<T> processor,
                                EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation,
                                boolean lastSubscription) {
             this.streamMessage = streamMessage;
             this.subscriber = subscriber;
+            this.duplicator = duplicator;
             this.processor = processor;
             this.executor = executor;
             this.withPooledObjects = withPooledObjects;
@@ -758,9 +788,15 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             invokedOnSubscribe = true;
 
             if (executor.inEventLoop()) {
-                subscriber.onSubscribe(this);
+                invokeOnSubscribe0();
             } else {
-                executor.execute(() -> subscriber.onSubscribe(this));
+                executor.execute(this::invokeOnSubscribe0);
+            }
+        }
+
+        private void invokeOnSubscribe0() {
+            try (SafeCloseable ignored = duplicator.pushContextIfExist()) {
+                subscriber.onSubscribe(this);
             }
         }
 

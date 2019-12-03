@@ -16,31 +16,30 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.CompletionStage;
-
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.EventExecutor;
 
 /**
  * An {@link HttpResponse} whose stream is published later by another {@link HttpResponse}. It is used when
  * an {@link HttpResponse} will not be instantiated early.
- *
- * @deprecated Use {@link HttpResponse#from(CompletionStage)}.
  */
-@Deprecated
-public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
+final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
 
     @Nullable
     private final EventExecutor executor;
+    @Nullable
+    private ClientRequestContext ctx;
 
-    public DeferredHttpResponse() {
-        this.executor = null;
+    DeferredHttpResponse() {
+        this(null);
     }
 
-    DeferredHttpResponse(EventExecutor executor) {
+    DeferredHttpResponse(@Nullable EventExecutor executor) {
         this.executor = executor;
     }
 
@@ -60,5 +59,21 @@ public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> impl
             return executor;
         }
         return super.defaultSubscriberExecutor();
+    }
+
+    @Override
+    protected void onSubscribeCalled() {
+        final RequestContext ctx = RequestContext.currentOrNull();
+        if (ctx instanceof ClientRequestContext) {
+            this.ctx = (ClientRequestContext) ctx;
+        }
+    }
+
+    @Override
+    protected SafeCloseable pushContextIfExist() {
+        if (ctx != null) {
+            return ctx.push();
+        }
+        return super.pushContextIfExist();
     }
 }

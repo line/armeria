@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.EventLoop;
@@ -28,12 +29,15 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class DecodedHttpResponse extends DefaultHttpResponse {
 
+    @Nullable
+    private final ClientRequestContext ctx;
     private final EventLoop eventLoop;
     @Nullable
     private InboundTrafficController inboundTrafficController;
     private long writtenBytes;
 
-    DecodedHttpResponse(EventLoop eventLoop) {
+    DecodedHttpResponse(@Nullable ClientRequestContext ctx, EventLoop eventLoop) {
+        this.ctx = ctx;
         this.eventLoop = eventLoop;
     }
 
@@ -48,6 +52,14 @@ final class DecodedHttpResponse extends DefaultHttpResponse {
     @Override
     protected EventExecutor defaultSubscriberExecutor() {
         return eventLoop;
+    }
+
+    @Override
+    protected SafeCloseable pushContextIfExist() {
+        if (ctx != null) {
+            return ctx.push();
+        }
+        return super.pushContextIfExist();
     }
 
     @Override

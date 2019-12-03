@@ -413,7 +413,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             ctx.writeAndFlush(upgradeReq);
 
             final Http2ResponseDecoder responseDecoder = this.responseDecoder;
-            final DecodedHttpResponse res = new DecodedHttpResponse(ctx.channel().eventLoop());
+            final DecodedHttpResponse res = new DecodedHttpResponse(null, ctx.channel().eventLoop());
 
             res.init(responseDecoder.inboundTrafficController());
             res.subscribe(new Subscriber<HttpObject>() {
