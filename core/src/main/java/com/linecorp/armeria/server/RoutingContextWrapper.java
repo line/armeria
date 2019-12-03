@@ -26,9 +26,11 @@ import com.linecorp.armeria.common.MediaType;
 class RoutingContextWrapper implements RoutingContext {
 
     private final RoutingContext delegate;
+    private final List<Object> summary;
 
     RoutingContextWrapper(RoutingContext delegate) {
         this.delegate = delegate;
+        this.summary = DefaultRoutingContext.generateSummary(this);
     }
 
     @Override
@@ -86,5 +88,21 @@ class RoutingContextWrapper implements RoutingContext {
     @Override
     public boolean isCorsPreflight() {
         return delegate.isCorsPreflight();
+    }
+
+    @Override
+    public int hashCode() {
+        return summary().hashCode();
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        return obj instanceof RoutingContext &&
+               (this == obj || summary().equals(((RoutingContext) obj).summary()));
+    }
+
+    @Override
+    public String toString() {
+        return summary().toString();
     }
 }
