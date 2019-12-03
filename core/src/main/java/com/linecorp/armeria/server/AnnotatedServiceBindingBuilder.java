@@ -95,7 +95,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder exceptionHandlers(
             ExceptionHandlerFunction... exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        exceptionHandlerFunctionBuilder.addAll(ImmutableList.copyOf(exceptionHandlerFunctions));
+        exceptionHandlerFunctionBuilder.add(exceptionHandlerFunctions);
         return this;
     }
 
@@ -105,7 +105,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder exceptionHandlers(
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        exceptionHandlerFunctionBuilder.addAll(ImmutableList.copyOf(exceptionHandlerFunctions));
+        exceptionHandlerFunctionBuilder.addAll(exceptionHandlerFunctions);
         return this;
     }
 
@@ -128,7 +128,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder responseConverters(
             ResponseConverterFunction... responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-        responseConverterFunctionBuilder.addAll(ImmutableList.copyOf(responseConverterFunctions));
+        responseConverterFunctionBuilder.add(responseConverterFunctions);
         return this;
     }
 
@@ -138,7 +138,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder responseConverters(
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-        responseConverterFunctionBuilder.addAll(ImmutableList.copyOf(responseConverterFunctions));
+        responseConverterFunctionBuilder.addAll(responseConverterFunctions);
         return this;
     }
 
@@ -160,7 +160,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder requestConverters(
             RequestConverterFunction... requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requestConverterFunctionBuilder.addAll(ImmutableList.copyOf(requestConverterFunctions));
+        requestConverterFunctionBuilder.add(requestConverterFunctions);
         return this;
     }
 
@@ -170,7 +170,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder requestConverters(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requestConverterFunctionBuilder.addAll(ImmutableList.copyOf(requestConverterFunctions));
+        requestConverterFunctionBuilder.addAll(requestConverterFunctions);
         return this;
     }
 
