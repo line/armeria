@@ -521,9 +521,9 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified annotated service object under the specified path prefix.
      *
-     * @param exceptionHandlerFunctions an iterable object of {@link ExceptionHandlerFunction}
-     * @param requestConverterFunctions an iterable object of {@link RequestConverterFunction}
-     * @param responseConverterFunctions an iterable object of {@link ResponseConverterFunction}
+     * @param exceptionHandlerFunctions an iterable object of the {@link ExceptionHandlerFunction}s
+     * @param requestConverterFunctions an iterable object of the {@link RequestConverterFunction}s
+     * @param responseConverterFunctions an iterable object of the {@link ResponseConverterFunction}s
      */
     public VirtualHostBuilder annotatedService(
             String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
