@@ -97,7 +97,6 @@ public final class ThriftServiceMetadata {
 
         // Build the map of method names and their corresponding process functions.
         // If a method is defined multiple times, we take the first definition
-        final Set<String> methodNames = new HashSet<>();
         final Set<Class<?>> interfaces = new HashSet<>();
 
         for (Class<?> iface : candidateInterfaces) {
@@ -105,7 +104,7 @@ public final class ThriftServiceMetadata {
             asyncProcessMap = getThriftAsyncProcessMap(implementation, iface);
             if (asyncProcessMap != null) {
                 asyncProcessMap.forEach(
-                        (name, func) -> registerFunction(methodNames, iface, name, func, implementation));
+                        (name, func) -> registerFunction(iface, name, func, implementation));
                 interfaces.add(iface);
             }
 
@@ -113,7 +112,7 @@ public final class ThriftServiceMetadata {
             processMap = getThriftProcessMap(implementation, iface);
             if (processMap != null) {
                 processMap.forEach(
-                        (name, func) -> registerFunction(methodNames, iface, name, func, implementation));
+                        (name, func) -> registerFunction(iface, name, func, implementation));
                 interfaces.add(iface);
             }
         }
@@ -195,13 +194,12 @@ public final class ThriftServiceMetadata {
     }
 
     @SuppressWarnings("rawtypes")
-    private void registerFunction(Set<String> methodNames, Class<?> iface, String name,
+    private void registerFunction(Class<?> iface, String name,
                                   Object func, @Nullable Object implementation) {
-        if (methodNames.contains(name)) {
+        if (functions.containsKey(name)) {
             logger.warn("duplicate Thrift method name: " + name);
             return;
         }
-        methodNames.add(name);
 
         try {
             final ThriftFunction f;
