@@ -29,8 +29,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * This class provides extension about {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
- * or {@link ResponseConverterFunction}s for an {@link AnnotatedHttpService}.
+ * Collects the {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s and
+ * {@link ResponseConverterFunction}s into three different lists from a single {@link Iterable}.
  */
 final class AnnotatedHttpServiceExtensions {
 
