@@ -22,7 +22,6 @@ import java.lang.reflect.Constructor;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -68,11 +67,8 @@ public final class ThriftServiceMetadata {
      * Creates a new instance from a list of Thrift service implementations, while each service can implement
      * one or more Thrift service interfaces.
      */
-    public ThriftServiceMetadata(List<Object> implementations) {
+    public ThriftServiceMetadata(Iterable<?> implementations) {
         requireNonNull(implementations, "implementations");
-        if (implementations.isEmpty()) {
-            throw new IllegalArgumentException("empty implementations");
-        }
 
         final Builder<Class<?>> interfaceBuilder = ImmutableSet.builder();
         implementations.forEach(implementation -> {

@@ -130,10 +130,8 @@ class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service = THttpService.builder()
-                    .addService((HelloService.Iface) name -> "Hello, " + name + '!')
-                    .defaultSerializationFormat(defaultSerializationFormat)
-                    .build();
+        final THttpService service = THttpService.of(
+                (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
 
         invoke(service);
 
@@ -148,12 +146,9 @@ class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((HelloService.AsyncIface) (name, resultHandler) ->
-                                    resultHandler.onComplete("Hello, " + name + '!'))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (HelloService.AsyncIface) (name, resultHandler) ->
+                        resultHandler.onComplete("Hello, " + name + '!'), defaultSerializationFormat);
 
         invoke(service);
 
@@ -169,11 +164,8 @@ class ThriftServiceTest {
         client.send_hello(null);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((HelloService.Iface) name -> String.valueOf(name != null))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (HelloService.Iface) name -> String.valueOf(name != null), defaultSerializationFormat);
 
         invoke(service);
 
@@ -189,12 +181,9 @@ class ThriftServiceTest {
         client.send_hello(null);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((HelloService.AsyncIface) (name, resultHandler) ->
-                                    resultHandler.onComplete(String.valueOf(name != null)))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (HelloService.AsyncIface) (name, resultHandler) ->
+                        resultHandler.onComplete(String.valueOf(name != null)), defaultSerializationFormat);
 
         invoke(service);
 
@@ -209,18 +198,12 @@ class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService syncService =
-                THttpService.builder()
-                            .addService((HelloService.Iface) name -> "Hello, " + name + '!')
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService syncService = THttpService.of(
+                (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
 
-        final THttpService asyncService =
-                THttpService.builder()
-                            .addService((HelloService.AsyncIface) (name, resultHandler) ->
-                                    resultHandler.onComplete("Hello, " + name + '!'))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService asyncService = THttpService.of(
+                (HelloService.AsyncIface) (name, resultHandler) ->
+                        resultHandler.onComplete("Hello, " + name + '!'), defaultSerializationFormat);
 
         invokeTwice(syncService, asyncService);
 
@@ -238,11 +221,8 @@ class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((OnewayHelloService.Iface) actualName::set)
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (OnewayHelloService.Iface) actualName::set, defaultSerializationFormat);
 
         invoke(service);
 
@@ -261,14 +241,10 @@ class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((OnewayHelloService.AsyncIface) (name, resultHandler) -> {
-                                actualName.set(name);
-                                resultHandler.onComplete(null);
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of((OnewayHelloService.AsyncIface) (name, resultHandler) -> {
+            actualName.set(name);
+            resultHandler.onComplete(null);
+        }, defaultSerializationFormat);
 
         invoke(service);
 
@@ -286,11 +262,8 @@ class ThriftServiceTest {
         client.send_consume(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((DevNullService.Iface) consumed::set)
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (DevNullService.Iface) consumed::set, defaultSerializationFormat);
 
         invoke(service);
 
@@ -309,13 +282,10 @@ class ThriftServiceTest {
         client.send_consume("bar");
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((DevNullService.AsyncIface) (value, resultHandler) -> {
-                                consumed.set(value);
-                                resultHandler.onComplete(null); })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of((DevNullService.AsyncIface) (value, resultHandler) -> {
+            consumed.set(value);
+            resultHandler.onComplete(null);
+        }, defaultSerializationFormat);
 
         invoke(service);
 
@@ -332,20 +302,13 @@ class ThriftServiceTest {
         client.send_consume(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService syncService =
-                THttpService.builder()
-                            .addService((DevNullService.Iface) value -> {
-                                // NOOP
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService syncService = THttpService.of((DevNullService.Iface) value -> {
+            // NOOP
+        }, defaultSerializationFormat);
 
-        final THttpService asyncService =
-                THttpService.builder()
-                            .addService((DevNullService.AsyncIface) (value, resultHandler) ->
-                                            resultHandler.onComplete(null))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService asyncService = THttpService.of(
+                (DevNullService.AsyncIface) (value, resultHandler) ->
+                        resultHandler.onComplete(null), defaultSerializationFormat);
 
         invokeTwice(syncService, asyncService);
 
@@ -360,13 +323,9 @@ class ThriftServiceTest {
         client.send_create(BAR);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((FileService.Iface) path -> {
-                                throw newFileServiceException();
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of((FileService.Iface) path -> {
+            throw newFileServiceException();
+        }, defaultSerializationFormat);
 
         invoke(service);
 
@@ -386,13 +345,9 @@ class ThriftServiceTest {
         client.send_create(BAR);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService(
-                                    (FileService.AsyncIface) (path, resultHandler) ->
-                                            resultHandler.onError(newFileServiceException()))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (FileService.AsyncIface) (path, resultHandler) ->
+                        resultHandler.onError(newFileServiceException()), defaultSerializationFormat);
 
         invoke(service);
 
@@ -413,13 +368,9 @@ class ThriftServiceTest {
         client.send_create(BAR);
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService syncService =
-                THttpService.builder()
-                            .addService((FileService.Iface) path -> {
-                                throw newFileServiceException();
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService syncService = THttpService.of((FileService.Iface) path -> {
+            throw newFileServiceException();
+        }, defaultSerializationFormat);
 
         final THttpService asyncService =
                 THttpService.builder()
@@ -442,15 +393,11 @@ class ThriftServiceTest {
                 inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_create(BAZ);
         assertThat(out.length()).isGreaterThan(0);
-        final RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((FileService.Iface) path -> {
-                                throw exception;
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
+        final THttpService service = THttpService.of((FileService.Iface) path -> {
+            throw exception;
+        }, defaultSerializationFormat);
 
         invoke(service);
 
@@ -473,14 +420,9 @@ class ThriftServiceTest {
         assertThat(out.length()).isGreaterThan(0);
 
         final RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
-
-        final THttpService service =
-                THttpService.builder()
-                            .addService(
-                                    (FileService.AsyncIface) (path, resultHandler) ->
-                                            resultHandler.onError(exception))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (FileService.AsyncIface) (path, resultHandler) ->
+                        resultHandler.onError(exception), defaultSerializationFormat);
 
         invoke(service);
 
@@ -503,21 +445,13 @@ class ThriftServiceTest {
         assertThat(out.length()).isGreaterThan(0);
 
         final RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
-        final THttpService syncService =
-                THttpService.builder()
-                            .addService((FileService.Iface) path -> {
-                                throw exception;
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService syncService = THttpService.of((FileService.Iface) path -> {
+            throw exception;
+        }, defaultSerializationFormat);
 
-        final THttpService asyncService =
-                THttpService.builder()
-                            .addService(
-                                    (FileService.AsyncIface) (path, resultHandler) ->
-                                            resultHandler.onError(exception))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService asyncService = THttpService.of(
+                (FileService.AsyncIface) (path, resultHandler) ->
+                        resultHandler.onError(exception), defaultSerializationFormat);
 
         invokeTwice(syncService, asyncService);
 
@@ -532,11 +466,8 @@ class ThriftServiceTest {
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((NameService.Iface) name -> new Name(name.first, null, name.last))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
 
         invoke(service);
 
@@ -551,13 +482,11 @@ class ThriftServiceTest {
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService(
-                                    (NameService.AsyncIface) (name, resultHandler) ->
-                                            resultHandler.onComplete(new Name(name.first, null, name.last)))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (NameService.AsyncIface) (name, resultHandler) ->
+                        resultHandler.onComplete(new Name(name.first, null, name.last)),
+                defaultSerializationFormat);
+
         invoke(service);
 
         assertThat(client.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
@@ -572,19 +501,13 @@ class ThriftServiceTest {
         client.send_removeMiddle(new Name(FOO, BAZ, BAR));
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService syncService =
-                THttpService.builder()
-                            .addService((NameService.Iface) name -> new Name(name.first, null, name.last))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService syncService = THttpService.of(
+                (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
 
-        final THttpService asyncService =
-                THttpService.builder()
-                            .addService(
-                                    (NameService.AsyncIface) (name, resultHandler) ->
-                                            resultHandler.onComplete(new Name(name.first, null, name.last)))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService asyncService = THttpService.of(
+                (NameService.AsyncIface) (name, resultHandler) ->
+                        resultHandler.onComplete(new Name(name.first, null, name.last)),
+                defaultSerializationFormat);
 
         invokeTwice(syncService, asyncService);
 
@@ -599,15 +522,11 @@ class ThriftServiceTest {
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((NameSortService.Iface) names -> {
-                                final ArrayList<Name> sorted = new ArrayList<>(names);
-                                Collections.sort(sorted);
-                                return sorted;
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of((NameSortService.Iface) names -> {
+            final ArrayList<Name> sorted = new ArrayList<>(names);
+            Collections.sort(sorted);
+            return sorted;
+        }, defaultSerializationFormat);
 
         invoke(service);
 
@@ -622,15 +541,11 @@ class ThriftServiceTest {
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((NameSortService.AsyncIface) (names, resultHandler) -> {
-                                final ArrayList<Name> sorted = new ArrayList<>(names);
-                                Collections.sort(sorted);
-                                resultHandler.onComplete(sorted);
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
+            final ArrayList<Name> sorted = new ArrayList<>(names);
+            Collections.sort(sorted);
+            resultHandler.onComplete(sorted);
+        }, defaultSerializationFormat);
 
         invoke(service);
 
@@ -645,25 +560,18 @@ class ThriftServiceTest {
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
-        final THttpService syncService =
-                THttpService.builder()
-                            .addService((NameSortService.Iface) names -> {
-                                final ArrayList<Name> sorted = new ArrayList<>(names);
-                                Collections.sort(sorted);
-                                return sorted;
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService syncService = THttpService.of((NameSortService.Iface) names -> {
+            final ArrayList<Name> sorted = new ArrayList<>(names);
+            Collections.sort(sorted);
+            return sorted;
+        }, defaultSerializationFormat);
 
         final THttpService asyncService =
-                THttpService.builder()
-                            .addService((NameSortService.AsyncIface) (names, resultHandler) -> {
-                                final ArrayList<Name> sorted = new ArrayList<>(names);
-                                Collections.sort(sorted);
-                                resultHandler.onComplete(sorted);
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+                THttpService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
+                    final ArrayList<Name> sorted = new ArrayList<>(names);
+                    Collections.sort(sorted);
+                    resultHandler.onComplete(sorted);
+                }, defaultSerializationFormat);
 
         invokeTwice(syncService, asyncService);
 
@@ -677,17 +585,13 @@ class ThriftServiceTest {
                 inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_process(ByteBuffer.wrap(new byte[] { 1, 2 }));
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService((BinaryService.Iface) data -> {
-                                final ByteBuffer result = ByteBuffer.allocate(data.remaining());
-                                for (int i = data.position(), j = 0; i < data.limit(); i++, j++) {
-                                    result.put(j, (byte) (data.get(i) + 1));
-                                }
-                                return result;
-                            })
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of((BinaryService.Iface) data -> {
+            final ByteBuffer result = ByteBuffer.allocate(data.remaining());
+            for (int i = data.position(), j = 0; i < data.limit(); i++, j++) {
+                result.put(j, (byte) (data.get(i) + 1));
+            }
+            return result;
+        }, defaultSerializationFormat);
 
         invoke(service);
 
@@ -723,13 +627,10 @@ class ThriftServiceTest {
 
         final HttpData req2 = HttpData.wrap(out.getArray(), 0, out.length());
 
-        final THttpService service =
-                THttpService.builder()
-                            .addService(
-                                    (UberNameService) (names, callback) -> callback.onComplete(
-                                            names.stream().sorted().collect(toImmutableList())))
-                            .defaultSerializationFormat(defaultSerializationFormat)
-                            .build();
+        final THttpService service = THttpService.of(
+                (UberNameService) (names, callback) -> callback.onComplete(
+                        names.stream().sorted().collect(toImmutableList())),
+                defaultSerializationFormat);
 
         invoke0(service, req1, promise);
         invoke0(service, req2, promise2);
@@ -748,9 +649,7 @@ class ThriftServiceTest {
     @ArgumentsSource(SerializationFormatProvider.class)
     void testServiceInheritance(SerializationFormat defaultSerializationFormat) {
         // This should not throw an exception
-        THttpService.builder()
-                    .addService((ChildRpcDebugService.Iface)(a1, a2, details) -> new Response("asdf"))
-                    .build();
+        THttpService.of((ChildRpcDebugService.Iface)(a1, a2, details) -> new Response("asdf"));
     }
 
     /**
@@ -784,8 +683,8 @@ class ThriftServiceTest {
                             .defaultSerializationFormat(defaultSerializationFormat)
                             .build();
 
-        invoke0(service, req1, promise, "/");
-        invoke0(service, req2, promise2, "/");
+        invoke0(service, req1, promise);
+        invoke0(service, req2, promise2);
 
         final HttpData res1 = promise.get();
         final HttpData res2 = promise2.get();
@@ -840,12 +739,7 @@ class ThriftServiceTest {
 
     private static void invoke0(THttpService service, HttpData content,
                                 CompletableFuture<HttpData> promise) throws Exception {
-        invoke0(service, content, promise, "/asd");
-    }
-
-    private static void invoke0(THttpService service, HttpData content,
-                                CompletableFuture<HttpData> promise, String path) throws Exception {
-        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, path);
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/");
         req.write(content);
         req.close();
 
