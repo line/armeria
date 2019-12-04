@@ -41,7 +41,7 @@ public interface Cookies extends Set<Cookie> {
     }
 
     /**
-     * Creates an instance with a copy of the specified {@link Iterable} of {@link Cookie}s.
+     * Creates an instance with a copy of the specified set of {@link Cookie}s.
      */
     static Cookies of(Iterable<? extends Cookie> cookies) {
         final ImmutableSet<Cookie> cookiesCopy = ImmutableSet.copyOf(requireNonNull(cookies, "cookies"));
@@ -53,7 +53,7 @@ public interface Cookies extends Set<Cookie> {
     }
 
     /**
-     * Creates an instance with a copy of the specified {@link Iterable} of {@link Cookie}s.
+     * Creates an instance with a copy of the specified set of {@link Cookie}s.
      *
      * @deprecated Use {@link #of(Iterable)}.
      */

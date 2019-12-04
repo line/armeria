@@ -40,10 +40,10 @@ import com.google.common.collect.ImmutableSet;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie decoder for server side.
+ * A <a href="http://tools.ietf.org/html/rfc6265">RFC 6265</a> compliant cookie decoder for server side.
  *
  * <p>Thie decoder decodes only cookie name and value. The old fields in
- * <a href="http://tools.ietf.org/html/rfc2965">RFC2965</a> such as {@code "path"} and {@code "domain"} are
+ * <a href="http://tools.ietf.org/html/rfc2965">RFC 2965</a> such as {@code "path"} and {@code "domain"} are
  * ignored.</p>
  *
  * @see ServerCookieEncoder
@@ -66,7 +66,7 @@ final class ServerCookieDecoder {
     /**
      * Decodes the specified {@code "Cookie"} header value into {@link Cookie}s.
      *
-     * @param strict whether to validate that name and value chars are in the valid scope defined in RFC6265.
+     * @param strict whether to validate that name and value chars are in the valid scope defined in RFC 6265.
      * @return the decoded {@link Cookie}s.
      */
     static Cookies decode(boolean strict, String header) {

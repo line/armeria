@@ -86,7 +86,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Decodes the specified {@code "Cookie"} header value into a set of {@link Cookie}s.
      *
      * @param strict whether to validate that the cookie names and values are in the valid scope
-     *               defined in RFC6265.
+     *               defined in RFC 6265.
      * @param cookieHeader the {@code "Cookie"} header value.
      * @return the decoded {@link Cookie}s.
      */
@@ -136,8 +136,8 @@ public interface Cookie extends Comparable<Cookie> {
      * Encodes the specified {@link Cookie}s into a {@code "Cookie"} header value.
      *
      * @param strict whether to validate that cookie names and values are in the valid scope
-     *               defined in RFC6265 and to sort the {@link Cookie}s into order of decreasing path length,
-     *               as specified in RFC6265. If {@code false}, the {@link Cookie}s are encoded in the order
+     *               defined in RFC 6265 and to sort the {@link Cookie}s into order of decreasing path length,
+     *               as specified in RFC 6265. If {@code false}, the {@link Cookie}s are encoded in the order
      *               in which they are given.
      * @param cookies the {@link Cookie}s to encode.
      * @return the encoded {@code "Cookie"} header value.
@@ -152,8 +152,8 @@ public interface Cookie extends Comparable<Cookie> {
      * Encodes the specified {@link Cookie}s into a {@code "Cookie"} header value.
      *
      * @param strict whether to validate that cookie names and values are in the valid scope
-     *               defined in RFC6265 and to sort the {@link Cookie}s into order of decreasing path length,
-     *               as specified in RFC6265. If {@code false}, the {@link Cookie}s are encoded in the order
+     *               defined in RFC 6265 and to sort the {@link Cookie}s into order of decreasing path length,
+     *               as specified in RFC 6265. If {@code false}, the {@link Cookie}s are encoded in the order
      *               in which they are given.
      * @param cookies the {@link Cookie}s to encode.
      * @return the encoded {@code "Cookie"} header value.
@@ -177,8 +177,8 @@ public interface Cookie extends Comparable<Cookie> {
      * Encodes the specified {@link Cookie}s into a {@code "Cookie"} header value.
      *
      * @param strict whether to validate that cookie names and values are in the valid scope
-     *               defined in RFC6265 and to sort the {@link Cookie}s into order of decreasing path length,
-     *               as specified in RFC6265. If {@code false}, the {@link Cookie}s are encoded in the order
+     *               defined in RFC 6265 and to sort the {@link Cookie}s into order of decreasing path length,
+     *               as specified in RFC 6265. If {@code false}, the {@link Cookie}s are encoded in the order
      *               in which they are given.
      * @param cookies the {@link Cookie}s to encode.
      * @return the encoded {@code "Cookie"} header value.
@@ -205,7 +205,7 @@ public interface Cookie extends Comparable<Cookie> {
     /**
      * Decodes the specified {@code "Set-Cookie"} header value into a {@link Cookie}.
      *
-     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC6265.
+     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC 6265.
      * @param setCookieHeader the {@code "Set-Cookie"} header value.
      * @return the decoded {@link Cookie} if decoded successfully. {@code null} otherwise.
      */
@@ -251,7 +251,7 @@ public interface Cookie extends Comparable<Cookie> {
     /**
      * Decodes the specified {@code "Set-Cookie"} header values into {@link Cookie}s.
      *
-     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC6265.
+     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC 6265.
      * @param setCookieHeaders the {@code "Set-Cookie"} header values.
      * @return the decoded {@link Cookie}s.
      */
@@ -277,7 +277,7 @@ public interface Cookie extends Comparable<Cookie> {
     /**
      * Decodes the specified {@code "Set-Cookie"} header values into {@link Cookie}s.
      *
-     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC6265.
+     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC 6265.
      * @param setCookieHeaders the {@code "Set-Cookie"} header values.
      * @return the decoded {@link Cookie}s.
      */
@@ -298,7 +298,7 @@ public interface Cookie extends Comparable<Cookie> {
     /**
      * Decodes the specified {@code "Set-Cookie"} header values into {@link Cookie}s.
      *
-     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC6265.
+     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC 6265.
      * @param setCookieHeaders the {@code "Set-Cookie"} header values.
      * @return the decoded {@link Cookie}s.
      */
@@ -346,7 +346,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Encodes the specified {@link Cookie}s into {@code "Set-Cookie"} header values.
      *
      * @param strict whether to validate that the cookie names and values are in the valid scope
-     *               defined in RFC6265.
+     *               defined in RFC 6265.
      * @param cookies the {@link Cookie}s to encode.
      * @return the encoded {@code "Set-Cookie"} header values.
      */
@@ -367,7 +367,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Encodes the specified {@link Cookie}s into {@code "Set-Cookie"} header values.
      *
      * @param strict whether to validate that the cookie names and values are in the valid scope
-     *               defined in RFC6265.
+     *               defined in RFC 6265.
      * @param cookies the {@link Cookie}s to encode.
      * @return the encoded {@code "Set-Cookie"} header values.
      */
@@ -392,7 +392,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Encodes the specified {@link Cookie}s into {@code "Set-Cookie"} header values.
      *
      * @param strict whether to validate that the cookie names and values are in the valid scope
-     *               defined in RFC6265.
+     *               defined in RFC 6265.
      * @param cookies the {@link Cookie}s to encode.
      * @return the encoded {@code "Set-Cookie"} header values.
      */
@@ -474,8 +474,11 @@ public interface Cookie extends Comparable<Cookie> {
 
     /**
      * Encodes this {@link Cookie} into a single {@code "Cookie"} header value.
+     * Note that you must use {@link #toCookieHeader(Collection)} when encoding more than one {@link Cookie},
+     * because it is prohibited to send multiple {@code "Cookie"} headers in an HTTP request,
+     * according to <a href="https://tools.ietf.org/html/rfc6265#section-5.4">RFC 6265</a>.
      *
-     * @return a single RFC6265-style {@code "Cookie"} header value.
+     * @return a single RFC 6265-style {@code "Cookie"} header value.
      */
     default String toCookieHeader() {
         return toCookieHeader(true);
@@ -483,10 +486,13 @@ public interface Cookie extends Comparable<Cookie> {
 
     /**
      * Encodes this {@link Cookie} into a single {@code "Cookie"} header value.
+     * Note that you must use {@link #toCookieHeader(boolean, Collection)} when encoding
+     * more than one {@link Cookie}, because it is prohibited to send multiple {@code "Cookie"} headers
+     * in an HTTP request, according to <a href="https://tools.ietf.org/html/rfc6265#section-5.4">RFC 6265</a>.
      *
      * @param strict whether to validate that the cookie name and value are in the valid scope
-     *               defined in RFC6265.
-     * @return a single RFC6265-style {@code "Cookie"} header value.
+     *               defined in RFC 6265.
+     * @return a single RFC 6265-style {@code "Cookie"} header value.
      */
     default String toCookieHeader(boolean strict) {
         return ClientCookieEncoder.encode(strict, this);
@@ -505,7 +511,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Encodes this {@link Cookie} into a single {@code "Set-Cookie"} header value.
      *
      * @param strict whether to validate that the cookie name and value are in the valid scope
-     *               defined in RFC6265.
+     *               defined in RFC 6265.
      * @return a single {@code "Set-Cookie"} header value.
      */
     default String toSetCookieHeader(boolean strict) {

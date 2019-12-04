@@ -43,7 +43,7 @@ import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie decoder for client side.
+ * A <a href="http://tools.ietf.org/html/rfc6265">RFC 6265</a> compliant cookie decoder for client side.
  *
  * <p>It will store the way the raw value was wrapped in {@link Cookie#isValueQuoted()} so it can be sent back
  * to the origin server as is.</p>
@@ -60,7 +60,7 @@ final class ClientCookieDecoder {
     /**
      * Decodes the specified {@code "Set-Cookie"} header value into a {@link Cookie}.
      *
-     * @param strict whether to validate the name and value chars are in the valid scope defined in RFC6265.
+     * @param strict whether to validate the name and value chars are in the valid scope defined in RFC 6265.
      * @return the decoded {@link Cookie}, or {@code null} if malformed.
      */
     @Nullable

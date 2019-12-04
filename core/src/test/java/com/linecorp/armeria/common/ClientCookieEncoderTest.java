@@ -71,7 +71,7 @@ class ClientCookieEncoderTest {
                                      .build();
         final Cookie cookie3 = Cookie.of("myCookie3", "myValue3");
         final String encodedCookie = Cookie.toCookieHeader(cookie1, cookie2, cookie3);
-        // Cookies should be sorted into decreasing order of path length, as per RFC6265.
+        // Cookies should be sorted into decreasing order of path length, as per RFC 6265.
         // When no path is provided, we assume maximum path length (so cookie3 comes first).
         assertThat(encodedCookie).isEqualTo(c3 + "; " + c2 + "; " + c1);
     }

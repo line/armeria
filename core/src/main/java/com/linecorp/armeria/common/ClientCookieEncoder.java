@@ -45,7 +45,7 @@ import java.util.List;
 import io.netty.util.internal.InternalThreadLocalMap;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder for client side.
+ * A <a href="http://tools.ietf.org/html/rfc6265">RFC 6265</a> compliant cookie encoder for client side.
  *
  * <p>Note that multiple cookies are supposed to be sent at once in a single {@code "Cookie"} header.</p>
  *
@@ -63,7 +63,7 @@ final class ClientCookieEncoder {
      *
      * @param strict whether to validate that name and value chars are in the valid scope.
      * @param cookie the {@link Cookie} to encode.
-     * @return a RFC6265-style {@code "Cookie"} header value.
+     * @return a RFC 6265-style {@code "Cookie"} header value.
      */
     static String encode(boolean strict, Cookie cookie) {
         requireNonNull(cookie, "cookie");
@@ -99,10 +99,10 @@ final class ClientCookieEncoder {
      * Encodes the specified cookies into a single {@code "Cookie"} header value.
      *
      * @param strict whether to validate that name and value chars are in the valid scope and
-     *               to sort the cookies into order of decreasing path length, as specified in RFC6265.
+     *               to sort the cookies into order of decreasing path length, as specified in RFC 6265.
      *               If {@code false}, the cookies are encoded in the order in which they are given.
      * @param cookies the {@link Cookie}s to encode.
-     * @return a RFC6265-style {@code "Cookie"} header value.
+     * @return a RFC 6265-style {@code "Cookie"} header value.
      */
     static String encode(boolean strict, Cookie... cookies) {
         assert cookies.length != 0 : cookies.length;
@@ -130,10 +130,10 @@ final class ClientCookieEncoder {
      * Encodes the specified cookies into a single {@code "Cookie"} header value.
      *
      * @param strict whether to validate that name and value chars are in the valid scope and
-     *               to sort the cookies into order of decreasing path length, as specified in RFC6265.
+     *               to sort the cookies into order of decreasing path length, as specified in RFC 6265.
      *               If {@code false}, the cookies are encoded in the order in which they are given.
      * @param cookiesIt the {@link Iterator} of the {@link Cookie}s to encode.
-     * @return a RFC6265-style {@code "Cookie"} header value, or {@code null} if no cookies were specified.
+     * @return a RFC 6265-style {@code "Cookie"} header value, or {@code null} if no cookies were specified.
      */
     static String encode(boolean strict, Iterator<? extends Cookie> cookiesIt) {
         assert cookiesIt.hasNext();

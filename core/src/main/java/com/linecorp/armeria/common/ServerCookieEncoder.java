@@ -45,7 +45,7 @@ import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder for server side.
+ * A <a href="http://tools.ietf.org/html/rfc6265">RFC 6265</a> compliant cookie encoder for server side.
  *
  * <p>Note that multiple cookies must be sent as separate "Set-Cookie" headers.</p>
  *
@@ -59,7 +59,7 @@ final class ServerCookieEncoder {
     /**
      * Encodes the specified {@link Cookie} into a {@code "Set-Cookie"} header value.
      *
-     * @param strict whether to validate that name and value chars are in the valid scope defined in RFC6265.
+     * @param strict whether to validate that name and value chars are in the valid scope defined in RFC 6265.
      * @param cookie the {@link Cookie} to encode.
      * @return a single {@code "Set-Cookie"} header value.
      */
