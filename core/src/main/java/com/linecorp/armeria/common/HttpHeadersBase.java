@@ -273,12 +273,12 @@ class HttpHeadersBase implements HttpHeaderGetters {
         }
 
         final ImmutableList.Builder<String> builder = ImmutableList.builder();
-        while (e != null) {
+        do {
             if (e.hash == h && keyEquals(e.key, name)) {
                 builder.add(e.getValue());
             }
             e = e.next;
-        }
+        } while (e != null);
         return builder.build();
     }
 
