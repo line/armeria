@@ -26,11 +26,9 @@ import com.linecorp.armeria.common.MediaType;
 class RoutingContextWrapper implements RoutingContext {
 
     private final RoutingContext delegate;
-    private final List<Object> summary;
 
     RoutingContextWrapper(RoutingContext delegate) {
         this.delegate = delegate;
-        this.summary = DefaultRoutingContext.generateSummary(this);
     }
 
     @Override
@@ -71,11 +69,6 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public List<Object> summary() {
-        return delegate.summary();
-    }
-
-    @Override
     public void deferStatusException(HttpStatusException cause) {
         delegate.deferStatusException(cause);
     }
@@ -92,17 +85,16 @@ class RoutingContextWrapper implements RoutingContext {
 
     @Override
     public int hashCode() {
-        return summary().hashCode();
+        return DefaultRoutingContext.hashCode(this);
     }
 
     @Override
     public boolean equals(@Nullable Object obj) {
-        return obj instanceof RoutingContext &&
-               (this == obj || summary().equals(((RoutingContext) obj).summary()));
+        return DefaultRoutingContext.equals(this, obj);
     }
 
     @Override
     public String toString() {
-        return summary().toString();
+        return DefaultRoutingContext.toString(this);
     }
 }

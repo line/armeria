@@ -264,10 +264,15 @@ class HttpHeadersBase implements HttpHeaderGetters {
     }
 
     private ImmutableList<String> getAllReversed(CharSequence name) {
-        final ImmutableList.Builder<String> builder = ImmutableList.builder();
         final int h = AsciiString.hashCode(name);
         final int i = index(h);
         HeaderEntry e = entries[i];
+
+        if (e == null) {
+            return ImmutableList.of();
+        }
+
+        final ImmutableList.Builder<String> builder = ImmutableList.builder();
         while (e != null) {
             if (e.hash == h && keyEquals(e.key, name)) {
                 builder.add(e.getValue());
