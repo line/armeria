@@ -37,12 +37,7 @@ public interface Cookies extends Set<Cookie> {
      * Creates an instance with a copy of the specified set of {@link Cookie}s.
      */
     static Cookies of(Cookie... cookies) {
-        requireNonNull(cookies, "cookies");
-        if (cookies.length == 0) {
-            return empty();
-        } else {
-            return new DefaultCookies(ImmutableSet.copyOf(cookies));
-        }
+        return of(ImmutableSet.copyOf(requireNonNull(cookies, "cookies")));
     }
 
     /**

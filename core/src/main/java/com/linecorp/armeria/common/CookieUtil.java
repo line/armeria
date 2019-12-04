@@ -254,6 +254,7 @@ final class CookieUtil {
 
     static Cookies fromSetCookieHeaders(ImmutableSet.Builder<Cookie> builder,
                                         boolean strict, Iterator<String> it) {
+        assert it.hasNext();
         do {
             final String v = it.next();
             requireNonNull(v, "setCookieHeaders contains null.");
@@ -268,6 +269,7 @@ final class CookieUtil {
 
     static List<String> toSetCookieHeaders(ImmutableList.Builder<String> builder,
                                            boolean strict, Iterator<? extends Cookie> it) {
+        assert it.hasNext();
         do {
             final Cookie c = it.next();
             requireNonNull(c, "cookies contains null.");
