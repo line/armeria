@@ -43,7 +43,7 @@ import com.linecorp.armeria.shared.AsyncCounters;
 public class HttpServerBenchmark {
 
     // JMH bug prevents it from using enums that override toString() (it should use name() instead...).
-    private enum Protocol {
+    public enum Protocol {
         H2C(SessionProtocol.H2C),
         H1C(SessionProtocol.H1C);
 

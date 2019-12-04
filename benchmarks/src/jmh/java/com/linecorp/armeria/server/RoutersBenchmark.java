@@ -74,4 +74,16 @@ public class RoutersBenchmark {
         }
         return routed;
     }
+
+    @Benchmark
+    public Routed<ServiceConfig> exactMatch_wrapped() {
+        final RoutingContext ctx = new RoutingContextWrapper(
+                DefaultRoutingContext.of(HOST, "localhost", METHOD1_HEADERS.path(),
+                                         null, METHOD1_HEADERS, false));
+        final Routed<ServiceConfig> routed = ROUTER.find(ctx);
+        if (routed.value() != SERVICES.get(0)) {
+            throw new IllegalStateException("Routing error");
+        }
+        return routed;
+    }
 }

@@ -149,8 +149,8 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-        return obj instanceof DefaultRoutingContext &&
-               (this == obj || summary().equals(((DefaultRoutingContext) obj).summary()));
+        return obj instanceof RoutingContext &&
+               (this == obj || summary().equals(((RoutingContext) obj).summary()));
     }
 
     @Override
