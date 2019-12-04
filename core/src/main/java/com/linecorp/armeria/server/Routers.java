@@ -226,37 +226,23 @@ public final class Routers {
         final Router<V> router;
         if (isTrie) {
             final RoutingTrieBuilder<V> builder = new RoutingTrieBuilder<>();
-            // Set a comparator to sort services by the number of conditions to be checked in a descending
-            // order.
+            // Set a comparator to sort services by the number of conditions to check in a descending order.
             builder.comparator(valueComparator);
-            values.forEach(v -> {
+            for (V v : values) {
                 final Route route = routeResolver.apply(v);
-                final String path = route.paths().get(0);
-                final int pathLen = path.length();
-                if (fallbackValue != null && pathLen > 1) {
-                    // Add some extra routes to handle the case where a client sends a request
-                    // without a trailing slash. `PathMapping.apply()` will produce a `RoutingResult`
-                    // whose type is `NEEDS_REDIRECT`.
-                    switch (route.pathType()) {
-                        case EXACT:         // `/foo`   or `/foo/`
-                        case PARAMETERIZED: // `/foo/:` or `/foo/:/`
-                            if (path.charAt(pathLen - 1) == '/') {
-                                // Add an extra route without a trailing slash for a redirect.
-                                builder.add(path.substring(0, pathLen - 1),
-                                            fallbackValue, /* hasHighPrecedence */ false);
-                            }
-                            break;
-                        case PREFIX: // `/foo/*`
-                            // Add an extra route of an exact match.
-                            builder.add(path.substring(0, pathLen - 1),
-                                        fallbackValue, /* hasHighPrecedence */ false);
-                            break;
-                        default:
-                            throw new Error("Unexpected path type: " + route.pathType());
+                builder.add(route.paths().get(1), v);
+
+                if (fallbackValue != null) {
+                    // Add an extra route without a trailing slash for a redirect.
+                    // Note that `path.length()` must be greater than 1 because path is `/` when 1.
+                    final String path = route.paths().get(0);
+                    final int pathLen = path.length();
+                    if (pathLen > 1 && path.charAt(pathLen - 1) == '/') {
+                        builder.add(path.substring(0, pathLen - 1),
+                                    fallbackValue, /* hasHighPrecedence */ false);
                     }
                 }
-                builder.add(route.paths().get(1), v);
-            });
+            }
             router = new TrieRouter<>(builder.build(), routeResolver);
         } else {
             values.sort(valueComparator);
