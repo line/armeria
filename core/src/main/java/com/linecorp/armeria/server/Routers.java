@@ -252,10 +252,10 @@ public final class Routers {
         if (logger.isDebugEnabled()) {
             logger.debug("Router created for {} service(s): {}",
                          values.size(), router.getClass().getSimpleName());
-            values.forEach(c -> {
-                final Route route = routeResolver.apply(c);
+            for (V v : values) {
+                final Route route = routeResolver.apply(v);
                 logger.debug("meterTag: {}, complexity: {}", route.meterTag(), route.complexity());
-            });
+            }
         }
         values.clear();
         return router;
