@@ -90,7 +90,7 @@ class AnnotatedValueResolverTest {
                                                    .collect(Collectors.joining("&"));
 
         final RequestHeadersBuilder headers = RequestHeaders.builder(HttpMethod.GET, path + '?' + query);
-        headers.set(HttpHeaderNames.COOKIE, "a=1;b=2", "c=3", "a=4");
+        headers.set(HttpHeaderNames.COOKIE, "a=1;b=2;c=3;a=4");
         existingHttpHeaders.forEach(name -> headers.set(name, headerValues));
 
         originalHeaders = headers.build();
