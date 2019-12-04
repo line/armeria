@@ -35,9 +35,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableSet;
+
 class ClientCookieEncoderTest {
 
     // Forked from netty-4.1.34.
+    // https://github.com/netty/netty/blob/4978266d52a90252ae00b40894a4398292830d7f/codec-http/src/test/java/io/netty/handler/codec/http/cookie/ClientCookieEncoderTest.java
+
+    @Test
+    public void testEncodingWithNoCookies() {
+        assertThatThrownBy(() -> Cookie.toCookieHeader(new Cookie[0]))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("empty");
+        assertThatThrownBy(() -> Cookie.toCookieHeader(ImmutableSet.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("empty");
+    }
 
     @Test
     void testEncodingMultipleClientCookies() {
@@ -57,7 +70,7 @@ class ClientCookieEncoderTest {
                                      .path("/anotherpathsomewhere")
                                      .build();
         final Cookie cookie3 = Cookie.of("myCookie3", "myValue3");
-        final String encodedCookie = ClientCookieEncoder.strict().encode(cookie1, cookie2, cookie3);
+        final String encodedCookie = Cookie.toCookieHeader(cookie1, cookie2, cookie3);
         // Cookies should be sorted into decreasing order of path length, as per RFC6265.
         // When no path is provided, we assume maximum path length (so cookie3 comes first).
         assertThat(encodedCookie).isEqualTo(c3 + "; " + c2 + "; " + c1);
@@ -65,13 +78,12 @@ class ClientCookieEncoderTest {
 
     @Test
     void testWrappedCookieValue() {
-        assertThat(ClientCookieEncoder.strict().encode(Cookie.of("myCookie", "\"foo\"")))
-                .isEqualTo("myCookie=\"foo\"");
+        assertThat(Cookie.of("myCookie", "\"foo\"").toCookieHeader()).isEqualTo("myCookie=\"foo\"");
     }
 
     @Test
     void testRejectCookieValueWithSemicolon() {
-        assertThatThrownBy(() -> ClientCookieEncoder.strict().encode(Cookie.of("myCookie", "foo;bar")))
+        assertThatThrownBy(() -> Cookie.of("myCookie", "foo;bar").toCookieHeader())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Cookie value contains an invalid char: ;");
     }

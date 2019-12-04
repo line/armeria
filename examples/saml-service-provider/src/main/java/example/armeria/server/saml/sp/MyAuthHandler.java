@@ -24,8 +24,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.ServerCookieDecoder;
-import com.linecorp.armeria.common.ServerCookieEncoder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.server.saml.SamlNameIdFormat;
@@ -52,7 +50,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
             return CompletableFuture.completedFuture(false);
         }
 
-        final boolean authenticated = ServerCookieDecoder.lax().decode(cookie).stream().anyMatch(
+        final boolean authenticated = Cookie.fromCookieHeader(cookie).stream().anyMatch(
                 c -> "username".equals(c.name()) && !Strings.isNullOrEmpty(c.value()));
         return CompletableFuture.completedFuture(authenticated);
     }
@@ -86,7 +84,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
         return HttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8,
-                                   HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.lax().encode(cookie)),
+                                   HttpHeaderNames.SET_COOKIE, cookie.toSetCookieHeader(false)),
                 HttpData.ofUtf8("<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
     }
 

@@ -35,13 +35,10 @@ import static com.linecorp.armeria.common.CookieUtil.add;
 import static com.linecorp.armeria.common.CookieUtil.addQuoted;
 import static com.linecorp.armeria.common.CookieUtil.stringBuilder;
 import static com.linecorp.armeria.common.CookieUtil.stripTrailingSeparator;
+import static com.linecorp.armeria.common.CookieUtil.validateCookie;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-
-import com.google.common.collect.ImmutableList;
 
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.HttpConstants;
@@ -52,76 +49,25 @@ import io.netty.handler.codec.http.cookie.CookieHeaderNames;
  *
  * <p>Note that multiple cookies must be sent as separate "Set-Cookie" headers.</p>
  *
- * <pre>{@code
- * ResponseHeaders headers =
- *     ResponseHeaders.of(HttpStatus.OK,
- *                        HttpHeaderNames.SET_COOKIE,
- *                        ServerCookieEncoder.strict().encode("JSESSIONID", "1234"));
- * }</pre>
- *
  * @see ServerCookieDecoder
  */
-public final class ServerCookieEncoder extends CookieEncoder {
+final class ServerCookieEncoder {
 
     // Forked from netty-4.1.43
-
-    /**
-     * Strict encoder that validates that name and value chars are in the valid scope
-     * defined in RFC6265, and (for methods that accept multiple cookies) that only
-     * one cookie is encoded with any given name. (If multiple cookies have the same
-     * name, the last one is the one that is encoded.)
-     */
-    private static final ServerCookieEncoder STRICT = new ServerCookieEncoder(true);
-
-    /**
-     * Lax instance that doesn't validate name and value, and that allows multiple
-     * cookies with the same name.
-     */
-    private static final ServerCookieEncoder LAX = new ServerCookieEncoder(false);
-
-    /**
-     * Returns the strict encoder that validates that name and value chars are in the valid scope defined
-     * in RFC6265, and (for methods that accept multiple cookies) that only one cookie is encoded with
-     * any given name. (If multiple cookies have the same name, the last one is the one that is encoded.)
-     */
-    public static ServerCookieEncoder strict() {
-        return STRICT;
-    }
-
-    /**
-     * Returns the lax encoder that doesn't validate name and value, and that allows multiple cookies
-     * with the same name.
-     */
-    public static ServerCookieEncoder lax() {
-        return LAX;
-    }
-
-    private ServerCookieEncoder(boolean strict) {
-        super(strict);
-    }
-
-    /**
-     * Encodes the specified cookie name-value pair into a {@code "Set-Cookie"} header value.
-     *
-     * @param name the cookie name.
-     * @param value the cookie value.
-     * @return a single {@code "Set-Cookie"} header value.
-     */
-    public String encode(String name, String value) {
-        return encode(Cookie.of(name, value));
-    }
+    // https://github.com/netty/netty/blob/5d448377e94ca1eca3ec994d34a1170912e57ae9/codec-http/src/main/java/io/netty/handler/codec/http/cookie/ServerCookieEncoder.java
 
     /**
      * Encodes the specified {@link Cookie} into a {@code "Set-Cookie"} header value.
      *
+     * @param strict whether to validate that name and value chars are in the valid scope defined in RFC6265.
      * @param cookie the {@link Cookie} to encode.
      * @return a single {@code "Set-Cookie"} header value.
      */
-    public String encode(Cookie cookie) {
+    static String encode(boolean strict, Cookie cookie) {
         final String name = requireNonNull(cookie, "cookie").name();
         final String value = firstNonNull(cookie.value(), "");
 
-        validateCookie(name, value);
+        validateCookie(strict, name, value);
 
         final StringBuilder buf = stringBuilder();
 
@@ -164,43 +110,5 @@ public final class ServerCookieEncoder extends CookieEncoder {
         return stripTrailingSeparator(buf);
     }
 
-    /**
-     * Encodes the specified {@link Cookie}s into the {@code "Set-Cookie"} header values.
-     *
-     * @param cookies the {@link Cookie}s to encode.
-     * @return the corresponding {@code "Set-Cookie"} header values.
-     */
-    public List<String> encode(Cookie... cookies) {
-        if (requireNonNull(cookies, "cookies").length == 0) {
-            return ImmutableList.of();
-        }
-
-        final ImmutableList.Builder<String> encoded = ImmutableList.builderWithExpectedSize(cookies.length);
-        for (final Cookie c : cookies) {
-            encoded.add(encode(c));
-        }
-        return encoded.build();
-    }
-
-    /**
-     * Encodes the specified {@link Cookie}s into the {@code "Set-Cookie"} header values.
-     *
-     * @param cookies the {@link Cookie}s to encode.
-     * @return the corresponding {@code "Set-Cookie"} header values.
-     */
-    public List<String> encode(Iterable<? extends Cookie> cookies) {
-        final Iterator<? extends Cookie> cookiesIt = requireNonNull(cookies, "cookies").iterator();
-        if (!cookiesIt.hasNext()) {
-            return ImmutableList.of();
-        }
-
-        final ImmutableList.Builder<String> encoded = ImmutableList.builder();
-        final Cookie firstCookie = cookiesIt.next();
-        encoded.add(encode(firstCookie));
-        while (cookiesIt.hasNext()) {
-            final Cookie c = cookiesIt.next();
-            encoded.add(encode(c));
-        }
-        return encoded.build();
-    }
+    private ServerCookieEncoder() {}
 }

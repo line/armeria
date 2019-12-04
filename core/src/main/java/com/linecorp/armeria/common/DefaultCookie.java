@@ -43,6 +43,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 final class DefaultCookie implements Cookie {
 
     // Forked from netty-4.1.43
+    // https://github.com/netty/netty/blob/9d45f514a47ee8ad5259ee782fcca240017fc3a3/codec-http/src/main/java/io/netty/handler/codec/http/cookie/DefaultCookie.java
 
     private final String name;
     private final String value;

@@ -30,9 +30,10 @@
  */
 package com.linecorp.armeria.common;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static com.linecorp.armeria.common.CookieUtil.initCookie;
 
-import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -47,9 +48,12 @@ import io.netty.handler.codec.http.cookie.CookieHeaderNames;
  *
  * @see ServerCookieEncoder
  */
-public final class ServerCookieDecoder extends CookieDecoder {
+final class ServerCookieDecoder {
 
     // Forked from netty-4.1.43
+    // https://github.com/netty/netty/blob/ba95c401a7cf8c7923fce660e16c8ba567d62f30/codec-http/src/main/java/io/netty/handler/codec/http/cookie/ServerCookieDecoder.java
+
+    private static final Logger logger = LoggerFactory.getLogger(ServerCookieDecoder.class);
 
     private static final String RFC2965_VERSION = "$Version";
 
@@ -60,46 +64,13 @@ public final class ServerCookieDecoder extends CookieDecoder {
     private static final String RFC2965_PORT = "$Port";
 
     /**
-     * Strict decoder that validates that name and value chars are in the valid scope defined in RFC6265.
-     */
-    private static final ServerCookieDecoder STRICT = new ServerCookieDecoder(true);
-
-    /**
-     * Lax instance that doesn't validate name and value.
-     */
-    private static final ServerCookieDecoder LAX = new ServerCookieDecoder(false);
-
-    /**
-     * Returns the strict decoder that validates that name and value chars are in the valid scope defined
-     * in RFC6265.
-     */
-    public static ServerCookieDecoder strict() {
-        return STRICT;
-    }
-
-    /**
-     * Returns the lax decoder that doesn't validate name and value.
-     */
-    public static ServerCookieDecoder lax() {
-        return LAX;
-    }
-
-    private ServerCookieDecoder(boolean strict) {
-        super(strict);
-    }
-
-    /**
-     * Decodes the specified {@code "Set-Cookie"} header value into {@link Cookie}s.
+     * Decodes the specified {@code "Cookie"} header value into {@link Cookie}s.
      *
+     * @param strict whether to validate that name and value chars are in the valid scope defined in RFC6265.
      * @return the decoded {@link Cookie}s.
      */
-    public Set<Cookie> decode(String header) {
-        final int headerLen = checkNotNull(header, "header").length();
-
-        if (headerLen == 0) {
-            return ImmutableSet.of();
-        }
-
+    static Cookies decode(boolean strict, String header) {
+        final int headerLen = header.length();
         final ImmutableSet.Builder<Cookie> cookies = ImmutableSet.builder();
 
         int i = 0;
@@ -177,12 +148,15 @@ public final class ServerCookieDecoder extends CookieDecoder {
                 continue;
             }
 
-            final CookieBuilder builder = initCookie(header, nameBegin, nameEnd, valueBegin, valueEnd);
+            final CookieBuilder builder = initCookie(logger, strict,
+                                                     header, nameBegin, nameEnd, valueBegin, valueEnd);
             if (builder != null) {
                 cookies.add(builder.build());
             }
         }
 
-        return cookies.build();
+        return Cookies.of(cookies.build());
     }
+
+    private ServerCookieDecoder() {}
 }

@@ -35,16 +35,12 @@ import static com.linecorp.armeria.common.CookieUtil.add;
 import static com.linecorp.armeria.common.CookieUtil.addQuoted;
 import static com.linecorp.armeria.common.CookieUtil.stringBuilder;
 import static com.linecorp.armeria.common.CookieUtil.stripTrailingSeparator;
-import static com.linecorp.armeria.common.CookieUtil.stripTrailingSeparatorOrNull;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-
-import javax.annotation.Nullable;
 
 import io.netty.util.internal.InternalThreadLocalMap;
 
@@ -53,74 +49,26 @@ import io.netty.util.internal.InternalThreadLocalMap;
  *
  * <p>Note that multiple cookies are supposed to be sent at once in a single {@code "Cookie"} header.</p>
  *
- * <pre>{@code
- * RequestHeaders headers =
- *     RequestHeaders.of(HttpHeaderNames.COOKIE,
- *                       ClientCookieEncoder.strict().encode("JSESSIONID", "1234"));
- * }</pre>
- *
  * @see ClientCookieDecoder
  */
-public final class ClientCookieEncoder extends CookieEncoder {
+final class ClientCookieEncoder {
 
     // Forked from netty-4.1.43
-
-    /**
-     * Strict encoder that validates that name and value chars are in the valid scope and (for methods that
-     * accept multiple cookies) sorts cookies into order of decreasing path length, as specified in RFC6265.
-     */
-    private static final ClientCookieEncoder STRICT = new ClientCookieEncoder(true);
-
-    /**
-     * Lax instance that doesn't validate name and value, and (for methods that accept multiple cookies) keeps
-     * cookies in the order in which they were given.
-     */
-    private static final ClientCookieEncoder LAX = new ClientCookieEncoder(false);
+    // https://github.com/netty/netty/blob/0623c6c5334bf43299e835cfcf86bfda19e2d4ce/codec-http/src/main/java/io/netty/handler/codec/http/ClientCookieEncoder.java
 
     private static final Cookie[] EMPTY_COOKIES = new Cookie[0];
 
     /**
-     * Returns the strict encoder that validates that name and value chars are in the valid scope and
-     * (for methods that accept multiple cookies) sorts cookies into order of decreasing path length,
-     * as specified in RFC6265.
-     */
-    public static ClientCookieEncoder strict() {
-        return STRICT;
-    }
-
-    /**
-     * Returns the lax encoder that doesn't validate name and value, and (for methods that accept multiple
-     * cookies) keeps cookies in the order in which they were given.
-     */
-    public static ClientCookieEncoder lax() {
-        return LAX;
-    }
-
-    private ClientCookieEncoder(boolean strict) {
-        super(strict);
-    }
-
-    /**
-     * Encodes the specified cookie into a {@code "Cookie"} header value.
-     *
-     * @param name the cookie name
-     * @param value the cookie value
-     * @return a Rfc6265 style Cookie header value
-     */
-    public String encode(String name, String value) {
-        return encode(Cookie.builder(name, value).build());
-    }
-
-    /**
      * Encodes the specified {@link Cookie} into a single {@code "Cookie"} header value.
      *
-     * @param cookie the {@link Cookie} to encode
+     * @param strict whether to validate that name and value chars are in the valid scope.
+     * @param cookie the {@link Cookie} to encode.
      * @return a RFC6265-style {@code "Cookie"} header value.
      */
-    public String encode(Cookie cookie) {
+    static String encode(boolean strict, Cookie cookie) {
         requireNonNull(cookie, "cookie");
         final StringBuilder buf = stringBuilder();
-        encode(buf, cookie);
+        encode(strict, buf, cookie);
         return stripTrailingSeparator(buf);
     }
 
@@ -150,53 +98,51 @@ public final class ClientCookieEncoder extends CookieEncoder {
     /**
      * Encodes the specified cookies into a single {@code "Cookie"} header value.
      *
-     * @param cookies the {@link Cookie}s to encode
-     * @return a RFC6265-style {@code "Cookie"} header value, or {@code null} if no cookies were specified.
+     * @param strict whether to validate that name and value chars are in the valid scope and
+     *               to sort the cookies into order of decreasing path length, as specified in RFC6265.
+     *               If {@code false}, the cookies are encoded in the order in which they are given.
+     * @param cookies the {@link Cookie}s to encode.
+     * @return a RFC6265-style {@code "Cookie"} header value.
      */
-    @Nullable
-    public String encode(Cookie... cookies) {
-        requireNonNull(cookies, "cookies");
-        if (cookies.length == 0) {
-            return null;
-        }
+    static String encode(boolean strict, Cookie... cookies) {
+        assert cookies.length != 0 : cookies.length;
 
         final StringBuilder buf = stringBuilder();
-        if (isStrict()) {
+        if (strict) {
             if (cookies.length == 1) {
-                encode(buf, cookies[0]);
+                encode(true, buf, cookies[0]);
             } else {
                 final Cookie[] cookiesSorted = Arrays.copyOf(cookies, cookies.length);
                 Arrays.sort(cookiesSorted, COOKIE_COMPARATOR);
                 for (Cookie c : cookiesSorted) {
-                    encode(buf, c);
+                    encode(true, buf, c);
                 }
             }
         } else {
             for (Cookie c : cookies) {
-                encode(buf, c);
+                encode(false, buf, c);
             }
         }
-        return stripTrailingSeparatorOrNull(buf);
+        return stripTrailingSeparator(buf);
     }
 
     /**
      * Encodes the specified cookies into a single {@code "Cookie"} header value.
      *
-     * @param cookies the {@link Cookie}s to encode
+     * @param strict whether to validate that name and value chars are in the valid scope and
+     *               to sort the cookies into order of decreasing path length, as specified in RFC6265.
+     *               If {@code false}, the cookies are encoded in the order in which they are given.
+     * @param cookiesIt the {@link Iterator} of the {@link Cookie}s to encode.
      * @return a RFC6265-style {@code "Cookie"} header value, or {@code null} if no cookies were specified.
      */
-    @Nullable
-    public String encode(Iterable<? extends Cookie> cookies) {
-        final Iterator<? extends Cookie> cookiesIt = checkNotNull(cookies, "cookies").iterator();
-        if (!cookiesIt.hasNext()) {
-            return null;
-        }
+    static String encode(boolean strict, Iterator<? extends Cookie> cookiesIt) {
+        assert cookiesIt.hasNext();
 
         final StringBuilder buf = stringBuilder();
-        if (isStrict()) {
+        if (strict) {
             final Cookie firstCookie = cookiesIt.next();
             if (!cookiesIt.hasNext()) {
-                encode(buf, firstCookie);
+                encode(true, buf, firstCookie);
             } else {
                 final List<Cookie> cookiesList = InternalThreadLocalMap.get().arrayList();
                 cookiesList.add(firstCookie);
@@ -206,22 +152,22 @@ public final class ClientCookieEncoder extends CookieEncoder {
                 final Cookie[] cookiesSorted = cookiesList.toArray(EMPTY_COOKIES);
                 Arrays.sort(cookiesSorted, COOKIE_COMPARATOR);
                 for (Cookie c : cookiesSorted) {
-                    encode(buf, c);
+                    encode(true, buf, c);
                 }
             }
         } else {
-            while (cookiesIt.hasNext()) {
-                encode(buf, cookiesIt.next());
-            }
+            do {
+                encode(false, buf, cookiesIt.next());
+            } while (cookiesIt.hasNext());
         }
-        return stripTrailingSeparatorOrNull(buf);
+        return stripTrailingSeparator(buf);
     }
 
-    private void encode(StringBuilder buf, Cookie c) {
+    private static void encode(boolean strict, StringBuilder buf, Cookie c) {
         final String name = c.name();
         final String value = firstNonNull(c.value(), "");
 
-        validateCookie(name, value);
+        CookieUtil.validateCookie(strict, name, value);
 
         if (c.isValueQuoted()) {
             addQuoted(buf, name, value);
@@ -229,4 +175,6 @@ public final class ClientCookieEncoder extends CookieEncoder {
             add(buf, name, value);
         }
     }
+
+    private ClientCookieEncoder() {}
 }

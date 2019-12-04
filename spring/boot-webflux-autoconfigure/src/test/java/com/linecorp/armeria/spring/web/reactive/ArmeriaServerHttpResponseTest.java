@@ -34,7 +34,6 @@ import org.springframework.core.io.buffer.NettyDataBufferFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 
-import com.linecorp.armeria.common.ClientCookieDecoder;
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -93,8 +92,9 @@ class ArmeriaServerHttpResponseTest {
                         assertThat(o).isInstanceOf(ResponseHeaders.class);
                         final ResponseHeaders headers = (ResponseHeaders) o;
                         assertThat(headers.status().code()).isEqualTo(404);
-                        final Cookie setCookie =
-                                ClientCookieDecoder.lax().decode(headers.get(HttpHeaderNames.SET_COOKIE));
+                        final String setCookieValue = headers.get(HttpHeaderNames.SET_COOKIE);
+                        assertThat(setCookieValue).isNotNull();
+                        final Cookie setCookie = Cookie.fromSetCookieHeader(setCookieValue);
                         assertThat(setCookie).isNotNull();
                         assertThat(setCookie.name()).isEqualTo("a");
                         assertThat(setCookie.value()).isEqualTo("1");
@@ -148,8 +148,9 @@ class ArmeriaServerHttpResponseTest {
                         final ResponseHeaders headers = (ResponseHeaders) o;
                         assertThat(headers.status().code()).isEqualTo(200);
                         assertThat(headers.get(HttpHeaderNames.of("Armeria"))).isEqualTo("awesome");
-                        final Cookie setCookie =
-                                ClientCookieDecoder.lax().decode(headers.get(HttpHeaderNames.SET_COOKIE));
+                        final String setCookieValue = headers.get(HttpHeaderNames.SET_COOKIE);
+                        assertThat(setCookieValue).isNotNull();
+                        final Cookie setCookie = Cookie.fromSetCookieHeader(setCookieValue);
                         assertThat(setCookie).isNotNull();
                         assertThat(setCookie.name()).isEqualTo("a");
                         assertThat(setCookie.value()).isEqualTo("1");

@@ -145,15 +145,16 @@ like ``MyAuthorizer`` in this example.
 
             // Note that you MUST NOT use this example in a real world application. You may consider encoding
             // the value using JSON Web Tokens to prevent tempering.
-            final Cookie cookie = new DefaultCookie("username", username);
-            cookie.setHttpOnly(true);
-            cookie.setDomain("localhost");
-            cookie.setMaxAge(60);
-            cookie.setPath("/");
+            final Cookie cookie = Cookie.builder("username", username)
+                                        .httpOnly(true)
+                                        .domain("localhost")
+                                        .maxAge(60)
+                                        .path("/")
+                                        .build();
             return HttpResponse.of(
                     ResponseHeaders,of(HttpStatus.OK,
                                        HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8,
-                                       HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.LAX.encode(cookie)),
+                                       HttpHeaderNames.SET_COOKIE, cookie.toSetCookieHeader()),
                     HttpData.ofUtf8("<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
         }
 
@@ -175,7 +176,7 @@ like ``MyAuthorizer`` in this example.
                 return CompletableFuture.completedFuture(false);
             }
 
-            final boolean authenticated = ServerCookieDecoder.LAX.decode(cookie).stream().anyMatch(
+            final boolean authenticated = Cookie.fromCookieHeader(cookie).stream().anyMatch(
                     c -> "username".equals(c.name()) && !Strings.isNullOrEmpty(c.value()));
             return CompletableFuture.completedFuture(authenticated);
         }

@@ -30,11 +30,14 @@
  */
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull;
+import static com.linecorp.armeria.common.CookieUtil.initCookie;
 
 import java.util.Date;
 
 import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
@@ -47,52 +50,23 @@ import io.netty.handler.codec.http.cookie.CookieHeaderNames;
  *
  * @see ClientCookieEncoder
  */
-public final class ClientCookieDecoder extends CookieDecoder {
+final class ClientCookieDecoder {
 
     // Forked from netty-4.1.43
+    // https://github.com/netty/netty/blob/587afddb279bea3fd0f64d3421de8e69a35cecb9/codec-http/src/main/java/io/netty/handler/codec/http/cookie/ClientCookieDecoder.java
 
-    /**
-     * Strict decoder that validates that name and value chars are in the valid scope
-     * defined in RFC6265.
-     */
-    private static final ClientCookieDecoder STRICT = new ClientCookieDecoder(true);
-
-    /**
-     * Lax instance that doesn't validate name and value.
-     */
-    private static final ClientCookieDecoder LAX = new ClientCookieDecoder(false);
-
-    /**
-     * Returns the strict decoder that validates that name and value chars are in the valid scope defined
-     * in RFC6265.
-     */
-    public static ClientCookieDecoder strict() {
-        return STRICT;
-    }
-
-    /**
-     * Returns the lax decoder that doesn't validate name and value.
-     */
-    public static ClientCookieDecoder lax() {
-        return LAX;
-    }
-
-    private ClientCookieDecoder(boolean strict) {
-        super(strict);
-    }
+    private static final Logger logger = LoggerFactory.getLogger(ClientCookieDecoder.class);
 
     /**
      * Decodes the specified {@code "Set-Cookie"} header value into a {@link Cookie}.
      *
+     * @param strict whether to validate the name and value chars are in the valid scope defined in RFC6265.
      * @return the decoded {@link Cookie}, or {@code null} if malformed.
      */
     @Nullable
-    public Cookie decode(String header) {
-        final int headerLen = requireNonNull(header, "header").length();
-
-        if (headerLen == 0) {
-            return null;
-        }
+    static Cookie decode(boolean strict, String header) {
+        final int headerLen = header.length();
+        assert headerLen != 0 : headerLen;
 
         CookieBuilder builder = null;
 
@@ -166,7 +140,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
 
             if (builder == null) {
                 // cookie name-value pair
-                builder = initCookie(header, nameBegin, nameEnd, valueBegin, valueEnd);
+                builder = initCookie(logger, strict, header, nameBegin, nameEnd, valueBegin, valueEnd);
                 if (builder == null) {
                     return null;
                 }
@@ -286,4 +260,6 @@ public final class ClientCookieDecoder extends CookieDecoder {
             }
         }
     }
+
+    private ClientCookieDecoder() {}
 }

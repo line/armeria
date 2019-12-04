@@ -46,6 +46,7 @@ import io.netty.handler.codec.DateFormatter;
 class ClientCookieDecoderTest {
 
     // Forked from netty-4.1.34.
+    // https://github.com/netty/netty/blob/587afddb279bea3fd0f64d3421de8e69a35cecb9/codec-http/src/test/java/io/netty/handler/codec/http/cookie/ClientCookieDecoderTest.java
 
     @Test
     void testDecodingSingleCookieV0() {
@@ -53,7 +54,7 @@ class ClientCookieDecoderTest {
                                     DateFormatter.format(new Date(System.currentTimeMillis() + 50000)) +
                                     ";path=/apathsomewhere;domain=.adomainsomewhere;secure;";
 
-        final Cookie cookie = ClientCookieDecoder.strict().decode(cookieString);
+        final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
         assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
@@ -73,7 +74,7 @@ class ClientCookieDecoderTest {
         final String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
                                     "domain=.adomainsomewhere;secure;comment=this is a comment;version=0;" +
                                     "commentURL=http://aurl.com;port=\"80,8080\";discard;";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(cookieString);
+        final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
         assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
@@ -86,7 +87,7 @@ class ClientCookieDecoderTest {
     void testDecodingSingleCookieV1() {
         final String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
                                     "domain=.adomainsomewhere;secure;comment=this is a comment;version=1;";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(cookieString);
+        final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
         assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
@@ -100,7 +101,7 @@ class ClientCookieDecoderTest {
         final String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
                                     "domain=.adomainsomewhere;secure;comment=this is a comment;version=1;" +
                                     "commentURL=http://aurl.com;port='80,8080';discard;";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(cookieString);
+        final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
         assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
@@ -114,7 +115,7 @@ class ClientCookieDecoderTest {
         final String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
                                     "domain=.adomainsomewhere;secure;comment=this is a comment;version=2;" +
                                     "commentURL=http://aurl.com;port=\"80,8080\";discard;";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(cookieString);
+        final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
         assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
@@ -129,7 +130,7 @@ class ClientCookieDecoderTest {
                           "domain=.adomainsomewhere;secure;comment=this is a comment;version=2;" +
                           "commentURL=\"http://aurl.com\";port='80,8080';discard;";
 
-        final Cookie cookie = ClientCookieDecoder.strict().decode(c1);
+        final Cookie cookie = Cookie.fromSetCookieHeader(c1);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
         assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
@@ -146,7 +147,7 @@ class ClientCookieDecoderTest {
 
         final Collection<Cookie> cookies = new ArrayList<>();
         for (String source : sources) {
-            cookies.add(ClientCookieDecoder.strict().decode(source));
+            cookies.add(Cookie.fromSetCookieHeader(source));
         }
 
         final Iterator<Cookie> it = cookies.iterator();
@@ -172,7 +173,7 @@ class ClientCookieDecoderTest {
                               "__utmz=48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|" +
                               "utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance," +
                               "/32/dept.html";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(source);
+        final Cookie cookie = Cookie.fromSetCookieHeader(source);
         assertThat(cookie).isNotNull();
         assertThat(cookie.name()).isEqualTo("ARPT");
         assertThat(cookie.value()).isEqualTo("LWUKQPSWRTUN04CKKJI");
@@ -186,7 +187,7 @@ class ClientCookieDecoderTest {
 
         final String source = "Format=EU; expires=Fri, 31-Dec-9999 23:59:59 GMT; path=/";
 
-        final Cookie cookie = ClientCookieDecoder.strict().decode(source);
+        final Cookie cookie = Cookie.fromSetCookieHeader(source);
         assertThat(cookie).isNotNull();
         assertThat(Math.abs(expectedMaxAge - cookie.maxAge())).isLessThan(2);
     }
@@ -195,14 +196,14 @@ class ClientCookieDecoderTest {
     void testDecodingValueWithCommaFails() {
         final String source = "UserCookie=timeZoneName=(GMT+04:00) Moscow, St. Petersburg, " +
                               "Volgograd&promocode=&region=BE; expires=Sat, 01-Dec-2012 10:53:31 GMT; path=/";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(source);
+        final Cookie cookie = Cookie.fromSetCookieHeader(source);
         assertThat(cookie).isNull();
     }
 
     @Test
     void testDecodingWeirdNames1() {
         final String src = "path=; expires=Mon, 01-Jan-1990 00:00:00 GMT; path=/; domain=.www.google.com";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(src);
+        final Cookie cookie = Cookie.fromSetCookieHeader(src);
         assertThat(cookie).isNotNull();
         assertThat(cookie.name()).isEqualTo("path");
         assertThat(cookie.value()).isEqualTo("");
@@ -212,7 +213,7 @@ class ClientCookieDecoderTest {
     @Test
     void testDecodingWeirdNames2() {
         final String src = "HTTPOnly=";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(src);
+        final Cookie cookie = Cookie.fromSetCookieHeader(src);
         assertThat(cookie).isNotNull();
         assertThat(cookie.name()).isEqualTo("HTTPOnly");
         assertThat(cookie.value()).isEmpty();
@@ -221,7 +222,7 @@ class ClientCookieDecoderTest {
     @Test
     void testDecodingWeirdNames3() {
         final String src = "SameSite=";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(src);
+        final Cookie cookie = Cookie.fromSetCookieHeader(src);
         assertThat(cookie).isNotNull();
         assertThat(cookie.name()).isEqualTo("SameSite");
         assertThat(cookie.value()).isEmpty();
@@ -230,15 +231,15 @@ class ClientCookieDecoderTest {
     @Test
     void testDecodingValuesWithCommasAndEqualsFails() {
         final String src = "A=v=1&lg=en-US,it-IT,it&intl=it&np=1;T=z=E";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(src);
+        final Cookie cookie = Cookie.fromSetCookieHeader(src);
         assertThat(cookie).isNull();
     }
 
     @Test
     void testDecodingInvalidValuesWithCommaAtStart() {
-        assertThat(ClientCookieDecoder.strict().decode(",")).isNull();
-        assertThat(ClientCookieDecoder.strict().decode(",a")).isNull();
-        assertThat(ClientCookieDecoder.strict().decode(",a=a")).isNull();
+        assertThat(Cookie.fromSetCookieHeader(",")).isNull();
+        assertThat(Cookie.fromSetCookieHeader(",a")).isNull();
+        assertThat(Cookie.fromSetCookieHeader(",a=a")).isNull();
     }
 
     @Test
@@ -289,7 +290,7 @@ class ClientCookieDecoderTest {
                 "%=KqtH_$?mi____'=KqtH_$?mx____'=KqtH_$D7]____#=J_#p_$D@T____#=J_#p_$V<g____" +
                 "'=KqtH";
 
-        final Cookie cookie = ClientCookieDecoder.strict().decode("bh=\"" + longValue + "\";");
+        final Cookie cookie = Cookie.fromSetCookieHeader("bh=\"" + longValue + "\";");
         assertThat(cookie).isNotNull();
         assertThat(cookie.name()).isEqualTo("bh");
         assertThat(cookie.value()).isEqualTo(longValue);
@@ -298,7 +299,7 @@ class ClientCookieDecoderTest {
     @Test
     void testIgnoreEmptyDomain() {
         final String emptyDomain = "sessionid=OTY4ZDllNTgtYjU3OC00MWRjLTkzMWMtNGUwNzk4MTY0MTUw;Domain=;Path=/";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(emptyDomain);
+        final Cookie cookie = Cookie.fromSetCookieHeader(emptyDomain);
         assertThat(cookie).isNotNull();
         assertThat(cookie.domain()).isNull();
     }
@@ -306,7 +307,7 @@ class ClientCookieDecoderTest {
     @Test
     void testIgnoreEmptyPath() {
         final String emptyPath = "sessionid=OTY4ZDllNTgtYjU3OC00MWRjLTkzMWMtNGUwNzk4MTY0MTUw;Domain=;Path=";
-        final Cookie cookie = ClientCookieDecoder.strict().decode(emptyPath);
+        final Cookie cookie = Cookie.fromSetCookieHeader(emptyPath);
         assertThat(cookie).isNotNull();
         assertThat(cookie.path()).isNull();
     }

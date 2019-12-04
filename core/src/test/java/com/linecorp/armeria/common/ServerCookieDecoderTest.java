@@ -33,18 +33,18 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Iterator;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
 public class ServerCookieDecoderTest {
 
     // Forked from netty-4.1.34.
+    // https://github.com/netty/netty/blob/f755e584638e20a4ae62466dd4b7a14954650348/codec-http/src/test/java/io/netty/handler/codec/http/cookie/ServerCookieDecoderTest.java
 
     @Test
     public void testDecodingSingleCookie() {
         final String cookieString = "myCookie=myValue";
-        final Set<Cookie> cookies = ServerCookieDecoder.strict().decode(cookieString);
+        final Cookies cookies = Cookie.fromCookieHeader(cookieString);
         assertThat(cookies).hasSize(1);
         final Cookie cookie = cookies.iterator().next();
         assertThat(cookie).isNotNull();
@@ -57,7 +57,7 @@ public class ServerCookieDecoderTest {
         final String c2 = "myCookie2=myValue2;";
         final String c3 = "myCookie3=myValue3;";
 
-        final Set<Cookie> cookies = ServerCookieDecoder.strict().decode(c1 + c2 + c3);
+        final Cookies cookies = Cookie.fromCookieHeader(c1 + c2 + c3);
         assertThat(cookies).hasSize(3);
         final Iterator<Cookie> it = cookies.iterator();
         Cookie cookie = it.next();
@@ -80,7 +80,7 @@ public class ServerCookieDecoderTest {
             "__utmb=48461872.13.10.1258140131; __utmc=48461872; " +
             "__utmz=48461872.1258140131.1.1.utmcsr=overstock.com|utmccn=(referral)|" +
                     "utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance/clearance/32/dept.html";
-        final Set<Cookie> cookies = ServerCookieDecoder.strict().decode(source);
+        final Cookies cookies = Cookie.fromCookieHeader(source);
         final Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
@@ -161,7 +161,7 @@ public class ServerCookieDecoderTest {
                 "%=KqtH_$?mi____'=KqtH_$?mx____'=KqtH_$D7]____#=J_#p_$D@T____#=J_#p_$V<g____" +
                 "'=KqtH";
 
-        final Set<Cookie> cookies = ServerCookieDecoder.strict().decode("bh=\"" + longValue + "\";");
+        final Cookies cookies = Cookie.fromCookieHeader("bh=\"" + longValue + "\";");
         assertThat(cookies).hasSize(1);
         final Cookie c = cookies.iterator().next();
         assertThat(c.name()).isEqualTo("bh");
@@ -174,7 +174,7 @@ public class ServerCookieDecoderTest {
                               "Part_Number1=\"Riding_Rocket_0023\"; $Path=\"/acme/ammo\"; " +
                               "Part_Number2=\"Rocket_Launcher_0001\"; $Path=\"/acme\"";
 
-        final Set<Cookie> cookies = ServerCookieDecoder.strict().decode(source);
+        final Cookies cookies = Cookie.fromCookieHeader(source);
         final Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 
@@ -191,13 +191,13 @@ public class ServerCookieDecoderTest {
 
     @Test
     public void testRejectCookieValueWithSemicolon() {
-        final Set<Cookie> cookies = ServerCookieDecoder.strict().decode("name=\"foo;bar\";");
+        final Cookies cookies = Cookie.fromCookieHeader("name=\"foo;bar\";");
         assertThat(cookies).isEmpty();
     }
 
     @Test
     public void testCaseSensitiveNames() {
-        final Set<Cookie> cookies = ServerCookieDecoder.strict().decode("session_id=a; Session_id=b;");
+        final Cookies cookies = Cookie.fromCookieHeader("session_id=a; Session_id=b;");
         final Iterator<Cookie> it = cookies.iterator();
         Cookie c;
 

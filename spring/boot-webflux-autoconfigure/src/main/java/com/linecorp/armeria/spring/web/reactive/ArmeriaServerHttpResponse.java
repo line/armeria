@@ -58,7 +58,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.common.ServerCookieEncoder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -211,7 +210,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
                     getCookies().values().stream()
                                 .flatMap(Collection::stream)
                                 .map(ArmeriaServerHttpResponse::toArmeriaCookie)
-                                .map(ServerCookieEncoder.lax()::encode)
+                                .map(c -> c.toSetCookieHeader(false))
                                 .collect(toImmutableList());
             if (!cookieValues.isEmpty()) {
                 armeriaHeaders.add(HttpHeaderNames.SET_COOKIE, cookieValues);

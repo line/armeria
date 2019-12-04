@@ -100,8 +100,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ServerCookieDecoder;
-import com.linecorp.armeria.common.ServerCookieEncoder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
@@ -230,7 +228,7 @@ public class SamlServiceProviderTest {
             }
 
             // Authentication will be succeeded only if both the specified cookie name and value are matched.
-            final Set<Cookie> cookies = ServerCookieDecoder.strict().decode(value);
+            final Set<Cookie> cookies = Cookie.fromCookieHeader(value);
             final boolean result = cookies.stream().anyMatch(
                     cookie -> cookieName.equals(cookie.name()) && cookieValue.equals(cookie.value()));
             return CompletableFuture.completedFuture(result);
@@ -249,7 +247,7 @@ public class SamlServiceProviderTest {
                                         .path("/")
                                         .httpOnly(true)
                                         .build();
-            setCookie = ServerCookieEncoder.strict().encode(cookie);
+            setCookie = cookie.toSetCookieHeader();
         }
 
         @Override

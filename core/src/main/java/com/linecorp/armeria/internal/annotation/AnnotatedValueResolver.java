@@ -62,7 +62,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -76,7 +75,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ServerCookieDecoder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
@@ -566,15 +564,11 @@ final class AnnotatedValueResolver {
             return builder(annotatedElement, type)
                     .supportOptional(true)
                     .resolver((unused, ctx) -> {
-                        final List<String> values = ctx.request().headers().getAll(HttpHeaderNames.COOKIE);
-                        if (values.isEmpty()) {
-                            return Cookies.of(ImmutableSet.of());
+                        final String value = ctx.request().headers().get(HttpHeaderNames.COOKIE);
+                        if (value == null) {
+                            return Cookies.empty();
                         }
-                        final ImmutableSet.Builder<Cookie> cookies = ImmutableSet.builder();
-                        values.stream()
-                              .map(ServerCookieDecoder.strict()::decode)
-                              .forEach(cookies::addAll);
-                        return Cookies.of(cookies.build());
+                        return Cookie.fromCookieHeader(value);
                     })
                     .build();
         }

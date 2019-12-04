@@ -30,9 +30,19 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
+import java.nio.CharBuffer;
 import java.util.BitSet;
+import java.util.Iterator;
+import java.util.List;
 
 import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.internal.InternalThreadLocalMap;
@@ -40,6 +50,7 @@ import io.netty.util.internal.InternalThreadLocalMap;
 final class CookieUtil {
 
     // Forked from netty-4.1.43
+    // https://github.com/netty/netty/blob/5d448377e94ca1eca3ec994d34a1170912e57ae9/codec-http/src/main/java/io/netty/handler/codec/http/cookie/CookieUtil.java
 
     private static final BitSet VALID_COOKIE_NAME_OCTETS = validCookieNameOctets();
 
@@ -90,14 +101,9 @@ final class CookieUtil {
     /**
      * Strips out the trailing 2-char separator from the specified {@link StringBuilder}.
      *
-     * @param buf a buffer where some cookies were maybe encoded.
-     * @return the {@link String} without the trailing separator, or null if no cookie was appended.
+     * @param buf a buffer where some cookies were encoded.
+     * @return the {@link String} without the trailing separator
      */
-    @Nullable
-    static String stripTrailingSeparatorOrNull(StringBuilder buf) {
-        return buf.length() == 0 ? null : stripTrailingSeparator(buf);
-    }
-
     static String stripTrailingSeparator(StringBuilder buf) {
         if (buf.length() > 0) {
             buf.setLength(buf.length() - 2);
@@ -141,15 +147,15 @@ final class CookieUtil {
         sb.append(HttpConstants.SP_CHAR);
     }
 
-    static int firstInvalidCookieNameOctet(CharSequence cs) {
+    private static int firstInvalidCookieNameOctet(CharSequence cs) {
         return firstInvalidOctet(cs, VALID_COOKIE_NAME_OCTETS);
     }
 
-    static int firstInvalidCookieValueOctet(CharSequence cs) {
+    private static int firstInvalidCookieValueOctet(CharSequence cs) {
         return firstInvalidOctet(cs, VALID_COOKIE_VALUE_OCTETS);
     }
 
-    static int firstInvalidOctet(CharSequence cs, BitSet bits) {
+    private static int firstInvalidOctet(CharSequence cs, BitSet bits) {
         for (int i = 0; i < cs.length(); i++) {
             final char c = cs.charAt(i);
             if (!bits.get(c)) {
@@ -160,7 +166,7 @@ final class CookieUtil {
     }
 
     @Nullable
-    static CharSequence unwrapValue(CharSequence cs) {
+    private static CharSequence unwrapValue(CharSequence cs) {
         final int len = cs.length();
         if (len > 0 && cs.charAt(0) == '"') {
             if (len >= 2 && cs.charAt(len - 1) == '"') {
@@ -173,7 +179,103 @@ final class CookieUtil {
         return cs;
     }
 
-    private CookieUtil() {
-        // Unused
+    // Forked from netty-4.1.43
+    // https://github.com/netty/netty/blob/4c709be1abf6e52c6a5640c1672d259f1de638d1/codec-http/src/main/java/io/netty/handler/codec/http/cookie/CookieEncoder.java
+
+    static void validateCookie(boolean strict, String name, String value) {
+        if (strict) {
+            int pos;
+
+            if ((pos = firstInvalidCookieNameOctet(name)) >= 0) {
+                throw new IllegalArgumentException("Cookie name contains an invalid char: " + name.charAt(pos));
+            }
+
+            final CharSequence unwrappedValue = unwrapValue(value);
+            if (unwrappedValue == null) {
+                throw new IllegalArgumentException("Cookie value wrapping quotes are not balanced: " + value);
+            }
+
+            if ((pos = firstInvalidCookieValueOctet(unwrappedValue)) >= 0) {
+                throw new IllegalArgumentException("Cookie value contains an invalid char: " +
+                                                   unwrappedValue.charAt(pos));
+            }
+        }
     }
+
+    // Forked from netty-4.1.43
+    // https://github.com/netty/netty/blob/97d871a7553a01384b43df855dccdda5205ae77a/codec-http/src/main/java/io/netty/handler/codec/http/cookie/CookieDecoder.java
+
+    @Nullable
+    static CookieBuilder initCookie(Logger logger, boolean strict,
+                                    String header, int nameBegin, int nameEnd, int valueBegin, int valueEnd) {
+        if (nameBegin == -1 || nameBegin == nameEnd) {
+            logger.debug("Skipping cookie with null name");
+            return null;
+        }
+
+        if (valueBegin == -1) {
+            logger.debug("Skipping cookie with null value");
+            return null;
+        }
+
+        final CharSequence wrappedValue = CharBuffer.wrap(header, valueBegin, valueEnd);
+        final CharSequence unwrappedValue = unwrapValue(wrappedValue);
+        if (unwrappedValue == null) {
+            logger.debug("Skipping cookie because starting quotes are not properly balanced in '{}'",
+                         wrappedValue);
+            return null;
+        }
+
+        final String name = header.substring(nameBegin, nameEnd);
+
+        int invalidOctetPos;
+        if (strict && (invalidOctetPos = firstInvalidCookieNameOctet(name)) >= 0) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Skipping cookie because name '{}' contains invalid char '{}'",
+                             name, name.charAt(invalidOctetPos));
+            }
+            return null;
+        }
+
+        final boolean valueQuoted = unwrappedValue.length() != valueEnd - valueBegin;
+
+        if (strict && (invalidOctetPos = firstInvalidCookieValueOctet(unwrappedValue)) >= 0) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Skipping cookie because value '{}' contains invalid char '{}'",
+                             unwrappedValue, unwrappedValue.charAt(invalidOctetPos));
+            }
+            return null;
+        }
+
+        return Cookie.builder(name, unwrappedValue.toString()).valueQuoted(valueQuoted);
+    }
+
+    // The methods newly added in the fork.
+
+    static Cookies fromSetCookieHeaders(ImmutableSet.Builder<Cookie> builder,
+                                        boolean strict, Iterator<String> it) {
+        do {
+            final String v = it.next();
+            requireNonNull(v, "setCookieHeaders contains null.");
+            final Cookie cookie = Cookie.fromSetCookieHeader(strict, v);
+            if (cookie != null) {
+                builder.add(cookie);
+            }
+        } while (it.hasNext());
+
+        return Cookies.of(builder.build());
+    }
+
+    static List<String> toSetCookieHeaders(ImmutableList.Builder<String> builder,
+                                           boolean strict, Iterator<? extends Cookie> it) {
+        do {
+            final Cookie c = it.next();
+            requireNonNull(c, "cookies contains null.");
+            builder.add(c.toSetCookieHeader(strict));
+        } while (it.hasNext());
+
+        return builder.build();
+    }
+
+    private CookieUtil() {}
 }

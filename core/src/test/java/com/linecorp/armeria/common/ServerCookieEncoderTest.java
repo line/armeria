@@ -34,7 +34,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -44,11 +43,14 @@ import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableSet;
+
 import io.netty.handler.codec.DateFormatter;
 
 public class ServerCookieEncoderTest {
 
     // Forked from netty-4.1.34.
+    // https://github.com/netty/netty/blob/4c709be1abf6e52c6a5640c1672d259f1de638d1/codec-http/src/test/java/io/netty/handler/codec/http/cookie/ServerCookieEncoderTest.java
 
     @Test
     public void testEncodingSingleCookieV0() throws ParseException {
@@ -65,7 +67,7 @@ public class ServerCookieEncoderTest {
                                     .sameSite("Strict")
                                     .build();
 
-        final String encodedCookie = ServerCookieEncoder.strict().encode(cookie);
+        final String encodedCookie = cookie.toSetCookieHeader();
 
         final Matcher matcher = Pattern.compile(result).matcher(encodedCookie);
         assertThat(matcher.find()).isTrue();
@@ -77,11 +79,8 @@ public class ServerCookieEncoderTest {
 
     @Test
     public void testEncodingWithNoCookies() {
-        final String encodedCookie1 = ClientCookieEncoder.strict().encode();
-        assertThat(encodedCookie1).isNull();
-
-        final List<String> encodedCookie2 = ServerCookieEncoder.strict().encode();
-        assertThat(encodedCookie2).isEmpty();
+        assertThat(Cookie.toSetCookieHeaders()).isEmpty();
+        assertThat(Cookie.toSetCookieHeaders(ImmutableSet.of())).isEmpty();
     }
 
     @Test
@@ -89,7 +88,7 @@ public class ServerCookieEncoderTest {
         final Cookie cookie1 = Cookie.of("cookie1", "value1");
         final Cookie cookie2 = Cookie.of("cookie2", "value2");
         final Cookie cookie3 = Cookie.of("cookie1", "value3");
-        final List<String> encodedCookies = ServerCookieEncoder.strict().encode(cookie1, cookie2, cookie3);
+        final List<String> encodedCookies = Cookie.toSetCookieHeaders(cookie1, cookie2, cookie3);
         assertThat(encodedCookies).containsExactly("cookie1=value1", "cookie2=value2", "cookie1=value3");
     }
 
@@ -111,7 +110,7 @@ public class ServerCookieEncoderTest {
 
         for (char c : illegalChars) {
             try {
-                ServerCookieEncoder.strict().encode(Cookie.of("foo" + c + "bar", "value"));
+                Cookie.of("foo" + c + "bar", "value").toSetCookieHeader();
             } catch (IllegalArgumentException e) {
                 exceptions++;
             }
@@ -137,7 +136,7 @@ public class ServerCookieEncoderTest {
 
         for (char c : illegalChars) {
             try {
-                ServerCookieEncoder.strict().encode(Cookie.of("name", "value" + c));
+                Cookie.of("name", "value" + c).toSetCookieHeader();
             } catch (IllegalArgumentException e) {
                 exceptions++;
             }
@@ -148,21 +147,17 @@ public class ServerCookieEncoderTest {
 
     @Test
     public void illegalCharInWrappedValueAppearsInException() {
-        assertThatThrownBy(() -> ServerCookieEncoder.strict().encode(Cookie.of("name", "\"value,\"")))
+        assertThatThrownBy(() -> Cookie.of("name", "\"value,\"").toSetCookieHeader())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Cookie value contains an invalid char: ,");
     }
 
     @Test
     public void testEncodingMultipleCookiesLax() {
-        final List<String> result = new ArrayList<String>();
-        result.add("cookie1=value1");
-        result.add("cookie2=value2");
-        result.add("cookie1=value3");
         final Cookie cookie1 = Cookie.of("cookie1", "value1");
         final Cookie cookie2 = Cookie.of("cookie2", "value2");
         final Cookie cookie3 = Cookie.of("cookie1", "value3");
-        final List<String> encodedCookies = ServerCookieEncoder.lax().encode(cookie1, cookie2, cookie3);
+        final List<String> encodedCookies = Cookie.toSetCookieHeaders(cookie1, cookie2, cookie3);
         assertThat(encodedCookies).containsExactly("cookie1=value1", "cookie2=value2", "cookie1=value3");
     }
 }

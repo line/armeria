@@ -30,15 +30,27 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * An interface defining an
  * <a href="http://en.wikipedia.org/wiki/HTTP_cookie">HTTP cookie</a>.
  */
+@SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
 public interface Cookie extends Comparable<Cookie> {
 
     // Forked from netty-4.1.43
+    // https://github.com/netty/netty/blob/f89dfb0bd53af45eb5f1c1dcc7d9badd889d17f0/codec-http/src/main/java/io/netty/handler/codec/http/Cookie.java
 
     /**
      * Returns a newly created {@link Cookie}.
@@ -58,6 +70,340 @@ public interface Cookie extends Comparable<Cookie> {
      */
     static CookieBuilder builder(String name, String value) {
         return new CookieBuilder(name, value);
+    }
+
+    /**
+     * Decodes the specified {@code "Cookie"} header value into a set of {@link Cookie}s.
+     *
+     * @param cookieHeader the {@code "Cookie"} header value.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromCookieHeader(String cookieHeader) {
+        return fromCookieHeader(true, cookieHeader);
+    }
+
+    /**
+     * Decodes the specified {@code "Cookie"} header value into a set of {@link Cookie}s.
+     *
+     * @param strict whether to validate that the cookie names and values are in the valid scope
+     *               defined in RFC6265.
+     * @param cookieHeader the {@code "Cookie"} header value.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromCookieHeader(boolean strict, String cookieHeader) {
+        requireNonNull(cookieHeader, "cookieHeader");
+        if (cookieHeader.isEmpty()) {
+            return Cookies.empty();
+        }
+        return ServerCookieDecoder.decode(strict, cookieHeader);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into a {@code "Cookie"} header value.
+     *
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Cookie"} header value.
+     */
+    static String toCookieHeader(Cookie... cookies) {
+        return toCookieHeader(true, cookies);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into a {@code "Cookie"} header value.
+     *
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Cookie"} header value.
+     *
+     * @throws IllegalArgumentException if {@code cookies} is empty.
+     */
+    static String toCookieHeader(Iterable<? extends Cookie> cookies) {
+        return toCookieHeader(true, cookies);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into a {@code "Cookie"} header value.
+     *
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Cookie"} header value.
+     *
+     * @throws IllegalArgumentException if {@code cookies} is empty.
+     */
+    static String toCookieHeader(Collection<? extends Cookie> cookies) {
+        return toCookieHeader(true, cookies);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into a {@code "Cookie"} header value.
+     *
+     * @param strict whether to validate that cookie names and values are in the valid scope
+     *               defined in RFC6265 and to sort the {@link Cookie}s into order of decreasing path length,
+     *               as specified in RFC6265. If {@code false}, the {@link Cookie}s are encoded in the order
+     *               in which they are given.
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Cookie"} header value.
+     */
+    static String toCookieHeader(boolean strict, Cookie... cookies) {
+        requireNonNull(cookies, "cookies");
+        checkArgument(cookies.length != 0, "cookies is empty.");
+        return ClientCookieEncoder.encode(strict, cookies);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into a {@code "Cookie"} header value.
+     *
+     * @param strict whether to validate that cookie names and values are in the valid scope
+     *               defined in RFC6265 and to sort the {@link Cookie}s into order of decreasing path length,
+     *               as specified in RFC6265. If {@code false}, the {@link Cookie}s are encoded in the order
+     *               in which they are given.
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Cookie"} header value.
+     *
+     * @throws IllegalArgumentException if {@code cookies} is empty.
+     */
+    static String toCookieHeader(boolean strict, Iterable<? extends Cookie> cookies) {
+        if (cookies instanceof Collection) {
+            @SuppressWarnings("unchecked")
+            final Collection<? extends Cookie> cast = (Collection<? extends Cookie>) cookies;
+            return toCookieHeader(strict, cast);
+        }
+
+        requireNonNull(cookies, "cookies");
+        final Iterator<? extends Cookie> it = cookies.iterator();
+        checkArgument(it.hasNext(), "cookies is empty");
+        return ClientCookieEncoder.encode(strict, it);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into a {@code "Cookie"} header value.
+     *
+     * @param strict whether to validate that cookie names and values are in the valid scope
+     *               defined in RFC6265 and to sort the {@link Cookie}s into order of decreasing path length,
+     *               as specified in RFC6265. If {@code false}, the {@link Cookie}s are encoded in the order
+     *               in which they are given.
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Cookie"} header value.
+     *
+     * @throws IllegalArgumentException if {@code cookies} is empty.
+     */
+    static String toCookieHeader(boolean strict, Collection<? extends Cookie> cookies) {
+        requireNonNull(cookies, "cookies");
+        checkArgument(!cookies.isEmpty(), "cookies is empty");
+        return ClientCookieEncoder.encode(strict, cookies.iterator());
+    }
+
+    /**
+     * Decodes the specified {@code "Set-Cookie"} header value into a {@link Cookie}.
+     *
+     * @param setCookieHeader the {@code "Set-Cookie"} header value.
+     * @return the decoded {@link Cookie} if decoded successfully. {@code null} otherwise.
+     */
+    @Nullable
+    static Cookie fromSetCookieHeader(String setCookieHeader) {
+        return fromSetCookieHeader(true, setCookieHeader);
+    }
+
+    /**
+     * Decodes the specified {@code "Set-Cookie"} header value into a {@link Cookie}.
+     *
+     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC6265.
+     * @param setCookieHeader the {@code "Set-Cookie"} header value.
+     * @return the decoded {@link Cookie} if decoded successfully. {@code null} otherwise.
+     */
+    @Nullable
+    static Cookie fromSetCookieHeader(boolean strict, String setCookieHeader) {
+        requireNonNull(setCookieHeader, "setCookieHeader");
+        if (setCookieHeader.isEmpty()) {
+            return null;
+        }
+        return ClientCookieDecoder.decode(strict, setCookieHeader);
+    }
+
+    /**
+     * Decodes the specified {@code "Set-Cookie"} header values into {@link Cookie}s.
+     *
+     * @param setCookieHeaders the {@code "Set-Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromSetCookieHeaders(String... setCookieHeaders) {
+        return fromSetCookieHeaders(true, setCookieHeaders);
+    }
+
+    /**
+     * Decodes the specified {@code "Set-Cookie"} header values into {@link Cookie}s.
+     *
+     * @param setCookieHeaders the {@code "Set-Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromSetCookieHeaders(Iterable<String> setCookieHeaders) {
+        return fromSetCookieHeaders(true, setCookieHeaders);
+    }
+
+    /**
+     * Decodes the specified {@code "Set-Cookie"} header values into {@link Cookie}s.
+     *
+     * @param setCookieHeaders the {@code "Set-Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromSetCookieHeaders(Collection<String> setCookieHeaders) {
+        return fromSetCookieHeaders(true, setCookieHeaders);
+    }
+
+    /**
+     * Decodes the specified {@code "Set-Cookie"} header values into {@link Cookie}s.
+     *
+     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC6265.
+     * @param setCookieHeaders the {@code "Set-Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromSetCookieHeaders(boolean strict, String... setCookieHeaders) {
+        requireNonNull(setCookieHeaders, "setCookieHeaders");
+        if (setCookieHeaders.length == 0) {
+            return Cookies.empty();
+        }
+
+        final ImmutableSet.Builder<Cookie> builder =
+                ImmutableSet.builderWithExpectedSize(setCookieHeaders.length);
+        for (String v : setCookieHeaders) {
+            requireNonNull(v, "setCookieHeaders contains null.");
+            final Cookie cookie = fromSetCookieHeader(strict, v);
+            if (cookie != null) {
+                builder.add(cookie);
+            }
+        }
+
+        return Cookies.of(builder.build());
+    }
+
+    /**
+     * Decodes the specified {@code "Set-Cookie"} header values into {@link Cookie}s.
+     *
+     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC6265.
+     * @param setCookieHeaders the {@code "Set-Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromSetCookieHeaders(boolean strict, Iterable<String> setCookieHeaders) {
+        if (setCookieHeaders instanceof Collection) {
+            return fromSetCookieHeaders(strict, (Collection<String>) setCookieHeaders);
+        }
+
+        requireNonNull(setCookieHeaders, "setCookieHeaders");
+        final Iterator<String> it = setCookieHeaders.iterator();
+        if (!it.hasNext()) {
+            return Cookies.empty();
+        }
+
+        return CookieUtil.fromSetCookieHeaders(ImmutableSet.builder(), strict, it);
+    }
+
+    /**
+     * Decodes the specified {@code "Set-Cookie"} header values into {@link Cookie}s.
+     *
+     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC6265.
+     * @param setCookieHeaders the {@code "Set-Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromSetCookieHeaders(boolean strict, Collection<String> setCookieHeaders) {
+        requireNonNull(setCookieHeaders, "setCookieHeaders");
+        if (setCookieHeaders.isEmpty()) {
+            return Cookies.empty();
+        }
+
+        return CookieUtil.fromSetCookieHeaders(ImmutableSet.builderWithExpectedSize(setCookieHeaders.size()),
+                                               strict, setCookieHeaders.iterator());
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into {@code "Set-Cookie"} header values.
+     *
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Set-Cookie"} header values.
+     */
+    static List<String> toSetCookieHeaders(Cookie... cookies) {
+        return toSetCookieHeaders(true, cookies);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into {@code "Set-Cookie"} header values.
+     *
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Set-Cookie"} header values.
+     */
+    static List<String> toSetCookieHeaders(Iterable<? extends Cookie> cookies) {
+        return toSetCookieHeaders(true, cookies);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into {@code "Set-Cookie"} header values.
+     *
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Set-Cookie"} header values.
+     */
+    static List<String> toSetCookieHeaders(Collection<? extends Cookie> cookies) {
+        return toSetCookieHeaders(true, cookies);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into {@code "Set-Cookie"} header values.
+     *
+     * @param strict whether to validate that the cookie names and values are in the valid scope
+     *               defined in RFC6265.
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Set-Cookie"} header values.
+     */
+    static List<String> toSetCookieHeaders(boolean strict, Cookie... cookies) {
+        requireNonNull(cookies, "cookies");
+        if (cookies.length == 0) {
+            return ImmutableList.of();
+        }
+
+        final ImmutableList.Builder<String> encoded = ImmutableList.builderWithExpectedSize(cookies.length);
+        for (final Cookie c : cookies) {
+            encoded.add(c.toSetCookieHeader(strict));
+        }
+        return encoded.build();
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into {@code "Set-Cookie"} header values.
+     *
+     * @param strict whether to validate that the cookie names and values are in the valid scope
+     *               defined in RFC6265.
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Set-Cookie"} header values.
+     */
+    static List<String> toSetCookieHeaders(boolean strict, Iterable<? extends Cookie> cookies) {
+        if (cookies instanceof Collection) {
+            @SuppressWarnings("unchecked")
+            final Collection<? extends Cookie> cast = (Collection<? extends Cookie>) cookies;
+            return toSetCookieHeaders(strict, cast);
+        }
+
+        requireNonNull(cookies, "cookies");
+        final Iterator<? extends Cookie> it = cookies.iterator();
+        if (!it.hasNext()) {
+            return ImmutableList.of();
+        }
+
+        final ImmutableList.Builder<String> encoded = ImmutableList.builder();
+        return CookieUtil.toSetCookieHeaders(encoded, strict, it);
+    }
+
+    /**
+     * Encodes the specified {@link Cookie}s into {@code "Set-Cookie"} header values.
+     *
+     * @param strict whether to validate that the cookie names and values are in the valid scope
+     *               defined in RFC6265.
+     * @param cookies the {@link Cookie}s to encode.
+     * @return the encoded {@code "Set-Cookie"} header values.
+     */
+    static List<String> toSetCookieHeaders(boolean strict, Collection<? extends Cookie> cookies) {
+        requireNonNull(cookies, "cookies");
+        if (cookies.isEmpty()) {
+            return ImmutableList.of();
+        }
+
+        return CookieUtil.toSetCookieHeaders(ImmutableList.builderWithExpectedSize(cookies.size()),
+                                             strict, cookies.iterator());
     }
 
     /**
@@ -125,4 +471,44 @@ public interface Cookie extends Comparable<Cookie> {
      */
     @Nullable
     String sameSite();
+
+    /**
+     * Encodes this {@link Cookie} into a single {@code "Cookie"} header value.
+     *
+     * @return a single RFC6265-style {@code "Cookie"} header value.
+     */
+    default String toCookieHeader() {
+        return toCookieHeader(true);
+    }
+
+    /**
+     * Encodes this {@link Cookie} into a single {@code "Cookie"} header value.
+     *
+     * @param strict whether to validate that the cookie name and value are in the valid scope
+     *               defined in RFC6265.
+     * @return a single RFC6265-style {@code "Cookie"} header value.
+     */
+    default String toCookieHeader(boolean strict) {
+        return ClientCookieEncoder.encode(strict, this);
+    }
+
+    /**
+     * Encodes this {@link Cookie} into a single {@code "Set-Cookie"} header value.
+     *
+     * @return a single {@code "Set-Cookie"} header value.
+     */
+    default String toSetCookieHeader() {
+        return toSetCookieHeader(true);
+    }
+
+    /**
+     * Encodes this {@link Cookie} into a single {@code "Set-Cookie"} header value.
+     *
+     * @param strict whether to validate that the cookie name and value are in the valid scope
+     *               defined in RFC6265.
+     * @return a single {@code "Set-Cookie"} header value.
+     */
+    default String toSetCookieHeader(boolean strict) {
+        return ServerCookieEncoder.encode(strict, this);
+    }
 }
