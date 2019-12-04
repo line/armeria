@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -82,6 +83,8 @@ public final class GrpcServiceBuilder {
     private boolean useBlockingTaskExecutor;
 
     private boolean unsafeWrapRequestBuffers;
+
+    private boolean useClientTimeoutHeader = true;
 
     @Nullable
     private ProtoReflectionService protoReflectionService;
@@ -276,6 +279,19 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether to use a {@code grpc-timeout} header sent by the client to control the timeout for request
+     * processing. If disabled, the request timeout will be the one configured for the Armeria server, e.g.,
+     * using {@link ServerBuilder#requestTimeout(Duration)}.
+     *
+     * <p>It is recommended to disable this when clients are not trusted code, e.g., for grpc-web clients that
+     * can come from arbitrary browsers.
+     */
+    public GrpcServiceBuilder useClientTimeoutHeader(boolean useClientTimeoutHeader) {
+        this.useClientTimeoutHeader = useClientTimeoutHeader;
+        return this;
+    }
+
+    /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
      * {@linkplain ServerBuilder#service(HttpServiceWithRoutes, Function[])
@@ -300,6 +316,7 @@ public final class GrpcServiceBuilder {
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
+                useClientTimeoutHeader,
                 protoReflectionService,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;

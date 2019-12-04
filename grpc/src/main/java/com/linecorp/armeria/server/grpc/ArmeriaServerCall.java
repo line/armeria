@@ -522,6 +522,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         return statusToTrailers(ctx, status, metadata, headersSent);
     }
 
+    // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     static HttpHeaders statusToTrailers(
             ServiceRequestContext ctx, Status status, Metadata metadata, boolean headersSent) {
         final HttpHeadersBuilder trailers = GrpcTrailersUtil.statusToTrailers(

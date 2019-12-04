@@ -44,7 +44,6 @@ import javax.annotation.Nullable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -168,6 +167,7 @@ public class GrpcClientTest {
                                        .addService(interceptService)
                                        .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                                        .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .useClientTimeoutHeader(false)
                                        .build()
                                        .decorate((client, ctx, req) -> {
                                            final HttpResponse res = client.serve(ctx, req);
@@ -1021,29 +1021,48 @@ public class GrpcClientTest {
         fail("cause must be a ResponseTimeoutException or a StatusException: ", cause);
     }
 
-    // NB: It's unclear when anyone would set a negative timeout, and trying to set the negative timeout
-    // into a header correctly raises an exception. The test has been copied over from upstream to make it
-    // easier to understand the compatibility test coverage - not sure why the gRPC test doesn't fail but it
-    // doesn't seem worth investigating too hard on this one.
-    @Ignore
     @Test
     public void deadlineInPast() {
         // Test once with idle channel and once with active channel
         final TestServiceGrpc.TestServiceBlockingStub stub =
-                Clients.newDerivedClient(
-                        blockingStub,
-
-                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(TimeUnit.SECONDS.toMillis(-10)));
-        stub.emptyCall(EMPTY);
-        Throwable t = catchThrowable(() -> stub.emptyCall(EMPTY));
-        assertThat(t).isInstanceOf(StatusRuntimeException.class);
-        assertThat(((StatusRuntimeException) t).getStatus().getCode());
+                blockingStub.withDeadlineAfter(-10, TimeUnit.SECONDS);
+        assertThatThrownBy(() -> stub.emptyCall(EMPTY))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, t -> {
+                    assertThat(t.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                    assertThat(t.getStatus().getDescription())
+                            .startsWith("ClientCall started after deadline exceeded");
+                });
 
         // warm up the channel
         blockingStub.emptyCall(Empty.getDefaultInstance());
-        t = catchThrowable(() -> stub.emptyCall(EMPTY));
-        assertThat(t).isInstanceOf(StatusRuntimeException.class);
-        assertThat(((StatusRuntimeException) t).getStatus().getCode());
+        assertThatThrownBy(() -> stub.emptyCall(EMPTY))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, t -> {
+                    assertThat(t.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                    assertThat(t.getStatus().getDescription())
+                            .startsWith("ClientCall started after deadline exceeded");
+                });
+    }
+
+    @Test
+    public void deadlineInFuture() throws Exception {
+        final TestServiceGrpc.TestServiceStub stub =
+                asyncStub.withDeadlineAfter(100, TimeUnit.MILLISECONDS);
+        final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
+        stub.streamingOutputCall(
+                StreamingOutputCallRequest
+                        .newBuilder()
+                        .addResponseParameters(
+                                ResponseParameters.newBuilder()
+                                                  .setIntervalUs((int) TimeUnit.SECONDS.toMicros(1))
+                                                  .build())
+                        .build(),
+                responseObserver);
+        responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
+        assertThat(responseObserver.getError()).isInstanceOfSatisfying(
+                StatusRuntimeException.class, t -> {
+                    assertThat(t.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                    assertThat(t.getStatus().getDescription()).contains("deadline exceeded after");
+                });
     }
 
     @Test
