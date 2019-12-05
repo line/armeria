@@ -59,7 +59,7 @@ public final class ThriftServiceEntry {
     }
 
     /**
-     * Returns the {@code *.AsyncIface} or {@code *.Iface} implementation.
+     * Returns the list of {@code *.AsyncIface} or {@code *.Iface} implementations.
      */
     public Iterable<?> implementations() {
         return implementations;
