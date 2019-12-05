@@ -54,9 +54,9 @@ public class StreamMessageBenchmark {
     }
 
     @State(Scope.Thread)
-    private static class StreamObjects {
+    public static class StreamObjects {
 
-        private enum StreamType {
+        public enum StreamType {
             DEFAULT_STREAM_MESSAGE,
             FIXED_STREAM_MESSAGE,
             DEFERRED_FIXED_STREAM_MESSAGE,

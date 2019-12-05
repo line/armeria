@@ -110,6 +110,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
     private final int maxOutboundMessageSizeBytes;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
+    private final boolean useClientTimeoutHeader;
     private final String advertisedEncodingsHeader;
     @Nullable
     private final ProtoReflectionService protoReflectionService;
@@ -127,6 +128,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
                 int maxOutboundMessageSizeBytes,
                 boolean useBlockingTaskExecutor,
                 boolean unsafeWrapRequestBuffers,
+                boolean useClientTimeoutHeader,
                 @Nullable ProtoReflectionService protoReflectionService,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
@@ -134,6 +136,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
+        this.useClientTimeoutHeader = useClientTimeoutHeader;
         this.protoReflectionService = protoReflectionService;
         jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats, jsonMarshallerCustomizer);
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
@@ -181,22 +184,24 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
         final ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
         if (method == null) {
             return HttpResponse.of(
-                    ArmeriaServerCall.statusToTrailers(
+                    (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
                             ctx,
                             Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
                             new Metadata(),
                             false));
         }
 
-        final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
-        if (timeoutHeader != null) {
-            try {
-                final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
-                ctx.setRequestTimeout(Duration.ofNanos(timeout));
-            } catch (IllegalArgumentException e) {
-                return HttpResponse.of(
-                        ArmeriaServerCall.statusToTrailers(
-                                ctx, GrpcStatus.fromThrowable(e), new Metadata(), false));
+        if (useClientTimeoutHeader) {
+            final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
+            if (timeoutHeader != null) {
+                try {
+                    final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
+                    ctx.setRequestTimeout(Duration.ofNanos(timeout));
+                } catch (IllegalArgumentException e) {
+                    return HttpResponse.of(
+                            (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
+                                    ctx, GrpcStatus.fromThrowable(e), new Metadata(), false));
+                }
             }
         }
 
@@ -207,7 +212,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
-            ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, new Metadata()));
+            ctx.setRequestTimeoutHandler(() -> call.close(Status.CANCELLED, new Metadata()));
             req.subscribe(call.messageReader(), ctx.eventLoop(), WITH_POOLED_OBJECTS);
             req.completionFuture().handleAsync(call.messageReader(), ctx.eventLoop());
         }

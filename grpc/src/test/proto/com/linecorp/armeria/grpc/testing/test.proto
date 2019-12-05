@@ -143,6 +143,9 @@ service UnitTestService {
 
     // A call where we check an interceptor correctly set a context value.
     rpc GrpcContext(SimpleRequest) returns (SimpleResponse);
+
+    // A call which will not return the response, triggering server timeout.
+    rpc TimesOut(SimpleRequest) returns (SimpleResponse);
 }
 
 // A simple service NOT implemented at servers so clients can test for

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -27,9 +28,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -61,10 +63,8 @@ final class DefaultRoutingContext implements RoutingContext {
     private final String path;
     @Nullable
     private final String query;
-    @Nullable
-    private volatile List<MediaType> acceptTypes;
+    private final List<MediaType> acceptTypes;
     private final boolean isCorsPreflight;
-    private final List<Object> summary;
     @Nullable
     private HttpStatusException deferredCause;
 
@@ -76,7 +76,7 @@ final class DefaultRoutingContext implements RoutingContext {
         this.path = requireNonNull(path, "path");
         this.query = query;
         this.isCorsPreflight = isCorsPreflight;
-        summary = generateSummary(this);
+        acceptTypes = extractAcceptTypes(headers);
     }
 
     @Override
@@ -113,22 +113,12 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public List<MediaType> acceptTypes() {
-        List<MediaType> acceptTypes = this.acceptTypes;
-        if (acceptTypes == null) {
-            acceptTypes = extractAcceptTypes(headers);
-            this.acceptTypes = acceptTypes;
-        }
         return acceptTypes;
     }
 
     @Override
     public boolean isCorsPreflight() {
         return isCorsPreflight;
-    }
-
-    @Override
-    public List<Object> summary() {
-        return summary;
     }
 
     @Override
@@ -142,20 +132,74 @@ final class DefaultRoutingContext implements RoutingContext {
         return deferredCause;
     }
 
+    // For hashing and comparison, we use these properties of the context
+    // 0 : VirtualHost
+    // 1 : HttpMethod
+    // 2 : Path
+    // 3 : Content-Type
+    // 4 : Accept
+
     @Override
     public int hashCode() {
-        return summary().hashCode();
+        return hashCode(this);
+    }
+
+    static int hashCode(RoutingContext routingCtx) {
+        int result = routingCtx.virtualHost().hashCode();
+        result *= 31;
+        result += routingCtx.method().hashCode();
+        result *= 31;
+        result += routingCtx.path().hashCode();
+        result *= 31;
+        final MediaType contentType = routingCtx.contentType();
+        if (contentType != null) {
+            result += contentType.hashCode();
+        }
+        for (MediaType mediaType : routingCtx.acceptTypes()) {
+            result *= 31;
+            result += mediaType.hashCode();
+        }
+        return result;
     }
 
     @Override
     public boolean equals(@Nullable Object obj) {
-        return obj instanceof DefaultRoutingContext &&
-               (this == obj || summary().equals(((DefaultRoutingContext) obj).summary()));
+        return equals(this, obj);
+    }
+
+    static boolean equals(RoutingContext self, @Nullable Object obj) {
+        if (self == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof RoutingContext)) {
+            return false;
+        }
+
+        final RoutingContext other = (RoutingContext) obj;
+        return self.virtualHost().equals(other.virtualHost()) &&
+               self.method().equals(other.method()) &&
+               self.path().equals(other.path()) &&
+               Objects.equals(self.contentType(), other.contentType()) &&
+               self.acceptTypes().equals(other.acceptTypes());
     }
 
     @Override
     public String toString() {
-        return summary().toString();
+        return toString(this);
+    }
+
+    static String toString(RoutingContext routingCtx) {
+        final ToStringHelper helper = MoreObjects.toStringHelper(routingCtx)
+                                                 .omitNullValues()
+                                                 .add("virtualHost", routingCtx.virtualHost())
+                                                 .add("method", routingCtx.method())
+                                                 .add("path", routingCtx.path())
+                                                 .add("contentType", routingCtx.contentType());
+        if (!routingCtx.acceptTypes().isEmpty()) {
+            helper.add("acceptTypes", routingCtx.acceptTypes());
+        }
+        return helper.toString();
     }
 
     @VisibleForTesting
@@ -167,16 +211,17 @@ final class DefaultRoutingContext implements RoutingContext {
         }
 
         final List<MediaType> acceptTypes = new ArrayList<>(4);
-        acceptHeaders.forEach(
-                acceptHeader -> Streams.stream(ACCEPT_SPLITTER.split(acceptHeader)).forEach(
-                        mediaType -> {
-                            try {
-                                acceptTypes.add(MediaType.parse(mediaType));
-                            } catch (IllegalArgumentException e) {
-                                logger.debug("Ignoring a malformed media type from 'accept' header: {}",
-                                             mediaType);
-                            }
-                        }));
+        for (String acceptHeader : acceptHeaders) {
+            for (String mediaType : ACCEPT_SPLITTER.split(acceptHeader)) {
+                try {
+                    acceptTypes.add(MediaType.parse(mediaType));
+                } catch (IllegalArgumentException e) {
+                    logger.debug("Ignoring a malformed media type from 'accept' header: {}",
+                                 mediaType);
+                }
+            }
+        }
+
         if (acceptTypes.isEmpty()) {
             return ImmutableList.of();
         }
@@ -202,30 +247,5 @@ final class DefaultRoutingContext implements RoutingContext {
         }
         // Finally, sort by lexicographic order. ex, application/*, image/*
         return m1.type().compareTo(m2.type());
-    }
-
-    /**
-     * Returns a summary string of the given {@link RoutingContext}.
-     */
-    static List<Object> generateSummary(RoutingContext routingCtx) {
-        requireNonNull(routingCtx, "routingCtx");
-
-        // 0 : VirtualHost
-        // 1 : HttpMethod
-        // 2 : Path
-        // 3 : Content-Type
-        // 4 : Accept
-        final List<Object> summary = new ArrayList<>(8);
-
-        summary.add(routingCtx.virtualHost());
-        summary.add(routingCtx.method());
-        summary.add(routingCtx.path());
-        summary.add(routingCtx.contentType());
-
-        final List<MediaType> acceptTypes = routingCtx.acceptTypes();
-        if (!acceptTypes.isEmpty()) {
-            summary.addAll(acceptTypes);
-        }
-        return summary;
     }
 }

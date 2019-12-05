@@ -75,12 +75,6 @@ public interface RoutingContext {
     List<MediaType> acceptTypes();
 
     /**
-     * Returns an identifier of this {@link RoutingContext} instance.
-     * It would be used as a cache key to reduce pattern list traversal.
-     */
-    List<Object> summary();
-
-    /**
      * Defers throwing an {@link HttpStatusException} until reaching the end of the service list.
      */
     void deferStatusException(HttpStatusException cause);

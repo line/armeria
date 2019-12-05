@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -45,10 +45,10 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.logging.LoggingService;
 
-public class AnnotatedHttpServiceBuilderTest {
+class AnnotatedHttpServiceBuilderTest {
 
     @Test
-    public void successfulOf() {
+    void successfulOf() {
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root() {}
@@ -261,7 +261,7 @@ public class AnnotatedHttpServiceBuilderTest {
     }
 
     @Test
-    public void ofBuiltinRequestConverter() {
+    void ofBuiltinRequestConverter() {
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root(@RequestObject String value) {}
@@ -281,7 +281,7 @@ public class AnnotatedHttpServiceBuilderTest {
     }
 
     @Test
-    public void failedOf() {
+    void failedOf() {
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get
             public void root() {}

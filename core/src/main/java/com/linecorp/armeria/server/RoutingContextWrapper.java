@@ -69,11 +69,6 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public List<Object> summary() {
-        return delegate.summary();
-    }
-
-    @Override
     public void deferStatusException(HttpStatusException cause) {
         delegate.deferStatusException(cause);
     }
@@ -86,5 +81,20 @@ class RoutingContextWrapper implements RoutingContext {
     @Override
     public boolean isCorsPreflight() {
         return delegate.isCorsPreflight();
+    }
+
+    @Override
+    public int hashCode() {
+        return DefaultRoutingContext.hashCode(this);
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        return DefaultRoutingContext.equals(this, obj);
+    }
+
+    @Override
+    public String toString() {
+        return DefaultRoutingContext.toString(this);
     }
 }

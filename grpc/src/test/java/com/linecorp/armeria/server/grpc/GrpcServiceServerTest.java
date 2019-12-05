@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
@@ -343,6 +344,11 @@ class GrpcServiceServerTest {
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
             responseObserver.onCompleted();
         }
+
+        @Override
+        public void timesOut(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            ServiceRequestContext.current().setRequestTimeoutMillis(100);
+        }
     }
 
     private static final ServerInterceptor REPLACE_EXCEPTION = new ServerInterceptor() {
@@ -401,7 +407,7 @@ class GrpcServiceServerTest {
                                 return delegate.serve(ctx, req);
                             }));
 
-            // For simplicity, mount onto a subpath with custom options
+            // For simplicity, mount onto subpaths with custom options
             sb.serviceUnder(
                     "/json-preserving/",
                     GrpcService.builder()
@@ -409,6 +415,12 @@ class GrpcServiceServerTest {
                                .supportedSerializationFormats(GrpcSerializationFormats.values())
                                .jsonMarshallerCustomizer(
                                        marshaller -> marshaller.preservingProtoFieldNames(true))
+                               .build());
+            sb.serviceUnder(
+                    "/no-client-timeout/",
+                    GrpcService.builder()
+                               .addService(new UnitTestServiceImpl())
+                               .useClientTimeoutHeader(false)
                                .build());
 
             sb.service(
@@ -724,6 +736,20 @@ class GrpcServiceServerTest {
                             .setPayload(Payload.newBuilder()
                                                .setBody(ByteString.copyFrom(LARGE_PAYLOAD.toByteArray())))
                             .build();
+    }
+
+    @Test
+    void ignoreClientTimeout() {
+        withTimeout(() -> {
+            final UnitTestServiceBlockingStub client =
+                    new ClientBuilder(server.httpUri(GrpcSerializationFormats.PROTO, "/no-client-timeout/"))
+                    .build(UnitTestServiceBlockingStub.class)
+                    .withDeadlineAfter(10, TimeUnit.SECONDS);
+            assertThatThrownBy(() -> client.timesOut(
+                    SimpleRequest.getDefaultInstance())).isInstanceOfSatisfying(
+                    StatusRuntimeException.class, t ->
+                            assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED));
+        });
     }
 
     @Test
