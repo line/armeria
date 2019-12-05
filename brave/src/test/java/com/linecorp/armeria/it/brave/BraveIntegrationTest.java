@@ -451,35 +451,35 @@ class BraveIntegrationTest {
     }
 
     @Test
-    void testClientTimesOut() throws Exception {
-        assertThatThrownBy(() -> timeoutClientClientTimesOut.hello("name"))
-                .isInstanceOf(ResponseTimeoutException.class);
-        final Span[] spans = spanReporter.take(2);
-
-        final Span serverSpan = findSpan(spans, "service/timeout");
-        final Span clientSpan = findSpan(spans, "client/timeout");
-
-        // HTTP2 client timed out, so RST_STREAM frame was sent to the server.
-        // There is a wire send in the server and no wire receive in the client.
-        assertThat(serverSpan.annotations()).hasSize(2);
-        assertThat(serverSpan.annotations().get(1).value()).isEqualTo("ws");
-        assertThat(clientSpan.annotations()).hasSize(1);
+    void testHttp2ClientTimesOut() throws Exception {
+        testClientTimesOut(timeoutClientClientTimesOut);
     }
 
     @Test
     void testHttp1ClientTimesOut() throws Exception {
-        assertThatThrownBy(() -> http1TimeoutClientClientTimesOut.hello("name"))
+        testClientTimesOut(http1TimeoutClientClientTimesOut);
+    }
+
+    private static void testClientTimesOut(HelloService.Iface client) {
+        assertThatThrownBy(() -> client.hello("name"))
                 .isInstanceOf(ResponseTimeoutException.class);
         final Span[] spans = spanReporter.take(2);
 
         final Span serverSpan = findSpan(spans, "service/timeout");
         final Span clientSpan = findSpan(spans, "client/timeout");
 
-        // HTTP1 client timed out, so no response data was ever sent from the server.
+        // Collect all annotations except for connection attempts.
+        final List<Annotation> serverAnnotations = serverSpan.annotations();
+        final List<Annotation> clientAnnotations = clientSpan.annotations().stream()
+                                                             .filter(a -> !a.value().contains("connect"))
+                                                             .collect(toImmutableList());
+
+        // Client timed out, so no response data was ever sent from the server.
         // There is a wire send in the server and no wire receive in the client.
-        assertThat(serverSpan.annotations()).hasSize(2);
-        assertThat(serverSpan.annotations().get(1).value()).isEqualTo("ws");
-        assertThat(clientSpan.annotations()).hasSizeGreaterThanOrEqualTo(1);
+        assertThat(serverAnnotations).hasSize(1);
+        assertThat(serverAnnotations.get(0).value()).isEqualTo("wr");
+        assertThat(clientAnnotations).hasSize(1);
+        assertThat(clientAnnotations.get(0).value()).isEqualTo("ws");
     }
 
     @Test
