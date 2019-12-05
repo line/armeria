@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -54,6 +55,7 @@ import com.linecorp.armeria.internal.HttpTimestampSupplier;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
@@ -282,11 +284,15 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             failAndRespond(cause,
                            AggregatedHttpResponse.of(((HttpStatusException) cause).httpStatus()),
                            Http2Error.CANCEL);
-        } else if (cause instanceof AbortedStreamException) {
-            // One of the two cases:
+        } else if (cause instanceof ClosedSessionException ||
+                   (cause instanceof Http2Exception.StreamException &&
+                    ((Http2Exception.StreamException) cause).error().code() == Http2Error.CANCEL.code()) ||
+                   cause instanceof AbortedStreamException) {
+            // One of the three cases:
             // - Client closed the connection too early.
+            // - Client sent an HTTP/2 RST_STREAM frame.
             // - Response publisher aborted the stream.
-            failAndReset((AbortedStreamException) cause);
+            failAndReset(cause);
         } else {
             logger.warn("{} Unexpected exception from a service or a response publisher: {}",
                         ctx.channel(), service(), cause);
@@ -422,7 +428,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         addCallbackAndFlush(cause, oldState, future);
     }
 
-    private void failAndReset(AbortedStreamException cause) {
+    private void failAndReset(Throwable cause) {
         final State oldState = setDone();
         subscription.cancel();
 
