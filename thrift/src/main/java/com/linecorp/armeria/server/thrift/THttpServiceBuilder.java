@@ -178,7 +178,7 @@ public final class THttpServiceBuilder {
         @SuppressWarnings("UnstableApiUsage")
         final Map<String, List<Object>> implementations = Multimaps.asMap(implementationsBuilder.build());
 
-        final ThriftCallService tcs = ThriftCallService.ofMultiple(implementations);
+        final ThriftCallService tcs = ThriftCallService.of(implementations);
 
         final LinkedHashSet<SerializationFormat> combined = new LinkedHashSet<>();
         combined.add(defaultSerializationFormat);
