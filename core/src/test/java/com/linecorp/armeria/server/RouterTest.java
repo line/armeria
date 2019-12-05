@@ -62,7 +62,7 @@ class RouterTest {
                 Route.builder().path("glob:/h/**/z").build(),     // router 4
                 Route.builder().path("prefix:/i").build()         // router 5
         );
-        final List<Router<Route>> routers = Routers.routers(routes, Function.identity(), REJECT);
+        final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT);
         assertThat(routers.size()).isEqualTo(5);
 
         // Map of a path string and a router index
@@ -102,14 +102,14 @@ class RouterTest {
                 Route.builder().path("glob:/h/**/z").build(),
                 Route.builder().path("prefix:/h").build()
         );
-        final List<Router<Route>> routers = Routers.routers(routes, Function.identity(), REJECT);
+        final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT);
         final CompositeRouter<Route, Route> router = new CompositeRouter<>(routers, Function.identity());
         final RoutingContext mock = mock(RoutingContext.class);
 
         when(mock.path()).thenReturn(path);
         assertThat(router.find(mock).route()).isEqualTo(routes.get(expectForFind));
 
-        final List<Route> matched = router.findAll(mock).map(Routed::route).collect(toImmutableList());
+        final List<Route> matched = router.findAll(mock).stream().map(Routed::route).collect(toImmutableList());
         final List<Route> expected = expectForFindAll.stream().map(routes::get).collect(toImmutableList());
         assertThat(matched).containsAll(expected);
     }
@@ -144,7 +144,7 @@ class RouterTest {
         assertThat(Routers.routers(ImmutableList.of(Route.builder().path("/foo/:bar").build(),
                                                     Route.builder().regex("not-trie-compatible").build(),
                                                     Route.builder().path("/bar/:baz").build()),
-                                   Function.identity(), REJECT)).hasSize(3);
+                                   null, Function.identity(), REJECT)).hasSize(3);
 
         testDuplicateRoutes(Route.builder().path("/foo/:bar").build(),
                             Route.builder().regex("not-trie-compatible").build(),
@@ -212,12 +212,13 @@ class RouterTest {
     }
 
     private static void testDuplicateRoutes(Route... routes) {
-        assertThatThrownBy(() -> Routers.routers(ImmutableList.copyOf(routes), Function.identity(), REJECT))
+        assertThatThrownBy(() -> Routers.routers(ImmutableList.copyOf(routes), null,
+                                                 Function.identity(), REJECT))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageStartingWith("duplicate route:");
     }
 
     private static void testNonDuplicateRoutes(Route... routes) {
-        Routers.routers(ImmutableList.copyOf(routes), Function.identity(), REJECT);
+        Routers.routers(ImmutableList.copyOf(routes), null, Function.identity(), REJECT);
     }
 }

@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -149,23 +148,23 @@ final class RouteCache {
         }
 
         @Override
-        public Stream<Routed<V>> findAll(RoutingContext routingCtx) {
+        public List<Routed<V>> findAll(RoutingContext routingCtx) {
             final List<V> cachedList = findAllCache.getIfPresent(routingCtx);
             if (cachedList != null) {
                 return cachedList.stream().map(cached -> {
                     final Route route = routeResolver.apply(cached);
                     final RoutingResult routingResult = route.apply(routingCtx);
                     return Routed.of(route, routingResult, cached);
-                });
+                }).collect(toImmutableList());
             }
 
-            final List<Routed<V>> result = delegate.findAll(routingCtx).collect(toImmutableList());
+            final List<Routed<V>> result = delegate.findAll(routingCtx);
             final List<V> valid = result.stream()
                                         .filter(Routed::isPresent)
                                         .map(Routed::value)
                                         .collect(toImmutableList());
             findAllCache.put(routingCtx, valid);
-            return result.stream();
+            return result;
         }
 
         @Override

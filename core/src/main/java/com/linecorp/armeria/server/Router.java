@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server;
 
 import java.io.OutputStream;
-import java.util.stream.Stream;
+import java.util.List;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -39,9 +39,9 @@ public interface Router<V> {
     /**
      * Finds all values of mapping that match the specified {@link RoutingContext}.
      *
-     * @return a stream of {@link Routed} that wraps the matching value.
+     * @return the {@link Routed} instances that wrap the matching value.
      */
-    Stream<Routed<V>> findAll(RoutingContext routingCtx);
+    List<Routed<V>> findAll(RoutingContext routingCtx);
 
     /**
      * Registers the stats of this {@link Router} to the specified {@link MeterRegistry}.
