@@ -42,7 +42,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
@@ -331,16 +330,18 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         fail(cause);
 
         final Http2Error error;
-        if (response.isOpen()) {
-            response.close(cause);
-            error = Http2Error.INTERNAL_ERROR;
-        } else if (cause instanceof WriteTimeoutException || cause instanceof AbortedStreamException) {
+        if (Exceptions.isStreamCancelling(cause)) {
             error = Http2Error.CANCEL;
         } else {
+            error = Http2Error.INTERNAL_ERROR;
+        }
+
+        if (response.isOpen()) {
+            response.close(cause);
+        } else if (error.code() != Http2Error.CANCEL.code()) {
             Exceptions.logIfUnexpected(logger, ch,
                                        HttpSession.get(ch).protocol(),
                                        "a request publisher raised an exception", cause);
-            error = Http2Error.INTERNAL_ERROR;
         }
 
         if (ch.isActive()) {
