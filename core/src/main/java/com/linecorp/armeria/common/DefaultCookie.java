@@ -147,47 +147,6 @@ final class DefaultCookie implements Cookie {
     }
 
     @Override
-    public int compareTo(Cookie c) {
-        int v = name.compareTo(c.name());
-        if (v != 0) {
-            return v;
-        }
-
-        v = value.compareTo(c.value());
-        if (v != 0) {
-            return v;
-        }
-
-        final String otherPath = c.path();
-        if (path == null) {
-            if (otherPath != null) {
-                return -1;
-            }
-        } else if (otherPath == null) {
-            return 1;
-        } else {
-            v = path().compareTo(otherPath);
-            if (v != 0) {
-                return v;
-            }
-        }
-
-        final String otherDomain = c.domain();
-        if (domain == null) {
-            if (otherDomain != null) {
-                return -1;
-            }
-        } else if (otherDomain == null) {
-            return 1;
-        } else {
-            v = domain.compareToIgnoreCase(otherDomain);
-            return v;
-        }
-
-        return 0;
-    }
-
-    @Override
     public String toString() {
         final ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues()
                                                  .add("name", name)

@@ -36,6 +36,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -516,5 +517,74 @@ public interface Cookie extends Comparable<Cookie> {
      */
     default String toSetCookieHeader(boolean strict) {
         return ServerCookieEncoder.encode(strict, this);
+    }
+
+    /**
+     * Returns a new {@link CookieBuilder} created from this {@link Cookie}.
+     *
+     * @see #withMutations(Consumer)
+     */
+    default CookieBuilder toBuilder() {
+        return new CookieBuilder(this);
+    }
+
+    /**
+     * Returns a new {@link Cookie} which is the result from the mutation by the specified {@link Consumer}.
+     * This method is a shortcut of:
+     * <pre>{@code
+     * builder = toBuilder();
+     * mutator.accept(builder);
+     * return builder.build();
+     * }</pre>
+     *
+     * @see #toBuilder()
+     */
+    default Cookie withMutations(Consumer<CookieBuilder> mutator) {
+        final CookieBuilder builder = toBuilder();
+        mutator.accept(builder);
+        return builder.build();
+    }
+
+    @Override
+    default int compareTo(Cookie c) {
+        int v = name().compareTo(c.name());
+        if (v != 0) {
+            return v;
+        }
+
+        v = value().compareTo(c.value());
+        if (v != 0) {
+            return v;
+        }
+
+        final String path = path();
+        final String otherPath = c.path();
+        if (path == null) {
+            if (otherPath != null) {
+                return -1;
+            }
+        } else if (otherPath == null) {
+            return 1;
+        } else {
+            v = path.compareTo(otherPath);
+            if (v != 0) {
+                return v;
+            }
+        }
+
+        final String domain = domain();
+        final String otherDomain = c.domain();
+        if (domain == null) {
+            if (otherDomain != null) {
+                return -1;
+            }
+        } else if (otherDomain == null) {
+            return 1;
+        } else {
+            v = domain.compareToIgnoreCase(otherDomain);
+            return v;
+        }
+
+        return 0;
     }
 }

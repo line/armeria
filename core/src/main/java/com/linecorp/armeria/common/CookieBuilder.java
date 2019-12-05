@@ -58,8 +58,8 @@ public final class CookieBuilder {
         return value;
     }
 
-    private final String name;
-    private final String value;
+    private String name;
+    private String value;
     private boolean valueQuoted;
     @Nullable
     private String domain;
@@ -78,6 +78,34 @@ public final class CookieBuilder {
     CookieBuilder(String name, String value) {
         this.name = requireNonNull(name, "name");
         this.value = requireNonNull(value, "value");
+    }
+
+    CookieBuilder(Cookie cookie) {
+        name = cookie.name();
+        value = cookie.value();
+        valueQuoted = cookie.isValueQuoted();
+        domain = cookie.domain();
+        path = cookie.path();
+        maxAge = cookie.maxAge();
+        secure = cookie.isSecure();
+        httpOnly = cookie.isHttpOnly();
+        sameSite = cookie.sameSite();
+    }
+
+    /**
+     * Sets the name of the {@link Cookie}.
+     */
+    public CookieBuilder name(String name) {
+        this.name = requireNonNull(name, "name");
+        return this;
+    }
+
+    /**
+     * Sets the value of the {@link Cookie}.
+     */
+    public CookieBuilder value(String value) {
+        this.value = requireNonNull(value, "value");
+        return this;
     }
 
     /**
