@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 
 import com.linecorp.armeria.internal.Types;
 
@@ -60,7 +59,7 @@ public final class ThriftServiceMetadata {
      * interfaces.
      */
     public ThriftServiceMetadata(Object implementation) {
-        this(ImmutableList.of(implementation));
+        this(ImmutableList.of(requireNonNull(implementation, "implementation")));
     }
 
     /**
@@ -70,8 +69,9 @@ public final class ThriftServiceMetadata {
     public ThriftServiceMetadata(Iterable<?> implementations) {
         requireNonNull(implementations, "implementations");
 
-        final Builder<Class<?>> interfaceBuilder = ImmutableSet.builder();
+        final ImmutableSet.Builder<Class<?>> interfaceBuilder = ImmutableSet.builder();
         implementations.forEach(implementation -> {
+            requireNonNull(implementation, "implementations contains null.");
             interfaceBuilder.addAll(init(implementation));
         });
         interfaces = interfaceBuilder.build();
