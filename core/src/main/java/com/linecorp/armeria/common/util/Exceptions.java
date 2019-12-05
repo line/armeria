@@ -37,12 +37,17 @@ import org.slf4j.Logger;
 
 import com.google.common.base.Throwables;
 
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 
 /**
@@ -160,6 +165,22 @@ public final class Exceptions {
         }
 
         return false;
+    }
+
+    /**
+     * Returns {@code true} if the specified exception will cancel the current request or response stream.
+     */
+    public static boolean isStreamCancelling(Throwable cause) {
+        if (cause instanceof UnprocessedRequestException) {
+            cause = cause.getCause();
+        }
+
+        return (cause instanceof Http2Exception.StreamException &&
+                ((Http2Exception.StreamException) cause).error() == Http2Error.CANCEL) ||
+               cause instanceof ClosedSessionException ||
+               cause instanceof CancelledSubscriptionException ||
+               cause instanceof WriteTimeoutException ||
+               cause instanceof AbortedStreamException;
     }
 
     /**

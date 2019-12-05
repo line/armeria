@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
@@ -282,11 +282,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             failAndRespond(cause,
                            AggregatedHttpResponse.of(((HttpStatusException) cause).httpStatus()),
                            Http2Error.CANCEL);
-        } else if (cause instanceof AbortedStreamException) {
-            // One of the two cases:
-            // - Client closed the connection too early.
-            // - Response publisher aborted the stream.
-            failAndReset((AbortedStreamException) cause);
+        } else if (Exceptions.isStreamCancelling(cause)) {
+            failAndReset(cause);
         } else {
             logger.warn("{} Unexpected exception from a service or a response publisher: {}",
                         ctx.channel(), service(), cause);
@@ -413,7 +410,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 future = responseEncoder.writeData(id, streamId, content, true);
             }
 
-            headersWriteFuture.addListener((ChannelFuture unused) -> maybeLogFirstResponseBytesTransferred());
+            headersWriteFuture.addListener((ChannelFuture f) -> {
+                if (f.isSuccess()) {
+                    maybeLogFirstResponseBytesTransferred();
+                }
+            });
         } else {
             // Wrote something already; we have to reset/cancel the stream.
             future = responseEncoder.writeReset(id, streamId, error);
@@ -422,7 +423,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         addCallbackAndFlush(cause, oldState, future);
     }
 
-    private void failAndReset(AbortedStreamException cause) {
+    private void failAndReset(Throwable cause) {
         final State oldState = setDone();
         subscription.cancel();
 

@@ -303,7 +303,17 @@ public final class HealthCheckService implements TransientHttpService {
                     });
 
                     updateRequestTimeout(ctx, longPollingTimeoutMillis);
-                    return HttpResponse.from(future);
+
+                    // Create a deferred response from the response future.
+                    final HttpResponse deferredRes = HttpResponse.from(future);
+
+                    // Cancel the scheduled timeout task if the deferred response fails,
+                    // so that it's removed from the event loop's task queue quickly.
+                    deferredRes.completionFuture().exceptionally(cause -> {
+                        timeoutFuture.cancel(false);
+                        return null;
+                    });
+                    return deferredRes;
                 } else {
                     // State has been changed before we acquire the lock.
                     // Fall through because there's no need for long polling.
