@@ -31,7 +31,7 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -39,17 +39,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.AsciiString;
 
-public class HttpHeadersBaseTest {
+class HttpHeadersBaseTest {
 
     @Test
-    public void testEqualsInsertionOrderSameHeaderName() {
+    void testEqualsInsertionOrderSameHeaderName() {
         final HttpHeadersBase h1 = newEmptyHeaders();
         h1.add("a", "b");
         h1.add("a", "c");
@@ -60,7 +60,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testEqualsInsertionOrderDifferentHeaderNames() {
+    void testEqualsInsertionOrderDifferentHeaderNames() {
         final HttpHeadersBase h1 = newEmptyHeaders();
         h1.add("a", "b");
         h1.add("c", "d");
@@ -73,7 +73,7 @@ public class HttpHeadersBaseTest {
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
 
     @Test
-    public void addShouldIncreaseAndRemoveShouldDecreaseTheSize() {
+    void addShouldIncreaseAndRemoveShouldDecreaseTheSize() {
         final HttpHeadersBase headers = newEmptyHeaders();
         assertThat(headers.size()).isEqualTo(0);
         headers.add("name1", "value1", "value2");
@@ -93,7 +93,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void afterClearHeadersShouldBeEmpty() {
+    void afterClearHeadersShouldBeEmpty() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name1", "value1");
         headers.add("name2", "value2");
@@ -106,7 +106,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void removingANameForASecondTimeShouldReturnFalse() {
+    void removingANameForASecondTimeShouldReturnFalse() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name1", "value1");
         headers.add("name2", "value2");
@@ -115,7 +115,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void multipleValuesPerNameShouldBeAllowed() {
+    void multipleValuesPerNameShouldBeAllowed() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name", "value1");
         headers.add("name", "value2");
@@ -128,7 +128,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void multipleValuesPerNameIteratorWithOtherNames() {
+    void multipleValuesPerNameIteratorWithOtherNames() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name1", "value1");
         headers.add("name1", "value2");
@@ -146,7 +146,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void multipleValuesPerNameIterator() {
+    void multipleValuesPerNameIterator() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name1", "value1");
         headers.add("name1", "value2");
@@ -157,7 +157,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void multipleValuesPerNameIteratorEmpty() {
+    void multipleValuesPerNameIteratorEmpty() {
         final HttpHeadersBase headers = newEmptyHeaders();
         assertThat(headers.valueIterator("name")).isExhausted();
         assertThatThrownBy(() -> headers.valueIterator("name").next())
@@ -165,7 +165,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testContains() {
+    void testContains() {
         final HttpHeadersBase headers = newEmptyHeaders();
 
         headers.addLong("long", Long.MAX_VALUE);
@@ -200,7 +200,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testCopy() throws Exception {
+    void testCopy() throws Exception {
         HttpHeadersBase headers = newEmptyHeaders();
         headers.addLong("long", Long.MAX_VALUE);
         headers.addInt("int", Integer.MIN_VALUE);
@@ -239,7 +239,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void canMixConvertedAndNormalValues() {
+    void canMixConvertedAndNormalValues() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name", "value");
         headers.addInt("name", 100);
@@ -251,7 +251,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testGetAndRemove() {
+    void testGetAndRemove() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name1", "value1");
         headers.add("name2", "value2", "value3");
@@ -267,14 +267,14 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void whenNameContainsMultipleValuesGetShouldReturnTheFirst() {
+    void whenNameContainsMultipleValuesGetShouldReturnTheFirst() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name1", "value1", "value2");
         assertThat(headers.get("name1")).isEqualTo("value1");
     }
 
     @Test
-    public void getWithDefaultValueWorks() {
+    void getWithDefaultValueWorks() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name1", "value1");
 
@@ -283,7 +283,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void setShouldOverWritePreviousValue() {
+    void setShouldOverWritePreviousValue() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.set("name", "value1");
         headers.set("name", "value2");
@@ -294,7 +294,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void setAllShouldOverwriteSomeAndLeaveOthersUntouched() {
+    void setAllShouldOverwriteSomeAndLeaveOthersUntouched() {
         final HttpHeadersBase h1 = newEmptyHeaders();
 
         h1.add("name1", "value1");
@@ -319,7 +319,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void headersWithSameNamesAndValuesShouldBeEquivalent() {
+    void headersWithSameNamesAndValuesShouldBeEquivalent() {
         final HttpHeadersBase headers1 = newEmptyHeaders();
         headers1.add("name1", "value1");
         headers1.add("name2", "value2");
@@ -340,7 +340,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void emptyHeadersShouldBeEqual() {
+    void emptyHeadersShouldBeEqual() {
         final HttpHeadersBase headers1 = newEmptyHeaders();
         final HttpHeadersBase headers2 = newEmptyHeaders();
         assertThat(headers2).isEqualTo(headers1);
@@ -348,7 +348,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void headersWithSameNamesButDifferentValuesShouldNotBeEquivalent() {
+    void headersWithSameNamesButDifferentValuesShouldNotBeEquivalent() {
         final HttpHeadersBase headers1 = newEmptyHeaders();
         headers1.add("name1", "value1");
         final HttpHeadersBase headers2 = newEmptyHeaders();
@@ -357,7 +357,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void subsetOfHeadersShouldNotBeEquivalent() {
+    void subsetOfHeadersShouldNotBeEquivalent() {
         final HttpHeadersBase headers1 = newEmptyHeaders();
         headers1.add("name1", "value1");
         headers1.add("name2", "value2");
@@ -367,7 +367,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void headersWithDifferentNamesAndValuesShouldNotBeEquivalent() {
+    void headersWithDifferentNamesAndValuesShouldNotBeEquivalent() {
         final HttpHeadersBase h1 = newEmptyHeaders();
         h1.set("name1", "value1");
         final HttpHeadersBase h2 = newEmptyHeaders();
@@ -378,15 +378,15 @@ public class HttpHeadersBaseTest {
         assertThat(h2).isEqualTo(h2);
     }
 
-    @Test(expected = NoSuchElementException.class)
-    public void iterateEmptyHeadersShouldThrow() {
+    @Test
+    void iterateEmptyHeadersShouldThrow() {
         final Iterator<Map.Entry<AsciiString, String>> iterator = newEmptyHeaders().iterator();
         assertThat(iterator.hasNext()).isFalse();
-        iterator.next();
+        assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
-    public void iteratorShouldReturnAllNameValuePairs() {
+    void iteratorShouldReturnAllNameValuePairs() {
         final HttpHeadersBase headers1 = newEmptyHeaders();
         headers1.add("name1", "value1", "value2");
         headers1.add("name2", "value3");
@@ -403,7 +403,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void iteratorSetShouldFail() {
+    void iteratorSetShouldFail() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name1", "value1", "value2", "value3");
         headers.add("name2", "value4");
@@ -414,7 +414,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testEntryEquals() {
+    void testEntryEquals() {
         final HttpHeadersBase nameValue = newEmptyHeaders();
         nameValue.add("name", "value");
         final HttpHeadersBase nameValueCopy = newEmptyHeaders();
@@ -444,13 +444,13 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void getAllReturnsEmptyListForUnknownName() {
+    void getAllReturnsEmptyListForUnknownName() {
         final HttpHeadersBase headers = newEmptyHeaders();
         assertThat(headers.getAll("noname").size()).isEqualTo(0);
     }
 
     @Test
-    public void setHeadersShouldClearAndOverwrite() {
+    void setHeadersShouldClearAndOverwrite() {
         final HttpHeadersBase headers1 = newEmptyHeaders();
         headers1.add("name", "value");
 
@@ -463,7 +463,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void setHeadersShouldOnlyOverwriteHeaders() {
+    void setHeadersShouldOnlyOverwriteHeaders() {
         final HttpHeadersBase headers1 = newEmptyHeaders();
         headers1.add("name", "value");
         headers1.add("name1", "value1");
@@ -481,14 +481,14 @@ public class HttpHeadersBaseTest {
         assertThat(expected).isEqualTo(headers1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testAddSelf() {
+    @Test
+    void testAddSelf() {
         final HttpHeadersBase headers = newEmptyHeaders();
-        headers.add(headers);
+        assertThatThrownBy(() -> headers.add(headers)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void testSetSelfIsNoOp() {
+    void testSetSelfIsNoOp() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name", "value");
         headers.set(headers);
@@ -496,7 +496,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testToString() {
+    void testToString() {
         HttpHeadersBase headers = newEmptyHeaders();
         headers.add("name1", "value1");
         headers.add("name1", "value2");
@@ -527,7 +527,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testNotThrowWhenConvertFails() {
+    void testNotThrowWhenConvertFails() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.set("name1", "");
         assertThat(headers.getInt("name1")).isNull();
@@ -546,10 +546,30 @@ public class HttpHeadersBaseTest {
         assertThat(headers.getTimeMillis("name1", Long.MAX_VALUE)).isEqualTo(Long.MAX_VALUE);
     }
 
+    @Test
+    void valueValidation() {
+        final HttpHeadersBase headers = newEmptyHeaders();
+        assertThatThrownBy(() -> headers.add("foo", "\u0000"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header value: <NUL>");
+        assertThatThrownBy(() -> headers.add("foo", "\n"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header value: <LF>");
+        assertThatThrownBy(() -> headers.add("foo", "\u000B"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header value: <VT>");
+        assertThatThrownBy(() -> headers.add("foo", "\f"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header value: <FF>");
+        assertThatThrownBy(() -> headers.add("foo", "\r"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header value: <CR>");
+    }
+
     // Tests forked from io.netty.handler.codec.http.HttpHeadersTest
 
     @Test
-    public void testGetOperations() {
+    void testGetOperations() {
         final HttpHeadersBase headers = newEmptyHeaders();
         headers.add("Foo", "1");
         headers.add("Foo", "2");
@@ -560,33 +580,35 @@ public class HttpHeadersBaseTest {
         assertThat(values).containsExactly("1", "2");
     }
 
-    @Test(expected = NullPointerException.class)
-    public void testSetNullHeaderValue() {
-        final HttpHeadersBase headers = newEmptyHeaders();
-        headers.set("test", (String) null);
+    @Test
+    void testSetNullHeaderValue() {
+        assertThatThrownBy(() -> newEmptyHeaders().set("test", (String) null))
+                .isInstanceOf(NullPointerException.class);
     }
 
     // Tests forked from io.netty.handler.codec.http2.DefaultHttp2HeadersTest
 
-    @Test(expected = NullPointerException.class)
-    public void nullHeaderNameNotAllowed() {
-        newEmptyHeaders().add(null, "foo");
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void emptyHeaderNameNotAllowed() {
-        newEmptyHeaders().add("", "foo");
+    @Test
+    void nullHeaderNameNotAllowed() {
+        assertThatThrownBy(() -> newEmptyHeaders().add(null, "foo")).isInstanceOf(NullPointerException.class);
     }
 
     @Test
-    public void testPseudoHeadersMustComeFirstWhenIterating() {
+    void emptyHeaderNameNotAllowed() {
+        assertThatThrownBy(() -> newEmptyHeaders().add("", "foo"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: <EMPTY>");
+    }
+
+    @Test
+    void testPseudoHeadersMustComeFirstWhenIterating() {
         final HttpHeadersBase headers = newHttp2Headers();
         verifyPseudoHeadersFirst(headers);
         verifyAllPseudoHeadersPresent(headers);
     }
 
     @Test
-    public void testPseudoHeadersWithRemovePreservesPseudoIterationOrder() {
+    void testPseudoHeadersWithRemovePreservesPseudoIterationOrder() {
         final HttpHeadersBase headers = newHttp2Headers();
         final HttpHeadersBase nonPseudoHeaders = newEmptyHeaders();
         for (Map.Entry<AsciiString, String> entry : headers) {
@@ -614,7 +636,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testPseudoHeadersWithClearDoesNotLeak() {
+    void testPseudoHeadersWithClearDoesNotLeak() {
         final HttpHeadersBase headers = newHttp2Headers();
 
         assertThat(headers.isEmpty()).isFalse();
@@ -643,7 +665,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testSetOrdersPseudoHeadersCorrectly() {
+    void testSetOrdersPseudoHeadersCorrectly() {
         final HttpHeadersBase headers = newHttp2Headers();
         final HttpHeadersBase other = newEmptyHeaders();
         other.add("name2", "value2");
@@ -663,7 +685,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testHeaderNameNormalization() {
+    void testHeaderNameNormalization() {
         final HttpHeadersBase headers = newHttp2Headers();
         headers.add("Foo", "bar");
         assertThat(headers.getAll("foo")).containsExactly("bar");
@@ -673,7 +695,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testClearResetsPseudoHeaderDivision() {
+    void testClearResetsPseudoHeaderDivision() {
         final HttpHeadersBase http2Headers = newHttp2Headers();
         http2Headers.method(HttpMethod.POST);
         http2Headers.set("some", "value");
@@ -684,7 +706,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testContainsNameAndValue() {
+    void testContainsNameAndValue() {
         final HttpHeadersBase headers = newHttp2Headers();
         assertThat(headers.contains("name1", "value2")).isTrue();
         assertThat(headers.contains("name1", "Value2")).isFalse();
@@ -693,7 +715,7 @@ public class HttpHeadersBaseTest {
     }
 
     @Test
-    public void testUri() {
+    void testUri() {
         final HttpHeadersBase headers = newHttp2Headers();
         assertThat(headers.uri()).isEqualTo(URI.create("https://netty.io/index.html"));
     }

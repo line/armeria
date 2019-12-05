@@ -673,7 +673,7 @@ public final class ArmeriaHttpUtil {
         final CharSequenceMap result = new CharSequenceMap(arraySizeHint);
 
         while (valuesIter.hasNext()) {
-            final AsciiString lowerCased = HttpHeaderNames.of(valuesIter.next()).toLowerCase();
+            final AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
             try {
                 int index = lowerCased.forEachByte(FIND_COMMA);
                 if (index != -1) {

@@ -16,15 +16,16 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.netty.util.AsciiString;
 
-public class HttpHeaderNamesTest {
+class HttpHeaderNamesTest {
 
     @Test
-    public void testOfAsciiString() {
+    void testOfAsciiString() {
         // Should produce a lower-cased AsciiString.
         final AsciiString mixedCased = AsciiString.of("Foo");
         assertThat((Object) HttpHeaderNames.of(mixedCased)).isNotSameAs(mixedCased);
@@ -39,11 +40,66 @@ public class HttpHeaderNamesTest {
     }
 
     @Test
-    public void testOfCharSequence() {
+    void testOfCharSequence() {
         // Should produce a lower-cased AsciiString.
         assertThat((Object) HttpHeaderNames.of("Foo")).isEqualTo(AsciiString.of("foo"));
 
         // Should reuse known header name instances.
         assertThat((Object) HttpHeaderNames.of("date")).isSameAs(HttpHeaderNames.DATE);
+    }
+
+    @Test
+    void pseudoHeaderNameValidation() {
+        // Known pseudo header names should pass validation.
+        assertThat((Object) HttpHeaderNames.of(":method")).isSameAs(HttpHeaderNames.METHOD);
+        assertThat((Object) HttpHeaderNames.of(":scheme")).isSameAs(HttpHeaderNames.SCHEME);
+        assertThat((Object) HttpHeaderNames.of(":authority")).isSameAs(HttpHeaderNames.AUTHORITY);
+        assertThat((Object) HttpHeaderNames.of(":path")).isSameAs(HttpHeaderNames.PATH);
+        assertThat((Object) HttpHeaderNames.of(":status")).isSameAs(HttpHeaderNames.STATUS);
+
+        // However, any other headers that start with `:` should fail.
+        assertThatThrownBy(() -> HttpHeaderNames.of(":foo"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: :foo");
+    }
+
+    @Test
+    void headerNameValidation() {
+        assertThatThrownBy(() -> HttpHeaderNames.of(""))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: <EMPTY>");
+        assertThatThrownBy(() -> HttpHeaderNames.of("\u0000"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: <NUL>");
+        assertThatThrownBy(() -> HttpHeaderNames.of("\t"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: <TAB>");
+        assertThatThrownBy(() -> HttpHeaderNames.of("\n"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: <LF>");
+        assertThatThrownBy(() -> HttpHeaderNames.of("\u000B"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: <VT>");
+        assertThatThrownBy(() -> HttpHeaderNames.of("\f"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: <FF>");
+        assertThatThrownBy(() -> HttpHeaderNames.of("\r"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: <CR>");
+        assertThatThrownBy(() -> HttpHeaderNames.of(" "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: <SP>");
+        assertThatThrownBy(() -> HttpHeaderNames.of(","))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: ,");
+        assertThatThrownBy(() -> HttpHeaderNames.of(":"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: :");
+        assertThatThrownBy(() -> HttpHeaderNames.of(";"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: ;");
+        assertThatThrownBy(() -> HttpHeaderNames.of("="))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("malformed header name: =");
     }
 }
