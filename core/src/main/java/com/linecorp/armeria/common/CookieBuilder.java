@@ -49,7 +49,7 @@ public final class CookieBuilder {
         return -1;
     }
 
-    private static String validateAttributeValue(@Nullable String value, String valueName) {
+    private static String validateAttributeValue(String value, String valueName) {
         value = requireNonNull(value, valueName).trim();
         checkArgument(!value.isEmpty(), "%s is empty.", valueName);
         final int i = firstInvalidOctet(value, VALID_COOKIE_ATTRIBUTE_VALUE_OCTETS);
