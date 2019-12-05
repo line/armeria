@@ -18,9 +18,11 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
+import java.util.List;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
 /**
  * An interface to provide source and destination addresses delivered from a proxy server.
@@ -28,41 +30,81 @@ import com.google.common.base.MoreObjects;
 public final class ProxiedAddresses {
 
     /**
-     * Creates a new instance.
+     * Creates a new instance with the specified {@code sourceAddress}.
+     * Note that {@linkplain InetSocketAddress#getPort() port} {@code 0} means that the port number is unknown.
      */
-    public static ProxiedAddresses of(SocketAddress sourceAddress, SocketAddress destinationAddress) {
-        return new ProxiedAddresses(sourceAddress, destinationAddress);
+    public static ProxiedAddresses of(InetSocketAddress sourceAddress) {
+        return new ProxiedAddresses(sourceAddress, ImmutableList.of());
     }
 
-    private final SocketAddress sourceAddress;
-    private final SocketAddress destinationAddress;
+    /**
+     * Creates a new instance with the specified {@code sourceAddress} and {@code destinationAddress}.
+     * Note that {@linkplain InetSocketAddress#getPort() port} {@code 0} means that the port number is unknown.
+     */
+    public static ProxiedAddresses of(InetSocketAddress sourceAddress, InetSocketAddress destinationAddress) {
+        requireNonNull(destinationAddress, "destinationAddress");
+        return new ProxiedAddresses(sourceAddress, ImmutableList.of(destinationAddress));
+    }
 
-    private ProxiedAddresses(SocketAddress sourceAddress, SocketAddress destinationAddress) {
+    /**
+     * Creates a new instance with the specified {@code sourceAddress} and {@code destinationAddresses}.
+     * Note that {@linkplain InetSocketAddress#getPort() port} {@code 0} means that the port number is unknown.
+     */
+    public static ProxiedAddresses of(InetSocketAddress sourceAddress,
+                                      Iterable<? extends InetSocketAddress> destinationAddresses) {
+        requireNonNull(destinationAddresses, "destinationAddresses");
+        return new ProxiedAddresses(sourceAddress, ImmutableList.copyOf(destinationAddresses));
+    }
+
+    private final InetSocketAddress sourceAddress;
+    private final List<InetSocketAddress> destinationAddresses;
+
+    private ProxiedAddresses(InetSocketAddress sourceAddress, List<InetSocketAddress> destinationAddresses) {
         this.sourceAddress = requireNonNull(sourceAddress, "sourceAddress");
-        this.destinationAddress = requireNonNull(destinationAddress, "destinationAddress");
+        this.destinationAddresses = requireNonNull(destinationAddresses, "destinationAddresses");
     }
 
     /**
      * Returns the source address of the proxied request.
+     * Note that {@linkplain InetSocketAddress#getPort() port} {@code 0} means that the port number is unknown.
      */
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A sourceAddress() {
-        return (A) sourceAddress;
+    public InetSocketAddress sourceAddress() {
+        return sourceAddress;
     }
 
     /**
-     * Returns the destination address of the proxied request.
+     * Returns the destination addresses of the proxied request.
+     * Note that {@linkplain InetSocketAddress#getPort() port} {@code 0} means that the port number is unknown.
      */
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A destinationAddress() {
-        return (A) destinationAddress;
+    public List<InetSocketAddress> destinationAddresses() {
+        return destinationAddresses;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof ProxiedAddresses)) {
+            return false;
+        }
+
+        final ProxiedAddresses that = (ProxiedAddresses) o;
+        return sourceAddress.equals(that.sourceAddress) &&
+               destinationAddresses.equals(that.destinationAddresses);
+    }
+
+    @Override
+    public int hashCode() {
+        return sourceAddress.hashCode() * 31 + destinationAddresses.hashCode();
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("sourceAddress", sourceAddress)
-                          .add("destinationAddress", destinationAddress)
+                          .add("destinationAddress", destinationAddresses)
                           .toString();
     }
 }

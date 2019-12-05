@@ -76,8 +76,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     private RoutingResult routingResult;
     @Nullable
     private ProxiedAddresses proxiedAddresses;
-    @Nullable
-    private InetAddress clientAddress;
 
     ServiceRequestContextBuilder(HttpRequest request) {
         super(true, request);
@@ -110,15 +108,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     }
 
     /**
-     * Sets the client address of the request. If not set, {@link ServiceRequestContext#clientAddress()} will
-     * return the same value as {@link ServiceRequestContext#remoteAddress()}.
-     */
-    public ServiceRequestContextBuilder clientAddress(InetAddress clientAddress) {
-        this.clientAddress = requireNonNull(clientAddress, "clientAddress");
-        return this;
-    }
-
-    /**
      * Adds the {@link Consumer} that configures the given {@link ServerBuilder}. The {@link Consumer}s added
      * by this method will be invoked when this builder builds a dummy {@link Server}. This may be useful
      * when you need to update the default settings of the dummy {@link Server},
@@ -134,11 +123,11 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      */
     public ServiceRequestContext build() {
         // Determine the client address; use remote address unless overridden.
-        final InetAddress clientAddress;
-        if (this.clientAddress != null) {
-            clientAddress = this.clientAddress;
+        final ProxiedAddresses proxiedAddresses;
+        if (this.proxiedAddresses != null) {
+            proxiedAddresses = this.proxiedAddresses;
         } else {
-            clientAddress = remoteAddress().getAddress();
+            proxiedAddresses = ProxiedAddresses.of(remoteAddress());
         }
 
         // Build a fake server which never starts up.
@@ -169,6 +158,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final RoutingResult routingResult =
                 this.routingResult != null ? this.routingResult
                                            : RoutingResult.builder().path(path()).query(query()).build();
+        final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
+                                                .getAddress();
 
         // Build the context with the properties set by a user and the fake objects.
         if (isRequestStartTimeSet()) {

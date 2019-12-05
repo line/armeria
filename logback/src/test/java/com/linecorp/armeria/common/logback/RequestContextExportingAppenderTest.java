@@ -61,6 +61,7 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import ch.qos.logback.classic.Level;
@@ -405,7 +406,8 @@ public class RequestContextExportingAppenderTest {
                                      .sslSession(newSslSession())
                                      .remoteAddress(remoteAddress)
                                      .localAddress(localAddress)
-                                     .clientAddress(InetAddress.getByName("9.10.11.12"))
+                                     .proxiedAddresses(
+                                             ProxiedAddresses.of(new InetSocketAddress("9.10.11.12", 0)))
                                      .build();
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));

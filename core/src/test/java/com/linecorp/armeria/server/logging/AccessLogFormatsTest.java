@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.CommonComponent;
@@ -263,18 +264,20 @@ class AccessLogFormatsTest {
 
     @Test
     void logClientAddress() throws Exception {
-        final InetSocketAddress remote = new InetSocketAddress(InetAddress.getByName("10.1.0.1"), 5000);
+        final InetSocketAddress remote = new InetSocketAddress(InetAddress.getByName("10.1.0.1"), 0);
+        final ProxiedAddresses proxied = ProxiedAddresses.of(
+                new InetSocketAddress("10.1.0.2", 5000));
         final ServiceRequestContext ctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                      .remoteAddress(remote)
-                                     .clientAddress(InetAddress.getByName("10.0.0.1"))
+                                     .proxiedAddresses(proxied)
                                      .build();
 
         List<AccessLogComponent> format;
 
         // Client IP address
         format = AccessLogFormats.parseCustom("%a");
-        assertThat(AccessLogger.format(format, ctx.log())).isEqualTo("10.0.0.1");
+        assertThat(AccessLogger.format(format, ctx.log())).isEqualTo("10.1.0.2");
 
         // Remote IP address of a channel
         format = AccessLogFormats.parseCustom("%{c}a");
@@ -310,7 +313,8 @@ class AccessLogFormatsTest {
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
         logBuilder.endResponse();
 
-        assertThat(AccessLogger.format(AccessLogFormats.COMMON, logHolder.get())).endsWith(expectedLogMessage);
+        assertThat(AccessLogger.format(AccessLogFormats.COMMON, logHolder.get()))
+                .endsWith(expectedLogMessage);
     }
 
     @Test

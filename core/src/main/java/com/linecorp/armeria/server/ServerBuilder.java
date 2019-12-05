@@ -183,6 +183,8 @@ public final class ServerBuilder {
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
+    private Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper =
+            ProxiedAddresses::sourceAddress;
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
@@ -1262,6 +1264,16 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets a {@link Function} to use when determining the client address from {@link ProxiedAddresses}.
+     * If not set, the {@link ProxiedAddresses#sourceAddress()}} is used as a client address.
+     */
+    public ServerBuilder clientAddressMapper(
+            Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper) {
+        this.clientAddressMapper = requireNonNull(clientAddressMapper, "clientAddressMapper");
+        return this;
+    }
+
+    /**
      * Sets the default access logger name for all {@link VirtualHost}s.
      * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
      * will have the same access {@link Logger} named the {@code loggerName}
@@ -1537,7 +1549,7 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, serviceLoggerPrefix,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
 
         serverListeners.forEach(server::addListener);
@@ -1612,7 +1624,7 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, serviceLoggerPrefix,
                 channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader);
     }
 }

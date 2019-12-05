@@ -78,8 +78,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Nullable
     private final SSLSession sslSession;
 
-    @Nullable
     private final ProxiedAddresses proxiedAddresses;
+
     private final InetAddress clientAddress;
 
     private final DefaultRequestLog log;
@@ -117,14 +117,13 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param routingResult the result of finding a matched {@link Route}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
-     * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
+     * @param proxiedAddresses source and destination addresses delivered through proxy servers
      * @param clientAddress the address of a client who initiated the request
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
-            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
-            InetAddress clientAddress) {
+            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress) {
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, request,
              sslSession, proxiedAddresses, clientAddress, false, 0, 0);
     }
@@ -142,7 +141,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param routingResult the result of finding a matched {@link Route}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
-     * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
+     * @param proxiedAddresses source and destination addresses delivered through proxy servers
      * @param clientAddress the address of a client who initiated the request
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
@@ -151,17 +150,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
-            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
-            InetAddress clientAddress, long requestStartTimeNanos, long requestStartTimeMicros) {
+            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            long requestStartTimeNanos, long requestStartTimeMicros) {
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, request,
-             sslSession, proxiedAddresses, clientAddress, true, requestStartTimeNanos, requestStartTimeMicros);
+             sslSession, proxiedAddresses, clientAddress, true, requestStartTimeNanos,
+             requestStartTimeMicros);
     }
 
     private DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
-            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
-            InetAddress clientAddress, boolean requestStartTimeSet, long requestStartTimeNanos,
+            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            boolean requestStartTimeSet, long requestStartTimeNanos,
             long requestStartTimeMicros) {
 
         super(meterRegistry, sessionProtocol, id,
@@ -174,7 +174,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.routingContext = routingContext;
         this.routingResult = routingResult;
         this.sslSession = sslSession;
-        this.proxiedAddresses = proxiedAddresses;
+        this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
         log = new DefaultRequestLog(this, cfg.requestContentPreviewerFactory(),
@@ -245,7 +245,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), id, routingContext,
-                routingResult, req, sslSession(), proxiedAddresses(), clientAddress);
+                routingResult, req, sslSession(), proxiedAddresses(), clientAddress());
 
         if (rpcReq != null) {
             ctx.updateRpcRequest(rpcReq);
@@ -531,7 +531,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         return removeAdditionalResponseHeader(additionalResponseTrailersUpdater, name);
     }
 
-    @Nullable
     @Override
     public ProxiedAddresses proxiedAddresses() {
         return proxiedAddresses;

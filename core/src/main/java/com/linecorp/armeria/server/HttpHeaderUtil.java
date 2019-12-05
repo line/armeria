@@ -36,6 +36,8 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.base.Splitter.MapSplitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -59,7 +61,8 @@ final class HttpHeaderUtil {
     static final Function<String, String> FORWARDED_CONVERTER = value -> TOKEN_SPLITTER.split(value).get("for");
 
     /**
-     * Returns an {@link InetAddress} of a client who initiated a request.
+     * Returns {@link ProxiedAddresses} which were delivered through a proxy server.
+     * Returns the specified {@code remoteAddress} if no valid proxy address is found.
      *
      * @param headers the HTTP headers which were received from the client
      * @param clientAddressSources a list of {@link ClientAddressSource}s which are used to determine
@@ -70,44 +73,49 @@ final class HttpHeaderUtil {
      * @see <a href="https://tools.ietf.org/html/rfc7239">Forwarded HTTP Extension</a>
      * @see <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-For">X-Forwarded-For</a>
      */
-    static InetAddress determineClientAddress(HttpHeaders headers,
-                                              List<ClientAddressSource> clientAddressSources,
-                                              @Nullable ProxiedAddresses proxiedAddresses,
-                                              InetAddress remoteAddress,
-                                              Predicate<InetAddress> filter) {
+    static ProxiedAddresses determineProxiedAddresses(HttpHeaders headers,
+                                                      List<ClientAddressSource> clientAddressSources,
+                                                      @Nullable ProxiedAddresses proxiedAddresses,
+                                                      InetSocketAddress remoteAddress,
+                                                      Predicate<InetAddress> filter) {
         for (final ClientAddressSource source : clientAddressSources) {
-            final InetAddress addr;
             if (source.isProxyProtocol()) {
                 if (proxiedAddresses != null) {
-                    addr = ((InetSocketAddress) proxiedAddresses.sourceAddress()).getAddress();
-                    if (filter.test(addr)) {
-                        return addr;
+                    if (filter.test(proxiedAddresses.sourceAddress().getAddress()) &&
+                        filter.test(proxiedAddresses.destinationAddresses().get(0).getAddress())) {
+                        return proxiedAddresses;
                     }
                 }
             } else {
+                final ImmutableList.Builder<InetSocketAddress> builder = ImmutableList.builder();
                 final AsciiString name = source.header();
                 if (name.equals(HttpHeaderNames.FORWARDED)) {
-                    addr = getFirstValidAddress(
-                            headers.get(HttpHeaderNames.FORWARDED), FORWARDED_CONVERTER, filter);
+                    headers.getAll(HttpHeaderNames.FORWARDED).forEach(forwarded -> {
+                        getAllValidAddress(forwarded, FORWARDED_CONVERTER, filter, builder);
+                    });
                 } else {
-                    addr = getFirstValidAddress(headers.get(name), Function.identity(), filter);
+                    headers.getAll(name).forEach(header -> {
+                        getAllValidAddress(header, Function.identity(), filter, builder);
+                    });
                 }
-                if (addr != null) {
-                    return addr;
+
+                final ImmutableList<InetSocketAddress> addresses = builder.build();
+                if (!addresses.isEmpty()) {
+                    return ProxiedAddresses.of(addresses.get(0), addresses.subList(1, addresses.size()));
                 }
             }
         }
         // We do not apply the filter to the remote address.
-        return remoteAddress;
+        return ProxiedAddresses.of(remoteAddress);
     }
 
     @VisibleForTesting
-    @Nullable
-    static InetAddress getFirstValidAddress(@Nullable String headerValue,
-                                            Function<String, String> valueConverter,
-                                            Predicate<InetAddress> filter) {
+    static void getAllValidAddress(@Nullable String headerValue,
+                                   Function<String, String> valueConverter,
+                                   Predicate<InetAddress> filter,
+                                   ImmutableList.Builder<InetSocketAddress> accumulator) {
         if (Strings.isNullOrEmpty(headerValue)) {
-            return null;
+            return;
         }
         for (String value : CSV_SPLITTER.split(headerValue)) {
             final String v = valueConverter.apply(value);
@@ -115,19 +123,18 @@ final class HttpHeaderUtil {
                 continue;
             }
             try {
-                final InetAddress addr = createInetAddress(v);
-                if (addr != null && filter.test(addr)) {
-                    return addr;
+                final InetSocketAddress addr = createInetSocketAddress(v);
+                if (addr != null && filter.test(addr.getAddress())) {
+                    accumulator.add(addr);
                 }
             } catch (UnknownHostException e) {
-                logger.debug("Failed to resolve hostname: {}", v, e);
+                logger.debug("Failed to create an InetSocketAddress: {}", v, e);
             }
         }
-        return null;
     }
 
     @Nullable
-    private static InetAddress createInetAddress(String address) throws UnknownHostException {
+    private static InetSocketAddress createInetSocketAddress(String address) throws UnknownHostException {
         final char firstChar = address.charAt(0);
         if (firstChar == '_' ||
             (firstChar == 'u' && "unknown".equals(address))) {
@@ -140,33 +147,19 @@ final class HttpHeaderUtil {
 
         // Remote quotes. e.g. "[2001:db8:cafe::17]:4711" => [2001:db8:cafe::17]:4711
         final String addr = firstChar == '"' ? QUOTED_STRING_TRIMMER.trimFrom(address) : address;
-
-        if (NetUtil.isValidIpV4Address(addr) || NetUtil.isValidIpV6Address(addr)) {
-            return InetAddress.getByAddress(NetUtil.createByteArrayFromIpAddressString(addr));
-        }
-
-        if (addr.charAt(0) == '[') {
-            final int delim = addr.indexOf(']');
-            if (delim > 0) {
-                // Remove the port part. e.g. [2001:db8:cafe::17]:4711 => [2001:db8:cafe::17]
-                final String withoutPort = addr.substring(0, delim + 1);
-                if (NetUtil.isValidIpV6Address(withoutPort)) {
-                    return InetAddress.getByAddress(NetUtil.createByteArrayFromIpAddressString(withoutPort));
-                }
+        try {
+            final HostAndPort hostAndPort = HostAndPort.fromString(addr);
+            final byte[] addressBytes = NetUtil.createByteArrayFromIpAddressString(hostAndPort.getHost());
+            if (addressBytes == null) {
+                logger.debug("Failed to parse an address: {}", address);
+                return null;
             }
-        } else {
-            final int delim = addr.indexOf(':');
-            if (delim > 0) {
-                // Remove the port part. e.g. 192.168.1.1:4711 => 192.168.1.1
-                final String withoutPort = addr.substring(0, delim);
-                if (NetUtil.isValidIpV4Address(withoutPort)) {
-                    return InetAddress.getByAddress(NetUtil.createByteArrayFromIpAddressString(withoutPort));
-                }
-            }
+            return new InetSocketAddress(InetAddress.getByAddress(addressBytes),
+                                         hostAndPort.getPortOrDefault(0));
+        } catch (IllegalArgumentException e) {
+            logger.debug("Failed to parse an address: {}", address, e);
+            return null;
         }
-        // Skip if it is an invalid address.
-        logger.debug("Failed to parse an address: {}", address);
-        return null;
     }
 
     static void ensureUniqueMediaTypes(Iterable<MediaType> types, String typeName) {
