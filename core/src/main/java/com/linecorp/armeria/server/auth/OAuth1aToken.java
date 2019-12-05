@@ -22,6 +22,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
@@ -42,32 +43,38 @@ public final class OAuth1aToken {
     /**
      * oauth_consumer_key parameter.
      */
-    private static final String OAUTH_CONSUMER_KEY = "oauth_consumer_key";
+    @VisibleForTesting
+    static final String OAUTH_CONSUMER_KEY = "oauth_consumer_key";
 
     /**
      * oauth_token parameter.
      */
-    private static final String OAUTH_TOKEN = "oauth_token";
+    @VisibleForTesting
+    static final String OAUTH_TOKEN = "oauth_token";
 
     /**
      * oauth_signature_method parameter.
      */
-    private static final String OAUTH_SIGNATURE_METHOD = "oauth_signature_method";
+    @VisibleForTesting
+    static final String OAUTH_SIGNATURE_METHOD = "oauth_signature_method";
 
     /**
      * oauth_signature parameter.
      */
-    private static final String OAUTH_SIGNATURE = "oauth_signature";
+    @VisibleForTesting
+    static final String OAUTH_SIGNATURE = "oauth_signature";
 
     /**
      * oauth_timestamp parameter.
      */
-    private static final String OAUTH_TIMESTAMP = "oauth_timestamp";
+    @VisibleForTesting
+    static final String OAUTH_TIMESTAMP = "oauth_timestamp";
 
     /**
      * oauth_nonce parameter.
      */
-    private static final String OAUTH_NONCE = "oauth_nonce";
+    @VisibleForTesting
+    static final String OAUTH_NONCE = "oauth_nonce";
 
     /**
      * version parameter. (optional)
@@ -127,7 +134,7 @@ public final class OAuth1aToken {
 
         if (!this.params.keySet().containsAll(REQUIRED_PARAM_KEYS)) {
             final Set<String> missing = Sets.difference(REQUIRED_PARAM_KEYS, this.params.keySet());
-            throw new IllegalArgumentException("Missing OAuth1a parameter exists: " + missing);
+            throw new IllegalArgumentException("Missing OAuth1a parameters: " + missing);
         }
 
         try {
@@ -195,7 +202,14 @@ public final class OAuth1aToken {
             return false;
         }
         final OAuth1aToken that = (OAuth1aToken) o;
-        return params.equals(that.params);
+
+        // Do not short-circuit to make it hard to guess anything from timing.
+        boolean equals = true;
+        for (Entry<String, String> e : params.entrySet()) {
+            equals &= BasicToken.secureEquals(that.params.get(e.getKey()), e.getValue());
+        }
+
+        return equals && params.size() == that.params.size();
     }
 
     @Override
