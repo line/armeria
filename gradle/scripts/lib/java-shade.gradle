@@ -24,7 +24,7 @@ configure(relocatedProjects) {
             dependsOn: tasks.classes) {
 
         configureShadowTask(project, delegate, true)
-        baseName = "${project.archivesBaseName}-shaded"
+        archiveBaseName.set("${project.archivesBaseName}-shaded")
 
         // Exclude the class signature files.
         exclude '/META-INF/*.SF'
@@ -60,7 +60,7 @@ configure(relocatedProjects) {
             dependsOn: tasks.testClasses) {
 
         configureShadowTask(project, delegate, false)
-        baseName = "test-${tasks.jar.baseName}-shaded"
+        archiveBaseName.set("test-${tasks.jar.archiveBaseName.get()}-shaded")
     }
 
     task shadedTestClasses(
@@ -83,7 +83,7 @@ configure(relocatedProjects) {
     if (project.hasFlags('trim')) {
         // Task 'shadedJar' may produce a very large JAR. Rename it to '*-untrimmed-*.jar' and
         // let the task 'trimShadedJar' produce the trimmed JAR from it.
-        tasks.shadedJar.baseName = "${tasks.jar.baseName}-untrimmed"
+        tasks.shadedJar.archiveBaseName.set("${tasks.jar.archiveBaseName.get()}-untrimmed")
 
         task trimShadedJar(
                 type: ProGuardTask,
@@ -268,15 +268,16 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
  */
 private Configuration createShadedTestRuntimeConfiguration(
         Project project, Project recursedProject = project,
+        Set<ExcludeRule> excludeRules = new HashSet<>(),
         Set<Project> visitedProjects = new HashSet<>()) {
 
+    def shadedTestRuntime = project.configurations.maybeCreate("shadedTestRuntime")
+
     if (visitedProjects.contains(recursedProject)) {
-        return
+        return shadedTestRuntime
     } else {
         visitedProjects.add(recursedProject);
     }
-
-    def shadedTestRuntime = project.configurations.maybeCreate("shadedTestRuntime")
 
     if (recursedProject.tasks.findByName('trimShadedJar')) {
         project.dependencies.add(shadedTestRuntime.name, files(recursedProject.tasks.trimShadedJar.outJarFiles))
@@ -285,21 +286,45 @@ private Configuration createShadedTestRuntimeConfiguration(
     }
 
     def shadedDependencyNames = project.ext.relocations.collect { it['name'] }
+    def targetConfigurationNames
+    if (project == recursedProject) {
+        targetConfigurationNames = ['compile', 'runtime', 'testCompile', 'testRuntime']
+    }  else {
+        targetConfigurationNames = ['compile', 'runtime']
+    }
+    def projectDependencies = []
     recursedProject.configurations.findAll { cfg ->
-        cfg.name in ['compile', 'runtime', 'testCompile', 'testRuntime']
+        cfg.name in targetConfigurationNames
     }.each { cfg ->
         cfg.dependencies.each { dep ->
             if (dep instanceof ProjectDependency) {
-                // Project dependency - recurse.
-                createShadedTestRuntimeConfiguration(project, dep.dependencyProject, visitedProjects)
+                // Project dependency - recurse later.
+                // Note that we recurse later to have immediate module dependencies higher precedence.
+                projectDependencies.add(dep)
             } else {
                 // Module dependency - add.
                 if (shadedDependencyNames.contains("${dep.group}:${dep.name}")) {
+                    // Skip the shaded dependencies.
                     return
                 }
+
+                if (excludeRules.find { rule ->
+                    return rule.group == dep.group && rule.module == dep.name
+                }) {
+                    // Skip the excluded dependencies.
+                    return
+                }
+
                 project.dependencies.add(shadedTestRuntime.name, dep)
             }
         }
+    }
+
+    // Recurse into the project dependencies.
+    projectDependencies.each { ProjectDependency dep ->
+        createShadedTestRuntimeConfiguration(
+                project, dep.dependencyProject,
+                excludeRules + dep.excludeRules, visitedProjects)
     }
 
     return shadedTestRuntime
