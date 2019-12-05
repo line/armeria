@@ -220,7 +220,7 @@ class HttpFileServiceTest {
     @ArgumentsSource(BaseUriProvider.class)
     void testIndexHtml(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(baseUri + "/"))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(baseUri + '/'))) {
                 assert200Ok(res, "text/html", "<html><body></body></html>");
             }
         }
@@ -475,11 +475,14 @@ class HttpFileServiceTest {
     @ParameterizedTest
     @ArgumentsSource(BaseUriProvider.class)
     void testFileSystemGet_newFile(String baseUri) throws Exception {
-        final Path barFile = tmpDir.resolve("newFile.html");
+        final String barFileName = baseUri.substring(baseUri.lastIndexOf('/') + 1) + "_newFile.html";
+        assertThat(barFileName).isIn("cached_newFile.html", "uncached_newFile.html");
+
+        final Path barFile = tmpDir.resolve(barFileName);
         final String expectedContentA = "<html/>";
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpUriRequest req = new HttpGet(baseUri + "/fs/newFile.html");
+            final HttpUriRequest req = new HttpGet(baseUri + "/fs/" + barFileName);
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert404NotFound(res);
             }
@@ -487,8 +490,6 @@ class HttpFileServiceTest {
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentA);
             }
-        } finally {
-            Files.delete(barFile);
         }
     }
 
@@ -544,8 +545,10 @@ class HttpFileServiceTest {
         contentAssertions.accept(EntityUtils.toString(res.getEntity()).trim());
     }
 
-    private void assert304NotModified(CloseableHttpClient hc, String baseUri, String path,
-                                      String expectedETag, String expectedLastModified) throws IOException {
+    private static void assert304NotModified(
+            CloseableHttpClient hc, String baseUri, String path,
+            String expectedETag, String expectedLastModified) throws IOException {
+
         final String uri = baseUri + path;
 
         // Test if the 'If-None-Match' header works as expected. (a single etag)
@@ -588,6 +591,9 @@ class HttpFileServiceTest {
         try (CloseableHttpResponse res = hc.execute(req5)) {
             // Should not receive '304 Not Modified' because the etag did not match.
             assertStatusLine(res, "HTTP/1.1 200 OK");
+
+            // Read the content fully so that Apache HC does not close the connection prematurely.
+            ByteStreams.exhaust(res.getEntity().getContent());
         }
     }
 

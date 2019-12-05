@@ -124,9 +124,18 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
 
             // Must receive the '503 Service Unavailable' response with long polling disabled,
             // so that the next health check respects the backoff.
-            final ResponseHeaders stoppingResponseHeaders = healthCheckRequestLogs.take().responseHeaders();
-            assertThat(stoppingResponseHeaders.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-            assertThat(stoppingResponseHeaders.getLong("armeria-lphc", -1)).isEqualTo(0);
+            for (;;) {
+                final ResponseHeaders stoppingResponseHeaders = healthCheckRequestLogs.take().responseHeaders();
+                if (stoppingResponseHeaders.status() == HttpStatus.OK) {
+                    // It is possible to get '200 OK' if the server sent a response before the shutdown.
+                    // Just try again so that another health check request is sent.
+                    continue;
+                }
+
+                assertThat(stoppingResponseHeaders.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                assertThat(stoppingResponseHeaders.getLong("armeria-lphc", -1)).isEqualTo(0);
+                break;
+            }
 
             // Check the next check respected backoff, because there's no point of
             // sending a request immediately only to get a 'connection refused' error.

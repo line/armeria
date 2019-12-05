@@ -46,7 +46,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
-@Timeout(10000)
+@Timeout(10)
 class HttpServerHeaderValidationTest {
 
     static final ClientFactory clientFactory = ClientFactory.builder().sslContextCustomizer(scb -> {
