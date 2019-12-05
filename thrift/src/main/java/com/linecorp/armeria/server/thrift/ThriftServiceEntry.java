@@ -67,7 +67,7 @@ public final class ThriftServiceEntry {
 
     /**
      * Returns the {@code *.AsyncIface} or {@code *.Iface} classes implemented by
-     * {@linkplain #implementations() the implementation}.
+     * {@linkplain #implementations() the implementations}.
      */
     public Set<Class<?>> interfaces() {
         return metadata.interfaces();
