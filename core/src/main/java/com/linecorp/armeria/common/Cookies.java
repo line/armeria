@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableSet;
 public interface Cookies extends Set<Cookie> {
 
     /**
-     * Returns an empty {@link Set} if {@link Cookie}s.
+     * Returns an immutable empty {@link Set} of {@link Cookie}s.
      */
     static Cookies empty() {
         return DefaultCookies.EMPTY;

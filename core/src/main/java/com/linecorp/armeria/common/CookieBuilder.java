@@ -49,12 +49,12 @@ public final class CookieBuilder {
         return -1;
     }
 
-    private static String validateAttributeValue(String name, @Nullable String value) {
-        value = requireNonNull(value, name).trim();
-        checkArgument(!value.isEmpty(), "%s is empty.", name);
+    private static String validateAttributeValue(@Nullable String value, String valueName) {
+        value = requireNonNull(value, valueName).trim();
+        checkArgument(!value.isEmpty(), "%s is empty.", valueName);
         final int i = firstInvalidOctet(value, VALID_COOKIE_ATTRIBUTE_VALUE_OCTETS);
         checkArgument(i == -1,
-                      "%s contains a prohibited character: %s", name, value);
+                      "%s contains a prohibited character: %s", valueName, value);
         return value;
     }
 
@@ -121,7 +121,7 @@ public final class CookieBuilder {
      * Sets the domain of the {@link Cookie}.
      */
     public CookieBuilder domain(String domain) {
-        this.domain = validateAttributeValue("domain", requireNonNull(domain, "domain"));
+        this.domain = validateAttributeValue(domain, "domain");
         return this;
     }
 
@@ -129,7 +129,7 @@ public final class CookieBuilder {
      * Sets the path of the {@link Cookie}.
      */
     public CookieBuilder path(String path) {
-        this.path = validateAttributeValue("path", requireNonNull(path, "path"));
+        this.path = validateAttributeValue(path, "path");
         return this;
     }
 
@@ -156,7 +156,7 @@ public final class CookieBuilder {
 
     /**
      * Sets whether the {@link Cookie} is HTTP only. If {@code true}, the {@link Cookie} cannot be accessed
-     * by a client side script. However, this works only if the browser supports it. For for information,
+     * by a client side script. However, this works only if the browser supports it. For more information,
      * please look <a href="http://www.owasp.org/index.php/HTTPOnly">here</a>. If unspecified, {@code false}
      * will be used.
      */
@@ -171,7 +171,7 @@ public final class CookieBuilder {
      * {@code "Strict"} or {@code "None"}. Note that this attribute is server-side only.
      */
     public CookieBuilder sameSite(String sameSite) {
-        this.sameSite = validateAttributeValue("sameSite", requireNonNull(sameSite, "sameSite"));
+        this.sameSite = validateAttributeValue(sameSite, "sameSite");
         return this;
     }
 
