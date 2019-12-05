@@ -7,9 +7,11 @@
 //
 // See also: ../thrift0.11/build.gradle
 
+final def THRIFT_VERSION = '0.9.3'
+
 dependencyManagement {
     dependencies {
-        dependency('org.apache.thrift:libthrift:0.9.3') {
+        dependency("org.apache.thrift:libthrift:${THRIFT_VERSION}") {
             exclude group: 'org.apache.httpcomponents', name: 'httpcore'
             exclude group: 'org.apache.httpcomponents', name: 'httpclient'
         }
@@ -44,7 +46,7 @@ tasks.javadoc.source "${rootProject.projectDir}/thrift/src/main/java"
 
 // Use the old compiler.
 ext {
-    thriftVersion = '0.9'
+    thriftVersion = THRIFT_VERSION.substring(0, THRIFT_VERSION.lastIndexOf('.'));
     disableThriftJson()
 }
 
@@ -64,4 +66,19 @@ tasks.shadedJar.doLast {
 // Disable checkstyle because it's checked by ':thrift'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
+}
+
+// Make sure the correct Thrift versions are used.
+afterEvaluate {
+    [configurations.runtime, configurations.testRuntime].each { cfg ->
+        cfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def group = artifact.moduleVersion.id.group
+            def version = artifact.moduleVersion.id.version
+            switch (group) {
+                case 'org.apache.thrift':
+                    assert version == THRIFT_VERSION
+                    break
+            }
+        }
+    }
 }

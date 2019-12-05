@@ -1,14 +1,3 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-gradle-plugin']}"
-    }
-}
-
-apply plugin: 'org.springframework.boot'
-
 dependencies {
     compile project(':spring:boot-starter')
     compile project(':tomcat')

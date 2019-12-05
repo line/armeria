@@ -1,4 +1,17 @@
+final def SPRING_BOOT_VERSION = '1.5.22.RELEASE'
+
 evaluationDependsOn ':spring:boot-autoconfigure'
+
+dependencyManagement {
+    // Override Spring Boot versions.
+    dependencies {
+        dependencySet(group: 'org.springframework.boot', version: SPRING_BOOT_VERSION) {
+            entry 'spring-boot-starter'
+            entry 'spring-boot-configuration-processor'
+            entry 'spring-boot-starter-test'
+        }
+    }
+}
 
 dependencies {
     compile(project(':thrift')) {
@@ -15,11 +28,11 @@ dependencies {
     }
     compile 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
-    compile 'org.springframework.boot:spring-boot-starter:1.5.22.RELEASE'
-    compileOnly 'org.springframework.boot:spring-boot-configuration-processor:1.5.22.RELEASE'
+    compile 'org.springframework.boot:spring-boot-starter'
+    compileOnly 'org.springframework.boot:spring-boot-configuration-processor'
 
     testCompile project(':grpc')
-    testCompile 'org.springframework.boot:spring-boot-starter-test:1.5.22.RELEASE'
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
 }
 
 // Use the sources from ':spring:boot-autoconfigure'.
@@ -43,4 +56,19 @@ tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.gene
 // Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
+}
+
+// Make sure the correct Spring Boot versions are used.
+afterEvaluate {
+    [configurations.runtime, configurations.testRuntime].each { cfg ->
+        cfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def group = artifact.moduleVersion.id.group
+            def version = artifact.moduleVersion.id.version
+            switch (group) {
+                case 'org.springframework.boot':
+                    assert version == SPRING_BOOT_VERSION
+                    break
+            }
+        }
+    }
 }

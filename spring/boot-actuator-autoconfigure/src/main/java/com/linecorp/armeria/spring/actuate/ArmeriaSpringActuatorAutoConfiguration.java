@@ -75,10 +75,10 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 public class ArmeriaSpringActuatorAutoConfiguration {
 
     @VisibleForTesting
-    static final MediaType ACTUATOR_MEDIA_TYPE = MediaType.parse(ActuatorMediaType.V2_JSON);
+    static final MediaType ACTUATOR_MEDIA_TYPE = MediaType.parse(ActuatorMediaType.V3_JSON);
 
     private static final List<String> MEDIA_TYPES =
-            ImmutableList.of(ActuatorMediaType.V2_JSON, "application/json");
+            ImmutableList.of(ActuatorMediaType.V3_JSON, "application/json");
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

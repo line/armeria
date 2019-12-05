@@ -1,19 +1,15 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-gradle-plugin']}"
-    }
-}
-
-apply plugin: 'java'
-apply plugin: 'org.springframework.boot'
+final def SPRING_BOOT_VERSION = '2.1.10.RELEASE'
+final def TOMCAT_VERSION = '8.5.49'
 
 dependencyManagement {
-    // Override Tomcat versions.
+    // Override Spring Boot and Tomcat versions.
     dependencies {
-        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.47') {
+        dependencySet(group: 'org.springframework.boot', version: SPRING_BOOT_VERSION) {
+            entry 'spring-boot-starter'
+            entry 'spring-boot-starter-web'
+            entry 'spring-boot-starter-test'
+        }
+        dependencySet(group: 'org.apache.tomcat.embed', version: TOMCAT_VERSION) {
             entry 'tomcat-embed-core'
             entry 'tomcat-embed-jasper'
             entry 'tomcat-embed-el'
@@ -24,10 +20,11 @@ dependencyManagement {
 dependencies {
     compile project(':spring:boot-starter')
     compile project(':tomcat')
+    compile 'org.springframework.boot:spring-boot-starter'
     compile('org.springframework.boot:spring-boot-starter-web') {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }
-    testCompile('org.springframework.boot:spring-boot-starter-test')
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
 }
 
 // Use the sources from ':it:spring:boot-tomcat'.
@@ -46,4 +43,22 @@ tasks.javadoc.source "${tomcatProjectDir}/src/main/java"
 // Disable checkstyle because it's checked by ':it:spring:boot-tomcat'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
+}
+
+// Make sure the correct Spring Boot and Tomcat versions are used.
+afterEvaluate {
+    [configurations.runtime, configurations.testRuntime].each { cfg ->
+        cfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def group = artifact.moduleVersion.id.group
+            def version = artifact.moduleVersion.id.version
+            switch (group) {
+                case 'org.springframework.boot':
+                    assert version == SPRING_BOOT_VERSION
+                    break
+                case 'org.apache.tomcat.embed':
+                    assert version == TOMCAT_VERSION
+                    break
+            }
+        }
+    }
 }
