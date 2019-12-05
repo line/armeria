@@ -44,7 +44,7 @@ class AnnotatedServiceBindingBuilderTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService()
-              .exceptionHandler(handlerFunction)
+              .exceptionHandlers(handlerFunction)
               .build(new TestService());
         }
     };
@@ -54,7 +54,7 @@ class AnnotatedServiceBindingBuilderTest {
         final Server server = Server.builder()
                                     .annotatedService()
                                     .requestTimeout(Duration.ofMillis(5000))
-                                    .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
+                                    .exceptionHandlers((ctx, request, cause) -> HttpResponse.of(400))
                                     .build(new TestService())
                                     .build();
 
@@ -68,7 +68,7 @@ class AnnotatedServiceBindingBuilderTest {
         final Server server = Server.builder()
                                     .annotatedService()
                                     .requestTimeout(Duration.ofMillis(5000))
-                                    .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
+                                    .exceptionHandlers((ctx, request, cause) -> HttpResponse.of(400))
                                     .pathPrefix("/home")
                                     .build(new TestService())
                                     .build();
@@ -91,7 +91,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .annotatedService()
                                     .requestTimeout(requestTimeoutDuration)
                                     .maxRequestLength(maxRequestLength)
-                                    .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
+                                    .exceptionHandlers((ctx, request, cause) -> HttpResponse.of(400))
                                     .pathPrefix("/home")
                                     .accessLogWriter(accessLogWriter, shutdownOnStop)
                                     .contentPreviewerFactory(factory)
