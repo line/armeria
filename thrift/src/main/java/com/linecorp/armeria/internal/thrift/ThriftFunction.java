@@ -61,15 +61,15 @@ public final class ThriftFunction {
     private final Map<Class<Throwable>, TFieldIdEnum> exceptionFields;
     private final Class<?>[] declaredExceptions;
 
+    ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func) throws Exception {
+        this(serviceType, func.getMethodName(), func, Type.SYNC,
+             getArgFields(func), getResult(func), getDeclaredExceptions(func), null);
+    }
+
     ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func,
                    @Nullable Object implementation) throws Exception {
         this(serviceType, func.getMethodName(), func, Type.SYNC,
              getArgFields(func), getResult(func), getDeclaredExceptions(func), implementation);
-    }
-
-    ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func) throws Exception {
-        this(serviceType, func.getMethodName(), func, Type.SYNC,
-             getArgFields(func), getResult(func), getDeclaredExceptions(func), null);
     }
 
     ThriftFunction(Class<?> serviceType, AsyncProcessFunction<?, ?, ?> func) throws Exception {
