@@ -30,8 +30,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +39,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
+import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.Cookies;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -50,7 +52,6 @@ import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverC
 import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.RoutingResultBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
@@ -59,7 +60,8 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 
 import io.netty.util.AsciiString;
 
-public class AnnotatedValueResolverTest {
+class AnnotatedValueResolverTest {
+
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolverTest.class);
 
     static final List<RequestObjectResolver> objectResolvers = toRequestObjectResolvers(ImmutableList.of());
@@ -88,7 +90,7 @@ public class AnnotatedValueResolverTest {
                                                    .collect(Collectors.joining("&"));
 
         final RequestHeadersBuilder headers = RequestHeaders.builder(HttpMethod.GET, path + '?' + query);
-        headers.set(HttpHeaderNames.COOKIE, "a=1;b=2", "c=3", "a=4");
+        headers.set(HttpHeaderNames.COOKIE, "a=1;b=2;c=3;a=4");
         existingHttpHeaders.forEach(name -> headers.set(name, headerValues));
 
         originalHeaders = headers.build();
@@ -106,8 +108,8 @@ public class AnnotatedValueResolverTest {
         resolverContext = new ResolverContext(context, request, null);
     }
 
-    @AfterClass
-    public static void ensureUnmodifiedHeaders() {
+    @AfterAll
+    static void ensureUnmodifiedHeaders() {
         assertThat(request.headers()).isEqualTo(originalHeaders);
     }
 
@@ -125,7 +127,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    public void ofMethods() {
+    void ofMethods() {
         getAllMethods(Service.class).forEach(method -> {
             try {
                 final List<AnnotatedValueResolver> elements =
@@ -138,7 +140,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    public void ofFieldBean() throws NoSuchFieldException {
+    void ofFieldBean() throws NoSuchFieldException {
         final FieldBean bean = new FieldBean();
 
         getAllFields(FieldBean.class).forEach(field -> {
@@ -160,7 +162,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    public void ofConstructorBean() {
+    void ofConstructorBean() {
         @SuppressWarnings("rawtypes")
         final Set<Constructor> constructors = getAllConstructors(ConstructorBean.class);
         assertThat(constructors.size()).isOne();
@@ -183,7 +185,7 @@ public class AnnotatedValueResolverTest {
     }
 
     @Test
-    public void ofSetterBean() throws Exception {
+    void ofSetterBean() throws Exception {
         final SetterBean bean = SetterBean.class.getDeclaredConstructor().newInstance();
         getAllMethods(SetterBean.class).forEach(method -> testMethod(method, bean));
         testBean(bean);
@@ -191,7 +193,7 @@ public class AnnotatedValueResolverTest {
 
     @Test
     @SuppressWarnings("rawtypes")
-    public void ofMixedBean() throws Exception {
+    void ofMixedBean() throws Exception {
         final Set<Constructor> constructors = getAllConstructors(MixedBean.class);
         assertThat(constructors.size()).isOne();
         final Constructor constructor = Iterables.getFirst(constructors, null);
@@ -227,19 +229,12 @@ public class AnnotatedValueResolverTest {
             assertThat(value).isInstanceOf(resolver.elementType());
 
             // Check whether 'Cookie' header is decoded correctly.
-            // 'a=4' will be ignored because 'a=1' is already in the set.
             if (resolver.elementType() == Cookies.class) {
                 final Cookies cookies = (Cookies) value;
-                assertThat(cookies.size()).isEqualTo(3);
-                cookies.forEach(cookie -> {
-                    if ("a".equals(cookie.name())) {
-                        assertThat(cookie.value()).isEqualTo("1");
-                    } else if ("b".equals(cookie.name())) {
-                        assertThat(cookie.value()).isEqualTo("2");
-                    } else if ("c".equals(cookie.name())) {
-                        assertThat(cookie.value()).isEqualTo("3");
-                    }
-                });
+                assertThat(cookies).containsExactly(Cookie.of("a", "1"),
+                                                    Cookie.of("b", "2"),
+                                                    Cookie.of("c", "3"),
+                                                    Cookie.of("a", "4"));
             }
             return;
         }
@@ -365,7 +360,7 @@ public class AnnotatedValueResolverTest {
     }
 
     static class Service {
-        public void method1(@Param String var1,
+        void method1(@Param String var1,
                             @Param String param1,
                             @Param @Default("1") int param2,
                             @Param @Default("1") List<Integer> param3,
@@ -383,15 +378,15 @@ public class AnnotatedValueResolverTest {
                             @RequestObject OuterBean outerBean,
                             Cookies cookies) {}
 
-        public void dummy1() {}
+        void dummy1() {}
 
-        public void redundant1(@Param @Default("defaultValue") Optional<String> value) {}
+        void redundant1(@Param @Default("defaultValue") Optional<String> value) {}
 
         @Get("/r2/:var1")
-        public void redundant2(@Param @Default("defaultValue") String var1) {}
+        void redundant2(@Param @Default("defaultValue") String var1) {}
 
         @Get("/r3/:var1")
-        public void redundant3(@Param Optional<String> var1) {}
+        void redundant3(@Param Optional<String> var1) {}
     }
 
     interface Bean {
@@ -758,7 +753,7 @@ public class AnnotatedValueResolverTest {
             this.header1 = header1;
         }
 
-        public void setOptionalHeader1(@Header("header1") Optional<List<ValueEnum>> optionalHeader1) {
+        void setOptionalHeader1(@Header("header1") Optional<List<ValueEnum>> optionalHeader1) {
             this.optionalHeader1 = optionalHeader1;
         }
 

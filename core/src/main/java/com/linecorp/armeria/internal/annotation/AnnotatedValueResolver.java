@@ -62,10 +62,11 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.Cookies;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
@@ -79,7 +80,6 @@ import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
-import com.linecorp.armeria.server.annotation.Cookies;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
@@ -91,8 +91,6 @@ import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
@@ -566,15 +564,11 @@ final class AnnotatedValueResolver {
             return builder(annotatedElement, type)
                     .supportOptional(true)
                     .resolver((unused, ctx) -> {
-                        final List<String> values = ctx.request().headers().getAll(HttpHeaderNames.COOKIE);
-                        if (values.isEmpty()) {
-                            return Cookies.copyOf(ImmutableSet.of());
+                        final String value = ctx.request().headers().get(HttpHeaderNames.COOKIE);
+                        if (value == null) {
+                            return Cookies.empty();
                         }
-                        final ImmutableSet.Builder<Cookie> cookies = ImmutableSet.builder();
-                        values.stream()
-                              .map(ServerCookieDecoder.STRICT::decode)
-                              .forEach(cookies::addAll);
-                        return Cookies.copyOf(cookies.build());
+                        return Cookie.fromCookieHeader(value);
                     })
                     .build();
         }

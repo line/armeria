@@ -13,24 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 
 import com.google.common.collect.ForwardingSet;
-
-import io.netty.handler.codec.http.cookie.Cookie;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A default implementation of {@link Cookies} interface.
  */
 final class DefaultCookies extends ForwardingSet<Cookie> implements Cookies {
 
+    static final DefaultCookies EMPTY = new DefaultCookies(ImmutableSet.of());
+
     private final Set<Cookie> delegate;
 
-    DefaultCookies(Set<Cookie> delegate) {
+    DefaultCookies(ImmutableSet<Cookie> delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 

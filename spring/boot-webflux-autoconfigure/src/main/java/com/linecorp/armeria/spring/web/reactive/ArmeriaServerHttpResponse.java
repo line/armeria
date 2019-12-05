@@ -49,6 +49,8 @@ import org.springframework.util.MultiValueMap;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.CookieBuilder;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpObject;
@@ -61,9 +63,6 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.cookie.DefaultCookie;
-import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import reactor.core.publisher.Flux;
@@ -210,8 +209,8 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
             final List<String> cookieValues =
                     getCookies().values().stream()
                                 .flatMap(Collection::stream)
-                                .map(ArmeriaServerHttpResponse::toNettyCookie)
-                                .map(ServerCookieEncoder.LAX::encode)
+                                .map(ArmeriaServerHttpResponse::toArmeriaCookie)
+                                .map(c -> c.toSetCookieHeader(false))
                                 .collect(toImmutableList());
             if (!cookieValues.isEmpty()) {
                 armeriaHeaders.add(HttpHeaderNames.SET_COOKIE, cookieValues);
@@ -283,20 +282,23 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
     /**
      * Converts the specified {@link ResponseCookie} to Netty's {@link Cookie} interface.
      */
-    private static Cookie toNettyCookie(ResponseCookie resCookie) {
-        final DefaultCookie cookie = new DefaultCookie(resCookie.getName(), resCookie.getValue());
+    private static Cookie toArmeriaCookie(ResponseCookie resCookie) {
+        final CookieBuilder builder = Cookie.builder(resCookie.getName(), resCookie.getValue());
         if (!resCookie.getMaxAge().isNegative()) {
-            cookie.setMaxAge(resCookie.getMaxAge().getSeconds());
+            builder.maxAge(resCookie.getMaxAge().getSeconds());
         }
         if (resCookie.getDomain() != null) {
-            cookie.setDomain(resCookie.getDomain());
+            builder.domain(resCookie.getDomain());
         }
         if (resCookie.getPath() != null) {
-            cookie.setPath(resCookie.getPath());
+            builder.path(resCookie.getPath());
         }
-        cookie.setSecure(resCookie.isSecure());
-        cookie.setHttpOnly(resCookie.isHttpOnly());
-        return cookie;
+        builder.secure(resCookie.isSecure());
+        builder.httpOnly(resCookie.isHttpOnly());
+        if (resCookie.getSameSite() != null) {
+            builder.sameSite(resCookie.getSameSite());
+        }
+        return builder.build();
     }
 
     /**

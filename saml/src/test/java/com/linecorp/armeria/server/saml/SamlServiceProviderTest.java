@@ -92,6 +92,7 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -107,10 +108,6 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.QueryStringEncoder;
-import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.cookie.DefaultCookie;
-import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
-import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 public class SamlServiceProviderTest {
@@ -231,7 +228,7 @@ public class SamlServiceProviderTest {
             }
 
             // Authentication will be succeeded only if both the specified cookie name and value are matched.
-            final Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode(value);
+            final Set<Cookie> cookies = Cookie.fromCookieHeader(value);
             final boolean result = cookies.stream().anyMatch(
                     cookie -> cookieName.equals(cookie.name()) && cookieValue.equals(cookie.value()));
             return CompletableFuture.completedFuture(result);
@@ -245,11 +242,12 @@ public class SamlServiceProviderTest {
             requireNonNull(cookieName, "cookieName");
             requireNonNull(cookieValue, "cookieValue");
 
-            final Cookie cookie = new DefaultCookie(cookieName, cookieValue);
-            cookie.setDomain(spHostname);
-            cookie.setPath("/");
-            cookie.setHttpOnly(true);
-            setCookie = ServerCookieEncoder.STRICT.encode(cookie);
+            final Cookie cookie = Cookie.builder(cookieName, cookieValue)
+                                        .domain(spHostname)
+                                        .path("/")
+                                        .httpOnly(true)
+                                        .build();
+            setCookie = cookie.toSetCookieHeader();
         }
 
         @Override

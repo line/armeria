@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
@@ -21,24 +21,44 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
-import io.netty.handler.codec.http.cookie.Cookie;
-
 /**
- * An interface which holds decoded {@link Cookie} instances for an HTTP request.
+ * An immutable {@link Set} of {@link Cookie}s.
  */
 public interface Cookies extends Set<Cookie> {
+
+    /**
+     * Returns an immutable empty {@link Set} of {@link Cookie}s.
+     */
+    static Cookies empty() {
+        return DefaultCookies.EMPTY;
+    }
 
     /**
      * Creates an instance with a copy of the specified set of {@link Cookie}s.
      */
     static Cookies of(Cookie... cookies) {
-        return new DefaultCookies(ImmutableSet.copyOf(requireNonNull(cookies, "cookies")));
+        return of(ImmutableSet.copyOf(requireNonNull(cookies, "cookies")));
     }
 
     /**
-     * Creates an instance with a copy of the specified {@link Iterable} of {@link Cookie}s.
+     * Creates an instance with a copy of the specified set of {@link Cookie}s.
      */
+    static Cookies of(Iterable<? extends Cookie> cookies) {
+        final ImmutableSet<Cookie> cookiesCopy = ImmutableSet.copyOf(requireNonNull(cookies, "cookies"));
+        if (cookiesCopy.isEmpty()) {
+            return empty();
+        } else {
+            return new DefaultCookies(cookiesCopy);
+        }
+    }
+
+    /**
+     * Creates an instance with a copy of the specified set of {@link Cookie}s.
+     *
+     * @deprecated Use {@link #of(Iterable)}.
+     */
+    @Deprecated
     static Cookies copyOf(Iterable<? extends Cookie> cookies) {
-        return new DefaultCookies(ImmutableSet.copyOf(requireNonNull(cookies, "cookies")));
+        return of(cookies);
     }
 }
