@@ -39,22 +39,14 @@ public final class CookieBuilder {
         return bits;
     }
 
-    private static int firstInvalidOctet(CharSequence cs, BitSet bits) {
-        for (int i = 0; i < cs.length(); i++) {
-            final char c = cs.charAt(i);
-            if (!bits.get(c)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
     private static String validateAttributeValue(String value, String valueName) {
         value = requireNonNull(value, valueName).trim();
         checkArgument(!value.isEmpty(), "%s is empty.", valueName);
-        final int i = firstInvalidOctet(value, VALID_COOKIE_ATTRIBUTE_VALUE_OCTETS);
-        checkArgument(i == -1,
-                      "%s contains a prohibited character: %s", valueName, value);
+        final int i = CookieUtil.firstInvalidOctet(value, VALID_COOKIE_ATTRIBUTE_VALUE_OCTETS);
+        if (i >= 0) {
+            throw new IllegalArgumentException(
+                    valueName + " contains a prohibited character: " + value.charAt(i));
+        }
         return value;
     }
 

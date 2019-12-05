@@ -155,7 +155,7 @@ final class CookieUtil {
         return firstInvalidOctet(cs, VALID_COOKIE_VALUE_OCTETS);
     }
 
-    private static int firstInvalidOctet(CharSequence cs, BitSet bits) {
+    static int firstInvalidOctet(CharSequence cs, BitSet bits) {
         for (int i = 0; i < cs.length(); i++) {
             final char c = cs.charAt(i);
             if (!bits.get(c)) {
