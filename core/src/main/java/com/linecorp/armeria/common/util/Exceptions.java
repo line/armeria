@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 
 import com.google.common.base.Throwables;
 
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.Flags;
@@ -170,6 +171,10 @@ public final class Exceptions {
      * Returns {@code true} if the specified exception will cancel the current request or response stream.
      */
     public static boolean isStreamCancelling(Throwable cause) {
+        if (cause instanceof UnprocessedRequestException) {
+            cause = cause.getCause();
+        }
+
         return (cause instanceof Http2Exception.StreamException &&
                 ((Http2Exception.StreamException) cause).error() == Http2Error.CANCEL) ||
                cause instanceof ClosedSessionException ||
