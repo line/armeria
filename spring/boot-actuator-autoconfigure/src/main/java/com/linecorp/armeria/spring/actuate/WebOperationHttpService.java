@@ -186,7 +186,7 @@ final class WebOperationHttpService implements HttpService {
             if (result instanceof Health) {
                 status = HttpStatus.valueOf(healthMapper.mapStatus(((Health) result).getStatus()));
             } else if (healthComponentClass != null && healthComponentClass.isInstance(result)) {
-                assert getStatusMethodHandle != null; // Always non-null if healthComponentClass it not null.
+                assert getStatusMethodHandle != null; // Always non-null if healthComponentClass is not null.
                 final Status actuatorStatus = (Status) getStatusMethodHandle.invoke(result);
                 status = HttpStatus.valueOf(healthMapper.mapStatus(actuatorStatus));
             } else {
