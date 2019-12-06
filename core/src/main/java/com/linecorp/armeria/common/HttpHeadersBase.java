@@ -68,16 +68,18 @@ import io.netty.util.AsciiString;
  */
 class HttpHeadersBase implements HttpHeaderGetters {
 
-    private static final int PROHIBITED_VALUE_CHAR_MASK = ~15;
-    private static final BitSet PROHIBITED_VALUE_CHARS = new BitSet(~PROHIBITED_VALUE_CHAR_MASK + 1);
-    private static final String[] PROHIBITED_VALUE_CHAR_NAMES = new String[~PROHIBITED_VALUE_CHAR_MASK + 1];
+    private static final BitSet PROHIBITED_VALUE_CHARS;
+    private static final String[] PROHIBITED_VALUE_CHAR_NAMES;
 
     static {
+        PROHIBITED_VALUE_CHARS = new BitSet();
         PROHIBITED_VALUE_CHARS.set(0);
         PROHIBITED_VALUE_CHARS.set('\n');
         PROHIBITED_VALUE_CHARS.set(0xB);
         PROHIBITED_VALUE_CHARS.set('\f');
         PROHIBITED_VALUE_CHARS.set('\r');
+
+        PROHIBITED_VALUE_CHAR_NAMES = new String[PROHIBITED_VALUE_CHARS.size()];
         PROHIBITED_VALUE_CHAR_NAMES[0] = "<NUL>";
         PROHIBITED_VALUE_CHAR_NAMES['\n'] = "<LF>";
         PROHIBITED_VALUE_CHAR_NAMES[0xB] = "<VT>";
@@ -852,11 +854,7 @@ class HttpHeadersBase implements HttpHeaderGetters {
         final int valueLength = value.length();
         for (int i = 0; i < valueLength; i++) {
             final char ch = value.charAt(i);
-            if ((ch & PROHIBITED_VALUE_CHAR_MASK) != 0) { // ch >= 16
-                continue;
-            }
 
-            // ch < 16
             if (PROHIBITED_VALUE_CHARS.get(ch)) {
                 throw new IllegalArgumentException(malformedHeaderValueMessage(value));
             }
