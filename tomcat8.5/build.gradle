@@ -1,7 +1,9 @@
+final def TOMCAT_VERSION = '8.5.49'
+
 dependencyManagement {
     // Override Tomcat versions.
     dependencies {
-        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.47') {
+        dependencySet(group: 'org.apache.tomcat.embed', version: TOMCAT_VERSION) {
             entry 'tomcat-embed-core'
             entry 'tomcat-embed-jasper'
             entry 'tomcat-embed-el'
@@ -33,3 +35,18 @@ tasks.sourceJar.from "${rootProject.projectDir}/tomcat/src/main/resources"
 tasks.sourceJar.exclude '**/ConfigFileLoaderInitializer*'
 tasks.javadoc.source "${rootProject.projectDir}/tomcat/src/main/java"
 tasks.javadoc.exclude '**/ConfigFileLoaderInitializer*'
+
+// Make sure the correct Tomcat versions are used.
+afterEvaluate {
+    [configurations.runtime, configurations.testRuntime].each { cfg ->
+        cfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            def group = artifact.moduleVersion.id.group
+            def version = artifact.moduleVersion.id.version
+            switch (group) {
+                case 'org.apache.tomcat.embed':
+                    assert version == TOMCAT_VERSION
+                    break
+            }
+        }
+    }
+}

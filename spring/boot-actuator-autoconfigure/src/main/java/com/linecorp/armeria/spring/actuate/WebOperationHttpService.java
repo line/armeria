@@ -21,6 +21,9 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.LinkedHashMap;
@@ -39,6 +42,7 @@ import org.springframework.boot.actuate.endpoint.web.WebOperation;
 import org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEndpointHandlerMapping;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthStatusHttpMapper;
+import org.springframework.boot.actuate.health.Status;
 import org.springframework.core.io.Resource;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -76,6 +80,35 @@ final class WebOperationHttpService implements HttpService {
     private static final TypeReference<Map<String, Object>> JSON_MAP =
             new TypeReference<Map<String, Object>>() {};
 
+    @Nullable
+    private static final Class<?> healthComponentClass;
+    @Nullable
+    private static final MethodHandle getStatusMethodHandle;
+
+    static {
+        final String healthComponentClassName = "org.springframework.boot.actuate.health.HealthComponent";
+        final String getStatusMethodName = "getStatus";
+        Class<?> healthComponentC = null;
+        MethodHandle getStatusMH = null;
+        try {
+            healthComponentC = Class.forName(
+                    healthComponentClassName, false, Health.class.getClassLoader());
+            getStatusMH = MethodHandles.lookup().findVirtual(
+                    healthComponentC, getStatusMethodName, MethodType.methodType(Status.class));
+        } catch (Throwable cause) {
+            logger.debug("Failed to find {}#{}() - not Spring Boot 2.2+?",
+                         healthComponentClassName, getStatusMethodName, cause);
+        }
+
+        if (getStatusMH != null) {
+            healthComponentClass = healthComponentC;
+            getStatusMethodHandle = getStatusMH;
+        } else {
+            healthComponentClass = null;
+            getStatusMethodHandle = null;
+        }
+    }
+
     private final WebOperation operation;
     private final HealthStatusHttpMapper healthMapper;
 
@@ -112,8 +145,8 @@ final class WebOperationHttpService implements HttpService {
         try {
             final HttpResponse res = handleResult(ctx, result, req.method());
             resFuture.complete(res);
-        } catch (IOException e) {
-            resFuture.completeExceptionally(e);
+        } catch (Throwable cause) {
+            resFuture.completeExceptionally(cause);
         }
     }
 
@@ -138,7 +171,7 @@ final class WebOperationHttpService implements HttpService {
     }
 
     private HttpResponse handleResult(ServiceRequestContext ctx,
-                                      @Nullable Object result, HttpMethod method) throws IOException {
+                                      @Nullable Object result, HttpMethod method) throws Throwable {
         if (result == null) {
             return HttpResponse.of(method != HttpMethod.GET ? HttpStatus.NO_CONTENT : HttpStatus.NOT_FOUND);
         }
@@ -152,6 +185,10 @@ final class WebOperationHttpService implements HttpService {
         } else {
             if (result instanceof Health) {
                 status = HttpStatus.valueOf(healthMapper.mapStatus(((Health) result).getStatus()));
+            } else if (healthComponentClass != null && healthComponentClass.isInstance(result)) {
+                assert getStatusMethodHandle != null; // Always non-null if healthComponentClass is not null.
+                final Status actuatorStatus = (Status) getStatusMethodHandle.invoke(result);
+                status = HttpStatus.valueOf(healthMapper.mapStatus(actuatorStatus));
             } else {
                 status = HttpStatus.OK;
             }

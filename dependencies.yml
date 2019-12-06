@@ -6,11 +6,11 @@ boms:
   - com.fasterxml.jackson:jackson-bom:2.10.1
   - io.dropwizard.metrics:metrics-bom:4.1.1
   - io.grpc:grpc-bom:1.25.0
-  - io.micrometer:micrometer-bom:1.3.1
+  - io.micrometer:micrometer-bom:1.3.2
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.43.Final
-  - io.zipkin.brave:brave-bom:5.9.0
-  - org.eclipse.jetty:jetty-bom:9.4.22.v20191022
+  - io.zipkin.brave:brave-bom:5.9.1
+  - org.eclipse.jetty:jetty-bom:9.4.24.v20191120
   - org.junit:junit-bom:5.5.2
 
 cglib:
@@ -51,13 +51,13 @@ com.github.ben-manes.caffeine:
       to: com.linecorp.armeria.internal.shaded.caffeine
 
 com.github.jengelman.gradle.plugins:
-  shadow: { version: '5.1.0' }
+  shadow: { version: '5.2.0' }
 
 com.github.node-gradle:
   gradle-node-plugin: { version: '2.2.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.50.1' }
+  gax-grpc: { version: '1.51.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -107,7 +107,7 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.10' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.26' }
+  checkstyle: { version: '8.27' }
 
 com.spotify:
   completable-futures:
@@ -156,13 +156,13 @@ io.grpc:
 io.micrometer:
   micrometer-core:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.3.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.3.2/
   micrometer-registry-prometheus:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.3.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.3.2/
   micrometer-spring-legacy:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.3.1/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.3.2/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -176,7 +176,7 @@ io.netty:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.0.RELEASE'
+    version: &REACTOR_VERSION '3.3.1.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -189,7 +189,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.14'
+    version: '2.2.15'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -297,7 +297,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.27'
+    version: &TOMCAT_VERSION '9.0.29'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -368,7 +368,7 @@ org.jsoup:
   jsoup: { version: '1.12.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.1.0' }
+  mockito-core: { version: &MOCKITO_VERSION '3.2.0' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -413,7 +413,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.10.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.2.1.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
