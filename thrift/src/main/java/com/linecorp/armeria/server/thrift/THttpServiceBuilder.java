@@ -112,7 +112,7 @@ public final class THttpServiceBuilder {
      * {@link SerializationFormat#values()}s are added.
      *
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
-     * protocol and setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
+     * protocol and setting the {@code "Content-Type"} header to the appropriate {@link SerializationFormat#mediaType()}.
      */
     public THttpServiceBuilder otherSerializationFormats(SerializationFormat otherSerializationFormat) {
         requireNonNull(otherSerializationFormat, "otherSerializationFormat");
@@ -125,7 +125,7 @@ public final class THttpServiceBuilder {
      * {@link SerializationFormat#values()}s are added.
      *
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
-     * protocol and setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
+     * protocol and setting the {@code "Content-Type"} header to the appropriate {@link SerializationFormat#mediaType()}.
      */
     public THttpServiceBuilder otherSerializationFormats(Iterable<SerializationFormat>
                                                                  otherSerializationFormats) {
@@ -143,7 +143,7 @@ public final class THttpServiceBuilder {
      * request.
      *
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
-     * protocol and setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
+     * protocol and setting the {@code "Content-Type"} header to the appropriate {@link SerializationFormat#mediaType()}.
      */
     public THttpServiceBuilder defaultSerializationFormat(SerializationFormat defaultSerializationFormat) {
         requireNonNull(defaultSerializationFormat, "defaultSerializationFormat");
@@ -179,11 +179,6 @@ public final class THttpServiceBuilder {
         final Map<String, List<Object>> implementations = Multimaps.asMap(implementationsBuilder.build());
 
         final ThriftCallService tcs = ThriftCallService.of(implementations);
-
-        final LinkedHashSet<SerializationFormat> combined = new LinkedHashSet<>();
-        combined.add(defaultSerializationFormat);
-        combined.addAll(otherSerializationFormats);
-
         return new THttpService(decorate(tcs), newAllowedSerializationFormats(defaultSerializationFormat,
                                                                               otherSerializationFormats));
     }
