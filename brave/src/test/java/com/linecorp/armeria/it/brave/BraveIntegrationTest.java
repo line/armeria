@@ -86,7 +86,7 @@ import zipkin2.Annotation;
 import zipkin2.Span;
 import zipkin2.reporter.Reporter;
 
-@Timeout(10000)
+@Timeout(10)
 class BraveIntegrationTest {
 
     private static final ReporterImpl spanReporter = new ReporterImpl();
