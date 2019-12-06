@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -192,7 +191,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     @Deprecated
     public static THttpService of(Map<String, ?> implementations,
                                   SerializationFormat defaultSerializationFormat) {
-        return ofFormats(implementations, defaultSerializationFormat, Collections.emptyList());
+        return ofFormats(implementations, defaultSerializationFormat, ThriftSerializationFormats.values());
     }
 
     /**
