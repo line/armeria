@@ -41,6 +41,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -53,6 +54,8 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
 
+import com.linecorp.armeria.common.util.OsType;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -136,6 +139,15 @@ class HttpFileServiceTest {
             sb.decorator(LoggingService.newDecorator());
         }
     };
+
+    @AfterAll
+    static void stopSynchronously() {
+        if (SystemInfo.osType() == OsType.WINDOWS) {
+            // Shut down the server completely so that no files
+            // are open before deleting the temporary directory.
+            server.stop().join();
+        }
+    }
 
     @BeforeEach
     void setUp() {
