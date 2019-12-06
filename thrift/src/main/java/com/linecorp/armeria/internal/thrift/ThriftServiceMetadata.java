@@ -34,6 +34,9 @@ import org.apache.thrift.TBaseProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.internal.Types;
 
 /**
@@ -56,8 +59,22 @@ public final class ThriftServiceMetadata {
      * interfaces.
      */
     public ThriftServiceMetadata(Object implementation) {
-        requireNonNull(implementation, "implementation");
-        interfaces = init(implementation);
+        this(ImmutableList.of(requireNonNull(implementation, "implementation")));
+    }
+
+    /**
+     * Creates a new instance from a list of Thrift service implementations, while each service can implement
+     * one or more Thrift service interfaces.
+     */
+    public ThriftServiceMetadata(Iterable<?> implementations) {
+        requireNonNull(implementations, "implementations");
+
+        final ImmutableSet.Builder<Class<?>> interfaceBuilder = ImmutableSet.builder();
+        implementations.forEach(implementation -> {
+            requireNonNull(implementation, "implementations contains null.");
+            interfaceBuilder.addAll(init(implementation));
+        });
+        interfaces = interfaceBuilder.build();
     }
 
     /**
@@ -76,7 +93,6 @@ public final class ThriftServiceMetadata {
 
         // Build the map of method names and their corresponding process functions.
         // If a method is defined multiple times, we take the first definition
-        final Set<String> methodNames = new HashSet<>();
         final Set<Class<?>> interfaces = new HashSet<>();
 
         for (Class<?> iface : candidateInterfaces) {
@@ -84,7 +100,7 @@ public final class ThriftServiceMetadata {
             asyncProcessMap = getThriftAsyncProcessMap(implementation, iface);
             if (asyncProcessMap != null) {
                 asyncProcessMap.forEach(
-                        (name, func) -> registerFunction(methodNames, iface, name, func));
+                        (name, func) -> registerFunction(iface, name, func, implementation));
                 interfaces.add(iface);
             }
 
@@ -92,7 +108,7 @@ public final class ThriftServiceMetadata {
             processMap = getThriftProcessMap(implementation, iface);
             if (processMap != null) {
                 processMap.forEach(
-                        (name, func) -> registerFunction(methodNames, iface, name, func));
+                        (name, func) -> registerFunction(iface, name, func, implementation));
                 interfaces.add(iface);
             }
         }
@@ -174,19 +190,19 @@ public final class ThriftServiceMetadata {
     }
 
     @SuppressWarnings("rawtypes")
-    private void registerFunction(Set<String> methodNames, Class<?> iface, String name, Object func) {
-        if (methodNames.contains(name)) {
+    private void registerFunction(Class<?> iface, String name,
+                                  Object func, @Nullable Object implementation) {
+        if (functions.containsKey(name)) {
             logger.warn("duplicate Thrift method name: " + name);
             return;
         }
-        methodNames.add(name);
 
         try {
             final ThriftFunction f;
             if (func instanceof ProcessFunction) {
-                f = new ThriftFunction(iface, (ProcessFunction) func);
+                f = new ThriftFunction(iface, (ProcessFunction) func, implementation);
             } else {
-                f = new ThriftFunction(iface, (AsyncProcessFunction) func);
+                f = new ThriftFunction(iface, (AsyncProcessFunction) func, implementation);
             }
             functions.put(name, f);
         } catch (Exception e) {

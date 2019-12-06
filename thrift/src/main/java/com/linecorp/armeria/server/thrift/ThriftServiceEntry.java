@@ -34,19 +34,19 @@ import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
 public final class ThriftServiceEntry {
 
     final String name;
-    final Object implementation;
+    final Iterable<?> implementations;
     final ThriftServiceMetadata metadata;
 
-    ThriftServiceEntry(Map.Entry<String, ?> entry) {
+    ThriftServiceEntry(Map.Entry<String, ? extends Iterable<?>> entry) {
         final String name = entry.getKey();
-        final Object implementation = entry.getValue();
+        final Iterable<?> implementations = entry.getValue();
 
         requireNonNull(name, "implementations contains an entry with null key.");
-        requireNonNull(implementation, "implementations['" + name + "']");
+        requireNonNull(implementations, "implementations['" + name + "']");
 
         this.name = name;
-        this.implementation = implementation;
-        metadata = new ThriftServiceMetadata(implementation);
+        this.implementations = implementations;
+        metadata = new ThriftServiceMetadata(implementations);
     }
 
     /**
@@ -59,15 +59,15 @@ public final class ThriftServiceEntry {
     }
 
     /**
-     * Returns the {@code *.AsyncIface} or {@code *.Iface} implementation.
+     * Returns the list of {@code *.AsyncIface} or {@code *.Iface} implementations.
      */
-    public Object implementation() {
-        return implementation;
+    public Iterable<?> implementations() {
+        return implementations;
     }
 
     /**
      * Returns the {@code *.AsyncIface} or {@code *.Iface} classes implemented by
-     * {@linkplain #implementation() the implementation}.
+     * {@linkplain #implementations() the implementations}.
      */
     public Set<Class<?>> interfaces() {
         return metadata.interfaces();
@@ -78,6 +78,6 @@ public final class ThriftServiceEntry {
         return MoreObjects.toStringHelper("Entry")
                           .add("name", name())
                           .add("ifaces", interfaces())
-                          .add("impl", implementation()).toString();
+                          .add("impl", implementations()).toString();
     }
 }

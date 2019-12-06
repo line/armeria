@@ -19,7 +19,7 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -372,9 +372,13 @@ class ThriftServiceTest {
             throw newFileServiceException();
         }, defaultSerializationFormat);
 
-        final THttpService asyncService = THttpService.of(
-                (FileService.AsyncIface) (path, resultHandler) ->
-                        resultHandler.onError(newFileServiceException()), defaultSerializationFormat);
+        final THttpService asyncService =
+                THttpService.builder()
+                            .addService(
+                                    (FileService.AsyncIface) (path, resultHandler) ->
+                                            resultHandler.onError(newFileServiceException()))
+                            .defaultSerializationFormat(defaultSerializationFormat)
+                            .build();
 
         invokeTwice(syncService, asyncService);
 
@@ -646,6 +650,50 @@ class ThriftServiceTest {
     void testServiceInheritance(SerializationFormat defaultSerializationFormat) {
         // This should not throw an exception
         THttpService.of((ChildRpcDebugService.Iface)(a1, a2, details) -> new Response("asdf"));
+    }
+
+    /**
+     * This tests when multiple thrift service implementations, with same service method are added under
+     * default("") service name then the thrift service that is added first should handle the request.
+     * And also makes sure that adding a duplicate service does not break other services.
+     */
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_HelloService_hello_WhenSameMethodMultipleTimes(SerializationFormat defaultSerializationFormat)
+            throws Exception {
+        final HelloService.Client helloClient = new HelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
+        helloClient.send_hello(FOO);
+        assertThat(out.length()).isGreaterThan(0);
+        final HttpData req1 = HttpData.wrap(out.getArray(), 0, out.length());
+
+        out = new TMemoryBuffer(128);
+        final NameService.Client nameClient = new NameService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
+        nameClient.send_removeMiddle(new Name(BAZ, BAR, FOO));
+        assertThat(out.length()).isGreaterThan(0);
+        final HttpData req2 = HttpData.wrap(out.getArray(), 0, out.length());
+
+        final THttpService service =
+                THttpService.builder()
+                            .addService((HelloService.Iface) name -> "Hello, " + name + '!')
+                            // Duplicate service with same method name
+                            .addService((HelloService.Iface) name -> "Hello (again) " + name + '!')
+                            .addService((NameService.Iface) name -> new Name(name.first, null, name.last))
+                            .defaultSerializationFormat(defaultSerializationFormat)
+                            .build();
+
+        invoke0(service, req1, promise);
+        invoke0(service, req2, promise2);
+
+        final HttpData res1 = promise.get();
+        final HttpData res2 = promise2.get();
+
+        in.reset(res1.array());
+        assertThat(helloClient.recv_hello()).isEqualTo("Hello, foo!");
+
+        in.reset(res2.array());
+        assertThat(nameClient.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
     }
 
     // NB: By making this interface functional, we can use lambda expression to implement

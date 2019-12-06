@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Optional;
 
 /**
- * Skeletal {@link Unwrappable} imlementation.
+ * Skeletal {@link Unwrappable} implementation.
  *
  * @param <T> the type of the object being decorated
  */
