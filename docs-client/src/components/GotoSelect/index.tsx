@@ -400,20 +400,18 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
   return (
     <div className={classes.root}>
       <NoSsr>
+        {/* Can't express nested options with react-select's type definition.
+        // @ts-ignore */}
         <Async
           autoFocus={true}
           classes={classes}
           styles={selectStyles}
           inputId="go-to-select"
-          // The type parameter of Async seems to incorrectly use the same type for options and onChange
-          // @ts-ignore
           defaultOptions={makeSuggestions(
             specification,
             DEFAULT_SUGGESTION_SIZE,
             () => true,
           )}
-          // The type parameter of Async seems to incorrectly use the same type for options and onChange
-          // @ts-ignore
           loadOptions={filterSuggestion}
           components={components}
           onChange={handleSelection}
