@@ -38,7 +38,7 @@ class THttpServiceBuilderTest {
     }
 
     @Test
-    void testOtherSerializations_WhenUserDoesNotSpecify_ShouldNotUseDefaults() {
+    void testOtherSerializations_WhenUserDoesNotSpecify_ShouldUseDefaults() {
         final THttpService service = THttpService.builder().addService((HelloService.Iface) name -> name)
                                                  .defaultSerializationFormat(JSON)
                                                  .build();
