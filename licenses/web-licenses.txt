@@ -56,7 +56,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: @material-ui/core, @material-ui/icons, @material-ui/styles, @material-ui/system, @material-ui/utils. A copy of the source code may be downloaded from https://github.com/mui-org/material-ui.git (@material-ui/core), https://github.com/mui-org/material-ui.git (@material-ui/icons), https://github.com/mui-org/material-ui.git (@material-ui/styles), https://github.com/mui-org/material-ui.git (@material-ui/system), https://github.com/mui-org/material-ui.git (@material-ui/utils). This software contains the following license and notice below:
+The following software may be included in this product: @material-ui/icons, @material-ui/styles, @material-ui/system, @material-ui/utils. A copy of the source code may be downloaded from https://github.com/mui-org/material-ui.git (@material-ui/styles), https://github.com/mui-org/material-ui.git (@material-ui/system), https://github.com/mui-org/material-ui.git (@material-ui/utils). This software contains the following license and notice below:
 
 The MIT License (MIT)
 

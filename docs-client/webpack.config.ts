@@ -95,7 +95,13 @@ const config: Configuration = {
     new HtmlWebpackPlugin({
       template: './src/index.html',
     }),
-    new FaviconsWebpackPlugin('./src/images/logo.png'),
+    new FaviconsWebpackPlugin({
+      logo: './src/images/logo.png',
+      // We don't need the many different icon versions of webapp mode and use light mode
+      // to keep JAR size down.
+      mode: 'light',
+      devMode: 'light',
+    }),
     new DefinePlugin({
       'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
     }),

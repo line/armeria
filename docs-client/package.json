@@ -21,9 +21,7 @@
     "react-hot-loader": "^4.12.10",
     "react-router-dom": "^5.0.1",
     "react-select": "^3.0.4",
-    "react-syntax-highlighter": "^11.0.2",
-    "typeface-roboto": "^0.0.75",
-    "typeface-roboto-mono": "^0.0.75"
+    "react-syntax-highlighter": "^11.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.1.0",
