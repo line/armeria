@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.logback;
+package com.linecorp.armeria.common.logging;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
@@ -28,7 +28,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.logback.RequestContextExporter.ExportEntry;
+import com.linecorp.armeria.common.logging.RequestContextExporter.ExportEntry;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;

@@ -17,7 +17,6 @@ package com.linecorp.armeria.common.logback;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -29,8 +28,8 @@ import org.slf4j.MDC;
 import org.slf4j.Marker;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.BuiltInProperty;
+import com.linecorp.armeria.common.logging.RequestContextAwareExporter;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -41,11 +40,9 @@ import ch.qos.logback.core.UnsynchronizedAppenderBase;
 import ch.qos.logback.core.spi.AppenderAttachable;
 import ch.qos.logback.core.spi.AppenderAttachableImpl;
 import io.netty.util.AsciiString;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
  * A <a href="https://logback.qos.ch/">Logback</a> {@link Appender} that exports the properties of the current
@@ -63,35 +60,30 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
         }
     }
 
-    private static final AttributeKey<State> STATE =
-            AttributeKey.valueOf(RequestContextExportingAppender.class, "STATE");
-
-    @Nullable
-    private RequestContextExporter exporter;
-
     private final AppenderAttachableImpl<ILoggingEvent> aai = new AppenderAttachableImpl<>();
-    private final RequestContextExporterBuilder builder = new RequestContextExporterBuilder();
+    private final RequestContextAwareExporter requestContextAwareExporter =
+            new RequestContextAwareExporter();
 
     /**
      * Adds the specified {@link BuiltInProperty} to the export list.
      */
     public void addBuiltIn(BuiltInProperty property) {
         ensureNotStarted();
-        builder.addBuiltIn(property);
+        requestContextAwareExporter.addBuiltIn(property);
     }
 
     /**
      * Returns {@code true} if the specified {@link BuiltInProperty} is in the export list.
      */
     public boolean containsBuiltIn(BuiltInProperty property) {
-        return builder.containsBuiltIn(property);
+        return requestContextAwareExporter.containsBuiltIn(property);
     }
 
     /**
      * Returns all {@link BuiltInProperty}s in the export list.
      */
     public Set<BuiltInProperty> getBuiltIns() {
-        return builder.getBuiltIns();
+        return requestContextAwareExporter.getBuiltIns();
     }
 
     /**
@@ -102,7 +94,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public void addAttribute(String alias, AttributeKey<?> attrKey) {
         ensureNotStarted();
-        builder.addAttribute(alias, attrKey);
+        requestContextAwareExporter.addAttribute(alias, attrKey);
     }
 
     /**
@@ -114,7 +106,10 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public void addAttribute(String alias, AttributeKey<?> attrKey, Function<?, String> stringifier) {
         ensureNotStarted();
-        builder.addAttribute(alias, attrKey, stringifier);
+        requireNonNull(alias, "alias");
+        requireNonNull(attrKey, "attrKey");
+        requireNonNull(stringifier, "stringifier");
+        requestContextAwareExporter.addAttribute(alias, attrKey, stringifier);
     }
 
     /**
@@ -122,7 +117,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public boolean containsAttribute(AttributeKey<?> key) {
         requireNonNull(key, "key");
-        return builder.containsAttribute(key);
+        return requestContextAwareExporter.containsAttribute(key);
     }
 
     /**
@@ -131,7 +126,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
      */
     public Map<String, AttributeKey<?>> getAttributes() {
-        return builder.getAttributes();
+        return requestContextAwareExporter.getAttributes();
     }
 
     /**
@@ -139,7 +134,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public void addHttpRequestHeader(CharSequence name) {
         ensureNotStarted();
-        builder.addHttpRequestHeader(name);
+        requireNonNull(name, "name");
+        requestContextAwareExporter.addHttpRequestHeader(name);
     }
 
     /**
@@ -147,35 +143,38 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public void addHttpResponseHeader(CharSequence name) {
         ensureNotStarted();
-        builder.addHttpResponseHeader(name);
+        requireNonNull(name, "name");
+        requestContextAwareExporter.addHttpResponseHeader(name);
     }
 
     /**
      * Returns {@code true} if the specified HTTP request header name is in the export list.
      */
     public boolean containsHttpRequestHeader(CharSequence name) {
-        return builder.containsHttpRequestHeader(name);
+        requireNonNull(name, "name");
+        return requestContextAwareExporter.containsHttpRequestHeader(name);
     }
 
     /**
      * Returns {@code true} if the specified HTTP response header name is in the export list.
      */
     public boolean containsHttpResponseHeader(CharSequence name) {
-        return builder.containsHttpResponseHeader(name);
+        requireNonNull(name, "name");
+        return requestContextAwareExporter.containsHttpResponseHeader(name);
     }
 
     /**
      * Returns all HTTP request header names in the export list.
      */
     public Set<AsciiString> getHttpRequestHeaders() {
-        return builder.getHttpRequestHeaders();
+        return requestContextAwareExporter.getHttpRequestHeaders();
     }
 
     /**
      * Returns all HTTP response header names in the export list.
      */
     public Set<AsciiString> getHttpResponseHeaders() {
-        return builder.getHttpResponseHeaders();
+        return requestContextAwareExporter.getHttpResponseHeaders();
     }
 
     /**
@@ -184,8 +183,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      * Use {@code add*()} methods instead.
      */
     public void setExport(String mdcKey) {
-        ensureNotStarted();
-        builder.export(mdcKey);
+        requireNonNull(mdcKey, "mdcKey");
+        requestContextAwareExporter.setExport(mdcKey);
     }
 
     /**
@@ -194,32 +193,20 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      * Use {@code add*()} methods instead.
      */
     public void setExports(String mdcKeys) {
-        ensureNotStarted();
         requireNonNull(mdcKeys, "mdcKeys");
-        Arrays.stream(mdcKeys.split(",")).map(String::trim).forEach(this::setExport);
+        requestContextAwareExporter.setExports(mdcKeys);
     }
 
     private void ensureNotStarted() {
-        if (exporter != null) {
+        if (isStarted()) {
             throw new IllegalStateException("can't update the export list once started");
         }
     }
 
     @Override
     protected void append(ILoggingEvent eventObject) {
-        final RequestContext ctx = RequestContext.currentOrNull();
-        if (ctx != null) {
-            final State state = state(ctx);
-            final RequestLog log = ctx.log();
-            final Set<RequestLogAvailability> availabilities = log.availabilities();
-
-            // Note: This equality check is extremely fast.
-            //       See RequestLogAvailabilitySet for more information.
-            if (!availabilities.equals(state.availabilities)) {
-                state.availabilities = availabilities;
-                export(state, ctx, log);
-            }
-
+        final Map<String, String> contextMap = requestContextAwareExporter.exports();
+        if (contextMap != null) {
             final Map<String, String> originalMdcMap = eventObject.getMDCPropertyMap();
             final Map<String, String> mdcMap;
 
@@ -227,49 +214,19 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
             // - the delegate appenders who iterate over the MDC map and
             // - this class who update 'state'.
             if (!originalMdcMap.isEmpty()) {
-                mdcMap = new UnionMap<>(state.clone(), originalMdcMap);
+                mdcMap = new UnionMap<>(contextMap, originalMdcMap);
             } else {
-                mdcMap = state.clone();
+                mdcMap = contextMap;
             }
-
             eventObject = new LoggingEventWrapper(eventObject, mdcMap);
         }
-
         aai.appendLoopOnAppenders(eventObject);
-    }
-
-    private static State state(RequestContext ctx) {
-        final Attribute<State> attr = ctx.attr(STATE);
-        final State state = attr.get();
-        if (state == null) {
-            final State newState = new State();
-            final State oldState = attr.setIfAbsent(newState);
-            if (oldState != null) {
-                return oldState;
-            } else {
-                return newState;
-            }
-        }
-        return state;
-    }
-
-    /**
-     * Exports the necessary properties to {@link MDC}. By default, this method exports all properties added
-     * to the export list via {@code add*()} calls and {@code <export />} tags. Override this method to export
-     * additional properties.
-     */
-    protected void export(Map<String, String> out, RequestContext ctx, RequestLog log) {
-        assert exporter != null;
-        exporter.export(out, ctx, log);
     }
 
     @Override
     public void start() {
         if (!aai.iteratorForAppenders().hasNext()) {
             addWarn("No appender was attached to " + getClass().getSimpleName() + '.');
-        }
-        if (exporter == null) {
-            exporter = builder.build();
         }
         super.start();
     }
@@ -316,13 +273,6 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
     @Override
     public boolean detachAppender(String name) {
         return aai.detachAppender(name);
-    }
-
-    private static final class State extends Object2ObjectOpenHashMap<String, String> {
-        private static final long serialVersionUID = -7084248226635055988L;
-
-        @Nullable
-        Set<RequestLogAvailability> availabilities;
     }
 
     private static final class LoggingEventWrapper implements ILoggingEvent {

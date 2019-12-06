@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,31 +14,31 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logback;
+package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.logback.BuiltInProperty.CLIENT_IP;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.ELAPSED_NANOS;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.LOCAL_HOST;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.LOCAL_IP;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.LOCAL_PORT;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REMOTE_HOST;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REMOTE_IP;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REMOTE_PORT;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_AUTHORITY;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_CONTENT_LENGTH;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_DIRECTION;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_METHOD;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_PATH;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_QUERY;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_RPC_METHOD;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_RPC_PARAMS;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.RES_CONTENT_LENGTH;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.RES_RPC_RESULT;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.RES_STATUS_CODE;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.SCHEME;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.TLS_CIPHER;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.TLS_PROTO;
-import static com.linecorp.armeria.common.logback.BuiltInProperty.TLS_SESSION_ID;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.CLIENT_IP;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.ELAPSED_NANOS;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.LOCAL_HOST;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.LOCAL_IP;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.LOCAL_PORT;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REMOTE_HOST;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REMOTE_IP;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REMOTE_PORT;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_AUTHORITY;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_CONTENT_LENGTH;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_DIRECTION;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_METHOD;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_PATH;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_QUERY;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_RPC_METHOD;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_RPC_PARAMS;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.RES_CONTENT_LENGTH;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.RES_RPC_RESULT;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.RES_STATUS_CODE;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.SCHEME;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.TLS_CIPHER;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.TLS_PROTO;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.TLS_SESSION_ID;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -61,8 +61,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
