@@ -112,7 +112,8 @@ public final class THttpServiceBuilder {
      * {@link SerializationFormat#values()}s are added.
      *
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
-     * protocol and setting the {@code "Content-Type"} header to the appropriate {@link SerializationFormat#mediaType()}.
+     * protocol and setting the {@code "Content-Type"} header to the appropriate
+     * {@link SerializationFormat#mediaType()}.
      */
     public THttpServiceBuilder otherSerializationFormats(SerializationFormat otherSerializationFormat) {
         requireNonNull(otherSerializationFormat, "otherSerializationFormat");
@@ -125,7 +126,8 @@ public final class THttpServiceBuilder {
      * {@link SerializationFormat#values()}s are added.
      *
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
-     * protocol and setting the {@code "Content-Type"} header to the appropriate {@link SerializationFormat#mediaType()}.
+     * protocol and setting the {@code "Content-Type"} header to the appropriate
+     * {@link SerializationFormat#mediaType()}.
      */
     public THttpServiceBuilder otherSerializationFormats(Iterable<SerializationFormat>
                                                                  otherSerializationFormats) {
@@ -143,7 +145,8 @@ public final class THttpServiceBuilder {
      * request.
      *
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
-     * protocol and setting the {@code "Content-Type"} header to the appropriate {@link SerializationFormat#mediaType()}.
+     * protocol and setting the {@code "Content-Type"} header to the appropriate
+     * {@link SerializationFormat#mediaType()}.
      */
     public THttpServiceBuilder defaultSerializationFormat(SerializationFormat defaultSerializationFormat) {
         requireNonNull(defaultSerializationFormat, "defaultSerializationFormat");
