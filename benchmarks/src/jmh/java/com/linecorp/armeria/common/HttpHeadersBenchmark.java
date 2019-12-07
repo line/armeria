@@ -19,11 +19,18 @@ package com.linecorp.armeria.common;
 import javax.annotation.Nullable;
 
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Fork;
 
 /**
  * Microbenchmarks of {@link DefaultHttpHeaders} construction.
  */
 public class HttpHeadersBenchmark {
+
+    private static final String AUTHORIZATION_TOKEN =
+            // Sample JWT from https://jwt.io. Most auth tokens will be significantly longer.
+            "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+            "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ." +
+            "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
 
     @Nullable
     @Benchmark
@@ -39,5 +46,16 @@ public class HttpHeadersBenchmark {
                 // Single letter change to keep theoretical parsing performance the same.
                 HttpHeaderNames.CONTENT_TYPE, "application/grpc+oroto");
         return headers.contentType();
+    }
+
+    @Benchmark
+    public HttpHeaders create_validation() {
+        return HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, AUTHORIZATION_TOKEN);
+    }
+
+    @Benchmark
+    @Fork(jvmArgsAppend = "-Dcom.linecorp.armeria.unsafeDisableHeaderValidation=true")
+    public HttpHeaders create_noValidation() {
+        return HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, AUTHORIZATION_TOKEN);
     }
 }

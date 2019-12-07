@@ -849,6 +849,10 @@ class HttpHeadersBase implements HttpHeaderGetters {
     }
 
     private static void validateValue(String value) {
+        if (Flags.unsafeDisableHeaderValidation()) {
+            return;
+        }
+
         final int valueLength = value.length();
         for (int i = 0; i < valueLength; i++) {
             final char ch = value.charAt(i);
