@@ -27,11 +27,13 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
+
 import io.netty.util.ReferenceCountUtil;
 
 final class StreamMessageDrainer<T> implements Subscriber<T> {
 
-    private final CompletableFuture<List<T>> future = new CompletableFuture<>();
+    private final CompletableFuture<List<T>> future = new EventLoopCheckingCompletableFuture<>();
 
     @Nullable
     private Builder<T> drained = ImmutableList.builder();

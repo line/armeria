@@ -104,7 +104,7 @@ configure(projectsWithFlags('java')) {
         // Logging
         compile 'org.slf4j:slf4j-api'
         testCompile 'org.slf4j:jul-to-slf4j'
-        testRuntime 'ch.qos.logback:logback-classic'
+        testCompile 'ch.qos.logback:logback-classic'
         ['jcl-over-slf4j', 'log4j-over-slf4j'].each {
             testRuntime "org.slf4j:$it"
         }

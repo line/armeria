@@ -21,6 +21,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
 import java.util.function.Predicate;
@@ -51,6 +52,7 @@ import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
@@ -300,6 +302,9 @@ public final class Flags {
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
     private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
+
+    private static final boolean REPORT_BLOCKED_EVENT_LOOP =
+            getBoolean("reportBlockedEventLoop", true);
 
     static {
         if (!isEpollAvailable()) {
@@ -862,6 +867,21 @@ public final class Flags {
      */
     public static boolean useJdkDnsResolver() {
         return USE_JDK_DNS_RESOLVER;
+    }
+
+    /**
+     * Returns whether {@link CompletableFuture}s returned by Armeria methods log a warning if
+     * {@link CompletableFuture#join()} or {@link CompletableFuture#get()} are called from an event loop thread.
+     * Blocking an event loop thread in this manner reduces performance significantly, possibly causing
+     * deadlocks, so it should be avoided at all costs (e.g. using thenApply type methods to execute
+     * asynchronously or running the logic using {@link ServiceRequestContext#blockingTaskExecutor()}.
+     *
+     * <p>This flag is disabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.reportBlockedEventLoop=false} JVM option
+     * to enable it.
+     */
+    public static boolean reportBlockedEventLoop() {
+        return REPORT_BLOCKED_EVENT_LOOP;
     }
 
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
