@@ -255,35 +255,35 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an empty HTTP request with the specified headers.
      */
     default HttpResponse execute(RequestHeaders headers) {
-        return execute(AggregatedHttpRequest.of(headers));
+        return execute(HttpRequest.of(headers));
     }
 
     /**
      * Sends an HTTP request with the specified headers and content.
      */
     default HttpResponse execute(RequestHeaders headers, HttpData content) {
-        return execute(AggregatedHttpRequest.of(headers, content));
+        return execute(HttpRequest.of(headers, content));
     }
 
     /**
      * Sends an HTTP request with the specified headers and content.
      */
     default HttpResponse execute(RequestHeaders headers, byte[] content) {
-        return execute(AggregatedHttpRequest.of(headers, HttpData.wrap(content)));
+        return execute(HttpRequest.of(headers, HttpData.wrap(content)));
     }
 
     /**
      * Sends an HTTP request with the specified headers and content.
      */
     default HttpResponse execute(RequestHeaders headers, String content) {
-        return execute(AggregatedHttpRequest.of(headers, HttpData.ofUtf8(content)));
+        return execute(HttpRequest.of(headers, HttpData.ofUtf8(content)));
     }
 
     /**
      * Sends an HTTP request with the specified headers and content.
      */
     default HttpResponse execute(RequestHeaders headers, String content, Charset charset) {
-        return execute(AggregatedHttpRequest.of(headers, HttpData.of(charset, content)));
+        return execute(HttpRequest.of(headers, HttpData.of(charset, content)));
     }
 
     /**
