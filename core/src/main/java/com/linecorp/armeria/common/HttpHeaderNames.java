@@ -642,7 +642,7 @@ public final class HttpHeaderNames {
             throw new IllegalArgumentException("malformed header name: <EMPTY>");
         }
 
-        if (Flags.unsafeDisableHeaderValidation()) {
+        if (!Flags.validateHeaders()) {
             return name;
         }
 

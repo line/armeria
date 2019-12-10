@@ -849,7 +849,7 @@ class HttpHeadersBase implements HttpHeaderGetters {
     }
 
     private static void validateValue(String value) {
-        if (Flags.unsafeDisableHeaderValidation()) {
+        if (!Flags.validateHeaders()) {
             return;
         }
 
