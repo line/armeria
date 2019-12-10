@@ -28,12 +28,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -42,6 +44,14 @@ import ch.qos.logback.core.Appender;
 import io.netty.util.concurrent.Future;
 
 class EventLoopCheckingCompletableFutureTest {
+
+    @RegisterExtension
+    public static final EventLoopExtension eventLoop = new EventLoopExtension() {
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+    };
 
     @Mock private Appender<ILoggingEvent> appender;
     @Captor private ArgumentCaptor<ILoggingEvent> eventCaptor;
@@ -61,15 +71,13 @@ class EventLoopCheckingCompletableFutureTest {
     @Test
     void joinOnEventLoop() {
         final EventLoopCheckingCompletableFuture<String> future = new EventLoopCheckingCompletableFuture<>();
-        final Future<?> eventLoopFuture = CommonPools.workerGroup().next().submit((Runnable) future::join);
+        final Future<?> eventLoopFuture = eventLoop.get().submit((Runnable) future::join);
         future.complete("complete");
         eventLoopFuture.syncUninterruptibly();
-        await().untilAsserted(() -> {
-            verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
-            assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
-                assertThat(event.getLevel()).isEqualTo(Level.WARN);
-                assertThat(event.getMessage()).startsWith("Calling a blocking method");
-            });
+        verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
+        assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.WARN);
+            assertThat(event.getMessage()).startsWith("Calling a blocking method");
         });
     }
 
@@ -93,32 +101,26 @@ class EventLoopCheckingCompletableFutureTest {
     @Test
     void getOnEventLoop() {
         final EventLoopCheckingCompletableFuture<String> future = new EventLoopCheckingCompletableFuture<>();
-        final Future<?> eventLoopFuture = CommonPools.workerGroup().next().submit(
-                (Callable<String>) future::get);
+        final Future<?> eventLoopFuture = eventLoop.get().submit((Callable<String>) future::get);
         future.complete("complete");
         eventLoopFuture.syncUninterruptibly();
-        await().untilAsserted(() -> {
-            verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
-            assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
-                assertThat(event.getLevel()).isEqualTo(Level.WARN);
-                assertThat(event.getMessage()).startsWith("Calling a blocking method");
-            });
+        verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
+        assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.WARN);
+            assertThat(event.getMessage()).startsWith("Calling a blocking method");
         });
     }
 
     @Test
     void getTimeoutOnEventLoop() {
         final EventLoopCheckingCompletableFuture<String> future = new EventLoopCheckingCompletableFuture<>();
-        final Future<?> eventLoopFuture = CommonPools.workerGroup().next()
-                                                     .submit(() -> future.get(10, TimeUnit.SECONDS));
+        final Future<?> eventLoopFuture = eventLoop.get().submit(() -> future.get(10, TimeUnit.SECONDS));
         future.complete("complete");
         eventLoopFuture.syncUninterruptibly();
-        await().untilAsserted(() -> {
-            verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
-            assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
-                assertThat(event.getLevel()).isEqualTo(Level.WARN);
-                assertThat(event.getMessage()).startsWith("Calling a blocking method");
-            });
+        verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
+        assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.WARN);
+            assertThat(event.getMessage()).startsWith("Calling a blocking method");
         });
     }
 }

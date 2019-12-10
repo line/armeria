@@ -60,7 +60,7 @@ public final class EventLoopCheckingCompletableFuture<T> extends CompletableFutu
         return super.join();
     }
 
-    private void maybeLogIfOnEventLoop() {
+    private static void maybeLogIfOnEventLoop() {
         if (!Flags.reportBlockedEventLoop()) {
             return;
         }
