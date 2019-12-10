@@ -67,11 +67,12 @@ public final class HttpHeaderNames {
     //   - Sec-Fetch-User
     //   - Sec-Metadata
 
-    private static final int PROHIBITED_NAME_CHAR_MASK = ~63;
-    private static final BitSet PROHIBITED_NAME_CHARS = new BitSet(~PROHIBITED_NAME_CHAR_MASK + 1);
-    private static final String[] PROHIBITED_NAME_CHAR_NAMES = new String[~PROHIBITED_NAME_CHAR_MASK + 1];
+    private static final BitSet PROHIBITED_NAME_CHARS;
+    private static final String[] PROHIBITED_NAME_CHAR_NAMES;
+    private static final byte LAST_PROHIBITED_NAME_CHAR;
 
     static {
+        PROHIBITED_NAME_CHARS = new BitSet();
         PROHIBITED_NAME_CHARS.set(0);
         PROHIBITED_NAME_CHARS.set('\t');
         PROHIBITED_NAME_CHARS.set('\n');
@@ -83,6 +84,9 @@ public final class HttpHeaderNames {
         PROHIBITED_NAME_CHARS.set(':');
         PROHIBITED_NAME_CHARS.set(';');
         PROHIBITED_NAME_CHARS.set('=');
+        LAST_PROHIBITED_NAME_CHAR = (byte) (PROHIBITED_NAME_CHARS.size() - 1);
+
+        PROHIBITED_NAME_CHAR_NAMES = new String[PROHIBITED_NAME_CHARS.size()];
         PROHIBITED_NAME_CHAR_NAMES[0] = "<NUL>";
         PROHIBITED_NAME_CHAR_NAMES['\t'] = "<TAB>";
         PROHIBITED_NAME_CHAR_NAMES['\n'] = "<LF>";
@@ -645,11 +649,11 @@ public final class HttpHeaderNames {
         final int lastIndex;
         try {
             lastIndex = name.forEachByte(value -> {
-                if ((value & PROHIBITED_NAME_CHAR_MASK) != 0) { // value >= 64
+                if (value > LAST_PROHIBITED_NAME_CHAR) {
+                    // Definitely valid.
                     return true;
                 }
 
-                // value < 64
                 return !PROHIBITED_NAME_CHARS.get(value);
             });
         } catch (Exception e) {
