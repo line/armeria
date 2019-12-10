@@ -881,7 +881,7 @@ public final class Flags {
      *
      * <p>This flag is enabled by default.
      * Specify the {@code -Dcom.linecorp.armeria.validateHeaders=false} JVM option
-     * to enable it.
+     * to disable it.
      */
     public static boolean validateHeaders() {
         return VALIDATE_HEADERS;
