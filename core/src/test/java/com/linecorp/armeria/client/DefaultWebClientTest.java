@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
@@ -42,11 +43,8 @@ class DefaultWebClientTest {
         final String requestPath = "world/test?q1=foo";
 
         final HttpClient mockClientDelegate = mock(HttpClient.class);
-        final ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(
-                ClientFactory.ofDefault(), new URI(clientUriPath), WebClient.class, ClientOptions.of());
-        final DefaultWebClient defaultWebClient = new DefaultWebClient(
-                clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
-                SessionProtocol.of("http"), Endpoint.of("127.0.0.1"));
+        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate,
+                "127.0.0.1");
 
         defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
 
@@ -55,6 +53,47 @@ class DefaultWebClientTest {
 
         final String concatPath = argCaptor.getValue().path();
         assertThat(concatPath).isEqualTo("/hello/world/test?q1=foo");
+    }
+
+    @Test
+    void testRequestParamsUndefinedEndPoint() throws Exception {
+        final String clientUriPath = "http://127.0.0.1/helloWorld/test?q1=foo";
+        final HttpClient mockClientDelegate = mock(HttpClient.class);
+        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate,
+                "undefined");
+
+        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, clientUriPath)));
+
+        final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
+
+        final String concatPath = argCaptor.getValue().path();
+        assertThat(concatPath).isEqualTo("/helloWorld/test?q1=foo");
+    }
+
+    @Test
+    void testWithoutRequestParamsUndefinedEndPoint() throws Exception {
+        final String clientUriPath = "http://127.0.0.1/helloWorld/test";
+        final HttpClient mockClientDelegate = mock(HttpClient.class);
+        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate,
+                "undefined");
+
+        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, clientUriPath)));
+
+        final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
+
+        final String concatPath = argCaptor.getValue().path();
+        assertThat(concatPath).isEqualTo("/helloWorld/test");
+    }
+
+    private DefaultWebClient createDefaultWebClient(String clientUriPath, HttpClient mockClientDelegate,
+                                                    String endpoint) throws URISyntaxException {
+        final ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(
+                ClientFactory.ofDefault(), new URI(clientUriPath), WebClient.class, ClientOptions.of());
+        return new DefaultWebClient(
+                clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
+                SessionProtocol.of("http"), Endpoint.of(endpoint));
     }
 
     @Test
