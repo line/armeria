@@ -54,7 +54,7 @@ public class HttpHeadersBenchmark {
     }
 
     @Benchmark
-    @Fork(jvmArgsAppend = "-Dcom.linecorp.armeria.unsafeDisableHeaderValidation=true")
+    @Fork(jvmArgsAppend = "-Dcom.linecorp.armeria.validateHeaders=false")
     public HttpHeaders create_noValidation() {
         return HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, AUTHORIZATION_TOKEN);
     }
