@@ -873,12 +873,12 @@ public final class Flags {
      * Returns whether {@link CompletableFuture}s returned by Armeria methods log a warning if
      * {@link CompletableFuture#join()} or {@link CompletableFuture#get()} are called from an event loop thread.
      * Blocking an event loop thread in this manner reduces performance significantly, possibly causing
-     * deadlocks, so it should be avoided at all costs (e.g. using thenApply type methods to execute
+     * deadlocks, so it should be avoided at all costs (e.g. using {@code thenApply()} type methods to execute
      * asynchronously or running the logic using {@link ServiceRequestContext#blockingTaskExecutor()}.
      *
-     * <p>This flag is disabled by default.
+     * <p>This flag is enabled by default.
      * Specify the {@code -Dcom.linecorp.armeria.reportBlockedEventLoop=false} JVM option
-     * to enable it.
+     * to disable it.
      */
     public static boolean reportBlockedEventLoop() {
         return REPORT_BLOCKED_EVENT_LOOP;
