@@ -34,12 +34,12 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class HttpHeadersTest {
+class HttpHeadersTest {
 
     @Test
-    public void testCaseInsensitiveHeaderNames() throws Exception {
+    void testCaseInsensitiveHeaderNames() throws Exception {
         final HttpHeaders headers = HttpHeaders.of(of("header1"), "value1",
                                                    of("HEADER2"), "value2",
                                                    of("Header3"), "VALUE3");
@@ -53,7 +53,7 @@ public class HttpHeadersTest {
     }
 
     @Test
-    public void testInvalidHeaderName() throws Exception {
+    void testInvalidHeaderName() throws Exception {
         assertThatThrownBy(() -> HttpHeaders.of(null, "value1"))
                 .isInstanceOf(NullPointerException.class);
 
@@ -62,7 +62,7 @@ public class HttpHeadersTest {
     }
 
     @Test
-    public void contentType() {
+    void contentType() {
         final HttpHeadersBuilder headers = HttpHeaders.builder();
 
         headers.contentType(ANY_TYPE);
@@ -83,7 +83,7 @@ public class HttpHeadersTest {
     }
 
     @Test
-    public void testSetObject() {
+    void testSetObject() {
         final String expectedDate = "Mon, 3 Dec 2007 10:15:30 GMT";
         final Instant instant = Instant.parse("2007-12-03T10:15:30.00Z");
         final Date date = new Date(instant.toEpochMilli());

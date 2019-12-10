@@ -748,7 +748,7 @@ class HttpHeadersBase implements HttpHeaderGetters {
                                  Set<AsciiString> existingNames) {
 
         for (Entry<? extends CharSequence, String> header : headers) {
-            final AsciiString key = AsciiString.of(header.getKey());
+            final AsciiString key = HttpHeaderNames.of(header.getKey());
             if (!existingNames.contains(key)) {
                 add(key, header.getValue());
             }

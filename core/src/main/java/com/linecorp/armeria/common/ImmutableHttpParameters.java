@@ -25,8 +25,16 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.sun.net.httpserver.HttpsParameters;
+
 import io.netty.handler.codec.Headers;
 
+/**
+ * Immutable {@link HttpsParameters}.
+ *
+ * @deprecated Use {@link QueryParams}.
+ */
+@Deprecated
 final class ImmutableHttpParameters implements HttpParameters {
 
     private final HttpParameters delegate;
