@@ -16,18 +16,25 @@
 package com.linecorp.armeria.server.annotation;
 
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.server.RouteBuilder;
+
 /**
- * The containing annotation type for {@link ConditionalParam}.
+ * Specifies a predicate which evaluates whether a request can be accepted by a service method.
  */
 @Retention(RetentionPolicy.RUNTIME)
+@Repeatable(MatchesParams.class)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface ConditionalParams {
+public @interface MatchesParam {
     /**
-     * An array of {@link ConditionalParam} annotations.
+     * The predicate which evaluates whether a request can be accepted by a service method.
+     *
+     * @see RouteBuilder#matchesParams(String...)
+     * @see RouteBuilder#matchesParams(Iterable)
      */
-    ConditionalParam[] value();
+    String value();
 }

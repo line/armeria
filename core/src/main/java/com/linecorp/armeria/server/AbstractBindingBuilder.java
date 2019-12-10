@@ -29,12 +29,14 @@ import static com.linecorp.armeria.common.HttpMethod.TRACE;
 import static com.linecorp.armeria.server.HttpHeaderUtil.ensureUniqueMediaTypes;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -46,8 +48,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.annotation.ConditionalHeader;
-import com.linecorp.armeria.server.annotation.ConditionalParam;
+import com.linecorp.armeria.server.annotation.MatchesHeader;
+import com.linecorp.armeria.server.annotation.MatchesParam;
 
 /**
  * An abstract builder class for binding something to a {@link Route} fluently.
@@ -57,8 +59,8 @@ abstract class AbstractBindingBuilder {
     private Set<HttpMethod> methods = ImmutableSet.of();
     private Set<MediaType> consumeTypes = ImmutableSet.of();
     private Set<MediaType> produceTypes = ImmutableSet.of();
-    private List<RoutingPredicate<HttpParameters>> paramPredicates = ImmutableList.of();
-    private List<RoutingPredicate<HttpHeaders>> headerPredicates = ImmutableList.of();
+    private List<RoutingPredicate<HttpParameters>> paramPredicates = new ArrayList<>();
+    private List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
     private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();
 
@@ -312,7 +314,7 @@ abstract class AbstractBindingBuilder {
      * Also note that each predicate will be evaluated with the decoded value of HTTP parameters,
      * so do not use percent-encoded value in the predicate.
      *
-     * @see ConditionalParam
+     * @see MatchesParam
      */
     public AbstractBindingBuilder matchesParams(String... paramPredicates) {
         return matchesParams(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
@@ -335,19 +337,22 @@ abstract class AbstractBindingBuilder {
      * Also note that each predicate will be evaluated with the decoded value of HTTP parameters,
      * so do not use percent-encoded value in the predicate.
      *
-     * @see ConditionalParam
+     * @see MatchesParam
      */
     public AbstractBindingBuilder matchesParams(Iterable<String> paramPredicates) {
-        this.paramPredicates = RoutingPredicate.copyOfParamPredicates(
-                requireNonNull(paramPredicates, "paramPredicates"));
+        this.paramPredicates.addAll(RoutingPredicate.copyOfParamPredicates(
+                requireNonNull(paramPredicates, "paramPredicates")));
         return this;
     }
 
     /**
-     * Sets the {@link Route} to accept a request if it the specified {@code predicate} returns {@code true}.
+     * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
+     * {@code true} with the value of the specified {@code paramName} parameter.
      */
-    public AbstractBindingBuilder matchesParams(RoutingPredicate<HttpParameters> predicate) {
-        paramPredicates = ImmutableList.of(requireNonNull(predicate, "predicate"));
+    public AbstractBindingBuilder matchesParams(String paramName, Predicate<String> valuePredicate) {
+        requireNonNull(paramName, "paramName");
+        requireNonNull(valuePredicate, "valuePredicate");
+        paramPredicates.add(RoutingPredicate.ofParams(paramName, valuePredicate));
         return this;
     }
 
@@ -364,7 +369,7 @@ abstract class AbstractBindingBuilder {
      *     header</li>
      * </ul>
      *
-     * @see ConditionalHeader
+     * @see MatchesHeader
      */
     public AbstractBindingBuilder matchesHeaders(String... headerPredicates) {
         return matchesHeaders(ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates")));
@@ -383,19 +388,22 @@ abstract class AbstractBindingBuilder {
      *     header</li>
      * </ul>
      *
-     * @see ConditionalHeader
+     * @see MatchesHeader
      */
     public AbstractBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
-        this.headerPredicates = RoutingPredicate.copyOfHeaderPredicates(
-                requireNonNull(headerPredicates, "headerPredicates"));
+        this.headerPredicates.addAll(RoutingPredicate.copyOfHeaderPredicates(
+                requireNonNull(headerPredicates, "headerPredicates")));
         return this;
     }
 
     /**
-     * Sets the {@link Route} to accept a request if it the specified {@code predicate} returns {@code true}.
+     * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
+     * {@code true} with the value of the specified {@code headerName} header.
      */
-    public AbstractBindingBuilder matchesHeaders(RoutingPredicate<HttpHeaders> predicate) {
-        headerPredicates = ImmutableList.of(requireNonNull(predicate, "predicate"));
+    public AbstractBindingBuilder matchesHeaders(CharSequence headerName, Predicate<String> valuePredicate) {
+        requireNonNull(headerName, "headerName");
+        requireNonNull(valuePredicate, "valuePredicate");
+        headerPredicates.add(RoutingPredicate.ofHeaders(headerName, valuePredicate));
         return this;
     }
 

@@ -53,9 +53,7 @@ class HttpServerParamPredicatesMatchingTest {
               .build((ctx, req) -> HttpResponse.of("my-param=/"))
               .route().get("/matches/percentEncoded").matchesParams("my-param=%2F")
               .build((ctx, req) -> HttpResponse.of("my-param=%2F"))
-              .route().get("/custom").matchesParams(
-                    RoutingPredicate.ofParams("my-param",
-                                              value -> Integer.parseInt(value) > 100))
+              .route().get("/custom").matchesParams("my-param", value -> Integer.parseInt(value) > 100)
               .build((ctx, req) -> HttpResponse.of("custom"))
               .route().get("/custom")
               .build((ctx, req) -> HttpResponse.of("fallback"));

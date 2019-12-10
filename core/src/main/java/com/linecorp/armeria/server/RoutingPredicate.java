@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.HttpParameters;
  *
  * @param <T> the type of the object to be tested
  */
-public final class RoutingPredicate<T> {
+final class RoutingPredicate<T> {
     private static final Logger logger = LoggerFactory.getLogger(RoutingPredicate.class);
 
     /**
@@ -83,7 +83,8 @@ public final class RoutingPredicate<T> {
         requireNonNull(headersPredicate, "headersPredicate");
         final Matcher m = CONTAIN_PATTERN.matcher(headersPredicate);
         if (m.matches()) {
-            final Predicate<HttpHeaders> predicate = headers -> headers.contains(m.group(2));
+            final CharSequence headerName = m.group(2);
+            final Predicate<HttpHeaders> predicate = headers -> headers.contains(headerName);
             return new RoutingPredicate<>(headersPredicate,
                                           "!".equals(m.group(1)) ? predicate.negate() : predicate);
         }
@@ -111,7 +112,8 @@ public final class RoutingPredicate<T> {
         requireNonNull(paramsPredicate, "paramsPredicate");
         final Matcher m = CONTAIN_PATTERN.matcher(paramsPredicate);
         if (m.matches()) {
-            final Predicate<HttpParameters> predicate = params -> params.contains(m.group(2));
+            final String paramName = m.group(2);
+            final Predicate<HttpParameters> predicate = params -> params.contains(paramName);
             return new RoutingPredicate<>(paramsPredicate,
                                           "!".equals(m.group(1)) ? predicate.negate() : predicate);
         }
@@ -153,36 +155,15 @@ public final class RoutingPredicate<T> {
         try {
             return delegate.test(t);
         } catch (Throwable cause) {
+            // Do not write the following log message every time because an abnormal request may be
+            // from an abusing user or a hacker and logging it every time may affect system performance.
             if (Flags.verboseExceptionSampler().isSampled(cause.getClass())) {
                 logger.warn("Failed to evaluate the value of header or param '{}'. " +
-                            "This exception MUST be properly handled by a user.: " +
+                            "You MUST catch and handle this exception properly: " +
                             "input={}", name, t, cause);
             }
             return false;
         }
-    }
-
-    /**
-     * Returns a composed predicate that represents a logical AND of this predicate and {@code other}.
-     */
-    public RoutingPredicate<T> and(RoutingPredicate<T> other) {
-        requireNonNull(other, "other");
-        return new RoutingPredicate<>(name + "_and_" + other.name(), delegate.and(other.delegate));
-    }
-
-    /**
-     * Returns a composed predicate that represents a logical OR of this predicate and {@code other}.
-     */
-    public RoutingPredicate<T> or(RoutingPredicate<T> other) {
-        requireNonNull(other, "other");
-        return new RoutingPredicate<>(this.name + "_or_" + name, delegate.or(other.delegate));
-    }
-
-    /**
-     * Returns a predicate that represents a logical negation of this predicate.
-     */
-    public RoutingPredicate<T> negate() {
-        return new RoutingPredicate<>("not_" + name, delegate.negate());
     }
 
     @Override

@@ -88,8 +88,6 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.Blocking;
-import com.linecorp.armeria.server.annotation.ConditionalHeader;
-import com.linecorp.armeria.server.annotation.ConditionalParam;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -102,6 +100,8 @@ import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
+import com.linecorp.armeria.server.annotation.MatchesHeader;
+import com.linecorp.armeria.server.annotation.MatchesParam;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
@@ -252,11 +252,11 @@ public final class AnnotatedServiceFactory {
                                                 .consumes(consumableMediaTypes)
                                                 .produces(producibleMediaTypes)
                                                 .matchesParams(
-                                                        predicates(method, clazz, ConditionalParam.class,
-                                                                   ConditionalParam::value))
+                                                        predicates(method, clazz, MatchesParam.class,
+                                                                   MatchesParam::value))
                                                 .matchesHeaders(
-                                                        predicates(method, clazz, ConditionalHeader.class,
-                                                                   ConditionalHeader::value))
+                                                        predicates(method, clazz, MatchesHeader.class,
+                                                                   MatchesHeader::value))
                                                 .build());
                 }).collect(toImmutableList());
 

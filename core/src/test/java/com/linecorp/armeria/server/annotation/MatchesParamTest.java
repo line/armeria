@@ -24,11 +24,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-class ConditionalHeaderTest {
+class MatchesParamTest {
 
     @RegisterExtension
     public static final ServerExtension extension = new ServerExtension() {
@@ -36,9 +35,9 @@ class ConditionalHeaderTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService(new Object() {
                 @Get("/matches")
-                @ConditionalHeader("my-header=my-value")
+                @MatchesParam("my-param=my-value")
                 public String matches() {
-                    return "my-header=my-value";
+                    return "my-param=my-value";
                 }
 
                 @Get("/matches")
@@ -47,9 +46,9 @@ class ConditionalHeaderTest {
                 }
 
                 @Get("/doesNotMatch")
-                @ConditionalHeader("my-header!=my-value")
+                @MatchesParam("my-param!=my-value")
                 public String doesNotMatch() {
-                    return "my-header!=my-value";
+                    return "my-param!=my-value";
                 }
 
                 @Get("/doesNotMatch")
@@ -58,9 +57,9 @@ class ConditionalHeaderTest {
                 }
 
                 @Get("/contains")
-                @ConditionalHeader("my-header")
+                @MatchesParam("my-param")
                 public String contains() {
-                    return "my-header";
+                    return "my-param";
                 }
 
                 @Get("/contains")
@@ -69,9 +68,9 @@ class ConditionalHeaderTest {
                 }
 
                 @Get("/doesNotContain")
-                @ConditionalHeader("!my-header")
+                @MatchesParam("!my-param")
                 public String doesNotContain() {
-                    return "!my-header";
+                    return "!my-param";
                 }
 
                 @Get("/doesNotContain")
@@ -79,16 +78,16 @@ class ConditionalHeaderTest {
                     return "fallback";
                 }
 
-                @Get("/multiple")
-                @ConditionalHeader("my-heaver=my-value")
-                @ConditionalHeader("!your-header")
-                public String multiple() {
-                    return "multiple";
+                @Get("/matches/percentEncoded")
+                @MatchesParam("my-param=/")
+                public String matchesPercentEncoded1() {
+                    return "my-param=/";
                 }
 
-                @Get("/multiple")
-                public String fallback5() {
-                    return "fallback";
+                @Get("/matches/percentEncoded")
+                @MatchesParam("my-param=%2F")
+                public String matchesPercentEncoded2() {
+                    return "my-param=%2F";
                 }
             });
         }
@@ -103,51 +102,43 @@ class ConditionalHeaderTest {
 
     @Test
     void matches() {
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/matches", "my-header", "my-value")))
-                         .aggregate().join().contentUtf8()).isEqualTo("my-header=my-value");
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/matches", "my-header", "your-value")))
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches?my-param=my-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=my-value");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches?my-param=your-value"))
                          .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 
     @Test
     void doesNotMatch() {
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/doesNotMatch", "my-header", "your-value")))
-                         .aggregate().join().contentUtf8()).isEqualTo("my-header!=my-value");
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/doesNotMatch", "my-header", "my-value")))
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/doesNotMatch?my-param=your-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param!=my-value");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/doesNotMatch?my-param=my-value"))
                          .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 
     @Test
     void contains() {
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/contains", "my-header", "any-value")))
-                         .aggregate().join().contentUtf8()).isEqualTo("my-header");
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/contains", "your-header", "your-value")))
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/contains?my-param=any-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/contains?your-param=your-value"))
                          .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 
     @Test
     void doesNotContain() {
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/doesNotContain", "your-header", "your-value")))
-                         .aggregate().join().contentUtf8()).isEqualTo("!my-header");
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/doesNotContain", "my-header", "my-value")))
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/doesNotContain?your-param=your-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("!my-param");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/doesNotContain?my-param=my-value"))
                          .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 
     @Test
-    void multiple() {
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/multiple", "my-header", "my-value")))
-                         .aggregate().join().contentUtf8()).isEqualTo("multiple");
-        assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/multiple", "my-header", "my-value", "your-header", "your-value")))
-                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    void percentEncoded() {
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/percentEncoded?my-param=/"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=/");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/percentEncoded?my-param=%2F"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=/");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/percentEncoded?my-param=%252F"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=%2F");
     }
 }

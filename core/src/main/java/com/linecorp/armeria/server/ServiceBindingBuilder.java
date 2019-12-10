@@ -22,10 +22,9 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -172,8 +171,8 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public ServiceBindingBuilder matchesParams(RoutingPredicate<HttpParameters> predicate) {
-        return (ServiceBindingBuilder) super.matchesParams(predicate);
+    public ServiceBindingBuilder matchesParams(String paramName, Predicate<String> valuePredicate) {
+        return (ServiceBindingBuilder) super.matchesParams(paramName, valuePredicate);
     }
 
     @Override
@@ -187,8 +186,8 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public ServiceBindingBuilder matchesHeaders(RoutingPredicate<HttpHeaders> predicate) {
-        return (ServiceBindingBuilder) super.matchesHeaders(predicate);
+    public ServiceBindingBuilder matchesHeaders(CharSequence headerName, Predicate<String> valuePredicate) {
+        return (ServiceBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
     }
 
     @Override

@@ -56,15 +56,13 @@ class HttpServerHeaderPredicatesMatchingTest {
               .build((ctx, req) -> HttpResponse.of("multiple"))
               .route().get("/multiple")
               .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/custom").matchesHeaders(
-                    RoutingPredicate.ofHeaders("my-header",
-                                               value -> Integer.parseInt(value) > 100))
+              .route().get("/custom").matchesHeaders("my-header", value -> Integer.parseInt(value) > 100)
               .build((ctx, req) -> HttpResponse.of("custom"))
               .route().get("/custom")
               .build((ctx, req) -> HttpResponse.of("fallback"))
-              .route().get("/custom/composed").matchesHeaders(
-                    RoutingPredicate.ofHeaders("my-header", value -> Integer.parseInt(value) > 100)
-                                    .or(RoutingPredicate.ofHeaders("your-header", "ok"::equals)))
+              .route().get("/custom/composed")
+              .matchesHeaders("my-header", value -> Integer.parseInt(value) > 100)
+              .matchesHeaders("your-header", "ok"::equals)
               .build((ctx, req) -> HttpResponse.of("custom"))
               .route().get("/custom/composed")
               .build((ctx, req) -> HttpResponse.of("fallback"));
@@ -141,13 +139,15 @@ class HttpServerHeaderPredicatesMatchingTest {
     @Test
     void customComposed() {
         assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/custom/composed", "my-header", "0101")))
+                HttpMethod.GET, "/custom/composed", "my-header", "0101", "your-header", "ok")))
                          .aggregate().join().contentUtf8()).isEqualTo("custom");
+
+        // Partial matching won't be accepted.
         assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/custom/composed", "your-header", "ok")))
-                         .aggregate().join().contentUtf8()).isEqualTo("custom");
+                HttpMethod.GET, "/custom/composed", "your-header", "0101")))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
         assertThat(client.execute(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/custom/composed", "my-header", "2", "your-header", "nok")))
+                HttpMethod.GET, "/custom/composed", "your-header", "nok")))
                          .aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 }

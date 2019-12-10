@@ -26,9 +26,11 @@ import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.server.HttpHeaderUtil.ensureUniqueMediaTypes;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -44,8 +46,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.annotation.ConditionalHeader;
-import com.linecorp.armeria.server.annotation.ConditionalParam;
+import com.linecorp.armeria.server.annotation.MatchesHeader;
+import com.linecorp.armeria.server.annotation.MatchesParam;
 
 /**
  * Builds a new {@link Route}.
@@ -63,9 +65,9 @@ public final class RouteBuilder {
 
     private Set<MediaType> produces = ImmutableSet.of();
 
-    private List<RoutingPredicate<HttpParameters>> paramPredicates = ImmutableList.of();
+    private List<RoutingPredicate<HttpParameters>> paramPredicates = new ArrayList<>();
 
-    private List<RoutingPredicate<HttpHeaders>> headerPredicates = ImmutableList.of();
+    private List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
 
     RouteBuilder() {}
 
@@ -347,7 +349,7 @@ public final class RouteBuilder {
      * Also note that each predicate will be evaluated with the decoded value of HTTP parameters,
      * so do not use percent-encoded value in the predicate.
      *
-     * @see ConditionalParam
+     * @see MatchesParam
      */
     public RouteBuilder matchesParams(String... paramPredicates) {
         return matchesParams(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
@@ -370,19 +372,22 @@ public final class RouteBuilder {
      * Also note that each predicate will be evaluated with the decoded value of HTTP parameters,
      * so do not use percent-encoded value in the predicate.
      *
-     * @see ConditionalParam
+     * @see MatchesParam
      */
     public RouteBuilder matchesParams(Iterable<String> paramPredicates) {
-        this.paramPredicates = RoutingPredicate.copyOfParamPredicates(
-                requireNonNull(paramPredicates, "paramPredicates"));
+        this.paramPredicates.addAll(RoutingPredicate.copyOfParamPredicates(
+                requireNonNull(paramPredicates, "paramPredicates")));
         return this;
     }
 
     /**
-     * Sets the {@link Route} to accept a request if it the specified {@code predicate} returns {@code true}.
+     * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
+     * {@code true} with the value of the specified {@code paramName} parameter.
      */
-    public RouteBuilder matchesParams(RoutingPredicate<HttpParameters> predicate) {
-        paramPredicates = ImmutableList.of(requireNonNull(predicate, "predicate"));
+    public RouteBuilder matchesParams(String paramName, Predicate<String> valuePredicate) {
+        requireNonNull(paramName, "paramName");
+        requireNonNull(valuePredicate, "valuePredicate");
+        paramPredicates.add(RoutingPredicate.ofParams(paramName, valuePredicate));
         return this;
     }
 
@@ -390,7 +395,7 @@ public final class RouteBuilder {
      * Sets the pre-configured predicates of the {@link HttpParameters}.
      */
     RouteBuilder matchesParams(List<RoutingPredicate<HttpParameters>> paramPredicates) {
-        this.paramPredicates = requireNonNull(paramPredicates, "paramPredicates");
+        this.paramPredicates.addAll(requireNonNull(paramPredicates, "paramPredicates"));
         return this;
     }
 
@@ -407,7 +412,7 @@ public final class RouteBuilder {
      *     header</li>
      * </ul>
      *
-     * @see ConditionalHeader
+     * @see MatchesHeader
      */
     public RouteBuilder matchesHeaders(String... headerPredicates) {
         return matchesHeaders(ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates")));
@@ -426,19 +431,22 @@ public final class RouteBuilder {
      *     header</li>
      * </ul>
      *
-     * @see ConditionalHeader
+     * @see MatchesHeader
      */
     public RouteBuilder matchesHeaders(Iterable<String> headerPredicates) {
-        this.headerPredicates = RoutingPredicate.copyOfHeaderPredicates(
-                requireNonNull(headerPredicates, "headerPredicates"));
+        this.headerPredicates.addAll(RoutingPredicate.copyOfHeaderPredicates(
+                requireNonNull(headerPredicates, "headerPredicates")));
         return this;
     }
 
     /**
-     * Sets the {@link Route} to accept a request if it the specified {@code predicate} returns {@code true}.
+     * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
+     * {@code true} with the value of the specified {@code headerName} header.
      */
-    public RouteBuilder matchesHeaders(RoutingPredicate<HttpHeaders> predicate) {
-        headerPredicates = ImmutableList.of(requireNonNull(predicate, "predicate"));
+    public RouteBuilder matchesHeaders(CharSequence headerName, Predicate<String> valuePredicate) {
+        requireNonNull(headerName, "headerName");
+        requireNonNull(valuePredicate, "valuePredicate");
+        headerPredicates.add(RoutingPredicate.ofHeaders(headerName, valuePredicate));
         return this;
     }
 
@@ -446,7 +454,7 @@ public final class RouteBuilder {
      * Sets the pre-configured predicates of the {@link HttpHeaders}.
      */
     RouteBuilder matchesHeaders(List<RoutingPredicate<HttpHeaders>> headerPredicates) {
-        this.headerPredicates = requireNonNull(headerPredicates, "headerPredicates");
+        this.headerPredicates.addAll(requireNonNull(headerPredicates, "headerPredicates"));
         return this;
     }
 

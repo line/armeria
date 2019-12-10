@@ -179,11 +179,11 @@ final class DefaultRoute implements Route {
         }
 
         if (!paramPredicates.isEmpty() &&
-            paramPredicates.stream().noneMatch(p -> p.test(routingCtx.params()))) {
+            !paramPredicates.stream().allMatch(p -> p.test(routingCtx.params()))) {
             return RoutingResult.empty();
         }
         if (!headerPredicates.isEmpty() &&
-            headerPredicates.stream().noneMatch(p -> p.test(routingCtx.headers()))) {
+            !headerPredicates.stream().allMatch(p -> p.test(routingCtx.headers()))) {
             return RoutingResult.empty();
         }
 
