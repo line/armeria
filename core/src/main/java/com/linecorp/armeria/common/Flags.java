@@ -301,8 +301,7 @@ public final class Flags {
 
     private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
 
-    private static final boolean VALIDATE_HEADERS =
-            getBoolean("validateHeaders", true);
+    private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
 
     static {
         if (!isEpollAvailable()) {
