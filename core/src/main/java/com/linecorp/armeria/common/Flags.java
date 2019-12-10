@@ -870,7 +870,7 @@ public final class Flags {
      * Enables validation of HTTP headers for dangerous characters like newlines - such characters can be used
      * for injecting arbitrary content into HTTP responses.
      *
-     * <p><strong>DISCLAIMER:</strong>Do not disable this unless you know what you are doing. It is recommended
+     * <p><strong>DISCLAIMER:</strong> Do not disable this unless you know what you are doing. It is recommended
      * to keep this validation enabled to ensure the sanity of responses. However, you may wish to disable the
      * validation to improve performance when you are sure responses are always safe, for example when only
      * HTTP/2 is used, or when you populate headers with known values, and have no chance of using untrusted
