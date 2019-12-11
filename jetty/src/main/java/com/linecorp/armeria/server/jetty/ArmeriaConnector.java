@@ -18,28 +18,17 @@ package com.linecorp.armeria.server.jetty;
 
 import java.io.IOException;
 import java.nio.channels.ServerSocketChannel;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.EventListener;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 
-import javax.annotation.Nullable;
-
-import org.eclipse.jetty.io.ArrayByteBufferPool;
-import org.eclipse.jetty.io.ByteBufferPool;
 import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.EndPoint;
-import org.eclipse.jetty.io.SelectorManager;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.util.component.ContainerLifeCycle;
-import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
-import org.eclipse.jetty.util.thread.Scheduler;
 
 import io.netty.util.concurrent.GlobalEventExecutor;
 
