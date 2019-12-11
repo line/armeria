@@ -53,8 +53,6 @@ final class DefaultRoute implements Route {
 
     private final int complexity;
 
-    private final String cacheKey;
-
     DefaultRoute(PathMapping pathMapping, Set<HttpMethod> methods,
                  Set<MediaType> consumes, Set<MediaType> produces,
                  List<RoutingPredicate<HttpParameters>> paramPredicates,
@@ -89,14 +87,6 @@ final class DefaultRoute implements Route {
             complexity += 1 << 4;
         }
         this.complexity = complexity;
-
-        if (paramPredicates.isEmpty() && headerPredicates.isEmpty()) {
-            cacheKey = meterTag;
-        } else {
-            // The predicates make this route dynamically resolved so we cannot use them as a cache key.
-            cacheKey = generateMeterTag(pathMapping.meterTag(), methods, consumes, produces,
-                                        ImmutableList.of(), ImmutableList.of());
-        }
     }
 
     @Override
@@ -249,11 +239,6 @@ final class DefaultRoute implements Route {
         return produces;
     }
 
-    @Override
-    public String cacheKey() {
-        return cacheKey;
-    }
-
     private static String generateLoggerName(String prefix, Set<HttpMethod> methods,
                                              Set<MediaType> consumes, Set<MediaType> produces,
                                              List<RoutingPredicate<HttpParameters>> paramPredicates,
@@ -281,11 +266,13 @@ final class DefaultRoute implements Route {
         }
         if (!paramPredicates.isEmpty()) {
             name.add("params");
-            name.add(loggerNameJoiner.join(paramPredicates.stream().map(RoutingPredicate::name).iterator()));
+            name.add(loggerNameJoiner.join(
+                    paramPredicates.stream().map(RoutingPredicate::name).sorted().distinct().iterator()));
         }
         if (!headerPredicates.isEmpty()) {
             name.add("headers");
-            name.add(loggerNameJoiner.join(headerPredicates.stream().map(RoutingPredicate::name).iterator()));
+            name.add(loggerNameJoiner.join(
+                    headerPredicates.stream().map(RoutingPredicate::name).sorted().distinct().iterator()));
         }
         return name.toString();
     }
@@ -313,11 +300,13 @@ final class DefaultRoute implements Route {
 
         if (!paramPredicates.isEmpty()) {
             name.add("params");
-            name.add(meterTagJoiner.join(paramPredicates.stream().map(RoutingPredicate::name).iterator()));
+            name.add(meterTagJoiner.join(
+                    paramPredicates.stream().map(RoutingPredicate::name).sorted().distinct().iterator()));
         }
         if (!headerPredicates.isEmpty()) {
             name.add("headers");
-            name.add(meterTagJoiner.join(headerPredicates.stream().map(RoutingPredicate::name).iterator()));
+            name.add(meterTagJoiner.join(
+                    headerPredicates.stream().map(RoutingPredicate::name).sorted().distinct().iterator()));
         }
         return name.toString();
     }

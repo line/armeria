@@ -15,97 +15,51 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.RoutingPredicate.CONTAIN_PATTERN;
-import static com.linecorp.armeria.server.RoutingPredicate.ParsedComparingPredicate.parse;
 import static com.linecorp.armeria.server.RoutingPredicate.ofHeaders;
 import static com.linecorp.armeria.server.RoutingPredicate.ofParams;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.regex.Matcher;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.server.RoutingPredicate.ParsedComparingPredicate;
+import com.linecorp.armeria.common.HttpParameters;
 
 class RoutingPredicateTest {
 
     @Test
     void equal() {
-        final ParsedComparingPredicate p = parse("a=b b");
-        assertThat(p.name).isEqualTo("a");
-        assertThat(p.comparator).isEqualTo("=");
-        assertThat(p.value).isEqualTo("b b");
+        assertThat(parse("a=b b ").name()).isEqualTo("a_eq_b_b_");
     }
 
     @Test
     void notEqual() {
-        final ParsedComparingPredicate p = parse("a!=b b");
-        assertThat(p.name).isEqualTo("a");
-        assertThat(p.comparator).isEqualTo("!=");
-        assertThat(p.value).isEqualTo("b b");
-    }
-
-    @Test
-    void greaterThan() {
-        final ParsedComparingPredicate p = parse("a>1");
-        assertThat(p.name).isEqualTo("a");
-        assertThat(p.comparator).isEqualTo(">");
-        assertThat(p.value).isEqualTo("1");
-    }
-
-    @Test
-    void greaterThanOrEquals() {
-        final ParsedComparingPredicate p = parse("a>=1");
-        assertThat(p.name).isEqualTo("a");
-        assertThat(p.comparator).isEqualTo(">=");
-        assertThat(p.value).isEqualTo("1");
-    }
-
-    @Test
-    void lessThan() {
-        final ParsedComparingPredicate p = parse("a<1");
-        assertThat(p.name).isEqualTo("a");
-        assertThat(p.comparator).isEqualTo("<");
-        assertThat(p.value).isEqualTo("1");
-    }
-
-    @Test
-    void lessThanOrEquals() {
-        final ParsedComparingPredicate p = parse("a<=1");
-        assertThat(p.name).isEqualTo("a");
-        assertThat(p.comparator).isEqualTo("<=");
-        assertThat(p.value).isEqualTo("1");
+        assertThat(parse("a!= b b").name()).isEqualTo("a_ne__b_b");
     }
 
     @Test
     void contain() {
-        final Matcher m = CONTAIN_PATTERN.matcher("a");
-        assertThat(m.matches()).isTrue();
-        assertThat(m.group(1)).isEqualTo("");
-        assertThat(m.group(2)).isEqualTo("a");
+        assertThat(parse("a").name()).isEqualTo("a");
     }
 
     @Test
     void doesNotContain() {
-        final Matcher m = CONTAIN_PATTERN.matcher("!a");
-        assertThat(m.matches()).isTrue();
-        assertThat(m.group(1)).isEqualTo("!");
-        assertThat(m.group(2)).isEqualTo("a");
+        assertThat(parse("!a").name()).isEqualTo("not_a");
     }
 
     @Test
     void preserveSpacesInValue() {
-        assertThat(parse("a=b")).isNotEqualTo(parse("a= b"));
-        assertThat(parse("a= b")).isNotEqualTo(parse("a=b "));
-        assertThat(parse("a!= b")).isNotEqualTo(parse("a!=b "));
+        assertThat(parse("a=b").name()).isNotEqualTo(parse("a= b").name());
+        assertThat(parse("a= b").name()).isNotEqualTo(parse("a=b ").name());
+        assertThat(parse("a!= b").name()).isNotEqualTo(parse("a!=b ").name());
     }
 
     @Test
     void notPreserveSpacesInName() {
-        assertThat(parse("a=b")).isEqualTo(parse("a =b"));
-        assertThat(parse(" a=b")).isEqualTo(parse("a =b"));
-        assertThat(parse(" a!=b")).isEqualTo(parse("a !=b"));
+        assertThat(parse("a=b").name()).isEqualTo(parse("a =b").name());
+        assertThat(parse(" a=b").name()).isEqualTo(parse("a =b").name());
+        assertThat(parse(" a!=b").name()).isEqualTo(parse("a !=b").name());
     }
 
     @Test
@@ -116,5 +70,10 @@ class RoutingPredicateTest {
         assertThatThrownBy(() -> ofParams("!a=b")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> ofParams("!!a")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> ofParams("!")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static RoutingPredicate<HttpParameters> parse(String expression) {
+        return RoutingPredicate.of(expression, Function.identity(),
+                                   name -> params -> true, (name, value) -> params -> true);
     }
 }

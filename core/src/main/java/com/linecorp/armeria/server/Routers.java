@@ -130,9 +130,18 @@ public final class Routers {
      * Returns {@link Route}s that must not be cached.
      */
     private static Set<Route> resolveNoCacheRoutes(List<Route> allRoutes) {
-        final Map<String, List<Route>> dup = new HashMap<>();
-        allRoutes.forEach(route -> dup.computeIfAbsent(route.cacheKey(), unused -> new ArrayList<>())
-                                      .add(route));
+        final Map<List<Object>, List<Route>> dup = new HashMap<>();
+        allRoutes.forEach(route -> {
+            final List<Object> key = ImmutableList.builder()
+                                                  .add(route.pathType())
+                                                  .addAll(route.paths())
+                                                  .addAll(route.methods())
+                                                  .addAll(route.consumes())
+                                                  .addAll(route.produces())
+                                                  .build();
+            dup.computeIfAbsent(key, unused -> new ArrayList<>())
+               .add(route);
+        });
         return dup.values().stream()
                   .filter(routes -> routes.size() > 1)  // duplicated routes
                   .flatMap(Collection::stream).collect(toImmutableSet());

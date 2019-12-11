@@ -17,10 +17,10 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -122,7 +122,7 @@ final class RouteCache {
         private final Function<V, Route> routeResolver;
         private final Cache<RoutingContext, V> findCache;
         private final Cache<RoutingContext, List<V>> findAllCache;
-        private final Set<Integer> noCacheRoutes;
+        private final IdentityHashMap<Route, Route> noCacheRoutes;
 
         CachingRouter(Router<V> delegate, Function<V, Route> routeResolver,
                       Cache<RoutingContext, V> findCache,
@@ -132,8 +132,10 @@ final class RouteCache {
             this.routeResolver = requireNonNull(routeResolver, "routeResolver");
             this.findCache = requireNonNull(findCache, "findCache");
             this.findAllCache = requireNonNull(findAllCache, "findAllCache");
-            this.noCacheRoutes = requireNonNull(noCacheRoutes, "noCacheRoutes")
-                    .stream().map(Route::hashCode).collect(toImmutableSet());
+
+            final IdentityHashMap<Route, Route> map = new IdentityHashMap<>();
+            requireNonNull(noCacheRoutes, "noCacheRoutes").forEach(r -> map.put(r, r));
+            this.noCacheRoutes = map;
         }
 
         @Override
@@ -148,7 +150,7 @@ final class RouteCache {
             }
 
             final Routed<V> result = delegate.find(routingCtx);
-            if (result.isPresent() && !noCacheRoutes.contains(result.route().hashCode())) {
+            if (result.isPresent() && !noCacheRoutes.containsKey(result.route())) {
                 findCache.put(routingCtx, result.value());
             }
             return result;

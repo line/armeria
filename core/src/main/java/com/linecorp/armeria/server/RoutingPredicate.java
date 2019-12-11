@@ -17,11 +17,12 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.server.RoutingPredicate.ParsedComparingPredicate.parse;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,9 +38,11 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
 
+import io.netty.util.AsciiString;
+
 /**
  * A {@link Predicate} to evaluate whether a request can be accepted by a service method.
- * Currently predicates for {@link HttpHeaders} and HTTP parameters are supported.
+ * Currently predicates for {@link HttpHeaders} and {@link HttpParameters} are supported.
  *
  * @param <T> the type of the object to be tested
  */
@@ -59,9 +62,9 @@ final class RoutingPredicate<T> {
      *     parameter</li>
      * </ul>
      */
-    @VisibleForTesting
-    static final Pattern CONTAIN_PATTERN = Pattern.compile("^\\s*([!]?)([^\\s=><!]+)\\s*$");
+    private static final Pattern CONTAIN_PATTERN = Pattern.compile("^\\s*([!]?)([^\\s=><!]+)\\s*$");
     private static final Pattern COMPARE_PATTERN = Pattern.compile("^\\s*([^\\s!><=]+)\\s*([><!]?=|>|<)(.*)$");
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s");
 
     static List<RoutingPredicate<HttpHeaders>> copyOfHeaderPredicates(Iterable<String> predicates) {
         return StreamSupport.stream(predicates.spliterator(), false)
@@ -73,62 +76,67 @@ final class RoutingPredicate<T> {
                             .map(RoutingPredicate::ofParams).collect(toImmutableList());
     }
 
-    static RoutingPredicate<HttpHeaders> ofHeaders(CharSequence headerName, Predicate<String> valuePredicate) {
-        return new RoutingPredicate<>(headerName,
-                                      headers -> headers.getAll(headerName).stream().anyMatch(valuePredicate));
+    static RoutingPredicate<HttpHeaders> ofHeaders(CharSequence headerName,
+                                                   Predicate<String> valuePredicate) {
+        final AsciiString name = AsciiString.of(headerName);
+        return new RoutingPredicate<>(headerName, headers ->
+                headers.getAll(name).stream().anyMatch(valuePredicate));
     }
 
     @VisibleForTesting
     static RoutingPredicate<HttpHeaders> ofHeaders(String headersPredicate) {
         requireNonNull(headersPredicate, "headersPredicate");
-        final Matcher m = CONTAIN_PATTERN.matcher(headersPredicate);
-        if (m.matches()) {
-            final CharSequence headerName = m.group(2);
-            final Predicate<HttpHeaders> predicate = headers -> headers.contains(headerName);
-            return new RoutingPredicate<>(headersPredicate,
-                                          "!".equals(m.group(1)) ? predicate.negate() : predicate);
-        }
-
-        final ParsedComparingPredicate parsed = parse(headersPredicate);
-        final Predicate<HttpHeaders> predicate;
-        if ("=".equals(parsed.comparator)) {
-            predicate = headers -> headers.getAll(parsed.name).stream()
-                                          .anyMatch(parsed.value::equals);
-        } else {
-            assert "!=".equals(parsed.comparator);
-            predicate = headers -> headers.getAll(parsed.name).stream()
-                                          .noneMatch(parsed.value::equals);
-        }
-        return new RoutingPredicate<>(headersPredicate, predicate);
+        return of(headersPredicate, AsciiString::of, name -> headers -> headers.contains(name),
+                  (name, value) -> headers -> headers.getAll(name).stream().anyMatch(value::equals));
     }
 
-    static RoutingPredicate<HttpParameters> ofParams(String paramName, Predicate<String> valuePredicate) {
-        return new RoutingPredicate<>(paramName,
-                                      params -> params.getAll(paramName).stream().anyMatch(valuePredicate));
+    static RoutingPredicate<HttpParameters> ofParams(String paramName,
+                                                     Predicate<String> valuePredicate) {
+        return new RoutingPredicate<>(paramName, params ->
+                params.getAll(paramName).stream().anyMatch(valuePredicate));
     }
 
     @VisibleForTesting
     static RoutingPredicate<HttpParameters> ofParams(String paramsPredicate) {
         requireNonNull(paramsPredicate, "paramsPredicate");
-        final Matcher m = CONTAIN_PATTERN.matcher(paramsPredicate);
-        if (m.matches()) {
-            final String paramName = m.group(2);
-            final Predicate<HttpParameters> predicate = params -> params.contains(paramName);
-            return new RoutingPredicate<>(paramsPredicate,
-                                          "!".equals(m.group(1)) ? predicate.negate() : predicate);
+        return of(paramsPredicate, Function.identity(), name -> params -> params.contains(name),
+                  (name, value) -> params -> params.getAll(name).stream().anyMatch(value::equals));
+    }
+
+    @VisibleForTesting
+    static <T, U> RoutingPredicate<T> of(String predicateExpr,
+                                         Function<String, U> nameConverter,
+                                         Function<U, Predicate<T>> containsPredicateFactory,
+                                         BiFunction<U, String, Predicate<T>> equalsPredicateFactory) {
+        final Matcher containMatcher = CONTAIN_PATTERN.matcher(predicateExpr);
+        if (containMatcher.matches()) {
+            final U name = nameConverter.apply(containMatcher.group(2));
+            final Predicate<T> predicate = containsPredicateFactory.apply(name);
+            if ("!".equals(containMatcher.group(1))) {
+                return new RoutingPredicate<>("not_" + containMatcher.group(2), predicate.negate());
+            } else {
+                return new RoutingPredicate<>(predicateExpr, predicate);
+            }
         }
 
-        final ParsedComparingPredicate parsed = parse(paramsPredicate);
-        final Predicate<HttpParameters> predicate;
-        if ("=".equals(parsed.comparator)) {
-            predicate = params -> params.getAll(parsed.name).stream()
-                                        .anyMatch(parsed.value::equals);
+        final Matcher compareMatcher = COMPARE_PATTERN.matcher(predicateExpr);
+        checkArgument(compareMatcher.matches(),
+                      "Invalid predicate: %s (expected: '%s' or '%s')",
+                      predicateExpr, CONTAIN_PATTERN.pattern(), COMPARE_PATTERN.pattern());
+        assert compareMatcher.groupCount() == 3;
+
+        final String name = compareMatcher.group(1);
+        final String comparator = compareMatcher.group(2);
+        final String value = compareMatcher.group(3);
+
+        final Predicate<T> predicate = equalsPredicateFactory.apply(nameConverter.apply(name), value);
+        final String noWsValue = WHITESPACE_PATTERN.matcher(value).replaceAll("_");
+        if ("=".equals(comparator)) {
+            return new RoutingPredicate<>(name + "_eq_" + noWsValue, predicate);
         } else {
-            assert "!=".equals(parsed.comparator);
-            predicate = params -> params.getAll(parsed.name).stream()
-                                        .noneMatch(parsed.value::equals);
+            assert "!=".equals(comparator);
+            return new RoutingPredicate<>(name + "_ne_" + noWsValue, predicate.negate());
         }
-        return new RoutingPredicate<>(paramsPredicate, predicate);
     }
 
     private final CharSequence name;
@@ -139,9 +147,6 @@ final class RoutingPredicate<T> {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
-    /**
-     * Returns the name of this predicate. This may be the predicate that a user specified.
-     */
     CharSequence name() {
         return name;
     }
@@ -167,70 +172,30 @@ final class RoutingPredicate<T> {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof RoutingPredicate)) {
+            return false;
+        }
+
+        final RoutingPredicate<?> that = (RoutingPredicate<?>) o;
+        return name.equals(that.name) &&
+               Objects.equals(delegate, that.delegate);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, delegate);
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("name", name)
                           .add("delegate", delegate)
                           .toString();
-    }
-
-    @VisibleForTesting
-    static final class ParsedComparingPredicate {
-
-        @VisibleForTesting
-        static ParsedComparingPredicate parse(CharSequence predicate) {
-            final Matcher compareMatcher = COMPARE_PATTERN.matcher(predicate);
-            checkArgument(compareMatcher.matches(),
-                          "Invalid predicate: %s (expected: '%s' or '%s')",
-                          predicate, CONTAIN_PATTERN.pattern(), COMPARE_PATTERN.pattern());
-            assert compareMatcher.groupCount() == 3;
-
-            final String name = compareMatcher.group(1);
-            final String comparator = compareMatcher.group(2);
-            final String value = compareMatcher.group(3);
-            assert name != null && comparator != null && value != null;
-
-            return new ParsedComparingPredicate(name, comparator, value);
-        }
-
-        final String name;
-        final String comparator;
-        final String value;
-
-        private ParsedComparingPredicate(String name, String comparator, String value) {
-            this.name = name;
-            this.comparator = comparator;
-            this.value = value;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-
-            if (!(o instanceof ParsedComparingPredicate)) {
-                return false;
-            }
-
-            final ParsedComparingPredicate that = (ParsedComparingPredicate) o;
-            return name.equals(that.name) &&
-                   Objects.equals(comparator, that.comparator) &&
-                   Objects.equals(value, that.value);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(name, comparator, value);
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this).omitNullValues()
-                              .add("name", name)
-                              .add("comparator", comparator)
-                              .add("value", value)
-                              .toString();
-        }
     }
 }
