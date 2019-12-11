@@ -17,11 +17,13 @@ package com.linecorp.armeria.server.dropwizard;
 
 import java.util.Objects;
 
+import javax.annotation.Nullable;
 import javax.validation.Valid;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -35,6 +37,7 @@ public class ManagedArmeriaServer<T extends Configuration> implements Managed {
 
     private final @Valid T configuration;
     private final ArmeriaServerConfigurator serverConfigurator;
+    @Nullable
     private Server server;
 
     /**
@@ -67,7 +70,13 @@ public class ManagedArmeriaServer<T extends Configuration> implements Managed {
             logger.debug("Built server {}", server);
         }
         logger.info("Starting Armeria Server");
-        server.start().thenRunAsync(() -> logger.info("Started Armeria Server"));
+        try {
+            server.start().join();
+        } catch (Throwable cause) {
+            Exceptions.throwUnsafely(Exceptions.peel(cause));
+        }
+
+        logger.info("Started Armeria Server");
     }
 
     @Override

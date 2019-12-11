@@ -19,7 +19,8 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
@@ -43,6 +44,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpConnectorFactory;
@@ -138,10 +140,8 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
     @Nullable
     private String defaultHostname;
     @JsonIgnore
+    @Nullable
     private transient ServerBuilder serverBuilder;
-
-    public ArmeriaServerFactory() {
-    }
 
     /**
      * Sets up the Armeria ServerBuilder with values from the Dropwizard Configuration.
@@ -153,8 +153,14 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
     @VisibleForTesting
     ServerBuilder decorateServerBuilderFromConfig(final ServerBuilder serverBuilder) {
         Objects.requireNonNull(serverBuilder);
+        final ScheduledThreadPoolExecutor blockingTaskExecutor = new ScheduledThreadPoolExecutor(
+                getMaxThreads(),
+                ThreadFactories.newThreadFactory("armeria-dropwizard-blocking-tasks", true));
+        blockingTaskExecutor.setKeepAliveTime(60, TimeUnit.SECONDS);
+        blockingTaskExecutor.allowCoreThreadTimeOut(true);
+
         serverBuilder.maxNumConnections(getMaxNumConnections())
-                     .blockingTaskExecutor(Executors.newFixedThreadPool(getMaxThreads()), true)
+                     .blockingTaskExecutor(blockingTaskExecutor, true)
                      .maxRequestLength(maxRequestLength.toBytes())
                      .idleTimeoutMillis(getIdleThreadTimeout().toMilliseconds())
                      .gracefulShutdownTimeout(
@@ -182,7 +188,7 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
         return verboseResponses;
     }
 
-    private void setVerboseResponses(boolean verboseResponses) {
+    public void setVerboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
     }
 
@@ -304,17 +310,18 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
                                                   @Nullable final ConnectorFactory connector,
                                                   @Nullable final MetricRegistry metricRegistry) {
         logger.debug("Building Armeria Server");
-        final JettyService jettyService = getJettyService(server);
-        final ServerBuilder serverBuilder = com.linecorp.armeria.server.Server
-                .builder()
-                .serviceUnder("/", jettyService);
+        final ServerBuilder serverBuilder = com.linecorp.armeria.server.Server.builder();
         try {
-            decorateServerBuilder(serverBuilder, this.connector, accessLogWriter,
-                                  DropwizardMeterRegistries.newRegistry(metricRegistry));
+            decorateServerBuilder(
+                    serverBuilder, this.connector, accessLogWriter,
+                    metricRegistry != null ? DropwizardMeterRegistries.newRegistry(metricRegistry) : null);
         } catch (SSLException | CertificateException e) {
             logger.error("Unable to define TLS Server", e);
             // TODO: Throw an exception?
         }
-        return decorateServerBuilderFromConfig(serverBuilder);
+
+        final JettyService jettyService = getJettyService(server);
+        return decorateServerBuilderFromConfig(serverBuilder)
+                .serviceUnder("/", jettyService);
     }
 }

@@ -16,8 +16,11 @@
 
 package com.linecorp.armeria.server.jetty;
 
+import java.io.IOException;
+import java.nio.channels.ServerSocketChannel;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EventListener;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -28,53 +31,38 @@ import org.eclipse.jetty.io.ArrayByteBufferPool;
 import org.eclipse.jetty.io.ByteBufferPool;
 import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.EndPoint;
+import org.eclipse.jetty.io.SelectorManager;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.component.ContainerLifeCycle;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 import org.eclipse.jetty.util.thread.Scheduler;
 
 import io.netty.util.concurrent.GlobalEventExecutor;
 
-final class ArmeriaConnector extends ContainerLifeCycle implements Connector {
+final class ArmeriaConnector extends ServerConnector {
 
     private static final String PROTOCOL_NAME = "armeria";
     private static final List<String> PROTOCOL_NAMES = Collections.singletonList(PROTOCOL_NAME);
 
-    private final Server server;
+    private final com.linecorp.armeria.server.Server armeriaServer;
     private final HttpConfiguration httpConfig;
-    private final Executor executor;
-    private final Scheduler scheduler;
-    private final ByteBufferPool byteBufferPool;
-    private final ArmeriaConnectionFactory connectionFactory;
-    private final Collection<ConnectionFactory> connectionFactories;
 
     private volatile boolean isShutdown;
 
-    ArmeriaConnector(Server server) {
-        this.server = server;
-        executor = server.getThreadPool();
+    ArmeriaConnector(Server server, com.linecorp.armeria.server.Server armeriaServer) {
+        super(server, 0, 0, new ArmeriaConnectionFactory());
+
+        this.armeriaServer = armeriaServer;
 
         final HttpConfiguration httpConfig = server.getBean(HttpConfiguration.class);
         this.httpConfig = httpConfig != null ? httpConfig : new HttpConfiguration();
-
-        final Scheduler scheduler = server.getBean(Scheduler.class);
-        this.scheduler = scheduler != null ? scheduler : new ScheduledExecutorScheduler();
-
-        final ByteBufferPool byteBufferPool = server.getBean(ByteBufferPool.class);
-        this.byteBufferPool = byteBufferPool != null ? byteBufferPool : new ArrayByteBufferPool();
-
-        addBean(server, false);
-        addBean(executor);
-        unmanage(executor);
         addBean(this.httpConfig);
-        addBean(this.scheduler);
-        addBean(this.byteBufferPool);
 
-        connectionFactory = new ArmeriaConnectionFactory();
-        connectionFactories = Collections.singleton(connectionFactory);
+        setDefaultProtocol(PROTOCOL_NAME);
     }
 
     @Override
@@ -83,8 +71,22 @@ final class ArmeriaConnector extends ContainerLifeCycle implements Connector {
     }
 
     @Override
-    public Server getServer() {
-        return server;
+    public String getHost() {
+        return armeriaServer.defaultHostname();
+    }
+
+    @Override
+    public int getPort() {
+        return getLocalPort();
+    }
+
+    @Override
+    public int getLocalPort() {
+        try {
+            return armeriaServer.activeLocalPort();
+        } catch (IllegalStateException e) {
+            return -1;
+        }
     }
 
     public HttpConfiguration getHttpConfiguration() {
@@ -92,62 +94,36 @@ final class ArmeriaConnector extends ContainerLifeCycle implements Connector {
     }
 
     @Override
-    public Executor getExecutor() {
-        return executor;
-    }
-
-    @Override
-    public Scheduler getScheduler() {
-        return scheduler;
-    }
-
-    @Override
-    public ByteBufferPool getByteBufferPool() {
-        return byteBufferPool;
-    }
-
-    @Nullable
-    @Override
-    public ConnectionFactory getConnectionFactory(String nextProtocol) {
-        return PROTOCOL_NAME.equals(nextProtocol) ? connectionFactory : null;
-    }
-
-    @Nullable
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> T getConnectionFactory(Class<T> factoryType) {
-        return factoryType == ArmeriaConnectionFactory.class ? (T) connectionFactory : null;
-    }
-
-    @Override
-    public ConnectionFactory getDefaultConnectionFactory() {
-        return connectionFactory;
-    }
-
-    @Override
-    public Collection<ConnectionFactory> getConnectionFactories() {
-        return connectionFactories;
-    }
-
-    @Override
-    public List<String> getProtocols() {
-        return PROTOCOL_NAMES;
-    }
-
-    @Override
-    public long getIdleTimeout() {
-        return 0;
-    }
-
-    @Override
-    public Collection<EndPoint> getConnectedEndPoints() {
-        return Collections.emptyList();
-    }
-
-    @Override
     public String getName() {
-        return "armeria";
+        return PROTOCOL_NAME;
     }
+
+    @Override
+    public boolean isOpen() {
+        return !isShutdown();
+    }
+
+    @Override
+    protected void doStart() {}
+
+    @Override
+    protected void doStop() {}
+
+    @Override
+    public void open() {}
+
+    @Override
+    public void open(ServerSocketChannel acceptChannel) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected ServerSocketChannel openAcceptChannel() throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void close() {}
 
     @Override
     public Future<Void> shutdown() {
