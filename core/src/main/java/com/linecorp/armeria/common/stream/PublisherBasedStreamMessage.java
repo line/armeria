@@ -35,6 +35,7 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -52,7 +53,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             PublisherBasedStreamMessage.class, AbortableSubscriber.class, "subscriber");
 
     private final Publisher<? extends T> publisher;
-    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingCompletableFuture<>();
     @Nullable
     @SuppressWarnings("unused") // Updated only via subscriberUpdater.
     private volatile AbortableSubscriber subscriber;
