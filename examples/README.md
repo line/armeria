@@ -4,7 +4,7 @@
   - Learn how to write an HTTP service using annotations.
   - See [Annotated services](https://line.github.io/armeria/server-annotated-service.html).
 
-- `grpc-service`
+- `grpc`
   - Learn how to write a gRPC service with Armeria gRPC module.
   - See [Running a gRPC service](https://line.github.io/armeria/server-grpc.html) and
     [Calling a gRPC service](https://line.github.io/armeria/client-grpc.html).
