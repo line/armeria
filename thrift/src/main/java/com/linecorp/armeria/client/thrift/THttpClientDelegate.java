@@ -62,6 +62,7 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
 import com.linecorp.armeria.internal.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
@@ -108,7 +109,9 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             }
         } catch (Throwable cause) {
             reply.completeExceptionally(cause);
-            return reply;
+            try (SafeCloseable ignored = ctx.push()) {
+                return reply;
+            }
         }
 
         try {
