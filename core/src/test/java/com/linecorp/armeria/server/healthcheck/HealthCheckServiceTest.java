@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.healthcheck;
 import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -109,12 +110,14 @@ class HealthCheckServiceTest {
     void ensureNoPendingResponses() {
         server.server().serviceConfigs().forEach(cfg -> {
             cfg.service().as(HealthCheckService.class).ifPresent(service -> {
-                if (service.pendingHealthyResponses != null) {
-                    assertThat(service.pendingHealthyResponses).isEmpty();
-                }
-                if (service.pendingUnhealthyResponses != null) {
-                    assertThat(service.pendingUnhealthyResponses).isEmpty();
-                }
+                await().untilAsserted(() -> {
+                    if (service.pendingHealthyResponses != null) {
+                        assertThat(service.pendingHealthyResponses).isEmpty();
+                    }
+                    if (service.pendingUnhealthyResponses != null) {
+                        assertThat(service.pendingUnhealthyResponses).isEmpty();
+                    }
+                });
             });
         });
     }

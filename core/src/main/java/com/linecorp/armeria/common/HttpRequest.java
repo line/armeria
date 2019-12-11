@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
@@ -426,7 +427,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * the trailers of the request is received fully.
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate() {
-        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingCompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
         subscribe(aggregator);
         return future;
@@ -438,7 +439,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingCompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
         subscribe(aggregator, executor);
         return future;
@@ -452,7 +453,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingCompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
         subscribe(aggregator, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
@@ -468,7 +469,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingCompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
         subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;

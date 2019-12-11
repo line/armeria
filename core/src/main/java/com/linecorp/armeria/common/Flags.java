@@ -21,6 +21,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
 import java.util.function.Predicate;
@@ -51,6 +52,7 @@ import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
@@ -300,6 +302,11 @@ public final class Flags {
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
     private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
+
+    private static final boolean REPORT_BLOCKED_EVENT_LOOP =
+            getBoolean("reportBlockedEventLoop", true);
+
+    private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
 
     static {
         if (!isEpollAvailable()) {
@@ -862,6 +869,42 @@ public final class Flags {
      */
     public static boolean useJdkDnsResolver() {
         return USE_JDK_DNS_RESOLVER;
+    }
+
+    /**
+     * Returns whether {@link CompletableFuture}s returned by Armeria methods log a warning if
+     * {@link CompletableFuture#join()} or {@link CompletableFuture#get()} are called from an event loop thread.
+     * Blocking an event loop thread in this manner reduces performance significantly, possibly causing
+     * deadlocks, so it should be avoided at all costs (e.g. using {@code thenApply()} type methods to execute
+     * asynchronously or running the logic using {@link ServiceRequestContext#blockingTaskExecutor()}.
+     *
+     * <p>This flag is enabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.reportBlockedEventLoop=false} JVM option
+     * to disable it.
+     */
+    public static boolean reportBlockedEventLoop() {
+        return REPORT_BLOCKED_EVENT_LOOP;
+    }
+
+    /**
+     * Enables validation of HTTP headers for dangerous characters like newlines - such characters can be used
+     * for injecting arbitrary content into HTTP responses.
+     *
+     * <p><strong>DISCLAIMER:</strong> Do not disable this unless you know what you are doing. It is recommended
+     * to keep this validation enabled to ensure the sanity of responses. However, you may wish to disable the
+     * validation to improve performance when you are sure responses are always safe, for example when only
+     * HTTP/2 is used, or when you populate headers with known values, and have no chance of using untrusted
+     * ones.
+     *
+     * <p>See <a href="https://github.com/line/armeria/security/advisories/GHSA-35fr-h7jr-hh86">CWE-113</a> for
+     * more details on the security implications of this flag.
+     *
+     * <p>This flag is enabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.validateHeaders=false} JVM option
+     * to disable it.
+     */
+    public static boolean validateHeaders() {
+        return VALIDATE_HEADERS;
     }
 
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
