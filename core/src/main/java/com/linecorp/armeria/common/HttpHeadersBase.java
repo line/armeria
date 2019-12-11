@@ -81,6 +81,7 @@ class HttpHeadersBase extends StringMultimap<CharSequence, AsciiString> implemen
      */
     HttpHeadersBase(HttpHeadersBase headers, boolean shallowCopy) {
         super(headers, shallowCopy);
+        endOfStream = headers.endOfStream;
     }
 
     /**
@@ -89,6 +90,7 @@ class HttpHeadersBase extends StringMultimap<CharSequence, AsciiString> implemen
     HttpHeadersBase(HttpHeaderGetters headers) {
         super(headers);
         assert !(headers instanceof HttpHeadersBase);
+        endOfStream = headers.isEndOfStream();
     }
 
     @Override
@@ -278,7 +280,7 @@ class HttpHeadersBase extends StringMultimap<CharSequence, AsciiString> implemen
             return false;
         }
 
-        return super.equals(o);
+        return endOfStream == ((HttpHeaderGetters) o).isEndOfStream() && super.equals(o);
     }
 
     @Override
