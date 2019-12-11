@@ -306,6 +306,8 @@ public final class Flags {
     private static final boolean REPORT_BLOCKED_EVENT_LOOP =
             getBoolean("reportBlockedEventLoop", true);
 
+    private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
+
     static {
         if (!isEpollAvailable()) {
             final Throwable cause = Epoll.unavailabilityCause();
@@ -882,6 +884,27 @@ public final class Flags {
      */
     public static boolean reportBlockedEventLoop() {
         return REPORT_BLOCKED_EVENT_LOOP;
+    }
+
+    /**
+     * Enables validation of HTTP headers for dangerous characters like newlines - such characters can be used
+     * for injecting arbitrary content into HTTP responses.
+     *
+     * <p><strong>DISCLAIMER:</strong> Do not disable this unless you know what you are doing. It is recommended
+     * to keep this validation enabled to ensure the sanity of responses. However, you may wish to disable the
+     * validation to improve performance when you are sure responses are always safe, for example when only
+     * HTTP/2 is used, or when you populate headers with known values, and have no chance of using untrusted
+     * ones.
+     *
+     * <p>See <a href="https://github.com/line/armeria/security/advisories/GHSA-35fr-h7jr-hh86">CWE-113</a> for
+     * more details on the security implications of this flag.
+     *
+     * <p>This flag is enabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.validateHeaders=false} JVM option
+     * to disable it.
+     */
+    public static boolean validateHeaders() {
+        return VALIDATE_HEADERS;
     }
 
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
