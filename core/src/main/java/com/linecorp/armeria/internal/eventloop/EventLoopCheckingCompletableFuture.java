@@ -66,10 +66,10 @@ public final class EventLoopCheckingCompletableFuture<T> extends CompletableFutu
         }
         final Thread thread = Thread.currentThread();
         if (thread instanceof NonBlocking && REPORTED_THREADS.add(thread)) {
-            logger.warn("Calling a blocking method on CompletableFuture from an event loop thread. You " +
-                        "should never do this as this will usually result in significantly reduced " +
-                        "performance of the server, generally crippling its ability to handle high load, or " +
-                        "even result in deadlock which cannot be recovered from. Use " +
+            logger.warn("Calling a blocking method on CompletableFuture from an event loop or non-blocking " +
+                        "thread. You should never do this as this will usually result in significantly " +
+                        "reduced performance of the server, generally crippling its ability to handle high " +
+                        "load, or even result in deadlock which cannot be recovered from. Use " +
                         "ServiceRequestContext.blockingExecutor to run this logic instead or switch to using " +
                         "asynchronous methods like thenApply. If you really believe it is fine to block the " +
                         "event loop like this, you can disable this log message by specifying the " +
