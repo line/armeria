@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
  * @see QueryParams#toBuilder()
  */
 public interface QueryParamsBuilder extends QueryParamGetters {
+
     /**
      * Returns a newly created {@link QueryParams} with the entries in this builder.
      */
@@ -225,7 +226,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * @return {@code this}
      * @throws IllegalArgumentException if {@code params == this}.
      */
-    QueryParamsBuilder add(Iterable<? extends Entry<String, String>> params);
+    QueryParamsBuilder add(Iterable<? extends Entry<? extends String, String>> params);
 
     /**
      * Adds a new parameter. The specified parameter value is converted into a {@link String}, as explained
@@ -277,7 +278,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * @return {@code this}
      * @throws IllegalArgumentException if {@code params == this}.
      */
-    QueryParamsBuilder addObject(Iterable<? extends Entry<String, ?>> params);
+    QueryParamsBuilder addObject(Iterable<? extends Entry<? extends String, ?>> params);
 
     /**
      * Adds a new parameter.
@@ -372,7 +373,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * @param parameters the parameters used to set the parameter values
      * @return {@code this}
      */
-    QueryParamsBuilder set(Iterable<? extends Entry<String, String>> parameters);
+    QueryParamsBuilder set(Iterable<? extends Entry<? extends String, String>> parameters);
 
     /**
      * Copies the entries missing in this parameters from the specified parameters.
@@ -387,7 +388,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      *
      * @return {@code this}
      */
-    QueryParamsBuilder setIfAbsent(Iterable<? extends Entry<String, String>> parameters);
+    QueryParamsBuilder setIfAbsent(Iterable<? extends Entry<? extends String, String>> parameters);
 
     /**
      * Sets a new parameter. Any existing parameters with the specified name are removed. The specified
@@ -444,7 +445,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * @param params the parameters used to set the values in this instance
      * @return {@code this}
      */
-    QueryParamsBuilder setObject(Iterable<? extends Entry<String, ?>> params);
+    QueryParamsBuilder setObject(Iterable<? extends Entry<? extends String, ?>> params);
 
     /**
      * Sets a parameter with the specified {@code name} to {@code value}. This will remove all previous values

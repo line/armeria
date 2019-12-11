@@ -30,7 +30,7 @@ import com.google.common.collect.Streams;
 /**
  * Provides the getter methods to {@link QueryParams} and {@link QueryParamsBuilder}.
  */
-interface QueryParamGetters extends Iterable<Entry<String, String>> {
+interface QueryParamGetters extends StringMultimapGetters<String, String> {
 
     /**
      * Returns the value of a parameter with the specified {@code name}. If there are more than one value for
@@ -39,6 +39,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param name the parameter name
      * @return the first parameter value if found. {@code null} if there is no such parameter
      */
+    @Override
     @Nullable
     String get(String name);
 
@@ -50,6 +51,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param defaultValue the default value
      * @return the first parameter value or {@code defaultValue} if there is no such parameter
      */
+    @Override
     String get(String name, String defaultValue);
 
     /**
@@ -59,6 +61,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param name the parameter name
      * @return a {@link List} of parameter values or an empty {@link List} if there is no such parameter.
      */
+    @Override
     List<String> getAll(String name);
 
     /**
@@ -69,6 +72,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the {@code int} value of the first value in insertion order or {@code null} if there is no such
      *         parameter or it can't be converted to {@code int}.
      */
+    @Override
     @Nullable
     Integer getInt(String name);
 
@@ -81,6 +85,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the {@code int} value of the first value in insertion order or {@code defaultValue} if there is
      *         no such parameter or it can't be converted to {@code int}.
      */
+    @Override
     int getInt(String name, int defaultValue);
 
     /**
@@ -91,6 +96,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the {@code long} value of the first value in insertion order or {@code null} if there is no such
      *         parameter or it can't be converted to {@code long}.
      */
+    @Override
     @Nullable
     Long getLong(String name);
 
@@ -103,6 +109,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the {@code long} value of the first value in insertion order or {@code defaultValue} if there is
      *         no such parameter or it can't be converted to {@code long}.
      */
+    @Override
     long getLong(String name, long defaultValue);
 
     /**
@@ -113,6 +120,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the {@code float} value of the first value in insertion order or {@code null} if there is no
      *         such parameter or it can't be converted to {@code float}.
      */
+    @Override
     @Nullable
     Float getFloat(String name);
 
@@ -125,6 +133,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the {@code float} value of the first value in insertion order or {@code defaultValue} if there
      *         is no such parameter or it can't be converted to {@code float}.
      */
+    @Override
     float getFloat(String name, float defaultValue);
 
     /**
@@ -135,6 +144,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the {@code double} value of the first value in insertion order or {@code null} if there is no
      *         such parameter or it can't be converted to {@code double}.
      */
+    @Override
     @Nullable
     Double getDouble(String name);
 
@@ -147,6 +157,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the {@code double} value of the first value in insertion order or {@code defaultValue} if there
      *         is no such parameter or it can't be converted to {@code double}.
      */
+    @Override
     double getDouble(String name, double defaultValue);
 
     /**
@@ -157,6 +168,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the milliseconds value of the first value in insertion order or {@code null} if there is no such
      *         parameter or it can't be converted to milliseconds.
      */
+    @Override
     @Nullable
     Long getTimeMillis(String name);
 
@@ -169,6 +181,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @return the milliseconds value of the first value in insertion order or {@code defaultValue} if there is
      *         no such parameter or it can't be converted to milliseconds.
      */
+    @Override
     long getTimeMillis(String name, long defaultValue);
 
     /**
@@ -176,6 +189,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      *
      * @param name the parameter name
      */
+    @Override
     boolean contains(String name);
 
     /**
@@ -184,6 +198,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param name the parameter name
      * @param value the parameter value to find
      */
+    @Override
     boolean contains(String name, String value);
 
     /**
@@ -193,6 +208,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param value the parameter value
      * @return {@code true} if the parameter exists. {@code false} otherwise
      */
+    @Override
     boolean containsObject(String name, Object value);
 
     /**
@@ -202,6 +218,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param value the parameter value
      * @return {@code true} if the parameter exists. {@code false} otherwise
      */
+    @Override
     boolean containsInt(String name, int value);
 
     /**
@@ -211,6 +228,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param value the parameter value
      * @return {@code true} if the parameter exists. {@code false} otherwise
      */
+    @Override
     boolean containsLong(String name, long value);
 
     /**
@@ -220,6 +238,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param value the parameter value
      * @return {@code true} if the parameter exists. {@code false} otherwise
      */
+    @Override
     boolean containsFloat(String name, float value);
 
     /**
@@ -229,6 +248,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param value the parameter value
      * @return {@code true} if the parameter exists. {@code false} otherwise
      */
+    @Override
     boolean containsDouble(String name, double value);
 
     /**
@@ -238,21 +258,25 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
      * @param value the parameter value
      * @return {@code true} if the parameter exists. {@code false} otherwise
      */
+    @Override
     boolean containsTimeMillis(String name, long value);
 
     /**
      * Returns the number of parameters.
      */
+    @Override
     int size();
 
     /**
      * Returns {@code true} if this parameters does not contain any entries.
      */
+    @Override
     boolean isEmpty();
 
     /**
      * Returns a {@link Set} of all parameter names. The returned {@link Set} cannot be modified.
      */
+    @Override
     Set<String> names();
 
     /**
@@ -264,21 +288,25 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
     /**
      * Returns an {@link Iterator} that yields all values of the parameters with the specified {@code name}.
      */
+    @Override
     Iterator<String> valueIterator(String name);
 
     /**
      * Invokes the specified {@code action} for all parameter entries.
      */
+    @Override
     void forEach(BiConsumer<String, String> action);
 
     /**
      * Invokes the specified {@code action} for all values of the parameters with the specified {@code name}.
      */
+    @Override
     void forEachValue(String name, Consumer<String> action);
 
     /**
      * Returns a {@link Stream} that yields all parameter entries.
      */
+    @Override
     default Stream<Entry<String, String>> stream() {
         return Streams.stream(iterator());
     }
@@ -286,6 +314,7 @@ interface QueryParamGetters extends Iterable<Entry<String, String>> {
     /**
      * Returns a {@link Stream} that yields all values of the parameters with the specified {@code name}.
      */
+    @Override
     default Stream<String> valueStream(String name) {
         return Streams.stream(valueIterator(name));
     }
