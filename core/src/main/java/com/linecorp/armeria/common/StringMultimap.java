@@ -99,31 +99,31 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     /**
      * Creates a shallow or deep copy of the specified {@link StringMultimap}.
      */
-    StringMultimap(StringMultimap<IN_NAME, NAME> headers, boolean shallowCopy) {
-        hashMask = headers.hashMask;
+    StringMultimap(StringMultimap<IN_NAME, NAME> parent, boolean shallowCopy) {
+        hashMask = parent.hashMask;
 
         if (shallowCopy) {
-            entries = headers.entries;
-            firstGroupHead = headers.firstGroupHead;
-            secondGroupHead = headers.secondGroupHead;
-            size = headers.size;
+            entries = parent.entries;
+            firstGroupHead = parent.firstGroupHead;
+            secondGroupHead = parent.secondGroupHead;
+            size = parent.size;
         } else {
             @SuppressWarnings("unchecked")
-            final Entry[] newEntries = (Entry[]) Array.newInstance(Entry.class, headers.entries.length);
+            final Entry[] newEntries = (Entry[]) Array.newInstance(Entry.class, parent.entries.length);
             entries = newEntries;
             firstGroupHead = secondGroupHead = new Entry();
-            final boolean succeeded = addFast(headers);
+            final boolean succeeded = addFast(parent);
             assert succeeded;
         }
     }
 
     /**
-     * Creates a deep copy of the specified {@link HttpHeaderGetters}.
+     * Creates a deep copy of the specified {@link StringMultimapGetters}.
      */
-    StringMultimap(StringMultimapGetters<IN_NAME, NAME> headers) {
-        this(headers.size());
-        assert !(headers instanceof StringMultimap);
-        addSlow(headers);
+    StringMultimap(StringMultimapGetters<IN_NAME, NAME> parent) {
+        this(parent.size());
+        assert !(parent instanceof StringMultimap);
+        addSlow(parent);
     }
 
     // Extension points
@@ -148,7 +148,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int i = index(h);
         Entry e = entries[i];
         String value = null;
-        // loop until the first header was found
+        // loop until the first entry was found
         while (e != null) {
             if (e.hash == h && nameEquals(e.key, name)) {
                 value = e.value;
@@ -261,7 +261,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int h = hashName(name);
         final int i = index(h);
         Entry e = entries[i];
-        // loop until the first header was found
+        // loop until the first entry was found
         while (e != null) {
             if (e.hash == h && nameEquals(e.key, name)) {
                 return true;
@@ -478,13 +478,13 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         }
     }
 
-    final void add(Iterable<? extends Map.Entry<? extends IN_NAME, String>> headers) {
-        if (headers == this) {
+    final void add(Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries) {
+        if (entries == this) {
             throw new IllegalArgumentException("can't add to itself.");
         }
 
-        if (!addFast(headers)) {
-            addSlow(headers);
+        if (!addFast(entries)) {
+            addSlow(entries);
         }
     }
 
@@ -511,13 +511,13 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         }
     }
 
-    void addObject(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> headers) {
-        if (headers == this) {
+    void addObject(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> entries) {
+        if (entries == this) {
             throw new IllegalArgumentException("can't add to itself.");
         }
 
-        if (!addFast(headers)) {
-            addObjectSlow(headers);
+        if (!addFast(entries)) {
+            addObjectSlow(entries);
         }
     }
 
@@ -578,43 +578,43 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         }
     }
 
-    final void set(Iterable<? extends Map.Entry<? extends IN_NAME, String>> headers) {
-        requireNonNull(headers, "headers");
-        if (headers == this) {
+    final void set(Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries) {
+        requireNonNull(entries, "entries");
+        if (entries == this) {
             return;
         }
 
-        for (Map.Entry<? extends IN_NAME, String> e : headers) {
+        for (Map.Entry<? extends IN_NAME, String> e : entries) {
             remove(e.getKey());
         }
 
-        if (!addFast(headers)) {
-            addSlow(headers);
+        if (!addFast(entries)) {
+            addSlow(entries);
         }
     }
 
     public StringMultimap<IN_NAME, NAME> setIfAbsent(
-            Iterable<? extends Map.Entry<? extends IN_NAME, String>> headers) {
-        requireNonNull(headers, "headers");
+            Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries) {
+        requireNonNull(entries, "entries");
         final Set<NAME> existingNames = names();
-        if (!setIfAbsentFast(headers, existingNames)) {
-            setIfAbsentSlow(headers, existingNames);
+        if (!setIfAbsentFast(entries, existingNames)) {
+            setIfAbsentSlow(entries, existingNames);
         }
         return this;
     }
 
-    private boolean setIfAbsentFast(Iterable<? extends Map.Entry<? extends IN_NAME, String>> headers,
+    private boolean setIfAbsentFast(Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries,
                                     Set<NAME> existingNames) {
 
-        if (!(headers instanceof StringMultimap)) {
+        if (!(entries instanceof StringMultimap)) {
             return false;
         }
 
         @SuppressWarnings("unchecked")
-        final StringMultimap<IN_NAME, NAME> headersBase = (StringMultimap<IN_NAME, NAME>) headers;
-        Entry e = headersBase.firstGroupHead.after;
+        final StringMultimap<IN_NAME, NAME> multimap = (StringMultimap<IN_NAME, NAME>) entries;
+        Entry e = multimap.firstGroupHead.after;
 
-        while (e != headersBase.firstGroupHead) {
+        while (e != multimap.firstGroupHead) {
             final NAME key = e.key;
             final String value = e.value;
             assert key != null;
@@ -628,13 +628,13 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         return true;
     }
 
-    private void setIfAbsentSlow(Iterable<? extends Map.Entry<? extends IN_NAME, String>> headers,
+    private void setIfAbsentSlow(Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries,
                                  Set<NAME> existingNames) {
 
-        for (Map.Entry<? extends IN_NAME, String> header : headers) {
-            final NAME key = normalizeName(header.getKey());
+        for (Map.Entry<? extends IN_NAME, String> e : entries) {
+            final NAME key = normalizeName(e.getKey());
             if (!existingNames.contains(key)) {
-                add(key, header.getValue());
+                add(key, e.getValue());
             }
         }
     }
@@ -672,18 +672,18 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         }
     }
 
-    final void setObject(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> headers) {
-        requireNonNull(headers, "headers");
-        if (headers == this) {
+    final void setObject(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> entries) {
+        requireNonNull(entries, "entries");
+        if (entries == this) {
             return;
         }
 
-        for (Map.Entry<? extends IN_NAME, ?> e : headers) {
+        for (Map.Entry<? extends IN_NAME, ?> e : entries) {
             remove(e.getKey());
         }
 
-        if (!addFast(headers)) {
-            addObjectSlow(headers);
+        if (!addFast(entries)) {
+            addObjectSlow(entries);
         }
     }
 
@@ -736,15 +736,15 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         ++size;
     }
 
-    private boolean addFast(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> headers) {
-        if (!(headers instanceof StringMultimap)) {
+    private boolean addFast(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> entries) {
+        if (!(entries instanceof StringMultimap)) {
             return false;
         }
 
         @SuppressWarnings("unchecked")
-        final StringMultimap<IN_NAME, NAME> headersBase = (StringMultimap<IN_NAME, NAME>) headers;
-        Entry e = headersBase.firstGroupHead.after;
-        while (e != headersBase.firstGroupHead) {
+        final StringMultimap<IN_NAME, NAME> multimap = (StringMultimap<IN_NAME, NAME>) entries;
+        Entry e = multimap.firstGroupHead.after;
+        while (e != multimap.firstGroupHead) {
             final NAME key = e.key;
             final String value = e.value;
             assert key != null;
@@ -756,24 +756,24 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         return true;
     }
 
-    private void addSlow(Iterable<? extends Map.Entry<? extends IN_NAME, String>> headers) {
+    private void addSlow(Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries) {
         // Slow copy
-        for (Map.Entry<? extends IN_NAME, String> header : headers) {
-            add(header.getKey(), header.getValue());
+        for (Map.Entry<? extends IN_NAME, String> e : entries) {
+            add(e.getKey(), e.getValue());
         }
     }
 
-    private void addObjectSlow(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> headers) {
+    private void addObjectSlow(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> entries) {
         // Slow copy
-        for (Map.Entry<? extends IN_NAME, ?> header : headers) {
-            addObject(header.getKey(), header.getValue());
+        for (Map.Entry<? extends IN_NAME, ?> e : entries) {
+            addObject(e.getKey(), e.getValue());
         }
     }
 
     /**
      * Removes all the entries whose hash code equals {@code h} and whose name is equal to {@code name}.
      *
-     * @return the first value inserted, or {@code null} if there is no such header.
+     * @return the first value inserted, or {@code null} if there is no such entry.
      */
     @Nullable
     private String remove0(int h, int i, IN_NAME name) {
@@ -1015,7 +1015,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             this.value = value;
             this.next = next;
 
-            // Make sure the pseudo headers fields are first in iteration order
+            // Make sure the first-group entries appear first during iteration.
             if (isFirstGroup(key)) {
                 after = secondGroupHead;
                 before = secondGroupHead.before;

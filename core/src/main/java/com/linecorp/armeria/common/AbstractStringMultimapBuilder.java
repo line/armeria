@@ -367,8 +367,8 @@ abstract class AbstractStringMultimapBuilder<
     }
 
     public final SELF add(
-            Iterable<? extends Entry<? extends IN_NAME, String>> headers) {
-        setters().add(headers);
+            Iterable<? extends Entry<? extends IN_NAME, String>> entries) {
+        setters().add(entries);
         return self();
     }
 
@@ -387,8 +387,8 @@ abstract class AbstractStringMultimapBuilder<
         return self();
     }
 
-    public final SELF addObject(Iterable<? extends Entry<? extends IN_NAME, ?>> headers) {
-        setters().addObject(headers);
+    public final SELF addObject(Iterable<? extends Entry<? extends IN_NAME, ?>> entries) {
+        setters().addObject(entries);
         return self();
     }
 
@@ -432,13 +432,13 @@ abstract class AbstractStringMultimapBuilder<
         return self();
     }
 
-    public final SELF set(Iterable<? extends Entry<? extends IN_NAME, String>> headers) {
-        setters().set(headers);
+    public final SELF set(Iterable<? extends Entry<? extends IN_NAME, String>> entries) {
+        setters().set(entries);
         return self();
     }
 
-    public final SELF setIfAbsent(Iterable<? extends Entry<? extends IN_NAME, String>> headers) {
-        setters().setIfAbsent(headers);
+    public final SELF setIfAbsent(Iterable<? extends Entry<? extends IN_NAME, String>> entries) {
+        setters().setIfAbsent(entries);
         return self();
     }
 
@@ -457,8 +457,8 @@ abstract class AbstractStringMultimapBuilder<
         return self();
     }
 
-    public final SELF setObject(Iterable<? extends Entry<? extends IN_NAME, ?>> headers) {
-        setters().setObject(headers);
+    public final SELF setObject(Iterable<? extends Entry<? extends IN_NAME, ?>> entries) {
+        setters().setObject(entries);
         return self();
     }
 

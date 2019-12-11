@@ -46,8 +46,8 @@ class QueryParamsBase extends StringMultimap<String, String> implements QueryPar
     /**
      * Creates a shallow or deep copy of the specified {@link QueryParamsBase}.
      */
-    QueryParamsBase(QueryParamsBase params, boolean shallowCopy) {
-        super(params, shallowCopy);
+    QueryParamsBase(QueryParamsBase parent, boolean shallowCopy) {
+        super(parent, shallowCopy);
     }
 
     @Override

@@ -221,12 +221,12 @@ public interface QueryParamsBuilder extends QueryParamGetters {
     QueryParamsBuilder add(String name, String... values);
 
     /**
-     * Adds all parameter names and values of the specified {@code params}.
+     * Adds all parameter names and values of the specified {@code entries}.
      *
      * @return {@code this}
-     * @throws IllegalArgumentException if {@code params == this}.
+     * @throws IllegalArgumentException if {@code entries == this}.
      */
-    QueryParamsBuilder add(Iterable<? extends Entry<? extends String, String>> params);
+    QueryParamsBuilder add(Iterable<? extends Entry<? extends String, String>> entries);
 
     /**
      * Adds a new parameter. The specified parameter value is converted into a {@link String}, as explained
@@ -271,14 +271,14 @@ public interface QueryParamsBuilder extends QueryParamGetters {
     QueryParamsBuilder addObject(String name, Object... values);
 
     /**
-     * Adds all parameter names and values of the specified {@code params}. The specified parameter values are
+     * Adds all parameter names and values of the specified {@code entries}. The specified parameter values are
      * converted into {@link String}s, as explained in <a href="QueryParams.html#object-values">Specifying
      * a non-String parameter value</a>.
      *
      * @return {@code this}
-     * @throws IllegalArgumentException if {@code params == this}.
+     * @throws IllegalArgumentException if {@code entries == this}.
      */
-    QueryParamsBuilder addObject(Iterable<? extends Entry<? extends String, ?>> params);
+    QueryParamsBuilder addObject(Iterable<? extends Entry<? extends String, ?>> entries);
 
     /**
      * Adds a new parameter.
@@ -368,27 +368,27 @@ public interface QueryParamsBuilder extends QueryParamGetters {
 
     /**
      * Retains all current parameters but calls {@link #set(String, String)} for each entry in
-     * the specified {@code parameters}.
+     * the specified {@code entries}.
      *
-     * @param parameters the parameters used to set the parameter values
+     * @param entries the parameters used to set the parameter values
      * @return {@code this}
      */
-    QueryParamsBuilder set(Iterable<? extends Entry<? extends String, String>> parameters);
+    QueryParamsBuilder set(Iterable<? extends Entry<? extends String, String>> entries);
 
     /**
-     * Copies the entries missing in this parameters from the specified parameters.
+     * Copies the entries missing in this parameters from the specified {@code entries}.
      * This method is a shortcut of the following code:
      * <pre>{@code
-     * params.names().forEach(name -> {
+     * entries.names().forEach(name -> {
      *     if (!contains(name)) {
-     *         set(name, params.getAll(name));
+     *         set(name, entries.getAll(name));
      *     }
      * });
      * }</pre>
      *
      * @return {@code this}
      */
-    QueryParamsBuilder setIfAbsent(Iterable<? extends Entry<? extends String, String>> parameters);
+    QueryParamsBuilder setIfAbsent(Iterable<? extends Entry<? extends String, String>> entries);
 
     /**
      * Sets a new parameter. Any existing parameters with the specified name are removed. The specified
@@ -439,13 +439,13 @@ public interface QueryParamsBuilder extends QueryParamGetters {
 
     /**
      * Retains all current parameters but calls {@link #setObject(String, Object)} for each entry in
-     * the specified {@code params}. The specified parameter values are converted into {@link String}s,
+     * the specified {@code entries}. The specified parameter values are converted into {@link String}s,
      * as explained in <a href="QueryParams.html#object-values">Specifying a non-String parameter value</a>.
      *
-     * @param params the parameters used to set the values in this instance
+     * @param entries the parameters used to set the values in this instance
      * @return {@code this}
      */
-    QueryParamsBuilder setObject(Iterable<? extends Entry<? extends String, ?>> params);
+    QueryParamsBuilder setObject(Iterable<? extends Entry<? extends String, ?>> entries);
 
     /**
      * Sets a parameter with the specified {@code name} to {@code value}. This will remove all previous values

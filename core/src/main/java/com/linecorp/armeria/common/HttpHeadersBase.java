@@ -79,18 +79,18 @@ class HttpHeadersBase extends StringMultimap<CharSequence, AsciiString> implemen
     /**
      * Creates a shallow or deep copy of the specified {@link HttpHeadersBase}.
      */
-    HttpHeadersBase(HttpHeadersBase headers, boolean shallowCopy) {
-        super(headers, shallowCopy);
-        endOfStream = headers.endOfStream;
+    HttpHeadersBase(HttpHeadersBase parent, boolean shallowCopy) {
+        super(parent, shallowCopy);
+        endOfStream = parent.endOfStream;
     }
 
     /**
      * Creates a deep copy of the specified {@link HttpHeaderGetters}.
      */
-    HttpHeadersBase(HttpHeaderGetters headers) {
-        super(headers);
-        assert !(headers instanceof HttpHeadersBase);
-        endOfStream = headers.isEndOfStream();
+    HttpHeadersBase(HttpHeaderGetters parent) {
+        super(parent);
+        assert !(parent instanceof HttpHeadersBase);
+        endOfStream = parent.isEndOfStream();
     }
 
     @Override

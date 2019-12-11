@@ -218,13 +218,12 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder add(CharSequence name, String... values);
 
     /**
-     * Adds all header names and values of the specified {@code headers}.
+     * Adds all header names and values of the specified {@code entries}.
      *
      * @return {@code this}
-     * @throws IllegalArgumentException if {@code headers == this}.
+     * @throws IllegalArgumentException if {@code entries == this}.
      */
-    HttpHeadersBuilder add(
-            Iterable<? extends Entry<? extends CharSequence, String>> headers);
+    HttpHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     /**
      * Adds a new header. The specified header value is converted into a {@link String}, as explained
@@ -269,14 +268,14 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder addObject(CharSequence name, Object... values);
 
     /**
-     * Adds all header names and values of the specified {@code headers}. The specified header values are
+     * Adds all header names and values of the specified {@code entries}. The specified header values are
      * converted into {@link String}s, as explained in <a href="HttpHeaders.html#object-values">Specifying
      * a non-String header value</a>.
      *
      * @return {@code this}
-     * @throws IllegalArgumentException if {@code headers == this}.
+     * @throws IllegalArgumentException if {@code entries == this}.
      */
-    HttpHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
+    HttpHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> entries);
 
     /**
      * Adds a new header.
@@ -365,28 +364,28 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder set(CharSequence name, String... values);
 
     /**
-     * Retains all current headers but calls {@link #set(CharSequence, String)} for each entry in
-     * the specified {@code headers}.
+     * Retains all current headers but calls {@link #set(CharSequence, String)} for each header in
+     * the specified {@code entries}.
      *
-     * @param headers the headers used to set the header values
+     * @param entries the headers used to set the header values
      * @return {@code this}
      */
-    HttpHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> headers);
+    HttpHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     /**
-     * Copies the entries missing in this headers from the specified headers.
+     * Copies the entries missing in this headers from the specified {@code entries}.
      * This method is a shortcut of the following code:
      * <pre>{@code
      * headers.names().forEach(name -> {
-     *      if (!contains(name)) {
-     *          set(name, headers.getAll(name));
-     *      }
+     *     if (!contains(name)) {
+     *         set(name, headers.getAll(name));
+     *     }
      * });
      * }</pre>
      *
      * @return {@code this}
      */
-    HttpHeadersBuilder setIfAbsent(Iterable<? extends Entry<? extends CharSequence, String>> headers);
+    HttpHeadersBuilder setIfAbsent(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     /**
      * Sets a new header. Any existing headers with the specified name are removed. The specified header value
@@ -437,13 +436,13 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
 
     /**
      * Retains all current headers but calls {@link #setObject(CharSequence, Object)} for each entry in
-     * the specified {@code headers}. The specified header values are converted into {@link String}s,
+     * the specified {@code entries}. The specified header values are converted into {@link String}s,
      * as explained in <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      *
-     * @param headers the headers used to set the values in this instance
+     * @param entries the headers used to set the values in this instance
      * @return {@code this}
      */
-    HttpHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
+    HttpHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> entries);
 
     /**
      * Sets a header with the specified {@code name} to {@code value}. This will remove all previous values
