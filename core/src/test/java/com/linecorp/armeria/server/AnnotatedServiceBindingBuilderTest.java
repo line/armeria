@@ -20,30 +20,53 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class AnnotatedServiceBindingBuilderTest {
 
     private static final ExceptionHandlerFunction handlerFunction = (ctx, req, cause) -> HttpResponse.of(501);
+    private static final JacksonResponseConverterFunction customJacksonResponseConverterFunction =
+            customJacksonResponseConverterFunction();
+
+    private static JacksonResponseConverterFunction customJacksonResponseConverterFunction() {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
+        return new JacksonResponseConverterFunction(objectMapper);
+    }
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService()
+            sb.annotatedHttpServiceExtensions(ImmutableList.of(),
+                                              ImmutableList.of(),
+                                              ImmutableList.of(customJacksonResponseConverterFunction))
+              .annotatedService()
               .exceptionHandlers(handlerFunction)
               .build(new TestService());
         }
@@ -58,7 +81,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .build(new TestService())
                                     .build();
 
-        assertThat(server.config().serviceConfigs()).hasSize(1);
+        assertThat(server.config().serviceConfigs()).hasSize(2);
         final ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
         assertThat(serviceConfig.route().paths()).allMatch("/foo"::equals);
     }
@@ -73,7 +96,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .build(new TestService())
                                     .build();
 
-        assertThat(server.config().serviceConfigs()).hasSize(1);
+        assertThat(server.config().serviceConfigs()).hasSize(2);
         final ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
         assertThat(serviceConfig.route().paths()).allMatch("/home/foo"::equals);
     }
@@ -99,7 +122,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .build(new TestService())
                                     .build();
 
-        assertThat(server.config().serviceConfigs()).hasSize(1);
+        assertThat(server.config().serviceConfigs()).hasSize(2);
         final ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(maxRequestLength);
@@ -116,15 +139,35 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(status.code()).isEqualTo(501);
     }
 
+    @Test
+    void testGlobalAnnotatedHttpServiceExtensions() {
+        final AggregatedHttpResponse result = postJson("/bar", "{\"b\":\"foo\",\"a\":\"bar\"}");
+
+        assertThat(result.contentUtf8()).isEqualTo("{\"a\":\"bar\",\"b\":\"foo\"}");
+    }
+
     private static AggregatedHttpResponse get(String path) {
         final WebClient webClient = WebClient.of(server.httpUri("/"));
         return webClient.get(path).aggregate().join();
+    }
+
+    private static AggregatedHttpResponse postJson(String path, String json) {
+        final WebClient webClient = WebClient.of(server.httpUri("/"));
+        final RequestHeaders postJson = RequestHeaders.of(HttpMethod.POST, path,
+                                                          HttpHeaderNames.CONTENT_TYPE, "application/json");
+        return webClient.execute(postJson, json).aggregate().join();
     }
 
     private static class TestService {
         @Get("/foo")
         public HttpResponse foo() {
             throw new RuntimeException();
+        }
+
+        @Post("/bar")
+        @ProducesJson
+        public Map<String, Object> bar(@RequestObject Map<String, Object> map) {
+            return map;
         }
     }
 }

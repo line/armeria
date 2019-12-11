@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.DecoratorAndOrder;
+import com.linecorp.armeria.server.AnnotatedHttpServiceExtensions;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -148,8 +149,12 @@ class AnnotatedHttpServiceFactoryTest {
     @Test
     void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
         final Object object = new PathPrefixServiceObject();
+        final AnnotatedHttpServiceExtensions extensions =
+                new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+
         final List<AnnotatedHttpServiceElement> elements = find("/", object, ImmutableList.of(),
-                                                                ImmutableList.of(), ImmutableList.of());
+                                                                ImmutableList.of(), ImmutableList.of(),
+                                                                extensions);
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
@@ -162,9 +167,12 @@ class AnnotatedHttpServiceFactoryTest {
     @Test
     void testFindAnnotatedServiceElementsWithoutPathPrefixAnnotation() {
         final Object serviceObject = new ServiceObject();
+        final AnnotatedHttpServiceExtensions extensions =
+                new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
         final List<AnnotatedHttpServiceElement> elements = find(HOME_PATH_PREFIX, serviceObject,
                                                                 ImmutableList.of(), ImmutableList.of(),
-                                                                ImmutableList.of());
+                                                                ImmutableList.of(),
+                                                                extensions);
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
@@ -181,8 +189,12 @@ class AnnotatedHttpServiceFactoryTest {
 
         getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
+                final AnnotatedHttpServiceExtensions extensions =
+                        new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
+                                                           ImmutableList.of());
+
                 create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
-                       ImmutableList.of());
+                       ImmutableList.of(), extensions);
             }).isInstanceOf(IllegalArgumentException.class)
               .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
         });
@@ -269,8 +281,12 @@ class AnnotatedHttpServiceFactoryTest {
         final MultiPathFailingService serviceObject = new MultiPathFailingService();
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
+                final AnnotatedHttpServiceExtensions extensions =
+                        new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
+                                                           ImmutableList.of());
+
                 create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
-                       ImmutableList.of());
+                       ImmutableList.of(), extensions);
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -280,9 +296,13 @@ class AnnotatedHttpServiceFactoryTest {
         return getMethods(service.getClass(), HttpResponse.class)
                 .filter(method -> method.getName().equals(methodName)).flatMap(
                         method -> {
+                            final AnnotatedHttpServiceExtensions extensions =
+                                    new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
+                                                                       ImmutableList.of());
+
                             final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
                                     "/", service, method, ImmutableList.of(), ImmutableList.of(),
-                                    ImmutableList.of());
+                                    ImmutableList.of(), extensions);
                             return annotatedHttpServices.stream();
                         }
                 )

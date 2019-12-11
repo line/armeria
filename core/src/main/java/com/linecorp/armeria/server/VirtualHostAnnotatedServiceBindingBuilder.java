@@ -67,6 +67,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
     private String pathPrefix = "/";
+    private Object service;
 
     VirtualHostAnnotatedServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
         this.virtualHostBuilder = virtualHostBuilder;
@@ -267,7 +268,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
 
     /**
      * Registers the given service to the {@linkplain VirtualHostBuilder}.
-     *
+     * FIXME(heowc): Update javadoc.
      * @param service annotated service object to handle incoming requests matching path prefix, which
      *                can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
      *                If path prefix is not set then this service is registered to handle requests matching
@@ -275,11 +276,21 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * @return {@link VirtualHostBuilder} to continue building {@link VirtualHost}
      */
     public VirtualHostBuilder build(Object service) {
+        this.service = service;
+        virtualHostBuilder.addAnnotatedServiceBindingBuilder(this);
+        return virtualHostBuilder;
+    }
+
+    /**
+     * FIXME(heowc): Update javadoc.
+     */
+    public VirtualHostBuilder create(AnnotatedHttpServiceExtensions extensions) {
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service,
                                                  exceptionHandlerFunctionBuilder.build(),
                                                  requestConverterFunctionBuilder.build(),
-                                                 responseConverterFunctionBuilder.build());
+                                                 responseConverterFunctionBuilder.build(),
+                                                 extensions);
         elements.forEach(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

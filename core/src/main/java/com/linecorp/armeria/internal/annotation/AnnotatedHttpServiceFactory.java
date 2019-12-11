@@ -81,6 +81,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotationUtil.FindOption;
+import com.linecorp.armeria.server.AnnotatedHttpServiceExtensions;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -162,19 +163,23 @@ public final class AnnotatedHttpServiceFactory {
 
     /**
      * Returns the list of {@link AnnotatedHttpService} defined by {@link Path} and HTTP method annotations
-     * from the specified {@code object}, {@link ExceptionHandlerFunction}'s,
-     * {@link RequestConverterFunction}'s and {@link ResponseConverterFunction}'s.
+     * from the specified {@code object}, {@link ExceptionHandlerFunction}s,
+     * {@link RequestConverterFunction}s and {@link ResponseConverterFunction}s.
+     * FIXME(heowc): Update javadoc.
      */
     public static List<AnnotatedHttpServiceElement> find(
             String pathPrefix, Object object,
             List<ExceptionHandlerFunction> exceptionHandlerFunctions,
             List<RequestConverterFunction> requestConverterFunctions,
-            List<ResponseConverterFunction> responseConverterFunctions) {
+            List<ResponseConverterFunction> responseConverterFunctions,
+            AnnotatedHttpServiceExtensions extensions) {
         final List<Method> methods = requestMappingMethods(object);
         return methods.stream()
                       .flatMap((Method method) ->
                                        create(pathPrefix, object, method, exceptionHandlerFunctions,
-                                              requestConverterFunctions, responseConverterFunctions).stream())
+                                              requestConverterFunctions,
+                                              responseConverterFunctions,
+                                              extensions).stream())
                       .collect(toImmutableList());
     }
 
@@ -224,7 +229,8 @@ public final class AnnotatedHttpServiceFactory {
     static List<AnnotatedHttpServiceElement> create(String pathPrefix, Object object, Method method,
                                                     List<ExceptionHandlerFunction> baseExceptionHandlers,
                                                     List<RequestConverterFunction> baseRequestConverters,
-                                                    List<ResponseConverterFunction> baseResponseConverters) {
+                                                    List<ResponseConverterFunction> baseResponseConverters,
+                                                    AnnotatedHttpServiceExtensions extensions) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
@@ -251,15 +257,29 @@ public final class AnnotatedHttpServiceFactory {
                                                 .build());
                 }).collect(toImmutableList());
 
+        final List<ExceptionHandlerFunction> ehFromAnnotated =
+                getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class);
         final List<ExceptionHandlerFunction> eh =
-                getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
-                        .addAll(baseExceptionHandlers).add(defaultExceptionHandler).build();
+                ImmutableList.<ExceptionHandlerFunction>builder().addAll(extensions.exceptionHandlers())
+                                                                 .addAll(ehFromAnnotated)
+                                                                 .addAll(baseExceptionHandlers)
+                                                                 .add(defaultExceptionHandler).build();
+
+        final List<RequestConverterFunction> reqFromAnnotated =
+                getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class);
         final List<RequestConverterFunction> req =
-                getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class)
-                        .addAll(baseRequestConverters).build();
+                ImmutableList.<RequestConverterFunction>builder().addAll(extensions.requestConverters())
+                                                                 .addAll(reqFromAnnotated)
+                                                                 .addAll(baseRequestConverters)
+                                                                 .build();
+
+        final List<ResponseConverterFunction> resFromAnnotated =
+                getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class);
         final List<ResponseConverterFunction> res =
-                getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
-                        .addAll(baseResponseConverters).build();
+                ImmutableList.<ResponseConverterFunction>builder().addAll(extensions.responseConverters())
+                                                                  .addAll(resFromAnnotated)
+                                                                  .addAll(baseResponseConverters)
+                                                                  .build();
 
         final Optional<HttpStatus> defaultResponseStatus = findFirst(method, StatusCode.class)
                 .map(code -> {
@@ -645,14 +665,15 @@ public final class AnnotatedHttpServiceFactory {
      * Returns a {@link Builder} which has the instances specified by the annotations of the
      * {@code annotationType}. The annotations of the specified {@code method} and {@code clazz} will be
      * collected respectively.
+     * FIXME(heowc): Update javadoc.
      */
-    private static <T extends Annotation, R> Builder<R> getAnnotatedInstances(
+    private static <T extends Annotation, R> List<R> getAnnotatedInstances(
             AnnotatedElement method, AnnotatedElement clazz, Class<T> annotationType, Class<R> resultType) {
         final Builder<R> builder = new Builder<>();
         Stream.concat(findAll(method, annotationType).stream(),
                       findAll(clazz, annotationType).stream())
               .forEach(annotation -> builder.add(getInstance(annotation, resultType)));
-        return builder;
+        return builder.build();
     }
 
     /**

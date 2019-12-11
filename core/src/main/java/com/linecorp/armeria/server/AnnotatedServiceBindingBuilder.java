@@ -63,6 +63,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
     private String pathPrefix = "/";
+    private Object service;
 
     AnnotatedServiceBindingBuilder(ServerBuilder serverBuilder) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
@@ -251,7 +252,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     /**
      * Registers the given service to {@link ServerBuilder} and return {@link ServerBuilder}
      * to continue building {@link Server}.
-     *
+     * FIXME(heowc): Update javadoc.
      * @param service annotated service object to handle incoming requests matching path prefix, which
      *                can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
      *                If path prefix is not set then this service is registered to handle requests matching
@@ -259,11 +260,21 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * @return {@link ServerBuilder} to continue building {@link Server}
      */
     public ServerBuilder build(Object service) {
+        this.service = service;
+        serverBuilder.annotatedServiceBindingBuilder(this);
+        return serverBuilder;
+    }
+
+    /**
+     * FIXME(heowc): Update javadoc.
+     */
+    void create(AnnotatedHttpServiceExtensions extensions) {
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service,
                                                  exceptionHandlerFunctionBuilder.build(),
                                                  requestConverterFunctionBuilder.build(),
-                                                 responseConverterFunctionBuilder.build());
+                                                 responseConverterFunctionBuilder.build(),
+                                                 extensions);
         elements.forEach(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());
@@ -271,6 +282,5 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
                     defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
             serverBuilder.serviceConfigBuilder(serviceConfigBuilder);
         });
-        return serverBuilder;
     }
 }

@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * Collects the {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s and
  * {@link ResponseConverterFunction}s into three different lists from a single {@link Iterable}.
  */
-final class AnnotatedHttpServiceExtensions {
+public final class AnnotatedHttpServiceExtensions {
 
     /**
      * Creates a new instance with the specified {@code exceptionHandlersAndConverters}.
@@ -75,7 +75,7 @@ final class AnnotatedHttpServiceExtensions {
      */
     private final List<ResponseConverterFunction> responseConverters;
 
-    AnnotatedHttpServiceExtensions(
+    public AnnotatedHttpServiceExtensions(
             List<ExceptionHandlerFunction> exceptionHandlers,
             List<RequestConverterFunction> requestConverters,
             List<ResponseConverterFunction> responseConverters) {
@@ -87,21 +87,21 @@ final class AnnotatedHttpServiceExtensions {
     /**
      * Returns the specified {@link ExceptionHandlerFunction}s with the annotated service.
      */
-    List<ExceptionHandlerFunction> exceptionHandlers() {
+    public List<ExceptionHandlerFunction> exceptionHandlers() {
         return exceptionHandlers;
     }
 
     /**
      * Returns the specified {@link RequestConverterFunction}s with the annotated service.
      */
-    List<RequestConverterFunction> requestConverters() {
+    public List<RequestConverterFunction> requestConverters() {
         return requestConverters;
     }
 
     /**
      * Returns the specified {@link ResponseConverterFunction}s with the annotated service.
      */
-    List<ResponseConverterFunction> responseConverters() {
+    public List<ResponseConverterFunction> responseConverters() {
         return responseConverters;
     }
 }

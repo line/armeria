@@ -157,6 +157,7 @@ public final class ServerBuilder {
     final VirtualHostBuilder virtualHostTemplate = new VirtualHostBuilder(this, false);
     private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
     private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
+    private final List<AnnotatedServiceBindingBuilder> annotatedServiceBindingBuilders = new ArrayList<>();
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
@@ -188,6 +189,8 @@ public final class ServerBuilder {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
+    private AnnotatedHttpServiceExtensions annotatedHttpServiceExtensions =
+            new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
 
     /**
      * Returns a new {@link ServerBuilder}.
@@ -1016,6 +1019,12 @@ public final class ServerBuilder {
         return this;
     }
 
+    ServerBuilder annotatedServiceBindingBuilder(
+            AnnotatedServiceBindingBuilder annotatedServiceBindingBuilder) {
+        annotatedServiceBindingBuilders.add(annotatedServiceBindingBuilder);
+        return this;
+    }
+
     ServerBuilder routingDecorator(RouteDecoratingService routeDecoratingService) {
         virtualHostTemplate.addRouteDecoratingService(routeDecoratingService);
         return this;
@@ -1479,9 +1488,28 @@ public final class ServerBuilder {
     }
 
     /**
+     * FIXME(heowc): Update javadoc.
+     */
+    public ServerBuilder annotatedHttpServiceExtensions(
+            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
+            Iterable<? extends RequestConverterFunction> requestConverterFunctions,
+            Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+        annotatedHttpServiceExtensions =
+                new AnnotatedHttpServiceExtensions(ImmutableList.copyOf(exceptionHandlerFunctions),
+                                                   ImmutableList.copyOf(requestConverterFunctions),
+                                                   ImmutableList.copyOf(responseConverterFunctions));
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
+        annotatedServiceBindingBuilders.forEach(builder -> builder.create(annotatedHttpServiceExtensions));
+
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate);
         final List<VirtualHost> virtualHosts =

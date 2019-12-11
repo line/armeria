@@ -121,6 +121,8 @@ public final class VirtualHostBuilder {
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
+    private final List<VirtualHostAnnotatedServiceBindingBuilder> annotatedServiceBindingBuilders
+            = new ArrayList<>();
 
     @Nullable
     private String defaultHostname;
@@ -148,6 +150,8 @@ public final class VirtualHostBuilder {
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
+    private AnnotatedHttpServiceExtensions annotatedHttpServiceExtensions =
+            new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -557,6 +561,12 @@ public final class VirtualHostBuilder {
         return this;
     }
 
+    VirtualHostBuilder addAnnotatedServiceBindingBuilder(
+            VirtualHostAnnotatedServiceBindingBuilder virtualHostAnnotatedServiceBindingBuilder) {
+        annotatedServiceBindingBuilders.add(virtualHostAnnotatedServiceBindingBuilder);
+        return this;
+    }
+
     private List<ServiceConfigBuilder> getServiceConfigBuilders(
             @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
         final List<ServiceConfigBuilder> serviceConfigBuilders;
@@ -840,6 +850,23 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * FIXME(heowc): Update javadoc.
+     */
+    public VirtualHostBuilder annotatedHttpServiceExtensions(
+            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
+            Iterable<? extends RequestConverterFunction> requestConverterFunctions,
+            Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+        annotatedHttpServiceExtensions =
+                new AnnotatedHttpServiceExtensions(ImmutableList.copyOf(exceptionHandlerFunctions),
+                                                   ImmutableList.copyOf(requestConverterFunctions),
+                                                   ImmutableList.copyOf(responseConverterFunctions));
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
@@ -897,6 +924,8 @@ public final class VirtualHostBuilder {
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
+
+        annotatedServiceBindingBuilders.forEach(builder -> builder.create(annotatedHttpServiceExtensions));
 
         final List<ServiceConfigBuilder> serviceConfigBuilders =
                 getServiceConfigBuilders(template);
