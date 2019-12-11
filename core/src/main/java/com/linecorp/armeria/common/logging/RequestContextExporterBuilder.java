@@ -27,13 +27,18 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.logging.RequestContextExporter.ExportEntry;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
-final class RequestContextExporterBuilder {
+/**
+ * Builds a new {@link RequestContextExporter}.
+ */
+public final class RequestContextExporterBuilder {
 
     private static final String PREFIX_ATTRS = "attrs.";
     private static final String PREFIX_HTTP_REQ_HEADERS = "req.http_headers.";
@@ -44,47 +49,89 @@ final class RequestContextExporterBuilder {
     private final Set<ExportEntry<AsciiString>> httpReqHeaders = new HashSet<>();
     private final Set<ExportEntry<AsciiString>> httpResHeaders = new HashSet<>();
 
-    void addBuiltIn(BuiltInProperty property) {
+    /**
+     * Adds the specified {@link BuiltInProperty} to the export list.
+     */
+    public RequestContextExporterBuilder addBuiltIn(BuiltInProperty property) {
         builtIns.add(requireNonNull(property, "property"));
+        return this;
     }
 
-    boolean containsBuiltIn(BuiltInProperty property) {
+    /**
+     * Returns {@code true} if the specified {@link BuiltInProperty} is in the export list.
+     */
+    public boolean containsBuiltIn(BuiltInProperty property) {
         return builtIns.contains(requireNonNull(property, "property"));
     }
 
-    Set<BuiltInProperty> getBuiltIns() {
-        return Collections.unmodifiableSet(builtIns);
+    /**
+     * Returns all {@link BuiltInProperty}s in the export list.
+     */
+    public Set<BuiltInProperty> getBuiltIns() {
+        return ImmutableSet.copyOf(builtIns);
     }
 
-    void addAttribute(String alias, AttributeKey<?> attrKey) {
+    /**
+     * Adds the specified {@link AttributeKey} to the export list.
+     *
+     * @param alias the alias of the attribute to export
+     * @param attrKey the key of the attribute to export
+     */
+    public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         attrs.add(new ExportEntry<>(attrKey, PREFIX_ATTRS + alias, null));
+        return this;
     }
 
-    void addAttribute(String alias, AttributeKey<?> attrKey, Function<?, String> stringifier) {
+    /**
+     * Adds the specified {@link AttributeKey} to the export list.
+     *
+     * @param alias the alias of the attribute to export
+     * @param attrKey the key of the attribute to export
+     * @param stringifier the {@link Function} that converts the attribute value into a {@link String}
+     */
+    public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey,
+                                                      Function<?, String> stringifier) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         requireNonNull(stringifier, "stringifier");
         attrs.add(new ExportEntry<>(attrKey, PREFIX_ATTRS + alias, stringifier));
+        return this;
     }
 
-    boolean containsAttribute(AttributeKey<?> key) {
+    /**
+     * Returns {@code true} if the specified {@link AttributeKey} is in export list.
+     */
+    public boolean containsAttribute(AttributeKey<?> key) {
         requireNonNull(key, "key");
         return attrs.stream().anyMatch(e -> e.key.equals(key));
     }
 
-    Map<String, AttributeKey<?>> getAttributes() {
+    /**
+     * Returns all {@link AttributeKey}s in the export list.
+     *
+     * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
+     */
+    public Map<String, AttributeKey<?>> getAttributes() {
         return Collections.unmodifiableMap(attrs.stream().collect(
-                Collectors.toMap(e -> e.mdcKey.substring(PREFIX_ATTRS.length()), e -> e.key)));
+                Collectors.toMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key)));
     }
 
-    void addHttpRequestHeader(CharSequence name) {
+    /**
+     * Adds the specified HTTP request header name to the export list.
+     */
+    public RequestContextExporterBuilder addHttpRequestHeader(CharSequence name) {
         addHttpHeader(PREFIX_HTTP_REQ_HEADERS, httpReqHeaders, name);
+        return this;
     }
 
-    void addHttpResponseHeader(CharSequence name) {
+    /**
+     * Adds the specified HTTP response header name to the export list.
+     */
+    public RequestContextExporterBuilder addHttpResponseHeader(CharSequence name) {
         addHttpHeader(PREFIX_HTTP_RES_HEADERS, httpResHeaders, name);
+        return this;
     }
 
     private static void addHttpHeader(
@@ -94,11 +141,17 @@ final class RequestContextExporterBuilder {
         httpHeaders.add(new ExportEntry<>(key, value, null));
     }
 
-    boolean containsHttpRequestHeader(CharSequence name) {
+    /**
+     * Returns {@code true} if the specified HTTP request header name is in the export list.
+     */
+    public boolean containsHttpRequestHeader(CharSequence name) {
         return httpReqHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
     }
 
-    boolean containsHttpResponseHeader(CharSequence name) {
+    /**
+     * Returns {@code true} if the specified HTTP response header name is in the export list.
+     */
+    public boolean containsHttpResponseHeader(CharSequence name) {
         return httpResHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
     }
 
@@ -106,36 +159,47 @@ final class RequestContextExporterBuilder {
         return HttpHeaderNames.of(requireNonNull(name, "name").toString());
     }
 
-    Set<AsciiString> getHttpRequestHeaders() {
+    /**
+     * Returns all HTTP request header names in the export list.
+     */
+    public Set<AsciiString> getHttpRequestHeaders() {
         return httpReqHeaders.stream().map(e -> e.key).collect(toImmutableSet());
     }
 
-    Set<AsciiString> getHttpResponseHeaders() {
+    /**
+     * Returns all HTTP response header names in the export list.
+     */
+    public Set<AsciiString> getHttpResponseHeaders() {
         return httpResHeaders.stream().map(e -> e.key).collect(toImmutableSet());
     }
 
-    void export(String mdcKey) {
-        requireNonNull(mdcKey, "mdcKey");
+    /**
+     * Adds the property represented by the specified key pattern to the export list. Please refer to the
+     * <a href="https://line.github.io/armeria/advanced-logging.html">Logging contextual information</a>
+     * in order to learn how to specify a key pattern.
+     */
+    public RequestContextExporterBuilder addKeyPattern(String keyPattern) {
+        requireNonNull(keyPattern, "keyPattern");
 
-        final List<BuiltInProperty> builtInPropertyList = BuiltInProperty.findByMdcKeyPattern(mdcKey);
+        final List<BuiltInProperty> builtInPropertyList = BuiltInProperty.findByKeyPattern(keyPattern);
         if (!builtInPropertyList.isEmpty()) {
             builtIns.addAll(builtInPropertyList);
-            return;
+            return this;
         }
 
-        if (mdcKey.contains(BuiltInProperty.WILDCARD_STR)) {
-            return;
+        if (keyPattern.contains(BuiltInProperty.WILDCARD_STR)) {
+            return this;
         }
 
-        if (mdcKey.startsWith(PREFIX_ATTRS)) {
-            final String[] components = mdcKey.split(":");
+        if (keyPattern.startsWith(PREFIX_ATTRS)) {
+            final String[] components = keyPattern.split(":");
             switch (components.length) {
                 case 2:
                     addAttribute(components[0].substring(PREFIX_ATTRS.length()),
                                  AttributeKey.valueOf(components[1]));
                     break;
                 case 3:
-                    final Function<?, String> stringifier = newStringifier(mdcKey, components[2]);
+                    final Function<?, String> stringifier = newStringifier(keyPattern, components[2]);
 
                     addAttribute(components[0].substring(PREFIX_ATTRS.length()),
                                  AttributeKey.valueOf(components[1]),
@@ -143,27 +207,27 @@ final class RequestContextExporterBuilder {
                     break;
                 default:
                     throw new IllegalArgumentException(
-                            "invalid attribute export: " + mdcKey +
+                            "invalid attribute export: " + keyPattern +
                             " (expected: attrs.<alias>:<AttributeKey.name>[:<FQCN of Function<?, String>>])");
             }
-            return;
+            return this;
         }
 
-        if (mdcKey.startsWith(PREFIX_HTTP_REQ_HEADERS)) {
-            addHttpRequestHeader(mdcKey.substring(PREFIX_HTTP_REQ_HEADERS.length()));
-            return;
+        if (keyPattern.startsWith(PREFIX_HTTP_REQ_HEADERS)) {
+            addHttpRequestHeader(keyPattern.substring(PREFIX_HTTP_REQ_HEADERS.length()));
+            return this;
         }
 
-        if (mdcKey.startsWith(PREFIX_HTTP_RES_HEADERS)) {
-            addHttpResponseHeader(mdcKey.substring(PREFIX_HTTP_RES_HEADERS.length()));
-            return;
+        if (keyPattern.startsWith(PREFIX_HTTP_RES_HEADERS)) {
+            addHttpResponseHeader(keyPattern.substring(PREFIX_HTTP_RES_HEADERS.length()));
+            return this;
         }
 
-        throw new IllegalArgumentException("unknown MDC key: " + mdcKey);
+        throw new IllegalArgumentException("unknown key pattern: " + keyPattern);
     }
 
     @SuppressWarnings("unchecked")
-    private Function<?, String> newStringifier(String mdcKey, String className) {
+    private Function<?, String> newStringifier(String keyPattern, String className) {
         final Function<?, String> stringifier;
         try {
             stringifier = (Function<?, String>)
@@ -172,12 +236,15 @@ final class RequestContextExporterBuilder {
                          .newInstance();
         } catch (Exception e) {
             throw new IllegalArgumentException("failed to instantiate a stringifier function: " +
-                                               mdcKey, e);
+                                               keyPattern, e);
         }
         return stringifier;
     }
 
-    RequestContextExporter build() {
+    /**
+     * Returns a newly-created {@link RequestContextExporter} instance.
+     */
+    public RequestContextExporter build() {
         return new RequestContextExporter(builtIns, attrs, httpReqHeaders, httpResHeaders);
     }
 }

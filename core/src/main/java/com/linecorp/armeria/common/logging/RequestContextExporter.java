@@ -64,9 +64,14 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
-final class RequestContextExporter {
+/**
+ * Exports the properties of current {@link RequestContext} to {@link Map}.
+ */
+public final class RequestContextExporter {
 
     private static final Pattern PORT_443 = Pattern.compile(":0*443$");
     private static final Pattern PORT_80 = Pattern.compile(":0*80$");
@@ -75,6 +80,13 @@ final class RequestContextExporter {
 
     @SuppressWarnings("rawtypes")
     private static final ExportEntry[] EMPTY_EXPORT_ENTRIES = new ExportEntry[0];
+
+    private static final AttributeKey<State> STATE =
+            AttributeKey.valueOf(RequestContextExporter.class, "STATE");
+
+    public static RequestContextExporterBuilder builder() {
+        return new RequestContextExporterBuilder();
+    }
 
     private final BuiltInProperties builtIns;
     @Nullable
@@ -112,7 +124,32 @@ final class RequestContextExporter {
         }
     }
 
-    void export(Map<String, String> out, RequestContext ctx, RequestLog log) {
+    /**
+     * Returns a {@link Map} whose key is export key set through {@code add*()} of
+     * {@link RequestContextExporterBuilder} and value is exported from {@link RequestContext}
+     * and {@link RequestLog}.
+     * Note that: this method returns {@code null} if current {@link RequestContext} is {@code null}.
+     */
+    @Nullable
+    public Map<String, String> export() {
+        final RequestContext ctx = RequestContext.currentOrNull();
+        if (ctx != null) {
+            final State state = state(ctx);
+            final RequestLog log = ctx.log();
+            final Set<RequestLogAvailability> availabilities = log.availabilities();
+
+            // Note: This equality check is extremely fast.
+            //       See RequestLogAvailabilitySet for more information.
+            if (!availabilities.equals(state.availabilities)) {
+                state.availabilities = availabilities;
+                export(state, ctx, log);
+            }
+            return state.clone();
+        }
+        return null;
+    }
+
+    private void export(Map<String, String> out, RequestContext ctx, RequestLog log) {
         // Built-ins
         if (builtIns.containsAddresses()) {
             exportAddresses(out, ctx);
@@ -175,40 +212,40 @@ final class RequestContextExporter {
 
         if (raddr != null) {
             if (builtIns.contains(REMOTE_HOST)) {
-                out.put(REMOTE_HOST.mdcKey, raddr.getHostString());
+                out.put(REMOTE_HOST.key, raddr.getHostString());
             }
             if (builtIns.contains(REMOTE_IP)) {
-                out.put(REMOTE_IP.mdcKey, raddr.getAddress().getHostAddress());
+                out.put(REMOTE_IP.key, raddr.getAddress().getHostAddress());
             }
             if (builtIns.contains(REMOTE_PORT)) {
-                out.put(REMOTE_PORT.mdcKey, String.valueOf(raddr.getPort()));
+                out.put(REMOTE_PORT.key, String.valueOf(raddr.getPort()));
             }
         }
 
         if (laddr != null) {
             if (builtIns.contains(LOCAL_HOST)) {
-                out.put(LOCAL_HOST.mdcKey, laddr.getHostString());
+                out.put(LOCAL_HOST.key, laddr.getHostString());
             }
             if (builtIns.contains(LOCAL_IP)) {
-                out.put(LOCAL_IP.mdcKey, laddr.getAddress().getHostAddress());
+                out.put(LOCAL_IP.key, laddr.getAddress().getHostAddress());
             }
             if (builtIns.contains(LOCAL_PORT)) {
-                out.put(LOCAL_PORT.mdcKey, String.valueOf(laddr.getPort()));
+                out.put(LOCAL_PORT.key, String.valueOf(laddr.getPort()));
             }
         }
 
         if (caddr != null) {
             if (builtIns.contains(CLIENT_IP)) {
-                out.put(CLIENT_IP.mdcKey, caddr.getHostAddress());
+                out.put(CLIENT_IP.key, caddr.getHostAddress());
             }
         }
     }
 
     private static void exportScheme(Map<String, String> out, RequestContext ctx, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.SCHEME)) {
-            out.put(SCHEME.mdcKey, log.scheme().uriText());
+            out.put(SCHEME.key, log.scheme().uriText());
         } else {
-            out.put(SCHEME.mdcKey, "unknown+" + ctx.sessionProtocol().uriText());
+            out.put(SCHEME.key, "unknown+" + ctx.sessionProtocol().uriText());
         }
     }
 
@@ -221,7 +258,7 @@ final class RequestContextExporter {
         } else {
             d = "UNKNOWN";
         }
-        out.put(REQ_DIRECTION.mdcKey, d);
+        out.put(REQ_DIRECTION.key, d);
     }
 
     private static void exportAuthority(Map<String, String> out, RequestContext ctx, RequestLog log) {
@@ -229,7 +266,7 @@ final class RequestContextExporter {
         if (availabilities.contains(RequestLogAvailability.REQUEST_HEADERS)) {
             final String authority = getAuthority(ctx, log.requestHeaders());
             if (authority != null) {
-                out.put(REQ_AUTHORITY.mdcKey, authority);
+                out.put(REQ_AUTHORITY.key, authority);
                 return;
             }
         }
@@ -238,7 +275,7 @@ final class RequestContextExporter {
         if (origReq != null) {
             final String authority = getAuthority(ctx, origReq.headers());
             if (authority != null) {
-                out.put(REQ_AUTHORITY.mdcKey, authority);
+                out.put(REQ_AUTHORITY.key, authority);
                 return;
             }
         }
@@ -246,7 +283,7 @@ final class RequestContextExporter {
         if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
             final String authority = log.authority();
             if (!"?".equals(authority)) {
-                out.put(REQ_AUTHORITY.mdcKey, authority);
+                out.put(REQ_AUTHORITY.key, authority);
                 return;
             }
         }
@@ -279,7 +316,7 @@ final class RequestContextExporter {
             }
         }
 
-        out.put(REQ_AUTHORITY.mdcKey, authority);
+        out.put(REQ_AUTHORITY.key, authority);
     }
 
     @Nullable
@@ -298,38 +335,38 @@ final class RequestContextExporter {
     }
 
     private static void exportPath(Map<String, String> out, RequestContext ctx) {
-        out.put(REQ_PATH.mdcKey, ctx.path());
+        out.put(REQ_PATH.key, ctx.path());
     }
 
     private static void exportQuery(Map<String, String> out, RequestContext ctx) {
-        out.put(REQ_QUERY.mdcKey, ctx.query());
+        out.put(REQ_QUERY.key, ctx.query());
     }
 
     private static void exportMethod(Map<String, String> out, RequestContext ctx) {
-        out.put(REQ_METHOD.mdcKey, ctx.method().name());
+        out.put(REQ_METHOD.key, ctx.method().name());
     }
 
     private static void exportRequestContentLength(Map<String, String> out, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.REQUEST_END)) {
-            out.put(REQ_CONTENT_LENGTH.mdcKey, String.valueOf(log.requestLength()));
+            out.put(REQ_CONTENT_LENGTH.key, String.valueOf(log.requestLength()));
         }
     }
 
     private static void exportStatusCode(Map<String, String> out, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-            out.put(RES_STATUS_CODE.mdcKey, log.status().codeAsText());
+            out.put(RES_STATUS_CODE.key, log.status().codeAsText());
         }
     }
 
     private static void exportResponseContentLength(Map<String, String> out, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.RESPONSE_END)) {
-            out.put(RES_CONTENT_LENGTH.mdcKey, String.valueOf(log.responseLength()));
+            out.put(RES_CONTENT_LENGTH.key, String.valueOf(log.responseLength()));
         }
     }
 
     private static void exportElapsedNanos(Map<String, String> out, RequestLog log) {
         if (log.isAvailable(RequestLogAvailability.COMPLETE)) {
-            out.put(ELAPSED_NANOS.mdcKey, String.valueOf(log.totalDurationNanos()));
+            out.put(ELAPSED_NANOS.key, String.valueOf(log.totalDurationNanos()));
         }
     }
 
@@ -339,19 +376,19 @@ final class RequestContextExporter {
             if (builtIns.contains(TLS_SESSION_ID)) {
                 final byte[] id = s.getId();
                 if (id != null) {
-                    out.put(TLS_SESSION_ID.mdcKey, lowerCasedBase16.encode(id));
+                    out.put(TLS_SESSION_ID.key, lowerCasedBase16.encode(id));
                 }
             }
             if (builtIns.contains(TLS_CIPHER)) {
                 final String cs = s.getCipherSuite();
                 if (cs != null) {
-                    out.put(TLS_CIPHER.mdcKey, cs);
+                    out.put(TLS_CIPHER.key, cs);
                 }
             }
             if (builtIns.contains(TLS_PROTO)) {
                 final String p = s.getProtocol();
                 if (p != null) {
-                    out.put(TLS_PROTO.mdcKey, p);
+                    out.put(TLS_PROTO.key, p);
                 }
             }
         }
@@ -366,10 +403,10 @@ final class RequestContextExporter {
         if (requestContent instanceof RpcRequest) {
             final RpcRequest rpcReq = (RpcRequest) requestContent;
             if (builtIns.contains(REQ_RPC_METHOD)) {
-                out.put(REQ_RPC_METHOD.mdcKey, rpcReq.method());
+                out.put(REQ_RPC_METHOD.key, rpcReq.method());
             }
             if (builtIns.contains(REQ_RPC_PARAMS)) {
-                out.put(REQ_RPC_PARAMS.mdcKey, String.valueOf(rpcReq.params()));
+                out.put(REQ_RPC_PARAMS.key, String.valueOf(rpcReq.params()));
             }
         }
     }
@@ -385,7 +422,7 @@ final class RequestContextExporter {
             if (builtIns.contains(RES_RPC_RESULT) &&
                 !rpcRes.isCompletedExceptionally()) {
                 try {
-                    out.put(RES_RPC_RESULT.mdcKey, String.valueOf(rpcRes.get()));
+                    out.put(RES_RPC_RESULT.key, String.valueOf(rpcRes.get()));
                 } catch (Exception e) {
                     // Should never reach here because RpcResponse must be completed.
                     throw new Error(e);
@@ -401,7 +438,7 @@ final class RequestContextExporter {
 
         for (ExportEntry<AttributeKey<?>> e : attrs) {
             final AttributeKey<?> attrKey = e.key;
-            final String mdcKey = e.mdcKey;
+            final String mdcKey = e.exportKey;
             if (ctx.hasAttr(attrKey)) {
                 final Object value = ctx.attr(attrKey).get();
                 if (value != null) {
@@ -431,7 +468,7 @@ final class RequestContextExporter {
                                           ExportEntry<AsciiString>[] requiredHeaderNames) {
         for (ExportEntry<AsciiString> e : requiredHeaderNames) {
             final String value = headers.get(e.key);
-            final String mdcKey = e.mdcKey;
+            final String mdcKey = e.exportKey;
             if (value != null) {
                 out.put(mdcKey, e.stringify(value));
             }
@@ -440,16 +477,16 @@ final class RequestContextExporter {
 
     static final class ExportEntry<T> {
         final T key;
-        final String mdcKey;
+        final String exportKey;
         @Nullable
         final Function<Object, String> stringifier;
 
         @SuppressWarnings("unchecked")
-        ExportEntry(T key, String mdcKey, @Nullable Function<?, ?> stringifier) {
+        ExportEntry(T key, String exportKey, @Nullable Function<?, ?> stringifier) {
             assert key != null;
-            assert mdcKey != null;
+            assert exportKey != null;
             this.key = key;
-            this.mdcKey = mdcKey;
+            this.exportKey = exportKey;
             this.stringifier = (Function<Object, String>) stringifier;
         }
 
@@ -482,7 +519,29 @@ final class RequestContextExporter {
 
         @Override
         public String toString() {
-            return mdcKey + ':' + key;
+            return exportKey + ':' + key;
         }
+    }
+
+    private static State state(RequestContext ctx) {
+        final Attribute<State> attr = ctx.attr(STATE);
+        final State state = attr.get();
+        if (state == null) {
+            final State newState = new State();
+            final State oldState = attr.setIfAbsent(newState);
+            if (oldState != null) {
+                return oldState;
+            } else {
+                return newState;
+            }
+        }
+        return state;
+    }
+
+    private static final class State extends Object2ObjectOpenHashMap<String, String> {
+        private static final long serialVersionUID = -7084248226635055988L;
+
+        @Nullable
+        Set<RequestLogAvailability> availabilities;
     }
 }

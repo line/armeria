@@ -30,9 +30,9 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.Scheme;
 
 /**
- * A built-in property exported by {@link RequestContextAwareExporter}.
+ * A built-in property exported by {@link RequestContextExporter}.
  *
- * @see RequestContextAwareExporter#addBuiltIn(BuiltInProperty)
+ * @see RequestContextExporterBuilder#addBuiltIn(BuiltInProperty)
  */
 public enum BuiltInProperty {
     /**
@@ -151,7 +151,7 @@ public enum BuiltInProperty {
      */
     TLS_PROTO("tls.proto");
 
-    private static final Map<String, BuiltInProperty> mdcKeyToEnum;
+    private static final Map<String, BuiltInProperty> keyToEnum;
 
     static final String WILDCARD_STR = "*";
     static final String WILDCARD_REGEX = '\\' + WILDCARD_STR;
@@ -159,23 +159,23 @@ public enum BuiltInProperty {
     static {
         final ImmutableMap.Builder<String, BuiltInProperty> builder = ImmutableMap.builder();
         for (BuiltInProperty k : BuiltInProperty.values()) {
-            builder.put(k.mdcKey, k);
+            builder.put(k.key, k);
         }
-        mdcKeyToEnum = builder.build();
+        keyToEnum = builder.build();
     }
 
-    static List<BuiltInProperty> findByMdcKeyPattern(String mdcKeyPattern) {
+    static List<BuiltInProperty> findByKeyPattern(String keyPattern) {
         final Pattern pattern = Pattern.compile(
-                ("\\Q" + mdcKeyPattern + "\\E").replaceAll(WILDCARD_REGEX, "\\\\E.*\\\\Q"));
-        return mdcKeyToEnum.entrySet().stream()
-                           .filter(e -> pattern.matcher(e.getKey()).matches())
-                           .map(Entry::getValue)
-                           .collect(toImmutableList());
+                ("\\Q" + keyPattern + "\\E").replaceAll(WILDCARD_REGEX, "\\\\E.*\\\\Q"));
+        return keyToEnum.entrySet().stream()
+                        .filter(e -> pattern.matcher(e.getKey()).matches())
+                        .map(Entry::getValue)
+                        .collect(toImmutableList());
     }
 
-    final String mdcKey;
+    final String key;
 
-    BuiltInProperty(String mdcKey) {
-        this.mdcKey = mdcKey;
+    BuiltInProperty(String key) {
+        this.key = key;
     }
 }

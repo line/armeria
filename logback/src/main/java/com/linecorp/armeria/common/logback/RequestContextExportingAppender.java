@@ -29,7 +29,8 @@ import org.slf4j.Marker;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
-import com.linecorp.armeria.common.logging.RequestContextAwareExporter;
+import com.linecorp.armeria.common.logging.RequestContextExporter;
+import com.linecorp.armeria.common.logging.RequestContextExporterBuilder;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -52,7 +53,7 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory;
  * for more information.
  */
 public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<ILoggingEvent>
-                                             implements AppenderAttachable<ILoggingEvent> {
+        implements AppenderAttachable<ILoggingEvent> {
     static {
         if (InternalLoggerFactory.getDefaultFactory() == null) {
             // Can happen due to initialization order.
@@ -61,29 +62,30 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
     }
 
     private final AppenderAttachableImpl<ILoggingEvent> aai = new AppenderAttachableImpl<>();
-    private final RequestContextAwareExporter requestContextAwareExporter =
-            new RequestContextAwareExporter();
+    private final RequestContextExporterBuilder builder = RequestContextExporter.builder();
+    @Nullable
+    private RequestContextExporter exporter;
 
     /**
      * Adds the specified {@link BuiltInProperty} to the export list.
      */
     public void addBuiltIn(BuiltInProperty property) {
         ensureNotStarted();
-        requestContextAwareExporter.addBuiltIn(property);
+        builder.addBuiltIn(property);
     }
 
     /**
      * Returns {@code true} if the specified {@link BuiltInProperty} is in the export list.
      */
     public boolean containsBuiltIn(BuiltInProperty property) {
-        return requestContextAwareExporter.containsBuiltIn(property);
+        return builder.containsBuiltIn(property);
     }
 
     /**
      * Returns all {@link BuiltInProperty}s in the export list.
      */
     public Set<BuiltInProperty> getBuiltIns() {
-        return requestContextAwareExporter.getBuiltIns();
+        return builder.getBuiltIns();
     }
 
     /**
@@ -94,7 +96,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public void addAttribute(String alias, AttributeKey<?> attrKey) {
         ensureNotStarted();
-        requestContextAwareExporter.addAttribute(alias, attrKey);
+        builder.addAttribute(alias, attrKey);
     }
 
     /**
@@ -109,7 +111,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         requireNonNull(stringifier, "stringifier");
-        requestContextAwareExporter.addAttribute(alias, attrKey, stringifier);
+        builder.addAttribute(alias, attrKey, stringifier);
     }
 
     /**
@@ -117,7 +119,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public boolean containsAttribute(AttributeKey<?> key) {
         requireNonNull(key, "key");
-        return requestContextAwareExporter.containsAttribute(key);
+        return builder.containsAttribute(key);
     }
 
     /**
@@ -126,7 +128,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
      */
     public Map<String, AttributeKey<?>> getAttributes() {
-        return requestContextAwareExporter.getAttributes();
+        return builder.getAttributes();
     }
 
     /**
@@ -135,7 +137,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
     public void addHttpRequestHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        requestContextAwareExporter.addHttpRequestHeader(name);
+        builder.addHttpRequestHeader(name);
     }
 
     /**
@@ -144,7 +146,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
     public void addHttpResponseHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        requestContextAwareExporter.addHttpResponseHeader(name);
+        builder.addHttpResponseHeader(name);
     }
 
     /**
@@ -152,7 +154,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public boolean containsHttpRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
-        return requestContextAwareExporter.containsHttpRequestHeader(name);
+        return builder.containsHttpRequestHeader(name);
     }
 
     /**
@@ -160,21 +162,21 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public boolean containsHttpResponseHeader(CharSequence name) {
         requireNonNull(name, "name");
-        return requestContextAwareExporter.containsHttpResponseHeader(name);
+        return builder.containsHttpResponseHeader(name);
     }
 
     /**
      * Returns all HTTP request header names in the export list.
      */
     public Set<AsciiString> getHttpRequestHeaders() {
-        return requestContextAwareExporter.getHttpRequestHeaders();
+        return builder.getHttpRequestHeaders();
     }
 
     /**
      * Returns all HTTP response header names in the export list.
      */
     public Set<AsciiString> getHttpResponseHeaders() {
-        return requestContextAwareExporter.getHttpResponseHeaders();
+        return builder.getHttpResponseHeaders();
     }
 
     /**
@@ -184,7 +186,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public void setExport(String mdcKey) {
         requireNonNull(mdcKey, "mdcKey");
-        requestContextAwareExporter.setExport(mdcKey);
+        builder.addKeyPattern(mdcKey);
     }
 
     /**
@@ -194,7 +196,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      */
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
-        requestContextAwareExporter.setExports(mdcKeys);
+        builder.addKeyPattern(mdcKeys);
     }
 
     private void ensureNotStarted() {
@@ -205,7 +207,10 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     @Override
     protected void append(ILoggingEvent eventObject) {
-        final Map<String, String> contextMap = requestContextAwareExporter.exports();
+        if (exporter == null) {
+            exporter = builder.build();
+        }
+        final Map<String, String> contextMap = exporter.export();
         if (contextMap != null) {
             final Map<String, String> originalMdcMap = eventObject.getMDCPropertyMap();
             final Map<String, String> mdcMap;
