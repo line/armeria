@@ -25,12 +25,10 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.sun.net.httpserver.HttpsParameters;
-
 import io.netty.handler.codec.Headers;
 
 /**
- * Immutable {@link HttpsParameters}.
+ * Immutable {@link HttpParameters}.
  *
  * @deprecated Use {@link QueryParams}.
  */
