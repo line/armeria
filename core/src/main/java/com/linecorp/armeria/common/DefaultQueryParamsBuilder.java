@@ -16,7 +16,7 @@
 package com.linecorp.armeria.common;
 
 final class DefaultQueryParamsBuilder
-        extends AbstractStringMultimapBuilder<String, String, QueryParamsBase, QueryParamsBuilder>
+        extends StringMultimapBuilder<String, String, QueryParamsBase, QueryParamsBuilder>
         implements QueryParamsBuilder {
 
     DefaultQueryParamsBuilder() {}

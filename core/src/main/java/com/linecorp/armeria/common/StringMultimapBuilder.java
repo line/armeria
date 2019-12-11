@@ -33,7 +33,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-abstract class AbstractStringMultimapBuilder<
+abstract class StringMultimapBuilder<
         IN_NAME extends CharSequence,
         NAME extends IN_NAME,
         CONTAINER extends StringMultimap<IN_NAME, NAME>,
@@ -45,9 +45,9 @@ abstract class AbstractStringMultimapBuilder<
     @Nullable
     private CONTAINER parent;
 
-    AbstractStringMultimapBuilder() {}
+    StringMultimapBuilder() {}
 
-    AbstractStringMultimapBuilder(CONTAINER parent) {
+    StringMultimapBuilder(CONTAINER parent) {
         this.parent = parent;
     }
 

@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 import io.netty.util.AsciiString;
 
 abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder>
-        extends AbstractStringMultimapBuilder<CharSequence, AsciiString, HttpHeadersBase, SELF> {
+        extends StringMultimapBuilder<CharSequence, AsciiString, HttpHeadersBase, SELF> {
 
     AbstractHttpHeadersBuilder() {}
 
