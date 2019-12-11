@@ -67,7 +67,10 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
         if (uri != null) {
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
-            final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(uri.getRawPath()));
+            final String query = uri.getRawQuery();
+            final String path = uri.getRawPath();
+            final HttpRequest newReq = req.withHeaders(req.headers().toBuilder()
+                    .path(query == null ? path : path + '?' + query));
             return execute(eventLoop, endpoint, newReq);
         }
 
