@@ -42,7 +42,6 @@ final class DefaultQueryParamsBuilder implements QueryParamsBuilder {
     @Nullable
     private QueryParamsBase parent;
 
-
     DefaultQueryParamsBuilder() {}
 
     DefaultQueryParamsBuilder(QueryParamsBase parent) {
