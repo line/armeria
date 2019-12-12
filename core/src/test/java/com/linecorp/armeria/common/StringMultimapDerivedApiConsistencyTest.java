@@ -64,6 +64,12 @@ class StringMultimapDerivedApiConsistencyTest {
                              return false;
                          }
 
+                         // Ignore the methods only available in QueryParamGetters
+                         if ("toQueryString".equals(methodName) ||
+                             "appendQueryString".equals(methodName)) {
+                             return false;
+                         }
+
                          // Ignore the build() method.
                          return !"build".equals(methodName);
                      })

@@ -318,4 +318,14 @@ interface QueryParamGetters extends StringMultimapGetters<String, String> {
     default Stream<String> valueStream(String name) {
         return Streams.stream(valueIterator(name));
     }
+
+
+    default String toQueryString() {
+        return QueryStringEncoder.encodeParams(this);
+    }
+
+    default StringBuilder appendQueryString(StringBuilder buf) {
+        QueryStringEncoder.encodeParams(buf, this);
+        return buf;
+    }
 }

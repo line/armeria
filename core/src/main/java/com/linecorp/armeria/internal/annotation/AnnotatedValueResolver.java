@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -74,7 +75,6 @@ import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -93,7 +93,6 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
-import io.netty.handler.codec.http.QueryStringDecoder;
 
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
@@ -1207,40 +1206,35 @@ final class AnnotatedValueResolver {
          *
          * <p>Names and values of the parameters would be decoded as UTF-8 character set.</p>
          *
-         * @see QueryStringDecoder#QueryStringDecoder(String, boolean)
+         * @see QueryParams#fromQueryString(String)
          * @see HttpConstants#DEFAULT_CHARSET
          */
         private static QueryParams queryParamsOf(@Nullable String query,
                                                  @Nullable MediaType contentType,
                                                  @Nullable AggregatedHttpRequest message) {
             try {
-                Map<String, List<String>> parameters = null;
-                if (query != null) {
-                    parameters = new QueryStringDecoder(query, false).parameters();
-                }
-
+                final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
+                QueryParams params2 = null;
                 if (message != null && isFormData(contentType)) {
                     // Respect 'charset' attribute of the 'content-type' header if it exists.
                     final String body = message.content(
                             contentType.charset().orElse(StandardCharsets.US_ASCII));
                     if (!body.isEmpty()) {
-                        final Map<String, List<String>> p =
-                                new QueryStringDecoder(body, false).parameters();
-                        if (parameters == null) {
-                            parameters = p;
-                        } else if (p != null) {
-                            parameters.putAll(p);
-                        }
+                        params2 = QueryParams.fromQueryString(body);
                     }
                 }
 
-                if (parameters == null || parameters.isEmpty()) {
-                    return QueryParams.of();
+                if (params1 == null || params1.isEmpty()) {
+                    return firstNonNull(params2, QueryParams.of());
+                } else if (params2 == null || params2.isEmpty()) {
+                    return params1;
+                } else {
+                    return QueryParams.builder()
+                                      .sizeHint(params1.size() + params2.size())
+                                      .add(params1)
+                                      .add(params2)
+                                      .build();
                 }
-
-                final QueryParamsBuilder builder = QueryParams.builder();
-                parameters.forEach(builder::add);
-                return builder.build();
             } catch (Exception e) {
                 // If we failed to decode the query string, we ignore the exception raised here.
                 // A missing parameter might be checked when invoking the annotated method.

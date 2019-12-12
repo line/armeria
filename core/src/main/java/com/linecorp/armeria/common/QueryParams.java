@@ -21,6 +21,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 /**
  * Immutable HTTP query parameters.
  *
@@ -238,6 +240,31 @@ public interface QueryParams extends QueryParamGetters {
                         .addObject(name3, value3)
                         .addObject(name4, value4)
                         .build();
+    }
+
+    static QueryParams fromQueryString(@Nullable String queryString) {
+        return fromQueryString(queryString, 1024);
+    }
+
+    static QueryParams fromQueryString(@Nullable String queryString, boolean semicolonIsSeparator) {
+        return fromQueryString(queryString, 1024, semicolonIsSeparator);
+    }
+
+    static QueryParams fromQueryString(@Nullable String queryString, int maxParams) {
+
+        // Do not treat a semicolon (;) as a separator by default, as recommended in:
+        //
+        //   https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data
+        //
+        // > Let strings be the result of strictly splitting the string payload on
+        // > U+0026 AMPERSAND characters (&).
+
+        return fromQueryString(queryString, maxParams, /* semicolonIsSeparator */ false);
+    }
+
+    static QueryParams fromQueryString(@Nullable String queryString, int maxParams,
+                                       boolean semicolonIsSeparator) {
+        return QueryStringDecoder.decodeParams(queryString, maxParams, semicolonIsSeparator);
     }
 
     /**
