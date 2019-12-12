@@ -242,14 +242,41 @@ public interface QueryParams extends QueryParamGetters {
                         .build();
     }
 
+    /**
+     * Decodes the specified query string into a {@link QueryParams}, as defined in
+     * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
+     * HTML5 W3C Recommendation</a>.
+     *
+     * @param queryString the query string with or without leading question mark ({@code '?'}).
+     */
     static QueryParams fromQueryString(@Nullable String queryString) {
         return fromQueryString(queryString, 1024);
     }
 
+    /**
+     * Decodes the specified query string into a {@link QueryParams}, as defined in
+     * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
+     * HTML5 W3C Recommendation</a>.
+     *
+     * @param queryString the query string with or without leading question mark ({@code '?'}).
+     * @param semicolonIsSeparator whether to treat a semicolon ({@code ';'}) as a separator as well as
+     *                             an ampersand ({@code '&'}). Note that HTML5 expects you to use only
+     *                             ampersand as a separator. Enable this flag only when you need to
+     *                             interop with a legacy system.
+     */
     static QueryParams fromQueryString(@Nullable String queryString, boolean semicolonIsSeparator) {
         return fromQueryString(queryString, 1024, semicolonIsSeparator);
     }
 
+    /**
+     * Decodes the specified query string into a {@link QueryParams}, as defined in
+     * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
+     * HTML5 W3C Recommendation</a>.
+     *
+     * @param queryString the query string with or without leading question mark ({@code '?'}).
+     * @param maxParams   the max number of parameters to decode. If the {@code queryString} contains
+     *                    more parameters than this value, the extra parameters will not be decoded.
+     */
     static QueryParams fromQueryString(@Nullable String queryString, int maxParams) {
 
         // Do not treat a semicolon (;) as a separator by default, as recommended in:
@@ -262,6 +289,19 @@ public interface QueryParams extends QueryParamGetters {
         return fromQueryString(queryString, maxParams, /* semicolonIsSeparator */ false);
     }
 
+    /**
+     * Decodes the specified query string into a {@link QueryParams}, as defined in
+     * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
+     * HTML5 W3C Recommendation</a>.
+     *
+     * @param queryString the query string with or without leading question mark ({@code '?'}).
+     * @param maxParams   the max number of parameters to decode. If the {@code queryString} contains
+     *                    more parameters than this value, the extra parameters will not be decoded.
+     * @param semicolonIsSeparator whether to treat a semicolon ({@code ';'}) as a separator as well as
+     *                             an ampersand ({@code '&'}). Note that HTML5 expects you to use only
+     *                             ampersand as a separator. Enable this flag only when you need to
+     *                             interop with a legacy system.
+     */
     static QueryParams fromQueryString(@Nullable String queryString, int maxParams,
                                        boolean semicolonIsSeparator) {
         return QueryStringDecoder.decodeParams(queryString, maxParams, semicolonIsSeparator);

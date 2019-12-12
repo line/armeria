@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -320,13 +322,28 @@ interface QueryParamGetters extends StringMultimapGetters<String, String> {
         return Streams.stream(valueIterator(name));
     }
 
+    /**
+     * Encodes all parameter entries into a query string, as defined in
+     * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
+     * HTML5 W3C Recommendation</a>.
+     *
+     * @return the encoded query string.
+     */
     default String toQueryString() {
         final StringBuilder buf = new StringBuilder(
                 IntMath.saturatedAdd(IntMath.saturatedMultiply(size(), 8), 16));
         return appendQueryString(buf).toString();
     }
 
+    /**
+     * Encodes all parameter entries into a query string, as defined in
+     * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
+     * HTML5 W3C Recommendation</a>, and appends it into the specified {@link StringBuilder}.
+     *
+     * @return the specified {@link StringBuilder} for method chaining.
+     */
     default StringBuilder appendQueryString(StringBuilder buf) {
+        requireNonNull(buf, "buf");
         QueryStringEncoder.encodeParams(buf, this);
         return buf;
     }
