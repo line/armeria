@@ -172,7 +172,7 @@ class QueryParamsTest {
     void testHashDos() {
         final StringBuilder buf = new StringBuilder();
         buf.append('?');
-        for (int i = 0; i < 65536; i ++) {
+        for (int i = 0; i < 65536; i++) {
             buf.append('k');
             buf.append(i);
             buf.append("=v");
@@ -232,6 +232,7 @@ class QueryParamsTest {
     // https://github.com/netty/netty/blob/dcd322dda2dfd1e0567017d2e02c53728c310032/codec-http/src/test/java/io/netty/handler/codec/http/QueryStringEncoderTest.java
 
     @Test
+    @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
     void testDefaultEncoding() throws Exception {
         assertThat(QueryParams.of("a", "b=c").toQueryString()).isEqualTo("a=b%3Dc");
         assertThat(QueryParams.of("a", "\u00A5").toQueryString()).isEqualTo("a=%C2%A5");

@@ -52,6 +52,7 @@ final class QueryStringDecoder {
     // Forked from netty-4.1.43.
     // https://github.com/netty/netty/blob/7d6d953153697bd66c3b01ca8ec73c4494a81788/codec-http/src/main/java/io/netty/handler/codec/http/QueryStringDecoder.java
 
+    @SuppressWarnings("checkstyle:FallThrough")
     static QueryParams decodeParams(@Nullable String s, int paramsLimit, boolean semicolonIsSeparator) {
         if (s == null) {
             return QueryParams.of();

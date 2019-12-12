@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.Streams;
+import com.google.common.math.IntMath;
 
 /**
  * Provides the getter methods to {@link QueryParams} and {@link QueryParamsBuilder}.
@@ -319,9 +320,10 @@ interface QueryParamGetters extends StringMultimapGetters<String, String> {
         return Streams.stream(valueIterator(name));
     }
 
-
     default String toQueryString() {
-        return QueryStringEncoder.encodeParams(this);
+        final StringBuilder buf = new StringBuilder(
+                IntMath.saturatedAdd(IntMath.saturatedMultiply(size(), 8), 16));
+        return appendQueryString(buf).toString();
     }
 
     default StringBuilder appendQueryString(StringBuilder buf) {

@@ -32,12 +32,9 @@ package com.linecorp.armeria.common;
 
 import java.util.Map.Entry;
 
-import com.google.common.math.IntMath;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.StringUtil;
-
 
 final class QueryStringEncoder {
 
@@ -46,13 +43,6 @@ final class QueryStringEncoder {
 
     private static final byte WRITE_UTF_UNKNOWN = (byte) '?';
     private static final char[] CHAR_MAP = "0123456789ABCDEF".toCharArray();
-
-    static String encodeParams(QueryParamGetters params) {
-        final StringBuilder buf = new StringBuilder(
-                IntMath.saturatedAdd(IntMath.saturatedMultiply(params.size(), 8), 16));
-        encodeParams(buf, params);
-        return buf.toString();
-    }
 
     static void encodeParams(StringBuilder buf, QueryParamGetters params) {
         for (Entry<String, String> e : params) {
@@ -69,6 +59,8 @@ final class QueryStringEncoder {
     }
 
     /**
+     * Encodes a query component (name or value).
+     *
      * @see ByteBufUtil#writeUtf8(ByteBuf, CharSequence, int, int)
      */
     private static void encodeUtf8Component(StringBuilder uriBuilder, String s) {
@@ -126,7 +118,7 @@ final class QueryStringEncoder {
      *
      * @param digit the number to convert to a character.
      * @return the {@code char} representation of the specified digit
-     * in hexadecimal.
+     *         in hexadecimal.
      */
     private static char forDigit(int digit) {
         return CHAR_MAP[digit & 0xF];
@@ -134,18 +126,18 @@ final class QueryStringEncoder {
 
     /**
      * Determines whether the given character is a unreserved character.
-     * <p>
-     * unreserved characters do not need to be encoded, and include uppercase and lowercase
-     * letters, decimal digits, hyphen, period, underscore, and tilde.
-     * <p>
-     * unreserved  = ALPHA / DIGIT / "-" / "_" / "." / "*"
+     *
+     * <p>unreserved characters do not need to be encoded, and include uppercase and lowercase
+     * letters, decimal digits, hyphen, period, underscore, and tilde.</p>
+     *
+     * <p>unreserved  = ALPHA / DIGIT / "-" / "_" / "." / "*"</p>
      *
      * @param ch the char to be judged whether it need to be encode
      * @return true or false
      */
     private static boolean dontNeedEncoding(char ch) {
-        return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9'
-                || ch == '-' || ch == '_' || ch == '.' || ch == '*';
+        return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' ||
+               ch == '-' || ch == '_' || ch == '.' || ch == '*';
     }
 
     private QueryStringEncoder() {}
