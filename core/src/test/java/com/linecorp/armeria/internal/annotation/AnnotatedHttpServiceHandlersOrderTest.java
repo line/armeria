@@ -22,10 +22,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -50,15 +51,18 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class AnnotatedHttpServiceHandlersOrderTest {
+class AnnotatedHttpServiceHandlersOrderTest {
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/1", new MyDecorationService1(), LoggingService.newDecorator(),
+            sb.annotatedHttpServiceExtensions(ImmutableList.of(new ServerLevelExceptionHandler()),
+                                              ImmutableList.of(new ServerLevelRequestConverter()),
+                                              ImmutableList.of(new ServerLevelResponseConverter()))
+              .annotatedService("/1", new MyDecorationService1(), LoggingService.newDecorator(),
                                 new ServiceLevelRequestConverter(), new ServiceLevelResponseConverter(),
                                 new ServiceLevelExceptionHandler());
         }
@@ -146,6 +150,17 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         }
     }
 
+    private static class ServerLevelRequestConverter implements RequestConverterFunction {
+        @Override
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
+                                     Class<?> expectedResultType) throws Exception {
+            if (expectedResultType == JsonNode.class) {
+                assertThat(requestCounter.getAndIncrement()).isEqualTo(4);
+            }
+            return RequestConverterFunction.fallthrough();
+        }
+    }
+
     // RequestConverterFunction ends
 
     // ResponseConverterFunction starts
@@ -191,6 +206,21 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         }
     }
 
+    private static class ServerLevelResponseConverter implements ResponseConverterFunction {
+        @Override
+        public HttpResponse convertResponse(ServiceRequestContext ctx,
+                                            ResponseHeaders headers,
+                                            @Nullable Object result,
+                                            HttpHeaders trailers) throws Exception {
+            if (result instanceof String && "hello foo".equals(result)) {
+                assertThat(responseCounter.getAndIncrement()).isEqualTo(3);
+                return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8(
+                        (String) result));
+            }
+            return ResponseConverterFunction.fallthrough();
+        }
+    }
+
     // ResponseConverterFunction ends
 
     // ExceptionHandlerFunction starts
@@ -219,6 +249,14 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         }
     }
 
+    private static class ServerLevelExceptionHandler implements ExceptionHandlerFunction {
+        @Override
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
+            assertThat(exceptionCounter.getAndIncrement()).isEqualTo(3);
+            return ExceptionHandlerFunction.fallthrough();
+        }
+    }
+
     // ExceptionHandlerFunction ends
 
     @Test
@@ -233,8 +271,9 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         // Converted from the default converter which is JacksonRequestConverterFunction.
         assertThat(aRes.contentUtf8()).isEqualTo(body);
 
-        // parameter level(+1) -> method level(+1) -> class level(+1) -> service level(+1) -> default
-        assertThat(requestCounter.get()).isEqualTo(4);
+        // parameter level(+1) -> method level(+1) -> class level(+1) -> service level(+1) -> server level(+1)
+        // -> default
+        assertThat(requestCounter.get()).isEqualTo(5);
     }
 
     @Test
@@ -247,7 +286,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         // Converted from the ServiceLevelResponseConverter.
         assertThat(aRes.contentUtf8()).isEqualTo("hello foo");
 
-        // method level(+1) -> class level(+1) -> service level(+1)
+        // method level(+1) -> class level(+1) -> service level(+1) -> server level(+1)
         assertThat(responseCounter.get()).isEqualTo(3);
     }
 
@@ -261,8 +300,8 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         // Converted from the default Handler which is DefaultExceptionHandler in AnnotatedHttpServices.
         assertThat(aRes.contentUtf8()).isEqualTo("hello foo");
 
-        // method level(+1) -> class level(+1) -> service level(+1) -> default
-        assertThat(exceptionCounter.get()).isEqualTo(3);
+        // method level(+1) -> class level(+1) -> service level(+1) -> server level(+1) -> default
+        assertThat(exceptionCounter.get()).isEqualTo(4);
     }
 
     private static AggregatedHttpResponse executeRequest(AggregatedHttpRequest req) {
