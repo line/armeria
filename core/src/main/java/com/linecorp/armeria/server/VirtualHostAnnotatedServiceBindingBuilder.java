@@ -284,7 +284,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     /**
      * FIXME(heowc): Update javadoc.
      */
-    public VirtualHostBuilder create(AnnotatedHttpServiceExtensions extensions) {
+    VirtualHostBuilder applyToServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service,
                                                  exceptionHandlerFunctionBuilder.build(),

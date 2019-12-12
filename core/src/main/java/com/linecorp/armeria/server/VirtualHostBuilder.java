@@ -121,8 +121,8 @@ public final class VirtualHostBuilder {
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
-    private final List<VirtualHostAnnotatedServiceBindingBuilder> annotatedServiceBindingBuilders
-            = new ArrayList<>();
+    private final List<VirtualHostAnnotatedServiceBindingBuilder> virtualHostAnnotatedServiceBindingBuilders =
+            new ArrayList<>();
 
     @Nullable
     private String defaultHostname;
@@ -563,7 +563,7 @@ public final class VirtualHostBuilder {
 
     VirtualHostBuilder addAnnotatedServiceBindingBuilder(
             VirtualHostAnnotatedServiceBindingBuilder virtualHostAnnotatedServiceBindingBuilder) {
-        annotatedServiceBindingBuilders.add(virtualHostAnnotatedServiceBindingBuilder);
+        virtualHostAnnotatedServiceBindingBuilders.add(virtualHostAnnotatedServiceBindingBuilder);
         return this;
     }
 
@@ -925,7 +925,8 @@ public final class VirtualHostBuilder {
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
 
-        annotatedServiceBindingBuilders.forEach(builder -> builder.create(annotatedHttpServiceExtensions));
+        virtualHostAnnotatedServiceBindingBuilders
+                .forEach(builder -> builder.applyToServiceConfigBuilder(annotatedHttpServiceExtensions));
 
         final List<ServiceConfigBuilder> serviceConfigBuilders =
                 getServiceConfigBuilders(template);

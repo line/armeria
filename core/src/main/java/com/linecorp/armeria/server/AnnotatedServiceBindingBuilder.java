@@ -268,7 +268,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     /**
      * FIXME(heowc): Update javadoc.
      */
-    void create(AnnotatedHttpServiceExtensions extensions) {
+    void applyToServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service,
                                                  exceptionHandlerFunctionBuilder.build(),

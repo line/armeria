@@ -1508,7 +1508,8 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        annotatedServiceBindingBuilders.forEach(builder -> builder.create(annotatedHttpServiceExtensions));
+        annotatedServiceBindingBuilders
+                .forEach(builder -> builder.applyToServiceConfigBuilder(annotatedHttpServiceExtensions));
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate);
