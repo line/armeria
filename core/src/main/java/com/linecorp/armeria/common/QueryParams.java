@@ -248,6 +248,8 @@ public interface QueryParams extends QueryParamGetters {
      * HTML5 W3C Recommendation</a>.
      *
      * @param queryString the query string with or without leading question mark ({@code '?'}).
+     * @return the decoded {@link QueryParams}. An empty {@link QueryParams} is returned
+     *         if {@code queryString} is {@code null}.
      */
     static QueryParams fromQueryString(@Nullable String queryString) {
         return fromQueryString(queryString, 1024);
@@ -263,6 +265,8 @@ public interface QueryParams extends QueryParamGetters {
      *                             an ampersand ({@code '&'}). Note that HTML5 expects you to use only
      *                             ampersand as a separator. Enable this flag only when you need to
      *                             interop with a legacy system.
+     * @return the decoded {@link QueryParams}. An empty {@link QueryParams} is returned
+     *         if {@code queryString} is {@code null}.
      */
     static QueryParams fromQueryString(@Nullable String queryString, boolean semicolonIsSeparator) {
         return fromQueryString(queryString, 1024, semicolonIsSeparator);
@@ -276,6 +280,8 @@ public interface QueryParams extends QueryParamGetters {
      * @param queryString the query string with or without leading question mark ({@code '?'}).
      * @param maxParams   the max number of parameters to decode. If the {@code queryString} contains
      *                    more parameters than this value, the extra parameters will not be decoded.
+     * @return the decoded {@link QueryParams}. An empty {@link QueryParams} is returned
+     *         if {@code queryString} is {@code null}.
      */
     static QueryParams fromQueryString(@Nullable String queryString, int maxParams) {
 
@@ -301,6 +307,8 @@ public interface QueryParams extends QueryParamGetters {
      *                             an ampersand ({@code '&'}). Note that HTML5 expects you to use only
      *                             ampersand as a separator. Enable this flag only when you need to
      *                             interop with a legacy system.
+     * @return the decoded {@link QueryParams}. An empty {@link QueryParams} is returned
+     *         if {@code queryString} is {@code null}.
      */
     static QueryParams fromQueryString(@Nullable String queryString, int maxParams,
                                        boolean semicolonIsSeparator) {
