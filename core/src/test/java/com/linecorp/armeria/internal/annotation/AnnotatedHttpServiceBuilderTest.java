@@ -52,20 +52,20 @@ class AnnotatedHttpServiceBuilderTest {
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root() {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Path("/")
             @Get
             public void root() {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Path("/")
             @Get
             @Post
             public void root() {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -77,7 +77,7 @@ class AnnotatedHttpServiceBuilderTest {
                              @Param("f") Optional<Float> f,
                              @Param("g") Optional<Double> g,
                              @Param("h") Optional<String> h) {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -89,7 +89,7 @@ class AnnotatedHttpServiceBuilderTest {
                              @Param("f") float f,
                              @Param("g") double g,
                              @Param("h") String h) {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -101,7 +101,7 @@ class AnnotatedHttpServiceBuilderTest {
                              @Param("f") List<Float> f,
                              @Param("g") List<Double> g,
                              @Param("h") List<String> h) {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -113,7 +113,7 @@ class AnnotatedHttpServiceBuilderTest {
                              @Param("f") Set<Float> f,
                              @Param("g") Set<Double> g,
                              @Param("h") Set<String> h) {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -125,7 +125,7 @@ class AnnotatedHttpServiceBuilderTest {
                              @Param("f") Optional<List<Float>> f,
                              @Param("g") Optional<List<Double>> g,
                              @Param("h") Optional<List<String>> h) {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
                                               @Get("/")
@@ -133,13 +133,13 @@ class AnnotatedHttpServiceBuilderTest {
                                           },
                                           new JacksonRequestConverterFunction(),
                                           new ByteArrayRequestConverterFunction(),
-                                          new DummyExceptionHandler());
+                                          new DummyExceptionHandler()).build();
 
         Server.builder().annotatedService(new Object() {
                                               @Get("/")
                                               public void root(@Param("a") byte a) {}
                                           },
-                                          LoggingService.newDecorator());
+                                          LoggingService.newDecorator()).build();
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -151,7 +151,7 @@ class AnnotatedHttpServiceBuilderTest {
                              @Header("f") List<Float> f,
                              @Header("g") List<Double> g,
                              @Header("h") List<String> h) {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -163,7 +163,7 @@ class AnnotatedHttpServiceBuilderTest {
                              @Header("f") Set<Float> f,
                              @Header("g") Set<Double> g,
                              @Header("h") Set<String> h) {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -175,13 +175,13 @@ class AnnotatedHttpServiceBuilderTest {
                              @Header("f") Optional<List<Float>> f,
                              @Header("g") Optional<List<Double>> g,
                              @Header("h") Optional<List<String>> h) {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root(@Header("a") ArrayList<String> a,
                              @Header("a") LinkedList<String> b) {}
-        });
+        }).build();
 
         // Multiple paths are allowed
         Server.builder().annotatedService(new Object() {
@@ -189,13 +189,13 @@ class AnnotatedHttpServiceBuilderTest {
             @Post
             @Path("/a")
             public void root() {}
-        });
+        }).build();
 
         Server.builder().annotatedService(new Object() {
             @Post("/")
             @Get("/")
             public void root() {}
-        });
+        }).build();
 
         // Multiple paths with matching params
         Server.builder().annotatedService(new Object() {
@@ -203,7 +203,7 @@ class AnnotatedHttpServiceBuilderTest {
             @Path("/a/{param}")
             @Path("/b/{param}")
             public void root(@Param("param") String param) {}
-        });
+        }).build();
 
         // Multiple paths with non matching but optional path variables
         Server.builder().annotatedService(new Object() {
@@ -211,7 +211,7 @@ class AnnotatedHttpServiceBuilderTest {
             @Path("/a")
             @Path("/b/{param}")
             public void root(@Param("param") Optional<String> param) {}
-        });
+        }).build();
 
         // Multiple paths with non matching non-optional path variables
         Server.builder().annotatedService(new Object() {
@@ -219,7 +219,7 @@ class AnnotatedHttpServiceBuilderTest {
             @Path("/a/{param1}")
             @Path("/b/{param2}")
             public void root(String param1, String param2) {}
-        });
+        }).build();
 
         // Multiple paths with same value
         Server.builder().annotatedService(new Object() {
@@ -227,37 +227,37 @@ class AnnotatedHttpServiceBuilderTest {
             @Path("/a")
             @Path("/a")
             public void root(BeanB b) {}
-        });
+        }).build();
 
         // Optional is redundant, but we just warn.
         Server.builder().annotatedService(new Object() {
             @Get("/{name}")
             public void root(@Param("name") Optional<String> name) {}
-        });
+        }).build();
 
         // @Default and Optional were used together, but we just warn.
         Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(@Param("name") @Default("a") Optional<String> name) {}
-        });
+        }).build();
 
         // @Default is redundant, but we just warn.
         Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(@Default("a") ServiceRequestContext ctx) {}
-        });
+        }).build();
 
         // Optional is redundant, but we just warn.
         Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(Optional<ServiceRequestContext> ctx) {}
-        });
+        }).build();
 
         // BeanB would be tried to be converted into an object with a request converter.
         Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(BeanB b) {}
-        });
+        }).build();
     }
 
     @Test
@@ -265,19 +265,19 @@ class AnnotatedHttpServiceBuilderTest {
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root(@RequestObject String value) {}
-        });
+        }).build();
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root(@RequestObject byte[] value) {}
-        });
+        }).build();
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root(@RequestObject JsonNode value) {}
-        });
+        }).build();
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root(@RequestObject HttpData value) {}
-        });
+        }).build();
     }
 
     @Test
@@ -285,75 +285,75 @@ class AnnotatedHttpServiceBuilderTest {
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get
             public void root() {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("")
             public void root() {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("  ")
             public void root() {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/{name}")
             public void root(@Param("name") Optional<AnnotatedHttpServiceBuilderTest> name) {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/{name}")
             public void root(@Param("name") List<String> name) {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(@Param("name") Optional<AnnotatedHttpServiceBuilderTest> name) {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(@Header("name") List<Object> name) {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(@Header("name") NoDefaultConstructorList<String> name) {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/test")
             @Default("a")
             public void root(ServiceRequestContext ctx) {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(BeanA a) {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get
             @Post("/")
             public void root() {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/")
             @Path("/")
             public void root() {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Path("")
             public void root() {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Path("/")
             public void root() {}
-        })).isInstanceOf(IllegalArgumentException.class);
+        }).build()).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static class NoDefaultConstructorList<E> extends ArrayList<E> {
