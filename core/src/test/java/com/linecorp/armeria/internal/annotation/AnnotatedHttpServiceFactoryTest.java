@@ -71,6 +71,9 @@ class AnnotatedHttpServiceFactoryTest {
 
     private static final String HOME_PATH_PREFIX = "/home";
 
+    private static final AnnotatedHttpServiceExtensions DEFAULT_EXTENSIONS  =
+            new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+
     @Test
     void ofNoOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
@@ -149,12 +152,9 @@ class AnnotatedHttpServiceFactoryTest {
     @Test
     void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
         final Object object = new PathPrefixServiceObject();
-        final AnnotatedHttpServiceExtensions extensions =
-                new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
-
         final List<AnnotatedHttpServiceElement> elements = find("/", object, ImmutableList.of(),
                                                                 ImmutableList.of(), ImmutableList.of(),
-                                                                extensions);
+                                                                DEFAULT_EXTENSIONS);
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
@@ -167,12 +167,10 @@ class AnnotatedHttpServiceFactoryTest {
     @Test
     void testFindAnnotatedServiceElementsWithoutPathPrefixAnnotation() {
         final Object serviceObject = new ServiceObject();
-        final AnnotatedHttpServiceExtensions extensions =
-                new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
         final List<AnnotatedHttpServiceElement> elements = find(HOME_PATH_PREFIX, serviceObject,
                                                                 ImmutableList.of(), ImmutableList.of(),
                                                                 ImmutableList.of(),
-                                                                extensions);
+                                                                DEFAULT_EXTENSIONS);
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
@@ -189,12 +187,9 @@ class AnnotatedHttpServiceFactoryTest {
 
         getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                final AnnotatedHttpServiceExtensions extensions =
-                        new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
-                                                           ImmutableList.of());
 
                 create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
-                       ImmutableList.of(), extensions);
+                       ImmutableList.of(), DEFAULT_EXTENSIONS);
             }).isInstanceOf(IllegalArgumentException.class)
               .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
         });
@@ -281,12 +276,8 @@ class AnnotatedHttpServiceFactoryTest {
         final MultiPathFailingService serviceObject = new MultiPathFailingService();
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                final AnnotatedHttpServiceExtensions extensions =
-                        new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
-                                                           ImmutableList.of());
-
                 create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
-                       ImmutableList.of(), extensions);
+                       ImmutableList.of(), DEFAULT_EXTENSIONS);
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -296,13 +287,9 @@ class AnnotatedHttpServiceFactoryTest {
         return getMethods(service.getClass(), HttpResponse.class)
                 .filter(method -> method.getName().equals(methodName)).flatMap(
                         method -> {
-                            final AnnotatedHttpServiceExtensions extensions =
-                                    new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
-                                                                       ImmutableList.of());
-
                             final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
                                     "/", service, method, ImmutableList.of(), ImmutableList.of(),
-                                    ImmutableList.of(), extensions);
+                                    ImmutableList.of(), DEFAULT_EXTENSIONS);
                             return annotatedHttpServices.stream();
                         }
                 )
