@@ -121,7 +121,7 @@ public final class RequestContextExporter {
     }
 
     /**
-     * Returns a {@link Map} whose key is an export key set through {@code add*()} of
+     * Returns a {@link Map} whose key is an export key set through {@code add*()} in
      * {@link RequestContextExporterBuilder} and value is extracted from {@link RequestContext}
      * Note that: this method returns {@code null} if current {@link RequestContext} is {@code null}.
      */
@@ -433,11 +433,11 @@ public final class RequestContextExporter {
 
         for (ExportEntry<AttributeKey<?>> e : attrs) {
             final AttributeKey<?> attrKey = e.key;
-            final String mdcKey = e.exportKey;
+            final String exportKey = e.exportKey;
             if (ctx.hasAttr(attrKey)) {
                 final Object value = ctx.attr(attrKey).get();
                 if (value != null) {
-                    out.put(mdcKey, e.stringify(value));
+                    out.put(exportKey, e.stringify(value));
                 }
             }
         }

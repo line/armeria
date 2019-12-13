@@ -121,7 +121,7 @@ public final class RequestContextExporterBuilder {
      * Adds the specified HTTP request header name to the export list.
      */
     public RequestContextExporterBuilder addHttpRequestHeader(CharSequence name) {
-        addHttpHeader(PREFIX_HTTP_REQ_HEADERS, httpReqHeaders, name);
+        addHttpHeader(PREFIX_HTTP_REQ_HEADERS, httpReqHeaders, requireNonNull(name, "name"));
         return this;
     }
 
@@ -129,7 +129,7 @@ public final class RequestContextExporterBuilder {
      * Adds the specified HTTP response header name to the export list.
      */
     public RequestContextExporterBuilder addHttpResponseHeader(CharSequence name) {
-        addHttpHeader(PREFIX_HTTP_RES_HEADERS, httpResHeaders, name);
+        addHttpHeader(PREFIX_HTTP_RES_HEADERS, httpResHeaders, requireNonNull(name, "name"));
         return this;
     }
 
@@ -144,6 +144,7 @@ public final class RequestContextExporterBuilder {
      * Returns {@code true} if the specified HTTP request header name is in the export list.
      */
     public boolean containsHttpRequestHeader(CharSequence name) {
+        requireNonNull(name, "name");
         return httpReqHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
     }
 
@@ -151,6 +152,7 @@ public final class RequestContextExporterBuilder {
      * Returns {@code true} if the specified HTTP response header name is in the export list.
      */
     public boolean containsHttpResponseHeader(CharSequence name) {
+        requireNonNull(name, "name");
         return httpResHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
     }
 

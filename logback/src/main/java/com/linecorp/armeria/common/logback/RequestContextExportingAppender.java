@@ -53,7 +53,7 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory;
  * for more information.
  */
 public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<ILoggingEvent>
-        implements AppenderAttachable<ILoggingEvent> {
+                                             implements AppenderAttachable<ILoggingEvent> {
     static {
         if (InternalLoggerFactory.getDefaultFactory() == null) {
             // Can happen due to initialization order.
