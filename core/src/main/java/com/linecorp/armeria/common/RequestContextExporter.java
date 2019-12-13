@@ -80,6 +80,9 @@ public final class RequestContextExporter {
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(RequestContextExporter.class, "STATE");
 
+    /**
+     * Returns a newly created {@link RequestContextExporterBuilder}.
+     */
     public static RequestContextExporterBuilder builder() {
         return new RequestContextExporterBuilder();
     }
