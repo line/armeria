@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -31,6 +30,7 @@ import javax.net.ssl.SSLSession;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.AttributeMap;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -50,8 +50,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.channel.Channel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeMap;
 
 /**
  * A set of informational properties collected while processing a {@link Request} and its {@link Response}.
@@ -66,11 +64,6 @@ import io.netty.util.AttributeMap;
  * @see RequestLogListener
  */
 public interface RequestLog extends AttributeMap {
-
-    /**
-     * Returns all {@link Attribute}s set in this log.
-     */
-    Iterator<Attribute<?>> attrs();
 
     /**
      * Returns the list of child {@link RequestLog}s, ordered by the time it was added.

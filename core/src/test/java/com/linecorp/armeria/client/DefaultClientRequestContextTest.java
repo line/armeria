@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.util.Iterator;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -29,11 +31,55 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 class DefaultClientRequestContextTest {
+
+    @Test
+    void canBringAttributeInServiceRequestContext() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext serviceContext = ServiceRequestContext.of(req);
+        final AttributeKey<String> fooKey = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
+        serviceContext.attr(fooKey).set("foo");
+        try (SafeCloseable ignored = serviceContext.push()) {
+            final ClientRequestContext clientContext = ClientRequestContext.of(req);
+            assertThat(clientContext.hasAttr(fooKey)).isTrue();
+            assertThat(clientContext.attr(fooKey).get()).isEqualTo("foo");
+            assertThat(clientContext.attrs().hasNext()).isTrue();
+
+            final ClientRequestContext derivedContext = clientContext.newDerivedContext(
+                    clientContext.id(), clientContext.request(),
+                    clientContext.rpcRequest());
+            assertThat(derivedContext.hasAttr(fooKey)).isTrue();
+            // Attributes in serviceContext is not copied to clientContext when derived.
+
+            final AttributeKey<String> barKey = AttributeKey.valueOf(DefaultClientRequestContextTest.class,
+                                                                     "bar");
+            clientContext.attr(barKey).set("bar");
+            assertThat(serviceContext.hasAttr(barKey)).isFalse();
+        }
+    }
+
+    @Test
+    void attrsDoNotIterateRootWhenKeyIsSame() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext serviceContext = ServiceRequestContext.of(req);
+        try (SafeCloseable ignored = serviceContext.push()) {
+            final ClientRequestContext clientContext = ClientRequestContext.of(req);
+            final AttributeKey<String> fooKey = AttributeKey.valueOf(DefaultClientRequestContextTest.class,
+                                                                     "foo");
+            clientContext.attr(fooKey).set("foo");
+            serviceContext.attr(fooKey).set("bar");
+            final Iterator<Attribute<?>> attrs = clientContext.attrs();
+            assertThat(attrs.next().get()).isEqualTo("foo");
+            assertThat(attrs.hasNext()).isFalse();
+        }
+    }
 
     @Test
     void deriveContext() {

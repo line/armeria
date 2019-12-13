@@ -52,15 +52,15 @@ import io.netty.util.AttributeKey;
  */
 public final class RequestMetricSupport {
 
-    // A variable to make sure setup method is not called twice.
-    private static final AttributeKey<Boolean> ATTR_REQUEST_METRICS_SET =
-            AttributeKey.valueOf(Boolean.class, "REQUEST_METRICS_SET");
-
-    public static void setup(RequestContext ctx, MeterIdPrefixFunction meterIdPrefixFunction, boolean server) {
-        if (ctx.hasAttr(ATTR_REQUEST_METRICS_SET)) {
+    /**
+     * Sets up request metrics.
+     */
+    public static void setup(RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
+                             MeterIdPrefixFunction meterIdPrefixFunction, boolean server) {
+        if (ctx.hasAttr(requestMetricsSetKey)) {
             return;
         }
-        ctx.attr(ATTR_REQUEST_METRICS_SET).set(true);
+        ctx.attr(requestMetricsSetKey).set(true);
 
         ctx.log().addListener(log -> onRequest(log, meterIdPrefixFunction, server),
                               RequestLogAvailability.REQUEST_HEADERS,

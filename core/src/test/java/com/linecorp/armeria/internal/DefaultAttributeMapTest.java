@@ -40,35 +40,36 @@ import static org.junit.Assert.assertSame;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Lists;
 
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
-public class DefaultAttributeMapTest {
+class DefaultAttributeMapTest {
 
     // Forked from Netty 4.1.34 at 2993760e9261f046db88a0e8ccf9edf4e9b0acad
 
     private DefaultAttributeMap map;
 
-    @Before
-    public void setup() {
-        map = new DefaultAttributeMap();
+    @BeforeEach
+    void setup() {
+        map = new DefaultAttributeMap(null);
     }
 
     @Test
-    public void testMapExists() {
+    void testMapExists() {
         assertNotNull(map);
     }
 
     @Test
-    public void testGetSetString() {
+    void testGetSetString() {
         final AttributeKey<String> key = AttributeKey.valueOf("Nothing");
         final Attribute<String> one = map.attr(key);
 
@@ -85,7 +86,7 @@ public class DefaultAttributeMapTest {
     }
 
     @Test
-    public void testGetSetInt() {
+    void testGetSetInt() {
         final AttributeKey<Integer> key = AttributeKey.valueOf("Nada");
         final Attribute<Integer> one = map.attr(key);
 
@@ -103,7 +104,7 @@ public class DefaultAttributeMapTest {
 
     // See https://github.com/netty/netty/issues/2523
     @Test
-    public void testSetRemove() {
+    void testSetRemove() {
         final AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
         final Attribute<Integer> attr = map.attr(key);
@@ -117,7 +118,7 @@ public class DefaultAttributeMapTest {
     }
 
     @Test
-    public void testGetAndSetWithNull() {
+    void testGetAndSetWithNull() {
         final AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
         final Attribute<Integer> attr = map.attr(key);
@@ -131,12 +132,12 @@ public class DefaultAttributeMapTest {
     }
 
     @Test
-    public void testIteratorWithEmptyMap() {
+    void testIteratorWithEmptyMap() {
         assertThat(map.attrs().hasNext()).isFalse();
     }
 
     @Test
-    public void testIteratorWithSparseMap() {
+    void testIteratorWithSparseMap() {
         final AttributeKey<Integer> key = AttributeKey.valueOf(DefaultAttributeMap.class, "KEY");
         map.attr(key).set(42);
 
@@ -148,7 +149,7 @@ public class DefaultAttributeMapTest {
     }
 
     @Test
-    public void testIteratorWithFullMap() {
+    void testIteratorWithFullMap() {
         final List<AttributeKey<Integer>> expectedKeys = new ArrayList<>();
         for (int i = 0; i < 1024; i++) {
             final AttributeKey<Integer> key =
@@ -186,5 +187,130 @@ public class DefaultAttributeMapTest {
             final Integer bVal = b.key().id();
             return aVal.compareTo(bVal);
         }).map(Attribute::key).collect(Collectors.toList());
+    }
+
+    @Test
+    void hasAttributeInRoot() {
+        final DefaultAttributeMap root = new DefaultAttributeMap(null);
+        final DefaultAttributeMap child = new DefaultAttributeMap(root);
+
+        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
+        final Attribute<String> fooInRoot = root.attr(foo);
+        fooInRoot.set("foo1");
+
+        assertThat(root.hasAttr(foo)).isTrue();
+        assertThat(child.hasAttr(foo)).isTrue();
+        assertThat(child.hasOwnAttr(foo)).isFalse();
+
+        final Attribute<String> fooInChild = child.attr(foo);
+        assertThat(fooInRoot.get()).isEqualTo(fooInChild.get());
+
+        fooInChild.set("foo2");
+        assertThat(child.hasOwnAttr(foo)).isTrue(); // Now it's true.
+        assertThat(fooInChild.get()).isEqualTo("foo2");
+        assertThat(fooInRoot.get()).isNotEqualTo(fooInChild.get());
+
+        assertThat(fooInChild.getAndSet("foo3")).isEqualTo("foo2");
+        assertThat(fooInChild.get()).isEqualTo("foo3");
+
+        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
+        final Attribute<String> barInRoot = root.attr(bar);
+        barInRoot.set("bar");
+
+        final Attribute<String> barInChild = child.attr(bar);
+        assertThat(child.hasOwnAttr(bar)).isFalse();
+        assertThat(barInChild.getAndSet("bar1")).isEqualTo("bar");
+        assertThat(child.hasOwnAttr(bar)).isTrue();
+        assertThat(barInChild.get()).isEqualTo("bar1");
+        assertThat(barInRoot.get()).isEqualTo("bar");
+        assertThat(barInChild.getAndSet("bar2")).isEqualTo("bar1");
+
+        final AttributeKey<String> baz = AttributeKey.valueOf("baz");
+        final Attribute<String> bazInRoot = root.attr(baz);
+        bazInRoot.set("baz");
+
+        final Attribute<String> bazInChild = child.attr(baz);
+
+        assertThat(child.hasOwnAttr(baz)).isFalse();
+        assertThat(bazInChild.setIfAbsent("baz1")).isNull();
+        assertThat(child.hasOwnAttr(baz)).isTrue();
+
+        assertThat(bazInChild.get()).isEqualTo("baz1");
+        assertThat(bazInRoot.get()).isEqualTo("baz");
+
+        final AttributeKey<String> qux = AttributeKey.valueOf("qux");
+        final Attribute<String> quxInRoot = root.attr(qux);
+        quxInRoot.set("qux");
+
+        final Attribute<String> quxInChild = child.attr(qux);
+
+        assertThat(child.hasOwnAttr(qux)).isFalse();
+        assertThat(quxInChild.compareAndSet("oops", "qux1")).isFalse();
+        assertThat(child.hasOwnAttr(qux)).isFalse();
+        assertThat(quxInChild.compareAndSet("qux", "qux1")).isTrue();
+        assertThat(child.hasOwnAttr(qux)).isTrue();
+        assertThat(quxInChild.get()).isEqualTo("qux1");
+        assertThat(quxInRoot.get()).isEqualTo("qux");
+    }
+
+    @Test
+    void hasNoAttributeInRoot() {
+        final DefaultAttributeMap root = new DefaultAttributeMap(null);
+        final DefaultAttributeMap child = new DefaultAttributeMap(root);
+
+        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
+        final Attribute<String> fooInChild = child.attr(foo);
+        fooInChild.set("foo1");
+
+        assertThat(root.hasAttr(foo)).isFalse();
+        assertThat(child.hasAttr(foo)).isTrue();
+        assertThat(child.hasOwnAttr(foo)).isTrue();
+
+        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
+        final Attribute<String> barInChild = child.attr(bar);
+        assertThat(barInChild.getAndSet("bar")).isNull();
+        assertThat(barInChild.get()).isEqualTo("bar");
+        assertThat(root.hasAttr(bar)).isFalse();
+
+        final AttributeKey<String> baz = AttributeKey.valueOf("baz");
+        final Attribute<String> bazInChild = child.attr(baz);
+        assertThat(bazInChild.setIfAbsent("baz")).isNull();
+        assertThat(child.hasOwnAttr(baz)).isTrue();
+        assertThat(root.hasAttr(baz)).isFalse();
+
+        final AttributeKey<String> qux = AttributeKey.valueOf("qux");
+        final Attribute<String> quxInChild = child.attr(qux);
+        quxInChild.set("qux");
+
+        assertThat(quxInChild.compareAndSet("qux", "qux1")).isTrue();
+        assertThat(child.hasOwnAttr(qux)).isTrue();
+        assertThat(quxInChild.get()).isEqualTo("qux1");
+        assertThat(root.hasAttr(qux)).isFalse();
+    }
+
+    @Test
+    void attrsWithRoot() {
+        final DefaultAttributeMap root = new DefaultAttributeMap(null);
+        final DefaultAttributeMap child = new DefaultAttributeMap(root);
+
+        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
+        root.attr(foo).set("foo");
+        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
+        child.attr(bar).set("bar");
+
+        final Iterator<Attribute<?>> childOwnIt = child.ownAttrs();
+        assertThat(childOwnIt.next().get()).isEqualTo("bar");
+        assertThat(childOwnIt.hasNext()).isFalse();
+
+        final Iterator<Attribute<?>> childIt = child.attrs();
+        assertThat(childIt.next().get()).isEqualTo("bar");
+        @SuppressWarnings("unchecked")
+        final Attribute<String> shouldBeFoo = (Attribute<String>) childIt.next();
+        assertThat(shouldBeFoo.get()).isEqualTo("foo");
+        assertThat(childIt.hasNext()).isFalse();
+
+        shouldBeFoo.set("foo2");
+        assertThat(root.attr(foo).get()).isEqualTo("foo");
+        assertThat(child.attr(foo).get()).isEqualTo("foo2");
     }
 }

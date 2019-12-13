@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
@@ -50,6 +51,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -81,6 +83,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private Endpoint endpoint;
     @Nullable
     private final String fragment;
+    @Nullable
+    private final ServiceRequestContext rootContext;
 
     private final DefaultRequestLog log;
 
@@ -139,12 +143,24 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq);
+        this(factory, eventLoop, meterRegistry, sessionProtocol,
+             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext());
+    }
+
+    private DefaultClientRequestContext(
+            @Nullable ClientFactory factory, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
+            SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
+            @Nullable String query, @Nullable String fragment, ClientOptions options,
+            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            @Nullable ServiceRequestContext rootContext) {
+        super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq,
+              rootContext);
 
         this.factory = factory;
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
         this.fragment = fragment;
+        this.rootContext = rootContext;
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
                                     options.responseContentPreviewerFactory());
@@ -153,6 +169,18 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         responseTimeoutMillis = options.responseTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
         additionalRequestHeaders = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.of());
+    }
+
+    @Nullable
+    private static ServiceRequestContext serviceRequestContext() {
+        final RequestContext current = RequestContext.currentOrNull();
+        if (current instanceof ServiceRequestContext) {
+            return (ServiceRequestContext) current;
+        }
+        if (current instanceof ClientRequestContext) {
+            return ((ClientRequestContext) current).rootContext();
+        }
+        return null;
     }
 
     /**
@@ -259,7 +287,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                                         @Nullable RpcRequest rpcReq,
                                         Endpoint endpoint) {
         super(ctx.meterRegistry(), ctx.sessionProtocol(), id, ctx.method(), ctx.path(), ctx.query(),
-              req, rpcReq);
+              req, rpcReq, ctx.rootContext());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -274,6 +302,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         endpointSelector = ctx.endpointSelector();
         updateEndpoint(requireNonNull(endpoint, "endpoint"));
         fragment = ctx.fragment();
+        rootContext = ctx.rootContext();
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
                                     options.responseContentPreviewerFactory());
@@ -283,7 +312,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
-        for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
+        for (final Iterator<Attribute<?>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
         runThreadLocalContextCustomizer();
@@ -293,6 +322,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private <T> void addAttr(Attribute<?> attribute) {
         final Attribute<T> a = (Attribute<T>) attribute;
         attr(a.key()).set(a.get());
+    }
+
+    @Nullable
+    @Override
+    public ServiceRequestContext rootContext() {
+        return rootContext;
     }
 
     @Override

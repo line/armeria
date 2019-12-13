@@ -56,8 +56,8 @@ public class RequestContextCurrentTraceContextTest {
     EventLoop eventLoop;
 
     final CurrentTraceContext currentTraceContext = RequestContextCurrentTraceContext.ofDefault();
-    final DefaultAttributeMap attrs1 = new DefaultAttributeMap();
-    final DefaultAttributeMap attrs2 = new DefaultAttributeMap();
+    final DefaultAttributeMap attrs1 = new DefaultAttributeMap(null);
+    final DefaultAttributeMap attrs2 = new DefaultAttributeMap(null);
     final TraceContext traceContext = TraceContext.newBuilder().traceId(1).spanId(1).build();
 
     @Before
@@ -70,18 +70,6 @@ public class RequestContextCurrentTraceContextTest {
                 (Answer<Attribute>) invocation -> attrs1.attr(invocation.getArgument(0)));
         when(mockRequestContext2.attr(isA(AttributeKey.class))).thenAnswer(
                 (Answer<Attribute>) invocation -> attrs2.attr(invocation.getArgument(0)));
-    }
-
-    @Test
-    public void copy() {
-        try (SafeCloseable requestContextScope = mockRequestContext.push()) {
-            try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
-                TraceContextUtil.copy(mockRequestContext, mockRequestContext2);
-                assertThat(attrs1.attrs().next().get())
-                        .isEqualTo(traceContext)
-                        .isEqualTo(attrs2.attrs().next().get());
-            }
-        }
     }
 
     @Test

@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -38,8 +39,11 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
@@ -160,6 +164,84 @@ public interface ClientRequestContext extends RequestContext {
     static ClientRequestContextBuilder builder(RpcRequest request, URI uri) {
         return new ClientRequestContextBuilder(request, uri);
     }
+
+    /**
+     * Returns the {@link ServiceRequestContext} whose {@link Service} invokes the {@link Client}
+     * {@link Request} which created this {@link ClientRequestContext}, or {@code null} if this client request
+     * was not made in the context of a server request.
+     */
+    @Nullable
+    ServiceRequestContext rootContext();
+
+    /**
+     * Returns the {@link Attribute} for the given {@link AttributeKey}. This method will never return
+     * {@code null}, but may return an {@link Attribute} which does not have a value set yet.
+     *
+     * <p>If the {@link Attribute} is not in this context, but {@link #rootContext()} has it,
+     * then this will return the {@link Attribute}.
+     * Please note that if you change the {@link Attribute#get() value} from {@link #rootContext()} using
+     * setter methods (e.g. {@link Attribute#set(Object)}), a new {@link Attribute} for the given
+     * {@link AttributeKey} is created in this {@link ClientRequestContext} and the value will be set to
+     * the {@link Attribute}.
+     * If you want to change the value from the root context, please call {@link #attr(AttributeKey)}
+     * from {@link #rootContext()}.
+     */
+    @Override
+    <T> Attribute<T> attr(AttributeKey<T> key);
+
+    /**
+     * Returns the {@link Attribute} for the given {@link AttributeKey}. This method will never return
+     * {@code null}, but may return an {@link Attribute} which does not have a value set yet.
+     * Unlike {@link #attr(AttributeKey)}, this does not search in {@link #rootContext()}.
+     *
+     * @see #attr(AttributeKey)
+     */
+    <T> Attribute<T> ownAttr(AttributeKey<T> key);
+
+    /**
+     * Returns {@code} true if and only if the given {@link Attribute} exists.
+     *
+     * <p>If the {@link Attribute} is not in this context, but {@link #rootContext()} has it,
+     * then this will return {@code true}.
+     *
+     * @see #hasOwnAttr(AttributeKey)
+     */
+    @Override
+    <T> boolean hasAttr(AttributeKey<T> key);
+
+    /**
+     * Returns {@code} true if and only if the given {@link Attribute} exists.
+     * Unlike {@link #hasAttr(AttributeKey)}, this does not search in {@link #rootContext()}.
+     *
+     * @see #hasAttr(AttributeKey)
+     */
+    <T> boolean hasOwnAttr(AttributeKey<T> key);
+
+    /**
+     * Returns the {@link Iterator} of all {@link Attribute}s this map contains.
+     *
+     * <p>If {@link #rootContext()} is not {@code null}, then the {@link Iterator} will iterate the
+     * {@link #rootContext()}'s {@link #attrs()} afterward.
+     *
+     * Please note that if you try to change the {@link Attribute#get() value} which is from the
+     * {@link Iterator} of {@link #rootContext()} using setter methods (e.g. {@link Attribute#set(Object)}),
+     * a new {@link Attribute} for the given {@link AttributeKey} is created in this
+     * {@link ClientRequestContext} and the value will be set to the {@link Attribute}.
+     * If you want to change the value from the root context while iterating, please call
+     * {@link #attrs()} from {@link #rootContext()}.
+     *
+     * @see #ownAttrs()
+     */
+    @Override
+    Iterator<Attribute<?>> attrs();
+
+    /**
+     * Returns the {@link Iterator} of all {@link Attribute}s this map contains.
+     * Unlike {@link #attrs()}, this does not iterate {@link #rootContext()}.
+     *
+     * @see #attrs()
+     */
+    Iterator<Attribute<?>> ownAttrs();
 
     /**
      * {@inheritDoc} For example, when you send an RPC request, this method will return {@code null} until

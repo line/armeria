@@ -167,7 +167,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
               requireNonNull(routingResult, "routingResult").query(),
-              requireNonNull(req, "req"), null);
+              requireNonNull(req, "req"), null, null);
 
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");

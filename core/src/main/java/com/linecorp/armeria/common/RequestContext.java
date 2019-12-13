@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -50,7 +49,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.util.Attribute;
-import io.netty.util.AttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
@@ -212,11 +210,6 @@ public interface RequestContext extends AttributeMap {
      * Returns the {@link MeterRegistry} that collects various stats.
      */
     MeterRegistry meterRegistry();
-
-    /**
-     * Returns all {@link Attribute}s set in this context.
-     */
-    Iterator<Attribute<?>> attrs();
 
     /**
      * Returns the {@link Executor} that is handling the current {@link Request}.

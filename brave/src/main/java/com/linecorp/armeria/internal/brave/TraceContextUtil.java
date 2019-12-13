@@ -36,19 +36,6 @@ public final class TraceContextUtil {
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.valueOf(TraceContextUtil.class, "TRACE_CONTEXT");
 
-    /**
-     * Use this to ensure the trace context propagates to children.
-     *
-     * <p>Ex.
-     * <pre>{@code
-     *  // Ensure the trace context propagates to children
-     * ctx.onChild(RequestContextCurrentTraceContext::copy);
-     * }</pre>
-     */
-    public static void copy(RequestContext src, RequestContext dst) {
-        dst.attr(TRACE_CONTEXT_KEY).set(src.attr(TRACE_CONTEXT_KEY).get());
-    }
-
     public static Attribute<TraceContext> getTraceContextAttribute(RequestContext ctx) {
         return ctx.attr(TRACE_CONTEXT_KEY);
     }
