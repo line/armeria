@@ -267,8 +267,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     /**
-     * Registers the given service to the {@linkplain VirtualHostBuilder}.
-     * FIXME(heowc): Update javadoc.
+     * Sets the annotated service object to be used for this {@link AnnotatedServiceBindingBuilder}.
+     *
      * @param service annotated service object to handle incoming requests matching path prefix, which
      *                can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
      *                If path prefix is not set then this service is registered to handle requests matching
@@ -282,7 +282,10 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     /**
-     * FIXME(heowc): Update javadoc.
+     * Apples the {@link ServiceConfigBuilder} created with the configured
+     * {@link AnnotatedHttpServiceExtensions} to the {@link VirtualHostBuilder}.
+     *
+     * @param extensions the {@link AnnotatedHttpServiceExtensions} at the virtual host level.
      */
     VirtualHostBuilder applyToServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
         final List<AnnotatedHttpServiceElement> elements =

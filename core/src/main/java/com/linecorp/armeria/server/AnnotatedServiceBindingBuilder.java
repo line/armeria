@@ -250,9 +250,9 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     /**
-     * Registers the given service to {@link ServerBuilder} and return {@link ServerBuilder}
-     * to continue building {@link Server}.
-     * FIXME(heowc): Update javadoc.
+     * Sets the annotated service object to be used for this {@link AnnotatedServiceBindingBuilder} and
+     * return {@link ServerBuilder} to continue building {@link Server}.
+     *
      * @param service annotated service object to handle incoming requests matching path prefix, which
      *                can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
      *                If path prefix is not set then this service is registered to handle requests matching
@@ -267,7 +267,10 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     /**
-     * FIXME(heowc): Update javadoc.
+     * Apples the {@link ServiceConfigBuilder} created with the configured
+     * {@link AnnotatedHttpServiceExtensions} to the {@link ServerBuilder}.
+     *
+     * @param extensions the {@link AnnotatedHttpServiceExtensions} at the server level.
      */
     void applyToServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
         final List<AnnotatedHttpServiceElement> elements =

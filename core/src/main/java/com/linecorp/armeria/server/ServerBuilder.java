@@ -1488,7 +1488,12 @@ public final class ServerBuilder {
     }
 
     /**
-     * FIXME(heowc): Update javadoc.
+     * Sets the {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
+     * and {@link ResponseConverterFunction} for creating a {@link AnnotatedHttpServiceExtensions}.
+     *
+     * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
+     * @param requestConverterFunctions the {@link RequestConverterFunction}s
+     * @param responseConverterFunctions the {@link ResponseConverterFunction}s
      */
     public ServerBuilder annotatedHttpServiceExtensions(
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,

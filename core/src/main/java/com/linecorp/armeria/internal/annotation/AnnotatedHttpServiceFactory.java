@@ -163,9 +163,8 @@ public final class AnnotatedHttpServiceFactory {
 
     /**
      * Returns the list of {@link AnnotatedHttpService} defined by {@link Path} and HTTP method annotations
-     * from the specified {@code object}, {@link ExceptionHandlerFunction}s,
-     * {@link RequestConverterFunction}s and {@link ResponseConverterFunction}s.
-     * FIXME(heowc): Update javadoc.
+     * from the specified {@code object}, {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s,
+     * {@link ResponseConverterFunction}s and {@link AnnotatedHttpServiceExtensions}.
      */
     public static List<AnnotatedHttpServiceElement> find(
             String pathPrefix, Object object,
