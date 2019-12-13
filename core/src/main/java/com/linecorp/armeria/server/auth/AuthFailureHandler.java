@@ -32,7 +32,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * @param <I> the type of incoming {@link Request}. Must be {@link HttpRequest} or {@link RpcRequest}.
  * @param <O> the type of outgoing {@link Response}. Must be {@link HttpResponse} or {@link RpcResponse}.
  *
- * @see HttpAuthServiceBuilder#onFailure(AuthFailureHandler)
+ * @see AuthServiceBuilder#onFailure(AuthFailureHandler)
  */
 @FunctionalInterface
 public interface AuthFailureHandler<I extends Request, O extends Response> {

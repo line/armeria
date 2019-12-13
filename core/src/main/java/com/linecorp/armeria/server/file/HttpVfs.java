@@ -31,7 +31,7 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
 
 /**
- * A virtual file system that provides the files requested by {@link HttpFileService}.
+ * A virtual file system that provides the files requested by {@link FileService}.
  */
 public interface HttpVfs {
 

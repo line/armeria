@@ -23,10 +23,10 @@ import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
 import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.uniqueResolverSet;
 import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.warnRedundantUse;
 import static com.linecorp.armeria.internal.annotation.AnnotatedElementNameUtil.findName;
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.findDescription;
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.normalizeContainerType;
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.stringToType;
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTypeUtil.validateElementType;
+import static com.linecorp.armeria.internal.annotation.AnnotatedServiceFactory.findDescription;
+import static com.linecorp.armeria.internal.annotation.AnnotatedServiceTypeUtil.normalizeContainerType;
+import static com.linecorp.armeria.internal.annotation.AnnotatedServiceTypeUtil.stringToType;
+import static com.linecorp.armeria.internal.annotation.AnnotatedServiceTypeUtil.validateElementType;
 import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findDeclared;
 import static java.util.Objects.requireNonNull;
 
@@ -325,7 +325,7 @@ final class AnnotatedValueResolver {
 
     /**
      * Creates a new {@link AnnotatedValueResolver} instance if the specified {@code annotatedElement} is
-     * a component of {@link AnnotatedHttpService}.
+     * a component of {@link AnnotatedService}.
      *
      * @param annotatedElement an element which is annotated with a value specifier such as {@link Param} and
      *                         {@link Header}.
@@ -415,7 +415,7 @@ final class AnnotatedValueResolver {
 
         final ImmutableList.Builder<RequestObjectResolver> builder = new ImmutableList.Builder<>();
         converters.forEach(c -> builder.add(RequestObjectResolver.of(
-                AnnotatedHttpServiceFactory.getInstance(c.value()))));
+                AnnotatedServiceFactory.getInstance(c.value()))));
         builder.addAll(resolvers);
         return builder.build();
     }

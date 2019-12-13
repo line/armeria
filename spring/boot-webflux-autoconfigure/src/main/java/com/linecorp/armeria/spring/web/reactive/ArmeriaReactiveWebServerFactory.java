@@ -17,7 +17,7 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedHttpServices;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configurePorts;
@@ -242,7 +242,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         configureHttpServices(sb,
                               findBeans(HttpServiceRegistrationBean.class),
                               meterIdPrefixFunctionFactory);
-        configureAnnotatedHttpServices(sb,
+        configureAnnotatedServices(sb,
                                        docServiceBuilder,
                                        findBeans(AnnotatedServiceRegistrationBean.class),
                                        meterIdPrefixFunctionFactory,

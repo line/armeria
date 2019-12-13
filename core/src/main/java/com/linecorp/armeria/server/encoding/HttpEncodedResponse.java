@@ -65,7 +65,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
         this.encodingType = requireNonNull(encodingType, "encodingType");
         this.encodableContentTypePredicate = requireNonNull(encodableContentTypePredicate,
                                                             "encodableContentTypePredicate");
-        this.minBytesToForceChunkedAndEncoding = HttpEncodingService.validateMinBytesToForceChunkedAndEncoding(
+        this.minBytesToForceChunkedAndEncoding = EncodingService.validateMinBytesToForceChunkedAndEncoding(
                 minBytesToForceChunkedAndEncoding);
     }
 

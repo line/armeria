@@ -48,7 +48,7 @@ import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.server.encoding.HttpEncodingService;
+import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.grpc.MethodDescriptor;
@@ -68,7 +68,7 @@ import io.netty.buffer.ByteBufHolder;
  *     <li>Only unary methods (single request, single response) are supported.</li>
  *     <li>
  *         Message compression is not supported.
- *         {@link HttpEncodingService} should be used instead for
+ *         {@link EncodingService} should be used instead for
  *         transport level encoding.
  *     </li>
  * </ul>

@@ -164,7 +164,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                    path,
                                                    predicate.getConsumes(),
                                                    predicate.getProduces());
-                         sb.service(route, new WebOperationHttpService(operation, healthMapper));
+                         sb.service(route, new WebOperationService(operation, healthMapper));
                          if (cors != null) {
                              cors.route(path);
                          }

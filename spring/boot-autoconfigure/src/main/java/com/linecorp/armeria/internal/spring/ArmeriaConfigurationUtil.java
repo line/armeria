@@ -66,7 +66,7 @@ import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
-import com.linecorp.armeria.server.encoding.HttpEncodingService;
+import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -334,7 +334,7 @@ public final class ArmeriaConfigurationUtil {
     /**
      * Adds annotated HTTP services to the specified {@link ServerBuilder}.
      */
-    public static void configureAnnotatedHttpServices(
+    public static void configureAnnotatedServices(
             ServerBuilder server, DocServiceBuilder docServiceBuilder,
             List<AnnotatedServiceRegistrationBean> beans,
             @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
@@ -536,7 +536,7 @@ public final class ArmeriaConfigurationUtil {
     /**
      * Configures a decorator for encoding the content of the HTTP responses sent from the server.
      */
-    public static Function<? super HttpService, HttpEncodingService> contentEncodingDecorator(
+    public static Function<? super HttpService, EncodingService> contentEncodingDecorator(
             @Nullable String[] mimeTypes, @Nullable String[] excludedUserAgents,
             long minBytesToForceChunkedAndEncoding) {
         final Predicate<MediaType> encodableContentTypePredicate;
@@ -562,10 +562,10 @@ public final class ArmeriaConfigurationUtil {
             };
         }
 
-        return delegate -> new HttpEncodingService(delegate,
-                                                   encodableContentTypePredicate,
-                                                   encodableRequestHeadersPredicate,
-                                                   minBytesToForceChunkedAndEncoding);
+        return delegate -> new EncodingService(delegate,
+                                               encodableContentTypePredicate,
+                                               encodableRequestHeadersPredicate,
+                                               minBytesToForceChunkedAndEncoding);
     }
 
     /**

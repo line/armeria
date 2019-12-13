@@ -68,7 +68,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceExtensions;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -209,8 +209,8 @@ public final class ServerBuilder {
         virtualHostTemplate.accessLogger(
                     host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
-        virtualHostTemplate.annotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
-                                                           ImmutableList.of());
+        virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
+                                                       ImmutableList.of());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -975,8 +975,8 @@ public final class ServerBuilder {
         requireNonNull(service, "service");
         requireNonNull(decorator, "decorator");
         requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
-        final AnnotatedHttpServiceExtensions configurator =
-                AnnotatedHttpServiceExtensions
+        final AnnotatedServiceExtensions configurator =
+                AnnotatedServiceExtensions
                         .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
         return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
                                 configurator.requestConverters(), configurator.responseConverters());
@@ -1490,19 +1490,19 @@ public final class ServerBuilder {
 
     /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
-     * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedHttpServiceExtensions}.
+     * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
      * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
      */
-    public ServerBuilder annotatedHttpServiceExtensions(
+    public ServerBuilder annotatedServiceExtensions(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions,
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
-        virtualHostTemplate.annotatedHttpServiceExtensions(requestConverterFunctions,
-                                                           responseConverterFunctions,
-                                                           exceptionHandlerFunctions);
+        virtualHostTemplate.annotatedServiceExtensions(requestConverterFunctions,
+                                                       responseConverterFunctions,
+                                                       exceptionHandlerFunctions);
         return this;
     }
 
@@ -1510,8 +1510,8 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        final AnnotatedHttpServiceExtensions extensions =
-                virtualHostTemplate.getAnnotatedHttpServiceExtensions();
+        final AnnotatedServiceExtensions extensions =
+                virtualHostTemplate.annotatedServiceExtensions();
 
         assert extensions != null;
 
