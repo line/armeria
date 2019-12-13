@@ -260,6 +260,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * @return {@link ServerBuilder} to continue building {@link Server}
      */
     public ServerBuilder build(Object service) {
+        requireNonNull(service, "service");
         this.service = service;
         serverBuilder.annotatedServiceBindingBuilder(this);
         return serverBuilder;
