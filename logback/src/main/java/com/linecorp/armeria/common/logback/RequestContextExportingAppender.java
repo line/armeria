@@ -27,10 +27,10 @@ import javax.annotation.Nullable;
 import org.slf4j.MDC;
 import org.slf4j.Marker;
 
+import com.linecorp.armeria.common.BuiltInProperty;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.logging.BuiltInProperty;
-import com.linecorp.armeria.common.logging.RequestContextExporter;
-import com.linecorp.armeria.common.logging.RequestContextExporterBuilder;
+import com.linecorp.armeria.common.RequestContextExporter;
+import com.linecorp.armeria.common.RequestContextExporterBuilder;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;

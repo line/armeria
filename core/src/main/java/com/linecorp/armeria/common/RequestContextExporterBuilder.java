@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.common;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
@@ -29,8 +29,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.logging.RequestContextExporter.ExportEntry;
+import com.linecorp.armeria.common.RequestContextExporter.ExportEntry;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;

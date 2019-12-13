@@ -14,31 +14,31 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.logging.BuiltInProperty.CLIENT_IP;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.ELAPSED_NANOS;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.LOCAL_HOST;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.LOCAL_IP;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.LOCAL_PORT;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REMOTE_HOST;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REMOTE_IP;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REMOTE_PORT;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_AUTHORITY;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_CONTENT_LENGTH;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_DIRECTION;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_METHOD;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_PATH;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_QUERY;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_RPC_METHOD;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_RPC_PARAMS;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.RES_CONTENT_LENGTH;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.RES_RPC_RESULT;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.RES_STATUS_CODE;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.SCHEME;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.TLS_CIPHER;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.TLS_PROTO;
-import static com.linecorp.armeria.common.logging.BuiltInProperty.TLS_SESSION_ID;
+import static com.linecorp.armeria.common.BuiltInProperty.CLIENT_IP;
+import static com.linecorp.armeria.common.BuiltInProperty.ELAPSED_NANOS;
+import static com.linecorp.armeria.common.BuiltInProperty.LOCAL_HOST;
+import static com.linecorp.armeria.common.BuiltInProperty.LOCAL_IP;
+import static com.linecorp.armeria.common.BuiltInProperty.LOCAL_PORT;
+import static com.linecorp.armeria.common.BuiltInProperty.REMOTE_HOST;
+import static com.linecorp.armeria.common.BuiltInProperty.REMOTE_IP;
+import static com.linecorp.armeria.common.BuiltInProperty.REMOTE_PORT;
+import static com.linecorp.armeria.common.BuiltInProperty.REQ_AUTHORITY;
+import static com.linecorp.armeria.common.BuiltInProperty.REQ_CONTENT_LENGTH;
+import static com.linecorp.armeria.common.BuiltInProperty.REQ_DIRECTION;
+import static com.linecorp.armeria.common.BuiltInProperty.REQ_METHOD;
+import static com.linecorp.armeria.common.BuiltInProperty.REQ_PATH;
+import static com.linecorp.armeria.common.BuiltInProperty.REQ_QUERY;
+import static com.linecorp.armeria.common.BuiltInProperty.REQ_RPC_METHOD;
+import static com.linecorp.armeria.common.BuiltInProperty.REQ_RPC_PARAMS;
+import static com.linecorp.armeria.common.BuiltInProperty.RES_CONTENT_LENGTH;
+import static com.linecorp.armeria.common.BuiltInProperty.RES_RPC_RESULT;
+import static com.linecorp.armeria.common.BuiltInProperty.RES_STATUS_CODE;
+import static com.linecorp.armeria.common.BuiltInProperty.SCHEME;
+import static com.linecorp.armeria.common.BuiltInProperty.TLS_CIPHER;
+import static com.linecorp.armeria.common.BuiltInProperty.TLS_PROTO;
+import static com.linecorp.armeria.common.BuiltInProperty.TLS_SESSION_ID;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -55,12 +55,8 @@ import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -69,7 +65,7 @@ import io.netty.util.AttributeKey;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
- * Exports the properties of current {@link RequestContext} to {@link Map}.
+ * Exports the specified properties from current {@link RequestContext} to {@link Map}.
  */
 public final class RequestContextExporter {
 
@@ -125,9 +121,8 @@ public final class RequestContextExporter {
     }
 
     /**
-     * Returns a {@link Map} whose key is export key set through {@code add*()} of
-     * {@link RequestContextExporterBuilder} and value is exported from {@link RequestContext}
-     * and {@link RequestLog}.
+     * Returns a {@link Map} whose key is an export key set through {@code add*()} of
+     * {@link RequestContextExporterBuilder} and value is extracted from {@link RequestContext}
      * Note that: this method returns {@code null} if current {@link RequestContext} is {@code null}.
      */
     @Nullable

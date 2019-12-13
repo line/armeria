@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -26,8 +26,6 @@ import java.util.regex.Pattern;
 import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableMap;
-
-import com.linecorp.armeria.common.Scheme;
 
 /**
  * A built-in property exported by {@link RequestContextExporter}.

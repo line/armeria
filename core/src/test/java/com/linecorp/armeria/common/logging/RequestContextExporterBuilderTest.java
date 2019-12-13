@@ -22,6 +22,10 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.BuiltInProperty;
+import com.linecorp.armeria.common.RequestContextExporter;
+import com.linecorp.armeria.common.RequestContextExporterBuilder;
+
 class RequestContextExporterBuilderTest {
 
     @Test
