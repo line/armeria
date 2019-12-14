@@ -52,7 +52,10 @@ includeWithFlags ':site'
 includeWithFlags ':examples:annotated-http-service', 'java'
 includeWithFlags ':examples:grpc-example',           'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
-includeWithFlags ':examples:grpc-reactor',           'java', 'reactor-grpc'
+if (!System.getProperty('os.name', '').toLowerCase(Locale.ROOT).contains('windows')) {
+    // reactor-grpc and rxgrpc do not support Gradle on Windows yet.
+    includeWithFlags ':examples:grpc-reactor',       'java', 'reactor-grpc'
+}
 includeWithFlags ':examples:proxy-server',           'java'
 includeWithFlags ':examples:saml-service-provider',  'java'
 includeWithFlags ':examples:server-sent-events',     'java'
