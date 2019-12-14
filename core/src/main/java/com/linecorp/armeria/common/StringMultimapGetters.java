@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -26,8 +24,6 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
-
-import com.google.common.collect.Streams;
 
 /**
  * Provides the getter methods to {@link StringMultimap}.
