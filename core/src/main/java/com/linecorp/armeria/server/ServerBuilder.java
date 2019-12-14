@@ -189,8 +189,6 @@ public final class ServerBuilder {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
-    private AnnotatedHttpServiceExtensions annotatedHttpServiceExtensions =
-            new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
 
     /**
      * Returns a new {@link ServerBuilder}.
@@ -210,6 +208,8 @@ public final class ServerBuilder {
         virtualHostTemplate.accessLogger(
                     host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
+        virtualHostTemplate.annotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
+                                                           ImmutableList.of());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -1499,13 +1499,8 @@ public final class ServerBuilder {
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
-        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-        annotatedHttpServiceExtensions =
-                new AnnotatedHttpServiceExtensions(ImmutableList.copyOf(exceptionHandlerFunctions),
-                                                   ImmutableList.copyOf(requestConverterFunctions),
-                                                   ImmutableList.copyOf(responseConverterFunctions));
+        virtualHostTemplate.annotatedHttpServiceExtensions(exceptionHandlerFunctions, requestConverterFunctions,
+                                                           responseConverterFunctions);
         return this;
     }
 
@@ -1513,8 +1508,9 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        annotatedServiceBindingBuilders
-                .forEach(builder -> builder.applyToServiceConfigBuilder(annotatedHttpServiceExtensions));
+        final AnnotatedHttpServiceExtensions extensions =
+                virtualHostTemplate.getAnnotatedHttpServiceExtensions();
+        annotatedServiceBindingBuilders.forEach(builder -> builder.applyToServiceConfigBuilder(extensions));
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate);

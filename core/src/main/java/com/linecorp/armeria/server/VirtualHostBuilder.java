@@ -150,8 +150,8 @@ public final class VirtualHostBuilder {
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
-    private AnnotatedHttpServiceExtensions annotatedHttpServiceExtensions =
-            new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+    @Nullable
+    private AnnotatedHttpServiceExtensions annotatedHttpServiceExtensions;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -871,6 +871,11 @@ public final class VirtualHostBuilder {
         return this;
     }
 
+    @Nullable
+    AnnotatedHttpServiceExtensions getAnnotatedHttpServiceExtensions() {
+        return annotatedHttpServiceExtensions;
+    }
+
     /**
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
@@ -923,6 +928,10 @@ public final class VirtualHostBuilder {
         final Function<VirtualHost, Logger> accessLoggerMapper =
                 this.accessLoggerMapper != null ?
                 this.accessLoggerMapper : template.accessLoggerMapper;
+
+        final AnnotatedHttpServiceExtensions annotatedHttpServiceExtensions =
+                this.annotatedHttpServiceExtensions != null ?
+                this.annotatedHttpServiceExtensions : template.annotatedHttpServiceExtensions;
 
         assert requestContentPreviewerFactory != null;
         assert responseContentPreviewerFactory != null;
