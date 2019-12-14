@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
@@ -390,7 +391,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * the trailers of the response are received fully.
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate() {
-        final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingCompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
         subscribe(aggregator);
         return future;
@@ -401,7 +402,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * the trailers of the response are received fully.
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
-        final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingCompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
         subscribe(aggregator, executor);
         return future;
@@ -415,7 +416,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingCompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
         subscribe(aggregator, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
@@ -431,7 +432,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingCompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
         subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;

@@ -30,6 +30,11 @@ configure(projectsWithFlags('java')) {
                             artifact = "com.salesforce.servicelibs:reactor-grpc:${managedVersions['com.salesforce.servicelibs:reactor-grpc']}"
                         }
                     }
+                    if (project.ext.hasFlag('rxgrpc') && managedVersions.containsKey('com.salesforce.servicelibs:rxgrpc')) {
+                        rxgrpc {
+                            artifact = "com.salesforce.servicelibs:rxgrpc:${managedVersions['com.salesforce.servicelibs:reactor-grpc']}"
+                        }
+                    }
                 }
                 generateProtoTasks {
                     all()*.plugins {
@@ -38,6 +43,9 @@ configure(projectsWithFlags('java')) {
                         }
                         if (project.ext.hasFlag('reactor-grpc') && managedVersions.containsKey('com.salesforce.servicelibs:reactor-grpc')) {
                             reactorGrpc {}
+                        }
+                        if (project.ext.hasFlag('rxgrpc') && managedVersions.containsKey('com.salesforce.servicelibs:rxgrpc')) {
+                            rxgrpc {}
                         }
                     }
                     all().each { task ->
