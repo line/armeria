@@ -130,7 +130,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     abstract int hashName(IN_NAME name);
 
-    abstract boolean nameEquals(@Nullable NAME a, @Nullable IN_NAME b);
+    abstract boolean nameEquals(NAME a, IN_NAME b);
 
     abstract boolean isFirstGroup(NAME name);
 
@@ -150,8 +150,11 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         String value = null;
         // loop until the first entry was found
         while (e != null) {
-            if (e.hash == h && nameEquals(e.key, name)) {
-                value = e.value;
+            if (e.hash == h) {
+                final NAME currentName = e.key;
+                if (currentName != null && nameEquals(currentName, name)) {
+                    value = e.value;
+                }
             }
             e = e.next;
         }
@@ -182,8 +185,11 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
         final ImmutableList.Builder<String> builder = ImmutableList.builder();
         do {
-            if (e.hash == h && nameEquals(e.key, name)) {
-                builder.add(e.getValue());
+            if (e.hash == h) {
+                final NAME currentName = e.key;
+                if (currentName != null && nameEquals(currentName, name)) {
+                    builder.add(e.getValue());
+                }
             }
             e = e.next;
         } while (e != null);
@@ -263,8 +269,11 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         Entry e = entries[i];
         // loop until the first entry was found
         while (e != null) {
-            if (e.hash == h && nameEquals(e.key, name)) {
-                return true;
+            if (e.hash == h) {
+                final NAME currentName = e.key;
+                if (currentName != null && nameEquals(currentName, name)) {
+                    return true;
+                }
             }
             e = e.next;
         }
@@ -279,9 +288,12 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int i = index(h);
         Entry e = entries[i];
         while (e != null) {
-            if (e.hash == h && nameEquals(e.key, name) &&
-                AsciiString.contentEquals(e.value, value)) {
-                return true;
+            if (e.hash == h) {
+                final NAME currentName = e.key;
+                if (currentName != null && nameEquals(currentName, name) &&
+                    AsciiString.contentEquals(e.value, value)) {
+                    return true;
+                }
             }
             e = e.next;
         }
@@ -785,11 +797,16 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         String value = null;
         Entry next = e.next;
         while (next != null) {
-            if (next.hash == h && nameEquals(next.key, name)) {
-                value = next.value;
-                e.next = next.next;
-                next.remove();
-                --size;
+            if (next.hash == h) {
+                final NAME currentName = next.key;
+                if (currentName != null && nameEquals(currentName, name)) {
+                    value = next.value;
+                    e.next = next.next;
+                    next.remove();
+                    --size;
+                } else {
+                    e = next;
+                }
             } else {
                 e = next;
             }
@@ -798,13 +815,16 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         }
 
         e = entries[i];
-        if (e.hash == h && nameEquals(e.key, name)) {
-            if (value == null) {
-                value = e.value;
+        if (e.hash == h) {
+            final NAME currentName = e.key;
+            if (currentName != null && nameEquals(currentName, name)) {
+                if (value == null) {
+                    value = e.value;
+                }
+                entries[i] = e.next;
+                e.remove();
+                --size;
             }
-            entries[i] = e.next;
-            e.remove();
-            --size;
         }
 
         return value;
@@ -1077,8 +1097,16 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
             @SuppressWarnings("unchecked")
             final Map.Entry<IN_NAME, String> that = (Map.Entry<IN_NAME, String>) o;
+            final NAME thisKey = key;
             final IN_NAME thatKey = that.getKey();
-            return nameEquals(key, thatKey) && Objects.equals(value, that.getValue());
+            if (thisKey == null) {
+                return thatKey == null &&
+                       Objects.equals(value, that.getValue());
+            } else {
+                return thatKey != null &&
+                       nameEquals(thisKey, thatKey) &&
+                       Objects.equals(value, that.getValue());
+            }
         }
 
         @Override

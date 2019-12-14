@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -334,6 +336,7 @@ interface HttpHeaderGetters extends StringMultimapGetters<CharSequence, AsciiStr
      */
     @Override
     default Stream<String> valueStream(CharSequence name) {
+        requireNonNull(name, "name");
         return Streams.stream(valueIterator(name));
     }
 }

@@ -319,6 +319,7 @@ interface QueryParamGetters extends StringMultimapGetters<String, String> {
      */
     @Override
     default Stream<String> valueStream(String name) {
+        requireNonNull(name, "name");
         return Streams.stream(valueIterator(name));
     }
 

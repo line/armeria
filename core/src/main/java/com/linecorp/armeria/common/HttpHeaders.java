@@ -54,7 +54,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  * a new {@link HttpHeaders} derived from an existing one:</p>
  *
  * <pre>{@code
- * HttpHeaders headers = HttpHeaders.of("name1", "value0")
+ * HttpHeaders headers = HttpHeaders.of("name1", "value0");
  *
  * // Using toBuilder()
  * HttpHeaders headersWithToBuilder = headers.toBuilder()

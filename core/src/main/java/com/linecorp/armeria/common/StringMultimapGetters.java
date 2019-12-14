@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -96,11 +98,7 @@ interface StringMultimapGetters<IN_NAME extends CharSequence, NAME extends IN_NA
 
     void forEachValue(IN_NAME name, Consumer<String> action);
 
-    default Stream<Entry<NAME, String>> stream() {
-        return Streams.stream(iterator());
-    }
+    Stream<Entry<NAME, String>> stream();
 
-    default Stream<String> valueStream(IN_NAME name) {
-        return Streams.stream(valueIterator(name));
-    }
+    Stream<String> valueStream(IN_NAME name);
 }

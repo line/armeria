@@ -29,8 +29,6 @@
  */
 package com.linecorp.armeria.common;
 
-import java.util.Objects;
-
 import javax.annotation.Nullable;
 
 /**
@@ -56,8 +54,8 @@ class QueryParamsBase extends StringMultimap<String, String> implements QueryPar
     }
 
     @Override
-    boolean nameEquals(@Nullable String a, @Nullable String b) {
-        return Objects.equals(a, b);
+    boolean nameEquals(String a, String b) {
+        return a.equals(b);
     }
 
     @Override

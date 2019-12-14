@@ -99,8 +99,8 @@ class HttpHeadersBase extends StringMultimap<CharSequence, AsciiString> implemen
     }
 
     @Override
-    boolean nameEquals(@Nullable AsciiString a, @Nullable CharSequence b) {
-        return a != null && (a == b || a.contentEqualsIgnoreCase(b));
+    boolean nameEquals(AsciiString a, CharSequence b) {
+        return a.contentEqualsIgnoreCase(b);
     }
 
     @Override

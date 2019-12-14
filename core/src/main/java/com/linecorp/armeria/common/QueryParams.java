@@ -52,7 +52,7 @@ import javax.annotation.Nullable;
  * a new {@link QueryParams} derived from an existing one:</p>
  *
  * <pre>{@code
- * QueryParams params = QueryParams.of("name1", "value0")
+ * QueryParams params = QueryParams.of("name1", "value0");
  *
  * // Using toBuilder()
  * QueryParams paramsWithToBuilder = params.toBuilder()
