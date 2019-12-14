@@ -311,6 +311,7 @@ automatically:
 - `publish` - Makes a project publish its artifact to a Maven repository
 - `bom` - Makes a project publish Maven BOM based on `dependencies.yml`
 - `shade`, `relocate` and `trim` - Makes a Java project produce an additional 'shaded' JAR
+- `reactor-grpc` or `rxgrpc` - Enables [`reactor-grpc`](https://github.com/salesforce/reactive-grpc/tree/master/reactor) or [`rxgrpc`](https://github.com/salesforce/reactive-grpc/tree/master/rx-java) support to the project
 
 We will learn what these flags exactly do in the following sections.
 

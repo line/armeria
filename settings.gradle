@@ -52,6 +52,7 @@ includeWithFlags ':site'
 includeWithFlags ':examples:annotated-http-service', 'java'
 includeWithFlags ':examples:grpc-example',           'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
+includeWithFlags ':examples:grpc-reactor',           'java', 'reactor-grpc'
 includeWithFlags ':examples:proxy-server',           'java'
 includeWithFlags ':examples:saml-service-provider',  'java'
 includeWithFlags ':examples:server-sent-events',     'java'
