@@ -260,7 +260,7 @@ class AnnotatedHttpServiceHandlersOrderTest {
     // ExceptionHandlerFunction ends
 
     @Test
-    public void requestConverterOrder() throws Exception {
+    void requestConverterOrder() throws Exception {
         final String body = "{\"foo\":\"bar\"}";
         final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
                 HttpMethod.POST, "/1/requestConverterOrder", MediaType.JSON, body);
@@ -277,7 +277,7 @@ class AnnotatedHttpServiceHandlersOrderTest {
     }
 
     @Test
-    public void responseConverterOrder() throws Exception {
+    void responseConverterOrder() throws Exception {
         final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
                 HttpMethod.POST, "/1/responseConverterOrder", MediaType.PLAIN_TEXT_UTF_8, "foo");
         final AggregatedHttpResponse aRes = executeRequest(aReq);
@@ -291,7 +291,7 @@ class AnnotatedHttpServiceHandlersOrderTest {
     }
 
     @Test
-    public void exceptionHandlerOrder() throws Exception {
+    void exceptionHandlerOrder() throws Exception {
         final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
                 HttpMethod.POST, "/1/exceptionHandlerOrder", MediaType.PLAIN_TEXT_UTF_8, "foo");
         final AggregatedHttpResponse aRes = executeRequest(aReq);
