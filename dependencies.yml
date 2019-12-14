@@ -109,6 +109,10 @@ com.google.protobuf:
 com.puppycrawl.tools:
   checkstyle: { version: '8.27' }
 
+com.salesforce.servicelibs:
+  reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.0' }
+  reactor-grpc-stub: { version: *REACTVIVE_GRPC_VERSION }
+
 com.spotify:
   completable-futures:
     version: '0.3.2'
