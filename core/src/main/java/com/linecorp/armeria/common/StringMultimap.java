@@ -267,7 +267,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int h = hashName(name);
         final int i = index(h);
         Entry e = entries[i];
-        // loop until the first entry was found
+        // Return true as soon as an entry with a matching name is found.
         while (e != null) {
             if (e.hash == h) {
                 final NAME currentName = e.key;
