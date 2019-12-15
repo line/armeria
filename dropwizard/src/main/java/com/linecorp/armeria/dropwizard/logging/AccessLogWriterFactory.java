@@ -13,20 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard.logging;
+package com.linecorp.armeria.dropwizard.logging;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-@JsonTypeName("combined")
-public class CombinedAccessLogWriterFactory implements AccessLogWriterFactory {
+import io.dropwizard.jackson.Discoverable;
 
-    public CombinedAccessLogWriterFactory() {
-    }
-
-    @Override
-    public AccessLogWriter getWriter() {
-        return AccessLogWriter.combined();
-    }
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        property = "type"
+)
+public interface AccessLogWriterFactory extends Discoverable {
+    AccessLogWriter getWriter();
 }

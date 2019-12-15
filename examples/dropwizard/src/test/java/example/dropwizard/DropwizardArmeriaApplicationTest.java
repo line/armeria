@@ -3,10 +3,9 @@ package example.dropwizard;
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.ExecutionException;
-
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -16,38 +15,32 @@ import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheck.Result;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 
-import example.dropwizard.armeria.services.http.HelloService;
 import example.dropwizard.health.PingCheck;
 import example.dropwizard.resources.JerseyResource;
-import io.dropwizard.jackson.Jackson;
 import io.dropwizard.testing.junit5.DropwizardAppExtension;
 import io.dropwizard.testing.junit5.DropwizardExtensionsSupport;
 import io.dropwizard.testing.junit5.ResourceExtension;
 
 @ExtendWith(DropwizardExtensionsSupport.class)
 public class DropwizardArmeriaApplicationTest {
-    public static final ResourceExtension RESOURCES =
-            ResourceExtension.builder()
-                             .addResource(new JerseyResource())
-                             .build();
+    public static final ResourceExtension RESOURCES = ResourceExtension.builder()
+                                                                       .addResource(new JerseyResource())
+                                                                       .build();
     private static final DropwizardAppExtension<DropwizardArmeriaConfiguration> EXTENSION =
             new DropwizardAppExtension<>(DropwizardArmeriaApplication.class,
                                          resourceFilePath("test-server.yaml"));
-    private static final ObjectMapper OBJECT_MAPPER = Jackson.newObjectMapper();
-    private static final Client CLIENT = ClientBuilder.newClient();
+    private static ObjectMapper objectMapper;
+    private static WebTarget client;
 
-    private static HelloService service;
     private static String endpoint;
 
     @BeforeAll
-    static void setUp() throws Exception {
+    public static void setup() {
+        objectMapper = EXTENSION.getObjectMapper();
         endpoint = "http://localhost:" + EXTENSION.getLocalPort();
-        service = new HelloService();
+        client = EXTENSION.client().target(endpoint);
     }
 
     @Test
@@ -61,26 +54,39 @@ public class DropwizardArmeriaApplicationTest {
     }
 
     @Test
-    void testJersey() {
-        final String content = RESOURCES.target("/jersey").request().get(String.class);
-        assertThat(content).isEqualTo("Hello, Jersey!");
+    void testJerseyResource() {
+        final Response resp = RESOURCES.target("/jersey").request().get();
+        assertThat(resp.getStatus()).isEqualTo(HttpStatus.OK.code());
+        assertThat(resp.readEntity(String.class)).isEqualTo("Hello, Jersey!");
     }
 
     @Test
-    void testArmeria_plainText() {
-        final String res = service.helloText();
-        assertThat(res).isEqualTo("Armeria");
+    void testArmeriaViaClient() {
+        final Response resp = client.path("/armeria")
+                                    .request()
+                                    .buildGet()
+                                    .invoke();
+        assertThat(resp.getStatus()).isEqualTo(HttpStatus.OK.code());
+        assertThat(resp.readEntity(String.class)).isEqualTo("Hello, Armeria!");
     }
 
     @Test
-    void testArmeria_JSON() throws ExecutionException, InterruptedException {
-        // When
-        final HttpResponse res = service.helloJson();
+    void testRootViaClient() {
+        final Response resp = client.path("/")
+                                    .request()
+                                    .buildGet()
+                                    .invoke();
+        assertThat(resp.getStatus()).isEqualTo(HttpStatus.OK.code());
+        assertThat(resp.readEntity(String.class)).isEqualTo("<h2>It works!</h2>");
+    }
 
-        // Then
-        final AggregatedHttpResponse aggregatedHttpResponse = res.aggregate().get();
-        assertThat(aggregatedHttpResponse.status()).isEqualTo(HttpStatus.OK);
-        assertThat(aggregatedHttpResponse.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThat(aggregatedHttpResponse.contentUtf8()).isEqualTo("{ \"name\": \"Armeria\" }");
+    @Test
+    void testHelloServiceJsonViaClient() {
+        final Response resp = client.path("/hello")
+                                    .request(MediaType.APPLICATION_JSON_TYPE)
+                                    .buildGet()
+                                    .invoke();
+        assertThat(resp.getStatus()).isEqualTo(HttpStatus.OK.code());
+        assertThat(resp.readEntity(String.class)).isEqualTo("{ \"name\": \"Armeria\" }");
     }
 }

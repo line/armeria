@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard.connector;
+package com.linecorp.armeria.dropwizard.connector;
 
 import javax.validation.Valid;
 import javax.validation.constraints.Min;

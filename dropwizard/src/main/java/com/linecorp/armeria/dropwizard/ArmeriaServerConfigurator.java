@@ -13,13 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.dropwizard;
+
+import com.linecorp.armeria.server.ServerBuilder;
 
 /**
- * Defines {@link io.dropwizard.jetty.ConnectorFactory} interfaces for
- * integration into Dropwizard from Armeria's PROXY
- * {@link com.linecorp.armeria.common.SessionProtocol}s.
+ * Interface used to configure a service on the default armeria server. Can be
+ * used to register arbitrary services.
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.dropwizard.connector.proxy;
-
-import com.linecorp.armeria.common.util.NonNullByDefault;
+@FunctionalInterface
+public interface ArmeriaServerConfigurator {
+    /**
+     * Configures the server using the specified {@link ServerBuilder}.
+     */
+    void configure(ServerBuilder builder);
+}

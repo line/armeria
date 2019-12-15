@@ -13,12 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.dropwizard.logging;
 
-/**
- * Defines {@link io.dropwizard.jetty.ConnectorFactory} interfaces for
- * integration into Dropwizard from Armeria's {@link com.linecorp.armeria.common.SessionProtocol}.
- */
-@NonNullByDefault
-package com.linecorp.armeria.server.dropwizard.connector;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+@JsonTypeName("combined")
+public class CombinedAccessLogWriterFactory implements AccessLogWriterFactory {
+
+    public CombinedAccessLogWriterFactory() {
+    }
+
+    @Override
+    public AccessLogWriter getWriter() {
+        return AccessLogWriter.combined();
+    }
+}

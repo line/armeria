@@ -15,10 +15,9 @@
  */
 
 /**
- * Defines Armeria {@link com.linecorp.armeria.server.logging.AccessLogWriter} interfaces for
- * integration into Dropwizard.
+ * Provides a <a href="https://dropwizard.io/">Dropwizard</a> Bundle for Armeria.
  */
 @NonNullByDefault
-package com.linecorp.armeria.server.dropwizard.logging;
+package com.linecorp.armeria.dropwizard;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

@@ -13,19 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard;
+package com.linecorp.armeria.dropwizard;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 import javax.validation.Validator;
 
+import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.util.thread.ThreadPool;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,16 +38,21 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpConnectorFactory;
-import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpsConnectorFactory;
-import com.linecorp.armeria.server.dropwizard.logging.AccessLogWriterFactory;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.dropwizard.connector.ArmeriaHttpConnectorFactory;
+import com.linecorp.armeria.dropwizard.connector.ArmeriaHttpsConnectorFactory;
+import com.linecorp.armeria.dropwizard.connector.ArmeriaServerDecorator;
+import com.linecorp.armeria.dropwizard.logging.AccessLogWriterFactory;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.dropwizard.configuration.YamlConfigurationFactory;
@@ -55,6 +64,7 @@ import io.dropwizard.jetty.ConnectorFactory;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.server.SimpleServerFactory;
 import io.dropwizard.setup.Environment;
+import io.dropwizard.util.Size;
 
 @ExtendWith(MockitoExtension.class)
 class ArmeriaServerFactoryTest {
@@ -68,7 +78,8 @@ class ArmeriaServerFactoryTest {
     private final Validator validator = Validators.newValidator();
     private final YamlConfigurationFactory<ArmeriaServerFactory> configFactory =
             new YamlConfigurationFactory<>(ArmeriaServerFactory.class, validator, objectMapper, "dw");
-    @Mock
+
+    @Spy
     private MetricRegistry metricRegistry;
 
     @ParameterizedTest
@@ -101,6 +112,30 @@ class ArmeriaServerFactoryTest {
     }
 
     @Test
+    public void testServerFactoryDecorator() throws Exception {
+        final ArmeriaServerFactory factory = new ArmeriaServerFactory();
+        final ServerBuilder sb = com.linecorp.armeria.server.Server.builder()
+                                                                   .service("/", (ctx, req) -> HttpResponse
+                                                                           .of(HttpStatus.OK));
+
+        final ClassCastException ex =
+                assertThrows(ClassCastException.class,
+                             () -> ArmeriaServerFactory
+                                     .decorateServerBuilder(sb, new ConnectorFactory() {
+                                         @Override
+                                         public Connector build(
+                                                 Server server,
+                                                 MetricRegistry metrics,
+                                                 String name,
+                                                 @Nullable ThreadPool threadPool) {
+                                             return null;
+                                         }
+                                     }, null, null));
+        assertThat(ex.getMessage()).isEqualTo("server.connector.type must be an instance of " +
+                                              ArmeriaServerDecorator.class.getName());
+    }
+
+    @Test
     public void testManualFactoryBuilder() {
         final ArmeriaServerFactory factory = new ArmeriaServerFactory();
         final ConnectorFactory connector = ArmeriaHttpConnectorFactory.build();
@@ -116,6 +151,31 @@ class ArmeriaServerFactoryTest {
 
         assertThat(factory.getAccessLogWriter()).isNotNull();
         assertThat(factory.getAccessLogWriter()).isSameAs(DISABLED_LOG_WRITER);
+    }
+
+    @Test
+    public void testManualFactoryBuilderWithSetters() throws Exception {
+        final ArmeriaServerFactory factory = new ArmeriaServerFactory();
+        final ConnectorFactory connector = ArmeriaHttpConnectorFactory.build();
+
+        factory.setDateHeaderEnabled(false);
+        factory.setServerHeaderEnabled(false);
+        factory.setVerboseResponses(true);
+        factory.setJerseyEnabled(false);
+
+        factory.setMaxRequestLength(Size.gigabytes(1));
+        factory.setMaxNumConnections(1);
+
+        final Server jettyServer = buildServer(factory, connector, DISABLED_LOG_WRITER);
+
+        final com.linecorp.armeria.server.Server server = factory.getServerBuilder().build();
+        server.stop().get(100, TimeUnit.MILLISECONDS);
+        final ServerConfig config = server.config();
+
+        assertThat(config.maxNumConnections())
+                .isEqualTo(factory.getMaxNumConnections());
+        assertThat(config.defaultVirtualHost().maxRequestLength())
+                .isEqualTo(factory.getMaxRequestLength().toBytes());
     }
 
     private static class ServerFactoryProvider implements ArgumentsProvider {

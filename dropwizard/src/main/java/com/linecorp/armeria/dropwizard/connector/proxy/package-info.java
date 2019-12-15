@@ -13,18 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard.logging;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+/**
+ * Defines {@link io.dropwizard.jetty.ConnectorFactory} interfaces for
+ * integration into Dropwizard from Armeria's PROXY
+ * {@link com.linecorp.armeria.common.SessionProtocol}s.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.dropwizard.connector.proxy;
 
-import com.linecorp.armeria.server.logging.AccessLogWriter;
-
-import io.dropwizard.jackson.Discoverable;
-
-@JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        property = "type"
-)
-public interface AccessLogWriterFactory extends Discoverable {
-    AccessLogWriter getWriter();
-}
+import com.linecorp.armeria.common.util.NonNullByDefault;

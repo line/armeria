@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard.connector.proxy;
+package com.linecorp.armeria.dropwizard.connector.proxy;
 
 import java.security.cert.CertificateException;
 
@@ -29,8 +29,8 @@ import org.slf4j.LoggerFactory;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.linecorp.armeria.dropwizard.connector.ArmeriaServerDecorator;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.dropwizard.connector.ArmeriaServerDecorator;
 
 import io.dropwizard.jetty.ConnectorFactory;
 import io.dropwizard.util.Size;

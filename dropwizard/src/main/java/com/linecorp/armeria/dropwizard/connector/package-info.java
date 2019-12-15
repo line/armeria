@@ -15,9 +15,10 @@
  */
 
 /**
- * Provides a <a href="https://dropwizard.io/">Dropwizard</a> Bundle for Armeria.
+ * Defines {@link io.dropwizard.jetty.ConnectorFactory} interfaces for
+ * integration into Dropwizard from Armeria's {@link com.linecorp.armeria.common.SessionProtocol}.
  */
 @NonNullByDefault
-package com.linecorp.armeria.server.dropwizard;
+package com.linecorp.armeria.dropwizard.connector;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

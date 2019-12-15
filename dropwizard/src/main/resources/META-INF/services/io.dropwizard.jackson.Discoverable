@@ -1,1 +1,1 @@
-com.linecorp.armeria.server.dropwizard.logging.AccessLogWriterFactory
+com.linecorp.armeria.dropwizard.logging.AccessLogWriterFactory

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard.connector;
+package com.linecorp.armeria.dropwizard.connector;
 
 import java.io.File;
 import java.security.cert.CertificateException;
@@ -121,14 +121,14 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
     public void decorate(ServerBuilder sb) throws SSLException, CertificateException {
         logger.debug("Building Armeria HTTPS Server");
 
+        sb.port(getPort(), getSessionProtocols())
+          .http2InitialConnectionWindowSize(initialConnectionWindowSize)
+          .http2InitialStreamWindowSize(initialStreamingWindowSize)
+          .http2MaxFrameSize(maxFrameSize)
+          .http2MaxStreamsPerConnection(maxStreamsPerConnection)
+          .http2MaxHeaderListSize(maxHeaderListSize);
         buildTlsServer(sb, getKeyCertChainFile(),
-                       Objects.requireNonNull(getKeyStorePath(), TYPE + " keyStorePath must not be null"))
-                .port(getPort(), getSessionProtocols())
-                .http2InitialConnectionWindowSize(initialConnectionWindowSize)
-                .http2InitialStreamWindowSize(initialStreamingWindowSize)
-                .http2MaxFrameSize(maxFrameSize)
-                .http2MaxStreamsPerConnection(maxStreamsPerConnection)
-                .http2MaxHeaderListSize(maxHeaderListSize);
+                       Objects.requireNonNull(getKeyStorePath(), TYPE + " keyStorePath must not be null"));
         // more HTTP/2 settings?
     }
 

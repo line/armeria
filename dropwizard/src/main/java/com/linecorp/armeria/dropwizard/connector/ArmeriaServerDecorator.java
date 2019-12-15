@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard.connector;
+package com.linecorp.armeria.dropwizard.connector;
 
 import java.security.cert.CertificateException;
 import java.util.Arrays;
@@ -62,7 +62,7 @@ public interface ArmeriaServerDecorator {
      */
     default Collection<SessionProtocol> getSessionProtocols() {
         return Arrays.stream(getType().split("-"))
-                     .filter(s -> !s.equals("armeria"))
+                     .filter(s -> !"armeria".equals(s))
                      .map(SessionProtocol::of)
                      .collect(Collectors.toSet());
     }

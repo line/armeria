@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard;
+package com.linecorp.armeria.dropwizard;
 
 import java.security.cert.CertificateException;
 import java.time.Duration;
@@ -45,12 +45,11 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.dropwizard.connector.ArmeriaHttpConnectorFactory;
+import com.linecorp.armeria.dropwizard.connector.ArmeriaServerDecorator;
+import com.linecorp.armeria.dropwizard.logging.AccessLogWriterFactory;
+import com.linecorp.armeria.dropwizard.logging.CommonAccessLogWriterFactory;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerConfig;
-import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpConnectorFactory;
-import com.linecorp.armeria.server.dropwizard.connector.ArmeriaServerDecorator;
-import com.linecorp.armeria.server.dropwizard.logging.AccessLogWriterFactory;
-import com.linecorp.armeria.server.dropwizard.logging.CommonAccessLogWriterFactory;
 import com.linecorp.armeria.server.jetty.JettyService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -276,11 +275,6 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
         addDefaultHandlers(server, environment, metrics);
         serverBuilder = getArmeriaServerBuilder(server, connector, metrics);
         return server;
-    }
-
-    @JsonIgnore
-    public ServerConfig getServerConfig() {
-        return serverBuilder.build().config();
     }
 
     private void addDefaultHandlers(final Server server, final Environment environment,

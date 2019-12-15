@@ -13,14 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard;
+package com.linecorp.armeria.dropwizard;
 
 import static io.dropwizard.testing.ResourceHelpers.resourceFilePath;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import javax.validation.ConstraintViolation;
@@ -44,11 +47,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpConnectorFactory;
-import com.linecorp.armeria.server.dropwizard.connector.ArmeriaHttpsConnectorFactory;
-import com.linecorp.armeria.server.dropwizard.connector.ArmeriaServerDecorator;
-import com.linecorp.armeria.server.dropwizard.connector.proxy.ArmeriaProxyConnectorFactory;
+import com.linecorp.armeria.dropwizard.connector.ArmeriaHttpConnectorFactory;
+import com.linecorp.armeria.dropwizard.connector.ArmeriaHttpsConnectorFactory;
+import com.linecorp.armeria.dropwizard.connector.ArmeriaServerDecorator;
+import com.linecorp.armeria.dropwizard.connector.proxy.ArmeriaProxyConnectorFactory;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerConfig;
 
 import io.dropwizard.configuration.ConfigurationValidationException;
 import io.dropwizard.configuration.YamlConfigurationFactory;
@@ -122,6 +129,14 @@ class ArmeriaConnectorFactoryTest {
         }
     }
 
+    static class TestProxy extends ArmeriaProxyConnectorFactory {
+
+        @Override
+        public String getType() {
+            return "armeria-http-proxy";
+        }
+    }
+
     @Nested
     class ArmeriaHttpConnectorFactoryTest {
         private final YamlConfigurationFactory<ArmeriaHttpConnectorFactory> configFactory =
@@ -146,6 +161,19 @@ class ArmeriaConnectorFactoryTest {
             assertThat(factory.getMaxInitialLineLength()).isEqualTo(Flags.defaultHttp1MaxInitialLineLength());
             assertThat(factory.getMaxChunkSize().toBytes()).isEqualTo(Flags.defaultHttp1MaxChunkSize());
             assertThat(factory.getMaxResponseHeaderSize()).isEqualByComparingTo(Size.kilobytes(8));
+        }
+
+        @Test
+        public void testSetters() {
+            final ArmeriaHttpConnectorFactory factory =
+                    (ArmeriaHttpConnectorFactory) ArmeriaHttpConnectorFactory.build();
+
+            factory.setMaxInitialLineLength(0);
+            factory.setMaxChunkSize(Size.gigabytes(1));
+            factory.setMaxResponseHeaderSize(Size.gigabytes(1));
+            assertThat(factory.getMaxInitialLineLength()).isEqualTo(0);
+            assertThat(factory.getMaxChunkSize().toGigabytes()).isEqualTo(1);
+            assertThat(factory.getMaxResponseHeaderSize().toGigabytes()).isEqualTo(1);
         }
     }
 
@@ -191,6 +219,56 @@ class ArmeriaConnectorFactoryTest {
             assertThat(factory.getMaxHeaderListSize())
                     .isEqualTo(Flags.defaultHttp2MaxHeaderListSize());
         }
+
+        @Test
+        public void testSetters() {
+            final String f1 = ResourceHelpers.resourceFilePath("f.crt");
+            final String f2 = ResourceHelpers.resourceFilePath("f.jks");
+
+            final ArmeriaHttpsConnectorFactory factory =
+                    (ArmeriaHttpsConnectorFactory) ArmeriaHttpsConnectorFactory.build(f1, f2, null);
+
+            factory.setKeyCertChainFile(f1);
+            assertThat(factory.getKeyCertChainFile()).isEqualTo(f1);
+
+            factory.setKeyStorePath(f2);
+            assertThat(factory.getKeyStorePath()).isEqualTo(f2);
+
+            factory.setSelfSigned(false);
+            assertThat(factory.isSelfSigned()).isFalse();
+
+            factory.setInitialConnectionWindowSize(0);
+            assertThat(factory.getInitialConnectionWindowSize()).isEqualTo(0);
+
+            factory.setInitialStreamingWindowSize(0);
+            assertThat(factory.getInitialStreamingWindowSize()).isEqualTo(0);
+
+            factory.setMaxStreamsPerConnection(0);
+            assertThat(factory.getMaxStreamsPerConnection()).isEqualTo(0);
+
+            factory.setMaxFrameSize(0);
+            assertThat(factory.getMaxFrameSize()).isEqualTo(0);
+
+            factory.setMaxHeaderListSize(0);
+            assertThat(factory.getMaxHeaderListSize()).isEqualTo(0);
+        }
+
+        @Test
+        public void testDecorator() throws Exception {
+            final String f1 = ResourceHelpers.resourceFilePath("f.crt");
+            final String f2 = ResourceHelpers.resourceFilePath("f.jks");
+
+            final ArmeriaHttpsConnectorFactory factory =
+                    (ArmeriaHttpsConnectorFactory) ArmeriaHttpsConnectorFactory.build(f1, f2, null);
+            // Builder fails without a defined service
+            final ServerBuilder sb = com.linecorp.armeria.server.Server
+                    .builder()
+                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                                                             () -> factory.decorate(sb));
+            assertThat(ex.getMessage()).startsWith("File does not contain valid certificates");
+            assertThrows(IllegalArgumentException.class, sb::build);
+        }
     }
 
     @Nested
@@ -203,14 +281,14 @@ class ArmeriaConnectorFactoryTest {
         private MetricRegistry registry;
 
         @Test
-        public void testProxyReturnsNoJettyServer() {
+        void testProxyReturnsNoJettyServer() {
             final TestProxy factory = new TestProxy();
             final Connector connector = factory.build(server, registry, "junit", null);
             assertThat(connector).isNull();
         }
 
         @Test
-        public void testProxySessionProtocol() {
+        void testProxySessionProtocol() {
             final TestProxy factory = new TestProxy();
             assertThat(factory.getSessionProtocols())
                     .contains(SessionProtocol.PROXY);
@@ -222,13 +300,35 @@ class ArmeriaConnectorFactoryTest {
             assertThat(factory.getPort()).isEqualTo(0);
             assertThat(factory.getMaxTlvSize().toBytes()).isEqualTo(65535 - 216);
         }
-    }
 
-    static class TestProxy extends ArmeriaProxyConnectorFactory {
+        @Test
+        void testDecorate() throws Exception {
+            final TestProxy factory = new TestProxy();
+            // Builder fails without a defined service
+            final ServerBuilder sb = com.linecorp.armeria.server.Server
+                    .builder()
+                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            factory.decorate(sb);
+            final com.linecorp.armeria.server.Server server = sb.build();
+            final ServerConfig config = server.config();
+            assertThat(config.ports().size()).isEqualTo(1);
+            assertThat(config.ports().get(0).localAddress().getPort()).isEqualTo(0);
+            assertThat(config.ports().stream()
+                             .flatMap(serverPort -> serverPort.protocols().stream())
+                             .collect(toSet())
+                             .containsAll(Arrays.asList(SessionProtocol.HTTP, SessionProtocol.PROXY)));
+            assertThat(config.proxyProtocolMaxTlvSize())
+                    .isEqualTo(factory.getMaxTlvSize().toBytes());
+            server.stop().get(100, TimeUnit.MILLISECONDS);
+        }
 
-        @Override
-        public String getType() {
-            return "armeria-proxy";
+        @Test
+        void testSetters() throws Exception {
+            final TestProxy factory = new TestProxy();
+
+            factory.setMaxTlvSize(Size.gigabytes(1));
+            assertThat(factory.getMaxTlvSize().toGigabytes())
+                    .isEqualTo(1);
         }
     }
 }

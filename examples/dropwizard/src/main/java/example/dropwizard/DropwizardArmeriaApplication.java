@@ -2,8 +2,8 @@ package example.dropwizard;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.dropwizard.ArmeriaBundle;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.dropwizard.ArmeriaBundle;
 
 import example.dropwizard.armeria.services.http.HelloService;
 import example.dropwizard.health.PingCheck;

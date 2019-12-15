@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.dropwizard;
+package com.linecorp.armeria.dropwizard;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
