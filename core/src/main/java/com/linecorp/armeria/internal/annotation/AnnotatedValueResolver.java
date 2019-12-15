@@ -1085,7 +1085,7 @@ final class AnnotatedValueResolver {
                 // - RequestContext (or ServiceRequestContext)
                 // - Request (or HttpRequest)
                 // - AggregatedHttpRequest
-                // - HttpParameters
+                // - QueryParams (or HttpParameters)
                 // - User classes which can be converted by request converter
                 //
                 // So the container type should be 'null'.
@@ -1194,7 +1194,7 @@ final class AnnotatedValueResolver {
                               .add("context", context)
                               .add("request", request)
                               .add("aggregatedRequest", aggregatedRequest)
-                              .add("httpParameters", queryParams)
+                              .add("queryParams", queryParams)
                               .toString();
         }
 
