@@ -854,17 +854,17 @@ public final class VirtualHostBuilder {
      * Sets the {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
      * and {@link ResponseConverterFunction} for creating a {@link AnnotatedHttpServiceExtensions}.
      *
-     * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
+     * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
      */
     public VirtualHostBuilder annotatedHttpServiceExtensions(
-            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
-            Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
-        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+            Iterable<? extends ResponseConverterFunction> responseConverterFunctions,
+            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
         annotatedHttpServiceExtensions =
                 new AnnotatedHttpServiceExtensions(ImmutableList.copyOf(exceptionHandlerFunctions),
                                                    ImmutableList.copyOf(requestConverterFunctions),

@@ -59,9 +59,9 @@ class AnnotatedHttpServiceHandlersOrderTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedHttpServiceExtensions(ImmutableList.of(new ServerLevelExceptionHandler()),
-                                              ImmutableList.of(new ServerLevelRequestConverter()),
-                                              ImmutableList.of(new ServerLevelResponseConverter()))
+            sb.annotatedHttpServiceExtensions(ImmutableList.of(new ServerLevelRequestConverter()),
+                                              ImmutableList.of(new ServerLevelResponseConverter()),
+                                              ImmutableList.of(new ServerLevelExceptionHandler()))
               .annotatedService("/1", new MyDecorationService1(), LoggingService.newDecorator(),
                                 new ServiceLevelRequestConverter(), new ServiceLevelResponseConverter(),
                                 new ServiceLevelExceptionHandler());

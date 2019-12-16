@@ -64,8 +64,8 @@ class AnnotatedServiceBindingBuilderTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedHttpServiceExtensions(ImmutableList.of(),
-                                              ImmutableList.of(),
-                                              ImmutableList.of(customJacksonResponseConverterFunction))
+                                              ImmutableList.of(customJacksonResponseConverterFunction),
+                                              ImmutableList.of())
               .annotatedService()
               .exceptionHandlers(handlerFunction)
               .build(new TestService());

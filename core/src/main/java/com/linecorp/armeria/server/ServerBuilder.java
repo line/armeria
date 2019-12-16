@@ -1489,19 +1489,20 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
-     * and {@link ResponseConverterFunction} for creating a {@link AnnotatedHttpServiceExtensions}.
+     * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
+     * and {@link ExceptionHandlerFunction}s for creating a {@link AnnotatedHttpServiceExtensions}.
      *
-     * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
+     * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
      */
     public ServerBuilder annotatedHttpServiceExtensions(
-            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
-            Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
-        virtualHostTemplate.annotatedHttpServiceExtensions(exceptionHandlerFunctions, requestConverterFunctions,
-                                                           responseConverterFunctions);
+            Iterable<? extends ResponseConverterFunction> responseConverterFunctions,
+            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
+        virtualHostTemplate.annotatedHttpServiceExtensions(requestConverterFunctions,
+                                                           responseConverterFunctions,
+                                                           exceptionHandlerFunctions);
         return this;
     }
 

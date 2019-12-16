@@ -69,8 +69,8 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.virtualHost(TEST_HOST)
               .annotatedHttpServiceExtensions(ImmutableList.of(),
-                                              ImmutableList.of(),
-                                              ImmutableList.of(customJacksonResponseConverterFunction))
+                                              ImmutableList.of(customJacksonResponseConverterFunction),
+                                              ImmutableList.of())
               .annotatedService()
               .pathPrefix("/path")
               .exceptionHandlers(handlerFunction)

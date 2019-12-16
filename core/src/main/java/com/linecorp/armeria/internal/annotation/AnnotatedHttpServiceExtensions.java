@@ -36,7 +36,7 @@ public final class AnnotatedHttpServiceExtensions {
     /**
      * Creates a new instance with the specified {@code exceptionHandlersAndConverters}.
      */
-    static AnnotatedHttpServiceExtensions ofExceptionHandlersAndConverters(
+    public static AnnotatedHttpServiceExtensions ofExceptionHandlersAndConverters(
             Iterable<?> exceptionHandlersAndConverters) {
 
         final Builder<ExceptionHandlerFunction> exceptionHandlers = ImmutableList.builder();
