@@ -216,7 +216,7 @@ Otherwise, case-sensitive exact match will be performed.
         }
     }
 
-Getting an HTTP parameter
+Getting a query parameter
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When the value of :api:`@Param` annotation is not shown in the path pattern, it will be handled as a
@@ -262,9 +262,9 @@ or ``Optional<?>`` class here, too.
         public HttpResponse hello3(@Param("number") Optional<List<Integer>> numbers) { ... }
     }
 
-If an HTTP ``POST`` request with a ``Content-Type: x-www-form-urlencoded`` is received and no :api:`@Param`
-value appears in the path pattern, Armeria will aggregate the received request and decode its body as
-a URL-encoded form. After that, Armeria will inject the decoded value into the parameter.
+If an HTTP ``POST`` request with a ``Content-Type: x-www-form-urlencoded`` header is received and
+no :api:`@Param` value appears in the path pattern, Armeria will aggregate the received request and
+decode its body as a URL-encoded form. After that, Armeria will inject the decoded value into the parameter.
 
 .. code-block:: java
 
