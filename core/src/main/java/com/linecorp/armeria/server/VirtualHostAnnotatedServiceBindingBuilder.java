@@ -268,7 +268,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     /**
-     * Sets the annotated service object to be used for this {@link AnnotatedServiceBindingBuilder}.
+     * Registers the given service to the {@linkplain VirtualHostBuilder}.
      *
      * @param service annotated service object to handle incoming requests matching path prefix, which
      *                can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
