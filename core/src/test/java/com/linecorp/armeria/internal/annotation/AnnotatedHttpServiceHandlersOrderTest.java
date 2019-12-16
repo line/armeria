@@ -199,8 +199,6 @@ class AnnotatedHttpServiceHandlersOrderTest {
                                             HttpHeaders trailers) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isEqualTo(2);
-                return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8(
-                        (String) result));
             }
             return ResponseConverterFunction.fallthrough();
         }
@@ -287,7 +285,7 @@ class AnnotatedHttpServiceHandlersOrderTest {
         assertThat(aRes.contentUtf8()).isEqualTo("hello foo");
 
         // method level(+1) -> class level(+1) -> service level(+1) -> server level(+1)
-        assertThat(responseCounter.get()).isEqualTo(3);
+        assertThat(responseCounter.get()).isEqualTo(4);
     }
 
     @Test
