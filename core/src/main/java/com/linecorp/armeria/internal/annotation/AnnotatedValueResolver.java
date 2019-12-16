@@ -359,8 +359,8 @@ final class AnnotatedValueResolver {
                 return Optional.of(ofPathVariable(name, annotatedElement, typeElement,
                                                   type, description));
             } else {
-                return Optional.of(ofHttpParameter(name, annotatedElement,
-                                                   typeElement, type, description));
+                return Optional.of(ofQueryParam(name, annotatedElement,
+                                                typeElement, type, description));
             }
         }
 
@@ -451,10 +451,10 @@ final class AnnotatedValueResolver {
                 .build();
     }
 
-    private static AnnotatedValueResolver ofHttpParameter(String name,
-                                                          AnnotatedElement annotatedElement,
-                                                          AnnotatedElement typeElement, Class<?> type,
-                                                          @Nullable String description) {
+    private static AnnotatedValueResolver ofQueryParam(String name,
+                                                       AnnotatedElement annotatedElement,
+                                                       AnnotatedElement typeElement, Class<?> type,
+                                                       @Nullable String description) {
         return builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
@@ -465,7 +465,7 @@ final class AnnotatedValueResolver {
                 .description(description)
                 .aggregation(AggregationStrategy.FOR_FORM_DATA)
                 .resolver(resolver(ctx -> ctx.queryParams().getAll(name),
-                                   () -> "Cannot resolve a value from HTTP parameter: " + name))
+                                   () -> "Cannot resolve a value from a query parameter: " + name))
                 .build();
     }
 
