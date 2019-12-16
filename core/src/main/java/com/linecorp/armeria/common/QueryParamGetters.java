@@ -28,7 +28,8 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.Streams;
-import com.google.common.math.IntMath;
+
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 /**
  * Provides the getter methods to {@link QueryParams} and {@link QueryParamsBuilder}.
@@ -331,8 +332,10 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      * @return the encoded query string.
      */
     default String toQueryString() {
-        final StringBuilder buf = new StringBuilder(Math.max(IntMath.saturatedMultiply(size(), 8), 16));
-        return appendQueryString(buf).toString();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf = tempThreadLocals.stringBuilder();
+        QueryStringEncoder.encodeParams(buf, tempThreadLocals.charArray(12), this);
+        return buf.toString();
     }
 
     /**
@@ -344,7 +347,7 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      */
     default StringBuilder appendQueryString(StringBuilder buf) {
         requireNonNull(buf, "buf");
-        QueryStringEncoder.encodeParams(buf, this);
+        QueryStringEncoder.encodeParams(buf, TemporaryThreadLocals.get().charArray(12), this);
         return buf;
     }
 }

@@ -43,14 +43,39 @@ final class QueryStringEncoder {
 
     private static final byte WRITE_UTF_UNKNOWN = (byte) '?';
     private static final char[] CHAR_MAP = "0123456789ABCDEF".toCharArray();
+    private static final boolean[] SAFE_OCTETS =
+            createSafeOctets("-_.*abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
 
-    static void encodeParams(StringBuilder buf, QueryParamGetters params) {
+    private static boolean[] createSafeOctets(String safeChars) {
+        int maxChar = -1;
+        for (int i = 0; i < safeChars.length(); i++) {
+            maxChar = Math.max(safeChars.charAt(i), maxChar);
+        }
+        final boolean[] octets = new boolean[maxChar + 1];
+        for (int i = 0; i < safeChars.length(); i++) {
+            octets[safeChars.charAt(i)] = true;
+        }
+        return octets;
+    }
+
+    static void encodeParams(StringBuilder buf, char[] tmp, QueryParamGetters params) {
+        assert tmp.length >= 12;
         for (Entry<String, String> e : params) {
-            encodeUtf8Component(buf, e.getKey());
+            final String name = e.getKey();
+            if (isSafeOctetsOnly(name)) {
+                buf.append(name);
+            } else {
+                encodeUtf8Component(buf, tmp, e.getKey());
+            }
+
             final String value = e.getValue();
             if (value != null) {
                 buf.append('=');
-                encodeUtf8Component(buf, value);
+                if (isSafeOctetsOnly(value)) {
+                    buf.append(value);
+                } else {
+                    encodeUtf8Component(buf, tmp, value);
+                }
             }
             buf.append('&');
         }
@@ -58,59 +83,145 @@ final class QueryStringEncoder {
         buf.setLength(buf.length() - 1);
     }
 
+    private static boolean isSafeOctetsOnly(String s) {
+        final int len = s.length();
+        for (int i = 0; i < len; i++) {
+            if (!isSafeOctet(s.charAt(i))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static boolean isSafeOctet(char c) {
+        return c < SAFE_OCTETS.length && SAFE_OCTETS[c];
+    }
+
     /**
      * Encodes a query component (name or value).
      *
      * @see ByteBufUtil#writeUtf8(ByteBuf, CharSequence, int, int)
      */
-    private static void encodeUtf8Component(StringBuilder uriBuilder, String s) {
-        for (int i = 0, len = s.length(); i < len; i++) {
+    private static void encodeUtf8Component(StringBuilder buf, char[] tmp, String s) {
+        int safeOctetStart = 0;
+        final int len = s.length();
+        for (int i = 0; i < len; i++) {
             final char c = s.charAt(i);
             if (c < 0x80) {
-                if (dontNeedEncoding(c)) {
-                    uriBuilder.append(c);
-                } else {
-                    appendEncoded(uriBuilder, c);
+                if (!isSafeOctet(c)) {
+                    if (i > safeOctetStart) {
+                        buf.append(s, safeOctetStart, i);
+                    }
+                    safeOctetStart = i + 1;
+                    appendEncoded(buf, tmp, c);
                 }
-            } else if (c < 0x800) {
-                appendEncoded(uriBuilder, 0xc0 | (c >> 6));
-                appendEncoded(uriBuilder, 0x80 | (c & 0x3f));
-            } else if (StringUtil.isSurrogate(c)) {
-                if (!Character.isHighSurrogate(c)) {
-                    appendEncoded(uriBuilder, WRITE_UTF_UNKNOWN);
-                    continue;
-                }
-                // Surrogate Pair consumes 2 characters.
-                if (++i == s.length()) {
-                    appendEncoded(uriBuilder, WRITE_UTF_UNKNOWN);
-                    break;
-                }
-                // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
-                writeUtf8Surrogate(uriBuilder, c, s.charAt(i));
-            } else {
-                appendEncoded(uriBuilder, 0xe0 | (c >> 12));
-                appendEncoded(uriBuilder, 0x80 | ((c >> 6) & 0x3f));
-                appendEncoded(uriBuilder, 0x80 | (c & 0x3f));
+                continue;
             }
+
+            if (i > safeOctetStart) {
+                buf.append(s, safeOctetStart, i);
+            }
+            safeOctetStart = i + 1;
+
+            if (c < 0x800) {
+                appendEncoded(buf, tmp,
+                              0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+                continue;
+            }
+
+            if (!StringUtil.isSurrogate(c)) {
+                appendEncoded(buf, tmp,
+                              0xe0 | (c >> 12),
+                              0x80 | ((c >> 6) & 0x3f),
+                              0x80 | (c & 0x3f));
+                continue;
+            }
+
+            if (!Character.isHighSurrogate(c)) {
+                appendEncoded(buf, tmp, WRITE_UTF_UNKNOWN);
+                continue;
+            }
+
+            // Surrogate Pair consumes 2 characters.
+            if (++i == len) {
+                appendEncoded(buf, tmp, WRITE_UTF_UNKNOWN);
+                break;
+            }
+
+            // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
+            writeUtf8Surrogate(buf, tmp, c, s.charAt(i));
+        }
+
+        if (safeOctetStart == 0) {
+            buf.append(s);
+        } else if (safeOctetStart < len) {
+            buf.append(s, safeOctetStart, len);
         }
     }
 
-    private static void writeUtf8Surrogate(StringBuilder uriBuilder, char c, char c2) {
+    private static void writeUtf8Surrogate(StringBuilder buf, char[] tmp, char c, char c2) {
         if (!Character.isLowSurrogate(c2)) {
-            appendEncoded(uriBuilder, WRITE_UTF_UNKNOWN);
-            appendEncoded(uriBuilder, Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2);
+            appendEncoded(buf, tmp,
+                          WRITE_UTF_UNKNOWN,
+                          Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2);
             return;
         }
+
         final int codePoint = Character.toCodePoint(c, c2);
         // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
-        appendEncoded(uriBuilder, 0xf0 | (codePoint >> 18));
-        appendEncoded(uriBuilder, 0x80 | ((codePoint >> 12) & 0x3f));
-        appendEncoded(uriBuilder, 0x80 | ((codePoint >> 6) & 0x3f));
-        appendEncoded(uriBuilder, 0x80 | (codePoint & 0x3f));
+        appendEncoded(buf, tmp,
+                      0xf0 | (codePoint >> 18),
+                      0x80 | ((codePoint >> 12) & 0x3f),
+                      0x80 | ((codePoint >> 6) & 0x3f),
+                      0x80 | (codePoint & 0x3f));
     }
 
-    private static void appendEncoded(StringBuilder uriBuilder, int b) {
-        uriBuilder.append('%').append(forDigit(b >> 4)).append(forDigit(b));
+    private static void appendEncoded(StringBuilder buf, char[] tmp, int b) {
+        setEncoded(tmp, b);
+        buf.append(tmp, 0, 3);
+    }
+
+    private static void appendEncoded(StringBuilder buf, char[] tmp, int b1, int b2) {
+        setEncoded(tmp, b1, b2);
+        buf.append(tmp, 0, 6);
+    }
+
+    private static void appendEncoded(StringBuilder buf, char[] tmp, int b1, int b2, int b3) {
+        setEncoded(tmp, b1, b2, b3);
+        buf.append(tmp, 0, 9);
+    }
+
+    private static void appendEncoded(StringBuilder buf, char[] tmp, int b1, int b2, int b3, int b4) {
+        setEncoded(tmp, b1, b2, b3, b4);
+        buf.append(tmp, 0, 12);
+    }
+
+    private static void setEncoded(char[] tmp, int b) {
+        tmp[0] = '%';
+        tmp[1] = forDigit(b >>> 4);
+        tmp[2] = forDigit(b);
+    }
+
+    private static void setEncoded(char[] tmp, int b1, int b2) {
+        setEncoded(tmp, b1);
+        tmp[3] = '%';
+        tmp[4] = forDigit(b2 >>> 4);
+        tmp[5] = forDigit(b2);
+    }
+
+    private static void setEncoded(char[] tmp, int b1, int b2, int b3) {
+        setEncoded(tmp, b1, b2);
+        tmp[6] = '%';
+        tmp[7] = forDigit(b3 >>> 4);
+        tmp[8] = forDigit(b3);
+    }
+
+    private static void setEncoded(char[] tmp, int b1, int b2, int b3, int b4) {
+        setEncoded(tmp, b1, b2, b3);
+        tmp[9] = '%';
+        tmp[10] = forDigit(b4 >>> 4);
+        tmp[11] = forDigit(b4);
     }
 
     /**
@@ -122,22 +233,6 @@ final class QueryStringEncoder {
      */
     private static char forDigit(int digit) {
         return CHAR_MAP[digit & 0xF];
-    }
-
-    /**
-     * Determines whether the given character is a unreserved character.
-     *
-     * <p>unreserved characters do not need to be encoded, and include uppercase and lowercase
-     * letters, decimal digits, hyphen, period, underscore, and tilde.</p>
-     *
-     * <p>unreserved  = ALPHA / DIGIT / "-" / "_" / "." / "*"</p>
-     *
-     * @param ch the char to be judged whether it need to be encode
-     * @return true or false
-     */
-    private static boolean dontNeedEncoding(char ch) {
-        return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' ||
-               ch == '-' || ch == '_' || ch == '.' || ch == '*';
     }
 
     private QueryStringEncoder() {}

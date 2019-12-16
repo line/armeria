@@ -13,17 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.internal;
 
+import javax.annotation.Nullable;
+
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import reactor.core.scheduler.NonBlocking;
 
 /**
- * A {@link FastThreadLocalThread} that implements {@link NonBlocking} tag interface to make Project Reactor
- * happy.
+ * An event loop thread with support for {@link TemporaryThreadLocals}, Netty {@link FastThreadLocal} and
+ * Project Reactor {@link NonBlocking}.
  */
-final class EventLoopThread extends FastThreadLocalThread implements NonBlocking {
-    EventLoopThread(ThreadGroup threadGroup, Runnable r, String name) {
+public final class EventLoopThread extends FastThreadLocalThread implements NonBlocking {
+
+    final TemporaryThreadLocals temporaryThreadLocals = new TemporaryThreadLocals();
+
+    /**
+     * Creates a new instance.
+     */
+    public EventLoopThread(@Nullable ThreadGroup threadGroup, Runnable r, String name) {
         super(threadGroup, r, name);
     }
 }
