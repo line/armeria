@@ -33,6 +33,14 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+/**
+ * Skeletal builder implementation of {@link StringMultimap} and/or its subtypes.
+ *
+ * @param <IN_NAME> the type of the user-specified names, which may be more permissive than {@link NAME}
+ * @param <NAME> the actual type of the names
+ * @param <CONTAINER> the type of the container object
+ * @param <SELF> the type of {@code this}
+ */
 abstract class StringMultimapBuilder<
         IN_NAME extends CharSequence,
         NAME extends IN_NAME,

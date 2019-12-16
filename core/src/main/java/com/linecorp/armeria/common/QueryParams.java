@@ -261,23 +261,6 @@ public interface QueryParams extends QueryParamGetters {
      * HTML5 W3C Recommendation</a>.
      *
      * @param queryString the query string with or without leading question mark ({@code '?'}).
-     * @param semicolonIsSeparator whether to treat a semicolon ({@code ';'}) as a separator as well as
-     *                             an ampersand ({@code '&'}). Note that HTML5 expects you to use only
-     *                             ampersand as a separator. Enable this flag only when you need to
-     *                             interop with a legacy system.
-     * @return the decoded {@link QueryParams}. An empty {@link QueryParams} is returned
-     *         if {@code queryString} is {@code null}.
-     */
-    static QueryParams fromQueryString(@Nullable String queryString, boolean semicolonIsSeparator) {
-        return fromQueryString(queryString, 1024, semicolonIsSeparator);
-    }
-
-    /**
-     * Decodes the specified query string into a {@link QueryParams}, as defined in
-     * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
-     * HTML5 W3C Recommendation</a>.
-     *
-     * @param queryString the query string with or without leading question mark ({@code '?'}).
      * @param maxParams   the max number of parameters to decode. If the {@code queryString} contains
      *                    more parameters than this value, the extra parameters will not be decoded.
      * @return the decoded {@link QueryParams}. An empty {@link QueryParams} is returned
@@ -292,7 +275,24 @@ public interface QueryParams extends QueryParamGetters {
         // > Let strings be the result of strictly splitting the string payload on
         // > U+0026 AMPERSAND characters (&).
 
-        return fromQueryString(queryString, maxParams, /* semicolonIsSeparator */ false);
+        return fromQueryString(queryString, maxParams, /* semicolonAsSeparator */ false);
+    }
+
+    /**
+     * Decodes the specified query string into a {@link QueryParams}, as defined in
+     * <a href="https://www.w3.org/TR/2014/REC-html5-20141028/forms.html#url-encoded-form-data">4.10.22.6,
+     * HTML5 W3C Recommendation</a>.
+     *
+     * @param queryString the query string with or without leading question mark ({@code '?'}).
+     * @param semicolonAsSeparator whether to treat a semicolon ({@code ';'}) as a separator as well as
+     *                             an ampersand ({@code '&'}). Note that HTML5 expects you to use only
+     *                             ampersand as a separator. Enable this flag only when you need to
+     *                             interop with a legacy system.
+     * @return the decoded {@link QueryParams}. An empty {@link QueryParams} is returned
+     *         if {@code queryString} is {@code null}.
+     */
+    static QueryParams fromQueryString(@Nullable String queryString, boolean semicolonAsSeparator) {
+        return fromQueryString(queryString, 1024, semicolonAsSeparator);
     }
 
     /**
@@ -303,7 +303,7 @@ public interface QueryParams extends QueryParamGetters {
      * @param queryString the query string with or without leading question mark ({@code '?'}).
      * @param maxParams   the max number of parameters to decode. If the {@code queryString} contains
      *                    more parameters than this value, the extra parameters will not be decoded.
-     * @param semicolonIsSeparator whether to treat a semicolon ({@code ';'}) as a separator as well as
+     * @param semicolonAsSeparator whether to treat a semicolon ({@code ';'}) as a separator as well as
      *                             an ampersand ({@code '&'}). Note that HTML5 expects you to use only
      *                             ampersand as a separator. Enable this flag only when you need to
      *                             interop with a legacy system.
@@ -311,8 +311,8 @@ public interface QueryParams extends QueryParamGetters {
      *         if {@code queryString} is {@code null}.
      */
     static QueryParams fromQueryString(@Nullable String queryString, int maxParams,
-                                       boolean semicolonIsSeparator) {
-        return QueryStringDecoder.decodeParams(queryString, maxParams, semicolonIsSeparator);
+                                       boolean semicolonAsSeparator) {
+        return QueryStringDecoder.decodeParams(queryString, maxParams, semicolonAsSeparator);
     }
 
     /**
@@ -324,7 +324,7 @@ public interface QueryParams extends QueryParamGetters {
 
     /**
      * Returns a new parameters which is the result from the mutation by the specified {@link Consumer}.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * builder = toBuilder();
      * mutator.accept(builder);

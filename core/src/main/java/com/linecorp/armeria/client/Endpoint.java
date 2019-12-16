@@ -268,7 +268,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * Returns whether this endpoint has an IP address resolved. This method is a shortcut of
+     * Returns whether this endpoint has an IP address resolved. This method is a shortcut for
      * {@code ipAddr() != null}.
      *
      * @return {@code true} if and only if this endpoint has an IP address.

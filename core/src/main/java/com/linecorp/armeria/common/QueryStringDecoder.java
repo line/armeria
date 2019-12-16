@@ -53,33 +53,22 @@ final class QueryStringDecoder {
     // https://github.com/netty/netty/blob/7d6d953153697bd66c3b01ca8ec73c4494a81788/codec-http/src/main/java/io/netty/handler/codec/http/QueryStringDecoder.java
 
     @SuppressWarnings("checkstyle:FallThrough")
-    static QueryParams decodeParams(@Nullable String s, int paramsLimit, boolean semicolonIsSeparator) {
+    static QueryParams decodeParams(@Nullable String s, int paramsLimit, boolean semicolonAsSeparator) {
         if (s == null) {
             return QueryParams.of();
         }
 
         final int len = s.length();
-
-        // Skip the leading question marks.
-        int from = -1;
-        for (int i = 0; i < len; i++) {
-            if (s.charAt(i) != '?') {
-                from = i;
-                break;
-            }
-        }
-
-        // Return an empty parameters if the string is empty or full of question marks.
-        if (from < 0) {
+        if (len == 0) {
             return QueryParams.of();
         }
 
         final QueryParamsBuilder params = QueryParams.builder();
-        int nameStart = from;
+        int nameStart = 0;
         int valueStart = -1;
         int i;
         loop:
-        for (i = from; i < len; i++) {
+        for (i = 0; i < len; i++) {
             switch (s.charAt(i)) {
                 case '=':
                     if (nameStart == i) {
@@ -89,7 +78,7 @@ final class QueryStringDecoder {
                     }
                     break;
                 case ';':
-                    if (!semicolonIsSeparator) {
+                    if (!semicolonAsSeparator) {
                         continue;
                     }
                     // fall-through

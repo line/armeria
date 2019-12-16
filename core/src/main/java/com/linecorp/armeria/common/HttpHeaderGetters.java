@@ -34,7 +34,7 @@ import io.netty.util.AsciiString;
 /**
  * Provides the getter methods to {@link HttpHeaders} and {@link HttpHeadersBuilder}.
  */
-interface HttpHeaderGetters extends StringMultimapGetters<CharSequence, AsciiString> {
+interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequence, /* NAME */ AsciiString> {
 
     /**
      * Tells whether the headers correspond to the last frame in an HTTP/2 stream.

@@ -530,7 +530,7 @@ public interface Cookie extends Comparable<Cookie> {
 
     /**
      * Returns a new {@link Cookie} which is the result from the mutation by the specified {@link Consumer}.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * builder = toBuilder();
      * mutator.accept(builder);

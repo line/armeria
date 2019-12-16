@@ -47,7 +47,9 @@ import io.netty.util.AsciiString;
 /**
  * The base container implementation of {@link HttpHeaders} and {@link HttpHeadersBuilder}.
  */
-class HttpHeadersBase extends StringMultimap<CharSequence, AsciiString> implements HttpHeaderGetters {
+class HttpHeadersBase
+        extends StringMultimap</* IN_NAME */ CharSequence, /* NAME */ AsciiString>
+        implements HttpHeaderGetters {
 
     private static final BitSet PROHIBITED_VALUE_CHARS;
     private static final String[] PROHIBITED_VALUE_CHAR_NAMES;

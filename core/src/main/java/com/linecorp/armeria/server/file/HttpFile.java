@@ -62,7 +62,7 @@ public interface HttpFile {
 
     /**
      * Creates a new {@link AggregatedHttpFile} which streams the specified {@link HttpData}. This method is
-     * a shortcut of {@code HttpFile.of(data, System.currentTimeMillis()}.
+     * a shortcut for {@code HttpFile.of(data, System.currentTimeMillis()}.
      */
     static AggregatedHttpFile of(HttpData data) {
         return (AggregatedHttpFile) HttpFileBuilder.of(data).build();
@@ -82,7 +82,7 @@ public interface HttpFile {
 
     /**
      * Creates a new {@link HttpFile} which streams the resource at the specified {@code path}. This method is
-     * a shortcut of {@code HttpFile.of(HttpFile.class.getClassLoader(), path)}.
+     * a shortcut for {@code HttpFile.of(HttpFile.class.getClassLoader(), path)}.
      */
     static HttpFile ofResource(String path) {
         return HttpFileBuilder.ofResource(path).build();

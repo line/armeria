@@ -35,7 +35,9 @@ import javax.annotation.Nullable;
  * The base container implementation of {@link QueryParams} and {@link QueryParamsBuilder}.
  */
 @SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
-class QueryParamsBase extends StringMultimap<String, String> implements QueryParamGetters {
+class QueryParamsBase
+        extends StringMultimap</* IN_NAME */ String, /* NAME */ String>
+        implements QueryParamGetters {
 
     QueryParamsBase(int sizeHint) {
         super(sizeHint);
@@ -55,6 +57,7 @@ class QueryParamsBase extends StringMultimap<String, String> implements QueryPar
 
     @Override
     boolean nameEquals(String a, String b) {
+        // Keys in URL parameters are case-sensitive - https://tools.ietf.org/html/rfc3986#page-39
         return a.equals(b);
     }
 

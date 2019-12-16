@@ -254,7 +254,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Sets the {@link Function} to use to sanitize request, response and trailers before logging.
      * It is common to have the {@link Function} that removes sensitive headers, like {@code "Cookie"} and
-     * {@code "Set-Cookie"}, before logging. This method is a shortcut of:
+     * {@code "Set-Cookie"}, before logging. This method is a shortcut for:
      * <pre>{@code
      * builder.requestHeadersSanitizer(headersSanitizer);
      * builder.requestTrailersSanitizer(headersSanitizer);
@@ -313,7 +313,8 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Sets the {@link Function} to use to sanitize request and response content before logging. It is common
      * to have the {@link Function} that removes sensitive content, such as an GPS location query and
-     * an address, before logging. If unset, will use {@link Function#identity()}. This method is a shortcut of:
+     * an address, before logging. If unset, will use {@link Function#identity()}.
+     * This method is a shortcut for:
      * <pre>{@code
      * builder.requestContentSanitizer(contentSanitizer);
      * builder.responseContentSanitizer(contentSanitizer);

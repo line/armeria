@@ -151,7 +151,7 @@ public enum TransportType {
 
     /**
      * Returns lowercase name of {@link TransportType}.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * Ascii.toLowerCase(name());
      * }</pre>

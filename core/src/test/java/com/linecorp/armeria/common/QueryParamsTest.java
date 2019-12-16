@@ -130,8 +130,6 @@ class QueryParamsTest {
     @Test
     void testExoticDecoding() {
         assertQueryString("", "");
-        assertQueryString("", "?");
-        assertQueryString("", "??");
         assertQueryString("a=", "a");
         assertQueryString("a=", "a&");
         assertQueryString("a=", "&a");
@@ -159,13 +157,23 @@ class QueryParamsTest {
     @Test
     void testFragmentDecoding() {
         // a 'fragment' after '#' should be cut (see RFC 3986)
+        assertThat(QueryParams.fromQueryString("#")).isEmpty();
         assertThat(QueryParams.fromQueryString("#123")).isEmpty();
-        assertThat(QueryParams.fromQueryString("?a#anchor"))
-                .containsExactly(Maps.immutableEntry("a", ""));
+        assertThat(QueryParams.fromQueryString("a#anchor")).containsExactly(Maps.immutableEntry("a", ""));
         assertThat(QueryParams.fromQueryString("#a#b?c=d")).isEmpty();
-        assertThat(QueryParams.fromQueryString("?#")).isEmpty();
-        assertThat(QueryParams.fromQueryString("?#anchor")).isEmpty();
-        assertThat(QueryParams.fromQueryString("?#a=b#anchor")).isEmpty();
+        assertThat(QueryParams.fromQueryString("#a=b#anchor")).isEmpty();
+    }
+
+    @Test
+    void testQuestionMarkDecoding() {
+        assertThat(QueryParams.fromQueryString("?"))
+                .containsExactly(Maps.immutableEntry("?", ""));
+        assertThat(QueryParams.fromQueryString("?a"))
+                .containsExactly(Maps.immutableEntry("?a", ""));
+        assertThat(QueryParams.fromQueryString("??a"))
+                .containsExactly(Maps.immutableEntry("??a", ""));
+        assertThat(QueryParams.fromQueryString("??a=??b"))
+                .containsExactly(Maps.immutableEntry("??a", "??b"));
     }
 
     @Test
@@ -223,9 +231,9 @@ class QueryParamsTest {
         assertQueryString(expected, actual, false);
     }
 
-    private static void assertQueryString(String expected, String actual, boolean semicolonIsSeparator) {
-        assertThat(QueryParams.fromQueryString(actual, semicolonIsSeparator))
-                .isEqualTo(QueryParams.fromQueryString(expected, semicolonIsSeparator));
+    private static void assertQueryString(String expected, String actual, boolean semicolonAsSeparator) {
+        assertThat(QueryParams.fromQueryString(actual, semicolonAsSeparator))
+                .isEqualTo(QueryParams.fromQueryString(expected, semicolonAsSeparator));
     }
 
     // Tests forked from netty-4.1.43

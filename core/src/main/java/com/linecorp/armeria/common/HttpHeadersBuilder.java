@@ -374,7 +374,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
 
     /**
      * Copies the entries missing in this headers from the specified {@code entries}.
-     * This method is a shortcut of the following code:
+     * This method is a shortcut for:
      * <pre>{@code
      * headers.names().forEach(name -> {
      *     if (!builder.contains(name)) {

@@ -154,7 +154,7 @@ public final class JettyServiceBuilder {
     }
 
     /**
-     * Sets the {@link SessionIdManager} of the Jetty {@link Server}. This method is a shortcut of:
+     * Sets the {@link SessionIdManager} of the Jetty {@link Server}. This method is a shortcut for:
      * <pre>{@code
      * sessionIdManagerFactory(server -> sessionIdManager);
      * }</pre>

@@ -104,7 +104,7 @@ public final class TypeSignature {
 
     /**
      * Creates a new type signature for the list with the specified element type signature.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * ofContainer("list", elementTypeSignature);
      * }</pre>
@@ -116,7 +116,7 @@ public final class TypeSignature {
 
     /**
      * Creates a new type signature for the list with the specified named element type.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * ofList(ofNamed(namedElementType));
      * }</pre>
@@ -127,7 +127,7 @@ public final class TypeSignature {
 
     /**
      * Creates a new type signature for the set with the specified element type signature.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * ofContainer("set", elementTypeSignature);
      * }</pre>
@@ -139,7 +139,7 @@ public final class TypeSignature {
 
     /**
      * Creates a new type signature for the set with the specified named element type.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * ofSet(ofNamed(namedElementType));
      * }</pre>
@@ -150,7 +150,7 @@ public final class TypeSignature {
 
     /**
      * Creates a new type signature for the map with the specified key and value type signatures.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * ofMap("map", keyTypeSignature, valueTypeSignature);
      * }</pre>
@@ -163,7 +163,7 @@ public final class TypeSignature {
 
     /**
      * Creates a new type signature for the map with the specified named key and value types.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * ofMap(ofNamed(namedKeyType), ofNamed(namedValueType));
      * }</pre>

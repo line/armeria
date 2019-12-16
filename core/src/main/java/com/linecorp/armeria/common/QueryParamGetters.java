@@ -33,7 +33,7 @@ import com.google.common.math.IntMath;
 /**
  * Provides the getter methods to {@link QueryParams} and {@link QueryParamsBuilder}.
  */
-interface QueryParamGetters extends StringMultimapGetters<String, String> {
+interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, /* NAME */ String> {
 
     /**
      * Returns the value of a parameter with the specified {@code name}. If there are more than one value for

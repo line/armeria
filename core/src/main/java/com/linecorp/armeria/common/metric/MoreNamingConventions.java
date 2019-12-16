@@ -64,7 +64,7 @@ public final class MoreNamingConventions {
      * Configures all the {@link MeterRegistry}s added to the {@link Metrics#globalRegistry} to use the
      * {@link NamingConvention}s provided by this class. {@link DropwizardMeterRegistry} and
      * {@link PrometheusMeterRegistry} will be configured to use {@link #dropwizard()} and
-     * {@link #prometheus()} respectively. This method is a shortcut of:
+     * {@link #prometheus()} respectively. This method is a shortcut for:
      *
      * <pre>{@code
      * configure(Metrics.globalRegistry);

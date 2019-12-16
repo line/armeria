@@ -19,8 +19,8 @@ import javax.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 
-abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder>
-        extends StringMultimapBuilder<CharSequence, AsciiString, HttpHeadersBase, SELF> {
+abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> extends StringMultimapBuilder<
+        /* IN_NAME */ CharSequence, /* NAME */ AsciiString, /* CONTAINER */ HttpHeadersBase, SELF> {
 
     AbstractHttpHeadersBuilder() {}
 

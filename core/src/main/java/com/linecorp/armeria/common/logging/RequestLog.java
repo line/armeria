@@ -558,7 +558,7 @@ public interface RequestLog extends AttributeMap {
     String toStringRequestOnly();
 
     /**
-     * Returns the string representation of the {@link Request}. This method is a shortcut of:
+     * Returns the string representation of the {@link Request}. This method is a shortcut for:
      * <pre>{@code
      * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
      * }</pre>
@@ -591,7 +591,7 @@ public interface RequestLog extends AttributeMap {
     String toStringResponseOnly();
 
     /**
-     * Returns the string representation of the {@link Response}. This method is a shortcut of:
+     * Returns the string representation of the {@link Response}. This method is a shortcut for:
      * <pre>{@code
      * toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
      * }</pre>

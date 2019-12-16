@@ -60,6 +60,9 @@ import io.netty.util.AsciiString;
  * The base container implementation of {@link HttpHeaders}, {@link HttpHeadersBuilder}, {@link QueryParams}
  * and {@link QueryParamsBuilder}.
  *
+ * @param <IN_NAME> the type of the user-specified names, which may be more permissive than {@link NAME}
+ * @param <NAME> the actual type of the names
+ *
  * @see HttpHeadersBase
  * @see QueryParamsBase
  */
@@ -128,14 +131,43 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     // Extension points
 
+    /**
+     * Returns the hash code of the specified {@code name}. Note that the following must be invariant
+     * for this class to function properly:
+     *
+     * <pre>{@code
+     * hashName(name) == hashName(normalizeName(name))
+     * }</pre>
+     */
     abstract int hashName(IN_NAME name);
 
+    /**
+     * Tells whether the two specified names are equal to each other. Note that the following must be invariant
+     * for this class to function properly:
+     *
+     * <pre>{@code
+     * nameEquals(a, b) == nameEquals(a, normalizeName(b))
+     * }</pre>
+     */
     abstract boolean nameEquals(NAME a, IN_NAME b);
 
+    /**
+     * Tells whether the specified {@code name} belongs to the first group in iteration order.
+     * The second-group entries will appear after the first-group entries in {@link #names()},
+     * {@link #iterator()} and {@link #stream()}.
+     */
     abstract boolean isFirstGroup(NAME name);
 
+    /**
+     * Normalizes the given user-specified {@code name} into {@link NAME}.
+     * See {@link #hashName(CharSequence)} and {@link #nameEquals(CharSequence, CharSequence)}
+     * for the invariance your implementation must meet.
+     */
     abstract NAME normalizeName(IN_NAME name);
 
+    /**
+     * Validates the given user-specified {@code value}.
+     */
     abstract void validateValue(String value);
 
     // Getters

@@ -27,6 +27,9 @@ import javax.annotation.Nullable;
 
 /**
  * Provides the getter methods to {@link StringMultimap}.
+ *
+ * @param <IN_NAME> the type of the user-specified names, which may be more permissive than {@link NAME}
+ * @param <NAME> the actual type of the names
  */
 interface StringMultimapGetters<IN_NAME extends CharSequence, NAME extends IN_NAME>
         extends Iterable<Entry<NAME, String>> {

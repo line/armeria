@@ -377,7 +377,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
 
     /**
      * Copies the entries missing in this parameters from the specified {@code entries}.
-     * This method is a shortcut of the following code:
+     * This method is a shortcut for:
      * <pre>{@code
      * entries.names().forEach(name -> {
      *     if (!builder.contains(name)) {

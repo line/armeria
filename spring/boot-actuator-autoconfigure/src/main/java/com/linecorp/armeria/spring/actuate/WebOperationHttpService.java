@@ -163,13 +163,10 @@ final class WebOperationHttpService implements HttpService {
             arguments.putAll(bodyParams);
         }
 
-        final String query = ctx.query();
-        if (query != null) {
-            final QueryParams params = QueryParams.fromQueryString(query);
-            for (String name : params.names()) {
-                final List<String> values = params.getAll(name);
-                arguments.put(name, values.size() != 1 ? values : values.get(0));
-            }
+        final QueryParams params = QueryParams.fromQueryString(ctx.query());
+        for (String name : params.names()) {
+            final List<String> values = params.getAll(name);
+            arguments.put(name, values.size() != 1 ? values : values.get(0));
         }
 
         return ImmutableMap.copyOf(arguments);
