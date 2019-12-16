@@ -57,9 +57,6 @@ public class ArmeriaHttpConnectorFactory extends HttpConnectorFactory
     @JsonProperty
     private @Min(0) int maxInitialLineLength = Flags.defaultHttp1MaxInitialLineLength();
 
-    public ArmeriaHttpConnectorFactory() {
-    }
-
     @Override
     public void decorate(final ServerBuilder sb) {
         logger.debug("Building Armeria HTTP Server");

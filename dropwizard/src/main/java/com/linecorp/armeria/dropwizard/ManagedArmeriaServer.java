@@ -31,6 +31,11 @@ import io.dropwizard.Configuration;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.server.ServerFactory;
 
+/**
+ * An Armeria {@link Server} wrapper class that accepts a Dropwizard Configuration
+ * and initializes the Armeria {@link ServerBuilder} to be passed back to the
+ * user via an {@link ArmeriaServerConfigurator}.
+ */
 public class ManagedArmeriaServer<T extends Configuration> implements Managed {
 
     private static final Logger logger = LoggerFactory.getLogger(ManagedArmeriaServer.class);
@@ -39,29 +44,28 @@ public class ManagedArmeriaServer<T extends Configuration> implements Managed {
     private final ArmeriaServerConfigurator serverConfigurator;
     @Nullable
     private Server server;
+    private final @Valid ServerFactory serverFactory;
 
     /**
-    * An Armeria {@link Server} wrapper class that accepts a Dropwizard Configuration
-    * and initializes the Armeria {@link ServerBuilder} to be passed back to the
-    * user via an {@link ArmeriaServerConfigurator}.
+    * Creates a new instance.
     *
     * @param configuration The Dropwizard configuration
     * @param serverConfigurator A non-null implementation of {@link ArmeriaServerConfigurator}
     */
     public ManagedArmeriaServer(final T configuration,
                                 final ArmeriaServerConfigurator serverConfigurator) {
-        this.configuration = configuration;
+        this.configuration = Objects.requireNonNull(configuration, "configuration");
+        serverFactory = Objects.requireNonNull(configuration.getServerFactory(), "server");
+        if (!(serverFactory instanceof ArmeriaServerFactory)) {
+            throw new RuntimeException("Cannot manage Armeria Server " +
+                                       "unless Configuration server.type=" + ArmeriaServerFactory.TYPE);
+        }
         this.serverConfigurator = Objects.requireNonNull(serverConfigurator, "serverConfigurator");
     }
 
     @Override
     public void start() throws Exception {
         logger.trace("Getting Armeria Server Builder");
-        final ServerFactory serverFactory = configuration.getServerFactory();
-        if (!(serverFactory instanceof ArmeriaServerFactory)) {
-            throw new RuntimeException("Cannot manage Armeria Server " +
-                    "unless Configuration server.type=" + ArmeriaServerFactory.TYPE);
-        }
         final ServerBuilder sb = ((ArmeriaServerFactory) serverFactory).getServerBuilder();
         logger.trace("Calling Server Configurator");
         serverConfigurator.configure(sb);
@@ -75,7 +79,6 @@ public class ManagedArmeriaServer<T extends Configuration> implements Managed {
         } catch (Throwable cause) {
             Exceptions.throwUnsafely(Exceptions.peel(cause));
         }
-
         logger.info("Started Armeria Server");
     }
 

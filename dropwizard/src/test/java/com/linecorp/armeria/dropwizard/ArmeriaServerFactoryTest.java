@@ -27,9 +27,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.validation.Validator;
 
-import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.util.thread.ThreadPool;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -120,17 +118,10 @@ class ArmeriaServerFactoryTest {
 
         final ClassCastException ex =
                 assertThrows(ClassCastException.class,
-                             () -> ArmeriaServerFactory
-                                     .decorateServerBuilder(sb, new ConnectorFactory() {
-                                         @Override
-                                         public Connector build(
-                                                 Server server,
-                                                 MetricRegistry metrics,
-                                                 String name,
-                                                 @Nullable ThreadPool threadPool) {
-                                             return null;
-                                         }
-                                     }, null, null));
+                             // decorate with an instance that does not implement ArmeriaServerDecorator
+                             () -> factory.decorateServerBuilder(sb,
+                                                                 (server, metrics, name, threadPool) -> null,
+                                                                 null, null));
         assertThat(ex.getMessage()).isEqualTo("server.connector.type must be an instance of " +
                                               ArmeriaServerDecorator.class.getName());
     }

@@ -56,68 +56,23 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import io.dropwizard.jersey.setup.JerseyEnvironment;
 import io.dropwizard.jetty.ConnectorFactory;
 import io.dropwizard.jetty.ContextRoutingHandler;
+import io.dropwizard.server.ServerFactory;
 import io.dropwizard.server.SimpleServerFactory;
 import io.dropwizard.setup.Environment;
 import io.dropwizard.util.Size;
 import io.dropwizard.validation.MinSize;
 import io.micrometer.core.instrument.MeterRegistry;
 
+/**
+ * A Dropwizard {@link ServerFactory} implementation for Armeria that replaces
+ * Dropwizard's default Jetty handler with one provided by Armeria.
+ */
 @JsonTypeName(ArmeriaServerFactory.TYPE)
 public class ArmeriaServerFactory extends SimpleServerFactory {
     // TODO: This class could be stripped down to the essential fields. Implement ServerFactory instead.
 
     public static final String TYPE = "armeria";
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerFactory.class);
-
-    /**
-     * Wrap a {@link Server} in a {@link JettyService}.
-     *
-     * @param jettyServer An instance of a Jetty {@link Server}
-     * @return Armeria {@link JettyService} for the provided jettyServer
-     */
-    @JsonIgnore
-    public static JettyService getJettyService(final Server jettyServer) {
-        Objects.requireNonNull(jettyServer, "Armeria cannot build a service from a null server");
-        return JettyService.forServer(jettyServer);
-    }
-
-    /**
-     * Builds on a {@link ServerBuilder}.
-     *
-     * @param sb An instance of a {@link ServerBuilder}
-     * @param connectorFactory {@code null} or {@link ConnectorFactory}. If non-null must be an instance of
-     *                         an {@link ArmeriaServerDecorator}
-     * @param writerFactory {@code null} or {@link AccessLogWriterFactory}
-     * @param meterRegistry {@code null} or {@link MeterRegistry}
-     * @throws SSLException Thrown when configuring TLS
-     * @throws CertificateException Thrown when validating certificates
-     */
-    public static ServerBuilder decorateServerBuilder(final ServerBuilder sb,
-                                                      @Nullable final ConnectorFactory connectorFactory,
-                                                      @Nullable final AccessLogWriterFactory writerFactory,
-                                                      @Nullable final MeterRegistry meterRegistry)
-            throws SSLException, CertificateException {
-        Objects.requireNonNull(sb, "builder to decorate must not be null");
-        if (connectorFactory != null) {
-            if (!(connectorFactory instanceof ArmeriaServerDecorator)) {
-                throw new ClassCastException("server.connector.type must be an instance of " +
-                                             ArmeriaServerDecorator.class.getName());
-            }
-            ((ArmeriaServerDecorator) connectorFactory).decorate(sb);
-        }
-        if (meterRegistry != null) {
-            sb.meterRegistry(meterRegistry);
-        }
-        if (writerFactory != null && !writerFactory.getWriter()
-                                                   .equals(AccessLogWriter.disabled())) {
-            logger.trace("Setting up Armeria AccessLogWriter");
-            sb.accessLogWriter(writerFactory.getWriter(), true);
-        } else {
-            logger.info("Armeria access logs will not be written");
-            sb.accessLogWriter(AccessLogWriter.disabled(), true);
-        }
-        return sb;
-    }
 
     @JsonProperty
     private @Valid ConnectorFactory connector = ArmeriaHttpConnectorFactory.build();
@@ -138,6 +93,7 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
     @JsonProperty
     @Nullable
     private String defaultHostname;
+
     @JsonIgnore
     @Nullable
     private transient ServerBuilder serverBuilder;
@@ -146,8 +102,8 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
      * Sets up the Armeria ServerBuilder with values from the Dropwizard Configuration.
      * Ref <a href="https://line.github.io/armeria/advanced-production-checklist.html">Production Checklist</a>
      *
-     * @param serverBuilder A non-production ready ServerBuilder
-     * @return A production-ready ServerBuilder
+     * @param serverBuilder A non-production ready {@link ServerBuilder}
+     * @return A production-ready {@link ServerBuilder}
      */
     @VisibleForTesting
     ServerBuilder decorateServerBuilderFromConfig(final ServerBuilder serverBuilder) {
@@ -180,6 +136,10 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
     @Nullable
     private String getDefaultHostname() {
         return defaultHostname;
+    }
+
+    public void setDefaultHostname(@Nullable String defaultHostname) {
+        this.defaultHostname = defaultHostname;
     }
 
     @JsonGetter("verboseResponses")
@@ -232,7 +192,7 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
     /**
      * Sets an {@link AccessLogWriter} onto this ServerFactory.
      *
-     * @param accessLogWriter - an instance of a {#link AccessLogWriter}
+     * @param accessLogWriter An instance of an {#link AccessLogWriter}
      */
     public void setAccessLogWriter(final @Valid AccessLogWriterFactory accessLogWriter) {
         this.accessLogWriter = Objects.requireNonNull(
@@ -262,6 +222,7 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
 
     @Override
     public Server build(final Environment environment) {
+        Objects.requireNonNull(environment, "environment");
         printBanner(environment.getName());
         final MetricRegistry metrics = environment.metrics();
         final ThreadPool threadPool = createThreadPool(metrics);
@@ -307,7 +268,7 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
         final ServerBuilder serverBuilder = com.linecorp.armeria.server.Server.builder();
         try {
             decorateServerBuilder(
-                    serverBuilder, this.connector, accessLogWriter,
+                    serverBuilder, connector, accessLogWriter,
                     metricRegistry != null ? DropwizardMeterRegistries.newRegistry(metricRegistry) : null);
         } catch (SSLException | CertificateException e) {
             logger.error("Unable to define TLS Server", e);
@@ -317,5 +278,58 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
         final JettyService jettyService = getJettyService(server);
         return decorateServerBuilderFromConfig(serverBuilder)
                 .serviceUnder("/", jettyService);
+    }
+
+    /**
+     * Wrap a {@link Server} in a {@link JettyService}.
+     *
+     * @param jettyServer An instance of a Jetty {@link Server}
+     * @return Armeria {@link JettyService} for the provided jettyServer
+     */
+    @JsonIgnore
+    private JettyService getJettyService(final Server jettyServer) {
+        Objects.requireNonNull(jettyServer, "Armeria cannot build a service from a null server");
+        return JettyService.forServer(jettyServer);
+    }
+
+    /**
+     * Builds on a {@link ServerBuilder}.
+     *
+     * @param sb An instance of a {@link ServerBuilder}
+     * @param connectorFactory {@code null} or {@link ConnectorFactory}. If non-null must be an instance of
+     *                         an {@link ArmeriaServerDecorator}
+     * @param writerFactory {@code null} or {@link AccessLogWriterFactory}
+     * @param meterRegistry {@code null} or {@link MeterRegistry}
+     * @throws SSLException Thrown when configuring TLS
+     * @throws CertificateException Thrown when validating certificates
+     */
+    @VisibleForTesting
+    ServerBuilder decorateServerBuilder(final ServerBuilder sb,
+                                                @Nullable final ConnectorFactory connectorFactory,
+                                                @Nullable final AccessLogWriterFactory writerFactory,
+                                                @Nullable final MeterRegistry meterRegistry)
+            throws SSLException, CertificateException {
+        Objects.requireNonNull(sb, "builder to decorate must not be null");
+        if (connectorFactory != null) {
+            if (!(connectorFactory instanceof ArmeriaServerDecorator)) {
+                throw new ClassCastException("server.connector.type must be an instance of " +
+                                             ArmeriaServerDecorator.class.getName());
+            }
+            ((ArmeriaServerDecorator) connectorFactory).decorate(sb);
+        } else {
+            logger.warn("connectorFactory was null. ServerBuilder not decorated from it.");
+        }
+        if (meterRegistry != null) {
+            sb.meterRegistry(meterRegistry);
+        }
+        if (writerFactory != null && !writerFactory.getWriter()
+                                                   .equals(AccessLogWriter.disabled())) {
+            logger.trace("Setting up Armeria AccessLogWriter");
+            sb.accessLogWriter(writerFactory.getWriter(), true);
+        } else {
+            logger.info("Armeria access logs will not be written");
+            sb.accessLogWriter(AccessLogWriter.disabled(), true);
+        }
+        return sb;
     }
 }
