@@ -100,14 +100,22 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .build(template);
 
         assertThat(virtualHost.serviceConfigs()).hasSize(2);
-        final ServiceConfig serviceConfig = virtualHost.serviceConfigs().get(1);
-        assertThat(serviceConfig.route().paths()).allMatch("/path/foo"::equals);
-        assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
-        assertThat(serviceConfig.maxRequestLength()).isEqualTo(maxRequestLength);
-        assertThat(serviceConfig.accessLogWriter()).isEqualTo(accessLogWriter);
-        assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isTrue();
-        assertThat(serviceConfig.requestContentPreviewerFactory()).isEqualTo(factory);
-        assertThat(serviceConfig.verboseResponses()).isTrue();
+        final ServiceConfig pathBar = virtualHost.serviceConfigs().get(0);
+        assertThat(pathBar.route().paths()).allMatch("/path/bar"::equals);
+        assertThat(pathBar.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
+        assertThat(pathBar.maxRequestLength()).isEqualTo(maxRequestLength);
+        assertThat(pathBar.accessLogWriter()).isEqualTo(accessLogWriter);
+        assertThat(pathBar.shutdownAccessLogWriterOnStop()).isTrue();
+        assertThat(pathBar.requestContentPreviewerFactory()).isEqualTo(factory);
+        assertThat(pathBar.verboseResponses()).isTrue();
+        final ServiceConfig pathFoo = virtualHost.serviceConfigs().get(1);
+        assertThat(pathFoo.route().paths()).allMatch("/path/foo"::equals);
+        assertThat(pathFoo.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
+        assertThat(pathFoo.maxRequestLength()).isEqualTo(maxRequestLength);
+        assertThat(pathFoo.accessLogWriter()).isEqualTo(accessLogWriter);
+        assertThat(pathFoo.shutdownAccessLogWriterOnStop()).isTrue();
+        assertThat(pathFoo.requestContentPreviewerFactory()).isEqualTo(factory);
+        assertThat(pathFoo.verboseResponses()).isTrue();
     }
 
     @Test

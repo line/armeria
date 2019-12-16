@@ -82,8 +82,10 @@ class AnnotatedServiceBindingBuilderTest {
                                     .build();
 
         assertThat(server.config().serviceConfigs()).hasSize(2);
-        final ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
-        assertThat(serviceConfig.route().paths()).allMatch("/foo"::equals);
+        final ServiceConfig foo = server.config().serviceConfigs().get(0);
+        assertThat(foo.route().paths()).allMatch("/foo"::equals);
+        final ServiceConfig bar = server.config().serviceConfigs().get(1);
+        assertThat(bar.route().paths()).allMatch("/bar"::equals);
     }
 
     @Test
@@ -97,8 +99,10 @@ class AnnotatedServiceBindingBuilderTest {
                                     .build();
 
         assertThat(server.config().serviceConfigs()).hasSize(2);
-        final ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
-        assertThat(serviceConfig.route().paths()).allMatch("/home/foo"::equals);
+        final ServiceConfig homeFoo = server.config().serviceConfigs().get(0);
+        assertThat(homeFoo.route().paths()).allMatch("/home/foo"::equals);
+        final ServiceConfig homeBar = server.config().serviceConfigs().get(0);
+        assertThat(homeBar.route().paths()).allMatch("/home/foo"::equals);
     }
 
     @Test
@@ -123,13 +127,20 @@ class AnnotatedServiceBindingBuilderTest {
                                     .build();
 
         assertThat(server.config().serviceConfigs()).hasSize(2);
-        final ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
-        assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
-        assertThat(serviceConfig.maxRequestLength()).isEqualTo(maxRequestLength);
-        assertThat(serviceConfig.accessLogWriter()).isEqualTo(accessLogWriter);
-        assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isTrue();
-        assertThat(serviceConfig.requestContentPreviewerFactory()).isEqualTo(factory);
-        assertThat(serviceConfig.verboseResponses()).isTrue();
+        final ServiceConfig homeFoo = server.config().serviceConfigs().get(0);
+        assertThat(homeFoo.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
+        assertThat(homeFoo.maxRequestLength()).isEqualTo(maxRequestLength);
+        assertThat(homeFoo.accessLogWriter()).isEqualTo(accessLogWriter);
+        assertThat(homeFoo.shutdownAccessLogWriterOnStop()).isTrue();
+        assertThat(homeFoo.requestContentPreviewerFactory()).isEqualTo(factory);
+        assertThat(homeFoo.verboseResponses()).isTrue();
+        final ServiceConfig homeBar = server.config().serviceConfigs().get(1);
+        assertThat(homeBar.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
+        assertThat(homeBar.maxRequestLength()).isEqualTo(maxRequestLength);
+        assertThat(homeBar.accessLogWriter()).isEqualTo(accessLogWriter);
+        assertThat(homeBar.shutdownAccessLogWriterOnStop()).isTrue();
+        assertThat(homeBar.requestContentPreviewerFactory()).isEqualTo(factory);
+        assertThat(homeBar.verboseResponses()).isTrue();
     }
 
     @Test
