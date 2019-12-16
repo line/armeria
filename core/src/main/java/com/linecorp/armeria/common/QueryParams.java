@@ -75,7 +75,7 @@ import javax.annotation.Nullable;
  * <h3><a name="object-values">Specifying a non-{@link String} parameter value</a></h3>
  *
  * <p>Certain parameter values are better represented as a Java object, such as {@link Integer},
- * {@link MediaType}, {@link Instant} or {@link Date}, than as a {@link String}. Armeria's HTTP parameters
+ * {@link MediaType}, {@link Instant} or {@link Date}, than as a {@link String}. Armeria's query parameters
  * API allows you to specify a Java object of well-known type as a parameter value by converting it into
  * an HTTP-friendly {@link String} representation:</p>
  *

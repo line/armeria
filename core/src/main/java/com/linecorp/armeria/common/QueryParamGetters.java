@@ -331,8 +331,7 @@ interface QueryParamGetters extends StringMultimapGetters<String, String> {
      * @return the encoded query string.
      */
     default String toQueryString() {
-        final StringBuilder buf = new StringBuilder(
-                IntMath.saturatedAdd(IntMath.saturatedMultiply(size(), 8), 16));
+        final StringBuilder buf = new StringBuilder(Math.max(IntMath.saturatedMultiply(size(), 8), 16));
         return appendQueryString(buf).toString();
     }
 

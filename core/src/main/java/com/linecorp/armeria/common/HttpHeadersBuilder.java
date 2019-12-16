@@ -192,7 +192,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * equivalent to
      * <pre>{@code
      * for (String value : values) {
-     *     headers.add(name, value);
+     *     builder.add(name, value);
      * }
      * }</pre>
      *
@@ -207,7 +207,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * equivalent to
      * <pre>{@code
      * for (String value : values) {
-     *     headers.add(name, value);
+     *     builder.add(name, value);
      * }
      * }</pre>
      *
@@ -241,7 +241,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * header value</a>. This method is equivalent to:
      * <pre>{@code
      * for (Object v : values) {
-     *     headers.addObject(name, v);
+     *     builder.addObject(name, v);
      * }
      * }</pre>
      *
@@ -257,7 +257,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * header value</a>. This method is equivalent to:
      * <pre>{@code
      * for (Object v : values) {
-     *     headers.addObject(name, v);
+     *     builder.addObject(name, v);
      * }
      * }</pre>
      *
@@ -335,9 +335,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Sets a new header with the specified name and values. This method is equivalent to
      * <pre>{@code
-     * headers.remove(name);
+     * builder.remove(name);
      * for (String v : values) {
-     *     headers.add(name, v);
+     *     builder.add(name, v);
      * }
      * }</pre>
      *
@@ -351,9 +351,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * Sets a header with the specified name and values. Any existing headers with the specified name are
      * removed. This method is equivalent to:
      * <pre>{@code
-     * headers.remove(name);
+     * builder.remove(name);
      * for (String v : values) {
-     *     headers.add(name, v);
+     *     builder.add(name, v);
      * }
      * }</pre>
      *
@@ -377,8 +377,8 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * This method is a shortcut of the following code:
      * <pre>{@code
      * headers.names().forEach(name -> {
-     *     if (!contains(name)) {
-     *         set(name, headers.getAll(name));
+     *     if (!builder.contains(name)) {
+     *         builder.set(name, headers.getAll(name));
      *     }
      * });
      * }</pre>
@@ -404,9 +404,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      * This method is equivalent to:
      * <pre>{@code
-     * headers.remove(name);
+     * builder.remove(name);
      * for (Object v : values) {
-     *     headers.addObject(name, v);
+     *     builder.addObject(name, v);
      * }
      * }</pre>
      *
@@ -422,9 +422,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      * This method is equivalent to:
      * <pre>{@code
-     * headers.remove(name);
+     * builder.remove(name);
      * for (Object v : values) {
-     *     headers.addObject(name, v);
+     *     builder.addObject(name, v);
      * }
      * }</pre>
      *

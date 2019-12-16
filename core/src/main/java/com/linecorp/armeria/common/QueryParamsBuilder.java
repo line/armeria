@@ -21,7 +21,7 @@ import java.util.Map.Entry;
 import javax.annotation.Nullable;
 
 /**
- * Builds an {@link QueryParams}.
+ * Builds a {@link QueryParams}.
  *
  * @see QueryParams#builder()
  * @see QueryParams#toBuilder()
@@ -195,7 +195,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * equivalent to
      * <pre>{@code
      * for (String value : values) {
-     *     params.add(name, value);
+     *     builder.add(name, value);
      * }
      * }</pre>
      *
@@ -210,7 +210,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * equivalent to
      * <pre>{@code
      * for (String value : values) {
-     *     params.add(name, value);
+     *     builder.add(name, value);
      * }
      * }</pre>
      *
@@ -244,7 +244,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * non-String parameter value</a>. This method is equivalent to:
      * <pre>{@code
      * for (Object v : values) {
-     *     params.addObject(name, v);
+     *     builder.addObject(name, v);
      * }
      * }</pre>
      *
@@ -260,7 +260,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * non-String parameter value</a>. This method is equivalent to:
      * <pre>{@code
      * for (Object v : values) {
-     *     params.addObject(name, v);
+     *     builder.addObject(name, v);
      * }
      * }</pre>
      *
@@ -338,9 +338,9 @@ public interface QueryParamsBuilder extends QueryParamGetters {
     /**
      * Sets a new parameter with the specified name and values. This method is equivalent to
      * <pre>{@code
-     * params.remove(name);
+     * builder.remove(name);
      * for (String v : values) {
-     *     params.add(name, v);
+     *     builder.add(name, v);
      * }
      * }</pre>
      *
@@ -354,9 +354,9 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * Sets a parameter with the specified name and values. Any existing parameters with the specified name are
      * removed. This method is equivalent to:
      * <pre>{@code
-     * params.remove(name);
+     * builder.remove(name);
      * for (String v : values) {
-     *     params.add(name, v);
+     *     builder.add(name, v);
      * }
      * }</pre>
      *
@@ -380,8 +380,8 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * This method is a shortcut of the following code:
      * <pre>{@code
      * entries.names().forEach(name -> {
-     *     if (!contains(name)) {
-     *         set(name, entries.getAll(name));
+     *     if (!builder.contains(name)) {
+     *         builder.set(name, entries.getAll(name));
      *     }
      * });
      * }</pre>
@@ -407,9 +407,9 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * <a href="QueryParams.html#object-values">Specifying a non-String parameter value</a>.
      * This method is equivalent to:
      * <pre>{@code
-     * params.remove(name);
+     * builder.remove(name);
      * for (Object v : values) {
-     *     params.addObject(name, v);
+     *     builder.addObject(name, v);
      * }
      * }</pre>
      *
@@ -425,9 +425,9 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * <a href="QueryParams.html#object-values">Specifying a non-String parameter value</a>.
      * This method is equivalent to:
      * <pre>{@code
-     * params.remove(name);
+     * builder.remove(name);
      * for (Object v : values) {
-     *     params.addObject(name, v);
+     *     builder.addObject(name, v);
      * }
      * }</pre>
      *

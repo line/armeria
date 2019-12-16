@@ -73,8 +73,8 @@ abstract class StringMultimapBuilder<
 
     /**
      * Makes the current {@link #delegate()} a new {@link #parent()} and clears the current {@link #delegate()}.
-     * Call this method when you create a new {@link HttpHeaders} derived from the {@link #delegate()},
-     * so that any further modifications to this builder do not break the immutability of {@link HttpHeaders}.
+     * Call this method when you create a new object derived from the {@link #delegate()},
+     * so that any further modifications to this builder do not break the immutability of the created object.
      *
      * @return the {@link #delegate()}
      */
