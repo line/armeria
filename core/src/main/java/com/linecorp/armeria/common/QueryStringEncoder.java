@@ -32,6 +32,10 @@ package com.linecorp.armeria.common;
 
 import java.util.Map.Entry;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.StringUtil;
@@ -58,24 +62,22 @@ final class QueryStringEncoder {
         return octets;
     }
 
-    static void encodeParams(StringBuilder buf, char[] tmp, QueryParamGetters params) {
-        assert tmp.length >= 12;
+    static void encodeParams(@Nullable TemporaryThreadLocals tempThreadLocals,
+                             StringBuilder buf, QueryParamGetters params) {
         for (Entry<String, String> e : params) {
             final String name = e.getKey();
             if (isSafeOctetsOnly(name)) {
                 buf.append(name);
             } else {
-                encodeUtf8Component(buf, tmp, e.getKey());
+                tempThreadLocals = encodeUtf8Component(tempThreadLocals, buf, e.getKey());
             }
+            buf.append('=');
 
             final String value = e.getValue();
-            if (value != null) {
-                buf.append('=');
-                if (isSafeOctetsOnly(value)) {
-                    buf.append(value);
-                } else {
-                    encodeUtf8Component(buf, tmp, value);
-                }
+            if (isSafeOctetsOnly(value)) {
+                buf.append(value);
+            } else {
+                tempThreadLocals = encodeUtf8Component(tempThreadLocals, buf, value);
             }
             buf.append('&');
         }
@@ -103,7 +105,13 @@ final class QueryStringEncoder {
      *
      * @see ByteBufUtil#writeUtf8(ByteBuf, CharSequence, int, int)
      */
-    private static void encodeUtf8Component(StringBuilder buf, char[] tmp, String s) {
+    private static TemporaryThreadLocals encodeUtf8Component(@Nullable TemporaryThreadLocals tempThreadLocals,
+                                                             StringBuilder buf, String s) {
+        if (tempThreadLocals == null) {
+            tempThreadLocals = TemporaryThreadLocals.get();
+        }
+
+        final char[] tmp = tempThreadLocals.charArray(12);
         int safeOctetStart = 0;
         final int len = s.length();
         for (int i = 0; i < len; i++) {
@@ -158,6 +166,8 @@ final class QueryStringEncoder {
         } else if (safeOctetStart < len) {
             buf.append(s, safeOctetStart, len);
         }
+
+        return tempThreadLocals;
     }
 
     private static void writeUtf8Surrogate(StringBuilder buf, char[] tmp, char c, char c2) {
