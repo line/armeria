@@ -852,7 +852,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
-     * and {@link ResponseConverterFunction} for creating a {@link AnnotatedHttpServiceExtensions}.
+     * and {@link ResponseConverterFunction} for creating an {@link AnnotatedHttpServiceExtensions}.
      *
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
@@ -939,6 +939,7 @@ public final class VirtualHostBuilder {
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
+        assert annotatedHttpServiceExtensions != null;
 
         virtualHostAnnotatedServiceBindingBuilders
                 .forEach(builder -> builder.applyToServiceConfigBuilder(annotatedHttpServiceExtensions));

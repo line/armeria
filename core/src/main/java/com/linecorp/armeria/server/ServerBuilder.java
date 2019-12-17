@@ -1490,7 +1490,7 @@ public final class ServerBuilder {
 
     /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
-     * and {@link ExceptionHandlerFunction}s for creating a {@link AnnotatedHttpServiceExtensions}.
+     * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedHttpServiceExtensions}.
      *
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
@@ -1513,6 +1513,8 @@ public final class ServerBuilder {
         final AnnotatedHttpServiceExtensions extensions =
                 virtualHostTemplate.getAnnotatedHttpServiceExtensions();
         annotatedServiceBindingBuilders.forEach(builder -> builder.applyToServiceConfigBuilder(extensions));
+
+        assert extensions != null;
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate);

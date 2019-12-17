@@ -268,7 +268,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     /**
-     * Apples the {@link ServiceConfigBuilder} created with the configured
+     * Applies the {@link ServiceConfigBuilder} created with the configured
      * {@link AnnotatedHttpServiceExtensions} to the {@link ServerBuilder}.
      *
      * @param extensions the {@link AnnotatedHttpServiceExtensions} at the server level.

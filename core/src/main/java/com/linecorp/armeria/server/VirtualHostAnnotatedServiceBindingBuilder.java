@@ -277,18 +277,19 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * @return {@link VirtualHostBuilder} to continue building {@link VirtualHost}
      */
     public VirtualHostBuilder build(Object service) {
+        requireNonNull(service, "service");
         this.service = service;
         virtualHostBuilder.addAnnotatedServiceBindingBuilder(this);
         return virtualHostBuilder;
     }
 
     /**
-     * Apples the {@link ServiceConfigBuilder} created with the configured
+     * Applies the {@link ServiceConfigBuilder} created with the configured
      * {@link AnnotatedHttpServiceExtensions} to the {@link VirtualHostBuilder}.
      *
      * @param extensions the {@link AnnotatedHttpServiceExtensions} at the virtual host level.
      */
-    VirtualHostBuilder applyToServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
+    void applyToServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service,
                                                  exceptionHandlerFunctionBuilder.build(),
@@ -302,6 +303,5 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
                     defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
             virtualHostBuilder.addServiceConfigBuilder(serviceConfigBuilder);
         });
-        return virtualHostBuilder;
     }
 }
