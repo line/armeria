@@ -347,7 +347,7 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      */
     default StringBuilder appendQueryString(StringBuilder buf) {
         requireNonNull(buf, "buf");
-        QueryStringEncoder.encodeParams(null, buf, this);
+        QueryStringEncoder.encodeParams(TemporaryThreadLocals.get(), buf, this);
         return buf;
     }
 }
