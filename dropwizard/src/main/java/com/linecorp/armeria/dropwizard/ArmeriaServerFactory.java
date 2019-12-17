@@ -68,7 +68,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  * Dropwizard's default Jetty handler with one provided by Armeria.
  */
 @JsonTypeName(ArmeriaServerFactory.TYPE)
-public class ArmeriaServerFactory extends SimpleServerFactory {
+class ArmeriaServerFactory extends SimpleServerFactory {
     // TODO: This class could be stripped down to the essential fields. Implement ServerFactory instead.
 
     public static final String TYPE = "armeria";

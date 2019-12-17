@@ -36,7 +36,7 @@ import io.dropwizard.server.ServerFactory;
  * and initializes the Armeria {@link ServerBuilder} to be passed back to the
  * user via an {@link ArmeriaServerConfigurator}.
  */
-public class ManagedArmeriaServer<T extends Configuration> implements Managed {
+class ManagedArmeriaServer<T extends Configuration> implements Managed {
 
     private static final Logger logger = LoggerFactory.getLogger(ManagedArmeriaServer.class);
 
@@ -52,7 +52,7 @@ public class ManagedArmeriaServer<T extends Configuration> implements Managed {
     * @param configuration The Dropwizard configuration
     * @param serverConfigurator A non-null implementation of {@link ArmeriaServerConfigurator}
     */
-    public ManagedArmeriaServer(final T configuration,
+    ManagedArmeriaServer(final T configuration,
                                 final ArmeriaServerConfigurator serverConfigurator) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
         serverFactory = Objects.requireNonNull(configuration.getServerFactory(), "server");

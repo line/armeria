@@ -22,7 +22,7 @@ import com.linecorp.armeria.server.ServerBuilder;
  * used to register arbitrary services.
  */
 @FunctionalInterface
-public interface ArmeriaServerConfigurator {
+interface ArmeriaServerConfigurator {
     /**
      * Configures the server using the specified {@link ServerBuilder}.
      */
