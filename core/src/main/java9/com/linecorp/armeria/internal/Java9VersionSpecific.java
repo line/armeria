@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcResponse;
 
 /**
  * Implementation of {@link JavaVersionSpecific} using Java 9 APIs.
@@ -43,5 +44,10 @@ class Java9VersionSpecific extends JavaVersionSpecific {
     @Override
     public final <T> CompletableFuture<T> newRequestContextAwareFuture(RequestContext ctx) {
         return new Java9RequestContextAwareCompletableFuture<>(ctx);
+    }
+
+    @Override
+    public final RpcResponse newRequestContextAwareRpcResponse(RequestContext ctx) {
+        return new Java9RequestContextAwareRpcResponse(ctx);
     }
 }

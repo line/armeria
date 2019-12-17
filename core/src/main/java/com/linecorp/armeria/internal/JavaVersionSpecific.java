@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcResponse;
 
 /**
  * Contains APIs that are implemented differently based on the version of Java being run. This class implements
@@ -65,5 +66,12 @@ public class JavaVersionSpecific {
      */
     public <T> CompletableFuture<T> newRequestContextAwareFuture(RequestContext ctx) {
         return new RequestContextAwareCompletableFuture<>(ctx);
+    }
+
+    /**
+     * Returns an {@link RpcResponse} which executes all callbacks with the {@link RequestContext}.
+     */
+    public RpcResponse newRequestContextAwareRpcResponse(RequestContext ctx) {
+        return new RequestContextAwareRpcResponse(ctx);
     }
 }

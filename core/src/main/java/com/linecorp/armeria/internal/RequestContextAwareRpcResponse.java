@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,54 +14,38 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
-/**
- * Default {@link RpcResponse} implementation.
- */
-public class DefaultRpcResponse extends CompletableFuture<Object> implements RpcResponse {
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcResponse;
 
-    private static final AtomicReferenceFieldUpdater<DefaultRpcResponse, Throwable> causeUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(DefaultRpcResponse.class, Throwable.class, "cause");
+final class RequestContextAwareRpcResponse extends RequestContextAwareCompletableFuture<Object>
+        implements RpcResponse {
+
+    private static final AtomicReferenceFieldUpdater<RequestContextAwareRpcResponse, Throwable> causeUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(RequestContextAwareRpcResponse.class,
+                                                   Throwable.class, "cause");
 
     @Nullable
     private volatile Throwable cause;
 
     /**
-     * Creates a new incomplete response.
+     * Creates a new instance.
      */
-    public DefaultRpcResponse() {}
-
-    /**
-     * Creates a new successfully complete response.
-     *
-     * @param result the result or an RPC call
-     */
-    public DefaultRpcResponse(@Nullable Object result) {
-        complete(result);
-    }
-
-    /**
-     * Creates a new exceptionally complete response.
-     *
-     * @param cause the cause of failure
-     */
-    public DefaultRpcResponse(Throwable cause) {
-        requireNonNull(cause, "cause");
-        completeExceptionally(cause);
+    RequestContextAwareRpcResponse(RequestContext ctx) {
+        super(ctx);
     }
 
     @Nullable
     @Override
-    public final Throwable cause() {
+    public Throwable cause() {
         return cause;
     }
 
