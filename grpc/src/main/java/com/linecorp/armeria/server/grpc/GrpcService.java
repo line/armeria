@@ -240,7 +240,6 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
                 jsonMarshaller,
                 unsafeWrapRequestBuffers,
                 useBlockingTaskExecutor,
-                advertisedEncodingsHeader,
                 defaultHeaders.get(serializationFormat));
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = ctx.push()) {

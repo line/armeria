@@ -52,7 +52,7 @@ import io.netty.buffer.Unpooled;
  * Marshaller for gRPC method request or response messages to and from {@link ByteBuf}. Will attempt to use
  * optimized code paths for known message types, and otherwise delegates to the gRPC stub.
  */
-public class GrpcMessageMarshaller<I, O> {
+public final class GrpcMessageMarshaller<I, O> {
 
     private enum MessageType {
         UNKNOWN,

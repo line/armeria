@@ -74,7 +74,7 @@ import io.grpc.protobuf.ProtoFileDescriptorSupplier;
 /**
  * {@link DocServicePlugin} implementation that supports {@link GrpcService}s.
  */
-public class GrpcDocServicePlugin implements DocServicePlugin {
+public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     static final TypeSignature BOOL = TypeSignature.ofBase("bool");

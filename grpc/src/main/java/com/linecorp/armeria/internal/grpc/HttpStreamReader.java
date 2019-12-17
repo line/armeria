@@ -45,7 +45,7 @@ import io.grpc.Status;
 /**
  * A {@link Subscriber} to read HTTP messages and pass to gRPC business logic.
  */
-public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
+public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpStreamReader.class);
 
