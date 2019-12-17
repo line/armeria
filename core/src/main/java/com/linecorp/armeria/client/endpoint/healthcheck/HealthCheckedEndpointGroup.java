@@ -69,6 +69,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     static final HealthCheckStrategy DEFAULT_HEALTH_CHECK_STRATEGY = new AllHealthCheckStrategy();
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
+    private static final ThreadLocal<Boolean> isRefreshingContexts = new ThreadLocal<>();
 
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
@@ -168,14 +169,19 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             }
 
             // Start the health checkers with new contexts for newly appeared endpoints.
-            for (Endpoint e : selectedCandidates) {
-                if (contexts.containsKey(e)) {
-                    // Not a new endpoint.
-                    continue;
+            isRefreshingContexts.set(Boolean.TRUE);
+            try {
+                for (Endpoint e : selectedCandidates) {
+                    if (contexts.containsKey(e)) {
+                        // Not a new endpoint.
+                        continue;
+                    }
+                    final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
+                    ctx.init(checkerFactory.apply(ctx));
+                    contexts.put(e, ctx);
                 }
-                final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
-                ctx.init(checkerFactory.apply(ctx));
-                contexts.put(e, ctx);
+            } finally {
+                isRefreshingContexts.remove();
             }
         }
     }
@@ -360,7 +366,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 refreshEndpoints();
             }
 
-            if (healthCheckStrategy.updateHealth(originalEndpoint, health)) {
+            if (healthCheckStrategy.updateHealth(originalEndpoint, health) &&
+                isRefreshingContexts.get() == null) {
                 refreshContexts();
             }
 

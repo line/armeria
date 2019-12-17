@@ -21,6 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
@@ -28,8 +29,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -42,6 +43,8 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import io.netty.channel.EventLoopGroup;
 
 class HealthCheckedEndpointGroupTest {
+    private static final double UNHEALTHY = 0;
+    private static final double HEALTHY = 1;
 
     @Test
     void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
@@ -147,44 +150,49 @@ class HealthCheckedEndpointGroupTest {
         }
     }
 
-    /*
-     * This test code and comment will be removed.
-     *
-     * The key point of this test method is below.
-     * 1. The checkFactory works synchronously.
-     * 2. HealthCheckStrategy always returns true when some thread calls updateHealth() method.
-     *    (It depends on how to implement a strategy.)
-     *
-     * The scenario is below.
-     * 1. Some thread creates a new HealthCheckedEndpointGroup.
-     * 2. The thread calls HealthCheckedEndpointGroup.updateCandidates() method automatically.
-     * 3. The thread calls HealthCheckStrategy.updateCandidates() method
-     *    by delegates then get selectedCandidates.
-     * 4. After step 3, the thread initializes endpoints in selectedCandidates
-     *    by calling refreshContexts() method.
-     * 5. The thread calls checkFactory to initialize endpoints,
-     *    then checkFactory calls HealthCheckContext.updateHealth() synchronously.
-     * 6. Because HealthCheckStrategy.updateHealth() always returns true,
-     *    thread calls refreshContexts() method.
-     * 7. Step 5~6 is repeated until StackOverflow occurs.
-     */
-    @DisplayName("bug reporting test case")
     @Test
-    void updatesSelectedCandidatesByHealthCheckStrategy() {
+    void updatesSelectedCandidatesByHealthCheckStrategyOnEqualThread() {
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+        final Endpoint candidate2 = Endpoint.of("candidate2");
+        final Endpoint candidate3 = Endpoint.of("candidate3");
+
+        final Endpoint candidate4 = Endpoint.of("candidate4");
+        final Endpoint candidate5 = Endpoint.of("candidate5");
+        final Endpoint candidate6 = Endpoint.of("candidate6");
+
         final MockEndpointGroup delegate = new MockEndpointGroup();
-        delegate.set(Endpoint.of("foo"));
+        delegate.set(candidate1, candidate2, candidate3);
+
+        final List<HealthCheckerContext> ctxCaptures = new ArrayList<>();
 
         try (HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
             @Override
             protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
                 return ctx -> {
-                    ctx.updateHealth(0);
+                    ctxCaptures.add(ctx);
+                    ctx.updateHealth(HEALTHY);
                     return () -> CompletableFuture.completedFuture(null);
                 };
             }
         }.healthCheckStrategy(new MockHealthCheckStrategy())
          .build()) {
-            // java.lang.StackOverflowError occurs.
+            final Set<Endpoint> initialHealthyEndpoint = group.healthyEndpoints;
+            // Because of it's called by an equal thread,
+            // there is no infinity loop even health check strategy always returns true.
+            assertThat(initialHealthyEndpoint).containsOnly(candidate1, candidate2, candidate3);
+
+            // update candidate1, candidate3 to unhealthy.
+            ctxCaptures.get(0).updateHealth(UNHEALTHY);
+            ctxCaptures.get(2).updateHealth(UNHEALTHY);
+
+            // candidate2 is only healthy.
+            final Set<Endpoint> afterHealthyEndpoint = group.healthyEndpoints;
+            assertThat(afterHealthyEndpoint).containsOnly(candidate2);
+
+            // update delegate's candidates
+            delegate.set(candidate4, candidate5, candidate6);
+            final Set<Endpoint> newInitialHealthyEndpoint = group.healthyEndpoints;
+            assertThat(newInitialHealthyEndpoint).containsOnly(candidate4, candidate5, candidate6);
         }
     }
 
@@ -196,23 +204,32 @@ class HealthCheckedEndpointGroupTest {
 
     private static final class MockHealthCheckStrategy implements HealthCheckStrategy {
         private List<Endpoint> candidates;
+        private List<Endpoint> selectedCandidates;
 
         MockHealthCheckStrategy() {
             candidates = new ArrayList<>();
+            selectedCandidates = ImmutableList.copyOf(candidates);
         }
 
         @Override
         public void updateCandidates(List<Endpoint> candidates) {
             this.candidates = candidates;
+            selectedCandidates = ImmutableList.copyOf(candidates);
         }
 
         @Override
         public List<Endpoint> getCandidates() {
-            return candidates;
+            return selectedCandidates;
         }
 
         @Override
         public boolean updateHealth(Endpoint endpoint, double health) {
+            if (health <= 0) {
+                selectedCandidates = ImmutableList.copyOf(selectedCandidates.stream()
+                                                        .filter(candidate -> !candidate.equals(endpoint))
+                                                        .collect(Collectors.toList()));
+            }
+
             return true;
         }
     }

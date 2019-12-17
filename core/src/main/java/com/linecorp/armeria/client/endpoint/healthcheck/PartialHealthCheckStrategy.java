@@ -104,22 +104,22 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
 
         unhealthyCandidates.add(endpoint);
         synchronized (selectedCandidates) {
-            removeAndSelectNewCandidates(ImmutableSet.of(endpoint));
-            return true;
+            return removeAndSelectNewCandidates(ImmutableSet.of(endpoint));
         }
     }
 
     /**
      This method must be called with synchronized selectedCandidates.
      */
-    private void removeAndSelectNewCandidates(final Set<Endpoint> removedEndpoints) {
+    private boolean removeAndSelectNewCandidates(final Set<Endpoint> removedEndpoints) {
+        final Set<Endpoint> oldSelectedCandidates = ImmutableSet.copyOf(selectedCandidates);
         final int targetSelectedCandidatesSize = max.calculate(candidates.size());
 
         selectedCandidates.removeAll(removedEndpoints);
 
         int availableCandidateCount = calculateAvailableCandidateCount(targetSelectedCandidatesSize);
         if (availableCandidateCount <= 0) {
-            return;
+            return true;
         }
 
         final int newSelectedCandidatesCount = addRandomlySelectedCandidates(selectedCandidates, candidates,
@@ -129,11 +129,13 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
 
         availableCandidateCount -= newSelectedCandidatesCount;
         if (availableCandidateCount <= 0) {
-            return;
+            return true;
         }
 
         addRandomlySelectedCandidates(selectedCandidates, unhealthyCandidates, availableCandidateCount,
                                       selectedCandidates);
+
+        return !oldSelectedCandidates.equals(selectedCandidates);
     }
 
     @SafeVarargs
