@@ -117,7 +117,6 @@ public class ArmeriaServerCallTest {
                 MessageMarshaller.builder().build(),
                 false,
                 false,
-                "gzip",
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build());
@@ -173,7 +172,6 @@ public class ArmeriaServerCallTest {
                 MessageMarshaller.builder().build(),
                 true,
                 false,
-                "gzip",
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build());

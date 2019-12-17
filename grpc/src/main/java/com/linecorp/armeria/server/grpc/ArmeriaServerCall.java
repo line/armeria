@@ -89,7 +89,7 @@ import io.netty.util.AsciiString;
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
  * via {@link ServerCall.Listener}, and writing messages passed back to the response.
  */
-class ArmeriaServerCall<I, O> extends ServerCall<I, O>
+final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         implements ArmeriaMessageDeframer.Listener, TransportStatusListener {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerCall.class);
@@ -115,7 +115,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final boolean unsafeWrapRequestBuffers;
-    private final String advertisedEncodingsHeader;
     @Nullable
     private final Executor blockingExecutor;
     private final ResponseHeaders defaultHeaders;
@@ -157,7 +156,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       @Nullable MessageMarshaller jsonMarshaller,
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
-                      String advertisedEncodingsHeader,
                       ResponseHeaders defaultHeaders) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
@@ -180,7 +178,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
-        this.advertisedEncodingsHeader = advertisedEncodingsHeader;
         blockingExecutor = useBlockingTaskExecutor ?
                            MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
 
@@ -367,6 +364,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     public void messageRead(DeframedMessage message) {
 
         final I request;
+        final ByteBuf buf = message.buf();
 
         boolean success = false;
         try {
@@ -383,8 +381,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
             success = true;
         } finally {
-            if (message.buf() != null && !success) {
-                message.buf().release();
+            if (buf != null && !success) {
+                buf.release();
             }
         }
 
@@ -398,8 +396,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
         }
 
-        if (unsafeWrapRequestBuffers && message.buf() != null) {
-            GrpcUnsafeBufferUtil.storeBuffer(message.buf(), request, ctx);
+        if (unsafeWrapRequestBuffers && buf != null) {
+            GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
         }
 
         if (blockingExecutor != null) {
