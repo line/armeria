@@ -95,6 +95,7 @@ final class QueryStringDecoder {
 
     private static void addParam(QueryParamsBuilder params, String s, int nameStart, int valueStart, int end) {
         if (nameStart == end) {
+            // Consecutive ampersands
             return;
         }
 
@@ -113,13 +114,18 @@ final class QueryStringDecoder {
 
     @VisibleForTesting
     static String decodeComponent(String s, int from, int toExcluded) {
-        final int len = toExcluded - from;
-        if (len == 0) {
+        if (from == toExcluded) {
             return EMPTY_STRING;
         }
 
         for (int i = from; i < toExcluded; i++) {
             final char c = s.charAt(i);
+            if ((c & 0xFFF1) != 0x21) {
+                // We can skip with a single comparison because both
+                // '%' (0b00100101) and '+' (0b00101011) has the same five bits (0b0010xxx1).
+                continue;
+            }
+
             if (c == '%' || c == '+') {
                 return decodeUtf8Component(s, from, toExcluded);
             }
