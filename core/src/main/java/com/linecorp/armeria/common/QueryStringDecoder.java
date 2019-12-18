@@ -40,6 +40,7 @@ import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 final class QueryStringDecoder {
 
+    @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
     private static final char UNKNOWN_CHAR = '\uFFFD';
     private static final byte[] OCTETS_TO_HEX = new byte['f' + 1];
 

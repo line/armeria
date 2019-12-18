@@ -68,7 +68,8 @@ final class QueryStringEncoder {
         buf.setLength(buf.length() - 1);
     }
 
-    private static StringBuilder encodeComponent(TemporaryThreadLocals tempThreadLocals, StringBuilder buf, String s) {
+    private static StringBuilder encodeComponent(TemporaryThreadLocals tempThreadLocals,
+                                                 StringBuilder buf, String s) {
         final int firstUnsafeOctetIdx = indexOfUnsafeOctet(s, 0);
         if (firstUnsafeOctetIdx < 0) {
             buf.append(s);
