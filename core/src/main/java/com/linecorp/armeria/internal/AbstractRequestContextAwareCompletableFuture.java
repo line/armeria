@@ -1,0 +1,124 @@
+/*
+ * Copyright 2020 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.internal;
+
+import static java.util.Objects.requireNonNull;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.util.SafeCloseable;
+
+/**
+ * A base class for {@link CompletableFuture} which pushing {@link RequestContext} into the thread-local
+ * when executes callbacks.
+ */
+public abstract class AbstractRequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
+
+    private static final Logger logger =
+            LoggerFactory.getLogger(AbstractRequestContextAwareCompletableFuture.class);
+
+    private final RequestContext ctx;
+
+    protected AbstractRequestContextAwareCompletableFuture(RequestContext ctx) {
+        this.ctx = ctx;
+    }
+
+    protected RequestContext ctx() {
+        return ctx;
+    }
+
+    protected Runnable makeContextAwareLoggingException(Runnable runnable) {
+        requireNonNull(runnable, "runnable");
+        return () -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                runnable.run();
+            } catch (Throwable th) {
+                logger.warn("An error occurred when pushing a context", th);
+                throw th;
+            }
+        };
+    }
+
+    protected <I, R> Function<I, R> makeContextAwareLoggingException(Function<I, R> function) {
+        requireNonNull(function, "function");
+        return t -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                return function.apply(t);
+            } catch (Throwable th) {
+                logger.warn("An error occurred when pushing a context", th);
+                throw th;
+            }
+        };
+    }
+
+    protected <I, U, V> BiFunction<I, U, V> makeContextAwareLoggingException(BiFunction<I, U, V> function) {
+        requireNonNull(function, "function");
+        return (t, u) -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                return function.apply(t, u);
+            } catch (Throwable th) {
+                logger.warn("An error occurred when pushing a context", th);
+                throw th;
+            }
+        };
+    }
+
+    protected <I> Consumer<I> makeContextAwareLoggingException(Consumer<I> action) {
+        requireNonNull(action, "action");
+        return t -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                action.accept(t);
+            } catch (Throwable th) {
+                logger.warn("An error occurred when pushing a context", th);
+                throw th;
+            }
+        };
+    }
+
+    protected <I, U> BiConsumer<I, U> makeContextAwareLoggingException(BiConsumer<I, U> action) {
+        requireNonNull(action, "action");
+        return (t, u) -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                action.accept(t, u);
+            } catch (Throwable th) {
+                logger.warn("An error occurred when pushing a context", th);
+                throw th;
+            }
+        };
+    }
+
+    protected Supplier<T> makeContextAwareLoggingException(Supplier<? extends T> action) {
+        requireNonNull(action, "action");
+        return () -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                return action.get();
+            } catch (Throwable th) {
+                logger.warn("An error occurred when pushing a context", th);
+                throw th;
+            }
+        };
+    }
+}

@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootAndOldCtx;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootCtx;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
+import static com.linecorp.armeria.internal.RequestContextUtil.throwIllegalContextPushing;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -351,10 +352,7 @@ public interface ClientRequestContext extends RequestContext {
 
         // Put the oldCtx back before throwing an exception.
         RequestContextThreadLocal.set(oldCtx);
-        throw new IllegalStateException(
-                "Trying to call object wrapped with context " + this + ", but context is currently " +
-                "set to " + oldCtx + ". This means the callback was called from " +
-                "unexpected thread or forgetting to close previous context.");
+        return throwIllegalContextPushing(this, oldCtx);
     }
 
     /**
