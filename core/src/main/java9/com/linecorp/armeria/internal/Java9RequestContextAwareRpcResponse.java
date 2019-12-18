@@ -23,6 +23,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -51,13 +53,15 @@ class Java9RequestContextAwareRpcResponse extends Java9RequestContextAwareComple
 
     @Override
     public boolean completeExceptionally(Throwable cause) {
-        causeUpdater.compareAndSet(this, null, requireNonNull(cause));
-        return super.completeExceptionally(cause);
+        if (causeUpdater.compareAndSet(this, null, requireNonNull(cause, "cause"))) {
+            return super.completeExceptionally(cause);
+        }
+        return false;
     }
 
     @Override
     public void obtrudeException(Throwable cause) {
-        this.cause = requireNonNull(cause);
+        this.cause = requireNonNull(cause, "cause");
         super.obtrudeException(cause);
     }
 
@@ -65,5 +69,28 @@ class Java9RequestContextAwareRpcResponse extends Java9RequestContextAwareComple
     public boolean cancel(boolean mayInterruptIfRunning) {
         final boolean updated = !isDone() && completeExceptionally(new CancellationException());
         return updated || isCancelled();
+    }
+
+    @Override
+    public String toString() {
+        if (isDone()) {
+            if (isCompletedExceptionally()) {
+                return MoreObjects.toStringHelper(this)
+                                  .add("cause", cause).toString();
+            } else {
+                return MoreObjects.toStringHelper(this)
+                                  .addValue(getNow(null)).toString();
+            }
+        }
+
+        final int count = getNumberOfDependents();
+        if (count == 0) {
+            return MoreObjects.toStringHelper(this)
+                              .addValue("not completed").toString();
+        } else {
+            return MoreObjects.toStringHelper(this)
+                              .addValue("not completed")
+                              .add("dependents", count).toString();
+        }
     }
 }

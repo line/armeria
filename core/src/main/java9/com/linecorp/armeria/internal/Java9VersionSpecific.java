@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
@@ -43,11 +45,11 @@ class Java9VersionSpecific extends JavaVersionSpecific {
 
     @Override
     public final <T> CompletableFuture<T> newRequestContextAwareFuture(RequestContext ctx) {
-        return new Java9RequestContextAwareCompletableFuture<>(ctx);
+        return new Java9RequestContextAwareCompletableFuture<>(requireNonNull(ctx, "ctx"));
     }
 
     @Override
     public final RpcResponse newRequestContextAwareRpcResponse(RequestContext ctx) {
-        return new Java9RequestContextAwareRpcResponse(ctx);
+        return new Java9RequestContextAwareRpcResponse(requireNonNull(ctx, "ctx"));
     }
 }
