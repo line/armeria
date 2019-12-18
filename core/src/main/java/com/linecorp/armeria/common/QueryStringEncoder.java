@@ -47,17 +47,17 @@ final class QueryStringEncoder {
 
     private static final byte WRITE_UTF_UNKNOWN = (byte) '?';
     private static final char[] CHAR_MAP = "0123456789ABCDEF".toCharArray();
-    private static final boolean[] SAFE_OCTETS =
+    private static final byte[] SAFE_OCTETS =
             createSafeOctets("-_.*abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
 
-    private static boolean[] createSafeOctets(String safeChars) {
+    private static byte[] createSafeOctets(String safeChars) {
         int maxChar = -1;
         for (int i = 0; i < safeChars.length(); i++) {
             maxChar = Math.max(safeChars.charAt(i), maxChar);
         }
-        final boolean[] octets = new boolean[maxChar + 1];
+        final byte[] octets = new byte[maxChar + 1];
         for (int i = 0; i < safeChars.length(); i++) {
-            octets[safeChars.charAt(i)] = true;
+            octets[safeChars.charAt(i)] = -1;
         }
         return octets;
     }
@@ -97,7 +97,7 @@ final class QueryStringEncoder {
     }
 
     private static boolean isSafeOctet(char c) {
-        return c < SAFE_OCTETS.length && SAFE_OCTETS[c];
+        return c < SAFE_OCTETS.length && SAFE_OCTETS[c] != 0;
     }
 
     /**
