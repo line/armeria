@@ -169,15 +169,13 @@ public final class AnnotatedHttpServiceFactory {
             String pathPrefix, Object object,
             List<ExceptionHandlerFunction> exceptionHandlerFunctions,
             List<RequestConverterFunction> requestConverterFunctions,
-            List<ResponseConverterFunction> responseConverterFunctions,
-            AnnotatedHttpServiceExtensions extensions) {
+            List<ResponseConverterFunction> responseConverterFunctions) {
         final List<Method> methods = requestMappingMethods(object);
         return methods.stream()
                       .flatMap((Method method) ->
                                        create(pathPrefix, object, method, exceptionHandlerFunctions,
                                               requestConverterFunctions,
-                                              responseConverterFunctions,
-                                              extensions).stream())
+                                              responseConverterFunctions).stream())
                       .collect(toImmutableList());
     }
 
@@ -227,8 +225,7 @@ public final class AnnotatedHttpServiceFactory {
     static List<AnnotatedHttpServiceElement> create(String pathPrefix, Object object, Method method,
                                                     List<ExceptionHandlerFunction> baseExceptionHandlers,
                                                     List<RequestConverterFunction> baseRequestConverters,
-                                                    List<ResponseConverterFunction> baseResponseConverters,
-                                                    AnnotatedHttpServiceExtensions extensions) {
+                                                    List<ResponseConverterFunction> baseResponseConverters) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
@@ -257,14 +254,13 @@ public final class AnnotatedHttpServiceFactory {
 
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
-                        .addAll(baseExceptionHandlers).addAll(extensions.exceptionHandlers())
-                        .add(defaultExceptionHandler).build();
+                        .addAll(baseExceptionHandlers).add(defaultExceptionHandler).build();
         final List<RequestConverterFunction> req =
                 getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class)
-                        .addAll(baseRequestConverters).addAll(extensions.requestConverters()).build();
+                        .addAll(baseRequestConverters).build();
         final List<ResponseConverterFunction> res =
                 getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
-                        .addAll(baseResponseConverters).addAll(extensions.responseConverters()).build();
+                        .addAll(baseResponseConverters).build();
 
         final Optional<HttpStatus> defaultResponseStatus = findFirst(method, StatusCode.class)
                 .map(code -> {

@@ -290,12 +290,16 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * @param extensions the {@link AnnotatedHttpServiceExtensions} at the virtual host level.
      */
     void applyToServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
+        final List<ExceptionHandlerFunction> exceptionHandlerFunctions =
+                exceptionHandlerFunctionBuilder.addAll(extensions.exceptionHandlers()).build();
+        final List<RequestConverterFunction> requestConverterFunctions =
+                requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
+        final List<ResponseConverterFunction> responseConverterFunctions =
+                responseConverterFunctionBuilder.addAll(extensions.responseConverters()).build();
+
         final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service,
-                                                 exceptionHandlerFunctionBuilder.build(),
-                                                 requestConverterFunctionBuilder.build(),
-                                                 responseConverterFunctionBuilder.build(),
-                                                 extensions);
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
+                                                 requestConverterFunctions, responseConverterFunctions);
         elements.forEach(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

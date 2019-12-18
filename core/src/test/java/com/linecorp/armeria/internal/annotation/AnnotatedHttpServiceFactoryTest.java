@@ -70,9 +70,6 @@ class AnnotatedHttpServiceFactoryTest {
 
     private static final String HOME_PATH_PREFIX = "/home";
 
-    private static final AnnotatedHttpServiceExtensions DEFAULT_EXTENSIONS  =
-            new AnnotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
-
     @Test
     void ofNoOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
@@ -152,8 +149,7 @@ class AnnotatedHttpServiceFactoryTest {
     void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
         final Object object = new PathPrefixServiceObject();
         final List<AnnotatedHttpServiceElement> elements = find("/", object, ImmutableList.of(),
-                                                                ImmutableList.of(), ImmutableList.of(),
-                                                                DEFAULT_EXTENSIONS);
+                                                                ImmutableList.of(), ImmutableList.of());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
@@ -168,8 +164,7 @@ class AnnotatedHttpServiceFactoryTest {
         final Object serviceObject = new ServiceObject();
         final List<AnnotatedHttpServiceElement> elements = find(HOME_PATH_PREFIX, serviceObject,
                                                                 ImmutableList.of(), ImmutableList.of(),
-                                                                ImmutableList.of(),
-                                                                DEFAULT_EXTENSIONS);
+                                                                ImmutableList.of());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
@@ -188,7 +183,7 @@ class AnnotatedHttpServiceFactoryTest {
             assertThatThrownBy(() -> {
 
                 create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
-                       ImmutableList.of(), DEFAULT_EXTENSIONS);
+                       ImmutableList.of());
             }).isInstanceOf(IllegalArgumentException.class)
               .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
         });
@@ -276,7 +271,7 @@ class AnnotatedHttpServiceFactoryTest {
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
                 create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
-                       ImmutableList.of(), DEFAULT_EXTENSIONS);
+                       ImmutableList.of());
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -288,7 +283,7 @@ class AnnotatedHttpServiceFactoryTest {
                         method -> {
                             final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
                                     "/", service, method, ImmutableList.of(), ImmutableList.of(),
-                                    ImmutableList.of(), DEFAULT_EXTENSIONS);
+                                    ImmutableList.of());
                             return annotatedHttpServices.stream();
                         }
                 )
