@@ -26,6 +26,8 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.client.Endpoint;
 
 public class PartialHealthCheckStrategyTest {
@@ -55,6 +57,14 @@ public class PartialHealthCheckStrategyTest {
         }
     }
 
+    private static void assertUniqueCandidates(List<Endpoint> candidates) {
+        if (candidates.isEmpty()) {
+            return;
+        }
+
+        assertThat(candidates).hasSameSizeAs(ImmutableSet.copyOf(candidates));
+    }
+
     @BeforeEach
     void beforeEach() {
         maxRatioStrategy = new PartialHealthCheckStrategyBuilder().maxEndpointRatio(MAX_RATIO).build();
@@ -76,7 +86,7 @@ public class PartialHealthCheckStrategyTest {
     }
 
     @Test
-    void getCandidatesWhenUpdateCandidatesByEmpty() {
+    void getCandidatesAfterSettingEmptyCandidates() {
         maxRatioStrategy.updateCandidates(new ArrayList<>());
         assertThat(maxRatioStrategy.getCandidates()).isEmpty();
     }
@@ -85,48 +95,50 @@ public class PartialHealthCheckStrategyTest {
     void getCandidates() {
         maxRatioStrategy.updateCandidates(candidatesForMaxRatio);
 
-        final List<Endpoint> actCandidates = maxRatioStrategy.getCandidates();
-        assertThat(actCandidates).hasSize(9);
+        final List<Endpoint> selectedCandidates = maxRatioStrategy.getCandidates();
+        assertThat(selectedCandidates).hasSize(9);
 
-        actCandidates.forEach(
-                actCandidate -> assertThat(candidatesForMaxRatio.contains(actCandidate)).isTrue());
+        selectedCandidates.forEach(
+                selectedCandidate -> assertThat(candidatesForMaxRatio).contains(selectedCandidate));
+
+        assertUniqueCandidates(selectedCandidates);
     }
 
     @Test
     void updateHealthWhenEndpointIsHealthy() {
         final Endpoint endpoint = candidatesForMaxRatio.get(1);
 
-        final boolean actRes = maxRatioStrategy.updateHealth(endpoint, HEALTHY);
-
-        assertThat(actRes).isFalse();
+        assertThat(maxRatioStrategy.updateHealth(endpoint, HEALTHY)).isFalse();
     }
 
     @Test
     void updateHealthWhenEndpointIsUnhealthyOnMaxRatioMode() {
         final Endpoint unhealthyEndpoint = maxRatioStrategy.getCandidates().get(0);
 
-        final boolean actRes = maxRatioStrategy.updateHealth(unhealthyEndpoint, UNHEALTHY);
-        assertThat(actRes).isTrue();
+        assertThat(maxRatioStrategy.updateHealth(unhealthyEndpoint, UNHEALTHY)).isTrue();
 
-        final List<Endpoint> actCandidates = maxRatioStrategy.getCandidates();
-        assertThat(actCandidates).hasSize(9);
-        assertThat(actCandidates.contains(unhealthyEndpoint)).isFalse();
-        actCandidates.forEach(
-                actCandidate -> assertThat(candidatesForMaxRatio.contains(actCandidate)).isTrue());
+        final List<Endpoint> selectedCandidates = maxRatioStrategy.getCandidates();
+        assertThat(selectedCandidates).hasSize(9)
+                                      .doesNotContain(unhealthyEndpoint);
+
+        selectedCandidates.forEach(
+                selectedCandidate -> assertThat(candidatesForMaxRatio).contains(selectedCandidate));
+
+        assertUniqueCandidates(selectedCandidates);
     }
 
     @Test
     void updateHealthWhenEndpointIsUnhealthyOnMaxValueMode() {
         final Endpoint unhealthyEndpoint = maxCountStrategy.getCandidates().get(0);
 
-        final boolean actRes = maxCountStrategy.updateHealth(unhealthyEndpoint, UNHEALTHY);
-        assertThat(actRes).isTrue();
+        assertThat(maxCountStrategy.updateHealth(unhealthyEndpoint, UNHEALTHY)).isTrue();
 
-        final List<Endpoint> actCandidates = maxCountStrategy.getCandidates();
-        assertThat(actCandidates).hasSize(5);
-        assertThat(actCandidates.contains(unhealthyEndpoint)).isFalse();
-        actCandidates.forEach(
-                actCandidate -> assertThat(candidatesForMaxCount.contains(actCandidate)).isTrue());
+        final List<Endpoint> selectedCandidates = maxCountStrategy.getCandidates();
+        assertThat(selectedCandidates).hasSize(5)
+                                      .doesNotContain(unhealthyEndpoint);
+
+        selectedCandidates.forEach(
+                selectedCandidate -> assertThat(candidatesForMaxCount).contains(selectedCandidate));
     }
 
     @Test
@@ -137,122 +149,122 @@ public class PartialHealthCheckStrategyTest {
         maxRatioStrategy.updateCandidates(endpoints);
 
         for (Endpoint unhealthyEndpoint : maxRatioStrategy.getCandidates()) {
-            final boolean actRes = maxRatioStrategy.updateHealth(unhealthyEndpoint, UNHEALTHY);
+            final boolean updateRes = maxRatioStrategy.updateHealth(unhealthyEndpoint, UNHEALTHY);
 
-            final List<Endpoint> actCandidates = maxRatioStrategy.getCandidates();
+            final List<Endpoint> selectedCandidates = maxRatioStrategy.getCandidates();
             // When there are not enough candidates, some of the unhealthy candidates are chosen again.
             // At this time, even an unhealthy candidate delivered by the function may be randomly chosen again.
-            if (actCandidates.contains(unhealthyEndpoint)) {
-                assertThat(actRes).isFalse();
+            if (selectedCandidates.contains(unhealthyEndpoint)) {
+                assertThat(updateRes).isFalse();
             } else {
-                assertThat(actRes).isTrue();
+                assertThat(updateRes).isTrue();
             }
 
-            assertThat(actCandidates).hasSize(5);
-            actCandidates.forEach(
-                    actCandidate -> assertThat(endpoints.contains(actCandidate)).isTrue());
+            assertThat(selectedCandidates).hasSize(5);
+            selectedCandidates.forEach(
+                    selectedCandidate -> assertThat(endpoints).contains(selectedCandidate));
         }
     }
 
     @Test
     void updateHealthWhenEndpointIsUnhealthyButDoesNotHaveEnoughCandidatesOnMaxValueMode() {
         for (Endpoint unhealthyEndpoint : maxCountStrategy.getCandidates()) {
-            final boolean actRes = maxCountStrategy.updateHealth(unhealthyEndpoint, UNHEALTHY);
+            final boolean updateRes = maxCountStrategy.updateHealth(unhealthyEndpoint, UNHEALTHY);
 
-            final List<Endpoint> actCandidates = maxCountStrategy.getCandidates();
+            final List<Endpoint> selectedCandidates = maxCountStrategy.getCandidates();
             // When there are not enough candidates, some of the unhealthy candidates are chosen again.
             // At this time, even an unhealthy candidate delivered by the function may be randomly chosen again.
-            if (actCandidates.contains(unhealthyEndpoint)) {
-                assertThat(actRes).isFalse();
+            if (selectedCandidates.contains(unhealthyEndpoint)) {
+                assertThat(updateRes).isFalse();
             } else {
-                assertThat(actRes).isTrue();
+                assertThat(updateRes).isTrue();
             }
 
-            assertThat(actCandidates).hasSize(5);
-            actCandidates.forEach(
-                    actCandidate -> assertThat(candidatesForMaxCount.contains(actCandidate)).isTrue());
+            assertThat(selectedCandidates).hasSize(5);
+            selectedCandidates.forEach(
+                    selectedCandidate -> assertThat(candidatesForMaxCount).contains(selectedCandidate));
         }
     }
 
     @Test
     void updateHealthWhenMaxRatioMode() {
-        List<Endpoint> actCandidates = maxRatioStrategy.getCandidates();
-        final Endpoint candidates = actCandidates.get(0);
+        List<Endpoint> selectedCandidates = maxRatioStrategy.getCandidates();
+        final Endpoint unhealthyCandidate = selectedCandidates.get(0);
 
-        assertThat(actCandidates).hasSize(9);
+        assertThat(selectedCandidates).hasSize(9);
 
-        boolean actUpdateRes = maxRatioStrategy.updateHealth(candidates, UNHEALTHY);
-        actCandidates = maxRatioStrategy.getCandidates();
+        boolean updateRes = maxRatioStrategy.updateHealth(unhealthyCandidate, UNHEALTHY);
+        selectedCandidates = maxRatioStrategy.getCandidates();
 
-        assertThat(actUpdateRes).isTrue();
-        assertThat(actCandidates).hasSize(9);
-        assertThat(actCandidates.contains(candidates)).isFalse();
+        assertThat(updateRes).isTrue();
+        assertThat(selectedCandidates).hasSize(9)
+                                      .doesNotContain(unhealthyCandidate);
 
-        actUpdateRes = maxRatioStrategy.updateHealth(candidates, HEALTHY);
-        actCandidates = maxRatioStrategy.getCandidates();
+        updateRes = maxRatioStrategy.updateHealth(unhealthyCandidate, HEALTHY);
+        selectedCandidates = maxRatioStrategy.getCandidates();
 
-        assertThat(actUpdateRes).isFalse();
-        assertThat(actCandidates).hasSize(9);
-        assertThat(actCandidates.contains(candidates)).isFalse();
+        assertThat(updateRes).isFalse();
+        assertThat(selectedCandidates).hasSize(9)
+                                      .doesNotContain(unhealthyCandidate);
 
-        actUpdateRes = maxRatioStrategy.updateHealth(actCandidates.get(0), UNHEALTHY);
-        actCandidates = maxRatioStrategy.getCandidates();
+        updateRes = maxRatioStrategy.updateHealth(selectedCandidates.get(0), UNHEALTHY);
+        selectedCandidates = maxRatioStrategy.getCandidates();
 
-        assertThat(actUpdateRes).isTrue();
-        assertThat(actCandidates).hasSize(9);
-        assertThat(actCandidates.contains(candidates)).isTrue();
+        assertThat(updateRes).isTrue();
+        assertThat(selectedCandidates).hasSize(9)
+                                      .contains(unhealthyCandidate);
     }
 
     @Test
     void updateHealthWhenMaxValueMode() {
-        List<Endpoint> actCandidates = maxCountStrategy.getCandidates();
-        final Endpoint candidates = actCandidates.get(0);
+        List<Endpoint> selectedCandidates = maxCountStrategy.getCandidates();
+        final Endpoint unhealthyCandidate = selectedCandidates.get(0);
 
-        assertThat(actCandidates).hasSize(5);
+        assertThat(selectedCandidates).hasSize(5);
 
-        boolean actUpdateRes = maxCountStrategy.updateHealth(candidates, UNHEALTHY);
-        actCandidates = maxCountStrategy.getCandidates();
+        boolean updateRes = maxCountStrategy.updateHealth(unhealthyCandidate, UNHEALTHY);
+        selectedCandidates = maxCountStrategy.getCandidates();
 
-        assertThat(actUpdateRes).isTrue();
-        assertThat(actCandidates).hasSize(5);
-        assertThat(actCandidates.contains(candidates)).isFalse();
+        assertThat(updateRes).isTrue();
+        assertThat(selectedCandidates).hasSize(5)
+                                      .doesNotContain(unhealthyCandidate);
 
-        actUpdateRes = maxCountStrategy.updateHealth(candidates, HEALTHY);
-        actCandidates = maxCountStrategy.getCandidates();
+        updateRes = maxCountStrategy.updateHealth(unhealthyCandidate, HEALTHY);
+        selectedCandidates = maxCountStrategy.getCandidates();
 
-        assertThat(actUpdateRes).isFalse();
-        assertThat(actCandidates).hasSize(5);
-        assertThat(actCandidates.contains(candidates)).isFalse();
+        assertThat(updateRes).isFalse();
+        assertThat(selectedCandidates).hasSize(5)
+                                      .doesNotContain(unhealthyCandidate);
 
-        actUpdateRes = maxCountStrategy.updateHealth(actCandidates.get(0), UNHEALTHY);
-        actCandidates = maxCountStrategy.getCandidates();
+        updateRes = maxCountStrategy.updateHealth(selectedCandidates.get(0), UNHEALTHY);
+        selectedCandidates = maxCountStrategy.getCandidates();
 
-        assertThat(actUpdateRes).isTrue();
-        assertThat(actCandidates).hasSize(5);
-        assertThat(actCandidates.contains(candidates)).isTrue();
+        assertThat(updateRes).isTrue();
+        assertThat(selectedCandidates).hasSize(5)
+                                      .contains(unhealthyCandidate);
     }
 
     @Test
     void updateHealthByDisappearedCandidate() {
-        final Endpoint disappearedCandidate = Endpoint.ofGroup("disappeared");
+        final Endpoint disappearedCandidate = Endpoint.of("disappeared");
         final List<Endpoint> candidates = createCandidates(3);
 
         maxCountStrategy.updateCandidates(candidates);
         assertThat(maxCountStrategy.getCandidates()).hasSize(3);
 
-        boolean actUpdateRes = maxCountStrategy.updateHealth(disappearedCandidate, HEALTHY);
-        assertThat(actUpdateRes).isTrue();
+        boolean updateRes = maxCountStrategy.updateHealth(disappearedCandidate, HEALTHY);
+        assertThat(updateRes).isTrue();
 
-        List<Endpoint> actCandidates = maxCountStrategy.getCandidates();
-        assertThat(actCandidates).hasSize(3);
-        assertThat(actCandidates.contains(disappearedCandidate)).isFalse();
+        List<Endpoint> selectedCandidates = maxCountStrategy.getCandidates();
+        assertThat(selectedCandidates).hasSize(3)
+                                      .doesNotContain(disappearedCandidate);
 
-        actUpdateRes = maxCountStrategy.updateHealth(disappearedCandidate, UNHEALTHY);
-        assertThat(actUpdateRes).isTrue();
+        updateRes = maxCountStrategy.updateHealth(disappearedCandidate, UNHEALTHY);
+        assertThat(updateRes).isTrue();
 
-        actCandidates = maxCountStrategy.getCandidates();
-        assertThat(actCandidates).hasSize(3);
-        assertThat(actCandidates.contains(disappearedCandidate)).isFalse();
+        selectedCandidates = maxCountStrategy.getCandidates();
+        assertThat(selectedCandidates).hasSize(3)
+                                      .doesNotContain(disappearedCandidate);
     }
 
     @Test
@@ -260,20 +272,20 @@ public class PartialHealthCheckStrategyTest {
         List<Endpoint> newCandidates = createCandidates(5);
         maxCountStrategy.updateCandidates(newCandidates);
 
-        List<Endpoint> actCandidates = maxCountStrategy.getCandidates();
-        assertCandidates(actCandidates, newCandidates);
+        List<Endpoint> selectedCandidates = maxCountStrategy.getCandidates();
+        assertCandidates(selectedCandidates, newCandidates);
 
         newCandidates = candidatesForMaxCount.subList(0, 3);
         maxCountStrategy.updateCandidates(newCandidates);
-        actCandidates = maxCountStrategy.getCandidates();
+        selectedCandidates = maxCountStrategy.getCandidates();
 
-        assertCandidates(actCandidates, newCandidates);
+        assertCandidates(selectedCandidates, newCandidates);
 
-        newCandidates.add(Endpoint.ofGroup("new1"));
-        newCandidates.add(Endpoint.ofGroup("new2"));
+        newCandidates.add(Endpoint.of("new1"));
+        newCandidates.add(Endpoint.of("new2"));
         maxCountStrategy.updateCandidates(newCandidates);
-        actCandidates = maxCountStrategy.getCandidates();
+        selectedCandidates = maxCountStrategy.getCandidates();
 
-        assertCandidates(actCandidates, newCandidates);
+        assertCandidates(selectedCandidates, newCandidates);
     }
 }

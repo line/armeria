@@ -102,14 +102,18 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
     }
 
     @Override
-    public HealthCheckedEndpointGroupBuilder healthCheckStrategy(
-            HealthCheckStrategy healthCheckStrategy) {
-        return (HealthCheckedEndpointGroupBuilder) super.healthCheckStrategy(healthCheckStrategy);
+    protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+        return new HttpHealthCheckerFactory(path, useGet);
     }
 
     @Override
-    protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
-        return new HttpHealthCheckerFactory(path, useGet);
+    public HealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
+        return (HealthCheckedEndpointGroupBuilder) super.maxEndpointRatio(maxEndpointRatio);
+    }
+
+    @Override
+    public HealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
+        return (HealthCheckedEndpointGroupBuilder) super.maxEndpointCount(maxEndpointCount);
     }
 
     private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {

@@ -20,7 +20,7 @@ import java.util.List;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.healthcheck.PartialHealthCheckStrategy.TargetCount;
 
-public interface HealthCheckStrategy {
+interface HealthCheckStrategy {
 
     /**
      * Creates a new AllHealthCheckStrategy.

@@ -18,11 +18,14 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
-import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.DEFAULT_HEALTH_CHECK_STRATEGY;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
@@ -46,7 +49,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     private ClientFactory clientFactory = ClientFactory.ofDefault();
     private Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator = Function.identity();
     private int port;
-    private HealthCheckStrategy healthCheckStrategy = DEFAULT_HEALTH_CHECK_STRATEGY;
+    private HealthCheckStrategy healthCheckStrategy = HealthCheckStrategy.all();
+    @Nullable
+    private PartialHealthCheckStrategyBuilder partialHealthCheckStrategyBuilder;
 
     /**
      * Creates a new {@link AbstractHealthCheckedEndpointGroupBuilder}.
@@ -158,11 +163,28 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     }
 
     /**
-     * Sets the health check strategy.
+     * Sets the maximum endpoint ratio of target selected candidates.
+     * @see PartialHealthCheckStrategyBuilder#maxEndpointRatio(double)
      */
-    public AbstractHealthCheckedEndpointGroupBuilder healthCheckStrategy(
-            HealthCheckStrategy healthCheckStrategy) {
-        this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
+    public AbstractHealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
+        if (partialHealthCheckStrategyBuilder == null) {
+            partialHealthCheckStrategyBuilder = new PartialHealthCheckStrategyBuilder();
+        }
+
+        partialHealthCheckStrategyBuilder.maxEndpointRatio(maxEndpointRatio);
+        return this;
+    }
+
+    /**
+     * Sets the maximum endpoint count of target selected candidates.
+     * @see PartialHealthCheckStrategyBuilder#maxEndpointCount(int)
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
+        if (partialHealthCheckStrategyBuilder == null) {
+            partialHealthCheckStrategyBuilder = new PartialHealthCheckStrategyBuilder();
+        }
+
+        partialHealthCheckStrategyBuilder.maxEndpointCount(maxEndpointCount);
         return this;
     }
 
@@ -170,9 +192,23 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
     public HealthCheckedEndpointGroup build() {
+        final HealthCheckStrategy healthCheckStrategy =
+                partialHealthCheckStrategyBuilder == null ? this.healthCheckStrategy
+                                                          : partialHealthCheckStrategyBuilder.build();
+
         return new HealthCheckedEndpointGroup(delegate, clientFactory, protocol, port,
                                               retryBackoff, configurator, newCheckerFactory(),
                                               healthCheckStrategy);
+    }
+
+    /**
+     * Sets the health check strategy fort test.
+     */
+    @VisibleForTesting
+    AbstractHealthCheckedEndpointGroupBuilder healthCheckStrategy(
+            HealthCheckStrategy healthCheckStrategy) {
+        this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
+        return this;
     }
 
     /**
