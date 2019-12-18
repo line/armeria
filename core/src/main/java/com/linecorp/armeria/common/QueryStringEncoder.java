@@ -118,8 +118,8 @@ final class QueryStringEncoder {
                 if (c == ' ') {
                     buf.append('+');
                 } else {
-                    tmp[1] = UPPER_HEX_DIGITS[c >>> 4];
                     tmp[2] = UPPER_HEX_DIGITS[c & 0xF];
+                    tmp[1] = UPPER_HEX_DIGITS[c >>> 4];
                     buf.append(tmp, 0, 3);
                 }
             } else if (c < 0x800) {
@@ -128,8 +128,7 @@ final class QueryStringEncoder {
                 tmp[4] = UPPER_HEX_DIGITS[0x8 | (c & 0x3)];
                 c >>>= 2;
                 tmp[2] = UPPER_HEX_DIGITS[c & 0xF];
-                c >>>= 4;
-                tmp[1] = UPPER_HEX_DIGITS[0xC | c];
+                tmp[1] = UPPER_HEX_DIGITS[0xC | (c >>> 4)];
                 buf.append(tmp, 0, 6);
             } else if (!StringUtil.isSurrogate(c)) {
                 tmp[8] = UPPER_HEX_DIGITS[c & 0xF];
@@ -139,8 +138,7 @@ final class QueryStringEncoder {
                 tmp[5] = UPPER_HEX_DIGITS[c & 0xF];
                 c >>>= 4;
                 tmp[4] = UPPER_HEX_DIGITS[0x8 | (c & 0x3)];
-                c >>>= 2;
-                tmp[2] = UPPER_HEX_DIGITS[c & 0xF];
+                tmp[2] = UPPER_HEX_DIGITS[(c >>> 2) & 0xF];
                 tmp[1] = 'E';
                 buf.append(tmp, 0, 9);
             } else if (!Character.isHighSurrogate(c)) {
@@ -175,8 +173,8 @@ final class QueryStringEncoder {
             if (Character.isHighSurrogate(c2)) {
                 buf.append(UTF_UNKNOWN);
             } else {
-                tmp[1] = UPPER_HEX_DIGITS[c2 >>> 4];
                 tmp[2] = UPPER_HEX_DIGITS[c2 & 0xF];
+                tmp[1] = UPPER_HEX_DIGITS[c2 >>> 4];
                 buf.append(tmp, 0, 3);
             }
             return;
@@ -195,8 +193,7 @@ final class QueryStringEncoder {
         tmp[5] = UPPER_HEX_DIGITS[codePoint & 0xF];
         codePoint >>>= 4;
         tmp[4] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
-        codePoint >>>= 2;
-        tmp[2] = UPPER_HEX_DIGITS[codePoint & 0xF];
+        tmp[2] = UPPER_HEX_DIGITS[(codePoint >>> 2) & 0xF];
         tmp[1] = 'F';
         buf.append(tmp, 0, 12);
     }
