@@ -28,8 +28,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-// Copyright (c) 2008-2010 Bjoern Hoehrmann <bjoern@hoehrmann.de>
-// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
 package com.linecorp.armeria.common;
 
 import static io.netty.util.internal.StringUtil.EMPTY_STRING;
@@ -43,28 +41,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 final class QueryStringDecoder {
-
-    private static final int UTF8_ACCEPT = 0;
-    private static final byte[] UTF8D = {
-            // The first part of the table maps bytes to character classes that
-            // to reduce the size of the transition table and create bitmasks.
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-            10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 11, 6, 6, 6, 5, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-
-            // The second part is a transition table that maps a combination
-            // of a state of the automaton and a character class to a state.
-            0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
-            12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12, 12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12,
-            12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
-            12, 12, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12,
-            12, 36, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12
-    };
 
     private static final char UNKNOWN_CHAR = '\uFFFD';
 
@@ -154,79 +130,136 @@ final class QueryStringDecoder {
 
         final char[] buf = TemporaryThreadLocals.get().charArray(toExcluded - from);
         int bufIdx = 0;
-        int state = UTF8_ACCEPT;
-        int codepoint = 0;
         for (int i = from; i < toExcluded;) {
             final char c = s.charAt(i++);
             if (c != '%') {
-                if (state != UTF8_ACCEPT) {
-                    buf[bufIdx++] = UNKNOWN_CHAR;
-                    state = UTF8_ACCEPT;
-                }
                 buf[bufIdx++] = c != '+' ? c : SPACE;
                 continue;
             }
 
             // %x
             if (i + 2 > toExcluded) {
-                if (state != UTF8_ACCEPT) {
-                    buf[bufIdx++] = UNKNOWN_CHAR;
-                    state = UTF8_ACCEPT;
-                }
                 buf[bufIdx++] = UNKNOWN_CHAR;
                 break;
             }
 
             // %xx
-            final int hi = decodeHexNibble(s.charAt(i++));
-            final int lo = decodeHexNibble(s.charAt(i++));
-            if (hi < 0 || lo < 0) {
-                if (state != UTF8_ACCEPT) {
-                    buf[bufIdx++] = UNKNOWN_CHAR;
-                    state = UTF8_ACCEPT;
-                }
+            final int b = decodeHexByte(s.charAt(i++), s.charAt(i++));
+            if (b < 0) {
                 buf[bufIdx++] = UNKNOWN_CHAR;
                 continue;
             }
 
-            final int b = (hi << 4) + lo;
-            if (b < 0x80) {
-                if (state != UTF8_ACCEPT) {
-                    buf[bufIdx++] = UNKNOWN_CHAR;
-                    state = UTF8_ACCEPT;
-                }
+            if ((b & 0x80) == 0) {
                 buf[bufIdx++] = (char) b;
                 continue;
             }
 
-            // UTF-8
-            final long stateAndCodepoint = decodeUtf8(state, codepoint, b);
-            state = (int) (stateAndCodepoint >>> 32);
-            codepoint = (int) stateAndCodepoint;
-            if (state != UTF8_ACCEPT) {
+            // 2-byte UTF-8
+            if ((b >>> 5) == 0b110 && (b & 0x1E) != 0) {
+                if (toExcluded - i < 3) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    break;
+                }
+
+                if (s.charAt(i) != '%') {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    i += 3;
+                    continue;
+                }
+
+                final int b2 = decodeHexByte(s.charAt(i + 1), s.charAt(i + 2));
+                i += 3;
+
+                if (b2 < 0 || !isContinuation(b2)) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    continue;
+                }
+
+                buf[bufIdx++] = (char) (((byte) b << 6) ^ (byte) b2 ^
+                                        ((byte) 0xC0 << 6) ^ (byte) 0x80);
                 continue;
             }
 
-            if ((codepoint & 0xFFFF0000) == 0) {
-                buf[bufIdx++] = (char) codepoint;
-            } else {
-                buf[bufIdx++] = (char) (0xD7C0 + (codepoint >>> 10));
-                buf[bufIdx++] = (char) (0xDC00 + (codepoint & 0x3FF));
-            }
-        }
+            // 3-byte UTF-8
+            if ((b >>> 4) == 0b1110) {
+                if (toExcluded - i < 6) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    break;
+                }
 
-        if (state != UTF8_ACCEPT) {
+                if (s.charAt(i) != '%' || s.charAt(i + 3) != '%') {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    i += 6;
+                    continue;
+                }
+
+                final int b2 = decodeHexByte(s.charAt(i + 1), s.charAt(i + 2));
+                final int b3 = decodeHexByte(s.charAt(i + 4), s.charAt(i + 5));
+                i += 6;
+
+                if (b2 < 0 || b3 < 0 ||
+                    (b == 0xe0 && (b2 & 0xe0) == 0x80) || !isContinuation(b2) || !isContinuation(b3)) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    continue;
+                }
+
+                final char decoded = (char) (((byte) b << 12) ^ ((byte) b2 << 6) ^ (byte) b3 ^
+                                             ((byte) 0xE0 << 12) ^ ((byte) 0x80 << 6) ^ (byte) 0x80);
+                buf[bufIdx++] = !Character.isSurrogate(decoded) ? decoded : UNKNOWN_CHAR;
+                continue;
+            }
+
+            // 4-byte UTF-8
+            if ((b >>> 3) == 0b11110) {
+                if (toExcluded - i < 9) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    break;
+                }
+
+                if (s.charAt(i) != '%' || s.charAt(i + 3) != '%' || s.charAt(i + 6) != '%') {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    i += 9;
+                    continue;
+                }
+
+                final int b2 = decodeHexByte(s.charAt(i + 1), s.charAt(i + 2));
+                final int b3 = decodeHexByte(s.charAt(i + 4), s.charAt(i + 5));
+                final int b4 = decodeHexByte(s.charAt(i + 7), s.charAt(i + 8));
+                i += 9;
+
+                if (b2 < 0 || b3 < 0 || b4 < 0 ||
+                    !isContinuation(b2) || !isContinuation(b3) || !isContinuation(b4)) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    continue;
+                }
+
+                final int codepoint =
+                        ((byte) b << 18) ^ ((byte) b2 << 12) ^ ((byte) b3 << 6) ^ (byte) b4 ^
+                        ((byte) 0xF0 << 18) ^ ((byte) 0x80 << 12) ^ ((byte) 0x80 << 6) ^ (byte) 0x80;
+                buf[bufIdx++] = Character.highSurrogate(codepoint);
+                buf[bufIdx++] = Character.lowSurrogate(codepoint);
+                continue;
+            }
+
             buf[bufIdx++] = UNKNOWN_CHAR;
         }
 
         return new String(buf, 0, bufIdx);
     }
 
-    private static long decodeUtf8(int state, int codepoint, int b) {
-        final byte type = UTF8D[b];
-        codepoint = state != UTF8_ACCEPT ? ((b & 0x3F) | (codepoint << 6)) : ((0xFF >>> type) & b);
-        state = UTF8D[256 + state + type];
-        return (long) state << 32L | codepoint;
+    private static int decodeHexByte(char c1, char c2) {
+        final int hi = decodeHexNibble(c1);
+        final int lo = decodeHexNibble(c2);
+        if (hi < 0 || lo < 0) {
+            return -1;
+        } else {
+            return (hi << 4) + lo;
+        }
+    }
+
+    private static boolean isContinuation(int b) {
+        return (b & 0xc0) == 0x80;
     }
 
     private QueryStringDecoder() {}
