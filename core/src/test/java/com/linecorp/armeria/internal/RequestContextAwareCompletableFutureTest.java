@@ -19,6 +19,8 @@ package com.linecorp.armeria.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,26 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class RequestContextAwareCompletableFutureTest {
+
+    @Test
+    void contextAwareFuture() {
+        final RequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
+        final CompletableFuture<Void> contextAwareFuture = ctx.makeContextAware(future);
+
+        final List<RequestContext> ctxs = new ArrayList<>();
+        final CompletableFuture<Void> handleFuture = contextAwareFuture.handle((unused1, unused2) -> {
+            ctxs.add(RequestContext.current());
+            return null;
+        });
+        handleFuture.join();
+        handleFuture.handle((unused1, unused2) -> {
+            ctxs.add(RequestContext.current());
+            return null;
+        });
+
+        assertThat(ctxs).containsExactly(ctx, ctx);
+    }
 
     @Test
     void makeContextAwareCompletableFutureWithDifferentContext() {
