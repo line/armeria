@@ -65,35 +65,36 @@ final class QueryStringEncoder {
     static void encodeParams(TemporaryThreadLocals tempThreadLocals,
                              StringBuilder buf, QueryParamGetters params) {
         for (Entry<String, String> e : params) {
-            final String name = e.getKey();
-            if (isSafeOctetsOnly(name)) {
-                buf.append(name);
-            } else {
-                encodeUtf8Component(tempThreadLocals, buf, name);
-            }
-            buf.append('=');
-
-            final String value = e.getValue();
-            if (isSafeOctetsOnly(value)) {
-                buf.append(value);
-            } else {
-                encodeUtf8Component(tempThreadLocals, buf, value);
-            }
-            buf.append('&');
+            encodeComponent(tempThreadLocals, buf, e.getKey()).append('=');
+            encodeComponent(tempThreadLocals, buf, e.getValue()).append('&');
         }
 
         buf.setLength(buf.length() - 1);
     }
 
-    private static boolean isSafeOctetsOnly(String s) {
+    private static StringBuilder encodeComponent(TemporaryThreadLocals tempThreadLocals, StringBuilder buf, String s) {
+        final int firstUnsafeOctetIdx = indexOfUnsafeOctet(s, 0);
+        if (firstUnsafeOctetIdx < 0) {
+            buf.append(s);
+        } else {
+            if (firstUnsafeOctetIdx != 0) {
+                buf.append(s, 0, firstUnsafeOctetIdx);
+            }
+
+            encodeUtf8Component(tempThreadLocals, buf, s, firstUnsafeOctetIdx);
+        }
+        return buf;
+    }
+
+    private static int indexOfUnsafeOctet(String s, int start) {
         final int len = s.length();
-        for (int i = 0; i < len; i++) {
+        for (int i = start; i < len; i++) {
             if (!isSafeOctet(s.charAt(i))) {
-                return false;
+                return i;
             }
         }
 
-        return true;
+        return -1;
     }
 
     private static boolean isSafeOctet(char c) {
@@ -101,73 +102,56 @@ final class QueryStringEncoder {
     }
 
     /**
-     * Encodes a query component (name or value).
-     *
-     * @see ByteBufUtil#writeUtf8(ByteBuf, CharSequence, int, int)
+     * Encodes a query component (name or value). The octet at {@code start} must be an unsafe octet.
      */
-    @VisibleForTesting
-    static void encodeUtf8Component(TemporaryThreadLocals tempThreadLocals,
-                                            StringBuilder buf, String s) {
+    private static void encodeUtf8Component(TemporaryThreadLocals tempThreadLocals,
+                                            StringBuilder buf, String s, int start) {
+        final int end = s.length();
+        if (start == end) {
+            return;
+        }
+
         final char[] tmp = tempThreadLocals.charArray(12);
-        int safeOctetStart = 0;
-        final int len = s.length();
-        for (int i = 0; i < len;) {
-            final char c = s.charAt(i);
+        int i = start;
+        for (;;) {
+            final char c = s.charAt(i++);
             if (c < 0x80) {
-                if (!isSafeOctet(c)) {
-                    if (i > safeOctetStart) {
-                        buf.append(s, safeOctetStart, i);
-                    }
-                    safeOctetStart = ++i;
-
-                    if (c == ' ') {
-                        buf.append('+');
-                    } else {
-                        appendEncoded(buf, tmp, c);
-                    }
+                if (c == ' ') {
+                    buf.append('+');
                 } else {
-                    i++;
+                    appendEncoded(buf, tmp, c);
                 }
-                continue;
-            }
-
-            if (i > safeOctetStart) {
-                buf.append(s, safeOctetStart, i);
-            }
-            safeOctetStart = ++i;
-
-            if (c < 0x800) {
+            } else if (c < 0x800) {
                 appendEncoded(buf, tmp,
                               0xc0 | (c >> 6), 0x80 | (c & 0x3f));
-                continue;
-            }
-
-            if (!StringUtil.isSurrogate(c)) {
+            } else if (!StringUtil.isSurrogate(c)) {
                 appendEncoded(buf, tmp,
                               0xe0 | (c >> 12),
                               0x80 | ((c >> 6) & 0x3f),
                               0x80 | (c & 0x3f));
-                continue;
-            }
-
-            if (!Character.isHighSurrogate(c)) {
+            } else if (!Character.isHighSurrogate(c)) {
                 appendEncoded(buf, tmp, WRITE_UTF_UNKNOWN);
-                continue;
-            }
-
-            // Surrogate Pair consumes 2 characters.
-            if (i == len) {
+            } else if (i == end) { // Surrogate Pair consumes 2 characters.
                 appendEncoded(buf, tmp, WRITE_UTF_UNKNOWN);
-                return;
+                break;
+            } else {
+                // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
+                writeUtf8Surrogate(buf, tmp, c, s.charAt(i++));
             }
 
-            // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
-            writeUtf8Surrogate(buf, tmp, c, s.charAt(i));
-            safeOctetStart = ++i;
-        }
+            // Find and append the safe region as-is.
+            final int nextUnsafeOctetIndex = indexOfUnsafeOctet(s, i);
+            if (nextUnsafeOctetIndex < 0) {
+                if (i != end) {
+                    buf.append(s, i, end);
+                }
+                break;
+            }
 
-        if (safeOctetStart < len) {
-            buf.append(s, safeOctetStart, len);
+            if (nextUnsafeOctetIndex != i) {
+                buf.append(s, i, nextUnsafeOctetIndex);
+                i = nextUnsafeOctetIndex;
+            }
         }
     }
 

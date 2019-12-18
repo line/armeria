@@ -265,9 +265,7 @@ class QueryParamsTest {
     @Test
     void testComponentEncoding() throws Exception {
         for (String v : TEST_COMPONENTS) {
-            final StringBuilder buf = new StringBuilder();
-            QueryStringEncoder.encodeUtf8Component(TemporaryThreadLocals.get(), buf, v);
-            assertThat(buf.toString()).isEqualTo(URLEncoder.encode(v, "UTF-8"));
+            assertThat(QueryParams.of(v, "").toQueryString()).isEqualTo(URLEncoder.encode(v, "UTF-8") + '=');
         }
     }
 }
