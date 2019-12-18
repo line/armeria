@@ -60,15 +60,13 @@ final class QueryStringDecoder {
 
         final QueryParamsBuilder params = QueryParams.builder();
         int nameStart = 0;
-        int valueStart = -1;
+        int valueStart = 0;
         int i;
         loop:
         for (i = 0; i < len; i++) {
             switch (s.charAt(i)) {
                 case '=':
-                    if (nameStart == i) {
-                        nameStart = i + 1;
-                    } else if (valueStart < nameStart) {
+                    if (valueStart == 0) {
                         valueStart = i + 1;
                     }
                     break;
@@ -78,13 +76,12 @@ final class QueryStringDecoder {
                     }
                     // fall-through
                 case '&':
-                    if (addParam(s, nameStart, valueStart, i, params)) {
-                        paramsLimit--;
-                        if (paramsLimit == 0) {
-                            return params.build();
-                        }
-                    }
+                    addParam(params, s, nameStart, valueStart, i);
                     nameStart = i + 1;
+                    valueStart = 0;
+                    if (--paramsLimit == 0) {
+                        return params.build();
+                    }
                     break;
                 case '#':
                     break loop;
@@ -92,42 +89,46 @@ final class QueryStringDecoder {
                     // continue
             }
         }
-        addParam(s, nameStart, valueStart, i, params);
+        addParam(params, s, nameStart, valueStart, i);
         return params.build();
     }
 
-    private static boolean addParam(String s, int nameStart, int valueStart, int valueEnd,
-                                    QueryParamsBuilder params) {
-        if (nameStart >= valueEnd) {
-            return false;
+    private static void addParam(QueryParamsBuilder params, String s, int nameStart, int valueStart, int end) {
+        if (nameStart == end) {
+            return;
         }
-        if (valueStart <= nameStart) {
-            valueStart = valueEnd + 1;
+
+        final String name;
+        final String value;
+        if (valueStart == 0) {
+            name = decodeComponent(s, nameStart, end);
+            value = "";
+        } else {
+            name = decodeComponent(s, nameStart, valueStart - 1);
+            value = decodeComponent(s, valueStart, end);
         }
-        final String name = decodeComponent(s, nameStart, valueStart - 1);
-        final String value = decodeComponent(s, valueStart, valueEnd);
+
         params.add(name, value);
-        return true;
     }
 
     @VisibleForTesting
     static String decodeComponent(String s, int from, int toExcluded) {
         final int len = toExcluded - from;
-        if (len <= 0) {
+        if (len == 0) {
             return EMPTY_STRING;
         }
-        int firstEscaped = -1;
+
         for (int i = from; i < toExcluded; i++) {
             final char c = s.charAt(i);
             if (c == '%' || c == '+') {
-                firstEscaped = i;
-                break;
+                return decodeUtf8Component(s, from, toExcluded);
             }
         }
-        if (firstEscaped == -1) {
-            return s.substring(from, toExcluded);
-        }
 
+        return s.substring(from, toExcluded);
+    }
+
+    private static String decodeUtf8Component(String s, int from, int toExcluded) {
         final char[] buf = TemporaryThreadLocals.get().charArray(toExcluded - from);
         int bufIdx = 0;
         for (int i = from; i < toExcluded;) {
@@ -137,8 +138,8 @@ final class QueryStringDecoder {
                 continue;
             }
 
-            // %x
-            if (i + 2 > toExcluded) {
+            // %x or %
+            if (toExcluded - i < 2) {
                 buf[bufIdx++] = UNKNOWN_CHAR;
                 break;
             }

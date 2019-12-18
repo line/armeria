@@ -148,12 +148,12 @@ class QueryParamsTest {
         assertQueryString("a=", "a&");
         assertQueryString("a=", "&a");
         assertQueryString("a=", "&a&");
-        assertQueryString("a=", "&=a");
-        assertQueryString("a=", "=a&");
+        assertQueryString("=a", "&=a");
+        assertQueryString("=a", "=a&");
         assertQueryString("a=", "a=&");
         assertQueryString("a=b&c=d", "a=b&&c=d");
-        assertQueryString("a=b&c=d", "a=b&=&c=d");
-        assertQueryString("a=b&c=d", "a=b&==&c=d");
+        assertQueryString("a=b&=&c=d", "a=b&=&c=d");
+        assertQueryString("a=b&==&c=d", "a=b&==&c=d");
         assertQueryString("a=b&c=&x=y", "a=b&c&x=y");
         assertQueryString("a=", "a=");
         assertQueryString("a=", "&a=");
