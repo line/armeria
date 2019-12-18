@@ -41,8 +41,8 @@ final class QueryStringEncoder {
     // Forked from netty-4.1.43.
     // https://github.com/netty/netty/blob/bd8cea644a07890f5bada18ddff0a849b58cd861/codec-http/src/main/java/io/netty/handler/codec/http/QueryStringEncoder.java
 
-    private static final byte WRITE_UTF_UNKNOWN = (byte) '?';
-    private static final char[] CHAR_MAP = "0123456789ABCDEF".toCharArray();
+    private static final char[] UTF_UNKNOWN = { '%', '3', 'F' }; // Percent encoded question mark
+    private static final char[] UPPER_HEX_DIGITS = "0123456789ABCDEF".toCharArray();
     private static final byte[] SAFE_OCTETS =
             createSafeOctets("-_.*abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
 
@@ -112,25 +112,40 @@ final class QueryStringEncoder {
 
         int i = start;
         for (;;) {
-            final char c = s.charAt(i++);
+            char c = s.charAt(i++);
             if (c < 0x80) {
                 if (c == ' ') {
                     buf.append('+');
                 } else {
-                    appendEncoded(buf, tmp, c);
+                    tmp[1] = UPPER_HEX_DIGITS[c >>> 4];
+                    tmp[2] = UPPER_HEX_DIGITS[c & 0xF];
+                    buf.append(tmp, 0, 3);
                 }
             } else if (c < 0x800) {
-                appendEncoded(buf, tmp,
-                              0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+                tmp[5] = UPPER_HEX_DIGITS[c & 0xF];
+                c >>>= 4;
+                tmp[4] = UPPER_HEX_DIGITS[0x8 | (c & 0x3)];
+                c >>>= 2;
+                tmp[2] = UPPER_HEX_DIGITS[c & 0xF];
+                c >>>= 4;
+                tmp[1] = UPPER_HEX_DIGITS[0xC | c];
+                buf.append(tmp, 0, 6);
             } else if (!StringUtil.isSurrogate(c)) {
-                appendEncoded(buf, tmp,
-                              0xe0 | (c >> 12),
-                              0x80 | ((c >> 6) & 0x3f),
-                              0x80 | (c & 0x3f));
+                tmp[8] = UPPER_HEX_DIGITS[c & 0xF];
+                c >>>= 4;
+                tmp[7] = UPPER_HEX_DIGITS[0x8 | (c & 0x3)];
+                c >>>= 2;
+                tmp[5] = UPPER_HEX_DIGITS[c & 0xF];
+                c >>>= 4;
+                tmp[4] = UPPER_HEX_DIGITS[0x8 | (c & 0x3)];
+                c >>>= 2;
+                tmp[2] = UPPER_HEX_DIGITS[c & 0xF];
+                tmp[1] = 'E';
+                buf.append(tmp, 0, 9);
             } else if (!Character.isHighSurrogate(c)) {
-                appendEncoded(buf, tmp, WRITE_UTF_UNKNOWN);
+                buf.append(UTF_UNKNOWN);
             } else if (i == end) { // Surrogate Pair consumes 2 characters.
-                appendEncoded(buf, tmp, WRITE_UTF_UNKNOWN);
+                buf.append(UTF_UNKNOWN);
                 break;
             } else {
                 // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
@@ -155,76 +170,34 @@ final class QueryStringEncoder {
 
     private static void writeUtf8Surrogate(StringBuilder buf, char[] tmp, char c, char c2) {
         if (!Character.isLowSurrogate(c2)) {
-            appendEncoded(buf, tmp,
-                          WRITE_UTF_UNKNOWN,
-                          Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2);
+            buf.append(UTF_UNKNOWN);
+            if (Character.isHighSurrogate(c2)) {
+                buf.append(UTF_UNKNOWN);
+            } else {
+                tmp[1] = UPPER_HEX_DIGITS[c2 >>> 4];
+                tmp[2] = UPPER_HEX_DIGITS[c2 & 0xF];
+                buf.append(tmp, 0, 3);
+            }
             return;
         }
 
-        final int codePoint = Character.toCodePoint(c, c2);
+        int codePoint = Character.toCodePoint(c, c2);
         // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
-        appendEncoded(buf, tmp,
-                      0xf0 | (codePoint >> 18),
-                      0x80 | ((codePoint >> 12) & 0x3f),
-                      0x80 | ((codePoint >> 6) & 0x3f),
-                      0x80 | (codePoint & 0x3f));
-    }
-
-    private static void appendEncoded(StringBuilder buf, char[] tmp, int b) {
-        setEncoded(tmp, b);
-        buf.append(tmp, 0, 3);
-    }
-
-    private static void appendEncoded(StringBuilder buf, char[] tmp, int b1, int b2) {
-        setEncoded(tmp, b1, b2);
-        buf.append(tmp, 0, 6);
-    }
-
-    private static void appendEncoded(StringBuilder buf, char[] tmp, int b1, int b2, int b3) {
-        setEncoded(tmp, b1, b2, b3);
-        buf.append(tmp, 0, 9);
-    }
-
-    private static void appendEncoded(StringBuilder buf, char[] tmp, int b1, int b2, int b3, int b4) {
-        setEncoded(tmp, b1, b2, b3, b4);
+        tmp[11] = UPPER_HEX_DIGITS[codePoint & 0xF];
+        codePoint >>>= 4;
+        tmp[10] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
+        codePoint >>>= 2;
+        tmp[8] = UPPER_HEX_DIGITS[codePoint & 0xF];
+        codePoint >>>= 4;
+        tmp[7] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
+        codePoint >>>= 2;
+        tmp[5] = UPPER_HEX_DIGITS[codePoint & 0xF];
+        codePoint >>>= 4;
+        tmp[4] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
+        codePoint >>>= 2;
+        tmp[2] = UPPER_HEX_DIGITS[codePoint & 0xF];
+        tmp[1] = 'F';
         buf.append(tmp, 0, 12);
-    }
-
-    private static void setEncoded(char[] tmp, int b) {
-        tmp[1] = highDigit(b);
-        tmp[2] = lowDigit(b);
-    }
-
-    private static void setEncoded(char[] tmp, int b1, int b2) {
-        setEncoded(tmp, b1);
-        tmp[4] = highDigit(b2);
-        tmp[5] = lowDigit(b2);
-    }
-
-    private static void setEncoded(char[] tmp, int b1, int b2, int b3) {
-        setEncoded(tmp, b1, b2);
-        tmp[7] = highDigit(b3);
-        tmp[8] = lowDigit(b3);
-    }
-
-    private static void setEncoded(char[] tmp, int b1, int b2, int b3, int b4) {
-        setEncoded(tmp, b1, b2, b3);
-        tmp[10] = highDigit(b4);
-        tmp[11] = lowDigit(b4);
-    }
-
-    /**
-     * Convert the given digit to a upper hexadecimal char.
-     *
-     * @param digit the number to convert to a character.
-     * @return the {@code char} representation of the specified digit
-     *         in hexadecimal.
-     */
-    private static char highDigit(int digit) {
-        return CHAR_MAP[digit >>> 4];
-    }
-    private static char lowDigit(int digit) {
-        return CHAR_MAP[digit & 0xF];
     }
 
     private QueryStringEncoder() {}
