@@ -16,19 +16,11 @@
 
 package com.linecorp.armeria.common;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.infra.Blackhole;
-
-import com.google.common.escape.Escaper;
-import com.google.common.net.UrlEscapers;
-
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
 
@@ -37,40 +29,10 @@ import io.netty.handler.codec.http.QueryStringDecoder;
  */
 public class QueryStringDecoderBenchmark {
 
-    private static final Escaper guavaEscaper = UrlEscapers.urlFormParameterEscaper();
-
-    private static final String ASCII_PARAMS;
-    private static final String UNICODE_PARAMS;
-    private static final String MIXED_PARAMS;
-
-    static {
-        final QueryParamsBuilder ascii = QueryParams.builder();
-        for (int i = 0; i < 10; i++) {
-            ascii.add("alpha", "beta_gamma")
-                 .add("delta", "epsilon_zeta")
-                 .add("eta", "theta_iota")
-                 .add("kappa", "lambda_mu");
-        }
-        ASCII_PARAMS = ascii.build().toQueryString();
-
-        final QueryParamsBuilder unicode = QueryParams.builder();
-        for (int i = 0; i < 10; i++) {
-            unicode.add("알파", "베타・감마") // Hangul
-                   .add("アルファ", "ベータ・ガンマ") // Katakana
-                   .add("电买车红", "无东马风") // Simplified Chinese
-                   .add("🎄❤️😂", "🎅🔥😊🎁"); // Emoji
-        }
-        UNICODE_PARAMS = unicode.build().toQueryString();
-
-        final QueryParamsBuilder mixed = QueryParams.builder();
-        for (int i = 0; i < 10; i++) {
-            mixed.add("foo", "alpha・ベータ")
-                 .add("bar", "ガンマ・delta")
-                 .add("baz", "nothing_无_east_东_horse_马_wind_风")
-                 .add("qux", "santa_🎅_fire_🔥_smile_😊_present_🎁");
-        }
-        MIXED_PARAMS = mixed.build().toQueryString();
-    }
+    private static final String ASCII_PARAMS = QueryStringEncoderBenchmark.ASCII_PARAMS.toQueryString();
+    private static final String UNICODE_PARAMS = QueryStringEncoderBenchmark.UNICODE_PARAMS.toQueryString();
+    private static final String MIXED_PARAMS = QueryStringEncoderBenchmark.MIXED_PARAMS.toQueryString();
+    private static final String LONG_PARAMS = QueryStringEncoderBenchmark.LONG_PARAMS.toQueryString();
 
     @Benchmark
     public void armeriaAscii(Blackhole bh) {
@@ -88,6 +50,11 @@ public class QueryStringDecoderBenchmark {
     }
 
     @Benchmark
+    public void armeriaLong(Blackhole bh) {
+        bh.consume(QueryParams.fromQueryString(LONG_PARAMS));
+    }
+
+    @Benchmark
     public void nettyAscii(Blackhole bh) {
         bh.consume(nettyDecode(ASCII_PARAMS));
     }
@@ -100,6 +67,11 @@ public class QueryStringDecoderBenchmark {
     @Benchmark
     public void nettyMixed(Blackhole bh) {
         bh.consume(nettyDecode(MIXED_PARAMS));
+    }
+
+    @Benchmark
+    public void nettyLong(Blackhole bh) {
+        bh.consume(nettyDecode(LONG_PARAMS));
     }
 
     private static Map<String, List<String>> nettyDecode(String queryString) {

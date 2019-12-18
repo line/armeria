@@ -19,11 +19,13 @@ package com.linecorp.armeria.common;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.infra.Blackhole;
 
+import com.google.common.base.Strings;
 import com.google.common.escape.Escaper;
 import com.google.common.net.UrlEscapers;
 
@@ -38,37 +40,44 @@ public class QueryStringEncoderBenchmark {
 
     private static final Escaper guavaEscaper = UrlEscapers.urlFormParameterEscaper();
 
-    private static final QueryParams ASCII_PARAMS;
-    private static final QueryParams UNICODE_PARAMS;
-    private static final QueryParams MIXED_PARAMS;
+    static final QueryParams ASCII_PARAMS;
+    static final QueryParams UNICODE_PARAMS;
+    static final QueryParams MIXED_PARAMS;
+    static final QueryParams LONG_PARAMS;
 
     static {
         final QueryParamsBuilder ascii = QueryParams.builder();
         for (int i = 0; i < 10; i++) {
-            ascii.add("alpha", "beta_gamma")
-                 .add("delta", "epsilon_zeta")
-                 .add("eta", "theta_iota")
-                 .add("kappa", "lambda_mu");
+            ascii.add("alpha" + i, "beta_gamma")
+                 .add("delta" + i, "epsilon_zeta")
+                 .add("eta" + i, "theta_iota")
+                 .add("kappa" + i, "lambda_mu");
         }
         ASCII_PARAMS = ascii.build();
 
         final QueryParamsBuilder unicode = QueryParams.builder();
         for (int i = 0; i < 10; i++) {
-            unicode.add("알파", "베타・감마") // Hangul
-                   .add("アルファ", "ベータ・ガンマ") // Katakana
-                   .add("电买车红", "无东马风") // Simplified Chinese
-                   .add("🎄❤️😂", "🎅🔥😊🎁"); // Emoji
+            unicode.add("알파" + i, "베타・감마") // Hangul
+                   .add("アルファ" + i, "ベータ・ガンマ") // Katakana
+                   .add("电买车红" + i, "无东马风") // Simplified Chinese
+                   .add("🎄❤️😂" + i, "🎅🔥😊🎁"); // Emoji
         }
         UNICODE_PARAMS = unicode.build();
 
         final QueryParamsBuilder mixed = QueryParams.builder();
         for (int i = 0; i < 10; i++) {
-            mixed.add("foo", "alpha・ベータ")
-                 .add("bar", "ガンマ・delta")
-                 .add("baz", "nothing_无_east_东_horse_马_wind_风")
-                 .add("qux", "santa_🎅_fire_🔥_smile_😊_present_🎁");
+            mixed.add("foo" + i, "alpha・ベータ")
+                 .add("bar" + i, "ガンマ・delta")
+                 .add("baz" + i, "nothing_无_east_东_horse_马_wind_风")
+                 .add("qux" + i, "santa_🎅_fire_🔥_smile_😊_present_🎁");
         }
         MIXED_PARAMS = mixed.build();
+
+        final QueryParamsBuilder looong = QueryParams.builder();
+        for (Map.Entry<String, String> e : MIXED_PARAMS) {
+            looong.add(e.getKey(), Strings.repeat(e.getValue(), 10));
+        }
+        LONG_PARAMS = looong.build();
     }
 
     @Benchmark
@@ -87,6 +96,11 @@ public class QueryStringEncoderBenchmark {
     }
 
     @Benchmark
+    public void armeriaLong(Blackhole bh) {
+        bh.consume(LONG_PARAMS.toQueryString());
+    }
+
+    @Benchmark
     public void guavaAscii(Blackhole bh) {
         bh.consume(guavaEncode(ASCII_PARAMS));
     }
@@ -99,6 +113,11 @@ public class QueryStringEncoderBenchmark {
     @Benchmark
     public void guavaMixed(Blackhole bh) {
         bh.consume(guavaEncode(MIXED_PARAMS));
+    }
+
+    @Benchmark
+    public void guavaLong(Blackhole bh) {
+        bh.consume(guavaEncode(LONG_PARAMS));
     }
 
     private static String guavaEncode(QueryParamGetters params) {
@@ -127,6 +146,11 @@ public class QueryStringEncoderBenchmark {
         bh.consume(nettyEncode(MIXED_PARAMS));
     }
 
+    @Benchmark
+    public void nettyLong(Blackhole bh) {
+        bh.consume(nettyEncode(LONG_PARAMS));
+    }
+
     private static String nettyEncode(QueryParamGetters params) {
         final QueryStringEncoder encoder = new QueryStringEncoder("", StandardCharsets.UTF_8);
         for (Entry<String, String> e : params) {
@@ -148,6 +172,11 @@ public class QueryStringEncoderBenchmark {
     @Benchmark
     public void jdkMixed(Blackhole bh) throws UnsupportedEncodingException {
         bh.consume(jdkEncode(MIXED_PARAMS));
+    }
+
+    @Benchmark
+    public void jdkLong(Blackhole bh) throws UnsupportedEncodingException {
+        bh.consume(jdkEncode(LONG_PARAMS));
     }
 
     private static String jdkEncode(QueryParamGetters params) throws UnsupportedEncodingException {
