@@ -32,12 +32,8 @@ package com.linecorp.armeria.common;
 
 import java.util.Map.Entry;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.util.internal.StringUtil;
 
 final class QueryStringEncoder {
@@ -112,6 +108,8 @@ final class QueryStringEncoder {
         }
 
         final char[] tmp = tempThreadLocals.charArray(12);
+        tmp[0] = tmp[3] = tmp[6] = tmp[9] = '%'; // Pre-set '%' so we don't have to set anymore.
+
         int i = start;
         for (;;) {
             final char c = s.charAt(i++);
@@ -193,30 +191,26 @@ final class QueryStringEncoder {
     }
 
     private static void setEncoded(char[] tmp, int b) {
-        tmp[0] = '%';
-        tmp[1] = forDigit(b >>> 4);
-        tmp[2] = forDigit(b);
+        tmp[1] = highDigit(b);
+        tmp[2] = lowDigit(b);
     }
 
     private static void setEncoded(char[] tmp, int b1, int b2) {
         setEncoded(tmp, b1);
-        tmp[3] = '%';
-        tmp[4] = forDigit(b2 >>> 4);
-        tmp[5] = forDigit(b2);
+        tmp[4] = highDigit(b2);
+        tmp[5] = lowDigit(b2);
     }
 
     private static void setEncoded(char[] tmp, int b1, int b2, int b3) {
         setEncoded(tmp, b1, b2);
-        tmp[6] = '%';
-        tmp[7] = forDigit(b3 >>> 4);
-        tmp[8] = forDigit(b3);
+        tmp[7] = highDigit(b3);
+        tmp[8] = lowDigit(b3);
     }
 
     private static void setEncoded(char[] tmp, int b1, int b2, int b3, int b4) {
         setEncoded(tmp, b1, b2, b3);
-        tmp[9] = '%';
-        tmp[10] = forDigit(b4 >>> 4);
-        tmp[11] = forDigit(b4);
+        tmp[10] = highDigit(b4);
+        tmp[11] = lowDigit(b4);
     }
 
     /**
@@ -226,7 +220,10 @@ final class QueryStringEncoder {
      * @return the {@code char} representation of the specified digit
      *         in hexadecimal.
      */
-    private static char forDigit(int digit) {
+    private static char highDigit(int digit) {
+        return CHAR_MAP[digit >>> 4];
+    }
+    private static char lowDigit(int digit) {
         return CHAR_MAP[digit & 0xF];
     }
 
