@@ -225,11 +225,13 @@ class QueryParamsTest {
         for (int i = 0; i < encoded.size(); i++) {
             final String src = encoded.get(i);
             final String expected = decoded.get(i);
-            String actual = QueryStringDecoder.decodeComponent(src, 0, src.length());
+            String actual = QueryStringDecoder.decodeComponent(TemporaryThreadLocals.get(),
+                                                               src, 0, src.length());
             assertThat(actual).isEqualTo(expected);
 
             // Off-by-one check
-            actual = QueryStringDecoder.decodeComponent(' ' + src + ' ', 1, src.length() + 1);
+            actual = QueryStringDecoder.decodeComponent(TemporaryThreadLocals.get(),
+                                                        ' ' + src + ' ', 1, src.length() + 1);
             assertThat(actual).isEqualTo(expected);
         }
     }

@@ -23,6 +23,8 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
+
 /**
  * Immutable HTTP query parameters.
  *
@@ -312,7 +314,12 @@ public interface QueryParams extends QueryParamGetters {
      */
     static QueryParams fromQueryString(@Nullable String queryString, int maxParams,
                                        boolean semicolonAsSeparator) {
-        return QueryStringDecoder.decodeParams(queryString, maxParams, semicolonAsSeparator);
+        if (queryString == null || queryString.isEmpty()) {
+            return of();
+        }
+
+        return QueryStringDecoder.decodeParams(TemporaryThreadLocals.get(),
+                                               queryString, maxParams, semicolonAsSeparator);
     }
 
     /**

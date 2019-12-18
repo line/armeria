@@ -30,11 +30,9 @@
  */
 package com.linecorp.armeria.common;
 
-import static io.netty.util.internal.StringUtil.EMPTY_STRING;
 import static io.netty.util.internal.StringUtil.SPACE;
-import static io.netty.util.internal.StringUtil.decodeHexNibble;
 
-import javax.annotation.Nullable;
+import java.util.Arrays;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -43,22 +41,29 @@ import com.linecorp.armeria.internal.TemporaryThreadLocals;
 final class QueryStringDecoder {
 
     private static final char UNKNOWN_CHAR = '\uFFFD';
+    private static final byte[] OCTETS_TO_HEX = new byte['f' + 1];
+
+    static {
+        Arrays.fill(OCTETS_TO_HEX, (byte) -1);
+        for (int i = '0'; i <= '9'; i++) {
+            OCTETS_TO_HEX[i] = (byte) (i - '0');
+        }
+        for (int i = 'A'; i <= 'F'; i++) {
+            OCTETS_TO_HEX[i] = (byte) (i - 'A' + 10);
+        }
+        for (int i = 'a'; i <= 'f'; i++) {
+            OCTETS_TO_HEX[i] = (byte) (i - 'a' + 10);
+        }
+    }
 
     // Forked from netty-4.1.43.
     // https://github.com/netty/netty/blob/7d6d953153697bd66c3b01ca8ec73c4494a81788/codec-http/src/main/java/io/netty/handler/codec/http/QueryStringDecoder.java
 
     @SuppressWarnings("checkstyle:FallThrough")
-    static QueryParams decodeParams(@Nullable String s, int paramsLimit, boolean semicolonAsSeparator) {
-        if (s == null) {
-            return QueryParams.of();
-        }
-
-        final int len = s.length();
-        if (len == 0) {
-            return QueryParams.of();
-        }
-
+    static QueryParams decodeParams(TemporaryThreadLocals tempThreadLocals,
+                                    String s, int paramsLimit, boolean semicolonAsSeparator) {
         final QueryParamsBuilder params = QueryParams.builder();
+        final int len = s.length();
         int nameStart = 0;
         int valueStart = 0;
         int i;
@@ -76,12 +81,14 @@ final class QueryStringDecoder {
                     }
                     // fall-through
                 case '&':
-                    addParam(params, s, nameStart, valueStart, i);
-                    nameStart = i + 1;
-                    valueStart = 0;
-                    if (--paramsLimit == 0) {
+                    if (addParam(tempThreadLocals, params, s, nameStart, valueStart, i) &&
+                        --paramsLimit == 0) {
+                        // TODO(trustin): Tell a user that some parameters were skipped.
                         return params.build();
                     }
+
+                    nameStart = i + 1;
+                    valueStart = 0;
                     break;
                 case '#':
                     break loop;
@@ -89,33 +96,38 @@ final class QueryStringDecoder {
                     // continue
             }
         }
-        addParam(params, s, nameStart, valueStart, i);
+
+        addParam(tempThreadLocals, params, s, nameStart, valueStart, i);
+
         return params.build();
     }
 
-    private static void addParam(QueryParamsBuilder params, String s, int nameStart, int valueStart, int end) {
+    private static boolean addParam(TemporaryThreadLocals tempThreadLocals,
+                                    QueryParamsBuilder params,
+                                    String s, int nameStart, int valueStart, int end) {
         if (nameStart == end) {
-            // Consecutive ampersands
-            return;
+            return false;
         }
 
         final String name;
         final String value;
         if (valueStart == 0) {
-            name = decodeComponent(s, nameStart, end);
+            name = decodeComponent(tempThreadLocals, s, nameStart, end);
             value = "";
         } else {
-            name = decodeComponent(s, nameStart, valueStart - 1);
-            value = decodeComponent(s, valueStart, end);
+            name = decodeComponent(tempThreadLocals, s, nameStart, valueStart - 1);
+            value = decodeComponent(tempThreadLocals, s, valueStart, end);
         }
 
         params.add(name, value);
+        return true;
     }
 
     @VisibleForTesting
-    static String decodeComponent(String s, int from, int toExcluded) {
+    static String decodeComponent(TemporaryThreadLocals tempThreadLocals,
+                                  String s, int from, int toExcluded) {
         if (from == toExcluded) {
-            return EMPTY_STRING;
+            return "";
         }
 
         for (int i = from; i < toExcluded; i++) {
@@ -126,18 +138,21 @@ final class QueryStringDecoder {
                 continue;
             }
 
+            // At this point, `c` is one of the following characters: # % ' ) + - /
             if (c == '%' || c == '+') {
-                return decodeUtf8Component(s, from, toExcluded);
+                return decodeUtf8Component(tempThreadLocals, s, from, toExcluded);
             }
         }
 
         return s.substring(from, toExcluded);
     }
 
-    private static String decodeUtf8Component(String s, int from, int toExcluded) {
-        final char[] buf = TemporaryThreadLocals.get().charArray(toExcluded - from);
+    private static String decodeUtf8Component(TemporaryThreadLocals tempThreadLocals,
+                                              String s, int from, int toExcluded) {
+        final char[] buf = tempThreadLocals.charArray(toExcluded - from);
         int bufIdx = 0;
         for (int i = from; i < toExcluded;) {
+            final int undecodedChars = toExcluded - i;
             final char c = s.charAt(i++);
             if (c != '%') {
                 buf[bufIdx++] = c != '+' ? c : SPACE;
@@ -145,7 +160,7 @@ final class QueryStringDecoder {
             }
 
             // %x or %
-            if (toExcluded - i < 2) {
+            if (undecodedChars < 3) {
                 buf[bufIdx++] = UNKNOWN_CHAR;
                 break;
             }
@@ -157,6 +172,7 @@ final class QueryStringDecoder {
                 continue;
             }
 
+            // 1-byte ASCII
             if ((b & 0x80) == 0) {
                 buf[bufIdx++] = (char) b;
                 continue;
@@ -164,12 +180,7 @@ final class QueryStringDecoder {
 
             // 2-byte UTF-8
             if ((b >>> 5) == 0b110 && (b & 0x1E) != 0) {
-                if (toExcluded - i < 3) {
-                    buf[bufIdx++] = UNKNOWN_CHAR;
-                    break;
-                }
-
-                if (s.charAt(i) != '%') {
+                if (undecodedChars < 6 || s.charAt(i) != '%') {
                     buf[bufIdx++] = UNKNOWN_CHAR;
                     i += 3;
                     continue;
@@ -190,12 +201,7 @@ final class QueryStringDecoder {
 
             // 3-byte UTF-8
             if ((b >>> 4) == 0b1110) {
-                if (toExcluded - i < 6) {
-                    buf[bufIdx++] = UNKNOWN_CHAR;
-                    break;
-                }
-
-                if (s.charAt(i) != '%' || s.charAt(i + 3) != '%') {
+                if (undecodedChars < 9 || s.charAt(i) != '%' || s.charAt(i + 3) != '%') {
                     buf[bufIdx++] = UNKNOWN_CHAR;
                     i += 6;
                     continue;
@@ -219,12 +225,8 @@ final class QueryStringDecoder {
 
             // 4-byte UTF-8
             if ((b >>> 3) == 0b11110) {
-                if (toExcluded - i < 9) {
-                    buf[bufIdx++] = UNKNOWN_CHAR;
-                    break;
-                }
-
-                if (s.charAt(i) != '%' || s.charAt(i + 3) != '%' || s.charAt(i + 6) != '%') {
+                if (undecodedChars < 12 ||
+                    s.charAt(i) != '%' || s.charAt(i + 3) != '%' || s.charAt(i + 6) != '%') {
                     buf[bufIdx++] = UNKNOWN_CHAR;
                     i += 9;
                     continue;
@@ -258,11 +260,11 @@ final class QueryStringDecoder {
     private static int decodeHexByte(char c1, char c2) {
         final int hi = decodeHexNibble(c1);
         final int lo = decodeHexNibble(c2);
-        if (hi < 0 || lo < 0) {
-            return -1;
-        } else {
-            return (hi << 4) + lo;
-        }
+        return (hi << 4) | lo;
+    }
+
+    private static int decodeHexNibble(char c) {
+        return c < OCTETS_TO_HEX.length ? OCTETS_TO_HEX[c] : -1;
     }
 
     private static boolean isContinuation(int b) {
