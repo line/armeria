@@ -84,7 +84,7 @@ public final class TemporaryThreadLocals {
     @VisibleForTesting
     void clear() {
         byteArray = EmptyArrays.EMPTY_BYTES;
-        stringBuilder = new StringBuilder();
+        stringBuilder = inflate(new StringBuilder());
         charArray = EmptyArrays.EMPTY_CHARS;
     }
 
@@ -136,10 +136,20 @@ public final class TemporaryThreadLocals {
     public StringBuilder stringBuilder() {
         final StringBuilder stringBuilder = this.stringBuilder;
         if (stringBuilder.capacity() > MAX_STRING_BUILDER_CAPACITY) {
-            return this.stringBuilder = new StringBuilder(MAX_STRING_BUILDER_CAPACITY);
+            return this.stringBuilder = inflate(new StringBuilder(MAX_STRING_BUILDER_CAPACITY));
         } else {
             stringBuilder.setLength(0);
             return stringBuilder;
         }
+    }
+
+    /**
+     * Switches the internal representation of the specified {@link StringBuilder} from LATIN1 to UTF16,
+     * so that character operations do not have performance penalty.
+     */
+    private static StringBuilder inflate(StringBuilder stringBuilder) {
+        stringBuilder.append('\u0100');
+        stringBuilder.setLength(0);
+        return stringBuilder;
     }
 }
