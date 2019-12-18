@@ -33,17 +33,31 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.nio.charset.StandardCharsets;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.TimeZone;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
+
 class QueryParamsTest {
+
+    private static final List<String> TEST_COMPONENTS = ImmutableList.of(
+            "Caffé", // Latin
+            "случайный праздник", // Cyril
+            "알파・베타", // Hangul
+            "アルファ・ベータ", // Katakana
+            "电买车红・无东马风", // Kanji
+            "🎄❤️😂🎅🔥😊🎁" // Emoji
+    );
 
     @Test
     void testSensitiveParamNames() throws Exception {
@@ -191,39 +205,32 @@ class QueryParamsTest {
     }
 
     @Test
-    void testUrlDecoding() throws Exception {
-        final String caffe = new String(
-                // "Caffé" but instead of putting the literal E-acute in the
-                // source file, we directly use the UTF-8 encoding so as to
-                // not rely on the platform's default encoding (not portable).
-                new byte[] {'C', 'a', 'f', 'f', (byte) 0xC3, (byte) 0xA9},
-                StandardCharsets.UTF_8);
-        final String[] tests = {
-                // Encoded   ->   Decoded or error message substring
-                "",               "",
-                "foo",            "foo",
-                "f+o",            "f o",
-                "f++",            "f  ",
-                "fo%",            "unterminated escape sequence at index 2 of: fo%",
-                "%42",            "B",
-                "%5f",            "_",
-                "f%4",            "unterminated escape sequence at index 1 of: f%4",
-                "%x2",            "invalid hex byte 'x2' at index 1 of '%x2'",
-                "%4x",            "invalid hex byte '4x' at index 1 of '%4x'",
-                "Caff%C3%A9",     caffe,
-                "случайный праздник",               "случайный праздник",
-                "случайный%20праздник",             "случайный праздник",
-                "случайный%20праздник%20%E2%98%BA", "случайный праздник ☺",
-                };
-        for (int i = 0; i < tests.length; i += 2) {
-            final String encoded = tests[i];
-            final String expected = tests[i + 1];
+    void testComponentDecoding() throws Exception {
+        final ImmutableList.Builder<String> encodedBuilder = ImmutableList.builder();
+        encodedBuilder.add("", "foo", "f+o", "f++", "fo%", "%42", "%5f", "f%4", "%x2", "%4x");
+        TEST_COMPONENTS.forEach(v -> {
             try {
-                final String decoded = QueryStringDecoder.decodeComponent(encoded, 0, encoded.length());
-                assertThat(decoded).isEqualTo(expected);
-            } catch (IllegalArgumentException e) {
-                assertThat(e.getMessage()).contains(expected);
+                encodedBuilder.add(URLEncoder.encode(v, "UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                throw new Error(e);
             }
+        });
+
+        final List<String> encoded = encodedBuilder.build();
+        final List<String> decoded = ImmutableList.<String>builder()
+                .add("", "foo", "f o", "f  ", "fo\uFFFD", "B", "_", "f\uFFFD", "\uFFFD", "\uFFFD")
+                .addAll(TEST_COMPONENTS)
+                .build();
+
+        for (int i = 0; i < encoded.size(); i++) {
+            final String src = encoded.get(i);
+            final String expected = decoded.get(i);
+            String actual = QueryStringDecoder.decodeComponent(src, 0, src.length());
+            assertThat(actual).isEqualTo(expected);
+
+            // Off-by-one check
+            actual = QueryStringDecoder.decodeComponent(' ' + src + ' ', 1, src.length() + 1);
+            assertThat(actual).isEqualTo(expected);
         }
     }
 
@@ -250,6 +257,15 @@ class QueryParamsTest {
 
     @Test
     void testWhitespaceEncoding() throws Exception {
-        assertThat(QueryParams.of("a", "b c").toQueryString()).isEqualTo("a=b%20c");
+        assertThat(QueryParams.of("a", "b c").toQueryString()).isEqualTo("a=b+c");
+    }
+
+    @Test
+    void testComponentEncoding() throws Exception {
+        for (String v : TEST_COMPONENTS) {
+            final StringBuilder buf = new StringBuilder();
+            QueryStringEncoder.encodeUtf8Component(TemporaryThreadLocals.get(), buf, v);
+            assertThat(buf.toString()).isEqualTo(URLEncoder.encode(v, "UTF-8"));
+        }
     }
 }

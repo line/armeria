@@ -28,26 +28,45 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+// Copyright (c) 2008-2010 Bjoern Hoehrmann <bjoern@hoehrmann.de>
+// See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
 package com.linecorp.armeria.common;
 
 import static io.netty.util.internal.StringUtil.EMPTY_STRING;
 import static io.netty.util.internal.StringUtil.SPACE;
-import static io.netty.util.internal.StringUtil.decodeHexByte;
-
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.StandardCharsets;
+import static io.netty.util.internal.StringUtil.decodeHexNibble;
 
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import io.netty.util.CharsetUtil;
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 final class QueryStringDecoder {
+
+    private static final int UTF8_ACCEPT = 0;
+    private static final byte[] UTF8D = {
+            // The first part of the table maps bytes to character classes that
+            // to reduce the size of the transition table and create bitmasks.
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
+            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+            8, 8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 11, 6, 6, 6, 5, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+
+            // The second part is a transition table that maps a combination
+            // of a state of the automaton and a character class to a state.
+            0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
+            12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12, 12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12,
+            12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
+            12, 12, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12,
+            12, 36, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12
+    };
+
+    private static final char UNKNOWN_CHAR = '\uFFFD';
 
     // Forked from netty-4.1.43.
     // https://github.com/netty/netty/blob/7d6d953153697bd66c3b01ca8ec73c4494a81788/codec-http/src/main/java/io/netty/handler/codec/http/QueryStringDecoder.java
@@ -133,51 +152,81 @@ final class QueryStringDecoder {
             return s.substring(from, toExcluded);
         }
 
-        final CharsetDecoder decoder = CharsetUtil.decoder(StandardCharsets.UTF_8);
-
-        // Each encoded byte takes 3 characters (e.g. "%20")
-        final int decodedCapacity = (toExcluded - firstEscaped) / 3;
-        final ByteBuffer byteBuf = ByteBuffer.allocate(decodedCapacity);
-        final CharBuffer charBuf = CharBuffer.allocate(decodedCapacity);
-
-        final StringBuilder strBuf = new StringBuilder(len);
-        strBuf.append(s, from, firstEscaped);
-
-        for (int i = firstEscaped; i < toExcluded; i++) {
-            final char c = s.charAt(i);
+        final char[] buf = TemporaryThreadLocals.get().charArray(toExcluded - from);
+        int bufIdx = 0;
+        int state = UTF8_ACCEPT;
+        int codepoint = 0;
+        for (int i = from; i < toExcluded;) {
+            final char c = s.charAt(i++);
             if (c != '%') {
-                strBuf.append(c != '+' ? c : SPACE);
+                if (state != UTF8_ACCEPT) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    state = UTF8_ACCEPT;
+                }
+                buf[bufIdx++] = c != '+' ? c : SPACE;
                 continue;
             }
 
-            byteBuf.clear();
-            do {
-                if (i + 3 > toExcluded) {
-                    throw new IllegalArgumentException(
-                            "unterminated escape sequence at index " + i + " of: " + s);
+            // %x
+            if (i + 2 > toExcluded) {
+                if (state != UTF8_ACCEPT) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    state = UTF8_ACCEPT;
                 }
-                byteBuf.put(decodeHexByte(s, i + 1));
-                i += 3;
-            } while (i < toExcluded && s.charAt(i) == '%');
-            i--;
-
-            byteBuf.flip();
-            charBuf.clear();
-            CoderResult result = decoder.reset().decode(byteBuf, charBuf, true);
-            try {
-                if (!result.isUnderflow()) {
-                    result.throwException();
-                }
-                result = decoder.flush(charBuf);
-                if (!result.isUnderflow()) {
-                    result.throwException();
-                }
-            } catch (CharacterCodingException ex) {
-                throw new IllegalStateException(ex);
+                buf[bufIdx++] = UNKNOWN_CHAR;
+                break;
             }
-            strBuf.append(charBuf.flip());
+
+            // %xx
+            final int hi = decodeHexNibble(s.charAt(i++));
+            final int lo = decodeHexNibble(s.charAt(i++));
+            if (hi < 0 || lo < 0) {
+                if (state != UTF8_ACCEPT) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    state = UTF8_ACCEPT;
+                }
+                buf[bufIdx++] = UNKNOWN_CHAR;
+                continue;
+            }
+
+            final int b = (hi << 4) + lo;
+            if (b < 0x80) {
+                if (state != UTF8_ACCEPT) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    state = UTF8_ACCEPT;
+                }
+                buf[bufIdx++] = (char) b;
+                continue;
+            }
+
+            // UTF-8
+            final long stateAndCodepoint = decodeUtf8(state, codepoint, b);
+            state = (int) (stateAndCodepoint >>> 32);
+            codepoint = (int) stateAndCodepoint;
+            if (state != UTF8_ACCEPT) {
+                continue;
+            }
+
+            if ((codepoint & 0xFFFF0000) == 0) {
+                buf[bufIdx++] = (char) codepoint;
+            } else {
+                buf[bufIdx++] = (char) (0xD7C0 + (codepoint >>> 10));
+                buf[bufIdx++] = (char) (0xDC00 + (codepoint & 0x3FF));
+            }
         }
-        return strBuf.toString();
+
+        if (state != UTF8_ACCEPT) {
+            buf[bufIdx++] = UNKNOWN_CHAR;
+        }
+
+        return new String(buf, 0, bufIdx);
+    }
+
+    private static long decodeUtf8(int state, int codepoint, int b) {
+        final byte type = UTF8D[b];
+        codepoint = state != UTF8_ACCEPT ? ((b & 0x3F) | (codepoint << 6)) : ((0xFF >>> type) & b);
+        state = UTF8D[256 + state + type];
+        return (long) state << 32L | codepoint;
     }
 
     private QueryStringDecoder() {}

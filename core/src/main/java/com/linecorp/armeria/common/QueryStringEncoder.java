@@ -32,6 +32,8 @@ package com.linecorp.armeria.common;
 
 import java.util.Map.Entry;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
@@ -103,20 +105,28 @@ final class QueryStringEncoder {
      *
      * @see ByteBufUtil#writeUtf8(ByteBuf, CharSequence, int, int)
      */
-    private static void encodeUtf8Component(TemporaryThreadLocals tempThreadLocals,
+    @VisibleForTesting
+    static void encodeUtf8Component(TemporaryThreadLocals tempThreadLocals,
                                             StringBuilder buf, String s) {
         final char[] tmp = tempThreadLocals.charArray(12);
         int safeOctetStart = 0;
         final int len = s.length();
-        for (int i = 0; i < len; i++) {
+        for (int i = 0; i < len;) {
             final char c = s.charAt(i);
             if (c < 0x80) {
                 if (!isSafeOctet(c)) {
                     if (i > safeOctetStart) {
                         buf.append(s, safeOctetStart, i);
                     }
-                    safeOctetStart = i + 1;
-                    appendEncoded(buf, tmp, c);
+                    safeOctetStart = ++i;
+
+                    if (c == ' ') {
+                        buf.append('+');
+                    } else {
+                        appendEncoded(buf, tmp, c);
+                    }
+                } else {
+                    i++;
                 }
                 continue;
             }
@@ -124,7 +134,7 @@ final class QueryStringEncoder {
             if (i > safeOctetStart) {
                 buf.append(s, safeOctetStart, i);
             }
-            safeOctetStart = i + 1;
+            safeOctetStart = ++i;
 
             if (c < 0x800) {
                 appendEncoded(buf, tmp,
@@ -146,18 +156,17 @@ final class QueryStringEncoder {
             }
 
             // Surrogate Pair consumes 2 characters.
-            if (++i == len) {
+            if (i == len) {
                 appendEncoded(buf, tmp, WRITE_UTF_UNKNOWN);
-                break;
+                return;
             }
 
             // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
             writeUtf8Surrogate(buf, tmp, c, s.charAt(i));
+            safeOctetStart = ++i;
         }
 
-        if (safeOctetStart == 0) {
-            buf.append(s);
-        } else if (safeOctetStart < len) {
+        if (safeOctetStart < len) {
             buf.append(s, safeOctetStart, len);
         }
     }
