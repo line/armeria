@@ -495,7 +495,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     final void add(IN_NAME name, String value) {
         final NAME normalizedName = normalizeName(name);
         requireNonNull(value, "value");
-        final int h = normalizedName.hashCode();
+        final int h = hashName(normalizedName);
         final int i = index(h);
         add0(h, i, normalizedName, value);
     }
@@ -503,7 +503,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     final void add(IN_NAME name, Iterable<String> values) {
         final NAME normalizedName = normalizeName(name);
         requireNonNull(values, "values");
-        final int h = normalizedName.hashCode();
+        final int h = hashName(normalizedName);
         final int i = index(h);
         for (String v : values) {
             requireNonNullElement(values, v);
@@ -514,7 +514,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     final void add(IN_NAME name, String... values) {
         final NAME normalizedName = normalizeName(name);
         requireNonNull(values, "values");
-        final int h = normalizedName.hashCode();
+        final int h = hashName(normalizedName);
         final int i = index(h);
         for (String v : values) {
             requireNonNullElement(values, v);
@@ -588,7 +588,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     final void set(IN_NAME name, String value) {
         final NAME normalizedName = normalizeName(name);
         requireNonNull(value, "value");
-        final int h = normalizedName.hashCode();
+        final int h = hashName(normalizedName);
         final int i = index(h);
         remove0(h, i, normalizedName);
         add0(h, i, normalizedName, value);
@@ -598,7 +598,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final NAME normalizedName = normalizeName(name);
         requireNonNull(values, "values");
 
-        final int h = normalizedName.hashCode();
+        final int h = hashName(normalizedName);
         final int i = index(h);
 
         remove0(h, i, normalizedName);
@@ -612,7 +612,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final NAME normalizedName = normalizeName(name);
         requireNonNull(values, "values");
 
-        final int h = normalizedName.hashCode();
+        final int h = hashName(normalizedName);
         final int i = index(h);
 
         remove0(h, i, normalizedName);
@@ -692,7 +692,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final NAME normalizedName = normalizeName(name);
         requireNonNull(values, "values");
 
-        final int h = normalizedName.hashCode();
+        final int h = hashName(normalizedName);
         final int i = index(h);
 
         remove0(h, i, normalizedName);
@@ -706,7 +706,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final NAME normalizedName = normalizeName(name);
         requireNonNull(values, "values");
 
-        final int h = normalizedName.hashCode();
+        final int h = hashName(normalizedName);
         final int i = index(h);
 
         remove0(h, i, normalizedName);
@@ -933,7 +933,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     public int hashCode() {
         int result = HASH_CODE_SEED;
         for (NAME name : names()) {
-            result = (result * 31 + name.hashCode()) * 31 + getAll(name).hashCode();
+            result = (result * 31 + hashName(name)) * 31 + getAll(name).hashCode();
         }
         return result;
     }
@@ -1114,7 +1114,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
         @Override
         public int hashCode() {
-            return (key == null ? 0 : key.hashCode()) ^ (value == null ? 0 : value.hashCode());
+            return (key == null ? 0 : hashName(key)) ^ (value == null ? 0 : value.hashCode());
         }
 
         @Override
