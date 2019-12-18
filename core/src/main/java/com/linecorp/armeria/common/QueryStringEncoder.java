@@ -67,7 +67,7 @@ final class QueryStringEncoder {
             if (isSafeOctetsOnly(name)) {
                 buf.append(name);
             } else {
-                encodeUtf8Component(tempThreadLocals, buf, e.getKey());
+                encodeUtf8Component(tempThreadLocals, buf, name);
             }
             buf.append('=');
 
