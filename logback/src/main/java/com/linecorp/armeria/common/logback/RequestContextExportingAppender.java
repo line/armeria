@@ -211,13 +211,10 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
             exporter = builder.build();
         }
         final Map<String, String> contextMap = exporter.export();
-        if (contextMap != null) {
+        if (!contextMap.isEmpty()) {
             final Map<String, String> originalMdcMap = eventObject.getMDCPropertyMap();
             final Map<String, String> mdcMap;
 
-            // Create a copy of 'state' to avoid the race between:
-            // - the delegate appenders who iterate over the MDC map and
-            // - this class who update 'state'.
             if (!originalMdcMap.isEmpty()) {
                 mdcMap = new UnionMap<>(contextMap, originalMdcMap);
             } else {

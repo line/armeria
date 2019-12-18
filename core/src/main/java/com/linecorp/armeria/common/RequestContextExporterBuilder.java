@@ -15,17 +15,16 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -100,7 +99,7 @@ public final class RequestContextExporterBuilder {
     }
 
     /**
-     * Returns {@code true} if the specified {@link AttributeKey} is in export list.
+     * Returns {@code true} if the specified {@link AttributeKey} is in the export list.
      */
     public boolean containsAttribute(AttributeKey<?> key) {
         requireNonNull(key, "key");
@@ -113,8 +112,8 @@ public final class RequestContextExporterBuilder {
      * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
      */
     public Map<String, AttributeKey<?>> getAttributes() {
-        return Collections.unmodifiableMap(attrs.stream().collect(
-                Collectors.toMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key)));
+        return attrs.stream().collect(
+                toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key));
     }
 
     /**

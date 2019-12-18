@@ -39,6 +39,7 @@ import static com.linecorp.armeria.common.BuiltInProperty.SCHEME;
 import static com.linecorp.armeria.common.BuiltInProperty.TLS_CIPHER;
 import static com.linecorp.armeria.common.BuiltInProperty.TLS_PROTO;
 import static com.linecorp.armeria.common.BuiltInProperty.TLS_SESSION_ID;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -51,6 +52,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -126,25 +128,34 @@ public final class RequestContextExporter {
     /**
      * Returns a {@link Map} whose key is an export key set through {@code add*()} in
      * {@link RequestContextExporterBuilder} and value is extracted from {@link RequestContext}
-     * Note that: this method returns {@code null} if current {@link RequestContext} is {@code null}.
+     * Note that: this method returns an empty {@link Map} if current {@link RequestContext} is {@code null}.
      */
-    @Nullable
     public Map<String, String> export() {
         final RequestContext ctx = RequestContext.currentOrNull();
-        if (ctx != null) {
-            final State state = state(ctx);
-            final RequestLog log = ctx.log();
-            final Set<RequestLogAvailability> availabilities = log.availabilities();
+        return ctx != null ? export(ctx) : ImmutableMap.of();
+    }
 
-            // Note: This equality check is extremely fast.
-            //       See RequestLogAvailabilitySet for more information.
-            if (!availabilities.equals(state.availabilities)) {
-                state.availabilities = availabilities;
-                export(state, ctx, log);
-            }
-            return state.clone();
+    /**
+     * Returns a {@link Map} whose key is an export key set through {@code add*()} in
+     * {@link RequestContextExporterBuilder} and value is extracted from the specified {@link RequestContext}
+     */
+    public Map<String, String> export(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+
+        final State state = state(ctx);
+        final RequestLog log = ctx.log();
+        final Set<RequestLogAvailability> availabilities = log.availabilities();
+
+        // Note: This equality check is extremely fast.
+        //       See RequestLogAvailabilitySet for more information.
+        if (!availabilities.equals(state.availabilities)) {
+            state.availabilities = availabilities;
+            export(state, ctx, log);
         }
-        return null;
+        // Create a copy of 'state' to avoid the race between:
+        // - the delegate appenders who iterate over the MDC map and
+        // - this class who update 'state'.
+        return state.clone();
     }
 
     private void export(Map<String, String> out, RequestContext ctx, RequestLog log) {
