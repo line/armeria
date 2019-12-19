@@ -121,11 +121,8 @@ final class QueryStringEncoder {
                 tmp[2] = UPPER_HEX_DIGITS[(c >>> 2) & 0xF];
                 tmp[1] = 'E';
                 buf.append(tmp, 0, 9);
-            } else if (!Character.isHighSurrogate(c)) {
+            } else if (!Character.isHighSurrogate(c) || i == end) {
                 buf.append(UTF_UNKNOWN);
-            } else if (i == end) { // Surrogate Pair consumes 2 characters.
-                buf.append(UTF_UNKNOWN);
-                break;
             } else {
                 final char c2 = s.charAt(i++);
                 if (!Character.isLowSurrogate(c2)) {
