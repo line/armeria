@@ -80,17 +80,19 @@ final class QueryStringEncoder {
     }
 
     private static StringBuilder encodeComponent(StringBuilder buf, String s) {
-        final int firstUnsafeOctetIdx = indexOfUnsafeOctet(s, 0);
-        if (firstUnsafeOctetIdx < 0) {
-            buf.append(s);
-        } else {
-            if (firstUnsafeOctetIdx != 0) {
-                buf.append(s, 0, firstUnsafeOctetIdx);
+        final int len = s.length();
+        for (int i = 0; i < len; i++) {
+            final char c = s.charAt(i);
+            if (isUnsafeOctet(c)) {
+                if (i != 0) {
+                    buf.append(s, 0, i);
+                }
+                encodeUtf8Component(buf, s, i);
+                return buf;
             }
-
-            encodeUtf8Component(buf, s, firstUnsafeOctetIdx);
         }
-        return buf;
+
+        return buf.append(s);
     }
 
     /**
@@ -188,12 +190,23 @@ final class QueryStringEncoder {
         final int len = s.length();
         for (int i = start; i < len; i++) {
             final char c = s.charAt(i);
-            if (c >= SAFE_OCTETS.length || SAFE_OCTETS[c] == 0) {
+            if (isUnsafeOctet(c)) {
                 return i;
             }
         }
 
         return -1;
+    }
+
+    // Do not inline `index` or remove `index < 0` check.
+    // They are specifically written to tell JVM to optimize away the array boundary check.
+    @SuppressWarnings({ "ConstantConditions", "UnnecessaryLocalVariable" })
+    private static boolean isUnsafeOctet(char c) {
+        final int index = c;
+        if (index < 0 || index >= SAFE_OCTETS.length) {
+            return true;
+        }
+        return SAFE_OCTETS[index] == 0;
     }
 
     private QueryStringEncoder() {}

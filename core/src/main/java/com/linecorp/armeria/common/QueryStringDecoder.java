@@ -264,8 +264,15 @@ final class QueryStringDecoder {
         return (hi << 4) | lo;
     }
 
+    // Do not inline `index` or remove `index < 0` check.
+    // They are specifically written to tell JVM to optimize away the array boundary check.
+    @SuppressWarnings({ "ConstantConditions", "UnnecessaryLocalVariable" })
     private static int decodeHexNibble(char c) {
-        return c < OCTETS_TO_HEX.length ? OCTETS_TO_HEX[c] : -1;
+        final int index = c;
+        if (index < 0 || index > OCTETS_TO_HEX.length) {
+            return -1;
+        }
+        return OCTETS_TO_HEX[index];
     }
 
     private static boolean isContinuation(int b) {
