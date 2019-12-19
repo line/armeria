@@ -217,6 +217,7 @@ class QueryParamsTest {
         });
 
         final List<String> encoded = encodedBuilder.build();
+        @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
         final List<String> decoded = ImmutableList.<String>builder()
                 .add("", "foo", "f o", "f  ", "fo\uFFFD", "B", "_", "f\uFFFD", "\uFFFD", "\uFFFD")
                 .addAll(TEST_COMPONENTS)
