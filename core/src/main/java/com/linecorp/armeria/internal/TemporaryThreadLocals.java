@@ -147,6 +147,7 @@ public final class TemporaryThreadLocals {
      * Switches the internal representation of the specified {@link StringBuilder} from LATIN1 to UTF16,
      * so that character operations do not have performance penalty.
      */
+    @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
     private static StringBuilder inflate(StringBuilder stringBuilder) {
         stringBuilder.append('\u0100');
         stringBuilder.setLength(0);
