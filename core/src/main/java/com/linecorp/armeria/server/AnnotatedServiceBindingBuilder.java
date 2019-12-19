@@ -278,18 +278,18 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * @param extensions the {@link AnnotatedHttpServiceExtensions} at the server level.
      */
     List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
-        final List<ExceptionHandlerFunction> exceptionHandlerFunctions =
-                exceptionHandlerFunctionBuilder.addAll(extensions.exceptionHandlers()).build();
         final List<RequestConverterFunction> requestConverterFunctions =
                 requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
         final List<ResponseConverterFunction> responseConverterFunctions =
                 responseConverterFunctionBuilder.addAll(extensions.responseConverters()).build();
+        final List<ExceptionHandlerFunction> exceptionHandlerFunctions =
+                exceptionHandlerFunctionBuilder.addAll(extensions.exceptionHandlers()).build();
 
         assert service != null;
 
         final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
-                                                 requestConverterFunctions, responseConverterFunctions);
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, requestConverterFunctions,
+                                                 responseConverterFunctions, exceptionHandlerFunctions);
         return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

@@ -28,8 +28,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * Collects the {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s and
- * {@link ResponseConverterFunction}s into three different lists from a single {@link Iterable}.
+ * Collects the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}s
+ * and the {@link ExceptionHandlerFunction}s into three different lists from a single {@link Iterable}.
  */
 public final class AnnotatedHttpServiceExtensions {
 
@@ -39,31 +39,26 @@ public final class AnnotatedHttpServiceExtensions {
     public static AnnotatedHttpServiceExtensions ofExceptionHandlersAndConverters(
             Iterable<?> exceptionHandlersAndConverters) {
 
-        final Builder<ExceptionHandlerFunction> exceptionHandlers = ImmutableList.builder();
         final Builder<RequestConverterFunction> requestConverters = ImmutableList.builder();
         final Builder<ResponseConverterFunction> responseConverters = ImmutableList.builder();
+        final Builder<ExceptionHandlerFunction> exceptionHandlers = ImmutableList.builder();
 
         for (final Object o : exceptionHandlersAndConverters) {
-            if (o instanceof ExceptionHandlerFunction) {
-                exceptionHandlers.add((ExceptionHandlerFunction) o);
-            } else if (o instanceof RequestConverterFunction) {
+            if (o instanceof RequestConverterFunction) {
                 requestConverters.add((RequestConverterFunction) o);
             } else if (o instanceof ResponseConverterFunction) {
                 responseConverters.add((ResponseConverterFunction) o);
+            } else if (o instanceof ExceptionHandlerFunction) {
+                exceptionHandlers.add((ExceptionHandlerFunction) o);
             } else {
                 throw new IllegalArgumentException(o.getClass().getName() +
                                                    " is neither an exception handler nor a converter.");
             }
         }
 
-        return new AnnotatedHttpServiceExtensions(exceptionHandlers.build(), requestConverters.build(),
-                                                  responseConverters.build());
+        return new AnnotatedHttpServiceExtensions(requestConverters.build(), responseConverters.build(),
+                                                  exceptionHandlers.build());
     }
-
-    /**
-     * The exception handlers of the annotated service.
-     */
-    private final List<ExceptionHandlerFunction> exceptionHandlers;
 
     /**
      * The request converters of the annotated service.
@@ -75,20 +70,18 @@ public final class AnnotatedHttpServiceExtensions {
      */
     private final List<ResponseConverterFunction> responseConverters;
 
+    /**
+     * The exception handlers of the annotated service.
+     */
+    private final List<ExceptionHandlerFunction> exceptionHandlers;
+
     public AnnotatedHttpServiceExtensions(
-            List<ExceptionHandlerFunction> exceptionHandlers,
             List<RequestConverterFunction> requestConverters,
-            List<ResponseConverterFunction> responseConverters) {
-        this.exceptionHandlers = requireNonNull(exceptionHandlers, "exceptionHandlers");
+            List<ResponseConverterFunction> responseConverters,
+            List<ExceptionHandlerFunction> exceptionHandlers) {
         this.requestConverters = requireNonNull(requestConverters, "requestConverters");
         this.responseConverters = requireNonNull(responseConverters, "responseConverters");
-    }
-
-    /**
-     * Returns the specified {@link ExceptionHandlerFunction}s with the annotated service.
-     */
-    public List<ExceptionHandlerFunction> exceptionHandlers() {
-        return exceptionHandlers;
+        this.exceptionHandlers = requireNonNull(exceptionHandlers, "exceptionHandlers");
     }
 
     /**
@@ -103,5 +96,12 @@ public final class AnnotatedHttpServiceExtensions {
      */
     public List<ResponseConverterFunction> responseConverters() {
         return responseConverters;
+    }
+
+    /**
+     * Returns the specified {@link ExceptionHandlerFunction}s with the annotated service.
+     */
+    public List<ExceptionHandlerFunction> exceptionHandlers() {
+        return exceptionHandlers;
     }
 }
