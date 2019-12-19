@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
  * Collects the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}s
- * and the {@link ExceptionHandlerFunction}s into three different lists from a single {@link Iterable}.
+ * and {@link ExceptionHandlerFunction}s into three different lists from a single {@link Iterable}.
  */
 public final class AnnotatedHttpServiceExtensions {
 
