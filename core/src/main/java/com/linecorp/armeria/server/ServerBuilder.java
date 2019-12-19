@@ -1512,9 +1512,12 @@ public final class ServerBuilder {
     public Server build() {
         final AnnotatedHttpServiceExtensions extensions =
                 virtualHostTemplate.getAnnotatedHttpServiceExtensions();
-        annotatedServiceBindingBuilders.forEach(builder -> builder.applyToServiceConfigBuilder(extensions));
 
         assert extensions != null;
+
+        annotatedServiceBindingBuilders.stream()
+                                       .flatMap(b -> b.buildServiceConfigBuilder(extensions).stream())
+                                       .forEach(this::serviceConfigBuilder);
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate);

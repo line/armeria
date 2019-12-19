@@ -174,8 +174,7 @@ public final class AnnotatedHttpServiceFactory {
         return methods.stream()
                       .flatMap((Method method) ->
                                        create(pathPrefix, object, method, exceptionHandlerFunctions,
-                                              requestConverterFunctions,
-                                              responseConverterFunctions).stream())
+                                              requestConverterFunctions, responseConverterFunctions).stream())
                       .collect(toImmutableList());
     }
 

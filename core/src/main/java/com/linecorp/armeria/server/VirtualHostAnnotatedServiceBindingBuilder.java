@@ -16,12 +16,15 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -68,6 +71,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
     private String pathPrefix = "/";
+    @Nullable
     private Object service;
 
     VirtualHostAnnotatedServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
@@ -284,12 +288,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     /**
-     * Applies the {@link ServiceConfigBuilder} created with the configured
+     * Builds the {@link ServiceConfigBuilder}s created with the configured
      * {@link AnnotatedHttpServiceExtensions} to the {@link VirtualHostBuilder}.
      *
      * @param extensions the {@link AnnotatedHttpServiceExtensions} at the virtual host level.
      */
-    void applyToServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
+    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
         final List<ExceptionHandlerFunction> exceptionHandlerFunctions =
                 exceptionHandlerFunctionBuilder.addAll(extensions.exceptionHandlers()).build();
         final List<RequestConverterFunction> requestConverterFunctions =
@@ -300,12 +304,10 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
                                                  requestConverterFunctions, responseConverterFunctions);
-        elements.forEach(element -> {
+        return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());
-            final ServiceConfigBuilder serviceConfigBuilder =
-                    defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
-            virtualHostBuilder.addServiceConfigBuilder(serviceConfigBuilder);
-        });
+            return defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
+        }).collect(toImmutableList());
     }
 }

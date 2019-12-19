@@ -941,8 +941,10 @@ public final class VirtualHostBuilder {
         assert accessLoggerMapper != null;
         assert annotatedHttpServiceExtensions != null;
 
-        virtualHostAnnotatedServiceBindingBuilders
-                .forEach(builder -> builder.applyToServiceConfigBuilder(annotatedHttpServiceExtensions));
+        virtualHostAnnotatedServiceBindingBuilders.stream()
+                                       .flatMap(b -> b.buildServiceConfigBuilder(annotatedHttpServiceExtensions)
+                                                      .stream())
+                                       .forEach(this::addServiceConfigBuilder);
 
         final List<ServiceConfigBuilder> serviceConfigBuilders =
                 getServiceConfigBuilders(template);
