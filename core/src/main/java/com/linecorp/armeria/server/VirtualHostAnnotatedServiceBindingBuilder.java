@@ -301,6 +301,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         final List<ResponseConverterFunction> responseConverterFunctions =
                 responseConverterFunctionBuilder.addAll(extensions.responseConverters()).build();
 
+        assert service != null;
+
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
                                                  requestConverterFunctions, responseConverterFunctions);

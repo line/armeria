@@ -285,6 +285,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         final List<ResponseConverterFunction> responseConverterFunctions =
                 responseConverterFunctionBuilder.addAll(extensions.responseConverters()).build();
 
+        assert service != null;
+
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
                                                  requestConverterFunctions, responseConverterFunctions);
