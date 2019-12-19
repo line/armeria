@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.common.BuiltInProperty.CLIENT_IP;
 import static com.linecorp.armeria.common.BuiltInProperty.ELAPSED_NANOS;
 import static com.linecorp.armeria.common.BuiltInProperty.LOCAL_HOST;
@@ -39,10 +41,12 @@ import static com.linecorp.armeria.common.BuiltInProperty.SCHEME;
 import static com.linecorp.armeria.common.BuiltInProperty.TLS_CIPHER;
 import static com.linecorp.armeria.common.BuiltInProperty.TLS_PROTO;
 import static com.linecorp.armeria.common.BuiltInProperty.TLS_SESSION_ID;
+import static com.linecorp.armeria.common.RequestContextExporterBuilder.PREFIX_ATTRS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -53,6 +57,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -89,7 +94,8 @@ public final class RequestContextExporter {
         return new RequestContextExporterBuilder();
     }
 
-    private final BuiltInProperties builtIns;
+    private final ImmutableSet<BuiltInProperty> builtInPropertySet;
+    private final BuiltInProperties builtInProperties;
     @Nullable
     private final ExportEntry<AttributeKey<?>>[] attrs;
     @Nullable
@@ -98,13 +104,14 @@ public final class RequestContextExporter {
     private final ExportEntry<AsciiString>[] httpResHeaders;
 
     @SuppressWarnings("unchecked")
-    RequestContextExporter(Set<BuiltInProperty> builtIns,
+    RequestContextExporter(Set<BuiltInProperty> builtInPropertySet,
                            Set<ExportEntry<AttributeKey<?>>> attrs,
                            Set<ExportEntry<AsciiString>> httpReqHeaders,
                            Set<ExportEntry<AsciiString>> httpResHeaders) {
 
-        this.builtIns = new BuiltInProperties();
-        builtIns.forEach(this.builtIns::add);
+        this.builtInPropertySet = ImmutableSet.copyOf(builtInPropertySet);
+        builtInProperties = new BuiltInProperties();
+        builtInPropertySet.forEach(builtInProperties::add);
 
         if (!attrs.isEmpty()) {
             this.attrs = attrs.toArray(EMPTY_EXPORT_ENTRIES);
@@ -126,9 +133,71 @@ public final class RequestContextExporter {
     }
 
     /**
+     * Returns {@code true} if the specified {@link AttributeKey} is in the export list.
+     */
+    public boolean containsAttribute(AttributeKey<?> key) {
+        requireNonNull(key, "key");
+        return Arrays.stream(attrs).anyMatch(e -> e.key.equals(key));
+    }
+
+    /**
+     * Returns {@code true} if the specified HTTP request header name is in the export list.
+     */
+    public boolean containsHttpRequestHeader(CharSequence name) {
+        requireNonNull(name, "name");
+        return Arrays.stream(httpReqHeaders).anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
+    }
+
+    /**
+     * Returns {@code true} if the specified HTTP response header name is in the export list.
+     */
+    public boolean containsHttpResponseHeader(CharSequence name) {
+        requireNonNull(name, "name");
+        return Arrays.stream(httpResHeaders).anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
+    }
+
+    /**
+     * Returns {@code true} if the specified {@link BuiltInProperty} is in the export list.
+     */
+    public boolean containsBuiltIn(BuiltInProperty property) {
+        return builtInProperties.contains(requireNonNull(property, "property"));
+    }
+
+    /**
+     * Returns all {@link BuiltInProperty}s in the export list.
+     */
+    public Set<BuiltInProperty> builtIns() {
+        return builtInPropertySet;
+    }
+
+    /**
+     * Returns all {@link AttributeKey}s in the export list.
+     *
+     * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
+     */
+    public Map<String, AttributeKey<?>> attributes() {
+        return Arrays.stream(attrs).collect(
+                toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key));
+    }
+
+    /**
+     * Returns all HTTP request header names in the export list.
+     */
+    public Set<AsciiString> httpRequestHeaders() {
+        return Arrays.stream(httpReqHeaders).map(e -> e.key).collect(toImmutableSet());
+    }
+
+    /**
+     * Returns all HTTP response header names in the export list.
+     */
+    public Set<AsciiString> httpResponseHeaders() {
+        return Arrays.stream(httpResHeaders).map(e -> e.key).collect(toImmutableSet());
+    }
+
+    /**
      * Returns a {@link Map} whose key is an export key set through {@code add*()} in
-     * {@link RequestContextExporterBuilder} and value is extracted from {@link RequestContext}
-     * Note that: this method returns an empty {@link Map} if current {@link RequestContext} is {@code null}.
+     * {@link RequestContextExporterBuilder} and value is extracted from {@link RequestContext}.
+     * Note that this method returns an empty {@link Map} if current {@link RequestContext} is {@code null}.
      */
     public Map<String, String> export() {
         final RequestContext ctx = RequestContext.currentOrNull();
@@ -137,7 +206,7 @@ public final class RequestContextExporter {
 
     /**
      * Returns a {@link Map} whose key is an export key set through {@code add*()} in
-     * {@link RequestContextExporterBuilder} and value is extracted from the specified {@link RequestContext}
+     * {@link RequestContextExporterBuilder} and value is extracted from the specified {@link RequestContext}.
      */
     public Map<String, String> export(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
@@ -160,47 +229,47 @@ public final class RequestContextExporter {
 
     private void export(Map<String, String> out, RequestContext ctx, RequestLog log) {
         // Built-ins
-        if (builtIns.containsAddresses()) {
+        if (builtInProperties.containsAddresses()) {
             exportAddresses(out, ctx);
         }
-        if (builtIns.contains(SCHEME)) {
+        if (builtInProperties.contains(SCHEME)) {
             exportScheme(out, ctx, log);
         }
-        if (builtIns.contains(REQ_DIRECTION)) {
+        if (builtInProperties.contains(REQ_DIRECTION)) {
             exportDirection(out, ctx);
         }
-        if (builtIns.contains(REQ_AUTHORITY)) {
+        if (builtInProperties.contains(REQ_AUTHORITY)) {
             exportAuthority(out, ctx, log);
         }
-        if (builtIns.contains(REQ_PATH)) {
+        if (builtInProperties.contains(REQ_PATH)) {
             exportPath(out, ctx);
         }
-        if (builtIns.contains(REQ_QUERY)) {
+        if (builtInProperties.contains(REQ_QUERY)) {
             exportQuery(out, ctx);
         }
-        if (builtIns.contains(REQ_METHOD)) {
+        if (builtInProperties.contains(REQ_METHOD)) {
             exportMethod(out, ctx);
         }
-        if (builtIns.contains(REQ_CONTENT_LENGTH)) {
+        if (builtInProperties.contains(REQ_CONTENT_LENGTH)) {
             exportRequestContentLength(out, log);
         }
-        if (builtIns.contains(RES_STATUS_CODE)) {
+        if (builtInProperties.contains(RES_STATUS_CODE)) {
             exportStatusCode(out, log);
         }
-        if (builtIns.contains(RES_CONTENT_LENGTH)) {
+        if (builtInProperties.contains(RES_CONTENT_LENGTH)) {
             exportResponseContentLength(out, log);
         }
-        if (builtIns.contains(ELAPSED_NANOS)) {
+        if (builtInProperties.contains(ELAPSED_NANOS)) {
             exportElapsedNanos(out, log);
         }
 
         // SSL
-        if (builtIns.containsSsl()) {
+        if (builtInProperties.containsSsl()) {
             exportTlsProperties(out, ctx);
         }
 
         // RPC
-        if (builtIns.containsRpc()) {
+        if (builtInProperties.containsRpc()) {
             exportRpcRequest(out, log);
             exportRpcResponse(out, log);
         }
@@ -220,31 +289,31 @@ public final class RequestContextExporter {
                 ctx instanceof ServiceRequestContext ? ((ServiceRequestContext) ctx).clientAddress() : null;
 
         if (raddr != null) {
-            if (builtIns.contains(REMOTE_HOST)) {
+            if (builtInProperties.contains(REMOTE_HOST)) {
                 out.put(REMOTE_HOST.key, raddr.getHostString());
             }
-            if (builtIns.contains(REMOTE_IP)) {
+            if (builtInProperties.contains(REMOTE_IP)) {
                 out.put(REMOTE_IP.key, raddr.getAddress().getHostAddress());
             }
-            if (builtIns.contains(REMOTE_PORT)) {
+            if (builtInProperties.contains(REMOTE_PORT)) {
                 out.put(REMOTE_PORT.key, String.valueOf(raddr.getPort()));
             }
         }
 
         if (laddr != null) {
-            if (builtIns.contains(LOCAL_HOST)) {
+            if (builtInProperties.contains(LOCAL_HOST)) {
                 out.put(LOCAL_HOST.key, laddr.getHostString());
             }
-            if (builtIns.contains(LOCAL_IP)) {
+            if (builtInProperties.contains(LOCAL_IP)) {
                 out.put(LOCAL_IP.key, laddr.getAddress().getHostAddress());
             }
-            if (builtIns.contains(LOCAL_PORT)) {
+            if (builtInProperties.contains(LOCAL_PORT)) {
                 out.put(LOCAL_PORT.key, String.valueOf(laddr.getPort()));
             }
         }
 
         if (caddr != null) {
-            if (builtIns.contains(CLIENT_IP)) {
+            if (builtInProperties.contains(CLIENT_IP)) {
                 out.put(CLIENT_IP.key, caddr.getHostAddress());
             }
         }
@@ -382,19 +451,19 @@ public final class RequestContextExporter {
     private void exportTlsProperties(Map<String, String> out, RequestContext ctx) {
         final SSLSession s = ctx.sslSession();
         if (s != null) {
-            if (builtIns.contains(TLS_SESSION_ID)) {
+            if (builtInProperties.contains(TLS_SESSION_ID)) {
                 final byte[] id = s.getId();
                 if (id != null) {
                     out.put(TLS_SESSION_ID.key, lowerCasedBase16.encode(id));
                 }
             }
-            if (builtIns.contains(TLS_CIPHER)) {
+            if (builtInProperties.contains(TLS_CIPHER)) {
                 final String cs = s.getCipherSuite();
                 if (cs != null) {
                     out.put(TLS_CIPHER.key, cs);
                 }
             }
-            if (builtIns.contains(TLS_PROTO)) {
+            if (builtInProperties.contains(TLS_PROTO)) {
                 final String p = s.getProtocol();
                 if (p != null) {
                     out.put(TLS_PROTO.key, p);
@@ -411,10 +480,10 @@ public final class RequestContextExporter {
         final Object requestContent = log.requestContent();
         if (requestContent instanceof RpcRequest) {
             final RpcRequest rpcReq = (RpcRequest) requestContent;
-            if (builtIns.contains(REQ_RPC_METHOD)) {
+            if (builtInProperties.contains(REQ_RPC_METHOD)) {
                 out.put(REQ_RPC_METHOD.key, rpcReq.method());
             }
-            if (builtIns.contains(REQ_RPC_PARAMS)) {
+            if (builtInProperties.contains(REQ_RPC_PARAMS)) {
                 out.put(REQ_RPC_PARAMS.key, String.valueOf(rpcReq.params()));
             }
         }
@@ -428,7 +497,7 @@ public final class RequestContextExporter {
         final Object responseContent = log.responseContent();
         if (responseContent instanceof RpcResponse) {
             final RpcResponse rpcRes = (RpcResponse) responseContent;
-            if (builtIns.contains(RES_RPC_RESULT) &&
+            if (builtInProperties.contains(RES_RPC_RESULT) &&
                 !rpcRes.isCompletedExceptionally()) {
                 try {
                     out.put(RES_RPC_RESULT.key, String.valueOf(rpcRes.get()));
@@ -477,9 +546,9 @@ public final class RequestContextExporter {
                                           ExportEntry<AsciiString>[] requiredHeaderNames) {
         for (ExportEntry<AsciiString> e : requiredHeaderNames) {
             final String value = headers.get(e.key);
-            final String mdcKey = e.exportKey;
+            final String exportKey = e.exportKey;
             if (value != null) {
-                out.put(mdcKey, e.stringify(value));
+                out.put(exportKey, e.stringify(value));
             }
         }
     }

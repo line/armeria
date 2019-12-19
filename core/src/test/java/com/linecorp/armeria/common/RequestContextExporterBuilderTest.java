@@ -31,6 +31,7 @@ class RequestContextExporterBuilderTest {
             builder.addKeyPattern(property.key);
         }
         assertThat(builder.getBuiltIns()).containsExactly(BuiltInProperty.values());
+        assertThat(builder.build().builtIns()).containsExactly(BuiltInProperty.values());
     }
 
     @Test
@@ -38,6 +39,7 @@ class RequestContextExporterBuilderTest {
         final RequestContextExporterBuilder builder = RequestContextExporter.builder();
         builder.addKeyPattern(BuiltInProperty.REMOTE_HOST.key);
         assertThat(builder.getBuiltIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
+        assertThat(builder.build().builtIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
     }
 
     @Test
@@ -49,6 +51,7 @@ class RequestContextExporterBuilderTest {
                       .toArray(BuiltInProperty[]::new);
         builder.addKeyPattern("req.*");
         assertThat(builder.getBuiltIns()).containsExactly(expectedProperties);
+        assertThat(builder.build().builtIns()).containsExactly(expectedProperties);
     }
 
     @Test
@@ -60,6 +63,7 @@ class RequestContextExporterBuilderTest {
                       .toArray(BuiltInProperty[]::new);
         builder.addKeyPattern("*rpc*");
         assertThat(builder.getBuiltIns()).containsExactly(expectedProperties);
+        assertThat(builder.build().builtIns()).containsExactly(expectedProperties);
     }
 
     @Test
@@ -68,5 +72,6 @@ class RequestContextExporterBuilderTest {
         builder.addKeyPattern("attrs.*");
         builder.addKeyPattern("attrs.my_attrs:MyAttribute");
         assertThat(1).isEqualTo(builder.getAttributes().size());
+        assertThat(1).isEqualTo(builder.build().attributes().size());
     }
 }

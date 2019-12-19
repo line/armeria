@@ -38,7 +38,7 @@ import io.netty.util.AttributeKey;
  */
 public final class RequestContextExporterBuilder {
 
-    private static final String PREFIX_ATTRS = "attrs.";
+    static final String PREFIX_ATTRS = "attrs.";
     private static final String PREFIX_HTTP_REQ_HEADERS = "req.http_headers.";
     private static final String PREFIX_HTTP_RES_HEADERS = "res.http_headers.";
 
@@ -46,6 +46,8 @@ public final class RequestContextExporterBuilder {
     private final Set<ExportEntry<AttributeKey<?>>> attrs = new HashSet<>();
     private final Set<ExportEntry<AsciiString>> httpReqHeaders = new HashSet<>();
     private final Set<ExportEntry<AsciiString>> httpResHeaders = new HashSet<>();
+
+    RequestContextExporterBuilder() {}
 
     /**
      * Adds the specified {@link BuiltInProperty} to the export list.
