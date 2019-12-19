@@ -58,18 +58,16 @@ final class QueryStringEncoder {
         return octets;
     }
 
-    static void encodeParams(TemporaryThreadLocals tempThreadLocals,
-                             StringBuilder buf, QueryParamGetters params) {
+    static void encodeParams(StringBuilder buf, QueryParamGetters params) {
         for (Entry<String, String> e : params) {
-            encodeComponent(tempThreadLocals, buf, e.getKey()).append('=');
-            encodeComponent(tempThreadLocals, buf, e.getValue()).append('&');
+            encodeComponent(buf, e.getKey()).append('=');
+            encodeComponent(buf, e.getValue()).append('&');
         }
 
         buf.setLength(buf.length() - 1);
     }
 
-    private static StringBuilder encodeComponent(TemporaryThreadLocals tempThreadLocals,
-                                                 StringBuilder buf, String s) {
+    private static StringBuilder encodeComponent(StringBuilder buf, String s) {
         final int firstUnsafeOctetIdx = indexOfUnsafeOctet(s, 0);
         if (firstUnsafeOctetIdx < 0) {
             buf.append(s);
@@ -78,37 +76,21 @@ final class QueryStringEncoder {
                 buf.append(s, 0, firstUnsafeOctetIdx);
             }
 
-            encodeUtf8Component(tempThreadLocals, buf, s, firstUnsafeOctetIdx);
+            encodeUtf8Component(buf, s, firstUnsafeOctetIdx);
         }
         return buf;
-    }
-
-    private static int indexOfUnsafeOctet(String s, int start) {
-        final int len = s.length();
-        for (int i = start; i < len; i++) {
-            if (!isSafeOctet(s.charAt(i))) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static boolean isSafeOctet(char c) {
-        return c < SAFE_OCTETS.length && SAFE_OCTETS[c] != 0;
     }
 
     /**
      * Encodes a query component (name or value). The octet at {@code start} must be an unsafe octet.
      */
-    private static void encodeUtf8Component(TemporaryThreadLocals tempThreadLocals,
-                                            StringBuilder buf, String s, int start) {
+    private static void encodeUtf8Component(StringBuilder buf, String s, int start) {
         final int end = s.length();
         if (start == end) {
             return;
         }
 
-        final char[] tmp = tempThreadLocals.charArray(12);
+        final char[] tmp = new char[12];
         tmp[0] = tmp[3] = tmp[6] = tmp[9] = '%'; // Pre-set '%' so we don't have to set anymore.
 
         int i = start;
@@ -147,8 +129,34 @@ final class QueryStringEncoder {
                 buf.append(UTF_UNKNOWN);
                 break;
             } else {
-                // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
-                writeUtf8Surrogate(buf, tmp, c, s.charAt(i++));
+                final char c2 = s.charAt(i++);
+                if (!Character.isLowSurrogate(c2)) {
+                    buf.append(UTF_UNKNOWN);
+                    if (Character.isHighSurrogate(c2)) {
+                        buf.append(UTF_UNKNOWN);
+                    } else {
+                        tmp[2] = UPPER_HEX_DIGITS[c2 & 0xF];
+                        tmp[1] = UPPER_HEX_DIGITS[c2 >>> 4];
+                        buf.append(tmp, 0, 3);
+                    }
+                } else {
+                    int codePoint = Character.toCodePoint(c, c2);
+                    // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+                    tmp[11] = UPPER_HEX_DIGITS[codePoint & 0xF];
+                    codePoint >>>= 4;
+                    tmp[10] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
+                    codePoint >>>= 2;
+                    tmp[8] = UPPER_HEX_DIGITS[codePoint & 0xF];
+                    codePoint >>>= 4;
+                    tmp[7] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
+                    codePoint >>>= 2;
+                    tmp[5] = UPPER_HEX_DIGITS[codePoint & 0xF];
+                    codePoint >>>= 4;
+                    tmp[4] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
+                    tmp[2] = UPPER_HEX_DIGITS[(codePoint >>> 2) & 0xF];
+                    tmp[1] = 'F';
+                    buf.append(tmp, 0, 12);
+                }
             }
 
             // Find and append the safe region as-is.
@@ -167,35 +175,16 @@ final class QueryStringEncoder {
         }
     }
 
-    private static void writeUtf8Surrogate(StringBuilder buf, char[] tmp, char c, char c2) {
-        if (!Character.isLowSurrogate(c2)) {
-            buf.append(UTF_UNKNOWN);
-            if (Character.isHighSurrogate(c2)) {
-                buf.append(UTF_UNKNOWN);
-            } else {
-                tmp[2] = UPPER_HEX_DIGITS[c2 & 0xF];
-                tmp[1] = UPPER_HEX_DIGITS[c2 >>> 4];
-                buf.append(tmp, 0, 3);
+    private static int indexOfUnsafeOctet(String s, int start) {
+        final int len = s.length();
+        for (int i = start; i < len; i++) {
+            final char c = s.charAt(i);
+            if (c >= SAFE_OCTETS.length || SAFE_OCTETS[c] == 0) {
+                return i;
             }
-            return;
         }
 
-        int codePoint = Character.toCodePoint(c, c2);
-        // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
-        tmp[11] = UPPER_HEX_DIGITS[codePoint & 0xF];
-        codePoint >>>= 4;
-        tmp[10] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
-        codePoint >>>= 2;
-        tmp[8] = UPPER_HEX_DIGITS[codePoint & 0xF];
-        codePoint >>>= 4;
-        tmp[7] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
-        codePoint >>>= 2;
-        tmp[5] = UPPER_HEX_DIGITS[codePoint & 0xF];
-        codePoint >>>= 4;
-        tmp[4] = UPPER_HEX_DIGITS[0x8 | (codePoint & 0x3)];
-        tmp[2] = UPPER_HEX_DIGITS[(codePoint >>> 2) & 0xF];
-        tmp[1] = 'F';
-        buf.append(tmp, 0, 12);
+        return -1;
     }
 
     private QueryStringEncoder() {}

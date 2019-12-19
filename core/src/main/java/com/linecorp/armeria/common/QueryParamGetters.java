@@ -334,8 +334,7 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
     default String toQueryString() {
         final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
         final StringBuilder buf = tempThreadLocals.stringBuilder();
-        QueryStringEncoder.encodeParams(tempThreadLocals, buf, this);
-        return buf.toString();
+        return appendQueryString(buf).toString();
     }
 
     /**
@@ -347,7 +346,7 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      */
     default StringBuilder appendQueryString(StringBuilder buf) {
         requireNonNull(buf, "buf");
-        QueryStringEncoder.encodeParams(TemporaryThreadLocals.get(), buf, this);
+        QueryStringEncoder.encodeParams(buf, this);
         return buf;
     }
 }
