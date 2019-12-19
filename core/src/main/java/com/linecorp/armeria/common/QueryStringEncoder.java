@@ -32,8 +32,6 @@ package com.linecorp.armeria.common;
 
 import java.util.Map.Entry;
 
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
-
 import io.netty.util.internal.StringUtil;
 
 final class QueryStringEncoder {
