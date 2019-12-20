@@ -45,6 +45,7 @@ package com.linecorp.armeria.common;
 
 import java.util.Map.Entry;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 final class QueryStringEncoder {
@@ -198,14 +199,19 @@ final class QueryStringEncoder {
         return -1;
     }
 
-    // Do not inline `index` or remove `index < 0` check.
-    // They are specifically written to tell JVM to optimize away the array boundary check.
-    @SuppressWarnings({ "ConstantConditions", "UnnecessaryLocalVariable" })
     private static boolean isUnsafeOctet(char c) {
+        // Widen explicitly so that JVM doesn't have to widen many times.
+        @SuppressWarnings("UnnecessaryLocalVariable")
         final int index = c;
-        if (index < 0 || index >= SAFE_OCTETS.length) {
+        if (index >= SAFE_OCTETS.length) {
             return true;
         }
+
+        if (PlatformDependent.hasUnsafe()) {
+            // Avoid boundary checks
+            return PlatformDependent.getByte(SAFE_OCTETS, index) == 0;
+        }
+
         return SAFE_OCTETS[index] == 0;
     }
 

@@ -38,6 +38,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
+import io.netty.util.internal.PlatformDependent;
+
 final class QueryStringDecoder {
 
     @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
@@ -264,14 +266,19 @@ final class QueryStringDecoder {
         return (hi << 4) | lo;
     }
 
-    // Do not inline `index` or remove `index < 0` check.
-    // They are specifically written to tell JVM to optimize away the array boundary check.
-    @SuppressWarnings({ "ConstantConditions", "UnnecessaryLocalVariable" })
     private static int decodeHexNibble(char c) {
+        // Widen explicitly so that JVM doesn't have to widen many times.
+        @SuppressWarnings("UnnecessaryLocalVariable")
         final int index = c;
-        if (index < 0 || index > OCTETS_TO_HEX.length) {
+        if (index >= OCTETS_TO_HEX.length) {
             return -1;
         }
+
+        if (PlatformDependent.hasUnsafe()) {
+            // Avoid boundary checks
+            return PlatformDependent.getByte(OCTETS_TO_HEX, index);
+        }
+
         return OCTETS_TO_HEX[index];
     }
 
