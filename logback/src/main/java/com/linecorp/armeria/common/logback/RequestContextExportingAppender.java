@@ -76,6 +76,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     /**
      * Returns {@code true} if the specified {@link BuiltInProperty} is in the export list.
+     *
+     * @deprecated This method will be removed without a replacement.
      */
     public boolean containsBuiltIn(BuiltInProperty property) {
         return builder.containsBuiltIn(property);
@@ -83,6 +85,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     /**
      * Returns all {@link BuiltInProperty}s in the export list.
+     *
+     * @deprecated This method will be removed without a replacement.
      */
     public Set<BuiltInProperty> getBuiltIns() {
         return builder.getBuiltIns();
@@ -116,6 +120,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     /**
      * Returns {@code true} if the specified {@link AttributeKey} is in the export list.
+     *
+     * @deprecated This method will be removed without a replacement.
      */
     public boolean containsAttribute(AttributeKey<?> key) {
         requireNonNull(key, "key");
@@ -124,6 +130,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     /**
      * Returns all {@link AttributeKey}s in the export list.
+     *
+     * @deprecated This method will be removed without a replacement.
      *
      * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
      */
@@ -151,6 +159,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     /**
      * Returns {@code true} if the specified HTTP request header name is in the export list.
+     *
+     * @deprecated This method will be removed without a replacement.
      */
     public boolean containsHttpRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
@@ -159,6 +169,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     /**
      * Returns {@code true} if the specified HTTP response header name is in the export list.
+     *
+     * @deprecated This method will be removed without a replacement.
      */
     public boolean containsHttpResponseHeader(CharSequence name) {
         requireNonNull(name, "name");
@@ -167,6 +179,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     /**
      * Returns all HTTP request header names in the export list.
+     *
+     * @deprecated This method will be removed without a replacement.
      */
     public Set<AsciiString> getHttpRequestHeaders() {
         return builder.getHttpRequestHeaders();
@@ -174,6 +188,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     /**
      * Returns all HTTP response header names in the export list.
+     *
+     * @deprecated This method will be removed without a replacement.
      */
     public Set<AsciiString> getHttpResponseHeaders() {
         return builder.getHttpResponseHeaders();
