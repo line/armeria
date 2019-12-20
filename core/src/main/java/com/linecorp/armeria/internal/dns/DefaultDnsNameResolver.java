@@ -89,10 +89,10 @@ public class DefaultDnsNameResolver {
                     } else {
                         final Throwable aggregatedCause;
                         if (causes == null) {
-                            aggregatedCause =
-                                    new UnknownHostException("empty result returned by DNS server");
+                            aggregatedCause = new UnknownHostException("Failed to resolve: " + questions +
+                                                                       " (empty result)");
                         } else {
-                            aggregatedCause = new UnknownHostException("failed to receive DNS records");
+                            aggregatedCause = new UnknownHostException("Failed to resolve: " + questions);
                             for (Throwable c : causes) {
                                 aggregatedCause.addSuppressed(c);
                             }
