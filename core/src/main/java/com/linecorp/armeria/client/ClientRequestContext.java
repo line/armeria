@@ -222,7 +222,6 @@ public interface ClientRequestContext extends RequestContext {
      *
      * <p>If {@link #rootContext()} is not {@code null}, then the {@link Iterator} will iterate the
      * {@link #rootContext()}'s {@link #attrs()} afterward.
-     *
      * Please note that if you try to change the {@link Attribute#get() value} which is from the
      * {@link Iterator} of {@link #rootContext()} using setter methods (e.g. {@link Attribute#set(Object)}),
      * a new {@link Attribute} for the given {@link AttributeKey} is created in this

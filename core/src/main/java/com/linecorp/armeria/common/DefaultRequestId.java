@@ -19,7 +19,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.internal.ThreadLocalByteArray;
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 /**
  * The default {@link RequestId} implementation.
@@ -98,7 +98,7 @@ final class DefaultRequestId implements RequestId {
 
     @SuppressWarnings("deprecation")
     private static String newTextSlow(long value, int digits) {
-        final byte[] bytes = ThreadLocalByteArray.get(digits);
+        final byte[] bytes = TemporaryThreadLocals.get().byteArray(digits);
         for (int i = digits - 1; i >= 0; i--) {
             bytes[i] = HEXDIGITS[(int) value & 0x0F];
             value >>>= 4;

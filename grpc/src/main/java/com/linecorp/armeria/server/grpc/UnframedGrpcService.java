@@ -73,7 +73,7 @@ import io.netty.buffer.ByteBufHolder;
  *     </li>
  * </ul>
  */
-class UnframedGrpcService extends SimpleDecoratingHttpService implements HttpServiceWithRoutes {
+final class UnframedGrpcService extends SimpleDecoratingHttpService implements HttpServiceWithRoutes {
 
     private static final char LINE_SEPARATOR = '\n';
 

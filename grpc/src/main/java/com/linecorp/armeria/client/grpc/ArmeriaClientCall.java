@@ -79,7 +79,7 @@ import io.netty.util.ByteProcessor.IndexOfProcessor;
  * Encapsulates the state of a single client call, writing messages from the client and reading responses
  * from the server, passing to business logic via {@link ClientCall.Listener}.
  */
-class ArmeriaClientCall<I, O> extends ClientCall<I, O>
+final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         implements ArmeriaMessageDeframer.Listener, TransportStatusListener {
 
     private static final Runnable NO_OP = () -> {

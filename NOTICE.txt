@@ -257,6 +257,11 @@ This product depends on Prometheus, distributed by the Prometheus authors:
   * License: licenses/LICENSE.prometheus.al20.txt (Apache License v2.0)
   * Homepage: https://prometheus.io/
 
+This product depends on reactive-grpc, distributed by Salesforce.com, Inc:
+
+  * License: licenses/LICENSE.reactive-grpc.bsd.txt (BSD License)
+  * Homepage: https://github.com/salesforce/reactive-grpc
+
 This product depends on Reactive Streams API, distributed by Reactive-Streams.org:
 
   * License: licenses/LICENSE.reactivestreams.cc0.txt

@@ -24,7 +24,10 @@ import io.netty.handler.codec.Headers;
 
 /**
  * HTTP parameters map.
+ *
+ * @deprecated Use {@link QueryParams}.
  */
+@Deprecated
 public interface HttpParameters extends Headers<String, String, HttpParameters> {
 
     /**

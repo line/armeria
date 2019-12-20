@@ -54,7 +54,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  * A {@link Channel} backed by an armeria {@link HttpClient}. Stores the {@link ClientBuilderParams} and other
  * {@link HttpClient} params for the associated gRPC stub.
  */
-class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable {
+final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable {
 
     /**
      * See {@link ManagedChannelBuilder} for default setting.

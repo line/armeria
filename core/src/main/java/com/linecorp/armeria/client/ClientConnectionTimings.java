@@ -75,10 +75,7 @@ public final class ClientConnectionTimings {
     @Nullable
     public static ClientConnectionTimings get(RequestLog log) {
         requireNonNull(log, "log");
-        if (log.hasAttr(TIMINGS)) {
-            return log.attr(TIMINGS).get();
-        }
-        return null;
+        return get(log.context());
     }
 
     /**
@@ -121,7 +118,7 @@ public final class ClientConnectionTimings {
      */
     public void setTo(RequestLog log) {
         requireNonNull(log, "log");
-        log.attr(TIMINGS).set(this);
+        setTo(log.context());
     }
 
     /**

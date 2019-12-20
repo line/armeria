@@ -54,7 +54,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  * a new {@link HttpHeaders} derived from an existing one:</p>
  *
  * <pre>{@code
- * HttpHeaders headers = HttpHeaders.of("name1", "value0")
+ * HttpHeaders headers = HttpHeaders.of("name1", "value0");
  *
  * // Using toBuilder()
  * HttpHeaders headersWithToBuilder = headers.toBuilder()
@@ -268,7 +268,7 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
 
     /**
      * Returns a new headers which is the result from the mutation by the specified {@link Consumer}.
-     * This method is a shortcut of:
+     * This method is a shortcut for:
      * <pre>{@code
      * builder = toBuilder();
      * mutator.accept(builder);

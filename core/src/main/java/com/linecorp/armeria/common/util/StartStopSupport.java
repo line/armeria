@@ -96,7 +96,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
      * neither {@link #doStart(Object)} nor {@link #doStop(Object)} is invoked concurrently. When the startup
      * fails, {@link #stop()} will be invoked automatically to roll back the side effect caused by this method
      * and any exceptions that occurred during the rollback will be reported to
-     * {@link #rollbackFailed(Throwable)}. This method is a shortcut of
+     * {@link #rollbackFailed(Throwable)}. This method is a shortcut for
      * {@code start(null, null, failIfStarted)}.
      *
      * @param failIfStarted whether to fail the returned {@link CompletableFuture} with
@@ -112,7 +112,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
      * neither {@link #doStart(Object)} nor {@link #doStop(Object)} is invoked concurrently. When the startup
      * fails, {@link #stop()} will be invoked automatically to roll back the side effect caused by this method
      * and any exceptions that occurred during the rollback will be reported to
-     * {@link #rollbackFailed(Throwable)}. This method is a shortcut of
+     * {@link #rollbackFailed(Throwable)}. This method is a shortcut for
      * {@code start(arg, null, failIfStarted)}.
      *
      * @param arg           the argument to pass to {@link #doStart(Object)},

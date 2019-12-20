@@ -113,7 +113,7 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     RequestHeadersBuilder add(CharSequence name, String... values);
 
     @Override
-    RequestHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> headers);
+    RequestHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     @Override
     RequestHeadersBuilder addObject(CharSequence name, Object value);
@@ -125,7 +125,7 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     RequestHeadersBuilder addObject(CharSequence name, Object... values);
 
     @Override
-    RequestHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
+    RequestHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> entries);
 
     @Override
     RequestHeadersBuilder addInt(CharSequence name, int value);
@@ -152,11 +152,10 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     RequestHeadersBuilder set(CharSequence name, String... values);
 
     @Override
-    RequestHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> headers);
+    RequestHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     @Override
-    RequestHeadersBuilder setIfAbsent(
-            Iterable<? extends Entry<? extends CharSequence, String>> headers);
+    RequestHeadersBuilder setIfAbsent(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     @Override
     RequestHeadersBuilder setObject(CharSequence name, Object value);
@@ -168,7 +167,7 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     RequestHeadersBuilder setObject(CharSequence name, Object... values);
 
     @Override
-    RequestHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
+    RequestHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> entries);
 
     @Override
     RequestHeadersBuilder setInt(CharSequence name, int value);

@@ -18,6 +18,8 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.Method;
+
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Maps;
@@ -138,5 +140,20 @@ class DefaultRequestHeadersBuilderTest {
         SessionProtocol.httpsValues().forEach(p -> assertThat(builder.scheme(p).scheme()).isEqualTo("https"));
         assertThatThrownBy(() -> builder.scheme(SessionProtocol.PROXY))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Makes sure {@link RequestHeadersBuilder} overrides all {@link HttpHeadersBuilder} methods
+     * with the correct return type.
+     */
+    @Test
+    void methodChaining() throws Exception {
+        for (Method m : RequestHeadersBuilder.class.getMethods()) {
+            if (m.getReturnType() == HttpHeadersBuilder.class) {
+                final Method overriddenMethod =
+                        RequestHeadersBuilder.class.getDeclaredMethod(m.getName(), m.getParameterTypes());
+                assertThat(overriddenMethod.getReturnType()).isSameAs(RequestHeadersBuilder.class);
+            }
+        }
     }
 }

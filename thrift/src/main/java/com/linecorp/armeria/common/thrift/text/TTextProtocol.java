@@ -61,7 +61,7 @@ import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.internal.ThreadLocalByteArray;
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 /**
  * A simple text format for serializing/deserializing thrift
@@ -663,7 +663,7 @@ public class TTextProtocol extends TProtocol {
             return;
         }
         final ByteArrayOutputStream content = new ByteArrayOutputStream();
-        final byte[] buffer = ThreadLocalByteArray.get(READ_BUFFER_SIZE);
+        final byte[] buffer = TemporaryThreadLocals.get().byteArray(READ_BUFFER_SIZE);
         try {
             while (trans_.read(buffer, 0, READ_BUFFER_SIZE) > 0) {
                 content.write(buffer);

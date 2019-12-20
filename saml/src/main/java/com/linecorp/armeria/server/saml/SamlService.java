@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
@@ -31,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
@@ -48,9 +49,6 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.QueryStringDecoder;
-
 /**
  * An {@link HttpService} which handles SAML APIs, such as consuming an assertion, retrieving a metadata
  * or handling a logout request from an identity provider.
@@ -58,16 +56,16 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 final class SamlService implements HttpServiceWithRoutes {
 
     private static final HttpData DATA_INCORRECT_PATH =
-            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request with an incorrect path");
+            HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nSAML request with an incorrect path");
 
     private static final HttpData DATA_AGGREGATION_FAILURE =
-            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request aggregation failure");
+            HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nSAML request aggregation failure");
 
     private static final HttpData DATA_NOT_TLS =
-            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request not from a TLS connection");
+            HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nSAML request not from a TLS connection");
 
     private static final HttpData DATA_NOT_CLEARTEXT =
-            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request not from a cleartext connection");
+            HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nSAML request not from a cleartext connection");
 
     private static final Logger logger = LoggerFactory.getLogger(SamlService.class);
 
@@ -187,7 +185,7 @@ final class SamlService implements HttpServiceWithRoutes {
      * A wrapper class which holds parameters resolved from a query string.
      */
     static final class SamlParameters {
-        private final Map<String, List<String>> parameters;
+        private final QueryParams params;
 
         /**
          * Creates a {@link SamlParameters} instance with the specified {@link AggregatedHttpRequest}.
@@ -196,17 +194,18 @@ final class SamlService implements HttpServiceWithRoutes {
             requireNonNull(req, "req");
             final MediaType contentType = req.contentType();
 
-            final QueryStringDecoder decoder;
             if (contentType != null && contentType.belongsTo(MediaType.FORM_DATA)) {
                 final String query = req.content(contentType.charset().orElse(StandardCharsets.UTF_8));
-                decoder = new QueryStringDecoder(query, false);
+                params = QueryParams.fromQueryString(query);
             } else {
                 final String path = req.path();
-                assert path != null : "path";
-                decoder = new QueryStringDecoder(path, true);
+                final int queryStartIdx = path.indexOf('?');
+                if (queryStartIdx < 0) {
+                    params = QueryParams.of();
+                } else {
+                    params = QueryParams.fromQueryString(path.substring(queryStartIdx + 1));
+                }
             }
-
-            parameters = decoder.parameters();
         }
 
         /**
@@ -229,21 +228,14 @@ final class SamlService implements HttpServiceWithRoutes {
         @Nullable
         String getFirstValueOrNull(String name) {
             requireNonNull(name, "name");
-            final List<String> values = parameters.get(name);
-            if (values == null || values.isEmpty()) {
-                return null;
-            }
-            final String value = values.get(0);
-            if (value.isEmpty()) {
-                return null;
-            }
-            return value;
+            final String value = params.get(name);
+            return Strings.emptyToNull(value);
         }
 
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
-                              .add("parameters", parameters)
+                              .add("parameters", params)
                               .toString();
         }
     }
