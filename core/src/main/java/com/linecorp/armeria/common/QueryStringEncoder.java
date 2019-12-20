@@ -201,7 +201,7 @@ final class QueryStringEncoder {
 
     private static boolean isUnsafeOctet(char c) {
         if (c >= SAFE_OCTETS.length) {
-            return false;
+            return true;
         }
 
         if (PlatformDependent.hasUnsafe()) {
