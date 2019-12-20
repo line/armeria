@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.logging;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -28,7 +28,8 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.RequestContextExporter.ExportEntry;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.logging.RequestContextExporter.ExportEntry;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -62,6 +63,7 @@ public final class RequestContextExporterBuilder {
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public boolean containsBuiltIn(BuiltInProperty property) {
         return builtIns.contains(requireNonNull(property, "property"));
     }
@@ -71,6 +73,7 @@ public final class RequestContextExporterBuilder {
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public Set<BuiltInProperty> getBuiltIns() {
         return ImmutableSet.copyOf(builtIns);
     }
@@ -109,6 +112,7 @@ public final class RequestContextExporterBuilder {
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public boolean containsAttribute(AttributeKey<?> key) {
         requireNonNull(key, "key");
         return attrs.stream().anyMatch(e -> e.key.equals(key));
@@ -121,6 +125,7 @@ public final class RequestContextExporterBuilder {
      *
      * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
      */
+    @Deprecated
     public Map<String, AttributeKey<?>> getAttributes() {
         return attrs.stream().collect(
                 toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key));
@@ -154,6 +159,7 @@ public final class RequestContextExporterBuilder {
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public boolean containsHttpRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
         return httpReqHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
@@ -164,6 +170,7 @@ public final class RequestContextExporterBuilder {
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public boolean containsHttpResponseHeader(CharSequence name) {
         requireNonNull(name, "name");
         return httpResHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
@@ -178,6 +185,7 @@ public final class RequestContextExporterBuilder {
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public Set<AsciiString> getHttpRequestHeaders() {
         return httpReqHeaders.stream().map(e -> e.key).collect(toImmutableSet());
     }
@@ -187,6 +195,7 @@ public final class RequestContextExporterBuilder {
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public Set<AsciiString> getHttpResponseHeaders() {
         return httpResHeaders.stream().map(e -> e.key).collect(toImmutableSet());
     }

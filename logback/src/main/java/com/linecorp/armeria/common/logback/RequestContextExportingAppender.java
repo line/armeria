@@ -27,10 +27,10 @@ import javax.annotation.Nullable;
 import org.slf4j.MDC;
 import org.slf4j.Marker;
 
-import com.linecorp.armeria.common.BuiltInProperty;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContextExporter;
-import com.linecorp.armeria.common.RequestContextExporterBuilder;
+import com.linecorp.armeria.common.logging.BuiltInProperty;
+import com.linecorp.armeria.common.logging.RequestContextExporter;
+import com.linecorp.armeria.common.logging.RequestContextExporterBuilder;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -79,6 +79,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public boolean containsBuiltIn(BuiltInProperty property) {
         return builder.containsBuiltIn(property);
     }
@@ -88,6 +89,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public Set<BuiltInProperty> getBuiltIns() {
         return builder.getBuiltIns();
     }
@@ -123,6 +125,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public boolean containsAttribute(AttributeKey<?> key) {
         requireNonNull(key, "key");
         return builder.containsAttribute(key);
@@ -135,6 +138,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      *
      * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
      */
+    @Deprecated
     public Map<String, AttributeKey<?>> getAttributes() {
         return builder.getAttributes();
     }
@@ -162,6 +166,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public boolean containsHttpRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
         return builder.containsHttpRequestHeader(name);
@@ -172,6 +177,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public boolean containsHttpResponseHeader(CharSequence name) {
         requireNonNull(name, "name");
         return builder.containsHttpResponseHeader(name);
@@ -182,6 +188,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public Set<AsciiString> getHttpRequestHeaders() {
         return builder.getHttpRequestHeaders();
     }
@@ -191,6 +198,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      *
      * @deprecated This method will be removed without a replacement.
      */
+    @Deprecated
     public Set<AsciiString> getHttpResponseHeaders() {
         return builder.getHttpResponseHeaders();
     }
