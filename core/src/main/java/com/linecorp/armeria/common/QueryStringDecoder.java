@@ -267,16 +267,19 @@ final class QueryStringDecoder {
     }
 
     private static int decodeHexNibble(char c) {
-        if (c >= OCTETS_TO_HEX.length) {
+        // Widen explicitly so that JVM doesn't have to widen many times.
+        @SuppressWarnings("UnnecessaryLocalVariable")
+        final int index = c;
+        if (index >= OCTETS_TO_HEX.length) {
             return -1;
         }
 
         if (PlatformDependent.hasUnsafe()) {
             // Avoid boundary checks
-            return PlatformDependent.getByte(OCTETS_TO_HEX, c);
+            return PlatformDependent.getByte(OCTETS_TO_HEX, index);
         }
 
-        return OCTETS_TO_HEX[c];
+        return OCTETS_TO_HEX[index];
     }
 
     private static boolean isContinuation(int b) {

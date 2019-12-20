@@ -200,16 +200,19 @@ final class QueryStringEncoder {
     }
 
     private static boolean isUnsafeOctet(char c) {
-        if (c >= SAFE_OCTETS.length) {
+        // Widen explicitly so that JVM doesn't have to widen many times.
+        @SuppressWarnings("UnnecessaryLocalVariable")
+        final int index = c;
+        if (index >= SAFE_OCTETS.length) {
             return true;
         }
 
         if (PlatformDependent.hasUnsafe()) {
             // Avoid boundary checks
-            return PlatformDependent.getByte(SAFE_OCTETS, c) == 0;
+            return PlatformDependent.getByte(SAFE_OCTETS, index) == 0;
         }
 
-        return SAFE_OCTETS[c] == 0;
+        return SAFE_OCTETS[index] == 0;
     }
 
     private QueryStringEncoder() {}
