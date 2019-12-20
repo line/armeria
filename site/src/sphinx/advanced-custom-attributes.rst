@@ -50,9 +50,3 @@ unlike ``RequestContext.attr(AttributeKey)`` does:
         int i = ctx.attr(INT_ATTR).get();
         ...
     }
-
-.. note::
-
-    You can do this using :api:`RequestLog` as well. If you invoke ``RequestLog.attr(AttributeKey)``,
-    ``RequestLog.attrs()`` and ``RequestLog.hasAttr(AttributeKey)``, the :api:`RequestLog` simply delegates
-    the call to the :api:`RequestContext` that it belongs to.
