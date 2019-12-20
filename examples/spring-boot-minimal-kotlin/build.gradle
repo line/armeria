@@ -35,13 +35,13 @@ dependencies {
 compileKotlin {
     kotlinOptions {
         freeCompilerArgs = ['-Xjsr305=strict']
-        jvmTarget = JavaVersion.current()
+        jvmTarget = JavaVersion.VERSION_12
     }
 }
 
 compileTestKotlin {
     kotlinOptions {
         freeCompilerArgs = ['-Xjsr305=strict']
-        jvmTarget = JavaVersion.current()
+        jvmTarget = JavaVersion.VERSION_12
     }
 }
