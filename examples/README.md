@@ -32,6 +32,9 @@
 - `spring-boot-minimal`
   - Learn how to use Armeria with the minimal Spring Boot dependencies.
 
+- `spring-boot-minimal-kotlin`
+  - Learn how to use Armeria with the minimal Spring Boot dependencies written in Kotlin.
+
 - `spring-boot-tomcat`
   - Learn how to make Armeria serve your Spring Boot web application.
 

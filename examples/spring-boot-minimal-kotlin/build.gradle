@@ -1,0 +1,47 @@
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-allopen:${managedVersions['org.jetbrains.kotlin:kotlin-allopen']}"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${managedVersions['org.jetbrains.kotlin:kotlin-gradle-plugin']}"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-gradle-plugin']}"
+    }
+}
+
+apply plugin: "org.jetbrains.kotlin.jvm"
+apply plugin: "org.jetbrains.kotlin.plugin.spring"
+apply plugin: 'org.springframework.boot'
+
+springBoot {
+    mainClassName = 'example.springframework.boot.minimal.kotlin.Main'
+}
+
+dependencies {
+    compile project(':spring:boot-starter')
+    compile 'org.hibernate.validator:hibernate-validator'
+
+    runtime project(':spring:boot-actuator-starter')
+
+    compile 'com.fasterxml.jackson.module:jackson-module-kotlin'
+    compile 'org.jetbrains.kotlin:kotlin-reflect'
+    compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+
+    testCompile 'junit:junit'
+    testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+}
+
+compileKotlin {
+    kotlinOptions {
+        freeCompilerArgs = ['-Xjsr305=strict']
+        jvmTarget = JavaVersion.current()
+    }
+}
+
+compileTestKotlin {
+    kotlinOptions {
+        freeCompilerArgs = ['-Xjsr305=strict']
+        jvmTarget = JavaVersion.current()
+    }
+}
