@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Instant;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
@@ -22,6 +24,8 @@ import java.util.Date;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
+
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
@@ -314,7 +318,7 @@ public interface QueryParams extends QueryParamGetters {
      */
     static QueryParams fromQueryString(@Nullable String queryString, int maxParams,
                                        boolean semicolonAsSeparator) {
-        if (queryString == null || queryString.isEmpty()) {
+        if (Strings.isNullOrEmpty(queryString)) {
             return of();
         }
 
@@ -341,6 +345,7 @@ public interface QueryParams extends QueryParamGetters {
      * @see #toBuilder()
      */
     default QueryParams withMutations(Consumer<QueryParamsBuilder> mutator) {
+        requireNonNull(mutator, "mutator");
         final QueryParamsBuilder builder = toBuilder();
         mutator.accept(builder);
         return builder.build();
