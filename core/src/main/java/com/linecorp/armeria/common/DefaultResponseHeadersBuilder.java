@@ -18,7 +18,7 @@ package com.linecorp.armeria.common;
 import static com.google.common.base.Preconditions.checkState;
 
 final class DefaultResponseHeadersBuilder
-        extends AbstractHttpHeadersBuilder<DefaultResponseHeadersBuilder, ResponseHeaders>
+        extends AbstractHttpHeadersBuilder<ResponseHeadersBuilder>
         implements ResponseHeadersBuilder {
 
     private static final String STATUS_HEADER_MISSING = ":status header does not exist.";

@@ -309,14 +309,14 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     RequestHeaders headers();
 
     /**
-     * Returns the URI of this request. This method is a shortcut of {@code headers().uri()}.
+     * Returns the URI of this request. This method is a shortcut for {@code headers().uri()}.
      */
     default URI uri() {
         return headers().uri();
     }
 
     /**
-     * Returns the scheme of this request. This method is a shortcut of {@code headers().scheme()}.
+     * Returns the scheme of this request. This method is a shortcut for {@code headers().scheme()}.
      */
     @Nullable
     default String scheme() {
@@ -324,21 +324,21 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns the method of this request. This method is a shortcut of {@code headers().method()}.
+     * Returns the method of this request. This method is a shortcut for {@code headers().method()}.
      */
     default HttpMethod method() {
         return headers().method();
     }
 
     /**
-     * Returns the path of this request. This method is a shortcut of {@code headers().path()}.
+     * Returns the path of this request. This method is a shortcut for {@code headers().path()}.
      */
     default String path() {
         return headers().path();
     }
 
     /**
-     * Returns the authority of this request. This method is a shortcut of {@code headers().authority()}.
+     * Returns the authority of this request. This method is a shortcut for {@code headers().authority()}.
      */
     @Nullable
     default String authority() {

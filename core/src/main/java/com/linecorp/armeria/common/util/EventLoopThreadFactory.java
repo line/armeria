@@ -21,6 +21,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.EventLoopThread;
+
 /**
  * {@link ThreadFactory} that creates event loop threads.
  *

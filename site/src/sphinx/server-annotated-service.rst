@@ -216,7 +216,7 @@ Otherwise, case-sensitive exact match will be performed.
         }
     }
 
-Getting an HTTP parameter
+Getting a query parameter
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When the value of :api:`@Param` annotation is not shown in the path pattern, it will be handled as a
@@ -262,9 +262,9 @@ or ``Optional<?>`` class here, too.
         public HttpResponse hello3(@Param("number") Optional<List<Integer>> numbers) { ... }
     }
 
-If an HTTP ``POST`` request with a ``Content-Type: x-www-form-urlencoded`` is received and no :api:`@Param`
-value appears in the path pattern, Armeria will aggregate the received request and decode its body as
-a URL-encoded form. After that, Armeria will inject the decoded value into the parameter.
+If an HTTP ``POST`` request with a ``Content-Type: x-www-form-urlencoded`` header is received and
+no :api:`@Param` value appears in the path pattern, Armeria will aggregate the received request and
+decode its body as a URL-encoded form. After that, Armeria will inject the decoded value into the parameter.
 
 .. code-block:: java
 
@@ -325,7 +325,7 @@ The following classes are automatically injected when you specify them on the pa
 - :api:`RequestHeaders` (or :api:`HttpHeaders`)
 - :api:`HttpRequest` (or :api:`Request`)
 - :api:`AggregatedHttpRequest`
-- :api:`HttpParameters`
+- :api:`QueryParams`
 - :api:`Cookies`
 
 .. code-block:: java
@@ -343,13 +343,13 @@ The following classes are automatically injected when you specify them on the pa
         }
 
         @Get("/hello3")
-        public HttpResponse hello3(HttpParameters httpParameters) {
-            // 'httpParameters' holds the parameters parsed from a query string of a request.
+        public HttpResponse hello3(QueryParams params) {
+            // 'params' holds the parameters parsed from a query string of a request.
         }
 
         @Post("/hello4")
-        public HttpResponse hello4(HttpParameters httpParameters) {
-            // If a request has a url-encoded form as its body, it can be accessed via 'httpParameters'.
+        public HttpResponse hello4(QueryParams params) {
+            // If a request has a url-encoded form as its body, it can be accessed via 'params'.
         }
 
         @Post("/hello5")

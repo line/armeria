@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -51,14 +50,13 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.netty.handler.codec.http.QueryStringDecoder;
 import okhttp3.HttpUrl;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -186,12 +184,11 @@ class ArmeriaCallFactoryTest {
                   @Override
                   protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                       return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
-                          final Map<String, List<String>> params = new QueryStringDecoder(aReq.path())
-                                  .parameters();
-                          final String fullPath = PathAndQuery.parse(req.path()).path();
+                          final String name = ctx.mappedPath().substring(1);
+                          final int age = QueryParams.fromQueryString(ctx.query()).getInt("age", -1);
                           return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                                 "{\"name\":\"" + fullPath.replace("/pathWithName/", "") +
-                                                 "\", \"age\":" + params.get("age").get(0) + '}');
+                                                 "{\"name\":\"" + name +
+                                                 "\", \"age\":" + age + '}');
                       }));
                   }
               })
@@ -214,11 +211,10 @@ class ArmeriaCallFactoryTest {
                   @Override
                   protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                       return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
-                          final Map<String, List<String>> params = new QueryStringDecoder(aReq.path())
-                                  .parameters();
+                          final QueryParams params = QueryParams.fromQueryString(ctx.query());
                           return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                                 "{\"name\":\"" + params.get("name").get(0) + "\", " +
-                                                 "\"age\":" + params.get("age").get(0) + '}');
+                                                 "{\"name\":\"" + params.get("name", "<NULL>") + "\", " +
+                                                 "\"age\":" + params.getInt("age", -1) + '}');
                       }));
                   }
               })
@@ -254,11 +250,11 @@ class ArmeriaCallFactoryTest {
                                                      MediaType.PLAIN_TEXT_UTF_8,
                                                      Exceptions.traceText(cause));
                           }
-                          final Map<String, List<String>> params = new QueryStringDecoder(
-                                  aReq.contentUtf8(), false).parameters();
+                          final QueryParams params =
+                                  QueryParams.fromQueryString(aReq.contentUtf8());
                           return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                                 "{\"name\":\"" + params.get("name").get(0) + "\", " +
-                                                 "\"age\":" + params.get("age").get(0) + '}');
+                                                 "{\"name\":\"" + params.get("name", "<NULL>") + "\", " +
+                                                 "\"age\":" + params.getInt("age", -1) + '}');
                       }));
                   }
               })

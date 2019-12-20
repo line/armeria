@@ -222,7 +222,7 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
-     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * Sets the {@code "cache-control"} header. This method is a shortcut for:
      * <pre>{@code
      * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
      * }</pre>
@@ -233,7 +233,7 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
-     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * Sets the {@code "cache-control"} header. This method is a shortcut for:
      * <pre>{@code
      * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
      * }</pre>

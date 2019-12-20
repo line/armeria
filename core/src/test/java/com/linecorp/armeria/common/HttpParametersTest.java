@@ -20,12 +20,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class HttpParametersTest {
+class HttpParametersTest {
 
     @Test
-    public void caseSensitive() {
+    void caseSensitive() {
         final HttpParameters p = HttpParameters.of();
         p.add("abc", "abc1");
         p.add("abc", "abc2");

@@ -27,6 +27,7 @@ import java.lang.invoke.MethodType;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
@@ -57,6 +58,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.HttpService;
@@ -64,7 +66,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
  * {@link HttpService} to handle a {@link WebOperation}. Mostly inspired by reactive implementation in
@@ -161,12 +162,13 @@ final class WebOperationHttpService implements HttpService {
             }
             arguments.putAll(bodyParams);
         }
-        final String query = ctx.query();
-        if (query != null) {
-            final QueryStringDecoder queryStringDecoder = new QueryStringDecoder(query, false);
-            queryStringDecoder.parameters().forEach(
-                    (key, values) -> arguments.put(key, values.size() != 1 ? values : values.get(0)));
+
+        final QueryParams params = QueryParams.fromQueryString(ctx.query());
+        for (String name : params.names()) {
+            final List<String> values = params.getAll(name);
+            arguments.put(name, values.size() != 1 ? values : values.get(0));
         }
+
         return ImmutableMap.copyOf(arguments);
     }
 

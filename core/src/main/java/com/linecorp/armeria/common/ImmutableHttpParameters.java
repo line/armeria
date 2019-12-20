@@ -27,6 +27,12 @@ import javax.annotation.Nullable;
 
 import io.netty.handler.codec.Headers;
 
+/**
+ * Immutable {@link HttpParameters}.
+ *
+ * @deprecated Use {@link QueryParams}.
+ */
+@Deprecated
 final class ImmutableHttpParameters implements HttpParameters {
 
     private final HttpParameters delegate;
