@@ -42,7 +42,7 @@ import io.netty.util.AttributeKey;
 public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
     private final MeterRegistry meterRegistry;
-    private final DefaultAttributeMap rootMap;
+    private final DefaultAttributeMap attrs;
     private final SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
@@ -79,7 +79,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
             @Nullable AttributeMap rootMap) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        this.rootMap = new DefaultAttributeMap(rootMap);
+        this.attrs = new DefaultAttributeMap(rootMap);
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.id = requireNonNull(id, "id");
         this.method = requireNonNull(method, "method");
@@ -195,7 +195,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
     @Override
     public <T> Attribute<T> attr(AttributeKey<T> key) {
-        return rootMap.attr(requireNonNull(key, "key"));
+        return attrs.attr(requireNonNull(key, "key"));
     }
 
     /**
@@ -206,13 +206,12 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * @see #attr(AttributeKey)
      */
     public <T> Attribute<T> ownAttr(AttributeKey<T> key) {
-        requireNonNull(key, "key");
-        return null;
+        return attrs.ownAttr(requireNonNull(key, "key"));
     }
 
     @Override
     public <T> boolean hasAttr(AttributeKey<T> key) {
-        return rootMap.hasAttr(requireNonNull(key, "key"));
+        return attrs.hasAttr(requireNonNull(key, "key"));
     }
 
     /**
@@ -222,13 +221,12 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * @see #hasAttr(AttributeKey)
      */
     public <T> boolean hasOwnAttr(AttributeKey<T> key) {
-        requireNonNull(key, "key");
-        return false;
+        return attrs.hasOwnAttr(requireNonNull(key, "key"));
     }
 
     @Override
     public Iterator<Attribute<?>> attrs() {
-        return rootMap.attrs();
+        return attrs.attrs();
     }
 
     /**
@@ -238,7 +236,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * @see #attrs()
      */
     public Iterator<Attribute<?>> ownAttrs() {
-        return rootMap.ownAttrs();
+        return attrs.ownAttrs();
     }
 
     @Override

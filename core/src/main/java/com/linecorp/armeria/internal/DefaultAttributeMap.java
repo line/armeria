@@ -208,12 +208,28 @@ public class DefaultAttributeMap implements AttributeMap {
     public Iterator<Attribute<?>> attrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
-            return root != null ? root.attrs() : Collections.emptyIterator();
+            if (root == null) {
+                return Collections.emptyIterator();
+            }
+
+            final Iterator<Attribute<?>> rootAttrs = root.attrs();
+            if (!rootAttrs.hasNext()) {
+                return Collections.emptyIterator();
+            }
+
+            return new CopyOnWriteAttributeIterator(rootAttrs);
         }
 
         final Iterator<Attribute<?>> ownAttrsIt = new IteratorImpl(attributes);
-        return root != null ? new ConcatenatedIteratorImpl(ownAttrsIt, root.attrs())
-                            : ownAttrsIt;
+        if (root == null) {
+            return ownAttrsIt;
+        }
+        final Iterator<Attribute<?>> rootAttrs = root.attrs();
+        if (!rootAttrs.hasNext()) {
+            return ownAttrsIt;
+        }
+
+        return new ConcatenatedIteratorImpl(ownAttrsIt, rootAttrs);
     }
 
     public Iterator<Attribute<?>> ownAttrs() {
@@ -462,6 +478,24 @@ public class DefaultAttributeMap implements AttributeMap {
 
                 return next;
             }
+        }
+    }
+
+    private final class CopyOnWriteAttributeIterator implements Iterator<Attribute<?>> {
+        private final Iterator<Attribute<?>> delegate;
+
+        CopyOnWriteAttributeIterator(Iterator<Attribute<?>> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return delegate.hasNext();
+        }
+
+        @Override
+        public Attribute<?> next() {
+            return new CopyOnWriteAttribute<>(delegate.next());
         }
     }
 

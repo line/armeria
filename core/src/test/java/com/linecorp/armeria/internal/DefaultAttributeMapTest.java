@@ -31,6 +31,7 @@
 package com.linecorp.armeria.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -42,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -295,22 +297,54 @@ class DefaultAttributeMapTest {
 
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         root.attr(foo).set("foo");
+
+        Iterator<Attribute<?>> childIt = child.attrs();
+        @SuppressWarnings("unchecked")
+        final Attribute<String> next = (Attribute<String>) childIt.next();
+        assertThat(next.get()).isEqualTo("foo");
+        assertThat(childIt.hasNext()).isFalse();
+        assertThatThrownBy(childIt::next).isInstanceOf(NoSuchElementException.class);
+
+        next.set("foo1");
+        assertThat(child.hasOwnAttr(foo)).isTrue();
+        assertThat(child.attr(foo).get()).isEqualTo("foo1");
+        // root context attribute remains unaffected.
+        assertThat(root.attr(foo).get()).isEqualTo("foo");
+
+        // Set the same attribute to child.
+        child.ownAttr(foo).set("foo2");
+        childIt = child.attrs();
+        assertThat(childIt.next().get()).isEqualTo("foo2");
+        assertThat(childIt.hasNext()).isFalse();
+
+        // Set a new attribute to child.
         final AttributeKey<String> bar = AttributeKey.valueOf("bar");
         child.attr(bar).set("bar");
 
         final Iterator<Attribute<?>> childOwnIt = child.ownAttrs();
-        assertThat(childOwnIt.next().get()).isEqualTo("bar");
+        final List<String> attributeValues = new ArrayList<>(2);
+        attributeValues.add((String) childOwnIt.next().get());
+        attributeValues.add((String) childOwnIt.next().get());
         assertThat(childOwnIt.hasNext()).isFalse();
+        assertThat(attributeValues).containsExactlyInAnyOrder("foo2", "bar");
 
-        final Iterator<Attribute<?>> childIt = child.attrs();
-        assertThat(childIt.next().get()).isEqualTo("bar");
+        // Set a new attribute to root.
+        final AttributeKey<String> baz = AttributeKey.valueOf("baz");
+        root.attr(baz).set("baz");
+
+        childIt = child.attrs();
+        attributeValues.clear();
+        attributeValues.add((String) childIt.next().get());
+        attributeValues.add((String) childIt.next().get());
+        assertThat(attributeValues).containsExactlyInAnyOrder("foo2", "bar");
+
         @SuppressWarnings("unchecked")
-        final Attribute<String> shouldBeFoo = (Attribute<String>) childIt.next();
-        assertThat(shouldBeFoo.get()).isEqualTo("foo");
+        final Attribute<String> shouldBeBaz = (Attribute<String>) childIt.next();
+        assertThat(shouldBeBaz.get()).isEqualTo("baz");
         assertThat(childIt.hasNext()).isFalse();
 
-        shouldBeFoo.set("foo2");
-        assertThat(root.attr(foo).get()).isEqualTo("foo");
-        assertThat(child.attr(foo).get()).isEqualTo("foo2");
+        shouldBeBaz.set("baz2");
+        assertThat(root.attr(baz).get()).isEqualTo("baz");
+        assertThat(child.attr(baz).get()).isEqualTo("baz2");
     }
 }
