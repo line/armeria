@@ -42,7 +42,7 @@ final class QueryStringDecoder {
 
     @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
     private static final char UNKNOWN_CHAR = '\uFFFD';
-    private static final byte[] OCTETS_TO_HEX = new byte[256];
+    private static final byte[] OCTETS_TO_HEX = new byte[Character.MAX_VALUE + 1];
 
     static {
         Arrays.fill(OCTETS_TO_HEX, (byte) -1);
@@ -259,8 +259,8 @@ final class QueryStringDecoder {
     }
 
     private static int decodeHexByte(char c1, char c2) {
-        final int hi = OCTETS_TO_HEX[c1 & 0xFF];
-        final int lo = OCTETS_TO_HEX[c2 & 0xFF];
+        final int hi = OCTETS_TO_HEX[c1];
+        final int lo = OCTETS_TO_HEX[c2];
         return (hi << 4) | lo;
     }
 

@@ -55,7 +55,7 @@ final class QueryStringEncoder {
 
     private static final char[] UTF_UNKNOWN = { '%', '3', 'F' }; // Percent encoded question mark
     private static final char[] UPPER_HEX_DIGITS = "0123456789ABCDEF".toCharArray();
-    private static final byte[] SAFE_OCTETS = new byte[256];
+    private static final byte[] SAFE_OCTETS = new byte[Character.MAX_VALUE + 1];
 
     static {
         final String safeOctetStr = "-_.*abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -76,7 +76,8 @@ final class QueryStringEncoder {
     private static StringBuilder encodeComponent(StringBuilder buf, String s) {
         final int len = s.length();
         for (int i = 0; i < len; i++) {
-            if (isUnsafeOctet(s.charAt(i))) {
+            final char c = s.charAt(i);
+            if (SAFE_OCTETS[c] == 0) {
                 if (i != 0) {
                     buf.append(s, 0, i);
                 }
@@ -182,16 +183,13 @@ final class QueryStringEncoder {
     private static int indexOfUnsafeOctet(String s, int start) {
         final int len = s.length();
         for (int i = start; i < len; i++) {
-            if (isUnsafeOctet(s.charAt(i))) {
+            final char c = s.charAt(i);
+            if (SAFE_OCTETS[c] == 0) {
                 return i;
             }
         }
 
         return -1;
-    }
-
-    private static boolean isUnsafeOctet(char c) {
-        return SAFE_OCTETS[c & 0xFF] == 0;
     }
 
     private QueryStringEncoder() {}
