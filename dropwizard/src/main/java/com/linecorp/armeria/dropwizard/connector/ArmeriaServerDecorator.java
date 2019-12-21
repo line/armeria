@@ -23,11 +23,16 @@ import java.util.stream.Collectors;
 import javax.net.ssl.SSLException;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
 import io.dropwizard.jetty.ConnectorFactory;
 import io.dropwizard.validation.PortRange;
 
+/**
+ * Defines a contract to load shared fields of a {@link Server} via
+ * a configured {@link ServerBuilder} such as port and protocol.
+ */
 public interface ArmeriaServerDecorator {
     /**
      * Decorate a {@link ServerBuilder} with the configurations of the parent {@link ConnectorFactory}.
@@ -35,9 +40,9 @@ public interface ArmeriaServerDecorator {
      *
      * @param sb An instance of a {@link ServerBuilder}
      * @throws SSLException Thrown when configuring TLS
-     * @throws CertificateException Thrown when validating certificates
+     * @throws CertificateException Thrown when validating TLS certificates
      */
-    default void decorate(final ServerBuilder sb) throws SSLException, CertificateException {
+    default void decorate(ServerBuilder sb) throws SSLException, CertificateException {
         sb.port(getPort(), getSessionProtocols());
     }
 

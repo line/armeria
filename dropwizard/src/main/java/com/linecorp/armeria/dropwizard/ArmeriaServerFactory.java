@@ -87,7 +87,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
     @JsonProperty
     private boolean dateHeaderEnabled = true;
     @JsonProperty
-    private boolean serverHeaderEnabled = true;
+    private boolean serverHeaderEnabled;
     @JsonProperty
     private boolean verboseResponses;
     @JsonProperty
@@ -106,7 +106,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
      * @return A production-ready {@link ServerBuilder}
      */
     @VisibleForTesting
-    ServerBuilder decorateServerBuilderFromConfig(final ServerBuilder serverBuilder) {
+    ServerBuilder decorateServerBuilderFromConfig(ServerBuilder serverBuilder) {
         Objects.requireNonNull(serverBuilder);
         final ScheduledThreadPoolExecutor blockingTaskExecutor = new ScheduledThreadPoolExecutor(
                 getMaxThreads(),
@@ -155,7 +155,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         return dateHeaderEnabled;
     }
 
-    public void setDateHeaderEnabled(final boolean dateHeaderEnabled) {
+    public void setDateHeaderEnabled(boolean dateHeaderEnabled) {
         this.dateHeaderEnabled = dateHeaderEnabled;
     }
 
@@ -163,7 +163,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         return serverHeaderEnabled;
     }
 
-    public void setServerHeaderEnabled(final boolean serverHeaderEnabled) {
+    public void setServerHeaderEnabled(boolean serverHeaderEnabled) {
         this.serverHeaderEnabled = serverHeaderEnabled;
     }
 
@@ -173,7 +173,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
     }
 
     @Override
-    public void setConnector(final ConnectorFactory factory) {
+    public void setConnector(ConnectorFactory factory) {
         connector = Objects.requireNonNull(factory, "server.connector");
     }
 
@@ -181,7 +181,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         return jerseyEnabled;
     }
 
-    public void setJerseyEnabled(final boolean jerseyEnabled) {
+    public void setJerseyEnabled(boolean jerseyEnabled) {
         this.jerseyEnabled = jerseyEnabled;
     }
 
@@ -194,7 +194,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
      *
      * @param accessLogWriter An instance of an {#link AccessLogWriter}
      */
-    public void setAccessLogWriter(final @Valid AccessLogWriterFactory accessLogWriter) {
+    public void setAccessLogWriter(@Valid AccessLogWriterFactory accessLogWriter) {
         this.accessLogWriter = Objects.requireNonNull(
                 accessLogWriter, "server[type=\"" + TYPE + "\"].accessLogWriter");
     }
@@ -203,7 +203,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         return maxRequestLength;
     }
 
-    public void setMaxRequestLength(final Size maxRequestLength) {
+    public void setMaxRequestLength(Size maxRequestLength) {
         this.maxRequestLength = maxRequestLength;
     }
 
@@ -211,7 +211,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         return maxNumConnections;
     }
 
-    public void setMaxNumConnections(final int maxNumConnections) {
+    public void setMaxNumConnections(int maxNumConnections) {
         this.maxNumConnections = maxNumConnections;
     }
 
@@ -221,7 +221,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
     }
 
     @Override
-    public Server build(final Environment environment) {
+    public Server build(Environment environment) {
         Objects.requireNonNull(environment, "environment");
         printBanner(environment.getName());
         final MetricRegistry metrics = environment.metrics();
@@ -238,8 +238,8 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         return server;
     }
 
-    private void addDefaultHandlers(final Server server, final Environment environment,
-                                    final MetricRegistry metrics) {
+    private void addDefaultHandlers(Server server, Environment environment,
+                                    MetricRegistry metrics) {
         final JerseyEnvironment jersey = environment.jersey();
         final Handler applicationHandler = createAppServlet(
                 server,
@@ -261,15 +261,15 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         server.setHandler(addStatsHandler(addRequestLog(server, gzipHandler, environment.getName())));
     }
 
-    private ServerBuilder getArmeriaServerBuilder(final Server server,
-                                                  @Nullable final ConnectorFactory connector,
-                                                  @Nullable final MetricRegistry metricRegistry) {
+    private ServerBuilder getArmeriaServerBuilder(Server server,
+                                                  ConnectorFactory connector,
+                                                  MetricRegistry metricRegistry) {
         logger.debug("Building Armeria Server");
         final ServerBuilder serverBuilder = com.linecorp.armeria.server.Server.builder();
         try {
             decorateServerBuilder(
                     serverBuilder, connector, accessLogWriter,
-                    metricRegistry != null ? DropwizardMeterRegistries.newRegistry(metricRegistry) : null);
+                    DropwizardMeterRegistries.newRegistry(metricRegistry));
         } catch (SSLException | CertificateException e) {
             logger.error("Unable to define TLS Server", e);
             // TODO: Throw an exception?
@@ -287,7 +287,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
      * @return Armeria {@link JettyService} for the provided jettyServer
      */
     @JsonIgnore
-    private JettyService getJettyService(final Server jettyServer) {
+    private JettyService getJettyService(Server jettyServer) {
         Objects.requireNonNull(jettyServer, "Armeria cannot build a service from a null server");
         return JettyService.forServer(jettyServer);
     }
@@ -304,12 +304,13 @@ class ArmeriaServerFactory extends SimpleServerFactory {
      * @throws CertificateException Thrown when validating certificates
      */
     @VisibleForTesting
-    ServerBuilder decorateServerBuilder(final ServerBuilder sb,
-                                                @Nullable final ConnectorFactory connectorFactory,
-                                                @Nullable final AccessLogWriterFactory writerFactory,
-                                                @Nullable final MeterRegistry meterRegistry)
+    ServerBuilder decorateServerBuilder(ServerBuilder sb,
+                                                @Nullable ConnectorFactory connectorFactory,
+                                                @Nullable AccessLogWriterFactory writerFactory,
+                                                MeterRegistry meterRegistry)
             throws SSLException, CertificateException {
         Objects.requireNonNull(sb, "builder to decorate must not be null");
+        Objects.requireNonNull(meterRegistry, "meterRegistry");
         if (connectorFactory != null) {
             if (!(connectorFactory instanceof ArmeriaServerDecorator)) {
                 throw new ClassCastException("server.connector.type must be an instance of " +
@@ -319,9 +320,7 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         } else {
             logger.warn("connectorFactory was null. ServerBuilder not decorated from it.");
         }
-        if (meterRegistry != null) {
-            sb.meterRegistry(meterRegistry);
-        }
+        sb.meterRegistry(meterRegistry);
         if (writerFactory != null && !writerFactory.getWriter()
                                                    .equals(AccessLogWriter.disabled())) {
             logger.trace("Setting up Armeria AccessLogWriter");

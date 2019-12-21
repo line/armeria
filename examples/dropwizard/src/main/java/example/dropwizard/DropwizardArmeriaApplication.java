@@ -14,7 +14,7 @@ import io.dropwizard.setup.Environment;
 
 public class DropwizardArmeriaApplication extends Application<DropwizardArmeriaConfiguration> {
 
-    public static void main(final String[] args) throws Exception {
+    public static void main(String[] args) throws Exception {
         new DropwizardArmeriaApplication().run(args);
     }
 
@@ -24,10 +24,10 @@ public class DropwizardArmeriaApplication extends Application<DropwizardArmeriaC
     }
 
     @Override
-    public void initialize(final Bootstrap<DropwizardArmeriaConfiguration> bootstrap) {
+    public void initialize(Bootstrap<DropwizardArmeriaConfiguration> bootstrap) {
         final ArmeriaBundle bundle = new ArmeriaBundle() {
             @Override
-            public void configure(final ServerBuilder builder) {
+            public void configure(ServerBuilder builder) {
                 builder.service("/", (ctx, res) -> HttpResponse.of(MediaType.HTML_UTF_8, "<h2>It works!</h2>"));
                 builder.service("/armeria", (ctx, res) -> HttpResponse.of("Hello, Armeria!"));
 
@@ -42,8 +42,8 @@ public class DropwizardArmeriaApplication extends Application<DropwizardArmeriaC
     }
 
     @Override
-    public void run(final DropwizardArmeriaConfiguration configuration,
-                    final Environment environment) {
+    public void run(DropwizardArmeriaConfiguration configuration,
+                    Environment environment) {
         environment.jersey().register(JerseyResource.class);
 
         environment.healthChecks().register("ping", new PingCheck());

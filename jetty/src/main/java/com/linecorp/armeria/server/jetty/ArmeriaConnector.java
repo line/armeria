@@ -43,7 +43,7 @@ final class ArmeriaConnector extends ServerConnector {
     private volatile boolean isShutdown;
 
     ArmeriaConnector(Server server, com.linecorp.armeria.server.Server armeriaServer) {
-        super(server, 0, 0, new ArmeriaConnectionFactory());
+        super(server, -1, -1, new ArmeriaConnectionFactory());
 
         this.armeriaServer = armeriaServer;
 

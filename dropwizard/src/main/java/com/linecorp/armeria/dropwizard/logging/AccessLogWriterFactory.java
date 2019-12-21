@@ -21,6 +21,9 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.dropwizard.jackson.Discoverable;
 
+/**
+ * A JSON type responsible for returning various {@link AccessLogWriter} implementations.
+ */
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         property = "type"

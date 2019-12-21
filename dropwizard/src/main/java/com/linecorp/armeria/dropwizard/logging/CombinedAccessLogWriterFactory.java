@@ -19,11 +19,11 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+/**
+ * Responsible for creating an instance of {@link AccessLogWriter#combined()}.
+ */
 @JsonTypeName("combined")
 public class CombinedAccessLogWriterFactory implements AccessLogWriterFactory {
-
-    public CombinedAccessLogWriterFactory() {
-    }
 
     @Override
     public AccessLogWriter getWriter() {

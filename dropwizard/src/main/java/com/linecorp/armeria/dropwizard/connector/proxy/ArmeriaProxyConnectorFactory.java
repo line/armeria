@@ -53,7 +53,7 @@ public abstract class ArmeriaProxyConnectorFactory implements ConnectorFactory, 
     }
 
     @Override
-    public void decorate(final ServerBuilder sb) throws CertificateException, SSLException {
+    public void decorate(ServerBuilder sb) throws CertificateException, SSLException {
         logger.debug("Building Armeria Proxy Server");
         sb.port(getPort(), getSessionProtocols())
           .proxyProtocolMaxTlvSize((int) getMaxTlvSize().toBytes());

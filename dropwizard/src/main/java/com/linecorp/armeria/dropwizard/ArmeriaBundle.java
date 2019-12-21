@@ -37,7 +37,7 @@ public abstract class ArmeriaBundle<C extends Configuration>
     }
 
     @Override
-    public void run(final C configuration, final Environment environment) throws Exception {
+    public void run(C configuration, Environment environment) throws Exception {
         final ManagedArmeriaServer<C> managedArmeriaServer = new ManagedArmeriaServer<>(configuration, this);
         environment.lifecycle().manage(managedArmeriaServer);
     }

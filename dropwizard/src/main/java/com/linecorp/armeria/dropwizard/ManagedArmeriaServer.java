@@ -52,8 +52,8 @@ class ManagedArmeriaServer<T extends Configuration> implements Managed {
     * @param configuration The Dropwizard configuration
     * @param serverConfigurator A non-null implementation of {@link ArmeriaServerConfigurator}
     */
-    ManagedArmeriaServer(final T configuration,
-                                final ArmeriaServerConfigurator serverConfigurator) {
+    ManagedArmeriaServer(T configuration,
+                                ArmeriaServerConfigurator serverConfigurator) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
         serverFactory = Objects.requireNonNull(configuration.getServerFactory(), "server");
         if (!(serverFactory instanceof ArmeriaServerFactory)) {

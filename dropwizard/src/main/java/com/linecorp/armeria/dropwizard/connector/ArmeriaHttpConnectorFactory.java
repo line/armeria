@@ -34,6 +34,9 @@ import io.dropwizard.util.Size;
 import io.dropwizard.validation.MaxSize;
 import io.dropwizard.validation.MinSize;
 
+/**
+ * A subclass of {@link HttpConnectorFactory} for Armeria.
+ */
 @JsonTypeName(ArmeriaHttpConnectorFactory.TYPE)
 public class ArmeriaHttpConnectorFactory extends HttpConnectorFactory
         implements ArmeriaServerDecorator {
@@ -58,7 +61,7 @@ public class ArmeriaHttpConnectorFactory extends HttpConnectorFactory
     private @Min(0) int maxInitialLineLength = Flags.defaultHttp1MaxInitialLineLength();
 
     @Override
-    public void decorate(final ServerBuilder sb) {
+    public void decorate(ServerBuilder sb) {
         logger.debug("Building Armeria HTTP Server");
         buildHttpServer(sb).port(getPort(), getSessionProtocols());
     }

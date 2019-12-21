@@ -26,6 +26,9 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+/**
+ * Responsible for creating an instance of {@link AccessLogWriter#custom(String)}.
+ */
 @JsonTypeName("custom")
 public class CustomAccessLogWriterFactory implements AccessLogWriterFactory {
 
@@ -45,14 +48,11 @@ public class CustomAccessLogWriterFactory implements AccessLogWriterFactory {
     @JsonProperty
     private String format;
 
-    public CustomAccessLogWriterFactory() {
-    }
-
     public String getFormat() {
         return format;
     }
 
-    public void setFormat(final String format) {
+    public void setFormat(String format) {
         this.format = format;
     }
 

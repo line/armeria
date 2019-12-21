@@ -39,6 +39,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import io.dropwizard.jetty.ConnectorFactory;
 import io.dropwizard.jetty.HttpsConnectorFactory;
 
+/**
+ * A subclass of {@link HttpsConnectorFactory} for Armeria.
+ */
 @JsonTypeName(ArmeriaHttpsConnectorFactory.TYPE)
 public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
         implements ArmeriaServerDecorator {
@@ -54,9 +57,9 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
      * @param keyStorePath path to a keystore
      * @param keyStorePassword password to the keystore, or null
      */
-    public static @Valid ConnectorFactory build(final String keyCertChainPath,
-                                                final String keyStorePath,
-                                                @Nullable final String keyStorePassword) {
+    public static @Valid ConnectorFactory build(String keyCertChainPath,
+                                                String keyStorePath,
+                                                @Nullable String keyStorePassword) {
         return build(keyCertChainPath, keyStorePath, keyStorePassword, false);
     }
 
@@ -69,10 +72,10 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
      * @param keyStorePassword password to the keystore, or null
      * @param certIsSelfSigned see {@link ArmeriaHttpsConnectorFactory#setSelfSigned}
      */
-    public static @Valid ConnectorFactory build(final String keyCertChainPath,
-                                                final String keyStorePath,
-                                                @Nullable final String keyStorePassword,
-                                                final boolean certIsSelfSigned) {
+    public static @Valid ConnectorFactory build(String keyCertChainPath,
+                                                String keyStorePath,
+                                                @Nullable String keyStorePassword,
+                                                boolean certIsSelfSigned) {
         final ArmeriaHttpsConnectorFactory factory = new ArmeriaHttpsConnectorFactory();
         factory.setPort(8080);
         factory.setKeyCertChainFile(keyCertChainPath);
@@ -98,14 +101,11 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
     @JsonProperty
     private @Min(0L) long maxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
 
-    public ArmeriaHttpsConnectorFactory() {
-    }
-
     public String getKeyCertChainFile() {
         return keyCertChainFile;
     }
 
-    public void setKeyCertChainFile(final String keyCertChainFile) {
+    public void setKeyCertChainFile(String keyCertChainFile) {
         this.keyCertChainFile = keyCertChainFile;
     }
 
@@ -113,7 +113,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
         return selfSigned;
     }
 
-    public void setSelfSigned(final boolean selfSigned) {
+    public void setSelfSigned(boolean selfSigned) {
         this.selfSigned = selfSigned;
     }
 
@@ -133,9 +133,9 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
     }
 
     @VisibleForTesting
-    ServerBuilder buildTlsServer(final ServerBuilder sb,
-                                 final String keyCertChainFile,
-                                 final String keyStoreFile) throws SSLException, CertificateException {
+    ServerBuilder buildTlsServer(ServerBuilder sb,
+                                 String keyCertChainFile,
+                                 String keyStoreFile) throws SSLException, CertificateException {
         final Collection<SessionProtocol> sessionProtocols = getSessionProtocols();
         boolean built = false;
         for (SessionProtocol protocol : sessionProtocols) {
@@ -171,7 +171,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
         return initialConnectionWindowSize;
     }
 
-    public void setInitialConnectionWindowSize(final int initialConnectionWindowSize) {
+    public void setInitialConnectionWindowSize(int initialConnectionWindowSize) {
         this.initialConnectionWindowSize = initialConnectionWindowSize;
     }
 
@@ -179,7 +179,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
         return initialStreamingWindowSize;
     }
 
-    public void setInitialStreamingWindowSize(final int initialStreamingWindowSize) {
+    public void setInitialStreamingWindowSize(int initialStreamingWindowSize) {
         this.initialStreamingWindowSize = initialStreamingWindowSize;
     }
 
@@ -187,7 +187,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
         return maxFrameSize;
     }
 
-    public void setMaxFrameSize(final int maxFrameSize) {
+    public void setMaxFrameSize(int maxFrameSize) {
         this.maxFrameSize = maxFrameSize;
     }
 
@@ -195,7 +195,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
         return maxStreamsPerConnection;
     }
 
-    public void setMaxStreamsPerConnection(final long maxStreamsPerConnection) {
+    public void setMaxStreamsPerConnection(long maxStreamsPerConnection) {
         this.maxStreamsPerConnection = maxStreamsPerConnection;
     }
 
@@ -203,7 +203,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
         return maxHeaderListSize;
     }
 
-    public void setMaxHeaderListSize(final long maxHeaderListSize) {
+    public void setMaxHeaderListSize(long maxHeaderListSize) {
         this.maxHeaderListSize = maxHeaderListSize;
     }
 
