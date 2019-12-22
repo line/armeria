@@ -21,8 +21,8 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.Order;
 
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 
 /**
  * Interface used to configure a {@link DocServiceBuilder} on the default armeria server. Can be
