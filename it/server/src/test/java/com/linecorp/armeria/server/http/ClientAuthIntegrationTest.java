@@ -32,8 +32,6 @@ import com.linecorp.armeria.testing.junit4.server.SelfSignedCertificateRule;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.handler.ssl.ClientAuth;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 public class ClientAuthIntegrationTest {
@@ -48,14 +46,14 @@ public class ClientAuthIntegrationTest {
     public static ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final SslContext sslContext =
-                    SslContextBuilder.forServer(serverCert.certificateFile(), serverCert.privateKeyFile())
-                                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                                     .clientAuth(ClientAuth.REQUIRE)
-                                     .build();
-            sb.tls(sslContext)
-              .service("/", (ctx, req) -> HttpResponse.of("success"))
-              .decorator(LoggingService.builder().newDecorator());
+            sb.tls(serverCert.certificateFile(), serverCert.privateKeyFile());
+            sb.tlsCustomizer(sslCtxBuilder -> {
+                sslCtxBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE)
+                             .clientAuth(ClientAuth.REQUIRE);
+            });
+
+            sb.service("/", (ctx, req) -> HttpResponse.of("success"));
+            sb.decorator(LoggingService.builder().newDecorator());
         }
     };
 
@@ -63,7 +61,7 @@ public class ClientAuthIntegrationTest {
     public void normal() {
         final ClientFactory clientFactory =
                 ClientFactory.builder()
-                             .sslContextCustomizer(ctx -> ctx
+                             .tlsCustomizer(ctx -> ctx
                                      .keyManager(clientCert.certificateFile(), clientCert.privateKeyFile())
                                      .trustManager(InsecureTrustManagerFactory.INSTANCE))
                              .build();

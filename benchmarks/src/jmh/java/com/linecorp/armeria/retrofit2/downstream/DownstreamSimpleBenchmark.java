@@ -34,8 +34,7 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
     protected SimpleBenchmarkClient newClient() {
         final ClientFactory factory =
                 ClientFactory.builder()
-                             .sslContextCustomizer(
-                                     ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .tlsCustomizer(ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))
                              .build();
         return new ArmeriaRetrofitBuilder(factory)
                 .baseUrl(baseUrl())

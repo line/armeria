@@ -48,8 +48,7 @@ class MockWebServiceExtensionTest {
         final WebClient webClient = WebClient.of(server.httpUri("/"));
         final ClientFactory clientFactory =
                 ClientFactory.builder()
-                             .sslContextCustomizer(
-                                     ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .tlsCustomizer(ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))
                              .build();
         final WebClient httpsClient = WebClient.builder(server.httpsUri("/"))
                                                .factory(clientFactory)

@@ -73,7 +73,7 @@ class HttpHealthCheckedEndpointGroupTest {
 
     private final ClientFactory clientFactory =
             ClientFactory.builder()
-                         .sslContextCustomizer(s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsCustomizer(s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE))
                          .build();
 
     @ParameterizedTest

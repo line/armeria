@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -48,6 +47,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.EmptyArrays;
 
 /**
  * Utilities for configuring {@link SslContextBuilder}.
@@ -83,12 +83,11 @@ public final class SslContextUtil {
      * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
      * TLSv1.3 (if supported), and TLSv1.2.
      */
-    public static SslContext createSslContext(Supplier<SslContextBuilder> sslContextSupplier,
+    public static SslContext createSslContext(SslContextBuilder builder,
                                               boolean forceHttp1,
-                                              Consumer<? super SslContextBuilder> userCustomizer) {
+                                              Iterable<Consumer<? super SslContextBuilder>> userCustomizers) {
 
         final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
-        final SslContextBuilder builder = sslContextSupplier.get();
         builder.sslProvider(provider);
 
         final Set<String> supportedProtocols = supportedProtocols(builder);
@@ -109,10 +108,10 @@ public final class SslContextUtil {
             }
         }
 
-        builder.protocols(protocols.toArray(new String[0]))
+        builder.protocols(protocols.toArray(EmptyArrays.EMPTY_STRINGS))
                .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
 
-        userCustomizer.accept(builder);
+        userCustomizers.forEach(customizer -> customizer.accept(builder));
 
         // We called user customization logic before setting ALPN to make sure they don't break
         // compatibility with HTTP/2.

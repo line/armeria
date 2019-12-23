@@ -29,9 +29,12 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_B
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -48,7 +51,6 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -696,8 +698,12 @@ public final class ServerBuilder {
 
     /**
      * Sets the {@link SslContext} of the {@link Server}.
+     *
+     * @deprecated This method has been deprecated because an incorrectly built {@link SslContext} can cause
+     *             a {@link Server} to malfunction. Use other {@code tls()} methods.
      */
-    public ServerBuilder tls(SslContext sslContext) throws SSLException {
+    @Deprecated
+    public ServerBuilder tls(SslContext sslContext) {
         virtualHostTemplate.tls(sslContext);
         return this;
     }
@@ -705,8 +711,10 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
-    public ServerBuilder tls(File keyCertChainFile, File keyFile) throws SSLException {
+    public ServerBuilder tls(File keyCertChainFile, File keyFile) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile);
         return this;
     }
@@ -714,9 +722,12 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * cleartext {@code keyFile} and {@code tlsCustomizer}.
+     *
+     * @deprecated Use {@link #tls(File, File)} and {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public ServerBuilder tls(File keyCertChainFile, File keyFile,
-                             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+                             Consumer<SslContextBuilder> tlsCustomizer) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile, tlsCustomizer);
         return this;
     }
@@ -724,9 +735,11 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
     public ServerBuilder tls(
-            File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
+            File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword);
         return this;
     }
@@ -734,20 +747,105 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * {@code keyFile}, {@code keyPassword} and {@code tlsCustomizer}.
+     *
+     * @deprecated Use {@link #tls(File, File, String)} and {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword,
-            Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+            Consumer<SslContextBuilder> tlsCustomizer) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword, tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@code keyCertChainInputStream} and
+     * cleartext {@code keyInputStream}.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
+        virtualHostTemplate.tls(keyCertChainInputStream, keyInputStream);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@code keyCertChainInputStream},
+     * {@code keyInputStream} and {@code keyPassword}.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
+                             @Nullable String keyPassword) {
+        virtualHostTemplate.tls(keyCertChainInputStream, keyInputStream, keyPassword);
+        return this;
+    }
+
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified cleartext {@link PrivateKey} and
+     * {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
+        virtualHostTemplate.tls(key, keyCertChain);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified cleartext {@link PrivateKey} and
+     * {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(PrivateKey key, Iterable<X509Certificate> keyCertChain) {
+        virtualHostTemplate.tls(key, keyCertChain);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@link PrivateKey}, {@code keyPassword}
+     * and {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(PrivateKey key, @Nullable String keyPassword, X509Certificate... keyCertChain) {
+        virtualHostTemplate.tls(key, keyPassword, keyCertChain);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@link PrivateKey}, {@code keyPassword}
+     * and {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(PrivateKey key, @Nullable String keyPassword,
+                             Iterable<X509Certificate> keyCertChain) {
+        virtualHostTemplate.tls(key, keyPassword, keyCertChain);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@link KeyManagerFactory}.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(KeyManagerFactory keyManagerFactory) {
+        virtualHostTemplate.tls(keyManagerFactory);
         return this;
     }
 
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyManagerFactory}
      * and {@code tlsCustomizer}.
+     *
+     * @deprecated Use {@link #tls(KeyManagerFactory)} and {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public ServerBuilder tls(KeyManagerFactory keyManagerFactory,
-                             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+                             Consumer<SslContextBuilder> tlsCustomizer) {
         virtualHostTemplate.tls(keyManagerFactory, tlsCustomizer);
         return this;
     }
@@ -755,6 +853,8 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
     public ServerBuilder tlsSelfSigned() {
         virtualHostTemplate.tlsSelfSigned();
@@ -764,9 +864,20 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
     public ServerBuilder tlsSelfSigned(boolean tlsSelfSigned) {
         virtualHostTemplate.tlsSelfSigned(tlsSelfSigned);
+        return this;
+    }
+
+    /**
+     * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
+     * applied to the SSL session.
+     */
+    public ServerBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
+        virtualHostTemplate.tlsCustomizer(tlsCustomizer);
         return this;
     }
 

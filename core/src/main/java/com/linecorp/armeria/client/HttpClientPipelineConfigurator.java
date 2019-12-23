@@ -42,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -125,9 +126,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         if (sessionProtocol.isTls()) {
-            sslCtx = SslContextUtil.createSslContext(SslContextBuilder::forClient,
+            sslCtx = SslContextUtil.createSslContext(SslContextBuilder.forClient(),
                                                      httpPreference == HttpPreference.HTTP1_REQUIRED,
-                                                     clientFactory.sslContextCustomizer());
+                                                     ImmutableList.of(clientFactory.sslContextCustomizer()));
         } else {
             sslCtx = null;
         }

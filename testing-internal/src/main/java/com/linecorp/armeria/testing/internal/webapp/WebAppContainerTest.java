@@ -140,7 +140,7 @@ public abstract class WebAppContainerTest {
     public void https() throws Exception {
         final ClientFactory clientFactory =
                 ClientFactory.builder()
-                             .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                              .build();
         final WebClient client = WebClient.of(clientFactory, server().httpsUri("/"));
         final AggregatedHttpResponse response = client.get("/jsp/index.jsp").aggregate().get();

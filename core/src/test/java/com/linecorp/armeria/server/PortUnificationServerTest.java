@@ -43,7 +43,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 class PortUnificationServerTest {
 
     private static final ClientFactory clientFactory =
-            ClientFactory.builder().sslContextCustomizer(
+            ClientFactory.builder().tlsCustomizer(
                     b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
 
     @RegisterExtension

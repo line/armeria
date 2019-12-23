@@ -18,8 +18,13 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,11 +40,17 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
+import com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
+
+import io.netty.handler.ssl.SslContextBuilder;
 
 class ServerBuilderTest {
 
     private static ClientFactory clientFactory;
+
+    @RegisterExtension
+    static final SelfSignedCertificateExtension selfSignedCertificate = new SelfSignedCertificateExtension();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -309,5 +320,88 @@ class ServerBuilderTest {
         } finally {
             server.stop();
         }
+    }
+
+    @Test
+    void tlsCustomizationWithFile() {
+        tlsCustomization(sb -> sb.tls(selfSignedCertificate.certificateFile(),
+                                      selfSignedCertificate.privateKeyFile()),
+                         vhb -> vhb.tls(selfSignedCertificate.certificateFile(),
+                                        selfSignedCertificate.privateKeyFile()));
+    }
+
+    @Test
+    void tlsCustomizationWithInputStream() {
+        tlsCustomization(sb -> {
+                             try {
+                                 sb.tls(new FileInputStream(selfSignedCertificate.certificateFile()),
+                                        new FileInputStream(selfSignedCertificate.privateKeyFile()));
+                             } catch (FileNotFoundException e) {
+                                 throw new AssertionError(e);
+                             }
+                         },
+                         vhb -> {
+                             try {
+                                 vhb.tls(new FileInputStream(selfSignedCertificate.certificateFile()),
+                                         new FileInputStream(selfSignedCertificate.privateKeyFile()));
+                             } catch (FileNotFoundException e) {
+                                 throw new AssertionError(e);
+                             }
+                         });
+    }
+
+    @Test
+    void tlsCustomizationWithKeyObjects() {
+        tlsCustomization(sb -> sb.tls(selfSignedCertificate.privateKey(),
+                                      selfSignedCertificate.certificate()),
+                         vhb -> vhb.tls(selfSignedCertificate.privateKey(),
+                                        selfSignedCertificate.certificate()));
+    }
+
+    @Test
+    void tlsSelfSignedCustomization() {
+        tlsCustomization(ServerBuilder::tlsSelfSigned, VirtualHostBuilder::tlsSelfSigned);
+    }
+
+    private static void tlsCustomization(Consumer<ServerBuilder> defaultKeySetter,
+                                         Consumer<VirtualHostBuilder> virtualHostKeySetter) {
+        final AtomicReference<SslContextBuilder> defaultSslCtxBuilder = new AtomicReference<>();
+        final AtomicReference<SslContextBuilder> virtualHostSslCtxBuilder = new AtomicReference<>();
+        final AtomicInteger firstDefaultCustomizerInvoked = new AtomicInteger();
+        final AtomicInteger secondDefaultCustomizerInvoked = new AtomicInteger();
+        final AtomicInteger firstVirtualHostCustomizerInvoked = new AtomicInteger();
+        final AtomicInteger secondVirtualHostCustomizerInvoked = new AtomicInteger();
+
+        final ServerBuilder sb = Server.builder().service("/", (ctx, req) -> HttpResponse.of(200));
+        defaultKeySetter.accept(sb);
+        sb.tlsCustomizer(b -> {
+            firstDefaultCustomizerInvoked.incrementAndGet();
+            defaultSslCtxBuilder.set(b);
+        });
+        sb.tlsCustomizer(b -> {
+            secondDefaultCustomizerInvoked.incrementAndGet();
+            assertThat(b).isSameAs(defaultSslCtxBuilder.get());
+        });
+
+        // A virtual host must have its own self-signed certificate and customizers.
+        // i.e. first and second customizer should not be invoked.
+        final VirtualHostBuilder vhb = sb.virtualHost("example.com");
+        virtualHostKeySetter.accept(vhb);
+        vhb.tlsCustomizer(b -> {
+            firstVirtualHostCustomizerInvoked.incrementAndGet();
+            virtualHostSslCtxBuilder.set(b);
+        });
+        vhb.tlsCustomizer(b -> {
+            secondVirtualHostCustomizerInvoked.incrementAndGet();
+            assertThat(b).isSameAs(virtualHostSslCtxBuilder.get());
+        });
+        sb.build();
+
+        assertThat(firstDefaultCustomizerInvoked).hasValue(1);
+        assertThat(secondDefaultCustomizerInvoked).hasValue(1);
+        assertThat(firstVirtualHostCustomizerInvoked).hasValue(1);
+        assertThat(secondVirtualHostCustomizerInvoked).hasValue(1);
+
+        assertThat(defaultSslCtxBuilder.get()).isNotSameAs(virtualHostSslCtxBuilder.get());
     }
 }

@@ -108,7 +108,7 @@ class HttpServerTest {
             ClientFactory.builder()
                          .workerGroup(workerGroup, false) // Will be shut down by the Server.
                          .idleTimeout(Duration.ofSeconds(3))
-                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                          .build();
 
     private static final long MAX_CONTENT_LENGTH = 65536;

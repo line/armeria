@@ -54,7 +54,7 @@ public class HelloConfiguration {
      */
     @Bean
     public ClientFactory clientFactory() {
-        return ClientFactory.builder().sslContextCustomizer(
+        return ClientFactory.builder().tlsCustomizer(
                 b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
     }
 

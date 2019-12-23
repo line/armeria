@@ -49,7 +49,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 @Timeout(10)
 class HttpServerHeaderValidationTest {
 
-    static final ClientFactory clientFactory = ClientFactory.builder().sslContextCustomizer(scb -> {
+    static final ClientFactory clientFactory = ClientFactory.builder().tlsCustomizer(scb -> {
         scb.trustManager(InsecureTrustManagerFactory.INSTANCE);
     }).build();
 

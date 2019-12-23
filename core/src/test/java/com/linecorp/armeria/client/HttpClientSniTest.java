@@ -81,7 +81,7 @@ class HttpClientSniTest {
                           .getPort();
         clientFactory =
                 ClientFactory.builder()
-                             .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                              .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
                              .build();
     }

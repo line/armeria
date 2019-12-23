@@ -102,8 +102,7 @@ public class ArmeriaWebClientTest {
     static WebClient webClient = WebClient.builder().clientConnector(
             new ArmeriaClientHttpConnector(builder -> builder.factory(
                     ClientFactory.builder()
-                                 .sslContextCustomizer(
-                                         b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                                 .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                                  .addressResolverGroupFactory(unused -> MockAddressResolverGroup.localhost())
                                  .build()))).build();
 

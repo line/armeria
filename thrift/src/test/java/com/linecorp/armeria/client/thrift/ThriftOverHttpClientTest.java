@@ -207,7 +207,7 @@ class ThriftOverHttpClientTest {
 
     @BeforeAll
     static void init() throws Exception {
-        final Consumer<SslContextBuilder> sslContextCustomizer =
+        final Consumer<SslContextBuilder> tlsCustomizer =
                 b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE);
 
         final ConnectionPoolListener connectionPoolListener =
@@ -215,13 +215,13 @@ class ThriftOverHttpClientTest {
                                                : ConnectionPoolListener.noop();
 
         clientFactoryWithUseHttp2Preface = ClientFactory.builder()
-                                                        .sslContextCustomizer(sslContextCustomizer)
+                                                        .tlsCustomizer(tlsCustomizer)
                                                         .connectionPoolListener(connectionPoolListener)
                                                         .useHttp2Preface(true)
                                                         .build();
 
         clientFactoryWithoutUseHttp2Preface = ClientFactory.builder()
-                                                           .sslContextCustomizer(sslContextCustomizer)
+                                                           .tlsCustomizer(tlsCustomizer)
                                                            .connectionPoolListener(connectionPoolListener)
                                                            .useHttp2Preface(false)
                                                            .build();

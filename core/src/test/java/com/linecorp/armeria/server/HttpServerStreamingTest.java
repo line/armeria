@@ -78,7 +78,7 @@ class HttpServerStreamingTest {
             ClientFactory.builder()
                          .workerGroup(workerGroup, false) // Will be shut down by the Server.
                          .idleTimeout(Duration.ofSeconds(3))
-                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                          .build();
 
     // Stream as much as twice of the heap.

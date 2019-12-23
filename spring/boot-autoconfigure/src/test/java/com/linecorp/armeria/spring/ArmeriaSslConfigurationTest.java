@@ -88,7 +88,7 @@ public class ArmeriaSslConfigurationTest {
 
     private static final ClientFactory clientFactory =
             ClientFactory.builder()
-                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                          .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                          .build();
 

@@ -35,6 +35,8 @@ import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -224,10 +226,32 @@ public final class ClientFactoryBuilder {
      * applied to the SSL session. For example, use {@link SslContextBuilder#trustManager} to configure a
      * custom server CA or {@link SslContextBuilder#keyManager} to configure a client certificate for SSL
      * authorization.
+     *
+     * @deprecated Use {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public ClientFactoryBuilder sslContextCustomizer(Consumer<? super SslContextBuilder> sslContextCustomizer) {
-        option(ClientFactoryOption.SSL_CONTEXT_CUSTOMIZER,
+        option(ClientFactoryOption.TLS_CUSTOMIZER,
                requireNonNull(sslContextCustomizer, "sslContextCustomizer"));
+        return this;
+    }
+
+    /**
+     * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
+     * applied to the SSL session. For example, use {@link SslContextBuilder#trustManager(TrustManagerFactory)}
+     * to configure a custom server CA or {@link SslContextBuilder#keyManager(KeyManagerFactory)} to configure
+     * a client certificate for SSL authorization.
+     */
+    public ClientFactoryBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
+        requireNonNull(tlsCustomizer, "tlsCustomizer");
+        @SuppressWarnings("unchecked")
+        final Consumer<SslContextBuilder> oldTlsCustomizer =
+                (Consumer<SslContextBuilder>) options.get(ClientFactoryOption.TLS_CUSTOMIZER).value();
+        if (oldTlsCustomizer == ClientFactoryOptions.DEFAULT_TLS_CUSTOMIZER) {
+            option(ClientFactoryOption.TLS_CUSTOMIZER, tlsCustomizer);
+        } else {
+            option(ClientFactoryOption.TLS_CUSTOMIZER, oldTlsCustomizer.andThen(tlsCustomizer));
+        }
         return this;
     }
 
