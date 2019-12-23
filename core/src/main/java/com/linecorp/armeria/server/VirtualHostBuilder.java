@@ -930,7 +930,7 @@ public final class VirtualHostBuilder {
                 this.accessLoggerMapper != null ?
                 this.accessLoggerMapper : template.accessLoggerMapper;
 
-        final AnnotatedHttpServiceExtensions annotatedHttpServiceExtensions =
+        final AnnotatedHttpServiceExtensions extensions =
                 this.annotatedHttpServiceExtensions != null ?
                 this.annotatedHttpServiceExtensions : template.annotatedHttpServiceExtensions;
 
@@ -939,12 +939,12 @@ public final class VirtualHostBuilder {
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
-        assert annotatedHttpServiceExtensions != null;
+        assert extensions != null;
 
         virtualHostAnnotatedServiceBindingBuilders.stream()
-                                       .flatMap(b -> b.buildServiceConfigBuilder(annotatedHttpServiceExtensions)
-                                                      .stream())
-                                       .forEach(this::addServiceConfigBuilder);
+                                                  .flatMap(b -> b.buildServiceConfigBuilder(extensions)
+                                                                 .stream())
+                                                  .forEach(this::addServiceConfigBuilder);
 
         final List<ServiceConfigBuilder> serviceConfigBuilders =
                 getServiceConfigBuilders(template);
