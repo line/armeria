@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceExtensions;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -121,6 +122,8 @@ public final class VirtualHostBuilder {
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
+    private final List<VirtualHostAnnotatedServiceBindingBuilder> virtualHostAnnotatedServiceBindingBuilders =
+            new ArrayList<>();
 
     @Nullable
     private String defaultHostname;
@@ -148,6 +151,8 @@ public final class VirtualHostBuilder {
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
+    @Nullable
+    private AnnotatedHttpServiceExtensions annotatedHttpServiceExtensions;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -557,6 +562,12 @@ public final class VirtualHostBuilder {
         return this;
     }
 
+    VirtualHostBuilder addAnnotatedServiceBindingBuilder(
+            VirtualHostAnnotatedServiceBindingBuilder virtualHostAnnotatedServiceBindingBuilder) {
+        virtualHostAnnotatedServiceBindingBuilders.add(virtualHostAnnotatedServiceBindingBuilder);
+        return this;
+    }
+
     private List<ServiceConfigBuilder> getServiceConfigBuilders(
             @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
         final List<ServiceConfigBuilder> serviceConfigBuilders;
@@ -840,6 +851,33 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
+     * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedHttpServiceExtensions}.
+     *
+     * @param requestConverterFunctions the {@link RequestConverterFunction}s
+     * @param responseConverterFunctions the {@link ResponseConverterFunction}s
+     * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
+     */
+    public VirtualHostBuilder annotatedHttpServiceExtensions(
+            Iterable<? extends RequestConverterFunction> requestConverterFunctions,
+            Iterable<? extends ResponseConverterFunction> responseConverterFunctions,
+            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        annotatedHttpServiceExtensions =
+                new AnnotatedHttpServiceExtensions(ImmutableList.copyOf(requestConverterFunctions),
+                                                   ImmutableList.copyOf(responseConverterFunctions),
+                                                   ImmutableList.copyOf(exceptionHandlerFunctions));
+        return this;
+    }
+
+    @Nullable
+    AnnotatedHttpServiceExtensions getAnnotatedHttpServiceExtensions() {
+        return annotatedHttpServiceExtensions;
+    }
+
+    /**
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
@@ -892,11 +930,21 @@ public final class VirtualHostBuilder {
                 this.accessLoggerMapper != null ?
                 this.accessLoggerMapper : template.accessLoggerMapper;
 
+        final AnnotatedHttpServiceExtensions extensions =
+                this.annotatedHttpServiceExtensions != null ?
+                this.annotatedHttpServiceExtensions : template.annotatedHttpServiceExtensions;
+
         assert requestContentPreviewerFactory != null;
         assert responseContentPreviewerFactory != null;
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
+        assert extensions != null;
+
+        virtualHostAnnotatedServiceBindingBuilders.stream()
+                                                  .flatMap(b -> b.buildServiceConfigBuilder(extensions)
+                                                                 .stream())
+                                                  .forEach(this::addServiceConfigBuilder);
 
         final List<ServiceConfigBuilder> serviceConfigBuilders =
                 getServiceConfigBuilders(template);

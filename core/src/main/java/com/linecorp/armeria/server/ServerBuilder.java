@@ -68,6 +68,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -157,6 +158,7 @@ public final class ServerBuilder {
     final VirtualHostBuilder virtualHostTemplate = new VirtualHostBuilder(this, false);
     private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
     private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
+    private final List<AnnotatedServiceBindingBuilder> annotatedServiceBindingBuilders = new ArrayList<>();
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
@@ -207,6 +209,8 @@ public final class ServerBuilder {
         virtualHostTemplate.accessLogger(
                     host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
+        virtualHostTemplate.annotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
+                                                           ImmutableList.of());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -1016,6 +1020,12 @@ public final class ServerBuilder {
         return this;
     }
 
+    ServerBuilder annotatedServiceBindingBuilder(
+            AnnotatedServiceBindingBuilder annotatedServiceBindingBuilder) {
+        annotatedServiceBindingBuilders.add(annotatedServiceBindingBuilder);
+        return this;
+    }
+
     ServerBuilder routingDecorator(RouteDecoratingService routeDecoratingService) {
         virtualHostTemplate.addRouteDecoratingService(routeDecoratingService);
         return this;
@@ -1479,9 +1489,36 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
+     * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedHttpServiceExtensions}.
+     *
+     * @param requestConverterFunctions the {@link RequestConverterFunction}s
+     * @param responseConverterFunctions the {@link ResponseConverterFunction}s
+     * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
+     */
+    public ServerBuilder annotatedHttpServiceExtensions(
+            Iterable<? extends RequestConverterFunction> requestConverterFunctions,
+            Iterable<? extends ResponseConverterFunction> responseConverterFunctions,
+            Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
+        virtualHostTemplate.annotatedHttpServiceExtensions(requestConverterFunctions,
+                                                           responseConverterFunctions,
+                                                           exceptionHandlerFunctions);
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
+        final AnnotatedHttpServiceExtensions extensions =
+                virtualHostTemplate.getAnnotatedHttpServiceExtensions();
+
+        assert extensions != null;
+
+        annotatedServiceBindingBuilders.stream()
+                                       .flatMap(b -> b.buildServiceConfigBuilder(extensions).stream())
+                                       .forEach(this::serviceConfigBuilder);
+
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate);
         final List<VirtualHost> virtualHosts =

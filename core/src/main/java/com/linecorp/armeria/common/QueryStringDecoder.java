@@ -42,7 +42,7 @@ final class QueryStringDecoder {
 
     @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
     private static final char UNKNOWN_CHAR = '\uFFFD';
-    private static final byte[] OCTETS_TO_HEX = new byte['f' + 1];
+    private static final byte[] OCTETS_TO_HEX = new byte[Character.MAX_VALUE + 1];
 
     static {
         Arrays.fill(OCTETS_TO_HEX, (byte) -1);
@@ -259,20 +259,9 @@ final class QueryStringDecoder {
     }
 
     private static int decodeHexByte(char c1, char c2) {
-        final int hi = decodeHexNibble(c1);
-        final int lo = decodeHexNibble(c2);
+        final int hi = OCTETS_TO_HEX[c1];
+        final int lo = OCTETS_TO_HEX[c2];
         return (hi << 4) | lo;
-    }
-
-    // Do not inline `index` or remove `index < 0` check.
-    // They are specifically written to tell JVM to optimize away the array boundary check.
-    @SuppressWarnings({ "ConstantConditions", "UnnecessaryLocalVariable" })
-    private static int decodeHexNibble(char c) {
-        final int index = c;
-        if (index < 0 || index > OCTETS_TO_HEX.length) {
-            return -1;
-        }
-        return OCTETS_TO_HEX[index];
     }
 
     private static boolean isContinuation(int b) {

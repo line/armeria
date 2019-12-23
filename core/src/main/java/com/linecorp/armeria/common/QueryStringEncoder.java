@@ -55,19 +55,13 @@ final class QueryStringEncoder {
 
     private static final char[] UTF_UNKNOWN = { '%', '3', 'F' }; // Percent encoded question mark
     private static final char[] UPPER_HEX_DIGITS = "0123456789ABCDEF".toCharArray();
-    private static final byte[] SAFE_OCTETS =
-            createSafeOctets("-_.*abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+    private static final byte[] SAFE_OCTETS = new byte[Character.MAX_VALUE + 1];
 
-    private static byte[] createSafeOctets(String safeChars) {
-        int maxChar = -1;
-        for (int i = 0; i < safeChars.length(); i++) {
-            maxChar = Math.max(safeChars.charAt(i), maxChar);
+    static {
+        final String safeOctetStr = "-_.*abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        for (int i = 0; i < safeOctetStr.length(); i++) {
+            SAFE_OCTETS[safeOctetStr.charAt(i)] = -1;
         }
-        final byte[] octets = new byte[maxChar + 1];
-        for (int i = 0; i < safeChars.length(); i++) {
-            octets[safeChars.charAt(i)] = -1;
-        }
-        return octets;
     }
 
     static void encodeParams(StringBuilder buf, QueryParamGetters params) {
@@ -83,7 +77,7 @@ final class QueryStringEncoder {
         final int len = s.length();
         for (int i = 0; i < len; i++) {
             final char c = s.charAt(i);
-            if (isUnsafeOctet(c)) {
+            if (SAFE_OCTETS[c] == 0) {
                 if (i != 0) {
                     buf.append(s, 0, i);
                 }
@@ -190,23 +184,12 @@ final class QueryStringEncoder {
         final int len = s.length();
         for (int i = start; i < len; i++) {
             final char c = s.charAt(i);
-            if (isUnsafeOctet(c)) {
+            if (SAFE_OCTETS[c] == 0) {
                 return i;
             }
         }
 
         return -1;
-    }
-
-    // Do not inline `index` or remove `index < 0` check.
-    // They are specifically written to tell JVM to optimize away the array boundary check.
-    @SuppressWarnings({ "ConstantConditions", "UnnecessaryLocalVariable" })
-    private static boolean isUnsafeOctet(char c) {
-        final int index = c;
-        if (index < 0 || index >= SAFE_OCTETS.length) {
-            return true;
-        }
-        return SAFE_OCTETS[index] == 0;
     }
 
     private QueryStringEncoder() {}
