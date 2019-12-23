@@ -194,10 +194,10 @@ public final class JettyService implements HttpService {
         try {
             assert armeriaServer != null;
             server = serverFactory.apply(armeriaServer.config().blockingTaskExecutor());
-            connector = new ArmeriaConnector(server);
+            connector = new ArmeriaConnector(server, armeriaServer);
             server.addConnector(connector);
 
-            if (!server.isStarted()) {
+            if (!server.isRunning()) {
                 logger.info("Starting an embedded Jetty: {}", server);
                 server.start();
                 startedServer = true;

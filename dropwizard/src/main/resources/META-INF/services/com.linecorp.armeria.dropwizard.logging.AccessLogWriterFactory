@@ -1,0 +1,3 @@
+com.linecorp.armeria.dropwizard.logging.CommonAccessLogWriterFactory
+com.linecorp.armeria.dropwizard.logging.CombinedAccessLogWriterFactory
+com.linecorp.armeria.dropwizard.logging.CustomAccessLogWriterFactory
