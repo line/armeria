@@ -45,6 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.dropwizard.connector.ArmeriaHttpConnectorFactory;
 import com.linecorp.armeria.dropwizard.connector.ArmeriaHttpsConnectorFactory;
 import com.linecorp.armeria.dropwizard.connector.ArmeriaServerDecorator;
@@ -121,7 +122,9 @@ class ArmeriaServerFactoryTest {
                              // decorate with an instance that does not implement ArmeriaServerDecorator
                              () -> factory.decorateServerBuilder(sb,
                                                                  (server, metrics, name, threadPool) -> null,
-                                                                 null, null));
+                                                                 null,
+                                                                 DropwizardMeterRegistries
+                                                                         .newRegistry(metricRegistry)));
         assertThat(ex.getMessage()).isEqualTo("server.connector.type must be an instance of " +
                                               ArmeriaServerDecorator.class.getName());
     }
