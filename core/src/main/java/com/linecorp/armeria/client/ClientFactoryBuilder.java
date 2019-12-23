@@ -244,9 +244,13 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
+        final ClientFactoryOptionValue<?> oldTlsCustomizerValue =
+                options.get(ClientFactoryOption.TLS_CUSTOMIZER);
+
         @SuppressWarnings("unchecked")
         final Consumer<SslContextBuilder> oldTlsCustomizer =
-                (Consumer<SslContextBuilder>) options.get(ClientFactoryOption.TLS_CUSTOMIZER).value();
+                oldTlsCustomizerValue == null ? ClientFactoryOptions.DEFAULT_TLS_CUSTOMIZER
+                                              : (Consumer<SslContextBuilder>) oldTlsCustomizerValue.value();
         if (oldTlsCustomizer == ClientFactoryOptions.DEFAULT_TLS_CUSTOMIZER) {
             option(ClientFactoryOption.TLS_CUSTOMIZER, tlsCustomizer);
         } else {
