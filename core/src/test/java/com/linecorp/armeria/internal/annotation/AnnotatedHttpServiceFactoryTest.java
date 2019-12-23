@@ -181,6 +181,7 @@ class AnnotatedHttpServiceFactoryTest {
 
         getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
+
                 create("/", serviceObject, method, ImmutableList.of(), ImmutableList.of(),
                        ImmutableList.of());
             }).isInstanceOf(IllegalArgumentException.class)
