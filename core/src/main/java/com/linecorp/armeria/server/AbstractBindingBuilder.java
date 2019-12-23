@@ -46,8 +46,8 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.server.annotation.MatchesHeader;
 import com.linecorp.armeria.server.annotation.MatchesParam;
 
@@ -59,7 +59,7 @@ abstract class AbstractBindingBuilder {
     private Set<HttpMethod> methods = ImmutableSet.of();
     private Set<MediaType> consumeTypes = ImmutableSet.of();
     private Set<MediaType> produceTypes = ImmutableSet.of();
-    private List<RoutingPredicate<HttpParameters>> paramPredicates = new ArrayList<>();
+    private List<RoutingPredicate<QueryParams>> paramPredicates = new ArrayList<>();
     private List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
     private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();

@@ -24,9 +24,9 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
@@ -66,7 +66,7 @@ public interface RoutingContext {
     /**
      * Returns the query parameters retrieved from the request path.
      */
-    HttpParameters params();
+    QueryParams params();
 
     /**
      * Returns {@link MediaType} specified by 'Content-Type' header of the request.

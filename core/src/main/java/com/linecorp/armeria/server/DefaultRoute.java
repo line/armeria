@@ -32,9 +32,9 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 
 final class DefaultRoute implements Route {
 
@@ -45,7 +45,7 @@ final class DefaultRoute implements Route {
     private final Set<HttpMethod> methods;
     private final Set<MediaType> consumes;
     private final Set<MediaType> produces;
-    private final List<RoutingPredicate<HttpParameters>> paramPredicates;
+    private final List<RoutingPredicate<QueryParams>> paramPredicates;
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates;
 
     private final String loggerName;
@@ -55,7 +55,7 @@ final class DefaultRoute implements Route {
 
     DefaultRoute(PathMapping pathMapping, Set<HttpMethod> methods,
                  Set<MediaType> consumes, Set<MediaType> produces,
-                 List<RoutingPredicate<HttpParameters>> paramPredicates,
+                 List<RoutingPredicate<QueryParams>> paramPredicates,
                  List<RoutingPredicate<HttpHeaders>> headerPredicates) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
@@ -241,7 +241,7 @@ final class DefaultRoute implements Route {
 
     private static String generateLoggerName(String prefix, Set<HttpMethod> methods,
                                              Set<MediaType> consumes, Set<MediaType> produces,
-                                             List<RoutingPredicate<HttpParameters>> paramPredicates,
+                                             List<RoutingPredicate<QueryParams>> paramPredicates,
                                              List<RoutingPredicate<HttpHeaders>> headerPredicates) {
         final StringJoiner name = new StringJoiner(".");
         name.add(prefix);
@@ -279,7 +279,7 @@ final class DefaultRoute implements Route {
 
     private static String generateMeterTag(String parentTag, Set<HttpMethod> methods,
                                            Set<MediaType> consumes, Set<MediaType> produces,
-                                           List<RoutingPredicate<HttpParameters>> paramPredicates,
+                                           List<RoutingPredicate<QueryParams>> paramPredicates,
                                            List<RoutingPredicate<HttpHeaders>> headerPredicates) {
 
         final StringJoiner name = new StringJoiner(",");

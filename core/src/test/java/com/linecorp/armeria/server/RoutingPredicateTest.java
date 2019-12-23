@@ -24,7 +24,7 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.HttpParameters;
+import com.linecorp.armeria.common.QueryParams;
 
 class RoutingPredicateTest {
 
@@ -72,7 +72,7 @@ class RoutingPredicateTest {
         assertThatThrownBy(() -> ofParams("!")).isInstanceOf(IllegalArgumentException.class);
     }
 
-    private static RoutingPredicate<HttpParameters> parse(String expression) {
+    private static RoutingPredicate<QueryParams> parse(String expression) {
         return RoutingPredicate.of(expression, Function.identity(),
                                    name -> params -> true, (name, value) -> params -> true);
     }

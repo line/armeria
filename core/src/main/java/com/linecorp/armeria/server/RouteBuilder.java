@@ -43,9 +43,9 @@ import com.google.common.collect.Sets;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.server.annotation.MatchesHeader;
 import com.linecorp.armeria.server.annotation.MatchesParam;
 
@@ -65,9 +65,9 @@ public final class RouteBuilder {
 
     private Set<MediaType> produces = ImmutableSet.of();
 
-    private List<RoutingPredicate<HttpParameters>> paramPredicates = new ArrayList<>();
+    private final List<RoutingPredicate<QueryParams>> paramPredicates = new ArrayList<>();
 
-    private List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
+    private final List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
 
     RouteBuilder() {}
 
@@ -392,9 +392,9 @@ public final class RouteBuilder {
     }
 
     /**
-     * Sets the pre-configured predicates of the {@link HttpParameters}.
+     * Sets the pre-configured predicates of the {@link QueryParams}.
      */
-    RouteBuilder matchesParams(List<RoutingPredicate<HttpParameters>> paramPredicates) {
+    RouteBuilder matchesParams(List<RoutingPredicate<QueryParams>> paramPredicates) {
         this.paramPredicates.addAll(requireNonNull(paramPredicates, "paramPredicates"));
         return this;
     }

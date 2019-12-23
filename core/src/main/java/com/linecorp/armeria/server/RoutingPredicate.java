@@ -35,14 +35,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpParameters;
+import com.linecorp.armeria.common.QueryParams;
 
 import io.netty.util.AsciiString;
 
 /**
  * A {@link Predicate} to evaluate whether a request can be accepted by a service method.
- * Currently predicates for {@link HttpHeaders} and {@link HttpParameters} are supported.
+ * Currently predicates for {@link HttpHeaders} and {@link QueryParams} are supported.
  *
  * @param <T> the type of the object to be tested
  */
@@ -71,14 +72,14 @@ final class RoutingPredicate<T> {
                             .map(RoutingPredicate::ofHeaders).collect(toImmutableList());
     }
 
-    static List<RoutingPredicate<HttpParameters>> copyOfParamPredicates(Iterable<String> predicates) {
+    static List<RoutingPredicate<QueryParams>> copyOfParamPredicates(Iterable<String> predicates) {
         return StreamSupport.stream(predicates.spliterator(), false)
                             .map(RoutingPredicate::ofParams).collect(toImmutableList());
     }
 
     static RoutingPredicate<HttpHeaders> ofHeaders(CharSequence headerName,
                                                    Predicate<String> valuePredicate) {
-        final AsciiString name = AsciiString.of(headerName);
+        final AsciiString name = HttpHeaderNames.of(headerName);
         return new RoutingPredicate<>(headerName, headers ->
                 headers.getAll(name).stream().anyMatch(valuePredicate));
     }
@@ -86,18 +87,18 @@ final class RoutingPredicate<T> {
     @VisibleForTesting
     static RoutingPredicate<HttpHeaders> ofHeaders(String headersPredicate) {
         requireNonNull(headersPredicate, "headersPredicate");
-        return of(headersPredicate, AsciiString::of, name -> headers -> headers.contains(name),
+        return of(headersPredicate, HttpHeaderNames::of, name -> headers -> headers.contains(name),
                   (name, value) -> headers -> headers.getAll(name).stream().anyMatch(value::equals));
     }
 
-    static RoutingPredicate<HttpParameters> ofParams(String paramName,
-                                                     Predicate<String> valuePredicate) {
+    static RoutingPredicate<QueryParams> ofParams(String paramName,
+                                                  Predicate<String> valuePredicate) {
         return new RoutingPredicate<>(paramName, params ->
                 params.getAll(paramName).stream().anyMatch(valuePredicate));
     }
 
     @VisibleForTesting
-    static RoutingPredicate<HttpParameters> ofParams(String paramsPredicate) {
+    static RoutingPredicate<QueryParams> ofParams(String paramsPredicate) {
         requireNonNull(paramsPredicate, "paramsPredicate");
         return of(paramsPredicate, Function.identity(), name -> params -> params.contains(name),
                   (name, value) -> params -> params.getAll(name).stream().anyMatch(value::equals));

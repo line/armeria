@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
@@ -122,7 +123,7 @@ final class RouteCache {
         private final Function<V, Route> routeResolver;
         private final Cache<RoutingContext, V> findCache;
         private final Cache<RoutingContext, List<V>> findAllCache;
-        private final IdentityHashMap<Route, Route> noCacheRoutes;
+        private final Set<Route> noCacheRoutes;
 
         CachingRouter(Router<V> delegate, Function<V, Route> routeResolver,
                       Cache<RoutingContext, V> findCache,
@@ -133,9 +134,9 @@ final class RouteCache {
             this.findCache = requireNonNull(findCache, "findCache");
             this.findAllCache = requireNonNull(findAllCache, "findAllCache");
 
-            final IdentityHashMap<Route, Route> map = new IdentityHashMap<>();
-            requireNonNull(noCacheRoutes, "noCacheRoutes").forEach(r -> map.put(r, r));
-            this.noCacheRoutes = map;
+            final Set<Route> newNoCacheRoutes = Collections.newSetFromMap(new IdentityHashMap<>());
+            newNoCacheRoutes.addAll(requireNonNull(noCacheRoutes, "noCacheRoutes"));
+            this.noCacheRoutes = Collections.unmodifiableSet(newNoCacheRoutes);
         }
 
         @Override
@@ -150,7 +151,7 @@ final class RouteCache {
             }
 
             final Routed<V> result = delegate.find(routingCtx);
-            if (result.isPresent() && !noCacheRoutes.containsKey(result.route())) {
+            if (result.isPresent() && !noCacheRoutes.contains(result.route())) {
                 findCache.put(routingCtx, result.value());
             }
             return result;

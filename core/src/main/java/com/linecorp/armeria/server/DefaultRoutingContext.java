@@ -36,11 +36,9 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
-
-import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
@@ -68,7 +66,7 @@ final class DefaultRoutingContext implements RoutingContext {
     private final String query;
     private final List<MediaType> acceptTypes;
     @Nullable
-    private volatile HttpParameters httpParameters;
+    private volatile QueryParams queryParams;
     private final boolean isCorsPreflight;
     @Nullable
     private HttpStatusException deferredCause;
@@ -111,17 +109,17 @@ final class DefaultRoutingContext implements RoutingContext {
     }
 
     @Override
-    public HttpParameters params() {
-        HttpParameters httpParameters = this.httpParameters;
-        if (httpParameters == null) {
+    public QueryParams params() {
+        QueryParams queryParams = this.queryParams;
+        if (queryParams == null) {
             if (query == null) {
-                httpParameters = HttpParameters.EMPTY_PARAMETERS;
+                queryParams = QueryParams.of();
             } else {
-                httpParameters = HttpParameters.copyOf(new QueryStringDecoder(query, false).parameters());
+                queryParams = QueryParams.fromQueryString(query);
             }
-            this.httpParameters = httpParameters.asImmutable();
+            this.queryParams = queryParams;
         }
-        return httpParameters;
+        return queryParams;
     }
 
     @Nullable
