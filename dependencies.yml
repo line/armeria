@@ -292,10 +292,11 @@ org.apache.kafka:
 
 org.apache.thrift:
   libthrift:
-    version: '0.12.0'
+    version: '0.13.0'
     javadocs:
-    - https://static.javadoc.io/org.apache.thrift/libthrift/0.12.0/
+    - https://static.javadoc.io/org.apache.thrift/libthrift/0.13.0/
     exclusions:
+    - javax.annotation:javax.annotation-api
     - org.apache.httpcomponents:httpcore
     - org.apache.httpcomponents:httpclient
 
