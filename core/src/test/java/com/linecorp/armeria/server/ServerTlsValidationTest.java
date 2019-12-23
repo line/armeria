@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLException;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

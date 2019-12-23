@@ -69,7 +69,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.EmptyArrays;
 
 /**
  * Builds a new {@link VirtualHost}.
@@ -325,7 +324,8 @@ public final class VirtualHostBuilder {
     private VirtualHostBuilder tls(SslContextBuilder sslContextBuilder) {
         requireNonNull(sslContextBuilder, "sslContextBuilder");
         checkState(sslContext == null, "sslContext is already set: %s", sslContext);
-        checkState(this.sslContextBuilder == null, "sslContextBuilder is already set: %s", this.sslContextBuilder);
+        checkState(this.sslContextBuilder == null,
+                   "sslContextBuilder is already set: %s", this.sslContextBuilder);
         this.sslContextBuilder = sslContextBuilder;
         return this;
     }

@@ -781,7 +781,6 @@ public final class ServerBuilder {
         return this;
     }
 
-
     /**
      * Configures SSL or TLS of this {@link Server} with the specified cleartext {@link PrivateKey} and
      * {@link X509Certificate} chain.
