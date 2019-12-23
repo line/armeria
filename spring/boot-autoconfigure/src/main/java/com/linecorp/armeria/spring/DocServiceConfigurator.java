@@ -25,14 +25,12 @@ import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 
 /**
- * Interface used to configure a {@link DocServiceBuilder} on the default armeria server. Can be
- * used to register arbitrary builders to customize the {@link DocService}
- * built by {@link ArmeriaAutoConfiguration}.
+ * Configures a {@link DocService} built by {@link ArmeriaAutoConfiguration}.
  */
 @FunctionalInterface
 public interface DocServiceConfigurator extends Ordered {
     /**
-     * Configures the builder using the specified {@link DocServiceBuilder}.
+     * Configures the specified {@link DocServiceBuilder}.
      */
     void configure(DocServiceBuilder docServiceBuilder);
 
