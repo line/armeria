@@ -1095,7 +1095,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Validates the specified {@link SslContext} is configured properly. If configured as client context or
+     * Makes sure the specified {@link SslContext} is configured properly. If configured as client context or
      * key store password is not given to key store when {@link SslContext} was created using
      * {@link KeyManagerFactory}, the validation will fail and an {@link IllegalStateException} will be raised.
      */
