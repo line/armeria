@@ -39,6 +39,10 @@
   - Learn how to make Armeria serve your Spring Boot reactive web application.
   - See [Using Armeria with Spring WebFlux](https://line.github.io/armeria/advanced-spring-webflux-integration.html).
 
+- `dropwizard`
+  - Learn how to make Armeria serve your Dropwizard web application.
+  - See [Using Armeria with Dropwizard](https://line.github.io/armeria/advanced-dropwizard-integration.html).
+
 - `static-files`
   - Learn how to serve static files.
   - See [Serving static files](https://line.github.io/armeria/server-http-file.html).
