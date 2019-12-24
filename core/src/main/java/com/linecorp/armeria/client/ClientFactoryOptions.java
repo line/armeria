@@ -260,8 +260,19 @@ public final class ClientFactoryOptions extends AbstractOptions {
     /**
      * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
      * applied to the SSL session.
+     *
+     * @deprecated Use {@link #tlsCustomizer()}.
      */
+    @Deprecated
     public Consumer<? super SslContextBuilder> sslContextCustomizer() {
+        return tlsCustomizer();
+    }
+
+    /**
+     * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
+     * applied to the SSL session.
+     */
+    public Consumer<? super SslContextBuilder> tlsCustomizer() {
         return get0(ClientFactoryOption.TLS_CUSTOMIZER).get();
     }
 
