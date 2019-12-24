@@ -101,7 +101,7 @@ public final class VirtualHostBuilder {
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
     private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
     @Nullable
-    private Function<VirtualHost, Logger> accessLoggerMapper;
+    private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
 
     @Nullable
     private RejectedRouteHandler rejectedRouteHandler;
@@ -265,7 +265,7 @@ public final class VirtualHostBuilder {
      *
      * @see #tlsCustomizer(Consumer)
      */
-    public VirtualHostBuilder tls(PrivateKey key, Iterable<X509Certificate> keyCertChain) {
+    public VirtualHostBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
         return tls(key, null, keyCertChain);
     }
 
@@ -287,7 +287,7 @@ public final class VirtualHostBuilder {
      * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tls(PrivateKey key, @Nullable String keyPassword,
-                                  Iterable<X509Certificate> keyCertChain) {
+                                  Iterable<? extends X509Certificate> keyCertChain) {
         requireNonNull(key, "key");
         requireNonNull(keyCertChain, "keyCertChain");
         for (X509Certificate keyCert : keyCertChain) {
@@ -365,7 +365,7 @@ public final class VirtualHostBuilder {
     /**
      * Configures an {@link HttpService} of the {@link VirtualHost} with the {@code customizer}.
      */
-    public VirtualHostBuilder withRoute(Consumer<VirtualHostServiceBindingBuilder> customizer) {
+    public VirtualHostBuilder withRoute(Consumer<? super VirtualHostServiceBindingBuilder> customizer) {
         final VirtualHostServiceBindingBuilder builder = new VirtualHostServiceBindingBuilder(this);
         customizer.accept(builder);
         return this;
@@ -440,7 +440,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder service(
             HttpServiceWithRoutes serviceWithRoutes,
-            Iterable<Function<? super HttpService, ? extends HttpService>> decorators) {
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(serviceWithRoutes, "serviceWithRoutes");
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
@@ -751,7 +751,7 @@ public final class VirtualHostBuilder {
     /**
      * Sets the access logger mapper of this {@link VirtualHost}.
      */
-    public VirtualHostBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
+    public VirtualHostBuilder accessLogger(Function<? super VirtualHost, ? extends Logger> mapper) {
         accessLoggerMapper = requireNonNull(mapper, "mapper");
         return this;
     }
@@ -981,7 +981,7 @@ public final class VirtualHostBuilder {
             shutdownAccessLogWriterOnStop = template.shutdownAccessLogWriterOnStop;
         }
 
-        final Function<VirtualHost, Logger> accessLoggerMapper =
+        final Function<? super VirtualHost, ? extends Logger> accessLoggerMapper =
                 this.accessLoggerMapper != null ?
                 this.accessLoggerMapper : template.accessLoggerMapper;
 
@@ -1084,7 +1084,7 @@ public final class VirtualHostBuilder {
 
     private static SslContext buildSslContext(
             SslContextBuilder sslContextBuilder,
-            Iterable<Consumer<? super SslContextBuilder>> tlsCustomizers) {
+            Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
         try {
             return BouncyCastleKeyFactoryProvider.call(() -> SslContextUtil.createSslContext(
                     sslContextBuilder, false, tlsCustomizers));

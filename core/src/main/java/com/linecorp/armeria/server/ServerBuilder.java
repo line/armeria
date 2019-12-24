@@ -185,8 +185,8 @@ public final class ServerBuilder {
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
-    private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
-    private Predicate<InetAddress> clientAddressFilter = address -> true;
+    private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
+    private Predicate<? super InetAddress> clientAddressFilter = address -> true;
     private Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper =
             ProxiedAddresses::sourceAddress;
     private boolean enableServerHeader = true;
@@ -798,7 +798,7 @@ public final class ServerBuilder {
      *
      * @see #tlsCustomizer(Consumer)
      */
-    public ServerBuilder tls(PrivateKey key, Iterable<X509Certificate> keyCertChain) {
+    public ServerBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
         virtualHostTemplate.tls(key, keyCertChain);
         return this;
     }
@@ -821,7 +821,7 @@ public final class ServerBuilder {
      * @see #tlsCustomizer(Consumer)
      */
     public ServerBuilder tls(PrivateKey key, @Nullable String keyPassword,
-                             Iterable<X509Certificate> keyCertChain) {
+                             Iterable<? extends X509Certificate> keyCertChain) {
         virtualHostTemplate.tls(key, keyPassword, keyCertChain);
         return this;
     }
@@ -883,7 +883,7 @@ public final class ServerBuilder {
     /**
      * Configures an {@link HttpService} of the default {@link VirtualHost} with the {@code customizer}.
      */
-    public ServerBuilder withRoute(Consumer<ServiceBindingBuilder> customizer) {
+    public ServerBuilder withRoute(Consumer<? super ServiceBindingBuilder> customizer) {
         final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(this);
         customizer.accept(serviceBindingBuilder);
         return this;
@@ -954,8 +954,9 @@ public final class ServerBuilder {
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
-    public ServerBuilder service(HttpServiceWithRoutes serviceWithRoutes,
-                                 Iterable<Function<? super HttpService, ? extends HttpService>> decorators) {
+    public ServerBuilder service(
+            HttpServiceWithRoutes serviceWithRoutes,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(serviceWithRoutes, "serviceWithRoutes");
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
@@ -1161,7 +1162,7 @@ public final class ServerBuilder {
     /**
      * Configures the default {@link VirtualHost} with the {@code customizer}.
      */
-    public ServerBuilder withDefaultVirtualHost(Consumer<VirtualHostBuilder> customizer) {
+    public ServerBuilder withDefaultVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
         customizer.accept(defaultVirtualHostBuilder);
         return this;
     }
@@ -1188,7 +1189,7 @@ public final class ServerBuilder {
     /**
      * Configures a {@link VirtualHost} with the {@code customizer}.
      */
-    public ServerBuilder withVirtualHost(Consumer<VirtualHostBuilder> customizer) {
+    public ServerBuilder withVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false);
         customizer.accept(virtualHostBuilder);
         virtualHostBuilders.add(virtualHostBuilder);
@@ -1369,7 +1370,7 @@ public final class ServerBuilder {
      * Sets a filter which evaluates whether an {@link InetAddress} of a remote endpoint is trusted.
      */
     public ServerBuilder clientAddressTrustedProxyFilter(
-            Predicate<InetAddress> clientAddressTrustedProxyFilter) {
+            Predicate<? super InetAddress> clientAddressTrustedProxyFilter) {
         this.clientAddressTrustedProxyFilter =
                 requireNonNull(clientAddressTrustedProxyFilter, "clientAddressTrustedProxyFilter");
         return this;
@@ -1378,7 +1379,7 @@ public final class ServerBuilder {
     /**
      * Sets a filter which evaluates whether an {@link InetAddress} can be used as a client address.
      */
-    public ServerBuilder clientAddressFilter(Predicate<InetAddress> clientAddressFilter) {
+    public ServerBuilder clientAddressFilter(Predicate<? super InetAddress> clientAddressFilter) {
         this.clientAddressFilter = requireNonNull(clientAddressFilter, "clientAddressFilter");
         return this;
     }
@@ -1419,7 +1420,7 @@ public final class ServerBuilder {
      * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
      * will have an access logger set by the {@code mapper} when {@link ServerBuilder#build()} is called.
      */
-    public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
+    public ServerBuilder accessLogger(Function<? super VirtualHost, ? extends Logger> mapper) {
         virtualHostTemplate.accessLogger(mapper);
         return this;
     }

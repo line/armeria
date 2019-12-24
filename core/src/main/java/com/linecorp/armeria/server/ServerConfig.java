@@ -100,8 +100,8 @@ public final class ServerConfig {
     private final Map<ChannelOption<?>, ?> childChannelOptions;
 
     private final List<ClientAddressSource> clientAddressSources;
-    private final Predicate<InetAddress> clientAddressTrustedProxyFilter;
-    private final Predicate<InetAddress> clientAddressFilter;
+    private final Predicate<? super InetAddress> clientAddressTrustedProxyFilter;
+    private final Predicate<? super InetAddress> clientAddressFilter;
     private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
@@ -125,8 +125,8 @@ public final class ServerConfig {
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
-            Predicate<InetAddress> clientAddressTrustedProxyFilter,
-            Predicate<InetAddress> clientAddressFilter,
+            Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
+            Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
             Supplier<? extends RequestId> requestIdGenerator) {
@@ -620,14 +620,14 @@ public final class ServerConfig {
     /**
      * Returns a filter which evaluates whether an {@link InetAddress} of a remote endpoint is trusted.
      */
-    public Predicate<InetAddress> clientAddressTrustedProxyFilter() {
+    public Predicate<? super InetAddress> clientAddressTrustedProxyFilter() {
         return clientAddressTrustedProxyFilter;
     }
 
     /**
      * Returns a filter which evaluates whether an {@link InetAddress} can be used as a client address.
      */
-    public Predicate<InetAddress> clientAddressFilter() {
+    public Predicate<? super InetAddress> clientAddressFilter() {
         return clientAddressFilter;
     }
 
@@ -695,8 +695,8 @@ public final class ServerConfig {
             @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
-            Predicate<InetAddress> clientAddressTrustedProxyFilter,
-            Predicate<InetAddress> clientAddressFilter,
+            Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
+            Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean serverHeaderEnabled, boolean dateHeaderEnabled) {
 
