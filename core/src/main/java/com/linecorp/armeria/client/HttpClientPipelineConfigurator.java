@@ -125,9 +125,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         if (sessionProtocol.isTls()) {
-            sslCtx = SslContextUtil.createSslContext(SslContextBuilder::forClient,
+            sslCtx = SslContextUtil.createSslContext(SslContextBuilder.forClient(),
                                                      httpPreference == HttpPreference.HTTP1_REQUIRED,
-                                                     clientFactory.sslContextCustomizer());
+                                                     clientFactory.tlsCustomizers());
         } else {
             sslCtx = null;
         }

@@ -75,8 +75,18 @@ public final class ClientFactoryOption<T> extends AbstractOption<T> {
      * The {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
      * applied to the SSL session.
      */
+    public static final ClientFactoryOption<Consumer<? super SslContextBuilder>> TLS_CUSTOMIZER =
+            valueOf("TLS_CUSTOMIZER");
+
+    /**
+     * The {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
+     * applied to the SSL session.
+     *
+     * @deprecated Use {@link #TLS_CUSTOMIZER}.
+     */
+    @Deprecated
     public static final ClientFactoryOption<Consumer<? super SslContextBuilder>> SSL_CONTEXT_CUSTOMIZER =
-            valueOf("SSL_CONTEXT_CUSTOMIZER");
+            TLS_CUSTOMIZER;
 
     /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into

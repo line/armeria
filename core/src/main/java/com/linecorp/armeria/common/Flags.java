@@ -435,9 +435,9 @@ public final class Flags {
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         if (dumpOpenSslInfo()) {
             final SSLEngine engine = SslContextUtil.createSslContext(
-                    SslContextBuilder::forClient,
+                    SslContextBuilder.forClient(),
                     false,
-                    unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
+                    ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
