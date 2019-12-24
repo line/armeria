@@ -31,9 +31,7 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     @Override
     protected SimpleBenchmarkClient newClient() {
-        final ClientFactory factory =
-                ClientFactory.builder().tlsNoVerify().build();
-        return new ArmeriaRetrofitBuilder(factory)
+        return new ArmeriaRetrofitBuilder(ClientFactory.insecure())
                 .baseUrl(baseUrl())
                 .addConverterFactory(JacksonConverterFactory.create())
                 .build()

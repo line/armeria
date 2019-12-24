@@ -137,11 +137,7 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void https() throws Exception {
-        final ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .tlsNoVerify()
-                             .build();
-        final WebClient client = WebClient.of(clientFactory, server().httpsUri("/"));
+        final WebClient client = WebClient.of(ClientFactory.insecure(), server().httpsUri("/"));
         final AggregatedHttpResponse response = client.get("/jsp/index.jsp").aggregate().get();
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");

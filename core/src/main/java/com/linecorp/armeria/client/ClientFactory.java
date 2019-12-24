@@ -64,13 +64,21 @@ public interface ClientFactory extends AutoCloseable {
      * @deprecated Use {@link #ofDefault()}.
      */
     @Deprecated
-    ClientFactory DEFAULT = builder().build();
+    ClientFactory DEFAULT = DefaultClientFactory.DEFAULT;
 
     /**
      * Returns the default {@link ClientFactory} implementation.
      */
     static ClientFactory ofDefault() {
-        return DEFAULT;
+        return DefaultClientFactory.DEFAULT;
+    }
+
+    /**
+     * Returns the insecure default {@link ClientFactory} implementation which does not verify server's TLS
+     * certificate chain.
+     */
+    static ClientFactory insecure() {
+        return DefaultClientFactory.INSECURE;
     }
 
     /**
@@ -86,7 +94,11 @@ public interface ClientFactory extends AutoCloseable {
     static void closeDefault() {
         LoggerFactory.getLogger(ClientFactory.class).debug(
                 "Closing the default {}", ClientFactory.class.getSimpleName());
-        ((DefaultClientFactory) ofDefault()).doClose();
+        try {
+            ((DefaultClientFactory) ofDefault()).doClose();
+        } finally {
+            ((DefaultClientFactory) insecure()).doClose();
+        }
     }
 
     /**

@@ -125,12 +125,12 @@ in your configuration as follows:
          * Returns a custom ClientFactory with TLS certificate validation disabled,
          * which means any certificate received from the server will be accepted without any verification.
          * It is used for an example which makes the client send an HTTPS request to the server running
-         * on localhost with a self-signed certificate. Do NOT use tlsNoVerify() or
-         * InsecureTrustManagerFactory in production.
+         * on localhost with a self-signed certificate. Do NOT use ClientFactory.insecure() or
+         * ClientFactoryBuilder.tlsNoVerify() in production.
          */
         @Bean
         public ClientFactory clientFactory() {
-            return new ClientFactoryBuilder().tlsNoVerify().build();
+            return ClientFactory.insecure();
         }
 
         /**

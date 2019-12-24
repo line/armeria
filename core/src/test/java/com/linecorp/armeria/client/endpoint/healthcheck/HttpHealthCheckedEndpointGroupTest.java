@@ -70,11 +70,6 @@ class HttpHealthCheckedEndpointGroupTest {
     @RegisterExtension
     static final ServerExtension serverTwo = new HealthCheckServerExtension();
 
-    private final ClientFactory clientFactory =
-            ClientFactory.builder()
-                         .tlsNoVerify()
-                         .build();
-
     @ParameterizedTest
     @CsvSource({ "HTTP, false", "HTTP, true", "HTTPS, false", "HTTPS, true" })
     void endpoints(SessionProtocol protocol, boolean useGet) throws Exception {
@@ -296,10 +291,10 @@ class HttpHealthCheckedEndpointGroupTest {
         }
     }
 
-    private HealthCheckedEndpointGroup build(HealthCheckedEndpointGroupBuilder builder,
-                                             SessionProtocol protocol) {
+    private static HealthCheckedEndpointGroup build(HealthCheckedEndpointGroupBuilder builder,
+                                                    SessionProtocol protocol) {
         return builder.protocol(protocol)
-                      .clientFactory(clientFactory)
+                      .clientFactory(ClientFactory.insecure())
                       .clientOptions(ClientOptions.builder().decorator(LoggingClient.newDecorator()).build())
                       .build();
     }

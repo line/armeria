@@ -44,12 +44,8 @@ class MockWebServiceExtensionTest {
     @Test
     void normal() {
         final WebClient webClient = WebClient.of(server.httpUri("/"));
-        final ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .tlsNoVerify()
-                             .build();
         final WebClient httpsClient = WebClient.builder(server.httpsUri("/"))
-                                               .factory(clientFactory)
+                                               .factory(ClientFactory.insecure())
                                                .build();
 
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "hello"));

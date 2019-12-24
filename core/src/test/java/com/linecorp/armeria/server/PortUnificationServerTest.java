@@ -40,8 +40,6 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class PortUnificationServerTest {
 
-    private static final ClientFactory clientFactory = ClientFactory.builder().tlsNoVerify().build();
-
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
@@ -66,7 +64,7 @@ class PortUnificationServerTest {
     @ParameterizedTest
     @ArgumentsSource(UniqueProtocolsProvider.class)
     void test(SessionProtocol protocol) throws Exception {
-        final WebClient client = WebClient.of(clientFactory, server.uri(protocol, "/"));
+        final WebClient client = WebClient.of(ClientFactory.insecure(), server.uri(protocol, "/"));
         final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))
                                                       .aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo(protocol.name());
