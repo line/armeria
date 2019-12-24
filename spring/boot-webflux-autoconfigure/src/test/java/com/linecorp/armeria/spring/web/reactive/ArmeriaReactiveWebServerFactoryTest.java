@@ -59,7 +59,7 @@ class ArmeriaReactiveWebServerFactoryTest {
     private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
     private final ClientFactory clientFactory =
             ClientFactory.builder()
-                         .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsNoVerify()
                          .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                          .build();
 

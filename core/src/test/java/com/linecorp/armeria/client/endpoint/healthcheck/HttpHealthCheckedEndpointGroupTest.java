@@ -42,7 +42,6 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 class HttpHealthCheckedEndpointGroupTest {
 
@@ -73,7 +72,7 @@ class HttpHealthCheckedEndpointGroupTest {
 
     private final ClientFactory clientFactory =
             ClientFactory.builder()
-                         .tlsCustomizer(s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsNoVerify()
                          .build();
 
     @ParameterizedTest

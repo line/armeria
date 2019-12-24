@@ -54,8 +54,6 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * {@code application-sslTest.yml} will be loaded with minimal settings to make it work.
@@ -88,7 +86,7 @@ public class ArmeriaSslConfigurationTest {
 
     private static final ClientFactory clientFactory =
             ClientFactory.builder()
-                         .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsNoVerify()
                          .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                          .build();
 

@@ -96,7 +96,6 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
 
@@ -108,7 +107,7 @@ class HttpServerTest {
             ClientFactory.builder()
                          .workerGroup(workerGroup, false) // Will be shut down by the Server.
                          .idleTimeout(Duration.ofSeconds(3))
-                         .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsNoVerify()
                          .build();
 
     private static final long MAX_CONTENT_LENGTH = 65536;

@@ -51,6 +51,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
@@ -233,6 +234,19 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder sslContextCustomizer(Consumer<? super SslContextBuilder> sslContextCustomizer) {
         option(ClientFactoryOption.TLS_CUSTOMIZER,
                requireNonNull(sslContextCustomizer, "sslContextCustomizer"));
+        return this;
+    }
+
+    /**
+     * Disables the verification of server's key certificate chain. This method is a shortcut for:
+     * {@code tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))}.
+     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see InsecureTrustManagerFactory
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ClientFactoryBuilder tlsNoVerify() {
+        tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
         return this;
     }
 

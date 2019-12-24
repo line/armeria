@@ -44,14 +44,10 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
 @Timeout(10)
 class HttpServerHeaderValidationTest {
 
-    static final ClientFactory clientFactory = ClientFactory.builder().tlsCustomizer(scb -> {
-        scb.trustManager(InsecureTrustManagerFactory.INSTANCE);
-    }).build();
+    static final ClientFactory clientFactory = ClientFactory.builder().tlsNoVerify().build();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {

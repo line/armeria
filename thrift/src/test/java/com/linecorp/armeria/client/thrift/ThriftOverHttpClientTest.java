@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.apache.thrift.TApplicationException;
@@ -84,8 +83,6 @@ import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.TimeService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.AsciiString;
 
 @SuppressWarnings("unchecked")
@@ -207,21 +204,18 @@ class ThriftOverHttpClientTest {
 
     @BeforeAll
     static void init() throws Exception {
-        final Consumer<SslContextBuilder> tlsCustomizer =
-                b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE);
-
         final ConnectionPoolListener connectionPoolListener =
                 ENABLE_CONNECTION_POOL_LOGGING ? new ConnectionPoolLoggingListener()
                                                : ConnectionPoolListener.noop();
 
         clientFactoryWithUseHttp2Preface = ClientFactory.builder()
-                                                        .tlsCustomizer(tlsCustomizer)
+                                                        .tlsNoVerify()
                                                         .connectionPoolListener(connectionPoolListener)
                                                         .useHttp2Preface(true)
                                                         .build();
 
         clientFactoryWithoutUseHttp2Preface = ClientFactory.builder()
-                                                           .tlsCustomizer(tlsCustomizer)
+                                                           .tlsNoVerify()
                                                            .connectionPoolListener(connectionPoolListener)
                                                            .useHttp2Preface(false)
                                                            .build();

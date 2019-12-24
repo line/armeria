@@ -61,9 +61,9 @@ public class ClientAuthIntegrationTest {
     public void normal() {
         final ClientFactory clientFactory =
                 ClientFactory.builder()
-                             .tlsCustomizer(ctx -> ctx
-                                     .keyManager(clientCert.certificateFile(), clientCert.privateKeyFile())
-                                     .trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .tlsCustomizer(ctx -> ctx.keyManager(clientCert.certificateFile(),
+                                                                  clientCert.privateKeyFile()))
+                             .tlsNoVerify()
                              .build();
         final WebClient client = WebClient.builder(rule.httpsUri("/"))
                                           .factory(clientFactory)

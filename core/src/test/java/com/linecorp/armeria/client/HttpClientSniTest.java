@@ -40,7 +40,6 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 class HttpClientSniTest {
@@ -81,7 +80,7 @@ class HttpClientSniTest {
                           .getPort();
         clientFactory =
                 ClientFactory.builder()
-                             .tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .tlsNoVerify()
                              .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
                              .build();
     }

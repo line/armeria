@@ -38,13 +38,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.internal.UniqueProtocolsProvider;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
 class PortUnificationServerTest {
 
-    private static final ClientFactory clientFactory =
-            ClientFactory.builder().tlsCustomizer(
-                    b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
+    private static final ClientFactory clientFactory = ClientFactory.builder().tlsNoVerify().build();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
