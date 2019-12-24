@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.PrivateKey;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -98,6 +99,8 @@ public final class VirtualHostBuilder {
     private SslContextBuilder sslContextBuilder;
     @Nullable
     private Boolean tlsSelfSigned;
+    @Nullable
+    private SelfSignedCertificate selfSignedCertificate;
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
     private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
     @Nullable
@@ -1018,11 +1021,16 @@ public final class VirtualHostBuilder {
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
         try {
+            // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
+            boolean sslContextFromThis = false;
+
             // Build a new SslContext or use a user-specified one for backward compatibility.
             if (this.sslContext != null) {
                 sslContext = this.sslContext;
+                sslContextFromThis = true;
             } else if (sslContextBuilder != null) {
                 sslContext = buildSslContext(sslContextBuilder, tlsCustomizers);
+                sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
             } else if (template.sslContext != null) {
                 sslContext = template.sslContext;
@@ -1038,6 +1046,7 @@ public final class VirtualHostBuilder {
                 if (this.tlsSelfSigned != null) {
                     tlsSelfSigned = this.tlsSelfSigned;
                     tlsCustomizers = this.tlsCustomizers;
+                    sslContextFromThis = true;
                 } else {
                     tlsSelfSigned = template.tlsSelfSigned;
                     tlsCustomizers = template.tlsCustomizers;
@@ -1045,9 +1054,10 @@ public final class VirtualHostBuilder {
 
                 if (tlsSelfSigned) {
                     try {
-                        final SelfSignedCertificate ssc = new SelfSignedCertificate(defaultHostname);
-                        tls(ssc.certificate(), ssc.privateKey());
-                        sslContext = buildSslContext(sslContextBuilder, tlsCustomizers);
+                        final SelfSignedCertificate ssc = selfSignedCertificate();
+                        sslContext = buildSslContext(SslContextBuilder.forServer(ssc.certificate(),
+                                                                                 ssc.privateKey()),
+                                                     tlsCustomizers);
                         releaseSslContextOnFailure = true;
                     } catch (Exception e) {
                         throw new RuntimeException("failed to create a self signed certificate", e);
@@ -1055,7 +1065,11 @@ public final class VirtualHostBuilder {
                 }
             }
 
-            // Validate the built SslContext.
+            // Reject if a user called `tlsCustomizer()` without `tls()` or `tlsSelfSigned()`.
+            checkState(sslContextFromThis || tlsCustomizers.isEmpty(),
+                       "Cannot call tlsCustomizer() without tls() or tlsSelfSigned()");
+
+            // Validate the built `SslContext`.
             if (sslContext != null) {
                 validateSslContext(sslContext);
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
@@ -1080,6 +1094,13 @@ public final class VirtualHostBuilder {
                 ReferenceCountUtil.release(sslContext);
             }
         }
+    }
+
+    private SelfSignedCertificate selfSignedCertificate() throws CertificateException {
+        if (selfSignedCertificate == null) {
+            return selfSignedCertificate = new SelfSignedCertificate(defaultHostname);
+        }
+        return selfSignedCertificate;
     }
 
     private static SslContext buildSslContext(

@@ -359,7 +359,7 @@ class ServerBuilderTest {
     }
 
     @Test
-    void tlsSelfSignedCustomization() {
+    void tlsCustomizationWithTlsSelfSigned() {
         tlsCustomization(ServerBuilder::tlsSelfSigned, VirtualHostBuilder::tlsSelfSigned);
     }
 
@@ -395,13 +395,61 @@ class ServerBuilderTest {
             secondVirtualHostCustomizerInvoked.incrementAndGet();
             assertThat(b).isSameAs(virtualHostSslCtxBuilder.get());
         });
-        sb.build();
 
-        assertThat(firstDefaultCustomizerInvoked).hasValue(1);
-        assertThat(secondDefaultCustomizerInvoked).hasValue(1);
-        assertThat(firstVirtualHostCustomizerInvoked).hasValue(1);
-        assertThat(secondVirtualHostCustomizerInvoked).hasValue(1);
+        // No interaction should occur until `ServerBuilder.build()`.
+        assertThat(firstDefaultCustomizerInvoked).hasValue(0);
+        assertThat(secondDefaultCustomizerInvoked).hasValue(0);
+        assertThat(firstVirtualHostCustomizerInvoked).hasValue(0);
+        assertThat(secondVirtualHostCustomizerInvoked).hasValue(0);
 
-        assertThat(defaultSslCtxBuilder.get()).isNotSameAs(virtualHostSslCtxBuilder.get());
+        // Try to build twice, to make sure `build()` does not have any side effects.
+        for (int i = 0; i < 2; i++) {
+            sb.build();
+
+            assertThat(firstDefaultCustomizerInvoked).hasValue(1);
+            assertThat(secondDefaultCustomizerInvoked).hasValue(1);
+            assertThat(firstVirtualHostCustomizerInvoked).hasValue(1);
+            assertThat(secondVirtualHostCustomizerInvoked).hasValue(1);
+
+            assertThat(defaultSslCtxBuilder.get()).isNotSameAs(virtualHostSslCtxBuilder.get());
+
+            firstDefaultCustomizerInvoked.set(0);
+            secondDefaultCustomizerInvoked.set(0);
+            firstVirtualHostCustomizerInvoked.set(0);
+            secondVirtualHostCustomizerInvoked.set(0);
+        }
+    }
+
+    @Test
+    void tlsCustomizerWithoutTls() {
+        // Did not call `tls()` for both default host and virtual host.
+        assertThatThrownBy(() -> Server.builder()
+                                       .virtualHost("example.com")
+                                       .tlsCustomizer(unused -> {})
+                                       .and().build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("tlsCustomizer");
+
+        // Called `tls()` for default host but did not for virtual host.
+        assertThatThrownBy(() -> Server.builder()
+                                       .tls(selfSignedCertificate.certificateFile(),
+                                            selfSignedCertificate.privateKeyFile())
+                                       .virtualHost("example.com")
+                                       .tlsCustomizer(unused -> {})
+                                       .and().build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("tlsCustomizer");
+    }
+
+    @Test
+    void tlsCustomizerWithoutTlsSelfSigned() {
+        // Called `tlsSelfSigned()` for default host but did not for virtual host.
+        assertThatThrownBy(() -> Server.builder()
+                                       .tlsSelfSigned()
+                                       .virtualHost("example.com")
+                                       .tlsCustomizer(unused -> {})
+                                       .and().build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("tlsCustomizer");
     }
 }
