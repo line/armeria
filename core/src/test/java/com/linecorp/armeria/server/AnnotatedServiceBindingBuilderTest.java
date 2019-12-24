@@ -63,9 +63,9 @@ class AnnotatedServiceBindingBuilderTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedHttpServiceExtensions(ImmutableList.of(),
-                                              ImmutableList.of(customJacksonResponseConverterFunction),
-                                              ImmutableList.of())
+            sb.annotatedServiceExtensions(ImmutableList.of(),
+                                          ImmutableList.of(customJacksonResponseConverterFunction),
+                                          ImmutableList.of())
               .annotatedService()
               .exceptionHandlers(handlerFunction)
               .build(new TestService());
@@ -151,7 +151,7 @@ class AnnotatedServiceBindingBuilderTest {
     }
 
     @Test
-    void testGlobalAnnotatedHttpServiceExtensions() {
+    void testGlobalAnnotatedServiceExtensions() {
         final AggregatedHttpResponse result = postJson("/bar", "{\"b\":\"foo\",\"a\":\"bar\"}");
 
         assertThat(result.contentUtf8()).isEqualTo("{\"a\":\"bar\",\"b\":\"foo\"}");

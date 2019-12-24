@@ -37,7 +37,7 @@ import io.netty.util.AsciiString;
 
 /**
  * Extracts {@link OAuth1aToken} from {@link RequestHeaders}, in order to be used by
- * {@link HttpAuthServiceBuilder}.
+ * {@link AuthServiceBuilder}.
  */
 final class OAuth1aTokenExtractor implements Function<RequestHeaders, OAuth1aToken> {
 

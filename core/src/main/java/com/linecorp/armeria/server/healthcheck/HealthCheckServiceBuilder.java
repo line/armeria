@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.auth.HttpAuthService;
+import com.linecorp.armeria.server.auth.AuthService;
 
 /**
  * Builds a {@link HealthCheckService}.
@@ -204,7 +204,7 @@ public final class HealthCheckServiceBuilder {
      * {@code POST} or {@code PATCH} request to the {@link HealthCheckService}. This feature is disabled
      * by default. If enabled, a JSON object which has a boolean property named {@code "healthy"} can be
      * sent using a {@code PUT} or {@code POST} request. A JSON patch in a {@code PATCH} request is also
-     * accepted. It is recommended to employ some authorization mechanism such as {@link HttpAuthService}
+     * accepted. It is recommended to employ some authorization mechanism such as {@link AuthService}
      * when enabling this feature.
      *
      * @return {@code this}
@@ -222,7 +222,7 @@ public final class HealthCheckServiceBuilder {
     /**
      * Specifies a {@link HealthCheckUpdateHandler} which handles other HTTP methods than {@code HEAD} and
      * {@code GET} which updates the healthiness of the {@link Server}. This feature is disabled by default.
-     * It is recommended to employ some authorization mechanism such as {@link HttpAuthService}
+     * It is recommended to employ some authorization mechanism such as {@link AuthService}
      * when enabling this feature.
      *
      * @param updateHandler The {@link HealthCheckUpdateHandler} which handles {@code PUT}, {@code POST} or

@@ -62,10 +62,10 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
      * Use this method instead of an explicit downcast. For example:
      * <pre>{@code
      * HttpService s = new MyService().decorate(LoggingService.newDecorator())
-     *                                .decorate(HttpAuthService.newDecorator());
+     *                                .decorate(AuthService.newDecorator());
      * MyService s1 = s.as(MyService.class);
      * LoggingService s2 = s.as(LoggingService.class);
-     * AuthService s3 = s.as(HttpAuthService.class);
+     * AuthService s3 = s.as(AuthService.class);
      * }</pre>
      *
      * @param type the type of the object to return

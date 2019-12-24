@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
@@ -65,8 +65,8 @@ public class HelloConfiguration {
         return builder -> {
             // Use a circuit breaker for each remote host.
             final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-            builder.decorator(CircuitBreakerHttpClient.builder(strategy)
-                                                      .newDecorator());
+            builder.decorator(CircuitBreakerClient.builder(strategy)
+                                                  .newDecorator());
 
             // Set a custom client factory.
             builder.factory(clientFactory);

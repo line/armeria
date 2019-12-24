@@ -16,167 +16,73 @@
 
 package com.linecorp.armeria.server.auth;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Service;
 
 /**
- * Builds a new {@link HttpAuthService}.
+ * Builds a new {@link AuthService}.
+ *
+ * @deprecated Use {@link AuthService#builder()}.
  */
-public final class HttpAuthServiceBuilder {
+@Deprecated
+public final class HttpAuthServiceBuilder extends AuthServiceBuilder {
 
-    @Nullable
-    private Authorizer<HttpRequest> authorizer;
-    private AuthSuccessHandler<HttpRequest, HttpResponse> successHandler = Service::serve;
-    private AuthFailureHandler<HttpRequest, HttpResponse> failureHandler = (delegate, ctx, req, cause) -> {
-        if (cause != null) {
-            HttpAuthService.logger.warn("Unexpected exception during authorization.", cause);
-        }
-        return HttpResponse.of(HttpStatus.UNAUTHORIZED);
-    };
-
-    /**
-     * Adds an {@link Authorizer}.
-     */
+    @Override
     public HttpAuthServiceBuilder add(Authorizer<HttpRequest> authorizer) {
-        requireNonNull(authorizer, "authorizer");
-        if (this.authorizer == null) {
-            this.authorizer = authorizer;
-        } else {
-            this.authorizer = this.authorizer.orElse(authorizer);
-        }
-        return this;
+        return (HttpAuthServiceBuilder) super.add(authorizer);
     }
 
-    /**
-     * Adds multiple {@link Authorizer}s.
-     */
+    @Override
     public HttpAuthServiceBuilder add(Iterable<? extends Authorizer<HttpRequest>> authorizers) {
-        requireNonNull(authorizers, "authorizers");
-        authorizers.forEach(a -> {
-            requireNonNull(a, "authorizers contains null.");
-            add(a);
-        });
-        return this;
+        return (HttpAuthServiceBuilder) super.add(authorizers);
     }
 
-    /**
-     * Adds an HTTP basic {@link Authorizer}.
-     */
+    @Override
     public HttpAuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer) {
-        return addTokenAuthorizer(AuthTokenExtractors.BASIC,
-                                  requireNonNull(authorizer, "authorizer"));
+        return (HttpAuthServiceBuilder) super.addBasicAuth(authorizer);
     }
 
-    /**
-     * Adds an HTTP basic {@link Authorizer} for the given {@code header}.
-     */
+    @Override
     public HttpAuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer, CharSequence header) {
-        return addTokenAuthorizer(new BasicTokenExtractor(requireNonNull(header, "header")),
-                                  requireNonNull(authorizer, "authorizer"));
+        return (HttpAuthServiceBuilder) super.addBasicAuth(authorizer, header);
     }
 
-    /**
-     * Adds an OAuth1a {@link Authorizer}.
-     */
+    @Override
     public HttpAuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer) {
-        return addTokenAuthorizer(AuthTokenExtractors.OAUTH1A,
-                                  requireNonNull(authorizer, "authorizer"));
+        return (HttpAuthServiceBuilder) super.addOAuth1a(authorizer);
     }
 
-    /**
-     * Adds an OAuth1a {@link Authorizer} for the given {@code header}.
-     */
+    @Override
     public HttpAuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer, CharSequence header) {
-        return addTokenAuthorizer(new OAuth1aTokenExtractor(requireNonNull(header, "header")),
-                                  requireNonNull(authorizer, "authorizer"));
+        return (HttpAuthServiceBuilder) super.addOAuth1a(authorizer, header);
     }
 
-    /**
-     * Adds an OAuth2 {@link Authorizer}.
-     */
+    @Override
     public HttpAuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer) {
-        return addTokenAuthorizer(AuthTokenExtractors.OAUTH2, requireNonNull(authorizer, "authorizer"));
+        return (HttpAuthServiceBuilder) super.addOAuth2(authorizer);
     }
 
-    /**
-     * Adds an OAuth2 {@link Authorizer} for the given {@code header}.
-     */
+    @Override
     public HttpAuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer, CharSequence header) {
-        return addTokenAuthorizer(new OAuth2TokenExtractor(requireNonNull(header, "header")),
-                                  requireNonNull(authorizer, "authorizer"));
+        return (HttpAuthServiceBuilder) super.addOAuth2(authorizer, header);
     }
 
-    /**
-     * Adds a token-based {@link Authorizer}.
-     */
-    public <T> HttpAuthServiceBuilder addTokenAuthorizer(
-            Function<? super RequestHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
-        requireNonNull(tokenExtractor, "tokenExtractor");
-        requireNonNull(authorizer, "authorizer");
-        final Authorizer<HttpRequest> requestAuthorizer = (ctx, req) -> {
-            final T token = tokenExtractor.apply(req.headers());
-            if (token == null) {
-                return CompletableFuture.completedFuture(false);
-            }
-            return authorizer.authorize(ctx, token);
-        };
-        add(requestAuthorizer);
-        return this;
+    @Override
+    public <T> HttpAuthServiceBuilder addTokenAuthorizer(Function<? super RequestHeaders, T> tokenExtractor,
+                                                         Authorizer<? super T> authorizer) {
+        return (HttpAuthServiceBuilder) super.addTokenAuthorizer(tokenExtractor, authorizer);
     }
 
-    /**
-     * Sets the {@link AuthSuccessHandler} which handles successfully authorized requests.
-     * By default, the request will be delegated to the next {@link HttpService}.
-     */
+    @Override
     public HttpAuthServiceBuilder onSuccess(AuthSuccessHandler<HttpRequest, HttpResponse> successHandler) {
-        this.successHandler = requireNonNull(successHandler, "successHandler");
-        return this;
+        return (HttpAuthServiceBuilder) super.onSuccess(successHandler);
     }
 
-    /**
-     * Sets the {@link AuthFailureHandler} which handles the requests with failed authorization.
-     * By default, an exception thrown during authorization is logged at WARN level (if any) and a
-     * {@code 401 Unauthorized} response will be sent.
-     */
+    @Override
     public HttpAuthServiceBuilder onFailure(AuthFailureHandler<HttpRequest, HttpResponse> failureHandler) {
-        this.failureHandler = requireNonNull(failureHandler, "failureHandler");
-        return this;
-    }
-
-    /**
-     * Returns a newly-created {@link HttpAuthService} based on the {@link Authorizer}s added to this builder.
-     */
-    public HttpAuthService build(HttpService delegate) {
-        return new HttpAuthService(requireNonNull(delegate, "delegate"), authorizer(),
-                                   successHandler, failureHandler);
-    }
-
-    /**
-     * Returns a newly-created decorator that decorates an {@link HttpService} with a new
-     * {@link HttpAuthService} based on the {@link Authorizer}s added to this builder.
-     */
-    public Function<? super HttpService, HttpAuthService> newDecorator() {
-        final Authorizer<HttpRequest> authorizer = authorizer();
-        final AuthSuccessHandler<HttpRequest, HttpResponse> successHandler = this.successHandler;
-        final AuthFailureHandler<HttpRequest, HttpResponse> failureHandler = this.failureHandler;
-        return service -> new HttpAuthService(service, authorizer, successHandler, failureHandler);
-    }
-
-    private Authorizer<HttpRequest> authorizer() {
-        if (authorizer == null) {
-            throw new IllegalStateException("no " + Authorizer.class.getSimpleName() + " was added.");
-        }
-        return authorizer;
+        return (HttpAuthServiceBuilder) super.onFailure(failureHandler);
     }
 }

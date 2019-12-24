@@ -30,9 +30,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceExtensions;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceElement;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -273,11 +273,11 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
 
     /**
      * Builds the {@link ServiceConfigBuilder}s created with the configured
-     * {@link AnnotatedHttpServiceExtensions} to the {@link ServerBuilder}.
+     * {@link AnnotatedServiceExtensions} to the {@link ServerBuilder}.
      *
-     * @param extensions the {@link AnnotatedHttpServiceExtensions} at the server level.
+     * @param extensions the {@link AnnotatedServiceExtensions} at the server level.
      */
-    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
+    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions) {
         final List<RequestConverterFunction> requestConverterFunctions =
                 requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
         final List<ResponseConverterFunction> responseConverterFunctions =
@@ -287,9 +287,9 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
 
         assert service != null;
 
-        final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service, requestConverterFunctions,
-                                                 responseConverterFunctions, exceptionHandlerFunctions);
+        final List<AnnotatedServiceElement> elements =
+                AnnotatedServiceFactory.find(pathPrefix, service, requestConverterFunctions,
+                                             responseConverterFunctions, exceptionHandlerFunctions);
         return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

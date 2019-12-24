@@ -57,8 +57,8 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.SslContextUtil;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceExtensions;
+import com.linecorp.armeria.internal.annotation.AnnotatedService;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -122,7 +122,7 @@ public final class VirtualHostBuilder {
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
     @Nullable
-    private AnnotatedHttpServiceExtensions annotatedHttpServiceExtensions;
+    private AnnotatedServiceExtensions annotatedServiceExtensions;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -574,8 +574,8 @@ public final class VirtualHostBuilder {
         requireNonNull(service, "service");
         requireNonNull(decorator, "decorator");
         requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
-        final AnnotatedHttpServiceExtensions configurator =
-                AnnotatedHttpServiceExtensions
+        final AnnotatedServiceExtensions configurator =
+                AnnotatedServiceExtensions
                         .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
         return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
                                 configurator.requestConverters(), configurator.responseConverters());
@@ -609,7 +609,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Returns a new instance of {@link VirtualHostAnnotatedServiceBindingBuilder} to build
-     * {@link AnnotatedHttpService} fluently.
+     * {@link AnnotatedService} fluently.
      */
     public VirtualHostAnnotatedServiceBindingBuilder annotatedService() {
         return new VirtualHostAnnotatedServiceBindingBuilder(this);
@@ -910,29 +910,29 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
-     * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedHttpServiceExtensions}.
+     * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
      * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
      */
-    public VirtualHostBuilder annotatedHttpServiceExtensions(
+    public VirtualHostBuilder annotatedServiceExtensions(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions,
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        annotatedHttpServiceExtensions =
-                new AnnotatedHttpServiceExtensions(ImmutableList.copyOf(requestConverterFunctions),
+        annotatedServiceExtensions =
+                new AnnotatedServiceExtensions(ImmutableList.copyOf(requestConverterFunctions),
                                                    ImmutableList.copyOf(responseConverterFunctions),
                                                    ImmutableList.copyOf(exceptionHandlerFunctions));
         return this;
     }
 
     @Nullable
-    AnnotatedHttpServiceExtensions getAnnotatedHttpServiceExtensions() {
-        return annotatedHttpServiceExtensions;
+    AnnotatedServiceExtensions annotatedServiceExtensions() {
+        return annotatedServiceExtensions;
     }
 
     /**
@@ -988,9 +988,9 @@ public final class VirtualHostBuilder {
                 this.accessLoggerMapper != null ?
                 this.accessLoggerMapper : template.accessLoggerMapper;
 
-        final AnnotatedHttpServiceExtensions extensions =
-                annotatedHttpServiceExtensions != null ?
-                annotatedHttpServiceExtensions : template.annotatedHttpServiceExtensions;
+        final AnnotatedServiceExtensions extensions =
+                annotatedServiceExtensions != null ?
+                annotatedServiceExtensions : template.annotatedServiceExtensions;
 
         assert requestContentPreviewerFactory != null;
         assert responseContentPreviewerFactory != null;

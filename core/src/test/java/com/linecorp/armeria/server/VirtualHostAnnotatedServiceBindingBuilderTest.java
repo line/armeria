@@ -68,9 +68,9 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.virtualHost(TEST_HOST)
-              .annotatedHttpServiceExtensions(ImmutableList.of(),
-                                              ImmutableList.of(customJacksonResponseConverterFunction),
-                                              ImmutableList.of())
+              .annotatedServiceExtensions(ImmutableList.of(),
+                                          ImmutableList.of(customJacksonResponseConverterFunction),
+                                          ImmutableList.of())
               .annotatedService()
               .pathPrefix("/path")
               .exceptionHandlers(handlerFunction)
@@ -128,7 +128,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
     }
 
     @Test
-    void testGlobalAnnotatedHttpServiceExtensions() {
+    void testGlobalAnnotatedServiceExtensions() {
         final AggregatedHttpResponse result =
                 postJson("/path/bar", "{\"b\":\"foo\",\"a\":\"bar\"}");
 

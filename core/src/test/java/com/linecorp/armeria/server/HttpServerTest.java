@@ -89,7 +89,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.server.encoding.HttpEncodingService;
+import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -300,7 +300,7 @@ class HttpServerTest {
                             HttpData.ofUtf8("is "),
                             HttpData.ofUtf8("awesome!"));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/images", new AbstractHttpService() {
                 @Override
@@ -312,7 +312,7 @@ class HttpServerTest {
                             HttpData.ofUtf8("is "),
                             HttpData.ofUtf8("awesome!"));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/small", new AbstractHttpService() {
                 @Override
@@ -324,7 +324,7 @@ class HttpServerTest {
                                                HttpHeaderNames.CONTENT_LENGTH, response.length()),
                             HttpData.ofUtf8(response));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/large", new AbstractHttpService() {
                 @Override
@@ -336,7 +336,7 @@ class HttpServerTest {
                                                HttpHeaderNames.CONTENT_LENGTH, response.length()),
                             HttpData.ofUtf8(response));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/sslsession", new AbstractHttpService() {
                 @Override
@@ -348,7 +348,7 @@ class HttpServerTest {
                     }
                     return HttpResponse.of(HttpStatus.OK);
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/headers", new AbstractHttpService() {
                 @Override
@@ -360,7 +360,7 @@ class HttpServerTest {
                                                HttpHeaderNames.of("X-Custom-Header2"), "custom2"),
                             HttpData.ofUtf8("headers"));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/trailers", new AbstractHttpService() {
                 @Override
