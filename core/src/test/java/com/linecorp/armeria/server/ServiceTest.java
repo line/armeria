@@ -66,10 +66,8 @@ public class ServiceTest {
         assertThat(outer.as(String.class)).isNotPresent();
 
         // Test if FooService.serviceAdded() is invoked.
-        @SuppressWarnings({ "unchecked", "rawtypes" })
-        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(),
-                                                    outer, "foo", 1, 1,
-                                                    true, ContentPreviewerFactory.disabled(),
+        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, 1, 1, true,
+                                                    ContentPreviewerFactory.disabled(),
                                                     ContentPreviewerFactory.disabled(),
                                                     AccessLogWriter.disabled(), false);
         outer.serviceAdded(cfg);

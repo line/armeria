@@ -26,8 +26,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
@@ -130,11 +128,6 @@ public class ServiceRequestContextWrapper
     @Override
     public MediaType negotiatedResponseMediaType() {
         return delegate().negotiatedResponseMediaType();
-    }
-
-    @Override
-    public Logger logger() {
-        return delegate().logger();
     }
 
     @Override

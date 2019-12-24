@@ -30,6 +30,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.JavaVersionSpecific;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
@@ -184,6 +186,11 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
         return RequestContext.super.makeContextAware(future);
+    }
+
+    @Override
+    public final Logger makeContextAware(Logger logger) {
+        return RequestContext.super.makeContextAware(logger);
     }
 
     @Override

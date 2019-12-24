@@ -140,7 +140,6 @@ public final class ServerBuilder {
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
-    private static final String DEFAULT_SERVICE_LOGGER_PREFIX = "armeria.services";
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
 
@@ -181,7 +180,6 @@ public final class ServerBuilder {
     private ScheduledExecutorService blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
-    private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
@@ -647,16 +645,6 @@ public final class ServerBuilder {
      */
     public ServerBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        return this;
-    }
-
-    /**
-     * Sets the prefix of {@linkplain ServiceRequestContext#logger() service logger} names.
-     * The default value is "{@value #DEFAULT_SERVICE_LOGGER_PREFIX}". A service logger name prefix must be
-     * a string of valid Java identifier names concatenated by period ({@code '.'}), such as a package name.
-     */
-    public ServerBuilder serviceLoggerPrefix(String serviceLoggerPrefix) {
-        this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
         return this;
     }
 
@@ -1584,8 +1572,7 @@ public final class ServerBuilder {
                 http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, serviceLoggerPrefix,
-                proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
+                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
 
@@ -1659,8 +1646,7 @@ public final class ServerBuilder {
                 http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, serviceLoggerPrefix,
-                channelOptions, childChannelOptions,
+                meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader);
     }
