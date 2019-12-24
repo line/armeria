@@ -47,7 +47,6 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
  * Tests a web application container {@link Service}.
@@ -138,11 +137,7 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void https() throws Exception {
-        final ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                             .build();
-        final WebClient client = WebClient.of(clientFactory, server().httpsUri("/"));
+        final WebClient client = WebClient.of(ClientFactory.insecure(), server().httpsUri("/"));
         final AggregatedHttpResponse response = client.get("/jsp/index.jsp").aggregate().get();
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");

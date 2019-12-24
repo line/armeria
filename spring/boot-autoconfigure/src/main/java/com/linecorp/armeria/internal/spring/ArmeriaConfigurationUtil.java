@@ -452,7 +452,8 @@ public final class ArmeriaConfigurationUtil {
             final KeyManagerFactory keyManagerFactory = getKeyManagerFactory(ssl, keyStoreSupplier);
             final TrustManagerFactory trustManagerFactory = getTrustManagerFactory(ssl, trustStoreSupplier);
 
-            sb.tls(keyManagerFactory, sslContextBuilder -> {
+            sb.tls(keyManagerFactory);
+            sb.tlsCustomizer(sslContextBuilder -> {
                 sslContextBuilder.trustManager(trustManagerFactory);
 
                 final SslProvider sslProvider = ssl.getProvider();

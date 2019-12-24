@@ -27,14 +27,17 @@ import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.security.PrivateKey;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
@@ -46,9 +49,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.SslContextUtil;
@@ -79,46 +84,6 @@ import io.netty.util.ReferenceCountUtil;
  */
 public final class VirtualHostBuilder {
 
-    /**
-     * Validate {@code sslContext} is configured properly. If {@code sslContext} is configured as client
-     * context, or key store password is not given to key store when {@code sslContext} is created using key
-     * manager factory, the validation will fail and an {@link SSLException} will be raised.
-     */
-    private static SslContext validateSslContext(SslContext sslContext) throws SSLException {
-        if (!sslContext.isServer()) {
-            throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
-        }
-
-        SSLEngine serverEngine = null;
-        SSLEngine clientEngine = null;
-
-        try {
-            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
-            serverEngine.setUseClientMode(false);
-            serverEngine.setNeedClientAuth(false);
-
-            final SslContext sslContextClient =
-                    buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {});
-            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
-            clientEngine.setUseClientMode(true);
-
-            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
-            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
-
-            clientEngine.wrap(appBuf, packetBuf);
-            appBuf.clear();
-            packetBuf.flip();
-            serverEngine.unwrap(packetBuf, appBuf);
-        } catch (SSLException e) {
-            throw new SSLException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
-        } finally {
-            ReferenceCountUtil.release(serverEngine);
-            ReferenceCountUtil.release(clientEngine);
-        }
-
-        return sslContext;
-    }
-
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
@@ -131,10 +96,15 @@ public final class VirtualHostBuilder {
     @Nullable
     private SslContext sslContext;
     @Nullable
+    private SslContextBuilder sslContextBuilder;
+    @Nullable
     private Boolean tlsSelfSigned;
+    @Nullable
+    private SelfSignedCertificate selfSignedCertificate;
+    private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
     private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
     @Nullable
-    private Function<VirtualHost, Logger> accessLoggerMapper;
+    private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
 
     @Nullable
     private RejectedRouteHandler rejectedRouteHandler;
@@ -198,100 +168,176 @@ public final class VirtualHostBuilder {
 
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with the specified {@link SslContext}.
+     *
+     * @deprecated This unsafe method has been deprecated because an incorrectly built {@link SslContext}
+     *             can cause a {@link Server} to malfunction. Use other {@code tls()} methods.
      */
-    public VirtualHostBuilder tls(SslContext sslContext) throws SSLException {
+    @Deprecated
+    public VirtualHostBuilder tls(SslContext sslContext) {
+        requireNonNull(sslContext, "sslContext");
         checkState(this.sslContext == null, "sslContext is already set: %s", this.sslContext);
-
-        this.sslContext = validateSslContext(requireNonNull(sslContext, "sslContext"));
+        checkState(sslContextBuilder == null, "sslContextBuilder is already set: %s", sslContextBuilder);
+        this.sslContext = sslContext;
         return this;
     }
 
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
-    public VirtualHostBuilder tls(File keyCertChainFile, File keyFile) throws SSLException {
-        tls(keyCertChainFile, keyFile, null, sslContextBuilder -> { /* noop */ });
-        return this;
+    public VirtualHostBuilder tls(File keyCertChainFile, File keyFile) {
+        return tls(keyCertChainFile, keyFile, (String) null);
     }
 
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
      * cleartext {@code keyFile} and {@code tlsCustomizer}.
+     *
+     * @deprecated Use {@link #tls(File, File)} and {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile,
-                                  Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
-        tls(keyCertChainFile, keyFile, null, tlsCustomizer);
-        return this;
+                                  Consumer<SslContextBuilder> tlsCustomizer) {
+        tls(keyCertChainFile, keyFile);
+        return tlsCustomizer(tlsCustomizer);
     }
 
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
-    public VirtualHostBuilder tls(File keyCertChainFile, File keyFile,
-                                  @Nullable String keyPassword) throws SSLException {
-        tls(keyCertChainFile, keyFile, keyPassword, sslContextBuilder -> { /* noop */ });
-        return this;
+    public VirtualHostBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
+        requireNonNull(keyCertChainFile, "keyCertChainFile");
+        requireNonNull(keyFile, "keyFile");
+        return tls(SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword));
     }
 
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
      * {@code keyFile}, {@code keyPassword} and {@code tlsCustomizer}.
+     *
+     * @deprecated Use {@link #tls(File, File, String)} and {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword,
-                                  Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
-        requireNonNull(keyCertChainFile, "keyCertChainFile");
-        requireNonNull(keyFile, "keyFile");
-        requireNonNull(tlsCustomizer, "tlsCustomizer");
+                                  Consumer<SslContextBuilder> tlsCustomizer) {
+        tls(keyCertChainFile, keyFile, keyPassword);
+        return tlsCustomizer(tlsCustomizer);
+    }
 
-        if (!keyCertChainFile.exists()) {
-            throw new SSLException("non-existent certificate chain file: " + keyCertChainFile);
-        }
-        if (!keyCertChainFile.canRead()) {
-            throw new SSLException("cannot read certificate chain file: " + keyCertChainFile);
-        }
-        if (!keyFile.exists()) {
-            throw new SSLException("non-existent key file: " + keyFile);
-        }
-        if (!keyFile.canRead()) {
-            throw new SSLException("cannot read key file: " + keyFile);
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainInputStream} and
+     * cleartext {@code keyInputStream}.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public VirtualHostBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
+        return tls(keyCertChainInputStream, keyInputStream, null);
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainInputStream},
+     * {@code keyInputStream} and {@code keyPassword}.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public VirtualHostBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
+                                  @Nullable String keyPassword) {
+        requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
+        requireNonNull(keyInputStream, "keyInputStream");
+        return tls(SslContextBuilder.forServer(keyCertChainInputStream, keyInputStream, keyPassword));
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey} and
+     * {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public VirtualHostBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
+        return tls(key, null, keyCertChain);
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey} and
+     * {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public VirtualHostBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
+        return tls(key, null, keyCertChain);
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey},
+     * {@code keyPassword} and {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public VirtualHostBuilder tls(PrivateKey key, @Nullable String keyPassword,
+                                  X509Certificate... keyCertChain) {
+        return tls(key, keyPassword, ImmutableList.copyOf(requireNonNull(keyCertChain, "keyCertChain")));
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey},
+     * {@code keyPassword} and {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public VirtualHostBuilder tls(PrivateKey key, @Nullable String keyPassword,
+                                  Iterable<? extends X509Certificate> keyCertChain) {
+        requireNonNull(key, "key");
+        requireNonNull(keyCertChain, "keyCertChain");
+        for (X509Certificate keyCert : keyCertChain) {
+            requireNonNull(keyCert, "keyCertChain contains null.");
         }
 
-        tls(buildSslContext(() -> SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword),
-                            tlsCustomizer));
-        return this;
+        return tls(SslContextBuilder.forServer(key, keyPassword,
+                                               Iterables.toArray(keyCertChain, X509Certificate.class)));
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@link KeyManagerFactory}.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public VirtualHostBuilder tls(KeyManagerFactory keyManagerFactory) {
+        requireNonNull(keyManagerFactory, "keyManagerFactory");
+        return tls(SslContextBuilder.forServer(keyManagerFactory));
     }
 
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyManagerFactory}
      * and {@code tlsCustomizer}.
+     *
+     * @deprecated Use {@link #tls(KeyManagerFactory)} and {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public VirtualHostBuilder tls(KeyManagerFactory keyManagerFactory,
-                                  Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
-        requireNonNull(keyManagerFactory, "keyManagerFactory");
-        requireNonNull(tlsCustomizer, "tlsCustomizer");
-
-        tls(buildSslContext(() -> SslContextBuilder.forServer(keyManagerFactory), tlsCustomizer));
-        return this;
+                                  Consumer<SslContextBuilder> tlsCustomizer) {
+        tls(keyManagerFactory);
+        return tlsCustomizer(tlsCustomizer);
     }
 
-    private static SslContext buildSslContext(
-            Supplier<SslContextBuilder> builderSupplier,
-            Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
-        try {
-            return BouncyCastleKeyFactoryProvider.call(() -> SslContextUtil.createSslContext(
-                    builderSupplier, false, tlsCustomizer));
-        } catch (RuntimeException | SSLException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new SSLException("failed to configure TLS: " + e, e);
-        }
+    private VirtualHostBuilder tls(SslContextBuilder sslContextBuilder) {
+        requireNonNull(sslContextBuilder, "sslContextBuilder");
+        checkState(sslContext == null, "sslContext is already set: %s", sslContext);
+        checkState(this.sslContextBuilder == null,
+                   "sslContextBuilder is already set: %s", this.sslContextBuilder);
+        this.sslContextBuilder = sslContextBuilder;
+        return this;
     }
 
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with an auto-generated self-signed certificate.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tlsSelfSigned() {
         tlsSelfSigned = true;
@@ -301,6 +347,8 @@ public final class VirtualHostBuilder {
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with an auto-generated self-signed certificate.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tlsSelfSigned(boolean tlsSelfSigned) {
         this.tlsSelfSigned = tlsSelfSigned;
@@ -308,9 +356,19 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
+     * applied to the SSL session.
+     */
+    public VirtualHostBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
+        requireNonNull(tlsCustomizer, "tlsCustomizer");
+        tlsCustomizers.add(tlsCustomizer);
+        return this;
+    }
+
+    /**
      * Configures an {@link HttpService} of the {@link VirtualHost} with the {@code customizer}.
      */
-    public VirtualHostBuilder withRoute(Consumer<VirtualHostServiceBindingBuilder> customizer) {
+    public VirtualHostBuilder withRoute(Consumer<? super VirtualHostServiceBindingBuilder> customizer) {
         final VirtualHostServiceBindingBuilder builder = new VirtualHostServiceBindingBuilder(this);
         customizer.accept(builder);
         return this;
@@ -385,7 +443,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder service(
             HttpServiceWithRoutes serviceWithRoutes,
-            Iterable<Function<? super HttpService, ? extends HttpService>> decorators) {
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(serviceWithRoutes, "serviceWithRoutes");
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
@@ -696,7 +754,7 @@ public final class VirtualHostBuilder {
     /**
      * Sets the access logger mapper of this {@link VirtualHost}.
      */
-    public VirtualHostBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
+    public VirtualHostBuilder accessLogger(Function<? super VirtualHost, ? extends Logger> mapper) {
         accessLoggerMapper = requireNonNull(mapper, "mapper");
         return this;
     }
@@ -926,7 +984,7 @@ public final class VirtualHostBuilder {
             shutdownAccessLogWriterOnStop = template.shutdownAccessLogWriterOnStop;
         }
 
-        final Function<VirtualHost, Logger> accessLoggerMapper =
+        final Function<? super VirtualHost, ? extends Logger> accessLoggerMapper =
                 this.accessLoggerMapper != null ?
                 this.accessLoggerMapper : template.accessLoggerMapper;
 
@@ -960,29 +1018,141 @@ public final class VirtualHostBuilder {
                                requestContentPreviewerFactory, responseContentPreviewerFactory,
                                accessLogWriter, shutdownAccessLogWriterOnStop);
 
-        SslContext sslContext = this.sslContext != null ? this.sslContext : template.sslContext;
-        final boolean tlsSelfSigned = this.tlsSelfSigned != null ? this.tlsSelfSigned : template.tlsSelfSigned;
-        if (sslContext == null && tlsSelfSigned) {
-            try {
-                final SelfSignedCertificate ssc = new SelfSignedCertificate(defaultHostname);
-                tls(ssc.certificate(), ssc.privateKey());
+        SslContext sslContext = null;
+        boolean releaseSslContextOnFailure = false;
+        try {
+            // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
+            boolean sslContextFromThis = false;
+
+            // Build a new SslContext or use a user-specified one for backward compatibility.
+            if (this.sslContext != null) {
                 sslContext = this.sslContext;
-            } catch (Exception e) {
-                throw new RuntimeException("failed to create a self signed certificate", e);
+                sslContextFromThis = true;
+            } else if (sslContextBuilder != null) {
+                sslContext = buildSslContext(sslContextBuilder, tlsCustomizers);
+                sslContextFromThis = true;
+                releaseSslContextOnFailure = true;
+            } else if (template.sslContext != null) {
+                sslContext = template.sslContext;
+            } else if (template.sslContextBuilder != null) {
+                sslContext = buildSslContext(template.sslContextBuilder, template.tlsCustomizers);
+                releaseSslContextOnFailure = true;
+            }
+
+            // Generate a self-signed certificate if necessary.
+            if (sslContext == null) {
+                final boolean tlsSelfSigned;
+                final List<Consumer<? super SslContextBuilder>> tlsCustomizers;
+                if (this.tlsSelfSigned != null) {
+                    tlsSelfSigned = this.tlsSelfSigned;
+                    tlsCustomizers = this.tlsCustomizers;
+                    sslContextFromThis = true;
+                } else {
+                    tlsSelfSigned = template.tlsSelfSigned;
+                    tlsCustomizers = template.tlsCustomizers;
+                }
+
+                if (tlsSelfSigned) {
+                    try {
+                        final SelfSignedCertificate ssc = selfSignedCertificate();
+                        sslContext = buildSslContext(SslContextBuilder.forServer(ssc.certificate(),
+                                                                                 ssc.privateKey()),
+                                                     tlsCustomizers);
+                        releaseSslContextOnFailure = true;
+                    } catch (Exception e) {
+                        throw new RuntimeException("failed to create a self signed certificate", e);
+                    }
+                }
+            }
+
+            // Reject if a user called `tlsCustomizer()` without `tls()` or `tlsSelfSigned()`.
+            checkState(sslContextFromThis || tlsCustomizers.isEmpty(),
+                       "Cannot call tlsCustomizer() without tls() or tlsSelfSigned()");
+
+            // Validate the built `SslContext`.
+            if (sslContext != null) {
+                validateSslContext(sslContext);
+                checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
+            }
+
+            final VirtualHost virtualHost =
+                    new VirtualHost(defaultHostname, hostnamePattern, sslContext,
+                                    serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
+                                    accessLoggerMapper, requestTimeoutMillis, maxRequestLength,
+                                    verboseResponses, requestContentPreviewerFactory,
+                                    responseContentPreviewerFactory, accessLogWriter,
+                                    shutdownAccessLogWriterOnStop);
+
+            final Function<? super HttpService, ? extends HttpService> decorator =
+                    getRouteDecoratingService(template);
+            final VirtualHost decoratedVirtualHost = decorator != null ? virtualHost.decorate(decorator)
+                                                                       : virtualHost;
+            releaseSslContextOnFailure = false;
+            return decoratedVirtualHost;
+        } finally {
+            if (releaseSslContextOnFailure) {
+                ReferenceCountUtil.release(sslContext);
             }
         }
+    }
 
-        final VirtualHost virtualHost =
-                new VirtualHost(defaultHostname, hostnamePattern, sslContext,
-                                serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                accessLoggerMapper, requestTimeoutMillis, maxRequestLength,
-                                verboseResponses, requestContentPreviewerFactory,
-                                responseContentPreviewerFactory, accessLogWriter,
-                                shutdownAccessLogWriterOnStop);
+    private SelfSignedCertificate selfSignedCertificate() throws CertificateException {
+        if (selfSignedCertificate == null) {
+            return selfSignedCertificate = new SelfSignedCertificate(defaultHostname);
+        }
+        return selfSignedCertificate;
+    }
 
-        final Function<? super HttpService, ? extends HttpService> decorator =
-                getRouteDecoratingService(template);
-        return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
+    private static SslContext buildSslContext(
+            SslContextBuilder sslContextBuilder,
+            Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
+        try {
+            return BouncyCastleKeyFactoryProvider.call(() -> SslContextUtil.createSslContext(
+                    sslContextBuilder, false, tlsCustomizers));
+        } catch (Exception e) {
+            // `createSslContext()` always throws an unchecked exception.
+            return Exceptions.throwUnsafely(e);
+        }
+    }
+
+    /**
+     * Makes sure the specified {@link SslContext} is configured properly. If configured as client context or
+     * key store password is not given to key store when {@link SslContext} was created using
+     * {@link KeyManagerFactory}, the validation will fail and an {@link IllegalStateException} will be raised.
+     */
+    private static SslContext validateSslContext(SslContext sslContext) {
+        if (!sslContext.isServer()) {
+            throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
+        }
+
+        SSLEngine serverEngine = null;
+        SSLEngine clientEngine = null;
+
+        try {
+            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+            serverEngine.setUseClientMode(false);
+            serverEngine.setNeedClientAuth(false);
+
+            final SslContext sslContextClient =
+                    buildSslContext(SslContextBuilder.forClient(), ImmutableList.of());
+            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
+            clientEngine.setUseClientMode(true);
+
+            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
+            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
+
+            clientEngine.wrap(appBuf, packetBuf);
+            appBuf.clear();
+            packetBuf.flip();
+            serverEngine.unwrap(packetBuf, appBuf);
+        } catch (SSLException e) {
+            throw new IllegalStateException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
+        } finally {
+            ReferenceCountUtil.release(serverEngine);
+            ReferenceCountUtil.release(clientEngine);
+        }
+
+        return sslContext;
     }
 
     @Override
@@ -992,6 +1162,7 @@ public final class VirtualHostBuilder {
                           .add("hostnamePattern", hostnamePattern)
                           .add("serviceConfigBuilders", serviceConfigBuilders)
                           .add("sslContext", sslContext)
+                          .add("sslContextBuilder", sslContextBuilder)
                           .add("tlsSelfSigned", tlsSelfSigned)
                           .add("routeDecoratingServices", routeDecoratingServices)
                           .add("accessLoggerMapper", accessLoggerMapper)

@@ -25,7 +25,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -44,14 +43,8 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
 @Timeout(10)
 class HttpServerHeaderValidationTest {
-
-    static final ClientFactory clientFactory = ClientFactory.builder().sslContextCustomizer(scb -> {
-        scb.trustManager(InsecureTrustManagerFactory.INSTANCE);
-    }).build();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -71,11 +64,6 @@ class HttpServerHeaderValidationTest {
         }
     };
 
-    @AfterAll
-    static void closeClientFactory() {
-        clientFactory.close();
-    }
-
     @ParameterizedTest
     @ArgumentsSource(WebClientProvider.class)
     void malformedHeaderValue(WebClient client) throws Exception {
@@ -92,7 +80,7 @@ class HttpServerHeaderValidationTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H1, H2C, H2)
                          .map(protocol -> Arguments.of(WebClient.of(
-                                 clientFactory,
+                                 ClientFactory.insecure(),
                                  protocol.uriText() + "://127.0.0.1:" +
                                  (protocol.isTls() ? server.httpsPort() : server.httpPort()))));
         }

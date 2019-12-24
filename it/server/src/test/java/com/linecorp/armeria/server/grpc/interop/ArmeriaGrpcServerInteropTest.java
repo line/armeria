@@ -76,7 +76,8 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.https(new InetSocketAddress("127.0.0.1", 0));
-            sb.tls(ssc.certificateFile(), ssc.privateKeyFile(), ssl -> {
+            sb.tls(ssc.certificateFile(), ssc.privateKeyFile());
+            sb.tlsCustomizer(ssl -> {
                 try {
                     ssl.trustManager(TestUtils.loadCert("ca.pem"));
                 } catch (IOException e) {

@@ -88,7 +88,7 @@ public final class VirtualHost {
                 Iterable<ServiceConfig> serviceConfigs,
                 ServiceConfig fallbackServiceConfig,
                 RejectedRouteHandler rejectionHandler,
-                Function<VirtualHost, Logger> accessLoggerMapper,
+                Function<? super VirtualHost, ? extends Logger> accessLoggerMapper,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 ContentPreviewerFactory requestContentPreviewerFactory,

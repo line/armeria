@@ -38,13 +38,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.internal.UniqueProtocolsProvider;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
 class PortUnificationServerTest {
-
-    private static final ClientFactory clientFactory =
-            ClientFactory.builder().sslContextCustomizer(
-                    b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -70,7 +64,7 @@ class PortUnificationServerTest {
     @ParameterizedTest
     @ArgumentsSource(UniqueProtocolsProvider.class)
     void test(SessionProtocol protocol) throws Exception {
-        final WebClient client = WebClient.of(clientFactory, server.uri(protocol, "/"));
+        final WebClient client = WebClient.of(ClientFactory.insecure(), server.uri(protocol, "/"));
         final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))
                                                       .aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo(protocol.name());
