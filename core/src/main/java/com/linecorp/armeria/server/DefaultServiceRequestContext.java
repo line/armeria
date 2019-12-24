@@ -99,7 +99,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private volatile HttpHeaders additionalResponseTrailers;
 
     @Nullable
-    private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
+    private volatile RequestTimeoutController requestTimeoutController;
 
     @Nullable
     private String strVal;
@@ -362,12 +362,12 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         }
         if (this.requestTimeoutMillis != requestTimeoutMillis) {
             this.requestTimeoutMillis = requestTimeoutMillis;
-            final RequestTimeoutChangeListener listener = requestTimeoutChangeListener;
+            final RequestTimeoutController listener = requestTimeoutController;
             if (listener != null) {
                 if (ch.eventLoop().inEventLoop()) {
-                    listener.onRequestTimeoutChange(requestTimeoutMillis);
+                    listener.resetTimeout(requestTimeoutMillis);
                 } else {
-                    ch.eventLoop().execute(() -> listener.onRequestTimeoutChange(requestTimeoutMillis));
+                    ch.eventLoop().execute(() -> listener.resetTimeout(requestTimeoutMillis));
                 }
             }
         }
@@ -376,6 +376,28 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public void setRequestTimeout(Duration requestTimeout) {
         setRequestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
+    }
+
+    @Override
+    public void setRequestTimeoutAfterNanos(long requestTimeoutAfterNanos) {
+        if (requestTimeoutAfterNanos < 0) {
+            throw new IllegalArgumentException(
+                    "requestTimeoutAfterNanos: " + requestTimeoutAfterNanos + " (expected: >= 0)");
+        }
+
+        final RequestTimeoutController requestTimeoutController = this.requestTimeoutController;
+        if (requestTimeoutController != null) {
+            if (ch.eventLoop().inEventLoop()) {
+                requestTimeoutController.setDeadline(requestTimeoutAfterNanos);
+            } else {
+                ch.eventLoop().execute(() -> requestTimeoutController.setDeadline(requestTimeoutAfterNanos));
+            }
+        }
+    }
+
+    @Override
+    public void setRequestTimeoutAfter(Duration requestTimeoutAfter) {
+       setRequestTimeoutAfterNanos(requireNonNull(requestTimeoutAfter, "requestTimeoutAfter").toNanos());
     }
 
     @Nullable
@@ -558,12 +580,12 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * <p>Note: This method is meant for internal use by server-side protocol implementation to reschedule
      * a timeout task when a user updates the request timeout configuration.
      */
-    public void setRequestTimeoutChangeListener(RequestTimeoutChangeListener listener) {
+    public void setRequestTimeoutController(RequestTimeoutController listener) {
         requireNonNull(listener, "listener");
-        if (requestTimeoutChangeListener != null) {
+        if (requestTimeoutController != null) {
             throw new IllegalStateException("requestTimeoutChangeListener is set already.");
         }
-        requestTimeoutChangeListener = listener;
+        requestTimeoutController = listener;
     }
 
     @Override

@@ -282,6 +282,18 @@ public interface ServiceRequestContext extends RequestContext {
     void setRequestTimeout(Duration requestTimeout);
 
     /**
+     * Sets the amount of time, that is after the specified {@code requestTimeoutAfterNanos} from now, allowed
+     * until receiving the current {@link Request} and sending the corresponding {@link Response} completely.
+     */
+    void setRequestTimeoutAfterNanos(long requestTimeoutAfterNanos);
+
+    /**
+     * Sets the amount of time, that is after the specified {@code requestTimeoutAfter} from now, allowed
+     * until receiving the current {@link Request} and sending the corresponding {@link Response} completely.
+     */
+    void setRequestTimeoutAfter(Duration requestTimeoutAfter);
+
+    /**
      * Returns {@link Request} timeout handler which is executed when
      * receiving the current {@link Request} and sending the corresponding {@link Response}
      * is not completely received within the allowed {@link #requestTimeoutMillis()}.

@@ -57,7 +57,7 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutChangeListener {
+final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutController {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
@@ -117,22 +117,25 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     }
 
     @Override
-    public void onRequestTimeoutChange(long newRequestTimeoutMillis) {
+    public void resetTimeout(long newRequestTimeoutMillis) {
+        if (newRequestTimeoutMillis > 0) {
+            final long passedTimeNanos = System.nanoTime() - startTimeNanos;
+            setDeadline(TimeUnit.MILLISECONDS.toNanos(newRequestTimeoutMillis) - passedTimeNanos);
+        }
+    }
+
+    @Override
+    public void setDeadline(long deadlineNanos) {
         // Cancel the previously scheduled timeout, if exists.
-        cancelTimeout();
-
-        if (newRequestTimeoutMillis > 0 && state != State.DONE) {
-            // Calculate the amount of time passed since the creation of this subscriber.
-            final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-
-            if (passedTimeMillis < newRequestTimeoutMillis) {
-                timeoutFuture = ctx.channel().eventLoop().schedule(
-                        this::onTimeout,
-                        newRequestTimeoutMillis - passedTimeMillis, TimeUnit.MILLISECONDS);
-            } else {
-                // We went past the dead line set by the new timeout already.
-                onTimeout();
-            }
+        if (!cancelTimeout()) {
+            return;
+        }
+        if (deadlineNanos > 0 && state != State.DONE) {
+            timeoutFuture = ctx.channel().eventLoop().schedule(
+                    this::onTimeout, deadlineNanos, TimeUnit.NANOSECONDS);
+        } else {
+            // We went past the dead line set by the new timeout already.
+            onTimeout();
         }
     }
 
@@ -155,7 +158,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         this.subscription = subscription;
 
         // Schedule the initial request timeout.
-        onRequestTimeoutChange(reqCtx.requestTimeoutMillis());
+        resetTimeout(reqCtx.requestTimeoutMillis());
 
         // Start consuming.
         subscription.request(1);

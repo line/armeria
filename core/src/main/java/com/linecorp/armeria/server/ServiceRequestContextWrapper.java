@@ -152,6 +152,16 @@ public class ServiceRequestContextWrapper
         delegate().setRequestTimeout(requestTimeout);
     }
 
+    @Override
+    public void setRequestTimeoutAfterNanos(long requestTimeoutAfterNanos) {
+        delegate().setRequestTimeoutAfterNanos(requestTimeoutAfterNanos);
+    }
+
+    @Override
+    public void setRequestTimeoutAfter(Duration requestTimeoutAfter) {
+        delegate().setRequestTimeoutAfter(requestTimeoutAfter);
+    }
+
     @Nullable
     @Override
     public Runnable requestTimeoutHandler() {
