@@ -198,7 +198,7 @@ public abstract class AbstractHttpFileBuilder {
     }
 
     /**
-     * Sets the {@code "content-type"} header. This method is a shortcut of:
+     * Sets the {@code "content-type"} header. This method is a shortcut for:
      * <pre>{@code
      * builder.autoDetectedContentType(false);
      * builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
@@ -212,7 +212,7 @@ public abstract class AbstractHttpFileBuilder {
     }
 
     /**
-     * Sets the {@code "content-type"} header. This method is a shortcut of:
+     * Sets the {@code "content-type"} header. This method is a shortcut for:
      * <pre>{@code
      * builder.autoDetectedContentType(false);
      * builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
@@ -225,7 +225,7 @@ public abstract class AbstractHttpFileBuilder {
     }
 
     /**
-     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * Sets the {@code "cache-control"} header. This method is a shortcut for:
      * <pre>{@code
      * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
      * }</pre>
@@ -236,7 +236,7 @@ public abstract class AbstractHttpFileBuilder {
     }
 
     /**
-     * Sets the {@code "cache-control"} header. This method is a shortcut of:
+     * Sets the {@code "cache-control"} header. This method is a shortcut for:
      * <pre>{@code
      * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
      * }</pre>

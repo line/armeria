@@ -40,10 +40,10 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 @Timeout(10)
@@ -63,8 +63,7 @@ class HttpServerHeaderValidationTest {
 
             sb.route().get("/headers-custom")
               .build((ctx, req) -> {
-                  final String param = new QueryStringDecoder(req.path()).parameters()
-                                                                         .get("param").get(0);
+                  final String param = QueryParams.fromQueryString(ctx.query()).get("param", "<NULL>");
                   return HttpResponse.of(
                           ResponseHeaders.of(HttpStatus.OK, "server-header", param),
                           HttpData.ofUtf8("OK"));

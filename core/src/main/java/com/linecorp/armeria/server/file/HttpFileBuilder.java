@@ -101,7 +101,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
 
     /**
      * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the classpath resource
-     * at the specified {@code path}. This method is a shortcut of
+     * at the specified {@code path}. This method is a shortcut for
      * {@code HttpFileBuilder.ofResource(HttpFile.class.getClassLoader(), path)}.
      */
     public static HttpFileBuilder ofResource(String path) {

@@ -61,8 +61,9 @@ public class ArmeriaConfigurationUtilTest {
         final DocServiceBuilder dsb1 = new DocServiceBuilder();
         configureAnnotatedHttpServices(sb1, dsb1, ImmutableList.of(bean),
                                        MeterIdPrefixFunctionFactory.DEFAULT, null);
+        final Server s1 = sb1.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(service(sb1).as(MetricCollectingService.class)).isPresent();
+        assertThat(service(s1).as(MetricCollectingService.class)).isPresent();
 
         reset(decorator);
 
@@ -70,8 +71,9 @@ public class ArmeriaConfigurationUtilTest {
         final DocServiceBuilder dsb2 = new DocServiceBuilder();
         configureAnnotatedHttpServices(sb2, dsb2, ImmutableList.of(bean),
                                        null, null);
+        final Server s2 = sb2.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(getServiceForHttpMethod(sb2.build(), HttpMethod.OPTIONS))
+        assertThat(getServiceForHttpMethod(s2, HttpMethod.OPTIONS))
                 .isInstanceOf(AnnotatedHttpService.class);
     }
 
@@ -87,12 +89,12 @@ public class ArmeriaConfigurationUtilTest {
         final DocServiceBuilder dsb = new DocServiceBuilder();
         configureAnnotatedHttpServices(sb, dsb, ImmutableList.of(bean),
                                        null, null);
+        final Server s = sb.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(service(sb).as(SimpleDecorator.class)).isPresent();
+        assertThat(service(s).as(SimpleDecorator.class)).isPresent();
     }
 
-    private static HttpService service(ServerBuilder sb) {
-        final Server server = sb.build();
+    private static HttpService service(Server server) {
         return server.config().defaultVirtualHost().serviceConfigs().get(0).service();
     }
 

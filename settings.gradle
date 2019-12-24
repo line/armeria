@@ -23,6 +23,7 @@ includeWithFlags ':spring:boot-webflux-autoconfigure',  'java', 'publish', 'relo
 includeWithFlags ':spring:boot-webflux-starter',        'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot1-autoconfigure',         'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot1-starter',               'java', 'publish', 'relocate'
+includeWithFlags ':dropwizard',                         'java', 'publish', 'relocate'
 includeWithFlags ':testing:common',                     'java', 'publish', 'relocate'
 includeWithFlags ':testing:junit',                      'java', 'publish', 'relocate'
 includeWithFlags ':testing:junit4',                     'java', 'publish', 'relocate'
@@ -50,6 +51,8 @@ includeWithFlags ':site'
 
 // Examples
 includeWithFlags ':examples:annotated-http-service',        'java'
+includeWithFlags ':examples:dropwizard-example',            'java'
+project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:grpc-example',                  'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-reactor',                  'java', 'reactor-grpc'

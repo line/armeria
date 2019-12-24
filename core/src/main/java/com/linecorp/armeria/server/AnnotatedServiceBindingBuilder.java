@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -23,11 +24,14 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceExtensions;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -63,6 +67,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
     private String pathPrefix = "/";
+    @Nullable
+    private Object service;
 
     AnnotatedServiceBindingBuilder(ServerBuilder serverBuilder) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
@@ -259,18 +265,35 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * @return {@link ServerBuilder} to continue building {@link Server}
      */
     public ServerBuilder build(Object service) {
+        requireNonNull(service, "service");
+        this.service = service;
+        serverBuilder.annotatedServiceBindingBuilder(this);
+        return serverBuilder;
+    }
+
+    /**
+     * Builds the {@link ServiceConfigBuilder}s created with the configured
+     * {@link AnnotatedHttpServiceExtensions} to the {@link ServerBuilder}.
+     *
+     * @param extensions the {@link AnnotatedHttpServiceExtensions} at the server level.
+     */
+    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedHttpServiceExtensions extensions) {
+        final List<RequestConverterFunction> requestConverterFunctions =
+                requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
+        final List<ResponseConverterFunction> responseConverterFunctions =
+                responseConverterFunctionBuilder.addAll(extensions.responseConverters()).build();
+        final List<ExceptionHandlerFunction> exceptionHandlerFunctions =
+                exceptionHandlerFunctionBuilder.addAll(extensions.exceptionHandlers()).build();
+
+        assert service != null;
+
         final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service,
-                                                 exceptionHandlerFunctionBuilder.build(),
-                                                 requestConverterFunctionBuilder.build(),
-                                                 responseConverterFunctionBuilder.build());
-        elements.forEach(element -> {
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, requestConverterFunctions,
+                                                 responseConverterFunctions, exceptionHandlerFunctions);
+        return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());
-            final ServiceConfigBuilder serviceConfigBuilder =
-                    defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
-            serverBuilder.serviceConfigBuilder(serviceConfigBuilder);
-        });
-        return serverBuilder;
+            return defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
+        }).collect(toImmutableList());
     }
 }

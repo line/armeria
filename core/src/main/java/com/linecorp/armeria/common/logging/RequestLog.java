@@ -51,6 +51,7 @@ import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.channel.Channel;
 import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
 
 /**
@@ -69,7 +70,10 @@ public interface RequestLog extends AttributeMap {
 
     /**
      * Returns all {@link Attribute}s set in this log.
+     *
+     * @deprecated Use {@code RequestLog.context().attrs()}
      */
+    @Deprecated
     Iterator<Attribute<?>> attrs();
 
     /**
@@ -558,7 +562,7 @@ public interface RequestLog extends AttributeMap {
     String toStringRequestOnly();
 
     /**
-     * Returns the string representation of the {@link Request}. This method is a shortcut of:
+     * Returns the string representation of the {@link Request}. This method is a shortcut for:
      * <pre>{@code
      * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
      * }</pre>
@@ -591,7 +595,7 @@ public interface RequestLog extends AttributeMap {
     String toStringResponseOnly();
 
     /**
-     * Returns the string representation of the {@link Response}. This method is a shortcut of:
+     * Returns the string representation of the {@link Response}. This method is a shortcut for:
      * <pre>{@code
      * toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
      * }</pre>
@@ -617,4 +621,22 @@ public interface RequestLog extends AttributeMap {
     String toStringResponseOnly(Function<? super ResponseHeaders, ?> headersSanitizer,
                                 Function<Object, ?> contentSanitizer,
                                 Function<? super HttpHeaders, ?> trailersSanitizer);
+
+    /**
+     * {@inheritDoc}
+     *
+     * @deprecated Use {@code RequestLog.context().attr()}.
+     */
+    @Override
+    @Deprecated
+    <T> Attribute<T> attr(AttributeKey<T> key);
+
+    /**
+     * {@inheritDoc}
+     *
+     * @deprecated Use {@code RequestLog.context().hasAttr()}.
+     */
+    @Override
+    @Deprecated
+    <T> boolean hasAttr(AttributeKey<T> key);
 }

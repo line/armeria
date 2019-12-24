@@ -15,10 +15,10 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
 import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.uniqueResolverSet;
 import static com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.warnRedundantUse;
@@ -50,6 +50,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -67,11 +68,13 @@ import com.google.common.collect.MapMaker;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.Cookies;
+import com.linecorp.armeria.common.DefaultHttpParameters;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -90,7 +93,6 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
-import io.netty.handler.codec.http.QueryStringDecoder;
 
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
@@ -357,8 +359,8 @@ final class AnnotatedValueResolver {
                 return Optional.of(ofPathVariable(name, annotatedElement, typeElement,
                                                   type, description));
             } else {
-                return Optional.of(ofHttpParameter(name, annotatedElement,
-                                                   typeElement, type, description));
+                return Optional.of(ofQueryParam(name, annotatedElement,
+                                                typeElement, type, description));
             }
         }
 
@@ -449,10 +451,10 @@ final class AnnotatedValueResolver {
                 .build();
     }
 
-    private static AnnotatedValueResolver ofHttpParameter(String name,
-                                                          AnnotatedElement annotatedElement,
-                                                          AnnotatedElement typeElement, Class<?> type,
-                                                          @Nullable String description) {
+    private static AnnotatedValueResolver ofQueryParam(String name,
+                                                       AnnotatedElement annotatedElement,
+                                                       AnnotatedElement typeElement, Class<?> type,
+                                                       @Nullable String description) {
         return builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
@@ -462,8 +464,8 @@ final class AnnotatedValueResolver {
                 .supportContainer(true)
                 .description(description)
                 .aggregation(AggregationStrategy.FOR_FORM_DATA)
-                .resolver(resolver(ctx -> ctx.httpParameters().getAll(name),
-                                   () -> "Cannot resolve a value from HTTP parameter: " + name))
+                .resolver(resolver(ctx -> ctx.queryParams().getAll(name),
+                                   () -> "Cannot resolve a value from a query parameter: " + name))
                 .build();
     }
 
@@ -552,10 +554,23 @@ final class AnnotatedValueResolver {
                     .build();
         }
 
+        if (actual == QueryParams.class) {
+            return builder(annotatedElement, type)
+                    .supportOptional(true)
+                    .resolver((unused, ctx) -> ctx.queryParams())
+                    .aggregation(AggregationStrategy.FOR_FORM_DATA)
+                    .build();
+        }
+
         if (actual == HttpParameters.class) {
             return builder(annotatedElement, type)
                     .supportOptional(true)
-                    .resolver((unused, ctx) -> ctx.httpParameters())
+                    .resolver((unused, ctx) -> {
+                        final QueryParams src = ctx.queryParams();
+                        final HttpParameters dest = new DefaultHttpParameters(src.size());
+                        src.forEach((BiConsumer<String, String>) dest::add);
+                        return dest;
+                    })
                     .aggregation(AggregationStrategy.FOR_FORM_DATA)
                     .build();
         }
@@ -1070,7 +1085,7 @@ final class AnnotatedValueResolver {
                 // - RequestContext (or ServiceRequestContext)
                 // - Request (or HttpRequest)
                 // - AggregatedHttpRequest
-                // - HttpParameters
+                // - QueryParams (or HttpParameters)
                 // - User classes which can be converted by request converter
                 //
                 // So the container type should be 'null'.
@@ -1136,7 +1151,7 @@ final class AnnotatedValueResolver {
         private final AggregatedHttpRequest aggregatedRequest;
 
         @Nullable
-        private volatile HttpParameters httpParameters;
+        private volatile QueryParams queryParams;
 
         ResolverContext(ServiceRequestContext context, HttpRequest request,
                         @Nullable AggregatedHttpRequest aggregatedRequest) {
@@ -1158,15 +1173,15 @@ final class AnnotatedValueResolver {
             return aggregatedRequest;
         }
 
-        HttpParameters httpParameters() {
-            HttpParameters result = httpParameters;
+        QueryParams queryParams() {
+            QueryParams result = queryParams;
             if (result == null) {
                 synchronized (this) {
-                    result = httpParameters;
+                    result = queryParams;
                     if (result == null) {
-                        httpParameters = result = httpParametersOf(context.query(),
-                                                                   request.contentType(),
-                                                                   aggregatedRequest);
+                        queryParams = result = queryParamsOf(context.query(),
+                                                             request.contentType(),
+                                                             aggregatedRequest);
                     }
                 }
             }
@@ -1179,55 +1194,52 @@ final class AnnotatedValueResolver {
                               .add("context", context)
                               .add("request", request)
                               .add("aggregatedRequest", aggregatedRequest)
-                              .add("httpParameters", httpParameters)
+                              .add("queryParams", queryParams)
                               .toString();
         }
 
         /**
-         * Returns a map of parameters decoded from a request.
+         * Returns a {@link QueryParams} decoded from a request.
          *
          * <p>Usually one of a query string of a URI or URL-encoded form data is specified in the request.
          * If both of them exist though, they would be decoded and merged into a parameter map.</p>
          *
          * <p>Names and values of the parameters would be decoded as UTF-8 character set.</p>
          *
-         * @see QueryStringDecoder#QueryStringDecoder(String, boolean)
+         * @see QueryParams#fromQueryString(String)
          * @see HttpConstants#DEFAULT_CHARSET
          */
-        private static HttpParameters httpParametersOf(@Nullable String query,
-                                                       @Nullable MediaType contentType,
-                                                       @Nullable AggregatedHttpRequest message) {
+        private static QueryParams queryParamsOf(@Nullable String query,
+                                                 @Nullable MediaType contentType,
+                                                 @Nullable AggregatedHttpRequest message) {
             try {
-                Map<String, List<String>> parameters = null;
-                if (query != null) {
-                    parameters = new QueryStringDecoder(query, false).parameters();
-                }
-
+                final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
+                QueryParams params2 = null;
                 if (message != null && isFormData(contentType)) {
                     // Respect 'charset' attribute of the 'content-type' header if it exists.
                     final String body = message.content(
                             contentType.charset().orElse(StandardCharsets.US_ASCII));
                     if (!body.isEmpty()) {
-                        final Map<String, List<String>> p =
-                                new QueryStringDecoder(body, false).parameters();
-                        if (parameters == null) {
-                            parameters = p;
-                        } else if (p != null) {
-                            parameters.putAll(p);
-                        }
+                        params2 = QueryParams.fromQueryString(body);
                     }
                 }
 
-                if (parameters == null || parameters.isEmpty()) {
-                    return EMPTY_PARAMETERS;
+                if (params1 == null || params1.isEmpty()) {
+                    return firstNonNull(params2, QueryParams.of());
+                } else if (params2 == null || params2.isEmpty()) {
+                    return params1;
+                } else {
+                    return QueryParams.builder()
+                                      .sizeHint(params1.size() + params2.size())
+                                      .add(params1)
+                                      .add(params2)
+                                      .build();
                 }
-
-                return HttpParameters.copyOf(parameters);
             } catch (Exception e) {
                 // If we failed to decode the query string, we ignore the exception raised here.
                 // A missing parameter might be checked when invoking the annotated method.
                 logger.debug("Failed to decode query string: {}", query, e);
-                return EMPTY_PARAMETERS;
+                return QueryParams.of();
             }
         }
     }
