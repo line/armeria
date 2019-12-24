@@ -68,7 +68,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *     // Set the socket send buffer to 1 MiB.
  *     .socketOption(ChannelOption.SO_SNDBUF, 1048576)
  *     // Disable certificate verification; never do this in production!
- *     .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+ *     .tlsNoVerify()
  *     .build();
  * }</pre>
  */

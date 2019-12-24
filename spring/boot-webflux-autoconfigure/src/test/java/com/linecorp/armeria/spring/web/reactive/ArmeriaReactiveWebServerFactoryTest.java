@@ -49,7 +49,6 @@ import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Mono;
 
 class ArmeriaReactiveWebServerFactoryTest {
