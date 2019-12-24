@@ -58,7 +58,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 /**
  * Default {@link ClientRequestContext} implementation.
@@ -312,16 +312,15 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
-        for (final Iterator<Attribute<?>> i = ctx.ownAttrs(); i.hasNext();) {
+        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
         runThreadLocalContextCustomizer();
     }
 
     @SuppressWarnings("unchecked")
-    private <T> void addAttr(Attribute<?> attribute) {
-        final Attribute<T> a = (Attribute<T>) attribute;
-        attr(a.key()).set(a.get());
+    private <T> void addAttr(Entry<AttributeKey<?>, Object> attribute) {
+        setAttr((AttributeKey<T>) attribute.getKey(), (T) attribute.getValue());
     }
 
     @Nullable

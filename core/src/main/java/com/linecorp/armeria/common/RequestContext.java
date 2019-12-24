@@ -18,6 +18,8 @@ package com.linecorp.armeria.common;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -48,7 +50,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
@@ -61,7 +63,7 @@ import io.netty.util.concurrent.Promise;
  * A server-side {@link Request} has a {@link ServiceRequestContext} and
  * a client-side {@link Request} has a {@link ClientRequestContext}.
  */
-public interface RequestContext extends AttributeMap {
+public interface RequestContext {
 
     /**
      * Returns the context of the {@link Request} that is being handled in the current thread.
@@ -109,6 +111,35 @@ public interface RequestContext extends AttributeMap {
 
         return null;
     }
+
+    /**
+     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
+     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
+     */
+    @Nullable
+    <V> V attr(AttributeKey<V> key);
+
+    /**
+     * Associates the specified value with the given {@link AttributeKey} in this context.
+     * If this context previously contained a mapping for the {@link AttributeKey},
+     * the old value is replaced by the specified value.
+     */
+    <V> void setAttr(AttributeKey<V> key, @Nullable V value);
+
+    /**
+     * Associates the specified value with the given {@link AttributeKey} in this context only
+     * if this context does not contain a mapping for the {@link AttributeKey}.
+     *
+     * @return {@code null} if there was no mapping for the {@link AttributeKey} or the old value if there's
+     *         a mapping for the {@link AttributeKey}.
+     */
+    @Nullable
+    <V> V setAttrIfAbsent(AttributeKey<V> key, V value);
+
+    /**
+     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
+     */
+    Iterator<Entry<AttributeKey<?>, Object>> attrs();
 
     /**
      * Returns the {@link HttpRequest} associated with this context, or {@code null} if there's no
@@ -520,13 +551,10 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Registers {@code callback} to be run when this context is replaced by a child context.
-     * You could use this method to inherit an attribute of this context to the child contexts or
-     * register a callback to the child contexts that may be created later:
+     * You could use this method to the child contexts that may be created later:
      * <pre>{@code
      * ctx.onChild((curCtx, newCtx) -> {
      *     assert ctx == curCtx && curCtx != newCtx;
-     *     // Inherit the value of the 'MY_ATTR' attribute to the child context.
-     *     newCtx.attr(MY_ATTR).set(curCtx.attr(MY_ATTR).get());
      *     // Add a callback to the child context.
      *     newCtx.onExit(() -> { ... });
      * });
@@ -647,7 +675,7 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
+     * Creates a new {@link RequestContext} whose properties and {@link #attrs()} are copied from this
      * {@link RequestContext}, except having a different pair of {@link HttpRequest} and {@link RpcRequest}
      * and its own {@link RequestLog}.
      */

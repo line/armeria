@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -31,7 +30,6 @@ import javax.net.ssl.SSLSession;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.AttributeMap;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -51,8 +49,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.channel.Channel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 
 /**
  * A set of informational properties collected while processing a {@link Request} and its {@link Response}.
@@ -66,7 +62,7 @@ import io.netty.util.AttributeKey;
  * @see RequestLogAvailability
  * @see RequestLogListener
  */
-public interface RequestLog extends AttributeMap {
+public interface RequestLog {
 
     /**
      * Returns the list of child {@link RequestLog}s, ordered by the time it was added.
@@ -613,31 +609,4 @@ public interface RequestLog extends AttributeMap {
     String toStringResponseOnly(Function<? super ResponseHeaders, ?> headersSanitizer,
                                 Function<Object, ?> contentSanitizer,
                                 Function<? super HttpHeaders, ?> trailersSanitizer);
-
-    /**
-     * {@inheritDoc}
-     *
-     * @deprecated Use {@code RequestLog.context().attrs()}.
-     */
-    @Override
-    @Deprecated
-    Iterator<Attribute<?>> attrs();
-
-    /**
-     * {@inheritDoc}
-     *
-     * @deprecated Use {@code RequestLog.context().attr()}.
-     */
-    @Override
-    @Deprecated
-    <T> Attribute<T> attr(AttributeKey<T> key);
-
-    /**
-     * {@inheritDoc}
-     *
-     * @deprecated Use {@code RequestLog.context().hasAttr()}.
-     */
-    @Override
-    @Deprecated
-    <T> boolean hasAttr(AttributeKey<T> key);
 }

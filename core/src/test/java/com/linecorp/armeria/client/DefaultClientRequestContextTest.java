@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.Iterator;
+import java.util.Map.Entry;
 
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +36,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 class DefaultClientRequestContextTest {
@@ -45,23 +45,22 @@ class DefaultClientRequestContextTest {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ServiceRequestContext serviceContext = ServiceRequestContext.of(req);
         final AttributeKey<String> fooKey = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
-        serviceContext.attr(fooKey).set("foo");
+        serviceContext.setAttr(fooKey, "foo");
         try (SafeCloseable ignored = serviceContext.push()) {
             final ClientRequestContext clientContext = ClientRequestContext.of(req);
-            assertThat(clientContext.hasAttr(fooKey)).isTrue();
-            assertThat(clientContext.attr(fooKey).get()).isEqualTo("foo");
+            assertThat(clientContext.attr(fooKey)).isEqualTo("foo");
             assertThat(clientContext.attrs().hasNext()).isTrue();
 
             final ClientRequestContext derivedContext = clientContext.newDerivedContext(
                     clientContext.id(), clientContext.request(),
                     clientContext.rpcRequest());
-            assertThat(derivedContext.hasAttr(fooKey)).isTrue();
+            assertThat(derivedContext.attr(fooKey)).isNotNull();
             // Attributes in serviceContext is not copied to clientContext when derived.
 
             final AttributeKey<String> barKey = AttributeKey.valueOf(DefaultClientRequestContextTest.class,
                                                                      "bar");
-            clientContext.attr(barKey).set("bar");
-            assertThat(serviceContext.hasAttr(barKey)).isFalse();
+            clientContext.setAttr(barKey, "bar");
+            assertThat(serviceContext.attr(barKey)).isNull();
         }
     }
 
@@ -73,10 +72,10 @@ class DefaultClientRequestContextTest {
             final ClientRequestContext clientContext = ClientRequestContext.of(req);
             final AttributeKey<String> fooKey = AttributeKey.valueOf(DefaultClientRequestContextTest.class,
                                                                      "foo");
-            clientContext.attr(fooKey).set("foo");
-            serviceContext.attr(fooKey).set("bar");
-            final Iterator<Attribute<?>> attrs = clientContext.attrs();
-            assertThat(attrs.next().get()).isEqualTo("foo");
+            clientContext.setAttr(fooKey, "foo");
+            serviceContext.setAttr(fooKey, "bar");
+            final Iterator<Entry<AttributeKey<?>, Object>> attrs = clientContext.attrs();
+            assertThat(attrs.next().getValue()).isEqualTo("foo");
             assertThat(attrs.hasNext()).isFalse();
         }
     }
@@ -97,7 +96,7 @@ class DefaultClientRequestContextTest {
         setAdditionalHeaders(originalCtx);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
-        originalCtx.attr(foo).set("foo");
+        originalCtx.setAttr(foo, "foo");
 
         final RequestId newId = RequestId.random();
         final HttpRequest newRequest = HttpRequest.of(RequestHeaders.of(
@@ -125,16 +124,16 @@ class DefaultClientRequestContextTest {
         assertThat(derivedCtx.additionalRequestHeaders().get(HttpHeaderNames.of("my-header#4")))
                 .isEqualTo("value#4");
         // the attribute is derived as well
-        assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
+        assertThat(derivedCtx.attr(foo)).isEqualTo("foo");
 
         // log is different
         assertThat(derivedCtx.log()).isNotSameAs(originalCtx.log());
 
         final AttributeKey<String> bar = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "bar");
-        originalCtx.attr(bar).set("bar");
+        originalCtx.setAttr(bar, "bar");
 
         // the Attribute added to the original context after creation is not propagated to the derived context
-        assertThat(derivedCtx.attr(bar).get()).isEqualTo(null);
+        assertThat(derivedCtx.attr(bar)).isEqualTo(null);
     }
 
     private static void setAdditionalHeaders(ClientRequestContext originalCtx) {

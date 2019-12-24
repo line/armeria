@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
@@ -53,17 +52,12 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public <T> Attribute<T> ownAttr(AttributeKey<T> key) {
+    public <V> V ownAttr(AttributeKey<V> key) {
         return delegate().ownAttr(key);
     }
 
     @Override
-    public <T> boolean hasOwnAttr(AttributeKey<T> key) {
-        return delegate().hasOwnAttr(key);
-    }
-
-    @Override
-    public Iterator<Attribute<?>> ownAttrs() {
+    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         return delegate().ownAttrs();
     }
 

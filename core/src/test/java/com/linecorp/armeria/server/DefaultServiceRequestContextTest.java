@@ -52,7 +52,7 @@ class DefaultServiceRequestContextTest {
         setAdditionalTrailers(originalCtx);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultServiceRequestContextTest.class, "foo");
-        originalCtx.attr(foo).set("foo");
+        originalCtx.setAttr(foo, "foo");
 
         final RequestId newId = RequestId.random();
         final HttpRequest newRequest = HttpRequest.of(HttpMethod.GET, "/derived/hello");
@@ -83,16 +83,16 @@ class DefaultServiceRequestContextTest {
         assertThat(derivedCtx.additionalResponseTrailers().get(HttpHeaderNames.of("my-trailer#4")))
                 .isEqualTo("value#4");
         // the attribute is derived as well
-        assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
+        assertThat(derivedCtx.attr(foo)).isEqualTo("foo");
 
         // log is different
         assertThat(derivedCtx.log()).isNotSameAs(originalCtx.log());
 
         final AttributeKey<String> bar = AttributeKey.valueOf(DefaultServiceRequestContextTest.class, "bar");
-        originalCtx.attr(bar).set("bar");
+        originalCtx.setAttr(bar, "bar");
 
         // the Attribute added to the original context after creation is not propagated to the derived context
-        assertThat(derivedCtx.attr(bar).get()).isEqualTo(null);
+        assertThat(derivedCtx.attr(bar)).isEqualTo(null);
     }
 
     private static void setAdditionalHeaders(ServiceRequestContext originalCtx) {

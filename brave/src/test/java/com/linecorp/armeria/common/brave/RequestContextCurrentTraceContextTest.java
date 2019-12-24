@@ -17,59 +17,50 @@
 package com.linecorp.armeria.common.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Answers;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
-import org.mockito.stubbing.Answer;
+import javax.annotation.Nullable;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.DefaultAttributeMap;
 import com.linecorp.armeria.internal.brave.TraceContextUtil;
 import com.linecorp.armeria.internal.brave.TraceContextUtil.PingPongExtra;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 
-public class RequestContextCurrentTraceContextTest {
-    @Rule
-    public MockitoRule mockitoRule = MockitoJUnit.rule();
+@ExtendWith(MockitoExtension.class)
+class RequestContextCurrentTraceContextTest {
 
-    @Mock(answer = Answers.CALLS_REAL_METHODS)
-    RequestContext mockRequestContext;
-    @Mock(answer = Answers.CALLS_REAL_METHODS)
-    RequestContext mockRequestContext2;
+    @Nullable
+    RequestContext ctx;
     @Mock
     EventLoop eventLoop;
 
-    final CurrentTraceContext currentTraceContext = RequestContextCurrentTraceContext.ofDefault();
-    final DefaultAttributeMap attrs1 = new DefaultAttributeMap(null);
-    final DefaultAttributeMap attrs2 = new DefaultAttributeMap(null);
-    final TraceContext traceContext = TraceContext.newBuilder().traceId(1).spanId(1).build();
+    private static final CurrentTraceContext currentTraceContext =
+            RequestContextCurrentTraceContext.ofDefault();
+    private static final TraceContext traceContext = TraceContext.newBuilder().traceId(1).spanId(1).build();
 
-    @Before
-    public void setup() {
-        when(mockRequestContext.eventLoop()).thenReturn(eventLoop);
-        when(mockRequestContext2.eventLoop()).thenReturn(eventLoop);
-        when(eventLoop.inEventLoop()).thenReturn(true);
-
-        when(mockRequestContext.attr(isA(AttributeKey.class))).thenAnswer(
-                (Answer<Attribute>) invocation -> attrs1.attr(invocation.getArgument(0)));
-        when(mockRequestContext2.attr(isA(AttributeKey.class))).thenAnswer(
-                (Answer<Attribute>) invocation -> attrs2.attr(invocation.getArgument(0)));
+    @BeforeEach
+    void setup() {
+        Mockito.lenient().when(eventLoop.inEventLoop()).thenReturn(true);
+        ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                             .eventLoop(eventLoop)
+                             .build();
     }
 
     @Test
@@ -79,7 +70,7 @@ public class RequestContextCurrentTraceContextTest {
 
     @Test
     public void get_returnsNullWhenCurrentRequestContext_hasNoTraceAttribute() {
-        try (SafeCloseable requestContextScope = mockRequestContext.push()) {
+        try (SafeCloseable requestContextScope = ctx.push()) {
             assertThat(currentTraceContext.get()).isNull();
         }
     }
@@ -94,7 +85,7 @@ public class RequestContextCurrentTraceContextTest {
 
     @Test
     public void newScope_appliesWhenCurrentRequestContext() {
-        try (SafeCloseable requestContextScope = mockRequestContext.push()) {
+        try (SafeCloseable requestContextScope = ctx.push()) {
             try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
                 assertThat(traceContextScope).hasToString("InitialRequestScope");
                 assertThat(currentTraceContext.get()).isEqualTo(traceContext);
@@ -106,7 +97,7 @@ public class RequestContextCurrentTraceContextTest {
     public void newScope_closeDoesntClearFirstScope() {
         final TraceContext traceContext2 = TraceContext.newBuilder().traceId(1).spanId(2).build();
 
-        try (SafeCloseable requestContextScope = mockRequestContext.push()) {
+        try (SafeCloseable requestContextScope = ctx.push()) {
             try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
                 assertThat(traceContextScope).hasToString("InitialRequestScope");
                 assertThat(currentTraceContext.get()).isEqualTo(traceContext);
@@ -126,7 +117,7 @@ public class RequestContextCurrentTraceContextTest {
     public void newScope_notOnEventLoop() {
         final TraceContext traceContext2 = TraceContext.newBuilder().traceId(1).spanId(2).build();
 
-        try (SafeCloseable requestContextScope = mockRequestContext.push()) {
+        try (SafeCloseable requestContextScope = ctx.push()) {
             try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
                 assertThat(traceContextScope).hasToString("InitialRequestScope");
                 assertThat(currentTraceContext.get()).isEqualTo(traceContext);
@@ -146,7 +137,7 @@ public class RequestContextCurrentTraceContextTest {
 
     @Test
     public void newScope_canClearScope() {
-        try (SafeCloseable requestContextScope = mockRequestContext.push()) {
+        try (SafeCloseable requestContextScope = ctx.push()) {
             try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
                 try (Scope traceContextScope2 = currentTraceContext.newScope(null)) {
                     assertThat(currentTraceContext.get()).isNull();

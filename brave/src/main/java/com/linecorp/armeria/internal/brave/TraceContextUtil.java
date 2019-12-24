@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -28,7 +30,6 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import brave.Tracing;
 import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 public final class TraceContextUtil {
@@ -36,8 +37,13 @@ public final class TraceContextUtil {
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.valueOf(TraceContextUtil.class, "TRACE_CONTEXT");
 
-    public static Attribute<TraceContext> getTraceContextAttribute(RequestContext ctx) {
+    @Nullable
+    public static TraceContext getTraceContext(RequestContext ctx) {
         return ctx.attr(TRACE_CONTEXT_KEY);
+    }
+
+    public static void setTraceContext(RequestContext ctx, TraceContext traceContext) {
+        ctx.setAttr(TRACE_CONTEXT_KEY, traceContext);
     }
 
     /**

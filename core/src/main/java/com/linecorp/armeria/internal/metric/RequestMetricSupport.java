@@ -57,10 +57,12 @@ public final class RequestMetricSupport {
      */
     public static void setup(RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
                              MeterIdPrefixFunction meterIdPrefixFunction, boolean server) {
-        if (ctx.hasAttr(requestMetricsSetKey)) {
+        final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
+
+        if (isRequestMetricsSet != null && isRequestMetricsSet) {
             return;
         }
-        ctx.attr(requestMetricsSetKey).set(true);
+        ctx.setAttr(requestMetricsSetKey, true);
 
         ctx.log().addListener(log -> onRequest(log, meterIdPrefixFunction, server),
                               RequestLogAvailability.REQUEST_HEADERS,

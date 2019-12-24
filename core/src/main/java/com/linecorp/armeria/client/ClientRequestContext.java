@@ -174,140 +174,104 @@ public interface ClientRequestContext extends RequestContext {
     ServiceRequestContext rootContext();
 
     /**
-     * Returns the {@link Attribute} for the given {@link AttributeKey}. This method will never return
-     * {@code null}, but may return an {@link Attribute} which does not have a value set yet.
+     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
+     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
      *
-     * <p>If the {@link Attribute} does not exist in this context but only in {@link #rootContext()},
-     * this method will return the {@link Attribute} from the {@link #rootContext()}.
-     * Please note that any changes made to the {@link Attribute} returned by this method never
-     * affects the {@link Attribute} owned by {@link #rootContext()}. For example:
+     * <p>If the value does not exist both in this context but only in {@link #rootContext()},
+     * this method will return the value from the {@link #rootContext()}.
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * assert ctx.rootContext().attr(KEY).get() == 42;
-     * assert ctx.hasOwnAttr(KEY) == false;
-     * assert ctx.attr(KEY).get() == 42;
-     *
-     * // Overriding the root context attribute creates the client context's own attribute.
-     * ctx.attr(KEY).set(4242);
-     * assert ctx.hasOwnAttr(KEY) == true;
-     * // The root context attribute remains unaffected.
-     * assert ctx.rootContext().attr(KEY).get() == 42;
+     * assert ctx.rootContext().attr(KEY) == "root";
+     * assert ctx.attr(KEY) == "root";
+     * assert ctx.ownAttr(KEY) == null;
      * }</pre>
-     * If you want to change the value from the root context, please call {@link #attr(AttributeKey)}
-     * from {@link #rootContext()}.
+     * If the value exists in this context and {@link #rootContext()},
+     * this method will return the value from this context.
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * assert ctx.rootContext().attr(KEY).get() == 42;
-     * assert ctx.hasOwnAttr(KEY) == false;
-     *
-     * // Set a value directly to the attribute from the root context.
-     * ctx.rootContext().attr(KEY).set(4242);
-     * // The ctx does not have its own attribute.
-     * assert ctx.hasOwnAttr(KEY) == false;
-     * assert ctx.attr(KEY).get() == 4242;
+     * assert ctx.rootContext().attr(KEY) == "root";
+     * assert ctx.ownAttr(KEY) == "child";
+     * assert ctx.attr(KEY) == "child";
      * }</pre>
+     *
+     * @see #ownAttr(AttributeKey)
      */
+    @Nullable
     @Override
-    <T> Attribute<T> attr(AttributeKey<T> key);
+    <V> V attr(AttributeKey<V> key);
 
     /**
-     * Returns the {@link Attribute} for the given {@link AttributeKey}. This method will never return
-     * {@code null}, but may return an {@link Attribute} which does not have a value set yet.
+     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
+     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
      * Unlike {@link #attr(AttributeKey)}, this does not search in {@link #rootContext()}.
      *
      * @see #attr(AttributeKey)
      */
-    <T> Attribute<T> ownAttr(AttributeKey<T> key);
+    <V> V ownAttr(AttributeKey<V> key);
 
     /**
-     * Returns {@code} true if and only if the given {@link Attribute} exists.
+     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
      *
-     * <p>If the {@link Attribute} does not exist in this context but only in {@link #rootContext()},
-     * this method will still return {@code true}.
+     * <p>The {@link Iterator} returned by this method will also yield the {@link Entry}s from the
+     * {@link #rootContext()} except those whose {@link AttributeKey} exist already in this context, e.g.
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * assert ctx.attr(KEY_A).get() == 41;
-     * assert ctx.rootContext().attr(KEY_B).get() == 42;
+     * assert ctx.ownAttr(KEY_A) == "child_a";
+     * assert ctx.rootContext().attr(KEY_A) == "root_a";
+     * assert ctx.rootContext().attr(KEY_B) == "root_b";
      *
-     * assert ctx.hasAttr(KEY_A) == true;
-     * assert ctx.hasAttr(KEY_B) == true;
-     * }</pre>
-     *
-     * @see #hasOwnAttr(AttributeKey)
-     */
-    @Override
-    <T> boolean hasAttr(AttributeKey<T> key);
-
-    /**
-     * Returns {@code} true if and only if the given {@link Attribute} exists.
-     * Unlike {@link #hasAttr(AttributeKey)}, this does not search in {@link #rootContext()}.
-     *
-     * @see #hasAttr(AttributeKey)
-     */
-    <T> boolean hasOwnAttr(AttributeKey<T> key);
-
-    /**
-     * Returns the {@link Iterator} of all {@link Attribute}s this context contains.
-     *
-     * <p>The {@link Iterator} returned by this method will also yield the {@link Attribute}s from the
-     * {@link #rootContext()} except those which exist already in this context, e.g.
-     * <pre>{@code
-     * ClientRequestContext ctx = ...;
-     * assert ctx.attr(KEY_A).get() == 41;
-     * assert ctx.rootContext().attr(KEY_A).get() == 42;
-     * assert ctx.rootContext().attr(KEY_B).get() == 43;
-     *
-     * Iterator<Attribute<?>> attrs = ctx.attrs();
-     * assert attrs.next().get() == 41; // KEY_A
+     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
+     * assert attrs.next().getValue() == "child_a"; // KEY_A
      * // Skip KEY_A in the root context.
-     * assert attrs.next().get() == 43; // KEY_B
+     * assert attrs.next().getValue() == "root_b"; // KEY_B
      * assert attrs.hasNext() == false;
      * }</pre>
-     * Please note that any changes made to the {@link Attribute} returned by {@link Iterator#next()} never
-     * affects the {@link Attribute} owned by {@link #rootContext()}. For example:
+     * Please note that any changes made to the {@link Entry} returned by {@link Iterator#next()} never
+     * affects the {@link Entry} owned by {@link #rootContext()}. For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * assert ctx.rootContext().attr(KEY).get() == 42;
-     * assert ctx.hasOwnAttr(KEY) == false;
-     * assert ctx.attr(KEY).get() == 42;
+     * assert ctx.rootContext().attr(KEY) == "root";
+     * assert ctx.ownAttr(KEY) == null;
      *
-     * Iterator<Attribute<?>> attrs = ctx.attrs();
-     * Attribute<Integer> next = (Attribute<Integer>) attrs.next();
-     * assert next.key() == KEY;
-     * // Overriding the root context attribute creates the client context's own attribute.
-     * next.set(4242);
-     * assert ctx.hasOwnAttr(KEY) == true;
+     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
+     * Entry<AttributeKey<?>, Object> next = attrs.next();
+     * assert next.getKey() == KEY;
+     * // Overriding the root context entry creates the client context's own entry.
+     * next.setValue("child");
+     * assert ctx.attr(KEY) == "child";
+     * assert ctx.ownAttr(KEY) == "child";
      * // root context attribute remains unaffected.
-     * assert ctx.rootContext().attr(KEY).get() == 42;
+     * assert ctx.rootContext().attr(KEY) == "root";
      * }</pre>
      * If you want to change the value from the root context while iterating, please call
      * {@link #attrs()} from {@link #rootContext()}.
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * assert ctx.rootContext().attr(KEY).get() == 42;
-     * assert ctx.hasOwnAttr(KEY) == false;
+     * assert ctx.rootContext().attr(KEY) == "root";
+     * assert ctx.ownAttr(KEY) == null;
      *
      * // Call attrs() from the root context to set a value directly while iterating.
-     * Iterator<Attribute<?>> attrs = ctx.rootContext().attrs();
-     * Attribute<Integer> next = (Attribute<Integer>) attrs.next();
-     * assert next.key() == KEY;
-     * next.set(4242);
+     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.rootContext().attrs();
+     * Entry<AttributeKey<?>, Object> next = attrs.next();
+     * assert next.getKey() == KEY;
+     * next.setValue("another_root");
      * // The ctx does not have its own attribute.
-     * assert ctx.hasOwnAttr(KEY) == false;
-     * assert ctx.attr(KEY).get() == 4242;
+     * assert ctx.ownAttr(KEY) == null;
+     * assert ctx.attr(KEY) == "another_root";
      * }</pre>
+     *
      * @see #ownAttrs()
      */
     @Override
-    Iterator<Attribute<?>> attrs();
+    Iterator<Entry<AttributeKey<?>, Object>> attrs();
 
     /**
-     * Returns the {@link Iterator} of all {@link Attribute}s this context contains.
+     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
      * Unlike {@link #attrs()}, this does not iterate {@link #rootContext()}.
      *
      * @see #attrs()
      */
-    Iterator<Attribute<?>> ownAttrs();
+    Iterator<Entry<AttributeKey<?>, Object>> ownAttrs();
 
     /**
      * {@inheritDoc} For example, when you send an RPC request, this method will return {@code null} until

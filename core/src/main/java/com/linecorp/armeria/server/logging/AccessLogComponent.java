@@ -49,7 +49,6 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
@@ -385,8 +384,8 @@ interface AccessLogComponent {
         @Nullable
         @Override
         Object getMessage0(RequestLog log) {
-            final Attribute<?> value = log.context().attr(key);
-            return value != null ? stringifer.apply(value.get()) : null;
+            final Object value = log.context().attr(key);
+            return value != null ? stringifer.apply(value) : null;
         }
     }
 
