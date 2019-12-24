@@ -95,9 +95,9 @@ public interface ClientFactory extends AutoCloseable {
         LoggerFactory.getLogger(ClientFactory.class).debug(
                 "Closing the default {}", ClientFactory.class.getSimpleName());
         try {
-            ((DefaultClientFactory) ofDefault()).doClose();
+            DefaultClientFactory.DEFAULT.doClose();
         } finally {
-            ((DefaultClientFactory) insecure()).doClose();
+            DefaultClientFactory.INSECURE.doClose();
         }
     }
 
