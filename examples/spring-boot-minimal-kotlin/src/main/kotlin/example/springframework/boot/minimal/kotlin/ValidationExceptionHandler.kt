@@ -1,7 +1,7 @@
 package example.springframework.boot.minimal.kotlin
 
 import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
@@ -16,7 +16,7 @@ import javax.validation.ValidationException
  */
 class ValidationExceptionHandler : ExceptionHandlerFunction {
 
-    private val mapper = ObjectMapper()
+    private val mapper = jacksonObjectMapper()
 
     override fun handleException(ctx: ServiceRequestContext, req: HttpRequest, cause: Throwable): HttpResponse {
         return if (cause is ValidationException) {

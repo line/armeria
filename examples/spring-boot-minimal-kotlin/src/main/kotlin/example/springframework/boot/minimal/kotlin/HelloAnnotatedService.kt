@@ -25,7 +25,7 @@ class HelloAnnotatedService {
      * An example in order to show how to use validation framework in an annotated HTTP service.
      */
     @Get("/hello/{name}")
-    fun hello(@Size(min = 3, max = 10, message = "name should have between 3 and 10 characters")
-              @Param
+    fun hello(@Param
+              @Size(min = 3, max = 10, message = "name should have between 3 and 10 characters")
               name: String): String = "Hello, $name! This message is from Armeria annotated service!"
 }
