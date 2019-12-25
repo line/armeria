@@ -8,12 +8,14 @@ buildscript {
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-allopen:${managedVersions["org.jetbrains.kotlin:kotlin-allopen"]}")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${managedVersions["org.jetbrains.kotlin:kotlin-gradle-plugin"]}")
+        classpath("org.jlleitschuh.gradle:ktlint-gradle:${managedVersions["org.jlleitschuh.gradle:ktlint-gradle"]}")
         classpath("org.springframework.boot:spring-boot-gradle-plugin:${managedVersions["org.springframework.boot:spring-boot-gradle-plugin"]}")
     }
 }
 
 apply(plugin = "org.jetbrains.kotlin.jvm")
 apply(plugin = "org.jetbrains.kotlin.plugin.spring")
+apply(plugin = "org.jlleitschuh.gradle.ktlint")
 apply(plugin = "org.springframework.boot")
 
 dependencies {

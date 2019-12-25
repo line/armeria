@@ -39,8 +39,10 @@ class ValidationExceptionHandler : ExceptionHandlerFunction {
 /**
  * A sample HTTP response which is sent to a client when a [ValidationException] is raised.
  */
-data class ErrorResponse(val error: String,
-                         val message: String,
-                         val path: String,
-                         val status: Int,
-                         val timestamp: String)
+data class ErrorResponse(
+    val error: String,
+    val message: String,
+    val path: String,
+    val status: Int,
+    val timestamp: String
+)

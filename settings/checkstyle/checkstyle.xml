@@ -6,7 +6,7 @@
 <module name="Checker">
   <property name="charset" value="UTF-8"/>
   <property name="severity" value="error"/>
-  <property name="fileExtensions" value="java, kt, properties, xml"/>
+  <property name="fileExtensions" value="java, properties, xml"/>
 
   <module name="SuppressWarningsFilter" />
   <module name="SuppressionFilter">
@@ -14,7 +14,7 @@
   </module>
 
   <module name="Header">
-    <property name="fileExtensions" value="java, kt"/>
+    <property name="fileExtensions" value="java"/>
   </module>
 
   <module name="NewlineAtEndOfFile"/>
