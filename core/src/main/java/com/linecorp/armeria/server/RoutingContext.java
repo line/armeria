@@ -118,4 +118,22 @@ public interface RoutingContext {
      * @see ArmeriaHttpUtil#isCorsPreflightRequest(HttpRequest)
      */
     boolean isCorsPreflight();
+
+    /**
+     * Returns {@code true} if this context requires matching the predicates for query parameters.
+     *
+     * @see RouteBuilder#matchesParams(Iterable)
+     */
+    default boolean requiresMatchingParamsPredicates() {
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if this context requires matching the predicates for HTTP headers.
+     *
+     * @see RouteBuilder#matchesHeaders(Iterable)
+     */
+    default boolean requiresMatchingHeadersPredicates() {
+        return true;
+    }
 }

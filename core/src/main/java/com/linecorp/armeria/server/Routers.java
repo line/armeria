@@ -73,13 +73,13 @@ public final class Routers {
                             RejectedRouteHandler.class.getSimpleName(), e);
             }
         };
-        final Set<Route> noCacheRoutes =
-                resolveNoCacheRoutes(StreamSupport.stream(configs.spliterator(), false)
-                                                  .map(ServiceConfig::route)
-                                                  .collect(toImmutableList()));
+        final Set<Route> ambiguousRoutes =
+                resolveAmbiguousRoutes(StreamSupport.stream(configs.spliterator(), false)
+                                                    .map(ServiceConfig::route)
+                                                    .collect(toImmutableList()));
         return wrapVirtualHostRouter(defaultRouter(configs, virtualHost.fallbackServiceConfig(),
                                                    ServiceConfig::route, rejectionConsumer),
-                                     noCacheRoutes);
+                                     ambiguousRoutes);
     }
 
     /**
@@ -102,9 +102,9 @@ public final class Routers {
                     throw new IllegalStateException(
                             "Your composite service has path mappings with a conflict: " +
                             a + " vs. " + b);
-                }), resolveNoCacheRoutes(entries.stream()
-                                                .map(CompositeServiceEntry::route)
-                                                .collect(toImmutableList())));
+                }), resolveAmbiguousRoutes(entries.stream()
+                                                  .map(CompositeServiceEntry::route)
+                                                  .collect(toImmutableList())));
 
         return new CompositeRouter<>(delegate, result ->
                 result.isPresent() ? Routed.of(result.route(), result.routingResult(),
@@ -121,15 +121,22 @@ public final class Routers {
                 defaultRouter(routeDecoratingServices, null,
                               RouteDecoratingService::route,
                               (route1, route2) -> {/* noop */}),
-                resolveNoCacheRoutes(routeDecoratingServices.stream()
-                                                            .map(RouteDecoratingService::route)
-                                                            .collect(toImmutableList())));
+                resolveAmbiguousRoutes(routeDecoratingServices.stream()
+                                                              .map(RouteDecoratingService::route)
+                                                              .collect(toImmutableList())));
     }
 
     /**
-     * Returns {@link Route}s that must not be cached.
+     * Finds the {@link Route}s that are not unique based on the following properties.
+     * <ul>
+     *     <li>{@link Route#pathType()}</li>
+     *     <li>{@link Route#paths()}</li>
+     *     <li>{@link Route#methods()}</li>
+     *     <li>{@link Route#consumes()}</li>
+     *     <li>{@link Route#produces()}</li>
+     * </ul>
      */
-    private static Set<Route> resolveNoCacheRoutes(List<Route> allRoutes) {
+    private static Set<Route> resolveAmbiguousRoutes(List<Route> allRoutes) {
         final Map<List<Object>, List<Route>> dup = new HashMap<>();
         allRoutes.forEach(route -> {
             final List<Object> key = ImmutableList.builder()
@@ -143,7 +150,7 @@ public final class Routers {
                .add(route);
         });
         return dup.values().stream()
-                  .filter(routes -> routes.size() > 1)  // duplicated routes
+                  .filter(routes -> routes.size() > 1)  // ambiguous routes
                   .flatMap(Collection::stream).collect(toImmutableSet());
     }
 

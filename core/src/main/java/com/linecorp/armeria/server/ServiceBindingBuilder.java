@@ -171,7 +171,7 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public ServiceBindingBuilder matchesParams(String paramName, Predicate<String> valuePredicate) {
+    public ServiceBindingBuilder matchesParams(String paramName, Predicate<? super String> valuePredicate) {
         return (ServiceBindingBuilder) super.matchesParams(paramName, valuePredicate);
     }
 
@@ -186,7 +186,8 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public ServiceBindingBuilder matchesHeaders(CharSequence headerName, Predicate<String> valuePredicate) {
+    public ServiceBindingBuilder matchesHeaders(CharSequence headerName,
+                                                Predicate<? super String> valuePredicate) {
         return (ServiceBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
     }
 

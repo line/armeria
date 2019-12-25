@@ -91,8 +91,23 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
+    public RoutingContext overridePath(String path) {
+        return delegate.overridePath(path);
+    }
+
+    @Override
     public boolean isCorsPreflight() {
         return delegate.isCorsPreflight();
+    }
+
+    @Override
+    public boolean requiresMatchingParamsPredicates() {
+        return delegate.requiresMatchingParamsPredicates();
+    }
+
+    @Override
+    public boolean requiresMatchingHeadersPredicates() {
+        return delegate.requiresMatchingHeadersPredicates();
     }
 
     @Override

@@ -113,10 +113,10 @@ final class DefaultRoute implements Route {
         final MediaType contentType = routingCtx.contentType();
         boolean contentTypeMatched = false;
         if (contentType == null) {
-            if (consumes().isEmpty()) {
+            if (consumes.isEmpty()) {
                 contentTypeMatched = true;
             }
-        } else if (!consumes().isEmpty()) {
+        } else if (!consumes.isEmpty()) {
             for (MediaType consumeType : consumes) {
                 contentTypeMatched = contentType.belongsTo(consumeType);
                 if (contentTypeMatched) {
@@ -131,7 +131,7 @@ final class DefaultRoute implements Route {
 
         final List<MediaType> acceptTypes = routingCtx.acceptTypes();
         if (acceptTypes.isEmpty()) {
-            if (contentTypeMatched && produces().isEmpty()) {
+            if (contentTypeMatched && produces.isEmpty()) {
                 builder.score(HIGHEST_SCORE);
             }
             for (MediaType produceType : produces) {
@@ -168,15 +168,18 @@ final class DefaultRoute implements Route {
             }
         }
 
-        if (!paramPredicates.isEmpty() &&
-            !paramPredicates.stream().allMatch(p -> p.test(routingCtx.params()))) {
-            return RoutingResult.empty();
+        if (routingCtx.requiresMatchingParamsPredicates()) {
+            if (!paramPredicates.isEmpty() &&
+                !paramPredicates.stream().allMatch(p -> p.test(routingCtx.params()))) {
+                return RoutingResult.empty();
+            }
         }
-        if (!headerPredicates.isEmpty() &&
-            !headerPredicates.stream().allMatch(p -> p.test(routingCtx.headers()))) {
-            return RoutingResult.empty();
+        if (routingCtx.requiresMatchingHeadersPredicates()) {
+            if (!headerPredicates.isEmpty() &&
+                !headerPredicates.stream().allMatch(p -> p.test(routingCtx.headers()))) {
+                return RoutingResult.empty();
+            }
         }
-
         return builder.build();
     }
 
