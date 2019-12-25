@@ -132,8 +132,8 @@ you can use :api:`@StatusCode` annotation as follows.
         public void deleteUser(@Param("name") String name) { ... }
     }
 
-A service method can receive a request only if it contains a header or parameter the method requires.
-The following methods are bound to the same path ``/users`` but a request may be routed based on the
+You can define a service method which handles a request only if it contains a header or parameter the method
+requires. The following methods are bound to the same path ``/users`` but a request may be routed based on the
 ``client-type`` header.
 
 .. code-block:: java

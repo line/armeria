@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -78,7 +77,7 @@ final class RoutingPredicate<T> {
     }
 
     static RoutingPredicate<HttpHeaders> ofHeaders(CharSequence headerName,
-                                                   Predicate<String> valuePredicate) {
+                                                   Predicate<? super String> valuePredicate) {
         final AsciiString name = HttpHeaderNames.of(headerName);
         return new RoutingPredicate<>(headerName, headers ->
                 headers.getAll(name).stream().anyMatch(valuePredicate));
@@ -92,7 +91,7 @@ final class RoutingPredicate<T> {
     }
 
     static RoutingPredicate<QueryParams> ofParams(String paramName,
-                                                  Predicate<String> valuePredicate) {
+                                                  Predicate<? super String> valuePredicate) {
         return new RoutingPredicate<>(paramName, params ->
                 params.getAll(paramName).stream().anyMatch(valuePredicate));
     }
@@ -155,7 +154,7 @@ final class RoutingPredicate<T> {
     /**
      * Tests the specified {@code t} object.
      *
-     * @see DefaultRoute where this predicate is evalued
+     * @see DefaultRoute where this predicate is evaluated
      */
     public boolean test(T t) {
         try {
@@ -184,12 +183,12 @@ final class RoutingPredicate<T> {
 
         final RoutingPredicate<?> that = (RoutingPredicate<?>) o;
         return name.equals(that.name) &&
-               Objects.equals(delegate, that.delegate);
+               delegate.equals(that.delegate);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, delegate);
+        return name.hashCode() * 31 + delegate.hashCode();
     }
 
     @Override

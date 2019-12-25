@@ -53,12 +53,16 @@ public interface Route {
      * @return a non-empty {@link RoutingResult} if the {@linkplain RoutingContext#path() path},
      *         {@linkplain RoutingContext#method() method},
      *         {@linkplain RoutingContext#contentType() contentType} and
-     *         {@linkplain RoutingContext#acceptTypes() acceptTypes} matches the equivalent conditions in
+     *         {@linkplain RoutingContext#acceptTypes() acceptTypes} amd
+     *         {@linkplain RoutingContext#headers() HTTP headers} and
+     *         {@linkplain RoutingContext#params() query parameters} matches the equivalent conditions in
      *         {@link Route}. {@link RoutingResult#empty()} otherwise.
      *
      * @see RouteBuilder#methods(Iterable)
      * @see RouteBuilder#consumes(Iterable)
      * @see RouteBuilder#produces(Iterable)
+     * @see RouteBuilder#matchesHeaders(Iterable)
+     * @see RouteBuilder#matchesParams(Iterable)
      */
     RoutingResult apply(RoutingContext routingCtx);
 

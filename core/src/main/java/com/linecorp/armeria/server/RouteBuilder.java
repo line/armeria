@@ -384,7 +384,7 @@ public final class RouteBuilder {
      * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
      * {@code true} with the value of the specified {@code paramName} parameter.
      */
-    public RouteBuilder matchesParams(String paramName, Predicate<String> valuePredicate) {
+    public RouteBuilder matchesParams(String paramName, Predicate<? super String> valuePredicate) {
         requireNonNull(paramName, "paramName");
         requireNonNull(valuePredicate, "valuePredicate");
         paramPredicates.add(RoutingPredicate.ofParams(paramName, valuePredicate));
@@ -443,7 +443,7 @@ public final class RouteBuilder {
      * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
      * {@code true} with the value of the specified {@code headerName} header.
      */
-    public RouteBuilder matchesHeaders(CharSequence headerName, Predicate<String> valuePredicate) {
+    public RouteBuilder matchesHeaders(CharSequence headerName, Predicate<? super String> valuePredicate) {
         requireNonNull(headerName, "headerName");
         requireNonNull(valuePredicate, "valuePredicate");
         headerPredicates.add(RoutingPredicate.ofHeaders(headerName, valuePredicate));

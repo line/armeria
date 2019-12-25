@@ -134,7 +134,8 @@ final class RouteCache {
             this.findCache = requireNonNull(findCache, "findCache");
             this.findAllCache = requireNonNull(findAllCache, "findAllCache");
 
-            final Set<Route> newNoCacheRoutes = Collections.newSetFromMap(new IdentityHashMap<>());
+            final Set<Route> newNoCacheRoutes =
+                    Collections.newSetFromMap(new IdentityHashMap<>(noCacheRoutes.size()));
             newNoCacheRoutes.addAll(requireNonNull(noCacheRoutes, "noCacheRoutes"));
             this.noCacheRoutes = Collections.unmodifiableSet(newNoCacheRoutes);
         }
@@ -174,6 +175,7 @@ final class RouteCache {
                                         .map(Routed::value)
                                         .collect(toImmutableList());
             findAllCache.put(routingCtx, valid);
+
             return result;
         }
 

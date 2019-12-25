@@ -59,8 +59,8 @@ abstract class AbstractBindingBuilder {
     private Set<HttpMethod> methods = ImmutableSet.of();
     private Set<MediaType> consumeTypes = ImmutableSet.of();
     private Set<MediaType> produceTypes = ImmutableSet.of();
-    private List<RoutingPredicate<QueryParams>> paramPredicates = new ArrayList<>();
-    private List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
+    private final List<RoutingPredicate<QueryParams>> paramPredicates = new ArrayList<>();
+    private final List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
     private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();
 
@@ -349,7 +349,7 @@ abstract class AbstractBindingBuilder {
      * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
      * {@code true} with the value of the specified {@code paramName} parameter.
      */
-    public AbstractBindingBuilder matchesParams(String paramName, Predicate<String> valuePredicate) {
+    public AbstractBindingBuilder matchesParams(String paramName, Predicate<? super String> valuePredicate) {
         requireNonNull(paramName, "paramName");
         requireNonNull(valuePredicate, "valuePredicate");
         paramPredicates.add(RoutingPredicate.ofParams(paramName, valuePredicate));
@@ -400,7 +400,8 @@ abstract class AbstractBindingBuilder {
      * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
      * {@code true} with the value of the specified {@code headerName} header.
      */
-    public AbstractBindingBuilder matchesHeaders(CharSequence headerName, Predicate<String> valuePredicate) {
+    public AbstractBindingBuilder matchesHeaders(CharSequence headerName,
+                                                 Predicate<? super String> valuePredicate) {
         requireNonNull(headerName, "headerName");
         requireNonNull(valuePredicate, "valuePredicate");
         headerPredicates.add(RoutingPredicate.ofHeaders(headerName, valuePredicate));
