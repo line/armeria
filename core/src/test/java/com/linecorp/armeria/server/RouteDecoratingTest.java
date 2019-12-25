@@ -35,6 +35,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -45,6 +46,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
@@ -138,6 +140,27 @@ class RouteDecoratingTest {
         }
     };
 
+    @RegisterExtension
+    static ServerExtension headersAndParamsExpectingServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.decorator(Route.builder().methods(HttpMethod.GET).path("/")
+                              .matchesHeaders("dest=headers-decorator").build(),
+                         (delegate, ctx, req) -> HttpResponse.of("headers-decorator"))
+              .service(Route.builder().methods(HttpMethod.GET).path("/")
+                            .matchesHeaders("dest=headers-service").build(),
+                       (ctx, req) -> HttpResponse.of("headers-service"))
+              .decorator(Route.builder().methods(HttpMethod.GET).path("/")
+                              .matchesParams("dest=params-decorator").build(),
+                         (delegate, ctx, req) -> HttpResponse.of("params-decorator"))
+              .service(Route.builder().methods(HttpMethod.GET).path("/")
+                            .matchesParams("dest=params-service").build(),
+                       (ctx, req) -> HttpResponse.of("params-service"))
+              .service(Route.builder().methods(HttpMethod.GET).path("/").build(),
+                       (ctx, req) -> HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    };
+
     @ParameterizedTest
     @MethodSource("generateDecorateInOrder")
     void decorateInOrder(String path, List<Integer> orders) {
@@ -205,5 +228,23 @@ class RouteDecoratingTest {
         assertThatThrownBy(() -> Server.builder().routeDecorator().build(Function.identity()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should set at least one");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/,                       headers-decorator,  headers-decorator",
+            "/,                       headers-service,    headers-service",
+            "/?dest=params-decorator, ,                   params-decorator",
+            "/?dest=params-service,   ,                   params-service"
+    })
+    void decoratorShouldWorkWithMatchingHeadersAndParams(String path,
+                                                         @Nullable String destHeader,
+                                                         String result) {
+        final WebClient client = WebClient.of(headersAndParamsExpectingServer.uri("/"));
+        final RequestHeadersBuilder builder = RequestHeaders.builder().method(HttpMethod.GET).path(path);
+        if (!Strings.isNullOrEmpty(destHeader)) {
+            builder.add("dest", destHeader);
+        }
+        assertThat(client.execute(builder.build()).aggregate().join().contentUtf8()).isEqualTo(result);
     }
 }

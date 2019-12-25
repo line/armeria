@@ -181,8 +181,9 @@ final class RouteCache {
             return list.stream().map(cached -> {
                 final Route route = routeResolver.apply(cached);
                 final RoutingResult routingResult = route.apply(routingCtx);
-                return Routed.of(route, routingResult, cached);
-            }).collect(toImmutableList());
+                return routingResult.isPresent() ? Routed.of(route, routingResult, cached)
+                                                 : Routed.<V>empty();
+            }).filter(Routed::isPresent).collect(toImmutableList());
         }
 
         @Override
