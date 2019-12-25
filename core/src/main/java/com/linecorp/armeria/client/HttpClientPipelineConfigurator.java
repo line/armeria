@@ -96,6 +96,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      * The maximum allowed content length of an HTTP/1 to 2 upgrade response.
      */
     private static final long UPGRADE_RESPONSE_MAX_LENGTH = 16384;
+    private static final int SSL_RECORD_HEADER_LENGTH = 5;
 
     private enum HttpPreference {
         HTTP1_REQUIRED,
@@ -267,6 +268,19 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private void configureAsHttp(Channel ch) {
         final ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast(TrafficLoggingHandler.CLIENT);
+        pipeline.addLast(new ByteToMessageDecoder() {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                if (in.readableBytes() < SSL_RECORD_HEADER_LENGTH) {
+                    return;
+                }
+                if (SslHandler.isEncrypted(in) && sslCtx == null) {
+                    finishWithNegotiationFailure(ctx, HTTPS, HTTP, "ssl required");
+                    return;
+                }
+                ctx.pipeline().remove(this);
+            }
+        });
 
         final boolean attemptUpgrade;
         switch (httpPreference) {

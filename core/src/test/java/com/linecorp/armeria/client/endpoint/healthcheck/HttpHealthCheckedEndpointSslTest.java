@@ -16,23 +16,20 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
-
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 class HttpHealthCheckedEndpointSslTest {
 
@@ -56,36 +53,13 @@ class HttpHealthCheckedEndpointSslTest {
     @RegisterExtension
     static final ServerExtension server = new HealthCheckServerExtension();
 
-    /**
-     * TODO: placeholder exception -- to decide exact behavior after further analysis
-     */
-    public static class SomeSslException extends RuntimeException {
-        private static final long serialVersionUID = -6543250369255632036L;
-    }
-
     @Test
     void plainTextRequstToHttpsEndpoint() throws Exception {
         server.start();
         final int port = server.httpsPort();
         final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, Endpoint.of("localhost", port))
-                                             .decorator(LoggingClient.newDecorator()).build();
-        assertThrows(SomeSslException.class,
-                     () -> webClient.get(HEALTH_CHECK_PATH).aggregate().get(10, TimeUnit.SECONDS));
-    }
-
-    @Test
-    void sslRequstToPlainTextEndpoint() throws Exception {
-        server.start();
-        final int port = server.httpPort();
-        final ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .sslContextCustomizer(
-                                     s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                             .build();
-        final WebClient webClient = WebClient.builder(SessionProtocol.HTTPS, Endpoint.of("localhost", port))
-                                             .factory(clientFactory)
-                                             .decorator(LoggingClient.newDecorator()).build();
-        assertThrows(SomeSslException.class,
-                     () -> webClient.get(HEALTH_CHECK_PATH).aggregate().get(10, TimeUnit.SECONDS));
+                                             .build();
+        assertThatThrownBy(() -> webClient.get(HEALTH_CHECK_PATH).aggregate().get(10, TimeUnit.SECONDS))
+                .hasRootCauseInstanceOf(SessionProtocolNegotiationException.class);
     }
 }
