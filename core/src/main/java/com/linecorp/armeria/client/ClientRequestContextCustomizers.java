@@ -40,14 +40,12 @@ final class ClientRequestContextCustomizers {
     }
 
     void remove(Consumer<? super ClientRequestContext> customizer) {
-        if (customizers == null) {
-            return;
-        }
-
-        for (int i = customizers.size() - 1; i >= 0; i--) {
-            if (customizers.get(i) == customizer) {
-                customizers.remove(i);
-                return;
+        if (customizers != null) {
+            for (int i = customizers.size() - 1; i >= 0; i--) {
+                if (customizers.get(i) == customizer) {
+                    customizers.remove(i);
+                    return;
+                }
             }
         }
 
