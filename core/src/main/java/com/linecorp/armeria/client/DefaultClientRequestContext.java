@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -21,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -62,8 +62,8 @@ import io.netty.util.Attribute;
  * Default {@link ClientRequestContext} implementation.
  */
 public class DefaultClientRequestContext extends NonWrappingRequestContext implements ClientRequestContext {
-    static final ThreadLocal<Consumer<ClientRequestContext>> THREAD_LOCAL_CONTEXT_CUSTOMIZER =
-            new ThreadLocal<>();
+
+    static final ThreadLocal<ClientRequestContextCustomizers> threadLocalCustomizers = new ThreadLocal<>();
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -95,6 +95,9 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Nullable
     private String strVal;
+
+    @Nullable
+    private final List<Consumer<? super ClientRequestContext>> customizers;
 
     /**
      * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
@@ -153,6 +156,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         responseTimeoutMillis = options.responseTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
         additionalRequestHeaders = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.of());
+        customizers = copyThreadLocalCustomizers();
     }
 
     /**
@@ -182,12 +186,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 // Note: thread-local customizer must be run before EndpointSelector.select()
                 //       so that the customizer can inject the attributes which may be required
                 //       by the EndpointSelector.
-                runThreadLocalContextCustomizer();
+                runThreadLocalContextCustomizers();
                 updateEndpoint(endpointSelector.select(this));
             } else {
                 endpointSelector = null;
                 updateEndpoint(endpoint);
-                runThreadLocalContextCustomizer();
+                runThreadLocalContextCustomizers();
             }
 
             if (eventLoop == null) {
@@ -215,10 +219,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         autoFillSchemeAndAuthority();
     }
 
-    private void runThreadLocalContextCustomizer() {
-        final Consumer<ClientRequestContext> customizer = THREAD_LOCAL_CONTEXT_CUSTOMIZER.get();
-        if (customizer != null) {
-            customizer.accept(this);
+    private void runThreadLocalContextCustomizers() {
+        if (customizers != null) {
+            for (Consumer<? super ClientRequestContext> c : customizers) {
+                c.accept(this);
+            }
         }
     }
 
@@ -282,11 +287,24 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         responseTimeoutMillis = ctx.responseTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
+        customizers = copyThreadLocalCustomizers();
 
         for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
             addAttr(i.next());
         }
-        runThreadLocalContextCustomizer();
+
+        runThreadLocalContextCustomizers();
+    }
+
+    @Nullable
+    private List<Consumer<? super ClientRequestContext>> copyThreadLocalCustomizers() {
+        final ClientRequestContextCustomizers customizers = threadLocalCustomizers.get();
+        if (customizers == null) {
+            return null;
+        }
+
+        customizers.setCapturedContext(this);
+        return customizers.copyCustomizers();
     }
 
     @SuppressWarnings("unchecked")

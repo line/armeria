@@ -49,6 +49,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
@@ -65,6 +66,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftCompletableFuture;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -300,6 +302,50 @@ class ThriftOverHttpClientTest {
                 final AbstractMap.SimpleEntry<Integer, ?> pair = resultQueue.take();
                 assertThat(pair.getValue()).isEqualTo("Hello, kukuman" + pair.getKey() + '!');
             }
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void contextCaptorSync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final HelloService.Iface client = Clients.newClient(clientFactory,
+                                                                uri(Handlers.HELLO, format, protocol),
+                                                                Handlers.HELLO.iface(), clientOptions);
+            Clients.captureNextContext();
+            client.hello("kukuman");
+            final ClientRequestContext ctx = Clients.capturedContext();
+            final RpcRequest rpcReq = ctx.rpcRequest();
+            assertThat(rpcReq).isNotNull();
+            assertThat(rpcReq.method()).isEqualTo("hello");
+            assertThat(rpcReq.params()).containsExactly("kukuman");
+            assertThatThrownBy(Clients::capturedContext).isInstanceOf(IllegalStateException.class)
+                                                        .hasMessageContaining("no request was made");
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void contextCaptorAsync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final HelloService.AsyncIface client =
+                    Clients.newClient(clientFactory, uri(Handlers.HELLO, format, protocol),
+                                      Handlers.HELLO.asyncIface(),
+                                      clientOptions);
+
+            Clients.captureNextContext();
+            client.hello("kukuman", new ThriftCompletableFuture<>());
+            final ClientRequestContext ctx = Clients.capturedContext();
+            final RpcRequest rpcReq = ctx.rpcRequest();
+            assertThat(rpcReq).isNotNull();
+            assertThat(rpcReq.method()).isEqualTo("hello");
+            assertThat(rpcReq.params()).containsExactly("kukuman");
+            assertThatThrownBy(Clients::capturedContext).isInstanceOf(IllegalStateException.class)
+                                                        .hasMessageContaining("no request was made");
         });
     }
 

@@ -240,6 +240,26 @@ public class GrpcClientTest {
     }
 
     @Test
+    public void contextCaptorBlocking() {
+        Clients.captureNextContext();
+        blockingStub.emptyCall(EMPTY);
+        final ClientRequestContext ctx = Clients.capturedContext();
+        assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        assertThatThrownBy(Clients::capturedContext).isInstanceOf(IllegalStateException.class)
+                                                    .hasMessageContaining("no request was made");
+    }
+
+    @Test
+    public void contextCaptorAsync() {
+        Clients.captureNextContext();
+        asyncStub.emptyCall(EMPTY, StreamRecorder.create());
+        final ClientRequestContext ctx = Clients.capturedContext();
+        assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        assertThatThrownBy(Clients::capturedContext).isInstanceOf(IllegalStateException.class)
+                                                    .hasMessageContaining("no request was made");
+    }
+
+    @Test
     public void largeUnary() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()

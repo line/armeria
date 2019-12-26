@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.DefaultClientRequestContext.THREAD_LOCAL_CONTEXT_CUSTOMIZER;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -539,7 +538,8 @@ public final class Clients {
      *
      * @see #withHttpHeader(CharSequence, String)
      */
-    public static SafeCloseable withHttpHeaders(Function<HttpHeaders, HttpHeaders> headerManipulator) {
+    public static SafeCloseable withHttpHeaders(
+            Function<? super HttpHeaders, ? extends HttpHeaders> headerManipulator) {
         requireNonNull(headerManipulator, "headerManipulator");
         return withContextCustomizer(ctx -> {
             final HttpHeaders manipulatedHeaders = headerManipulator.apply(ctx.additionalRequestHeaders());
@@ -582,18 +582,77 @@ public final class Clients {
      *
      * @see #withHttpHeaders(Function)
      */
-    public static SafeCloseable withContextCustomizer(Consumer<ClientRequestContext> contextCustomizer) {
+    public static SafeCloseable withContextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
         requireNonNull(contextCustomizer, "contextCustomizer");
 
-        final Consumer<ClientRequestContext> oldCustomizer = THREAD_LOCAL_CONTEXT_CUSTOMIZER.get();
+        final ClientRequestContextCustomizers customizers = maybeCreateContextCustomizers();
+        customizers.add(contextCustomizer);
 
-        if (oldCustomizer != null) {
-            THREAD_LOCAL_CONTEXT_CUSTOMIZER.set(oldCustomizer.andThen(contextCustomizer));
-            return () -> THREAD_LOCAL_CONTEXT_CUSTOMIZER.set(oldCustomizer);
-        } else {
-            THREAD_LOCAL_CONTEXT_CUSTOMIZER.set(contextCustomizer);
-            return THREAD_LOCAL_CONTEXT_CUSTOMIZER::remove;
+        return new SafeCloseable() {
+            boolean closed;
+
+            @Override
+            public void close() {
+                if (closed) {
+                    return;
+                }
+
+                closed = true;
+                customizers.remove(contextCustomizer);
+            }
+        };
+    }
+
+    /**
+     * Prepare to capture the {@link ClientRequestContext} of the next request sent from the current thread.
+     * Use {@link #capturedContext()} to retrieve the captured {@link ClientRequestContext}.
+     * <pre>{@code
+     * Clients.captureNextContext();
+     * WebClient.of().get("https://www.example.com/hello");
+     * ClientRequestContext ctx = Clients.capturedContext();
+     * assert ctx.path().equals("/hello");
+     * }</pre>
+     *
+     * <p>Note: Only the first {@link ClientRequestContext} is captured if you made more than one request.</p>
+     */
+    public static void captureNextContext() {
+        maybeCreateContextCustomizers().captureNextContext();
+    }
+
+    /**
+     * Retrieves the {@link ClientRequestContext} captured after {@link #captureNextContext()}.
+     *
+     * <p>Note: The captured {@link ClientRequestContext} is cleared when this method is invoked.
+     * There's no way to re-retrieve the captured {@link ClientRequestContext}. You also need to call
+     * {@link #captureNextContext()} to capture another.</p>
+     *
+     * @return the retrieved {@link ClientRequestContext}.
+     *
+     * @throws IllegalStateException if 1) {@link #captureNextContext()} was not called or
+     *                               2) no request was made in between.
+     */
+    public static ClientRequestContext capturedContext() {
+        final ClientRequestContextCustomizers customizers =
+                DefaultClientRequestContext.threadLocalCustomizers.get();
+        if (customizers == null) {
+            throw new IllegalStateException("captureNextContext() was not called.");
         }
+
+        final ClientRequestContext ctx = customizers.capturedContext();
+        if (ctx == null) {
+            throw new IllegalStateException("No context was captured; no request was made?");
+        }
+        return ctx;
+    }
+
+    private static ClientRequestContextCustomizers maybeCreateContextCustomizers() {
+        ClientRequestContextCustomizers customizers = DefaultClientRequestContext.threadLocalCustomizers.get();
+        if (customizers == null) {
+            customizers = new ClientRequestContextCustomizers();
+            DefaultClientRequestContext.threadLocalCustomizers.set(customizers);
+        }
+        return customizers;
     }
 
     private Clients() {}
