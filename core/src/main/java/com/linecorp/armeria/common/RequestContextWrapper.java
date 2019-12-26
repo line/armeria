@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -192,6 +193,13 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public <V> V setAttrIfAbsent(AttributeKey<V> key, V value) {
         return delegate().setAttrIfAbsent(key, value);
+    }
+
+    @Nullable
+    @Override
+    public <V> V computeAttrIfAbsent(
+            AttributeKey<V> key, Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
+        return delegate().computeAttrIfAbsent(key, mappingFunction);
     }
 
     @Override

@@ -152,6 +152,20 @@ class DefaultAttributeMapTest {
         // root: [foo, bar], child: [foo2, bar2]
         assertThat(child.setAttrIfAbsent(bar, "bar3")).isEqualTo("bar2");
         assertThat(child.attr(bar)).isEqualTo("bar2");
+
+        final AttributeKey<String> baz = AttributeKey.valueOf("baz");
+        // root: [foo, bar, baz], child: [foo2, bar2]
+        root.setAttr(baz, "baz");
+        // root: [foo, bar, baz], child: [foo2, bar2, baz2]
+        assertThat(child.computeAttrIfAbsent(baz, key -> "baz2")).isEqualTo("baz2");
+
+        assertThat(child.attr(baz)).isEqualTo("baz2");
+        assertThat(root.attr(baz)).isEqualTo("baz");
+
+        // Do not change.
+        // root: [foo, bar, baz], child: [foo2, bar2, baz2]
+        assertThat(child.computeAttrIfAbsent(baz, key -> "baz3")).isEqualTo("baz2");
+        assertThat(child.attr(baz)).isEqualTo("baz2");
     }
 
     @Test
@@ -176,6 +190,17 @@ class DefaultAttributeMapTest {
         // root: [foo], child: [bar]
         assertThat(child.setAttrIfAbsent(bar, "bar2")).isEqualTo("bar");
         assertThat(child.attr(bar)).isEqualTo("bar");
+
+        final AttributeKey<String> baz = AttributeKey.valueOf("baz");
+        // root: [foo], child: [bar, baz]
+        assertThat(child.computeAttrIfAbsent(baz, key -> "baz")).isEqualTo("baz");
+        assertThat(root.attr(baz)).isNull();
+        assertThat(child.attr(baz)).isEqualTo("baz");
+
+        // Do not change.
+        // root: [foo], child: [bar, baz]
+        assertThat(child.computeAttrIfAbsent(baz, key -> "baz2")).isEqualTo("baz");
+        assertThat(child.attr(baz)).isEqualTo("baz");
     }
 
     @Test

@@ -138,6 +138,20 @@ public interface RequestContext {
     <V> V setAttrIfAbsent(AttributeKey<V> key, V value);
 
     /**
+     * If the specified {@link AttributeKey} is not already associated with a value (or is mapped
+     * to {@code null}), attempts to compute its value using the given mapping
+     * function and stores it into this context.
+     *
+     * <p>If the mapping function returns {@code null}, no mapping is recorded.
+     *
+     * @return the current (existing or computed) value associated with
+     *         the specified {@link AttributeKey}, or {@code null} if the computed value is {@code null}
+     */
+    @Nullable
+    <V> V computeAttrIfAbsent(
+            AttributeKey<V> key, Function<? super AttributeKey<V>, ? extends V> mappingFunction);
+
+    /**
      * Returns the {@link Iterator} of all {@link Entry}s this context contains.
      */
     Iterator<Entry<AttributeKey<?>, Object>> attrs();

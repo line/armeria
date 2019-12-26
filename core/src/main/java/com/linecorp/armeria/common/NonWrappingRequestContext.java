@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -224,6 +225,15 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
         requireNonNull(key, "key");
         requireNonNull(value, "value");
         return attrs.setAttrIfAbsent(key, value);
+    }
+
+    @Nullable
+    @Override
+    public <V> V computeAttrIfAbsent(AttributeKey<V> key,
+                                     Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
+        requireNonNull(key, "key");
+        requireNonNull(mappingFunction, "mappingFunction");
+        return attrs.computeAttrIfAbsent(key, mappingFunction);
     }
 
     @Override

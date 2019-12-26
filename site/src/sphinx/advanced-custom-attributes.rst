@@ -36,6 +36,6 @@ You can also iterate over all the attributes in a context using ``RequestContext
 
 .. code-block:: java
 
-    for (Entry<AttributeKey<?>, Object> a : ctx.attrs()) {
-        System.err.println(a.getKey() + ": " + a.getValue());
-    }
+    ctx.attrs().forEachRemaining(e -> {
+        System.err.println(e.getKey() + ": " + e.getValue());
+    });

@@ -39,6 +39,7 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -49,7 +50,8 @@ import io.netty.util.AttributeKey;
 final class DefaultAttributeMap {
 
     // Forked from Netty 4.1.34 at 506f0d8f8c10e1b24924f7d992a726d7bdd2e486
-    // - Greatly simplified and just bring the implementation of attributes.
+    // - Add rootAttributeMap and related methods to retrieve values from the rootAttributeMap.
+    // - Add setAttrIfAbsent and computeAttrIfAbsent
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray>
@@ -142,15 +144,7 @@ final class DefaultAttributeMap {
 
     private <T> DefaultAttribute<T> setAttr(AttributeKey<T> key, @Nullable T value, boolean setIfAbsent) {
         requireNonNull(key, "key");
-        AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
-        if (attributes == null) {
-            attributes = new AtomicReferenceArray<>(BUCKET_SIZE);
-
-            if (!updater.compareAndSet(this, null, attributes)) {
-                attributes = this.attributes;
-            }
-        }
-        assert attributes != null;
+        final AtomicReferenceArray<DefaultAttribute<?>> attributes = attributes();
 
         final int i = index(key);
         DefaultAttribute<?> head = attributes.get(i);
@@ -196,6 +190,65 @@ final class DefaultAttributeMap {
         }
     }
 
+    private AtomicReferenceArray<DefaultAttribute<?>> attributes() {
+        AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
+        if (attributes == null) {
+            attributes = new AtomicReferenceArray<>(BUCKET_SIZE);
+
+            if (!updater.compareAndSet(this, null, attributes)) {
+                attributes = this.attributes;
+            }
+        }
+        assert attributes != null;
+        return attributes;
+    }
+
+    @Nullable
+    <T> T computeAttrIfAbsent(
+            AttributeKey<T> key, Function<? super AttributeKey<T>, ? extends T> mappingFunction) {
+        requireNonNull(key, "key");
+        requireNonNull(mappingFunction, "mappingFunction");
+        final AtomicReferenceArray<DefaultAttribute<?>> attributes = attributes();
+
+        final int i = index(key);
+        DefaultAttribute<?> head = attributes.get(i);
+        if (head == null) {
+            head = new DefaultAttribute<>();
+            if (!attributes.compareAndSet(i, null, head)) {
+                head = attributes.get(i);
+            }
+        }
+
+        synchronized (head) {
+            DefaultAttribute<?> curr = head;
+            for (;;) {
+                final DefaultAttribute<?> next = curr.next;
+                if (next != null && next.key == key) {
+                    @SuppressWarnings("unchecked")
+                    final DefaultAttribute<T> attr = (DefaultAttribute<T>) next;
+                    final T current = attr.getValue();
+                    if (current != null) {
+                        return current;
+                    }
+
+                    final T computed = mappingFunction.apply(key);
+                    attr.setValue(computed);
+                    return computed;
+                }
+
+                if (next == null) {
+                    final T computed = mappingFunction.apply(key);
+                    if (computed != null) {
+                        curr.next = new DefaultAttribute<>(key, computed);
+                    }
+                    return computed;
+                }
+
+                curr = next;
+            }
+        }
+    }
+
     Iterator<Entry<AttributeKey<?>, Object>> attrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
@@ -208,10 +261,10 @@ final class DefaultAttributeMap {
                 return Collections.emptyIterator();
             }
 
-            return new CopyOnWriteAttributeIterator(rootAttrs);
+            return new CopyOnWriteIterator(rootAttrs);
         }
 
-        final Iterator<Entry<AttributeKey<?>, Object>> ownAttrsIt = new IteratorImpl(attributes);
+        final Iterator<Entry<AttributeKey<?>, Object>> ownAttrsIt = new OwnIterator(attributes);
         if (rootAttributeMap == null) {
             return ownAttrsIt;
         }
@@ -221,7 +274,7 @@ final class DefaultAttributeMap {
             return ownAttrsIt;
         }
 
-        return new ConcatenatedIteratorImpl(ownAttrsIt, rootAttrs);
+        return new ConcatenatedCopyOnWriteIterator(ownAttrsIt, rootAttrs);
     }
 
     Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
@@ -229,7 +282,7 @@ final class DefaultAttributeMap {
         if (attributes == null) {
             return Collections.emptyIterator();
         }
-        return new IteratorImpl(attributes);
+        return new OwnIterator(attributes);
     }
 
     @VisibleForTesting
@@ -244,7 +297,7 @@ final class DefaultAttributeMap {
         @Nullable
         private DefaultAttribute<?> next;
 
-        DefaultAttribute(AttributeKey<T> key, T value) {
+        DefaultAttribute(AttributeKey<T> key, @Nullable T value) {
             this.key = key;
             this.value = value;
         }
@@ -276,7 +329,7 @@ final class DefaultAttributeMap {
         }
     }
 
-    private static final class IteratorImpl implements Iterator<Entry<AttributeKey<?>, Object>> {
+    private static final class OwnIterator implements Iterator<Entry<AttributeKey<?>, Object>> {
 
         private final AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
@@ -284,7 +337,7 @@ final class DefaultAttributeMap {
         @Nullable
         private DefaultAttribute<?> next;
 
-        IteratorImpl(AtomicReferenceArray<DefaultAttribute<?>> attributes) {
+        OwnIterator(AtomicReferenceArray<DefaultAttribute<?>> attributes) {
             this.attributes = attributes;
             next = findNext(null);
         }
@@ -337,10 +390,10 @@ final class DefaultAttributeMap {
         return (T) o;
     }
 
-    private class CopyOnWriteAttributeIterator implements Iterator<Entry<AttributeKey<?>, Object>> {
+    private class CopyOnWriteIterator implements Iterator<Entry<AttributeKey<?>, Object>> {
         private final Iterator<Entry<AttributeKey<?>, Object>> rootAttrs;
 
-        CopyOnWriteAttributeIterator(Iterator<Entry<AttributeKey<?>, Object>> rootAttrs) {
+        CopyOnWriteIterator(Iterator<Entry<AttributeKey<?>, Object>> rootAttrs) {
             this.rootAttrs = rootAttrs;
         }
 
@@ -356,7 +409,7 @@ final class DefaultAttributeMap {
         }
     }
 
-    private final class ConcatenatedIteratorImpl implements Iterator<Entry<AttributeKey<?>, Object>> {
+    private final class ConcatenatedCopyOnWriteIterator implements Iterator<Entry<AttributeKey<?>, Object>> {
 
         private final Iterator<Entry<AttributeKey<?>, Object>> childIt;
         private final Iterator<Entry<AttributeKey<?>, Object>> rootIt;
@@ -366,8 +419,8 @@ final class DefaultAttributeMap {
         @Nullable
         private Entry<AttributeKey<?>, Object> next;
 
-        ConcatenatedIteratorImpl(Iterator<Entry<AttributeKey<?>, Object>> childIt,
-                                 Iterator<Entry<AttributeKey<?>, Object>> rootIt) {
+        ConcatenatedCopyOnWriteIterator(Iterator<Entry<AttributeKey<?>, Object>> childIt,
+                                        Iterator<Entry<AttributeKey<?>, Object>> rootIt) {
             this.childIt = childIt;
             this.rootIt = rootIt;
 
