@@ -49,7 +49,7 @@ public final class Main {
                          // longer period than the configured request timeout. The timeout can be disabled by
                          // setting 0 like the below, but it is NOT RECOMMENDED in the real world application,
                          // because it can leave a lot of unfinished requests.
-                         ctx.setRequestTimeout(Duration.ZERO);
+                         ctx.resetRequestTimeout(Duration.ZERO);
                          return ServerSentEvents.fromPublisher(
                                  Flux.interval(sendingInterval)
                                      .take(eventCount)

@@ -98,6 +98,26 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public void adjustResponseTimeoutMillis(long adjustmentMillis) {
+        delegate().adjustResponseTimeoutMillis(adjustmentMillis);
+    }
+
+    @Override
+    public void adjustResponseTimeout(Duration adjustment) {
+        delegate().adjustResponseTimeout(adjustment);
+    }
+
+    @Override
+    public void resetResponseTimeoutMillis(long responseTimeoutMillis) {
+        delegate().resetResponseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    public void resetResponseTimeout(Duration responseTimeout) {
+        delegate().resetResponseTimeout(responseTimeout);
+    }
+
+    @Override
     @Nullable
     public Runnable responseTimeoutHandler() {
         return delegate().responseTimeoutHandler();

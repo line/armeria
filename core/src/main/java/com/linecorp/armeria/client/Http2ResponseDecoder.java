@@ -65,15 +65,14 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     }
 
     @Override
-    HttpResponseWrapper addResponse(
+    HttpWrapper addResponse(
             int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
-            long responseTimeoutMillis, long maxContentLength) {
+            EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
-        final HttpResponseWrapper resWrapper =
-                super.addResponse(id, res, ctx, responseTimeoutMillis, maxContentLength);
+        final HttpWrapper resWrapper =
+                super.addResponse(id, res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
 
         resWrapper.completionFuture().handle((unused, cause) -> {
-            final EventLoop eventLoop = channel().eventLoop();
             if (eventLoop.inEventLoop()) {
                 onWrapperCompleted(resWrapper, id, cause);
             } else {
@@ -84,7 +83,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         return resWrapper;
     }
 
-    private void onWrapperCompleted(HttpResponseWrapper resWrapper, int id, @Nullable Throwable cause) {
+    private void onWrapperCompleted(HttpWrapper resWrapper, int id, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
         resWrapper.onSubscriptionCancelled(cause);
 
@@ -126,7 +125,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onStreamClosed(Http2Stream stream) {
         goAwayHandler.onStreamClosed(channel(), stream);
 
-        final HttpResponseWrapper res = getResponse(streamIdToId(stream.id()), true);
+        final HttpWrapper res = getResponse(streamIdToId(stream.id()), true);
         if (res == null) {
             return;
         }
@@ -176,7 +175,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
-        final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
+        final HttpWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -194,7 +193,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, false, endOfStream);
         try {
-            res.scheduleTimeout(channel().eventLoop());
+            res.initTimeout();
             res.tryWrite(converted);
         } catch (Throwable t) {
             res.close(t);
@@ -220,7 +219,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             int padding, boolean endOfStream) throws Http2Exception {
 
         final int dataLength = data.readableBytes();
-        final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
+        final HttpWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -259,7 +258,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
-        final HttpResponseWrapper res = removeResponse(streamIdToId(streamId));
+        final HttpWrapper res = removeResponse(streamIdToId(streamId));
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {

@@ -153,13 +153,23 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public void setRequestTimeoutAfterNanos(long requestTimeoutAfterNanos) {
-        delegate().setRequestTimeoutAfterNanos(requestTimeoutAfterNanos);
+    public void adjustRequestTimeoutMillis(long requestTimeoutMillis) {
+        delegate().adjustRequestTimeoutMillis(requestTimeoutMillis);
     }
 
     @Override
-    public void setRequestTimeoutAfter(Duration requestTimeoutAfter) {
-        delegate().setRequestTimeoutAfter(requestTimeoutAfter);
+    public void adjustRequestTimeout(Duration requestTimeout) {
+        delegate().adjustRequestTimeout(requestTimeout);
+    }
+
+    @Override
+    public void resetRequestTimeoutMillis(long requestTimeoutMillis) {
+        delegate().resetRequestTimeoutMillis(requestTimeoutMillis);
+    }
+
+    @Override
+    public void resetRequestTimeout(Duration deadline) {
+        delegate().resetRequestTimeout(deadline);
     }
 
     @Nullable

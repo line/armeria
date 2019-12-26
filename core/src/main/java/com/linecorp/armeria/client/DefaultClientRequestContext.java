@@ -22,12 +22,15 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
+
+import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
@@ -45,6 +48,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TimeoutController;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -67,7 +71,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                    DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
+            DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
 
     private boolean initialized;
     @Nullable
@@ -88,6 +92,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private long responseTimeoutMillis;
     @Nullable
     private Runnable responseTimeoutHandler;
+    @Nullable
+    private TimeoutController responseTimeoutController;
     private long maxResponseLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
@@ -391,12 +397,66 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             throw new IllegalArgumentException(
                     "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: >= 0)");
         }
-        this.responseTimeoutMillis = responseTimeoutMillis;
+        final long adjustmentMillis =
+                LongMath.saturatedSubtract(responseTimeoutMillis, this.responseTimeoutMillis);
+        adjustResponseTimeoutMillis(adjustmentMillis);
     }
 
     @Override
     public void setResponseTimeout(Duration responseTimeout) {
         setResponseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
+
+    @Override
+    public void adjustResponseTimeoutMillis(long adjustmentMillis) {
+        if (adjustmentMillis < 0) {
+            throw new IllegalArgumentException(
+                    "adjustmentMillis: " + adjustmentMillis + " (expected: >= 0)");
+        }
+        if (adjustmentMillis > 0) {
+            final long oldRequestTimeoutMillis = responseTimeoutMillis;
+            responseTimeoutMillis = LongMath.saturatedAdd(oldRequestTimeoutMillis, adjustmentMillis);
+            final TimeoutController responseTimeoutController = this.responseTimeoutController;
+            if (responseTimeoutController != null) {
+                if (eventLoop().inEventLoop()) {
+                    responseTimeoutController.adjustTimeout(adjustmentMillis);
+                } else {
+                    eventLoop().execute(() -> responseTimeoutController.adjustTimeout(adjustmentMillis));
+                }
+            }
+        }
+    }
+
+    @Override
+    public void adjustResponseTimeout(Duration adjustment) {
+        adjustResponseTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
+    }
+
+    @Override
+    public void resetResponseTimeoutMillis(long newTimeoutMillis) {
+        if (newTimeoutMillis < 0) {
+            throw new IllegalArgumentException(
+                    "newTimeoutMillis: " + newTimeoutMillis + " (expected: >= 0)");
+        }
+
+        long passedTimeMillis = 0;
+        final TimeoutController responseTimeoutController = this.responseTimeoutController;
+        if (responseTimeoutController != null) {
+            passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
+                    System.nanoTime() - responseTimeoutController.startTimeNanos());
+            if (channel().eventLoop().inEventLoop()) {
+                responseTimeoutController.resetTimeout(newTimeoutMillis);
+            } else {
+                channel().eventLoop().execute(() -> responseTimeoutController.resetTimeout(newTimeoutMillis));
+            }
+        }
+
+        responseTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, newTimeoutMillis);
+    }
+
+    @Override
+    public void resetResponseTimeout(Duration responseTimeout) {
+        resetResponseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
     }
 
     @Override
@@ -408,6 +468,18 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
         this.responseTimeoutHandler = requireNonNull(responseTimeoutHandler, "responseTimeoutHandler");
+    }
+
+    /**
+     * Sets the {@code responseTimeoutController} that is set to a new timeout when
+     * the {@linkplain #responseTimeoutMillis()} request timeout} setting is changed.
+     */
+    public void setResponseTimeoutController(TimeoutController responseTimeoutController) {
+        requireNonNull(responseTimeoutController, "responseTimeoutController");
+        if (this.responseTimeoutController != null) {
+            throw new IllegalStateException("requestTimeoutChangeListener is set already.");
+        }
+        this.responseTimeoutController = responseTimeoutController;
     }
 
     @Override

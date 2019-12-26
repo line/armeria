@@ -56,7 +56,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     /** The request being decoded currently. */
     @Nullable
-    private HttpResponseWrapper res;
+    private HttpWrapper res;
     private int resId = 1;
     private State state = State.NEED_HEADERS;
 
@@ -65,15 +65,15 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     @Override
-    HttpResponseWrapper addResponse(
+    HttpWrapper addResponse(
             int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
+            EventLoop eventLoop,
             long responseTimeoutMillis, long maxContentLength) {
 
-        final HttpResponseWrapper resWrapper =
-                super.addResponse(id, res, ctx, responseTimeoutMillis, maxContentLength);
+        final HttpWrapper resWrapper =
+                super.addResponse(id, res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
 
         resWrapper.completionFuture().handle((unused, cause) -> {
-            final EventLoop eventLoop = channel().eventLoop();
             if (eventLoop.inEventLoop()) {
                 onWrapperCompleted(resWrapper, cause);
             } else {
@@ -85,7 +85,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         return resWrapper;
     }
 
-    private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
+    private void onWrapperCompleted(HttpWrapper resWrapper, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
         resWrapper.onSubscriptionCancelled(cause);
 
@@ -147,7 +147,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             disconnectWhenFinished();
                         }
 
-                        final HttpResponseWrapper res = getResponse(resId);
+                        final HttpWrapper res = getResponse(resId);
                         assert res != null;
                         this.res = res;
 
@@ -159,7 +159,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             state = State.NEED_DATA_OR_TRAILERS;
                         }
 
-                        res.scheduleTimeout(channel().eventLoop());
+                        res.initTimeout();
                         res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes));
                     } else {
                         failWithUnexpectedMessageType(ctx, msg);
@@ -195,7 +195,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         if (msg instanceof LastHttpContent) {
-                            final HttpResponseWrapper res = removeResponse(resId++);
+                            final HttpWrapper res = removeResponse(resId++);
                             assert res != null;
                             assert this.res == res;
                             this.res = null;
@@ -233,7 +233,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
         state = State.DISCARD;
 
-        final HttpResponseWrapper res = this.res;
+        final HttpWrapper res = this.res;
         this.res = null;
 
         if (res != null) {

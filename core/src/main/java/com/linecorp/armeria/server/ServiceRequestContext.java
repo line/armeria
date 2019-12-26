@@ -271,27 +271,81 @@ public interface ServiceRequestContext extends RequestContext {
      * Sets the amount of time allowed until receiving the current {@link Request} and sending
      * the corresponding {@link Response} completely.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     *
+     * @deprecated Use {@link #adjustRequestTimeoutMillis(long)})} or {@link #resetRequestTimeoutMillis(long)}
      */
+    @Deprecated
     void setRequestTimeoutMillis(long requestTimeoutMillis);
 
     /**
      * Sets the amount of time allowed until receiving the current {@link Request} and sending
      * the corresponding {@link Response} completely.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     *
+     * @deprecated Use {@link #adjustRequestTimeout(Duration)} or {@link #resetRequestTimeout(Duration)}
      */
+    @Deprecated
     void setRequestTimeout(Duration requestTimeout);
 
     /**
-     * Sets the amount of time, that is after the specified {@code requestTimeoutAfterNanos} from now, allowed
-     * until receiving the current {@link Request} and sending the corresponding {@link Response} completely.
+     * Adjusts the existing timeout allowed by the specified {@code adjustmentMillis} until receiving
+     * the current {@link Request} and sending the corresponding {@link Response} completely.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ServiceRequestContext ctx = ...;
+     * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
+     * ctx.adjustRequestTimeoutMillis(1000);
+     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
+     * }</pre>
      */
-    void setRequestTimeoutAfterNanos(long requestTimeoutAfterNanos);
+    void adjustRequestTimeoutMillis(long adjustmentMillis);
 
     /**
-     * Sets the amount of time, that is after the specified {@code requestTimeoutAfter} from now, allowed
-     * until receiving the current {@link Request} and sending the corresponding {@link Response} completely.
+     * Adjusts the existing timeout allowed by the specified {@code adjustment} until receiving
+     * the current {@link Request} and sending the corresponding {@link Response} completely.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ServiceRequestContext ctx = ...;
+     * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
+     * ctx.adjustRequestTimeout(Duration.ofSeconds(1));
+     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
+     * }</pre>
      */
-    void setRequestTimeoutAfter(Duration requestTimeoutAfter);
+    void adjustRequestTimeout(Duration adjustment);
+
+    /**
+     * Sets the new request timeout allowed that is after the specified {@code requestTimeoutMillis}
+     * from the now until receiving the current {@link Request} and sending the corresponding
+     * {@link Response} completely.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ServiceRequestContext ctx = ...;
+     * ctx.resetRequestTimeoutMillis(1000);
+     * assert ctx.requestTimeoutMillis() == 1000;
+     * }</pre>
+     */
+    void resetRequestTimeoutMillis(long requestTimeoutMillis);
+
+    /**
+     * Sets the new request timeout allowed that is after the specified {@code requestTimeout}
+     * from the now until receiving the current {@link Request} and sending the corresponding
+     * the corresponding {@link Response} completely.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ServiceRequestContext ctx = ...;
+     * ctx.resetRequestTimeout(Duration.ofSeconds(1));
+     * assert ctx.requestTimeoutMillis() == 1000;
+     * }</pre>
+     */
+    void resetRequestTimeout(Duration requestTimeout);
 
     /**
      * Returns {@link Request} timeout handler which is executed when

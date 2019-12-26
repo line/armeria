@@ -30,7 +30,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
+import com.linecorp.armeria.client.HttpResponseDecoder.HttpWrapper;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingClient;
@@ -54,7 +54,7 @@ class HttpResponseDecoderTest {
     };
 
     /**
-     * This test would be passed because the {@code cancelAction} method of the {@link HttpResponseWrapper} is
+     * This test would be passed because the {@code cancelAction} method of the {@link HttpWrapper} is
      * invoked in the event loop of the {@link Channel}.
      */
     @ParameterizedTest

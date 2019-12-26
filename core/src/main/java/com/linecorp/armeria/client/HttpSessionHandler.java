@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
+import com.linecorp.armeria.client.HttpResponseDecoder.HttpWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -156,14 +156,16 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         assert requestEncoder != null;
 
         final int numRequestsSent = ++this.numRequestsSent;
-        final HttpResponseWrapper wrappedRes =
+        final HttpWrapper wrappedRes =
                 responseDecoder.addResponse(numRequestsSent, res, ctx,
-                                            responseTimeoutMillis, maxContentLength);
-        req.subscribe(
-                new HttpRequestSubscriber(channel, remoteAddress, requestEncoder,
-                                          numRequestsSent, req, wrappedRes, ctx,
-                                          writeTimeoutMillis),
-                channel.eventLoop(), WITH_POOLED_OBJECTS);
+                                            channel.eventLoop(), responseTimeoutMillis, maxContentLength);
+        if (ctx instanceof DefaultClientRequestContext) {
+            ((DefaultClientRequestContext) ctx).setResponseTimeoutController(wrappedRes);
+        }
+        final HttpRequestSubscriber reqSubscriber =
+                new HttpRequestSubscriber(channel, remoteAddress, requestEncoder, numRequestsSent,
+                                          req, wrappedRes, ctx, writeTimeoutMillis);
+        req.subscribe(reqSubscriber, channel.eventLoop(), WITH_POOLED_OBJECTS);
 
         if (numRequestsSent >= MAX_NUM_REQUESTS_SENT) {
             responseDecoder.disconnectWhenFinished();

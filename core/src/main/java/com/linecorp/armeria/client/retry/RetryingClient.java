@@ -180,7 +180,7 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
             return;
         }
 
-        if (!setResponseTimeout(ctx)) {
+        if (!resetResponseTimeout(ctx)) {
             handleException(ctx, rootReqDuplicator, future, ResponseTimeoutException.get(), initialAttempt);
             return;
         }

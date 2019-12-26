@@ -47,14 +47,14 @@ class HttpServerRequestTimeoutTest {
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(100))
-                              .doOnNext(i -> ctx.setRequestTimeoutAfter(Duration.ofMillis(150)));
+                              .doOnNext(i -> ctx.resetRequestTimeout(Duration.ofMillis(150)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/extend-timeout-from-start", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(100))
                               .doOnNext(i -> {
-                                  ctx.setRequestTimeout(Duration.ofMillis(ctx.requestTimeoutMillis() + 100));
+                                  ctx.adjustRequestTimeout(Duration.ofMillis(100));
                               });
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
@@ -98,5 +98,4 @@ class HttpServerRequestTimeoutTest {
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ClosedSessionException.class);
     }
-
 }

@@ -20,8 +20,6 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Set;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -43,6 +41,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.TimeoutController;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -53,11 +52,12 @@ import com.linecorp.armeria.internal.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutController {
+final class HttpResponseSubscriber extends TimeoutController implements Subscriber<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
@@ -85,12 +85,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final DefaultServiceRequestContext reqCtx;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-    private final long startTimeNanos;
 
     @Nullable
     private Subscription subscription;
-    @Nullable
-    private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_HEADERS;
     private boolean isComplete;
 
@@ -105,7 +102,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         this.reqCtx = reqCtx;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
-        startTimeNanos = System.nanoTime();
     }
 
     private HttpService service() {
@@ -117,30 +113,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     }
 
     @Override
-    public void resetTimeout(long newRequestTimeoutMillis) {
-        if (newRequestTimeoutMillis > 0) {
-            final long passedTimeNanos = System.nanoTime() - startTimeNanos;
-            setDeadline(TimeUnit.MILLISECONDS.toNanos(newRequestTimeoutMillis) - passedTimeNanos);
-        }
-    }
-
-    @Override
-    public void setDeadline(long deadlineNanos) {
-        // Cancel the previously scheduled timeout, if exists.
-        if (!cancelTimeout()) {
-            return;
-        }
-        if (deadlineNanos > 0 && state != State.DONE) {
-            timeoutFuture = ctx.channel().eventLoop().schedule(
-                    this::onTimeout, deadlineNanos, TimeUnit.NANOSECONDS);
-        } else {
-            // We went past the dead line set by the new timeout already.
-            onTimeout();
-        }
-    }
-
-    private void onTimeout() {
-        if (state != State.DONE) {
+    protected void onTimeout() {
+        if (!isDone()) {
             reqCtx.setTimedOut();
             final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
             if (requestTimeoutHandler != null) {
@@ -153,12 +127,27 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     }
 
     @Override
+    protected boolean isReady() {
+        return true;
+    }
+
+    @Override
+    protected boolean isDone() {
+        return state == State.DONE;
+    }
+
+    @Override
+    protected EventLoop eventLoop() {
+        return ctx.channel().eventLoop();
+    }
+
+    @Override
     public void onSubscribe(Subscription subscription) {
         assert this.subscription == null;
         this.subscription = subscription;
 
         // Schedule the initial request timeout.
-        resetTimeout(reqCtx.requestTimeoutMillis());
+        initTimeout(reqCtx.requestTimeoutMillis());
 
         // Start consuming.
         subscription.request(1);
@@ -303,7 +292,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         if (wroteNothing(state)) {
-            logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
+            logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(),
+                        service());
             responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR);
             return;
         }
@@ -362,7 +352,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
-                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
+                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log,
+                                             RequestLogAvailability.COMPLETE);
                 }
 
                 subscription.request(1);
@@ -442,7 +433,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
                     logBuilder().endResponse(cause);
-                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
+                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log,
+                                             RequestLogAvailability.COMPLETE);
                 }
             });
         }
@@ -504,16 +496,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         return builder;
-    }
-
-    private boolean cancelTimeout() {
-        final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
-        if (timeoutFuture == null) {
-            return true;
-        }
-
-        this.timeoutFuture = null;
-        return timeoutFuture.cancel(false);
     }
 
     private IllegalStateException newIllegalStateException(String msg) {

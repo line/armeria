@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
+import com.linecorp.armeria.client.HttpResponseDecoder.HttpWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -72,10 +72,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private final HttpObjectEncoder encoder;
     private final int id;
     private final HttpRequest request;
-    private final HttpResponseWrapper response;
+    private final HttpWrapper response;
     private final ClientRequestContext reqCtx;
     private final RequestLogBuilder logBuilder;
     private final long timeoutMillis;
+    private long startResponseTimeoutNanos;
     @Nullable
     private Subscription subscription;
     @Nullable
@@ -86,7 +87,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private boolean loggedRequestFirstBytesTransferred;
 
     HttpRequestSubscriber(Channel ch, SocketAddress remoteAddress, HttpObjectEncoder encoder,
-                          int id, HttpRequest request, HttpResponseWrapper response,
+                          int id, HttpRequest request, HttpWrapper response,
                           ClientRequestContext reqCtx, long timeoutMillis) {
 
         this.ch = ch;
@@ -117,8 +118,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             }
 
             if (state == State.DONE) {
+
+                startResponseTimeoutNanos = System.nanoTime();
                 // Successfully sent the request; schedule the response timeout.
-                response.scheduleTimeout(ch.eventLoop());
+                response.initTimeout();
             }
 
             // Request more messages regardless whether the state is DONE. It makes the producer have

@@ -299,7 +299,7 @@ class HttpClientIntegrationTest {
             sb.service("/pooled-unaware", new PooledContentService().decorate(PoolUnawareDecorator::new));
 
             sb.service("/stream-closed", (ctx, req) -> {
-                ctx.setRequestTimeout(Duration.ZERO);
+                ctx.resetRequestTimeout(Duration.ZERO);
                 final HttpResponseWriter res = HttpResponse.streaming();
                 res.write(ResponseHeaders.of(HttpStatus.OK));
                 req.subscribe(new Subscriber<HttpObject>() {

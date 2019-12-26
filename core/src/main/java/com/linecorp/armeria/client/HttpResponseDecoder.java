@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -33,6 +32,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.TimeoutController;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -43,13 +43,12 @@ import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.concurrent.ScheduledFuture;
 
 abstract class HttpResponseDecoder {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseDecoder.class);
 
-    private final IntObjectMap<HttpResponseWrapper> responses = new IntObjectHashMap<>();
+    private final IntObjectMap<HttpWrapper> responses = new IntObjectHashMap<>();
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
     private boolean disconnectWhenFinished;
@@ -67,13 +66,13 @@ abstract class HttpResponseDecoder {
         return inboundTrafficController;
     }
 
-    HttpResponseWrapper addResponse(
+    HttpWrapper addResponse(
             int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
-            long responseTimeoutMillis, long maxContentLength) {
+            EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
-        final HttpResponseWrapper newRes =
-                new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
-        final HttpResponseWrapper oldRes = responses.put(id, newRes);
+        final HttpWrapper newRes =
+                new HttpWrapper(res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
+        final HttpWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
@@ -82,17 +81,17 @@ abstract class HttpResponseDecoder {
     }
 
     @Nullable
-    final HttpResponseWrapper getResponse(int id) {
+    final HttpWrapper getResponse(int id) {
         return responses.get(id);
     }
 
     @Nullable
-    final HttpResponseWrapper getResponse(int id, boolean remove) {
+    final HttpWrapper getResponse(int id, boolean remove) {
         return remove ? removeResponse(id) : getResponse(id);
     }
 
     @Nullable
-    final HttpResponseWrapper removeResponse(int id) {
+    final HttpWrapper removeResponse(int id) {
         return responses.remove(id);
     }
 
@@ -106,7 +105,7 @@ abstract class HttpResponseDecoder {
 
     final void failUnfinishedResponses(Throwable cause) {
         try {
-            for (HttpResponseWrapper res : responses.values()) {
+            for (HttpWrapper res : responses.values()) {
                 res.close(cause);
             }
         } finally {
@@ -126,7 +125,7 @@ abstract class HttpResponseDecoder {
         return disconnectWhenFinished;
     }
 
-    static final class HttpResponseWrapper implements StreamWriter<HttpObject>, Runnable {
+    static final class HttpWrapper extends TimeoutController implements StreamWriter<HttpObject> {
 
         enum State {
             WAIT_NON_INFORMATIONAL,
@@ -137,38 +136,24 @@ abstract class HttpResponseDecoder {
         private final DecodedHttpResponse delegate;
         @Nullable
         private final ClientRequestContext ctx;
-        private final long responseTimeoutMillis;
         private final long maxContentLength;
-        @Nullable
-        private ScheduledFuture<?> responseTimeoutFuture;
+        private final EventLoop eventLoop;
 
         private boolean loggedResponseFirstBytesTransferred;
 
         private State state = State.WAIT_NON_INFORMATIONAL;
 
-        HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
-                            long responseTimeoutMillis, long maxContentLength) {
+        HttpWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
+                    EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
+            super(responseTimeoutMillis);
             this.delegate = delegate;
             this.ctx = ctx;
-            this.responseTimeoutMillis = responseTimeoutMillis;
+            this.eventLoop = eventLoop;
             this.maxContentLength = maxContentLength;
         }
 
         CompletableFuture<Void> completionFuture() {
             return delegate.completionFuture();
-        }
-
-        void scheduleTimeout(EventLoop eventLoop) {
-            if (responseTimeoutFuture != null || responseTimeoutMillis <= 0 || !isOpen()) {
-                // No need to schedule a response timeout if:
-                // - the timeout has been scheduled already,
-                // - the timeout has been disabled or
-                // - the response stream has been closed already.
-                return;
-            }
-
-            responseTimeoutFuture = eventLoop.schedule(
-                    this, responseTimeoutMillis, TimeUnit.MILLISECONDS);
         }
 
         long maxContentLength() {
@@ -189,7 +174,7 @@ abstract class HttpResponseDecoder {
         }
 
         @Override
-        public void run() {
+        protected void onTimeout() {
             final Runnable responseTimeoutHandler = ctx != null ? ctx.responseTimeoutHandler() : null;
             if (responseTimeoutHandler != null) {
                 responseTimeoutHandler.run();
@@ -201,6 +186,21 @@ abstract class HttpResponseDecoder {
                     ctx.request().abort(cause);
                 }
             }
+        }
+
+        @Override
+        protected EventLoop eventLoop() {
+            return eventLoop;
+        }
+
+        @Override
+        protected boolean isReady() {
+            return isOpen();
+        }
+
+        @Override
+        protected boolean isDone() {
+            return state == State.DONE;
         }
 
         @Override
@@ -324,10 +324,7 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnTimeoutCancelled) {
 
-            final ScheduledFuture<?> responseTimeoutFuture = this.responseTimeoutFuture;
-            this.responseTimeoutFuture = null;
-
-            if (responseTimeoutFuture == null || responseTimeoutFuture.cancel(false)) {
+            if (cancelTimeout()) {
                 // There's no timeout or the response has not been timed out.
                 actionOnTimeoutCancelled.accept(cause);
                 return;

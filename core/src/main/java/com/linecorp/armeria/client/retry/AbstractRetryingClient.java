@@ -184,13 +184,13 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * @return {@code true} if the response timeout is set, {@code false} if it can't be set due to the timeout
      */
     @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
-    protected final boolean setResponseTimeout(ClientRequestContext ctx) {
+    protected final boolean resetResponseTimeout(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
         final long responseTimeoutMillis = ctx.attr(STATE).get().responseTimeoutMillis();
         if (responseTimeoutMillis < 0) {
             return false;
         }
-        ctx.setResponseTimeoutMillis(responseTimeoutMillis);
+        ctx.resetResponseTimeoutMillis(responseTimeoutMillis);
         return true;
     }
 

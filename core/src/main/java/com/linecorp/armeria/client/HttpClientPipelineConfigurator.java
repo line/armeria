@@ -270,19 +270,19 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         final boolean attemptUpgrade;
         switch (httpPreference) {
-        case HTTP1_REQUIRED:
-            attemptUpgrade = false;
-            break;
-        case HTTP2_PREFERRED:
-            assert remoteAddress != null;
-            attemptUpgrade = !SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C);
-            break;
-        case HTTP2_REQUIRED:
-            attemptUpgrade = true;
-            break;
-        default:
-            // Should never reach here.
-            throw new Error();
+            case HTTP1_REQUIRED:
+                attemptUpgrade = false;
+                break;
+            case HTTP2_PREFERRED:
+                assert remoteAddress != null;
+                attemptUpgrade = !SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C);
+                break;
+            case HTTP2_REQUIRED:
+                attemptUpgrade = true;
+                break;
+            default:
+                // Should never reach here.
+                throw new Error();
         }
 
         if (attemptUpgrade) {
@@ -447,7 +447,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }, ctx.channel().eventLoop());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, null, 0, UPGRADE_RESPONSE_MAX_LENGTH);
+            responseDecoder.addResponse(0, res, null, ctx.channel().eventLoop(), /* response timeout */ 0,
+                                        UPGRADE_RESPONSE_MAX_LENGTH);
             ctx.fireChannelActive();
         }
 

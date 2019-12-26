@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -407,7 +406,7 @@ public final class HealthCheckService implements TransientHttpService {
     private static void updateRequestTimeout(ServiceRequestContext ctx, long longPollingTimeoutMillis) {
         final long requestTimeoutMillis = ctx.requestTimeoutMillis();
         if (requestTimeoutMillis > 0) {
-            ctx.setRequestTimeoutMillis(LongMath.saturatedAdd(longPollingTimeoutMillis, requestTimeoutMillis));
+            ctx.adjustRequestTimeoutMillis(longPollingTimeoutMillis);
         }
     }
 

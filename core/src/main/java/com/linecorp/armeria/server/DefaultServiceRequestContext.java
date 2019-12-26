@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
@@ -36,6 +37,8 @@ import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -47,6 +50,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TimeoutController;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -99,7 +103,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private volatile HttpHeaders additionalResponseTrailers;
 
     @Nullable
-    private volatile RequestTimeoutController requestTimeoutController;
+    private volatile TimeoutController requestTimeoutController;
 
     @Nullable
     private String strVal;
@@ -360,17 +364,9 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             throw new IllegalArgumentException(
                     "requestTimeoutMillis: " + requestTimeoutMillis + " (expected: >= 0)");
         }
-        if (this.requestTimeoutMillis != requestTimeoutMillis) {
-            this.requestTimeoutMillis = requestTimeoutMillis;
-            final RequestTimeoutController listener = requestTimeoutController;
-            if (listener != null) {
-                if (ch.eventLoop().inEventLoop()) {
-                    listener.resetTimeout(requestTimeoutMillis);
-                } else {
-                    ch.eventLoop().execute(() -> listener.resetTimeout(requestTimeoutMillis));
-                }
-            }
-        }
+        final long adjustmentMillis =
+                LongMath.saturatedSubtract(requestTimeoutMillis, this.requestTimeoutMillis);
+        adjustRequestTimeoutMillis(adjustmentMillis);
     }
 
     @Override
@@ -379,25 +375,56 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public void setRequestTimeoutAfterNanos(long requestTimeoutAfterNanos) {
-        if (requestTimeoutAfterNanos < 0) {
+    public void adjustRequestTimeoutMillis(long adjustmentMillis) {
+        if (adjustmentMillis < 0) {
             throw new IllegalArgumentException(
-                    "requestTimeoutAfterNanos: " + requestTimeoutAfterNanos + " (expected: >= 0)");
+                    "adjustmentMillis: " + adjustmentMillis + " (expected: >= 0)");
         }
-
-        final RequestTimeoutController requestTimeoutController = this.requestTimeoutController;
-        if (requestTimeoutController != null) {
-            if (ch.eventLoop().inEventLoop()) {
-                requestTimeoutController.setDeadline(requestTimeoutAfterNanos);
-            } else {
-                ch.eventLoop().execute(() -> requestTimeoutController.setDeadline(requestTimeoutAfterNanos));
+        if (adjustmentMillis > 0) {
+            final long oldRequestTimeoutMillis = requestTimeoutMillis;
+            requestTimeoutMillis = LongMath.saturatedAdd(oldRequestTimeoutMillis, adjustmentMillis);
+            final TimeoutController requestTimeoutController = this.requestTimeoutController;
+            if (requestTimeoutController != null) {
+                if (ch.eventLoop().inEventLoop()) {
+                    requestTimeoutController.adjustTimeout(adjustmentMillis);
+                } else {
+                    ch.eventLoop().execute(() -> requestTimeoutController.adjustTimeout(adjustmentMillis));
+                }
             }
         }
     }
 
     @Override
-    public void setRequestTimeoutAfter(Duration requestTimeoutAfter) {
-       setRequestTimeoutAfterNanos(requireNonNull(requestTimeoutAfter, "requestTimeoutAfter").toNanos());
+    public void adjustRequestTimeout(Duration adjustment) {
+        adjustRequestTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
+    }
+
+    @Override
+    public void resetRequestTimeoutMillis(long newTimeoutMillis) {
+        if (newTimeoutMillis < 0) {
+            throw new IllegalArgumentException(
+                    "newTimeoutMillis: " + newTimeoutMillis + " (expected: >= 0)");
+        }
+
+        long passedTimeMillis = 0;
+        final TimeoutController requestTimeoutController = this.requestTimeoutController;
+        if (requestTimeoutController != null) {
+            passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
+                    System.nanoTime() - requestTimeoutController.startTimeNanos());
+            if (ch.eventLoop().inEventLoop()) {
+                requestTimeoutController.resetTimeout(newTimeoutMillis);
+            } else {
+                ch.eventLoop().execute(() -> requestTimeoutController
+                        .resetTimeout(newTimeoutMillis));
+            }
+        }
+
+        requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, newTimeoutMillis);
+    }
+
+    @Override
+    public void resetRequestTimeout(Duration newTimeout) {
+        resetRequestTimeoutMillis(requireNonNull(newTimeout, "newTimeout").toMillis());
     }
 
     @Nullable
@@ -574,18 +601,15 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     /**
-     * Sets the listener that is notified when the {@linkplain #requestTimeoutMillis()} request timeout} of
-     * the request is changed.
-     *
-     * <p>Note: This method is meant for internal use by server-side protocol implementation to reschedule
-     * a timeout task when a user updates the request timeout configuration.
+     * Sets the {@code requestTimeoutController} that is set to a new timeout when
+     * the {@linkplain #requestTimeoutMillis()} request timeout} of the request is changed.
      */
-    public void setRequestTimeoutController(RequestTimeoutController listener) {
-        requireNonNull(listener, "listener");
-        if (requestTimeoutController != null) {
+    public void setRequestTimeoutController(TimeoutController requestTimeoutController) {
+        requireNonNull(requestTimeoutController, "requestTimeoutController");
+        if (this.requestTimeoutController != null) {
             throw new IllegalStateException("requestTimeoutChangeListener is set already.");
         }
-        requestTimeoutController = listener;
+        this.requestTimeoutController = requestTimeoutController;
     }
 
     @Override
