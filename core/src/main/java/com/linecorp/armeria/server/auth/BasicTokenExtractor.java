@@ -39,7 +39,7 @@ import io.netty.util.AsciiString;
 
 /**
  * Extracts {@link BasicToken} from {@link RequestHeaders}, in order to be used by
- * {@link HttpAuthServiceBuilder}.
+ * {@link AuthServiceBuilder}.
  */
 final class BasicTokenExtractor implements Function<RequestHeaders, BasicToken> {
 

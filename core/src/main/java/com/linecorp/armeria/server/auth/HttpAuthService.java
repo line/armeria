@@ -20,36 +20,31 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
  * Decorates an {@link HttpService} to provide HTTP authorization functionality.
  *
- * @see HttpAuthServiceBuilder
+ * @deprecated Use {@link AuthService}.
  */
-public final class HttpAuthService extends SimpleDecoratingHttpService {
-
-    static final Logger logger = LoggerFactory.getLogger(HttpAuthService.class);
+@Deprecated
+public final class HttpAuthService extends AuthService {
 
     /**
      * Creates a new HTTP authorization {@link HttpService} decorator using the specified
      * {@link Authorizer}s.
      *
      * @param authorizers a list of {@link Authorizer}s.
+     * @deprecated Use {@link AuthService#newDecorator(Iterable)}.
      */
-    public static Function<? super HttpService, HttpAuthService> newDecorator(
+    @Deprecated
+    public static Function<? super HttpService, AuthService> newDecorator(
             Iterable<? extends Authorizer<HttpRequest>> authorizers) {
-        return new HttpAuthServiceBuilder().add(authorizers).newDecorator();
+        return new AuthServiceBuilder().add(authorizers).newDecorator();
     }
 
     /**
@@ -57,42 +52,19 @@ public final class HttpAuthService extends SimpleDecoratingHttpService {
      * {@link Authorizer}s.
      *
      * @param authorizers the array of {@link Authorizer}s.
+     * @deprecated Use {@link AuthService#newDecorator(Authorizer[])}.
      */
     @SafeVarargs
-    public static Function<? super HttpService, HttpAuthService>
+    @Deprecated
+    public static Function<? super HttpService, AuthService>
     newDecorator(Authorizer<HttpRequest>... authorizers) {
         return newDecorator(ImmutableList.copyOf(requireNonNull(authorizers, "authorizers")));
     }
 
-    private final Authorizer<HttpRequest> authorizer;
-    private final AuthSuccessHandler<HttpRequest, HttpResponse> successHandler;
-    private final AuthFailureHandler<HttpRequest, HttpResponse> failureHandler;
-
-    HttpAuthService(HttpService delegate, Authorizer<HttpRequest> authorizer,
+    HttpAuthService(HttpService delegate,
+                    Authorizer<HttpRequest> authorizer,
                     AuthSuccessHandler<HttpRequest, HttpResponse> successHandler,
                     AuthFailureHandler<HttpRequest, HttpResponse> failureHandler) {
-        super(delegate);
-        this.authorizer = authorizer;
-        this.successHandler = successHandler;
-        this.failureHandler = failureHandler;
-    }
-
-    @Override
-    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(AuthorizerUtil.authorize(authorizer, ctx, req).handleAsync((result, cause) -> {
-            try {
-                if (cause == null) {
-                    if (result != null) {
-                        return result ? successHandler.authSucceeded(delegate(), ctx, req)
-                                      : failureHandler.authFailed(delegate(), ctx, req, null);
-                    }
-                    cause = AuthorizerUtil.newNullResultException(authorizer);
-                }
-
-                return failureHandler.authFailed(delegate(), ctx, req, cause);
-            } catch (Exception e) {
-                return Exceptions.throwUnsafely(e);
-            }
-        }, ctx.contextAwareEventLoop()));
+        super(delegate, authorizer, successHandler, failureHandler);
     }
 }

@@ -42,7 +42,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.client.retry.RetryingHttpClient;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
@@ -435,9 +435,9 @@ public final class Flags {
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         if (dumpOpenSslInfo()) {
             final SSLEngine engine = SslContextUtil.createSslContext(
-                    SslContextBuilder::forClient,
+                    SslContextBuilder.forClient(),
                     false,
-                    unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
+                    ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
@@ -727,7 +727,7 @@ public final class Flags {
 
     /**
      * Returns the default maximum number of total attempts. Note that this value has effect only if a user
-     * did not specify it when creating a {@link RetryingHttpClient} or a {@link RetryingRpcClient}.
+     * did not specify it when creating a {@link RetryingClient} or a {@link RetryingRpcClient}.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_TOTAL_ATTEMPTS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultMaxTotalAttempts=<integer>} JVM option to

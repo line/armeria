@@ -145,16 +145,11 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
                 }
                 final File _keyCertChainFile = new File(keyCertChainFile);
                 final File _keyStoreFile = new File(keyStoreFile);
-                try {
-                    if (isValidKeyStorePassword()) {
-                        sb.tls(_keyCertChainFile, _keyStoreFile, getKeyStorePassword());
-                    } else {
-                        logger.warn("keyStorePassword is not valid. Continuing to configure server without it");
-                        sb.tls(_keyCertChainFile, _keyStoreFile);
-                    }
-                } catch (SSLException e) {
-                    logger.error("Error building server with protocol " + protocol, e);
-                    throw e;
+                if (isValidKeyStorePassword()) {
+                    sb.tls(_keyCertChainFile, _keyStoreFile, getKeyStorePassword());
+                } else {
+                    logger.warn("keyStorePassword is not valid. Continuing to configure server without it");
+                    sb.tls(_keyCertChainFile, _keyStoreFile);
                 }
                 // more TLS settings?
                 built = true;

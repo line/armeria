@@ -63,6 +63,12 @@ final class DefaultClientFactory extends AbstractClientFactory {
 
     private static volatile boolean shutdownHookDisabled;
 
+    static final DefaultClientFactory DEFAULT =
+            (DefaultClientFactory) ClientFactory.builder().build();
+
+    static final DefaultClientFactory INSECURE =
+            (DefaultClientFactory) ClientFactory.builder().tlsNoVerify().build();
+
     static {
         if (DefaultClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {

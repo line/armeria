@@ -18,134 +18,131 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
-import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * Builds a new {@link RetryingClient} or its decorator function.
- *
- * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
-public abstract class RetryingClientBuilder<O extends Response> {
+public class RetryingClientBuilder extends AbstractRetryingClientBuilder<HttpResponse> {
 
-    @Nullable
-    private final RetryStrategy retryStrategy;
+    private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = Integer.MAX_VALUE;
 
-    @Nullable
-    private final RetryStrategyWithContent<O> retryStrategyWithContent;
+    private boolean useRetryAfter;
 
-    private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
-    private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
+    private int contentPreviewLength = DEFAULT_CONTENT_PREVIEW_LENGTH;
+
+    private final boolean needsContentInStrategy;
 
     /**
      * Creates a new builder with the specified {@link RetryStrategy}.
      */
-    protected RetryingClientBuilder(RetryStrategy retryStrategy) {
-        this(requireNonNull(retryStrategy, "retryStrategy"), null);
+    RetryingClientBuilder(RetryStrategy retryStrategy) {
+        super(retryStrategy);
+        needsContentInStrategy = false;
     }
 
     /**
      * Creates a new builder with the specified {@link RetryStrategyWithContent}.
      */
-    protected RetryingClientBuilder(RetryStrategyWithContent<O> retryStrategyWithContent) {
-        this(null, requireNonNull(retryStrategyWithContent, "retryStrategyWithContent"));
-    }
-
-    private RetryingClientBuilder(@Nullable RetryStrategy retryStrategy,
-                                  @Nullable RetryStrategyWithContent<O> retryStrategyWithContent) {
-        this.retryStrategy = retryStrategy;
-        this.retryStrategyWithContent = retryStrategyWithContent;
-    }
-
-    RetryStrategy retryStrategy() {
-        checkState(retryStrategy != null, "retryStrategy is not set.");
-        return retryStrategy;
-    }
-
-    RetryStrategyWithContent<O> retryStrategyWithContent() {
-        checkState(retryStrategyWithContent != null, "retryStrategyWithContent is not set.");
-        return retryStrategyWithContent;
+    RetryingClientBuilder(RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
+        super(retryStrategyWithContent);
+        needsContentInStrategy = true;
     }
 
     /**
-     * Sets the maximum number of total attempts. If unspecified, the value from
-     * {@link Flags#defaultMaxTotalAttempts()} will be used.
+     * Whether retry should be attempted according to the {@code retryHeader} from the server or not.
+     * The web server may request a client to retry after specific time with {@code retryAfter} header.
+     * If you want to follow the direction from the server not by your {@link Backoff}, invoke this method
+     * with the {@code useRetryAfter} with {@code true} to request after the specified delay.
      *
-     * @return {@code this} to support method chaining.
+     * @param useRetryAfter {@code true} if you want to retry after using the {@code retryAfter} header.
+     *                      {@code false} otherwise
+     * @return {@link RetryingClientBuilder} to support method chaining
      */
-    public RetryingClientBuilder<O> maxTotalAttempts(int maxTotalAttempts) {
-        checkArgument(maxTotalAttempts > 0,
-                      "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
-        this.maxTotalAttempts = maxTotalAttempts;
+    public RetryingClientBuilder useRetryAfter(boolean useRetryAfter) {
+        this.useRetryAfter = useRetryAfter;
         return this;
     }
 
-    int maxTotalAttempts() {
-        return maxTotalAttempts;
-    }
-
     /**
-     * Sets the response timeout for each attempt in milliseconds.
-     * When requests in {@link RetryingClient} are made,
-     * corresponding responses are timed out by this value. {@code 0} disables the timeout.
-     * It will be set by the default value in {@link Flags#defaultResponseTimeoutMillis()}, if the client
-     * dose not specify.
+     * Sets the length of content required to determine whether to retry or not. If the total length of content
+     * exceeds this length and there's no retry condition matched, it will hand over the stream to the client.
+     * Note that this property is useful only if you specified {@link RetryStrategyWithContent} when calling
+     * this builder's constructor. The default value of this property is
+     * {@value #DEFAULT_CONTENT_PREVIEW_LENGTH}.
      *
-     * @return {@code this} to support method chaining.
+     * @param contentPreviewLength the content length to preview. {@code 0} does not disable the length limit.
      *
-     * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
-     *      timeout</a>
+     * @return {@link RetryingClientBuilder} to support method chaining
+     *
+     * @throws IllegalStateException if this builder is created with a {@link RetryStrategy} rather than
+     *                               {@link RetryStrategyWithContent}
+     * @throws IllegalArgumentException if the specified {@code contentPreviewLength} is equal to or
+     *                                  less than {@code 0}
      */
-    public RetryingClientBuilder<O> responseTimeoutMillisForEachAttempt(
-            long responseTimeoutMillisForEachAttempt) {
-        checkArgument(responseTimeoutMillisForEachAttempt >= 0,
-                      "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
-                      responseTimeoutMillisForEachAttempt);
-        this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+    public RetryingClientBuilder contentPreviewLength(int contentPreviewLength) {
+        checkState(needsContentInStrategy, "cannot set contentPreviewLength when RetryStrategy is used; " +
+                                           "Use RetryStrategyWithContent to enable this feature.");
+        checkArgument(contentPreviewLength > 0,
+                      "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
+        this.contentPreviewLength = contentPreviewLength;
         return this;
     }
 
-    long responseTimeoutMillisForEachAttempt() {
-        return responseTimeoutMillisForEachAttempt;
+    /**
+     * Returns a newly-created {@link RetryingClient} based on the properties of this builder.
+     */
+    public RetryingClient build(HttpClient delegate) {
+        if (needsContentInStrategy) {
+            return new RetryingClient(delegate, retryStrategyWithContent(), maxTotalAttempts(),
+                                      responseTimeoutMillisForEachAttempt(), useRetryAfter,
+                                      contentPreviewLength);
+        }
+
+        return new RetryingClient(delegate, retryStrategy(), maxTotalAttempts(),
+                                  responseTimeoutMillisForEachAttempt(), useRetryAfter);
     }
 
     /**
-     * Sets the response timeout for each attempt. When requests in {@link RetryingClient} are made,
-     * corresponding responses are timed out by this value. {@code 0} disables the timeout.
-     *
-     * @return {@code this} to support method chaining.
-     *
-     * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
-     *      timeout</a>
+     * Returns a newly-created decorator that decorates an {@link HttpClient} with a new
+     * {@link RetryingClient} based on the properties of this builder.
      */
-    public RetryingClientBuilder<O> responseTimeoutForEachAttempt(
-            Duration responseTimeoutForEachAttempt) {
-        checkArgument(
-                !requireNonNull(responseTimeoutForEachAttempt, "responseTimeoutForEachAttempt").isNegative(),
-                "responseTimeoutForEachAttempt: %s (expected: >= 0)", responseTimeoutForEachAttempt);
-        return responseTimeoutMillisForEachAttempt(responseTimeoutForEachAttempt.toMillis());
+    public Function<? super HttpClient, RetryingClient> newDecorator() {
+        return this::build;
     }
 
     @Override
     public String toString() {
-        return toStringHelper().toString();
+        final ToStringHelper stringHelper = toStringHelper().add("useRetryAfter", this.useRetryAfter);
+        if (needsContentInStrategy) {
+            stringHelper.add("contentPreviewLength", contentPreviewLength);
+        }
+        return stringHelper.toString();
     }
 
-    ToStringHelper toStringHelper() {
-        return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("retryStrategy", retryStrategy)
-                          .add("retryStrategyWithContent", retryStrategyWithContent)
-                          .add("maxTotalAttempts", maxTotalAttempts)
-                          .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt);
+    // Methods that were overridden to change the return type.
+
+    @Override
+    public RetryingClientBuilder maxTotalAttempts(int maxTotalAttempts) {
+        return (RetryingClientBuilder) super.maxTotalAttempts(maxTotalAttempts);
+    }
+
+    @Override
+    public RetryingClientBuilder responseTimeoutMillisForEachAttempt(
+            long responseTimeoutMillisForEachAttempt) {
+        return (RetryingClientBuilder)
+                super.responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+    }
+
+    @Override
+    public RetryingClientBuilder responseTimeoutForEachAttempt(Duration responseTimeoutForEachAttempt) {
+        return (RetryingClientBuilder) super.responseTimeoutForEachAttempt(responseTimeoutForEachAttempt);
     }
 }

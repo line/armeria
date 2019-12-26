@@ -29,9 +29,12 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_B
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -48,7 +51,6 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +70,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceExtensions;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -183,8 +185,8 @@ public final class ServerBuilder {
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
-    private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
-    private Predicate<InetAddress> clientAddressFilter = address -> true;
+    private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
+    private Predicate<? super InetAddress> clientAddressFilter = address -> true;
     private Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper =
             ProxiedAddresses::sourceAddress;
     private boolean enableServerHeader = true;
@@ -209,8 +211,8 @@ public final class ServerBuilder {
         virtualHostTemplate.accessLogger(
                     host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
-        virtualHostTemplate.annotatedHttpServiceExtensions(ImmutableList.of(), ImmutableList.of(),
-                                                           ImmutableList.of());
+        virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
+                                                       ImmutableList.of());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -696,8 +698,12 @@ public final class ServerBuilder {
 
     /**
      * Sets the {@link SslContext} of the {@link Server}.
+     *
+     * @deprecated This method has been deprecated because an incorrectly built {@link SslContext} can cause
+     *             a {@link Server} to malfunction. Use other {@code tls()} methods.
      */
-    public ServerBuilder tls(SslContext sslContext) throws SSLException {
+    @Deprecated
+    public ServerBuilder tls(SslContext sslContext) {
         virtualHostTemplate.tls(sslContext);
         return this;
     }
@@ -705,8 +711,10 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
-    public ServerBuilder tls(File keyCertChainFile, File keyFile) throws SSLException {
+    public ServerBuilder tls(File keyCertChainFile, File keyFile) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile);
         return this;
     }
@@ -714,9 +722,12 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * cleartext {@code keyFile} and {@code tlsCustomizer}.
+     *
+     * @deprecated Use {@link #tls(File, File)} and {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public ServerBuilder tls(File keyCertChainFile, File keyFile,
-                             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+                             Consumer<SslContextBuilder> tlsCustomizer) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile, tlsCustomizer);
         return this;
     }
@@ -724,9 +735,11 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
     public ServerBuilder tls(
-            File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
+            File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword);
         return this;
     }
@@ -734,20 +747,104 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * {@code keyFile}, {@code keyPassword} and {@code tlsCustomizer}.
+     *
+     * @deprecated Use {@link #tls(File, File, String)} and {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword,
-            Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+            Consumer<SslContextBuilder> tlsCustomizer) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword, tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@code keyCertChainInputStream} and
+     * cleartext {@code keyInputStream}.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
+        virtualHostTemplate.tls(keyCertChainInputStream, keyInputStream);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@code keyCertChainInputStream},
+     * {@code keyInputStream} and {@code keyPassword}.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
+                             @Nullable String keyPassword) {
+        virtualHostTemplate.tls(keyCertChainInputStream, keyInputStream, keyPassword);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified cleartext {@link PrivateKey} and
+     * {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
+        virtualHostTemplate.tls(key, keyCertChain);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified cleartext {@link PrivateKey} and
+     * {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
+        virtualHostTemplate.tls(key, keyCertChain);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@link PrivateKey}, {@code keyPassword}
+     * and {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(PrivateKey key, @Nullable String keyPassword, X509Certificate... keyCertChain) {
+        virtualHostTemplate.tls(key, keyPassword, keyCertChain);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@link PrivateKey}, {@code keyPassword}
+     * and {@link X509Certificate} chain.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(PrivateKey key, @Nullable String keyPassword,
+                             Iterable<? extends X509Certificate> keyCertChain) {
+        virtualHostTemplate.tls(key, keyPassword, keyCertChain);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link Server} with the specified {@link KeyManagerFactory}.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ServerBuilder tls(KeyManagerFactory keyManagerFactory) {
+        virtualHostTemplate.tls(keyManagerFactory);
         return this;
     }
 
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyManagerFactory}
      * and {@code tlsCustomizer}.
+     *
+     * @deprecated Use {@link #tls(KeyManagerFactory)} and {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public ServerBuilder tls(KeyManagerFactory keyManagerFactory,
-                             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+                             Consumer<SslContextBuilder> tlsCustomizer) {
         virtualHostTemplate.tls(keyManagerFactory, tlsCustomizer);
         return this;
     }
@@ -755,6 +852,8 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
     public ServerBuilder tlsSelfSigned() {
         virtualHostTemplate.tlsSelfSigned();
@@ -764,6 +863,8 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see #tlsCustomizer(Consumer)
      */
     public ServerBuilder tlsSelfSigned(boolean tlsSelfSigned) {
         virtualHostTemplate.tlsSelfSigned(tlsSelfSigned);
@@ -771,9 +872,18 @@ public final class ServerBuilder {
     }
 
     /**
+     * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
+     * applied to the SSL session.
+     */
+    public ServerBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
+        virtualHostTemplate.tlsCustomizer(tlsCustomizer);
+        return this;
+    }
+
+    /**
      * Configures an {@link HttpService} of the default {@link VirtualHost} with the {@code customizer}.
      */
-    public ServerBuilder withRoute(Consumer<ServiceBindingBuilder> customizer) {
+    public ServerBuilder withRoute(Consumer<? super ServiceBindingBuilder> customizer) {
         final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(this);
         customizer.accept(serviceBindingBuilder);
         return this;
@@ -844,8 +954,9 @@ public final class ServerBuilder {
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
-    public ServerBuilder service(HttpServiceWithRoutes serviceWithRoutes,
-                                 Iterable<Function<? super HttpService, ? extends HttpService>> decorators) {
+    public ServerBuilder service(
+            HttpServiceWithRoutes serviceWithRoutes,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(serviceWithRoutes, "serviceWithRoutes");
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
@@ -975,8 +1086,8 @@ public final class ServerBuilder {
         requireNonNull(service, "service");
         requireNonNull(decorator, "decorator");
         requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
-        final AnnotatedHttpServiceExtensions configurator =
-                AnnotatedHttpServiceExtensions
+        final AnnotatedServiceExtensions configurator =
+                AnnotatedServiceExtensions
                         .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
         return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
                                 configurator.requestConverters(), configurator.responseConverters());
@@ -1051,7 +1162,7 @@ public final class ServerBuilder {
     /**
      * Configures the default {@link VirtualHost} with the {@code customizer}.
      */
-    public ServerBuilder withDefaultVirtualHost(Consumer<VirtualHostBuilder> customizer) {
+    public ServerBuilder withDefaultVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
         customizer.accept(defaultVirtualHostBuilder);
         return this;
     }
@@ -1078,7 +1189,7 @@ public final class ServerBuilder {
     /**
      * Configures a {@link VirtualHost} with the {@code customizer}.
      */
-    public ServerBuilder withVirtualHost(Consumer<VirtualHostBuilder> customizer) {
+    public ServerBuilder withVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false);
         customizer.accept(virtualHostBuilder);
         virtualHostBuilders.add(virtualHostBuilder);
@@ -1259,7 +1370,7 @@ public final class ServerBuilder {
      * Sets a filter which evaluates whether an {@link InetAddress} of a remote endpoint is trusted.
      */
     public ServerBuilder clientAddressTrustedProxyFilter(
-            Predicate<InetAddress> clientAddressTrustedProxyFilter) {
+            Predicate<? super InetAddress> clientAddressTrustedProxyFilter) {
         this.clientAddressTrustedProxyFilter =
                 requireNonNull(clientAddressTrustedProxyFilter, "clientAddressTrustedProxyFilter");
         return this;
@@ -1268,7 +1379,7 @@ public final class ServerBuilder {
     /**
      * Sets a filter which evaluates whether an {@link InetAddress} can be used as a client address.
      */
-    public ServerBuilder clientAddressFilter(Predicate<InetAddress> clientAddressFilter) {
+    public ServerBuilder clientAddressFilter(Predicate<? super InetAddress> clientAddressFilter) {
         this.clientAddressFilter = requireNonNull(clientAddressFilter, "clientAddressFilter");
         return this;
     }
@@ -1309,7 +1420,7 @@ public final class ServerBuilder {
      * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
      * will have an access logger set by the {@code mapper} when {@link ServerBuilder#build()} is called.
      */
-    public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
+    public ServerBuilder accessLogger(Function<? super VirtualHost, ? extends Logger> mapper) {
         virtualHostTemplate.accessLogger(mapper);
         return this;
     }
@@ -1490,19 +1601,19 @@ public final class ServerBuilder {
 
     /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
-     * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedHttpServiceExtensions}.
+     * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
      * @param exceptionHandlerFunctions the {@link ExceptionHandlerFunction}s
      */
-    public ServerBuilder annotatedHttpServiceExtensions(
+    public ServerBuilder annotatedServiceExtensions(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions,
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
-        virtualHostTemplate.annotatedHttpServiceExtensions(requestConverterFunctions,
-                                                           responseConverterFunctions,
-                                                           exceptionHandlerFunctions);
+        virtualHostTemplate.annotatedServiceExtensions(requestConverterFunctions,
+                                                       responseConverterFunctions,
+                                                       exceptionHandlerFunctions);
         return this;
     }
 
@@ -1510,8 +1621,8 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        final AnnotatedHttpServiceExtensions extensions =
-                virtualHostTemplate.getAnnotatedHttpServiceExtensions();
+        final AnnotatedServiceExtensions extensions =
+                virtualHostTemplate.annotatedServiceExtensions();
 
         assert extensions != null;
 

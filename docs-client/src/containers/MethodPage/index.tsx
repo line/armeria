@@ -114,7 +114,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
   }
 
   const debugTransport = TRANSPORTS.getDebugTransport(method);
-  const isAnnotatedHttpService =
+  const isAnnotatedService =
     debugTransport !== undefined &&
     debugTransport.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
 
@@ -150,7 +150,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           </TableBody>
         </Table>
       </Section>
-      {!isAnnotatedHttpService && (
+      {!isAnnotatedService && (
         <Exceptions method={method} specification={props.specification} />
       )}
       <Endpoints method={method} />
@@ -158,14 +158,14 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
         <DebugPage
           {...props}
           method={method}
-          isAnnotatedHttpService={isAnnotatedHttpService}
+          isAnnotatedService={isAnnotatedService}
           exampleHeaders={getExampleHeaders(
             props.specification,
             service,
             method,
           )}
           exactPathMapping={
-            isAnnotatedHttpService ? isSingleExactPathMapping(method) : false
+            isAnnotatedService ? isSingleExactPathMapping(method) : false
           }
           useRequestBody={useRequestBody(props.match.params.httpMethod)}
         />

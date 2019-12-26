@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.RpcResponse;
  * An {@link RpcClient} decorator that handles failures of RPC remote invocation based on
  * circuit breaker pattern.
  */
-public final class CircuitBreakerRpcClient extends CircuitBreakerClient<RpcRequest, RpcResponse>
+public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<RpcRequest, RpcResponse>
         implements RpcClient {
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2018 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,131 +16,164 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
+import java.util.function.Function;
 
-import java.util.concurrent.CompletionStage;
-
-import javax.annotation.Nullable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseDuplicator;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 /**
- * A {@link Client} decorator that handles failures of remote invocation based on circuit breaker pattern.
- *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
+ * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
  */
-public abstract class CircuitBreakerClient<I extends Request, O extends Response>
-        extends SimpleDecoratingClient<I, O> {
-
-    private static final Logger logger = LoggerFactory.getLogger(CircuitBreakerClient.class);
-
-    @Nullable
-    private final CircuitBreakerStrategy strategy;
-
-    @Nullable
-    private final CircuitBreakerStrategyWithContent<O> strategyWithContent;
-
-    private final CircuitBreakerMapping mapping;
+public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpRequest, HttpResponse>
+        implements HttpClient {
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    protected CircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                   CircuitBreakerStrategy strategy) {
-        this(delegate, mapping, requireNonNull(strategy, "strategy"), null);
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    protected CircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                   CircuitBreakerStrategyWithContent<O> strategyWithContent) {
-        this(delegate, mapping, null, requireNonNull(strategyWithContent, "strategyWithContent"));
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    private CircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                 @Nullable CircuitBreakerStrategy strategy,
-                                 @Nullable CircuitBreakerStrategyWithContent<O> strategyWithContent) {
-        super(delegate);
-        this.mapping = requireNonNull(mapping, "mapping");
-        this.strategy = strategy;
-        this.strategyWithContent = strategyWithContent;
-    }
-
-    /**
-     * Returns the {@link CircuitBreakerStrategy}.
+     * Creates a new decorator using the specified {@link CircuitBreaker} instance and
+     * {@link CircuitBreakerStrategy}.
      *
-     * @throws IllegalStateException if the {@link CircuitBreakerStrategy} is not set
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
      */
-    protected final CircuitBreakerStrategy strategy() {
-        checkState(strategy != null, "strategy is not set.");
-        return strategy;
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerStrategy strategy) {
+        return newDecorator((ctx, req) -> circuitBreaker, strategy);
     }
 
     /**
-     * Returns the {@link CircuitBreakerStrategyWithContent}.
+     * Creates a new decorator with the specified {@link CircuitBreakerMapping} and
+     * {@link CircuitBreakerStrategy}.
      *
-     * @throws IllegalStateException if the {@link CircuitBreakerStrategyWithContent} is not set
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
      */
-    protected final CircuitBreakerStrategyWithContent<O> strategyWithContent() {
-        checkState(strategyWithContent != null, "strategyWithContent is not set.");
-        return strategyWithContent;
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newDecorator(CircuitBreakerMapping mapping, CircuitBreakerStrategy strategy) {
+        return delegate -> new CircuitBreakerClient(delegate, mapping, strategy);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per {@link HttpMethod} with the specified
+     * {@link CircuitBreakerStrategy}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerMethodDecorator(Function<String, CircuitBreaker> factory,
+                          CircuitBreakerStrategy strategy) {
+        return newDecorator(CircuitBreakerMapping.perMethod(factory), strategy);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per host with the specified
+     * {@link CircuitBreakerStrategy}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerHostDecorator(Function<String, CircuitBreaker> factory,
+                        CircuitBreakerStrategy strategy) {
+        return newDecorator(CircuitBreakerMapping.perHost(factory), strategy);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per host and {@link HttpMethod} with
+     * the specified {@link CircuitBreakerStrategy}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
+                                 CircuitBreakerStrategy strategy) {
+        return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), strategy);
+    }
+
+    /**
+     * Returns a new {@link CircuitBreakerClientBuilder} with
+     * the specified {@link CircuitBreakerStrategy}.
+     */
+    public static CircuitBreakerClientBuilder builder(CircuitBreakerStrategy strategy) {
+        return new CircuitBreakerClientBuilder(strategy);
+    }
+
+    /**
+     * Returns a new {@link CircuitBreakerClientBuilder} with
+     * the specified {@link CircuitBreakerStrategyWithContent}.
+     */
+    public static CircuitBreakerClientBuilder builder(
+            CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
+        return new CircuitBreakerClientBuilder(strategyWithContent);
+    }
+
+    private final boolean needsContentInStrategy;
+
+    /**
+     * Creates a new instance that decorates the specified {@link HttpClient}.
+     */
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
+                         CircuitBreakerStrategy strategy) {
+        super(delegate, mapping, strategy);
+        needsContentInStrategy = false;
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link HttpClient}.
+     */
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
+                         CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
+        super(delegate, mapping, strategyWithContent);
+        needsContentInStrategy = true;
     }
 
     @Override
-    public O execute(ClientRequestContext ctx, I req) throws Exception {
-        final CircuitBreaker circuitBreaker;
+    protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req, CircuitBreaker circuitBreaker)
+            throws Exception {
+        final HttpResponse response;
         try {
-            circuitBreaker = mapping.get(ctx, req);
-        } catch (Throwable t) {
-            logger.warn("Failed to get a circuit breaker from mapping", t);
-            return delegate().execute(ctx, req);
+            response = delegate().execute(ctx, req);
+        } catch (Throwable cause) {
+            if (needsContentInStrategy) {
+                reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(
+                        ctx, HttpResponse.ofFailure(cause)));
+            } else {
+                reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(ctx, cause));
+            }
+            throw cause;
         }
 
-        if (circuitBreaker.canRequest()) {
-            return doExecute(ctx, req, circuitBreaker);
-        } else {
-            // the circuit is tripped; raise an exception without delegating.
-            throw new FailFastException(circuitBreaker);
+        if (needsContentInStrategy) {
+            final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(
+                    response, maxSignalLength(ctx.maxResponseLength()), ctx.eventLoop());
+            reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(
+                    ctx, resDuplicator.duplicateStream()));
+            return resDuplicator.duplicateStream(true);
         }
+
+        ctx.log().addListener(log -> {
+            final Throwable cause =
+                    log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;
+            reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(ctx, cause));
+        }, RequestLogAvailability.RESPONSE_HEADERS);
+        return response;
     }
 
-    /**
-     * Invoked when the {@link CircuitBreaker} is in closed state.
-     */
-    protected abstract O doExecute(ClientRequestContext ctx, I req, CircuitBreaker circuitBreaker)
-            throws Exception;
-
-    /**
-     * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value
-     * of the specified {@code future}. If the completed value is {@code null}, this doesn't do anything.
-     */
-    protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
-                                                 CompletionStage<Boolean> future) {
-        future.handle((success, unused) -> {
-            if (success != null) {
-                if (success) {
-                    circuitBreaker.onSuccess();
-                } else {
-                    circuitBreaker.onFailure();
-                }
-            } else {
-                // Ignore, because 'null' means the user does not want to count as a success nor failure.
-            }
-            return null;
-        }).exceptionally(CompletionActions::log);
+    private static int maxSignalLength(long maxResponseLength) {
+        if (maxResponseLength == 0 || maxResponseLength > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        return (int) maxResponseLength;
     }
 }

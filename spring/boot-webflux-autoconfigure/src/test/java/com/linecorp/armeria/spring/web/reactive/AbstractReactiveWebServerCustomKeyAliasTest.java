@@ -59,7 +59,7 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
         // Create a new ClientFactory with a TrustManager that records the received certificate.
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .sslContextCustomizer(b -> {
+                                  .tlsCustomizer(b -> {
                                       b.trustManager(new TrustManagerFactoryImpl(actualKeyName));
                                   })
                                   .build()) {

@@ -49,7 +49,6 @@ import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Mono;
 
 class ArmeriaReactiveWebServerFactoryTest {
@@ -59,7 +58,7 @@ class ArmeriaReactiveWebServerFactoryTest {
     private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
     private final ClientFactory clientFactory =
             ClientFactory.builder()
-                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsNoVerify()
                          .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                          .build();
 

@@ -45,7 +45,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
-import com.linecorp.armeria.server.encoding.HttpEncodingService;
+import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.BindableService;
@@ -222,7 +222,7 @@ public final class GrpcServiceBuilder {
      *     <li>Only unary methods (single request, single response) are supported.</li>
      *     <li>
      *         Message compression is not supported.
-     *         {@link HttpEncodingService} should be used instead for
+     *         {@link EncodingService} should be used instead for
      *         transport level encoding.
      *     </li>
      * </ul>

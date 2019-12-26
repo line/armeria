@@ -16,79 +16,61 @@
 
 package com.linecorp.armeria.client.encoding;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-
-import java.util.Map;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * A {@link DecoratingClient} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
  * content of an {@link HttpResponse}.
+ *
+ * @deprecated Use {@link DecodingClient}.
  */
-public final class HttpDecodingClient extends SimpleDecoratingHttpClient {
+@Deprecated
+public final class HttpDecodingClient extends DecodingClient {
 
     /**
-     * Creates a new {@link HttpDecodingClient} decorator with the default encodings of 'gzip' and 'deflate'.
+     * Creates a new {@link DecodingClient} decorator with the default encodings of 'gzip' and 'deflate'.
+     *
+     * @deprecated Use {@link DecodingClient#newDecorator()}.
      */
-    public static Function<? super HttpClient, HttpDecodingClient> newDecorator() {
+    @Deprecated
+    public static Function<? super HttpClient, DecodingClient> newDecorator() {
         return newDecorator(
                 ImmutableList.of(new GzipStreamDecoderFactory(), new DeflateStreamDecoderFactory()));
     }
 
     /**
-     * Creates a new {@link HttpDecodingClient} decorator with the specified {@link StreamDecoderFactory}s.
+     * Creates a new {@link DecodingClient} decorator with the specified {@link StreamDecoderFactory}s.
+     *
+     * @deprecated Use {@link DecodingClient#newDecorator(StreamDecoderFactory...)}.
      */
-    public static Function<? super HttpClient, HttpDecodingClient>
+    @Deprecated
+    public static Function<? super HttpClient, DecodingClient>
     newDecorator(StreamDecoderFactory... decoderFactories) {
         return newDecorator(ImmutableList.copyOf(decoderFactories));
     }
 
     /**
-     * Creates a new {@link HttpDecodingClient} decorator with the specified {@link StreamDecoderFactory}s.
+     * Creates a new {@link DecodingClient} decorator with the specified {@link StreamDecoderFactory}s.
+     *
+     * @deprecated Use {@link DecodingClient#newDecorator(Iterable)}.
      */
-    public static Function<? super HttpClient, HttpDecodingClient> newDecorator(
+    @Deprecated
+    public static Function<? super HttpClient, DecodingClient> newDecorator(
             Iterable<? extends StreamDecoderFactory> decoderFactories) {
-        return client -> new HttpDecodingClient(client, decoderFactories);
+        return client -> new DecodingClient(client, decoderFactories);
     }
-
-    private final Map<String, StreamDecoderFactory> decoderFactories;
-    private final String acceptEncodingHeader;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient} with the provided decoders.
      */
-    private HttpDecodingClient(HttpClient delegate,
-                               Iterable<? extends StreamDecoderFactory> decoderFactories) {
-        super(delegate);
-        this.decoderFactories = Streams.stream(decoderFactories)
-                                       .collect(toImmutableMap(StreamDecoderFactory::encodingHeaderValue,
-                                                               Function.identity()));
-        acceptEncodingHeader = String.join(",", this.decoderFactories.keySet());
-    }
-
-    @Override
-    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        if (req.headers().contains(HttpHeaderNames.ACCEPT_ENCODING)) {
-            // Client specified encoding, so we don't do anything automatically.
-            return delegate().execute(ctx, req);
-        }
-
-        req = req.withHeaders(req.headers().toBuilder()
-                                 .set(HttpHeaderNames.ACCEPT_ENCODING, acceptEncodingHeader));
-        ctx.updateRequest(req);
-
-        final HttpResponse res = delegate().execute(ctx, req);
-        return new HttpDecodedResponse(res, decoderFactories, ctx.alloc());
+    HttpDecodingClient(HttpClient delegate,
+                       Iterable<? extends StreamDecoderFactory> decoderFactories) {
+        super(delegate, decoderFactories);
     }
 }

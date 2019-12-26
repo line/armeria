@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.spring;
 
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedHttpServices;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configurePorts;
@@ -121,11 +121,11 @@ public class ArmeriaAutoConfiguration {
         configureHttpServices(serverBuilder,
                               httpServiceRegistrationBeans.orElseGet(Collections::emptyList),
                               meterIdPrefixFuncFactory);
-        configureAnnotatedHttpServices(serverBuilder,
-                                       docServiceBuilder,
-                                       annotatedServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                                       meterIdPrefixFuncFactory,
-                                       docsPath);
+        configureAnnotatedServices(serverBuilder,
+                                   docServiceBuilder,
+                                   annotatedServiceRegistrationBeans.orElseGet(Collections::emptyList),
+                                   meterIdPrefixFuncFactory,
+                                   docsPath);
         configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
                                            meterRegistry.orElse(Metrics.globalRegistry),
                                            healthCheckers.orElseGet(Collections::emptyList));

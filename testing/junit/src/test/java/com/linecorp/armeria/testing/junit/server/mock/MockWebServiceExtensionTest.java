@@ -36,8 +36,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-
 class MockWebServiceExtensionTest {
 
     @RegisterExtension
@@ -46,13 +44,8 @@ class MockWebServiceExtensionTest {
     @Test
     void normal() {
         final WebClient webClient = WebClient.of(server.httpUri("/"));
-        final ClientFactory clientFactory =
-                ClientFactory.builder()
-                             .sslContextCustomizer(
-                                     ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                             .build();
         final WebClient httpsClient = WebClient.builder(server.httpsUri("/"))
-                                               .factory(clientFactory)
+                                               .factory(ClientFactory.insecure())
                                                .build();
 
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "hello"));
