@@ -59,8 +59,8 @@ class RequestContextCurrentTraceContextTest {
     void setup() {
         Mockito.lenient().when(eventLoop.inEventLoop()).thenReturn(true);
         ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                             .eventLoop(eventLoop)
-                             .build();
+                                   .eventLoop(eventLoop)
+                                   .build();
     }
 
     @Test

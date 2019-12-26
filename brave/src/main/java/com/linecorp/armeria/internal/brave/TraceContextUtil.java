@@ -38,7 +38,7 @@ public final class TraceContextUtil {
             AttributeKey.valueOf(TraceContextUtil.class, "TRACE_CONTEXT");
 
     @Nullable
-    public static TraceContext getTraceContext(RequestContext ctx) {
+    public static TraceContext traceContext(RequestContext ctx) {
         return ctx.attr(TRACE_CONTEXT_KEY);
     }
 

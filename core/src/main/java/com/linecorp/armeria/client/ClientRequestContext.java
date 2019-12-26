@@ -177,7 +177,7 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
      * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
      *
-     * <p>If the value does not exist both in this context but only in {@link #rootContext()},
+     * <p>If the value does not exist in this context but only in {@link #rootContext()},
      * this method will return the value from the {@link #rootContext()}.
      * <pre>{@code
      * ClientRequestContext ctx = ...;
@@ -185,7 +185,7 @@ public interface ClientRequestContext extends RequestContext {
      * assert ctx.attr(KEY) == "root";
      * assert ctx.ownAttr(KEY) == null;
      * }</pre>
-     * If the value exists in this context and {@link #rootContext()},
+     * If the value exists both in this context and {@link #rootContext()},
      * this method will return the value from this context.
      * <pre>{@code
      * ClientRequestContext ctx = ...;

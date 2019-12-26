@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common.brave;
 
-import static com.linecorp.armeria.internal.brave.TraceContextUtil.getTraceContext;
 import static com.linecorp.armeria.internal.brave.TraceContextUtil.setTraceContext;
+import static com.linecorp.armeria.internal.brave.TraceContextUtil.traceContext;
 
 import java.util.List;
 import java.util.function.Function;
@@ -140,14 +140,14 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
 
         if (ctx.eventLoop().inEventLoop()) {
-            return getTraceContext(ctx);
+            return traceContext(ctx);
         } else {
             final TraceContext threadLocalContext = THREAD_LOCAL_CONTEXT.get();
             if (threadLocalContext != null) {
                 return threadLocalContext;
             }
             // First span on a non-request thread will use the request's TraceContext as a parent.
-            return getTraceContext(ctx);
+            return traceContext(ctx);
         }
     }
 
@@ -171,7 +171,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     private Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {
-        final TraceContext previous = getTraceContext(ctx);
+        final TraceContext previous = traceContext(ctx);
         setTraceContext(ctx, currentSpan);
 
         // Don't remove the outer-most context (client or server request)

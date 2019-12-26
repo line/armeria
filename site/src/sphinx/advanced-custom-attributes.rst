@@ -24,29 +24,18 @@ Then, you can access them via ``RequestContext.attr(AttributeKey)``:
 .. code-block:: java
 
     // Setting
-    ctx.attr(INT_ATTR).set(42);
+    ctx.setAttr(INT_ATTR, 42);
     MyBean myBean = new MyBean();
-    ctx.attr(BEAN_ATTR).set(new MyBean());
+    ctx.setAttr(BEAN_ATTR, new MyBean());
 
     // Getting
-    Integer i = ctx.attr(INT_ATTR).get(); // i == 42
-    MyBean bean = ctx.attr(BEAN_ATTR).get(); // bean == myBean
+    Integer i = ctx.attr(INT_ATTR); // i == 42
+    MyBean bean = ctx.attr(BEAN_ATTR); // bean == myBean
 
 You can also iterate over all the attributes in a context using ``RequestContext.attrs()``:
 
 .. code-block:: java
 
-    for (Attribute<?> a : ctx.attrs()) {
-        System.err.println(a.key() + ": " + a.get());
-    }
-
-If you are only interested in checking whether an attribute exists or not, you should use
-``RequestContext.hasAttr(AttributeKey)``. It does not perform any allocation for a non-existent attribute
-unlike ``RequestContext.attr(AttributeKey)`` does:
-
-.. code-block:: java
-
-    if (ctx.hasAttr(INT_ATTR)) {
-        int i = ctx.attr(INT_ATTR).get();
-        ...
+    for (Entry<AttributeKey<?>, Object> a : ctx.attrs()) {
+        System.err.println(a.getKey() + ": " + a.getValue());
     }

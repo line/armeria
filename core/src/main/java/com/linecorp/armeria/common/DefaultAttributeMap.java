@@ -34,6 +34,7 @@ import io.netty.util.AttributeKey;
 final class DefaultAttributeMap {
 
     // Forked from Netty 4.1.34 at 506f0d8f8c10e1b24924f7d992a726d7bdd2e486
+    // - Greatly simplified and just bring the implementation of attributes.
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray>
