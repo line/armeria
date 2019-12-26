@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.Response;
 public interface RequestTimeoutController {
 
     /**
-     *
      * Sets the amount of time, that is after the specified {@code deadlineNanos} from now, allowed
      * until receiving the current {@link Request} and sending the corresponding {@link Response} completely.
      *
