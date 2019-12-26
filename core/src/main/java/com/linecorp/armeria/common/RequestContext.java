@@ -122,7 +122,8 @@ public interface RequestContext {
     /**
      * Associates the specified value with the given {@link AttributeKey} in this context.
      * If this context previously contained a mapping for the {@link AttributeKey},
-     * the old value is replaced by the specified value.
+     * the old value is replaced by the specified value. Set {@code null} not to iterate the mapping from
+     * {@link #attrs()}.
      */
     <V> void setAttr(AttributeKey<V> key, @Nullable V value);
 
