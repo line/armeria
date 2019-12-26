@@ -97,7 +97,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private String strVal;
 
     @Nullable
-    private final List<Consumer<? super ClientRequestContext>> customizers;
+    private volatile List<Consumer<? super ClientRequestContext>> customizers;
 
     /**
      * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
@@ -220,7 +220,9 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     private void runThreadLocalContextCustomizers() {
+        final List<Consumer<? super ClientRequestContext>> customizers = this.customizers;
         if (customizers != null) {
+            this.customizers = null;
             for (Consumer<? super ClientRequestContext> c : customizers) {
                 c.accept(this);
             }
