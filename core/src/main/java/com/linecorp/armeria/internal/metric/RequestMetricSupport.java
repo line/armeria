@@ -59,7 +59,7 @@ public final class RequestMetricSupport {
                              MeterIdPrefixFunction meterIdPrefixFunction, boolean server) {
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
-        if (isRequestMetricsSet != null && isRequestMetricsSet) {
+        if (Boolean.TRUE.equals(isRequestMetricsSet)) {
             return;
         }
         ctx.setAttr(requestMetricsSetKey, true);
