@@ -144,6 +144,13 @@ public final class JettyService implements HttpService {
         return new JettyService(config.hostname().orElse(null), serverFactory, postStopTask);
     }
 
+    /**
+     * Returns a new {@link JettyServiceBuilder}.
+     */
+    public static JettyServiceBuilder builder() {
+        return new JettyServiceBuilder();
+    }
+
     private final Function<ScheduledExecutorService, Server> serverFactory;
     private final Consumer<Server> postStopTask;
     private final Configurator configurator;

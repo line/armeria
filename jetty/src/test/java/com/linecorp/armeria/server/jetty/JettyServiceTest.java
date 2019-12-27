@@ -63,21 +63,25 @@ public class JettyServiceTest extends WebAppContainerTest {
 
             sb.serviceUnder(
                     "/jsp/",
-                    new JettyServiceBuilder()
-                            .handler(newWebAppContext())
-                            .configurator(s -> jettyBeans.addAll(s.getBeans()))
-                            .build()
+                    JettyService.builder()
+                                .handler(newWebAppContext())
+                                .configurator(s -> jettyBeans.addAll(s.getBeans()))
+                                .build()
                             .decorate(LoggingService.newDecorator()));
 
             sb.serviceUnder(
                     "/default/",
-                    new JettyServiceBuilder().handler(new DefaultHandler()).build());
+                    JettyService.builder()
+                                .handler(new DefaultHandler())
+                                .build());
 
             final ResourceHandler resourceHandler = new ResourceHandler();
             resourceHandler.setResourceBase(webAppRoot().getPath());
             sb.serviceUnder(
                     "/resources/",
-                    new JettyServiceBuilder().handler(resourceHandler).build());
+                    JettyService.builder()
+                                .handler(resourceHandler)
+                                .build());
         }
     };
 
