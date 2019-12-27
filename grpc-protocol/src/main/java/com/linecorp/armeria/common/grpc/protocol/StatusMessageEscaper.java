@@ -49,7 +49,7 @@ package com.linecorp.armeria.common.grpc.protocol;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-import com.linecorp.armeria.internal.ThreadLocalByteArray;
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 /**
  * Utility to escape status messages (e.g., error messages) for saving to ascii headers.
@@ -86,7 +86,7 @@ public final class StatusMessageEscaper {
      * @param ri The reader index, pointed at the first byte that needs escaping.
      */
     private static String doEscape(byte[] valueBytes, int ri) {
-        final byte[] escapedBytes = ThreadLocalByteArray.get(ri + (valueBytes.length - ri) * 3);
+        final byte[] escapedBytes = TemporaryThreadLocals.get().byteArray(ri + (valueBytes.length - ri) * 3);
         // copy over the good bytes
         if (ri != 0) {
             System.arraycopy(valueBytes, 0, escapedBytes, 0, ri);

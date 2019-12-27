@@ -66,7 +66,6 @@ import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 class HttpServerStreamingTest {
@@ -78,7 +77,7 @@ class HttpServerStreamingTest {
             ClientFactory.builder()
                          .workerGroup(workerGroup, false) // Will be shut down by the Server.
                          .idleTimeout(Duration.ofSeconds(3))
-                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsNoVerify()
                          .build();
 
     // Stream as much as twice of the heap.

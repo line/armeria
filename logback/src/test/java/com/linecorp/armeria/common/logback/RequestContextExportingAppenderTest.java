@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logback.HelloService.hello_args;
 import com.linecorp.armeria.common.logback.HelloService.hello_result;
+import com.linecorp.armeria.common.logging.BuiltInProperty;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -410,7 +411,7 @@ public class RequestContextExportingAppenderTest {
                                              ProxiedAddresses.of(new InetSocketAddress("9.10.11.12", 0)))
                                      .build();
 
-        ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
         return ctx;
     }
 
@@ -527,7 +528,7 @@ public class RequestContextExportingAppenderTest {
                                     .sslSession(newSslSession())
                                     .build();
 
-        ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
         return ctx;
     }
 

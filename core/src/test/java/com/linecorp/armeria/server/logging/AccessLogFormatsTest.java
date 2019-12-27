@@ -192,7 +192,7 @@ class AccessLogFormatsTest {
                                      .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
                                      .id(id)
                                      .build();
-        ctx.attr(Attr.ATTR_KEY).set(new Attr("line"));
+        ctx.setAttr(Attr.ATTR_KEY, new Attr("line"));
 
         final RequestLog log = ctx.log();
         final RequestLogBuilder logBuilder = ctx.logBuilder();

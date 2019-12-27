@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -28,7 +30,6 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import brave.Tracing;
 import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 public final class TraceContextUtil {
@@ -36,21 +37,13 @@ public final class TraceContextUtil {
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.valueOf(TraceContextUtil.class, "TRACE_CONTEXT");
 
-    /**
-     * Use this to ensure the trace context propagates to children.
-     *
-     * <p>Ex.
-     * <pre>{@code
-     *  // Ensure the trace context propagates to children
-     * ctx.onChild(RequestContextCurrentTraceContext::copy);
-     * }</pre>
-     */
-    public static void copy(RequestContext src, RequestContext dst) {
-        dst.attr(TRACE_CONTEXT_KEY).set(src.attr(TRACE_CONTEXT_KEY).get());
+    @Nullable
+    public static TraceContext traceContext(RequestContext ctx) {
+        return ctx.attr(TRACE_CONTEXT_KEY);
     }
 
-    public static Attribute<TraceContext> getTraceContextAttribute(RequestContext ctx) {
-        return ctx.attr(TRACE_CONTEXT_KEY);
+    public static void setTraceContext(RequestContext ctx, TraceContext traceContext) {
+        ctx.setAttr(TRACE_CONTEXT_KEY, traceContext);
     }
 
     /**

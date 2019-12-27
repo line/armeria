@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogListener;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -46,6 +47,9 @@ import com.linecorp.armeria.common.util.Sampler;
  */
 abstract class AbstractLoggingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
+
+    private final RequestLogListener requestLogger = new RequestLogger();
+    private final RequestLogListener responseLogger = new ResponseLogger();
 
     private final Logger logger;
     private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
@@ -114,23 +118,35 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(log -> logRequest(logger, log,
-                                                    requestLogLevelMapper,
-                                                    requestHeadersSanitizer,
-                                                    requestContentSanitizer, requestTrailersSanitizer),
-                                  RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(log -> logResponse(logger, log,
-                                                     requestLogLevelMapper,
-                                                     responseLogLevelMapper,
-                                                     requestHeadersSanitizer,
-                                                     requestContentSanitizer,
-                                                     requestHeadersSanitizer,
-                                                     responseHeadersSanitizer,
-                                                     responseContentSanitizer,
-                                                     responseTrailersSanitizer,
-                                                     responseCauseSanitizer),
-                                  RequestLogAvailability.COMPLETE);
+            ctx.log().addListener(requestLogger, RequestLogAvailability.REQUEST_END);
+            ctx.log().addListener(responseLogger, RequestLogAvailability.COMPLETE);
         }
         return delegate().execute(ctx, req);
+    }
+
+    private class RequestLogger implements RequestLogListener {
+        @Override
+        public void onRequestLog(RequestLog log) throws Exception {
+            logRequest(logger, log,
+                       requestLogLevelMapper,
+                       requestHeadersSanitizer,
+                       requestContentSanitizer, requestTrailersSanitizer);
+        }
+    }
+
+    private class ResponseLogger implements RequestLogListener {
+        @Override
+        public void onRequestLog(RequestLog log) throws Exception {
+            logResponse(logger, log,
+                        requestLogLevelMapper,
+                        responseLogLevelMapper,
+                        requestHeadersSanitizer,
+                        requestContentSanitizer,
+                        requestHeadersSanitizer,
+                        responseHeadersSanitizer,
+                        responseContentSanitizer,
+                        responseTrailersSanitizer,
+                        responseCauseSanitizer);
+        }
     }
 }

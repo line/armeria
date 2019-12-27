@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -32,7 +34,7 @@ import io.netty.util.AsciiString;
 /**
  * Provides the getter methods to {@link HttpHeaders} and {@link HttpHeadersBuilder}.
  */
-interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
+interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequence, /* NAME */ AsciiString> {
 
     /**
      * Tells whether the headers correspond to the last frame in an HTTP/2 stream.
@@ -54,6 +56,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param name the name of the header to retrieve
      * @return the first header value if the header is found. {@code null} if there's no such header
      */
+    @Override
     @Nullable
     String get(CharSequence name);
 
@@ -65,6 +68,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param defaultValue the default value
      * @return the first header value or {@code defaultValue} if there is no such header
      */
+    @Override
     String get(CharSequence name, String defaultValue);
 
     /**
@@ -73,6 +77,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param name the name of the header to retrieve
      * @return a {@link List} of header values or an empty {@link List} if there is no such header.
      */
+    @Override
     List<String> getAll(CharSequence name);
 
     /**
@@ -83,6 +88,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the {@code int} value of the first value in insertion order or {@code null} if there is no such
      *         header or it can't be converted to {@code int}.
      */
+    @Override
     @Nullable
     Integer getInt(CharSequence name);
 
@@ -95,6 +101,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the {@code int} value of the first value in insertion order or {@code defaultValue} if there is
      *         no such header or it can't be converted to {@code int}.
      */
+    @Override
     int getInt(CharSequence name, int defaultValue);
 
     /**
@@ -105,6 +112,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the {@code long} value of the first value in insertion order or {@code null} if there is no such
      *         header or it can't be converted to {@code long}.
      */
+    @Override
     @Nullable
     Long getLong(CharSequence name);
 
@@ -117,6 +125,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the {@code long} value of the first value in insertion order or {@code defaultValue} if there is
      *         no such header or it can't be converted to {@code long}.
      */
+    @Override
     long getLong(CharSequence name, long defaultValue);
 
     /**
@@ -127,6 +136,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the {@code float} value of the first value in insertion order or {@code null} if there is no
      *         such header or it can't be converted to {@code float}.
      */
+    @Override
     @Nullable
     Float getFloat(CharSequence name);
 
@@ -139,6 +149,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the {@code float} value of the first value in insertion order or {@code defaultValue} if there
      *         is no such header or it can't be converted to {@code float}.
      */
+    @Override
     float getFloat(CharSequence name, float defaultValue);
 
     /**
@@ -149,6 +160,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the {@code double} value of the first value in insertion order or {@code null} if there is no
      *         such header or it can't be converted to {@code double}.
      */
+    @Override
     @Nullable
     Double getDouble(CharSequence name);
 
@@ -161,6 +173,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the {@code double} value of the first value in insertion order or {@code defaultValue} if there
      *         is no such header or it can't be converted to {@code double}.
      */
+    @Override
     double getDouble(CharSequence name, double defaultValue);
 
     /**
@@ -171,6 +184,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the milliseconds value of the first value in insertion order or {@code null} if there is no such
      *         header or it can't be converted to milliseconds.
      */
+    @Override
     @Nullable
     Long getTimeMillis(CharSequence name);
 
@@ -183,6 +197,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @return the milliseconds value of the first value in insertion order or {@code defaultValue} if there is
      *         no such header or it can't be converted to milliseconds.
      */
+    @Override
     long getTimeMillis(CharSequence name, long defaultValue);
 
     /**
@@ -190,6 +205,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      *
      * @param name the header name
      */
+    @Override
     boolean contains(CharSequence name);
 
     /**
@@ -198,6 +214,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param name the header name
      * @param value the header value of the header to find
      */
+    @Override
     boolean contains(CharSequence name, String value);
 
     /**
@@ -207,6 +224,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param value the header value
      * @return {@code true} if the header exists. {@code false} otherwise
      */
+    @Override
     boolean containsObject(CharSequence name, Object value);
 
     /**
@@ -216,6 +234,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param value the header value
      * @return {@code true} if the header exists. {@code false} otherwise
      */
+    @Override
     boolean containsInt(CharSequence name, int value);
 
     /**
@@ -225,6 +244,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param value the header value
      * @return {@code true} if the header exists. {@code false} otherwise
      */
+    @Override
     boolean containsLong(CharSequence name, long value);
 
     /**
@@ -234,6 +254,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param value the header value
      * @return {@code true} if the header exists. {@code false} otherwise
      */
+    @Override
     boolean containsFloat(CharSequence name, float value);
 
     /**
@@ -243,6 +264,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param value the header value
      * @return {@code true} if the header exists. {@code false} otherwise
      */
+    @Override
     boolean containsDouble(CharSequence name, double value);
 
     /**
@@ -252,21 +274,25 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
      * @param value the header value
      * @return {@code true} if the header exists. {@code false} otherwise
      */
+    @Override
     boolean containsTimeMillis(CharSequence name, long value);
 
     /**
      * Returns the number of headers.
      */
+    @Override
     int size();
 
     /**
      * Returns {@code true} if this headers does not contain any entries.
      */
+    @Override
     boolean isEmpty();
 
     /**
      * Returns a {@link Set} of all header names. The returned {@link Set} cannot be modified.
      */
+    @Override
     Set<AsciiString> names();
 
     /**
@@ -282,21 +308,25 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
     /**
      * Returns an {@link Iterator} that yields all values of the headers with the specified {@code name}.
      */
+    @Override
     Iterator<String> valueIterator(CharSequence name);
 
     /**
      * Invokes the specified {@code action} for all header entries.
      */
+    @Override
     void forEach(BiConsumer<AsciiString, String> action);
 
     /**
      * Invokes the specified {@code action} for all values of the headers with the specified {@code name}.
      */
+    @Override
     void forEachValue(CharSequence name, Consumer<String> action);
 
     /**
      * Returns a {@link Stream} that yields all header entries.
      */
+    @Override
     default Stream<Entry<AsciiString, String>> stream() {
         return Streams.stream(iterator());
     }
@@ -304,7 +334,9 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
     /**
      * Returns a {@link Stream} that yields all values of the headers with the specified {@code name}.
      */
+    @Override
     default Stream<String> valueStream(CharSequence name) {
+        requireNonNull(name, "name");
         return Streams.stream(valueIterator(name));
     }
 }

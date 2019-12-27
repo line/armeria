@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategy;
-import com.linecorp.armeria.client.retry.RetryingHttpClient;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -71,9 +71,9 @@ class HttpResponseDecoderTest {
         // for notifying RESPONSE_END to listeners.
         builder.contentPreview(100);
         // In order to use a different thread to to subscribe to the response.
-        builder.decorator(RetryingHttpClient.builder(strategy)
-                                            .maxTotalAttempts(2)
-                                            .newDecorator());
+        builder.decorator(RetryingClient.builder(strategy)
+                                        .maxTotalAttempts(2)
+                                        .newDecorator());
         builder.decorator((delegate, ctx, req) -> {
             final AtomicReference<Thread> responseStartedThread = new AtomicReference<>();
             ctx.log().addListener(log -> {

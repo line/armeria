@@ -63,7 +63,7 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder add(CharSequence name, String... values);
 
     @Override
-    ResponseHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> headers);
+    ResponseHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     @Override
     ResponseHeadersBuilder addObject(CharSequence name, Object value);
@@ -75,7 +75,7 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder addObject(CharSequence name, Object... values);
 
     @Override
-    ResponseHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
+    ResponseHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> entries);
 
     @Override
     ResponseHeadersBuilder addInt(CharSequence name, int value);
@@ -102,11 +102,10 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder set(CharSequence name, String... values);
 
     @Override
-    ResponseHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> headers);
+    ResponseHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     @Override
-    ResponseHeadersBuilder setIfAbsent(
-            Iterable<? extends Entry<? extends CharSequence, String>> headers);
+    ResponseHeadersBuilder setIfAbsent(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     @Override
     ResponseHeadersBuilder setObject(CharSequence name, Object value);
@@ -118,7 +117,7 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder setObject(CharSequence name, Object... values);
 
     @Override
-    ResponseHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
+    ResponseHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> entries);
 
     @Override
     ResponseHeadersBuilder setInt(CharSequence name, int value);

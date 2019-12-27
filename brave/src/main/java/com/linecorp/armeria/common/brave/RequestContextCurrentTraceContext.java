@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.common.brave;
 
-import static com.linecorp.armeria.internal.brave.TraceContextUtil.getTraceContextAttribute;
+import static com.linecorp.armeria.internal.brave.TraceContextUtil.setTraceContext;
+import static com.linecorp.armeria.internal.brave.TraceContextUtil.traceContext;
 
 import java.util.List;
 import java.util.function.Function;
@@ -36,7 +37,6 @@ import com.linecorp.armeria.server.brave.BraveService;
 import brave.Tracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.TraceContext;
-import io.netty.util.Attribute;
 
 /**
  * {@linkplain Tracing.Builder#currentTraceContext(CurrentTraceContext) Tracing
@@ -140,14 +140,14 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
 
         if (ctx.eventLoop().inEventLoop()) {
-            return getTraceContextAttribute(ctx).get();
+            return traceContext(ctx);
         } else {
             final TraceContext threadLocalContext = THREAD_LOCAL_CONTEXT.get();
             if (threadLocalContext != null) {
                 return threadLocalContext;
             }
             // First span on a non-request thread will use the request's TraceContext as a parent.
-            return getTraceContextAttribute(ctx).get();
+            return traceContext(ctx);
         }
     }
 
@@ -171,9 +171,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     private Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {
-        final Attribute<TraceContext> traceContextAttribute = getTraceContextAttribute(ctx);
-
-        final TraceContext previous = traceContextAttribute.getAndSet(currentSpan);
+        final TraceContext previous = traceContext(ctx);
+        setTraceContext(ctx, currentSpan);
 
         // Don't remove the outer-most context (client or server request)
         if (previous == null) {
@@ -186,7 +185,10 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             @Override
             public void close() {
                 // re-lookup the attribute to avoid holding a reference to the request if this scope is leaked
-                getTraceContextAttributeOrWarnOnce().set(previous);
+                final RequestContext ctx = getRequestContextOrWarnOnce();
+                if (ctx != null) {
+                    setTraceContext(ctx, previous);
+                }
             }
 
             @Override
@@ -236,18 +238,6 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             }
         }
         return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE);
-    }
-
-    /**
-     * Armeria code should always have a request context available, and this won't work without it.
-     */
-    @Nullable
-    private Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
-        final RequestContext ctx = getRequestContextOrWarnOnce();
-        if (ctx == null) {
-            return null;
-        }
-        return getTraceContextAttribute(ctx);
     }
 
     private enum LogRequestContextWarningOnce implements Supplier<RequestContext> {

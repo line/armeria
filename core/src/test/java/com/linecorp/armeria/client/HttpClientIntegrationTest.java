@@ -58,8 +58,8 @@ import org.reactivestreams.Subscription;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
+import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.client.encoding.DeflateStreamDecoderFactory;
-import com.linecorp.armeria.client.encoding.HttpDecodingClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -88,7 +88,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.server.encoding.HttpEncodingService;
+import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -282,7 +282,7 @@ class HttpClientIntegrationTest {
                             HttpData.ofUtf8("some content to compress "),
                             HttpData.ofUtf8("more content to compress"));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/encoding-toosmall", new AbstractHttpService() {
                 @Override
@@ -290,7 +290,7 @@ class HttpClientIntegrationTest {
                         throws Exception {
                     return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "small content");
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/pooled", new PooledContentService());
 
@@ -474,7 +474,7 @@ class HttpClientIntegrationTest {
     void httpDecoding() throws Exception {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .factory(clientFactory)
-                                          .decorator(HttpDecodingClient.newDecorator())
+                                          .decorator(DecodingClient.newDecorator())
                                           .build();
 
         final AggregatedHttpResponse response =
@@ -488,7 +488,7 @@ class HttpClientIntegrationTest {
     void httpDecoding_deflate() throws Exception {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .factory(clientFactory)
-                                          .decorator(HttpDecodingClient.newDecorator(
+                                          .decorator(DecodingClient.newDecorator(
                                                   new DeflateStreamDecoderFactory()))
                                           .build();
 
@@ -503,7 +503,7 @@ class HttpClientIntegrationTest {
     void httpDecoding_noEncodingApplied() throws Exception {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .factory(clientFactory)
-                                          .decorator(HttpDecodingClient.newDecorator(
+                                          .decorator(DecodingClient.newDecorator(
                                                   new DeflateStreamDecoderFactory()))
                                           .build();
 
@@ -724,7 +724,7 @@ class HttpClientIntegrationTest {
                                                          .build();
         final WebClient client = WebClient.builder(server.httpUri("/"))
                                           .factory(clientFactory)
-                                          .decorator(HttpDecodingClient.newDecorator())
+                                          .decorator(DecodingClient.newDecorator())
                                           .build();
 
         final AggregatedHttpResponse response = client.execute(

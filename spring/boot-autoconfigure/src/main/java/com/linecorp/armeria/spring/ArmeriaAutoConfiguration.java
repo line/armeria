@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.spring;
 
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedHttpServices;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configurePorts;
@@ -75,7 +75,8 @@ public class ArmeriaAutoConfiguration {
             Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
             Optional<List<GrpcServiceRegistrationBean>> grpcServiceRegistrationBeans,
             Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
-            Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans)
+            Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans,
+            Optional<List<DocServiceConfigurator>> docServiceConfigurators)
             throws InterruptedException {
 
         if (!armeriaServerConfigurators.isPresent() &&
@@ -92,60 +93,64 @@ public class ArmeriaAutoConfiguration {
                 armeriaSettings.isEnableMetrics() ? meterIdPrefixFunctionFactory.orElse(DEFAULT)
                                                   : null;
 
-        final ServerBuilder server = Server.builder();
+        final ServerBuilder serverBuilder = Server.builder();
 
         final List<Port> ports = armeriaSettings.getPorts();
         if (ports.isEmpty()) {
-            server.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocols()));
+            serverBuilder.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocols()));
         } else {
-            configurePorts(server, ports);
+            configurePorts(serverBuilder, ports);
         }
 
         final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
+        docServiceConfigurators.ifPresent(
+                configurators -> configurators.forEach(
+                        configurator -> configurator.configure(docServiceBuilder)));
+
         final String docsPath = armeriaSettings.getDocsPath();
-        configureThriftServices(server,
+        configureThriftServices(serverBuilder,
                                 docServiceBuilder,
                                 thriftServiceRegistrationBeans.orElseGet(Collections::emptyList),
                                 meterIdPrefixFuncFactory,
                                 docsPath);
-        configureGrpcServices(server,
+        configureGrpcServices(serverBuilder,
                               docServiceBuilder,
                               grpcServiceRegistrationBeans.orElseGet(Collections::emptyList),
                               meterIdPrefixFuncFactory,
                               docsPath);
-        configureHttpServices(server,
+        configureHttpServices(serverBuilder,
                               httpServiceRegistrationBeans.orElseGet(Collections::emptyList),
                               meterIdPrefixFuncFactory);
-        configureAnnotatedHttpServices(server,
-                                       docServiceBuilder,
-                                       annotatedServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                                       meterIdPrefixFuncFactory,
-                                       docsPath);
-        configureServerWithArmeriaSettings(server, armeriaSettings,
+        configureAnnotatedServices(serverBuilder,
+                                   docServiceBuilder,
+                                   annotatedServiceRegistrationBeans.orElseGet(Collections::emptyList),
+                                   meterIdPrefixFuncFactory,
+                                   docsPath);
+        configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
                                            meterRegistry.orElse(Metrics.globalRegistry),
                                            healthCheckers.orElseGet(Collections::emptyList));
 
         armeriaServerConfigurators.ifPresent(
                 configurators -> configurators.forEach(
-                        configurator -> configurator.configure(server)));
+                        configurator -> configurator.configure(serverBuilder)));
 
         armeriaServerBuilderConsumers.ifPresent(
                 consumers -> consumers.forEach(
-                        consumer -> consumer.accept(server)));
+                        consumer -> consumer.accept(serverBuilder)));
 
         if (!Strings.isNullOrEmpty(docsPath)) {
-            server.serviceUnder(docsPath, docServiceBuilder.build());
+            serverBuilder.serviceUnder(docsPath, docServiceBuilder.build());
         }
 
-        final Server s = server.build();
+        final Server server = serverBuilder.build();
 
-        s.start().handle((result, t) -> {
+        server.start().handle((result, t) -> {
             if (t != null) {
                 throw new IllegalStateException("Armeria server failed to start", t);
             }
             return result;
         }).join();
-        logger.info("Armeria server started at ports: {}", s.activePorts());
-        return s;
+        logger.info("Armeria server started at ports: {}", server.activePorts());
+        return server;
     }
 }

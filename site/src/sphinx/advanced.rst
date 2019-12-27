@@ -16,3 +16,4 @@ Advanced topics
     advanced-zookeeper
     advanced-saml
     advanced-spring-webflux-integration
+    advanced-dropwizard-integration

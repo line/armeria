@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.internal.spring;
 
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedHttpServices;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.reset;
@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
+import com.linecorp.armeria.internal.annotation.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -59,20 +59,22 @@ public class ArmeriaConfigurationUtilTest {
 
         final ServerBuilder sb1 = Server.builder();
         final DocServiceBuilder dsb1 = new DocServiceBuilder();
-        configureAnnotatedHttpServices(sb1, dsb1, ImmutableList.of(bean),
+        configureAnnotatedServices(sb1, dsb1, ImmutableList.of(bean),
                                        MeterIdPrefixFunctionFactory.DEFAULT, null);
+        final Server s1 = sb1.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(service(sb1).as(MetricCollectingService.class)).isPresent();
+        assertThat(service(s1).as(MetricCollectingService.class)).isPresent();
 
         reset(decorator);
 
         final ServerBuilder sb2 = Server.builder();
         final DocServiceBuilder dsb2 = new DocServiceBuilder();
-        configureAnnotatedHttpServices(sb2, dsb2, ImmutableList.of(bean),
+        configureAnnotatedServices(sb2, dsb2, ImmutableList.of(bean),
                                        null, null);
+        final Server s2 = sb2.build();
         verify(decorator, times(2)).apply(any());
         assertThat(getServiceForHttpMethod(sb2.build(), HttpMethod.OPTIONS))
-                .isInstanceOf(AnnotatedHttpService.class);
+                .isInstanceOf(AnnotatedService.class);
     }
 
     @Test
@@ -85,14 +87,13 @@ public class ArmeriaConfigurationUtilTest {
 
         final ServerBuilder sb = Server.builder();
         final DocServiceBuilder dsb = new DocServiceBuilder();
-        configureAnnotatedHttpServices(sb, dsb, ImmutableList.of(bean),
-                                       null, null);
+        configureAnnotatedServices(sb, dsb, ImmutableList.of(bean), null, null);
+        final Server s = sb.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(service(sb).as(SimpleDecorator.class)).isPresent();
+        assertThat(service(s).as(SimpleDecorator.class)).isPresent();
     }
 
-    private static HttpService service(ServerBuilder sb) {
-        final Server server = sb.build();
+    private static HttpService service(Server server) {
         return server.config().defaultVirtualHost().serviceConfigs().get(0).service();
     }
 
@@ -139,7 +140,7 @@ public class ArmeriaConfigurationUtilTest {
     static class SimpleService {
         // We need to specify '@Options' annotation in order to avoid adding a decorator which denies
         // a CORS preflight request. If any decorator is added, the service will be automatically decorated
-        // with AnnotatedHttpService#ExceptionFilteredHttpResponseDecorator.
+        // with AnnotatedService#ExceptionFilteredHttpResponseDecorator.
         @Get
         @Options
         @Path("/")

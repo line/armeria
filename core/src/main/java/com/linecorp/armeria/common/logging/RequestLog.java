@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -50,8 +49,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.channel.Channel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeMap;
 
 /**
  * A set of informational properties collected while processing a {@link Request} and its {@link Response}.
@@ -65,12 +62,7 @@ import io.netty.util.AttributeMap;
  * @see RequestLogAvailability
  * @see RequestLogListener
  */
-public interface RequestLog extends AttributeMap {
-
-    /**
-     * Returns all {@link Attribute}s set in this log.
-     */
-    Iterator<Attribute<?>> attrs();
+public interface RequestLog {
 
     /**
      * Returns the list of child {@link RequestLog}s, ordered by the time it was added.
@@ -558,7 +550,7 @@ public interface RequestLog extends AttributeMap {
     String toStringRequestOnly();
 
     /**
-     * Returns the string representation of the {@link Request}. This method is a shortcut of:
+     * Returns the string representation of the {@link Request}. This method is a shortcut for:
      * <pre>{@code
      * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
      * }</pre>
@@ -591,7 +583,7 @@ public interface RequestLog extends AttributeMap {
     String toStringResponseOnly();
 
     /**
-     * Returns the string representation of the {@link Response}. This method is a shortcut of:
+     * Returns the string representation of the {@link Response}. This method is a shortcut for:
      * <pre>{@code
      * toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
      * }</pre>

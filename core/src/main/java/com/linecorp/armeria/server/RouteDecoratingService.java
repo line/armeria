@@ -85,8 +85,10 @@ final class RouteDecoratingService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Queue<HttpService> delegates = ctx.attr(DECORATOR_KEY).get();
+        final Queue<HttpService> delegates = ctx.attr(DECORATOR_KEY);
+        assert delegates != null;
         final HttpService delegate = delegates.poll();
+        assert delegate != null;
         return delegate.serve(ctx, req);
     }
 
@@ -128,7 +130,8 @@ final class RouteDecoratingService implements HttpService {
             }
             serviceChain.add(delegate());
             final HttpService service = serviceChain.poll();
-            ctx.attr(DECORATOR_KEY).set(serviceChain);
+            ctx.setAttr(DECORATOR_KEY, serviceChain);
+            assert service != null;
             return service.serve(ctx, req);
         }
 

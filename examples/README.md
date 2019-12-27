@@ -32,12 +32,19 @@
 - `spring-boot-minimal`
   - Learn how to use Armeria with the minimal Spring Boot dependencies.
 
+- `spring-boot-minimal-kotlin`
+  - Learn how to use Armeria with the minimal Spring Boot dependencies (Kotlin).
+
 - `spring-boot-tomcat`
   - Learn how to make Armeria serve your Spring Boot web application.
 
 - `spring-boot-webflux`
   - Learn how to make Armeria serve your Spring Boot reactive web application.
   - See [Using Armeria with Spring WebFlux](https://line.github.io/armeria/advanced-spring-webflux-integration.html).
+
+- `dropwizard`
+  - Learn how to make Armeria serve your Dropwizard web application.
+  - See [Using Armeria with Dropwizard](https://line.github.io/armeria/advanced-dropwizard-integration.html).
 
 - `static-files`
   - Learn how to serve static files.

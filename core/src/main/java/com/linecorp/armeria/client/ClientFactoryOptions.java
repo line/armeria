@@ -54,7 +54,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
             DEFAULT_EVENT_LOOP_SCHEDULER_FACTORY =
             eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, ImmutableList.of());
 
-    private static final Consumer<SslContextBuilder> DEFAULT_SSL_CONTEXT_CUSTOMIZER = b -> { /* no-op */ };
+    static final Consumer<SslContextBuilder> DEFAULT_TLS_CUSTOMIZER = b -> { /* no-op */ };
 
     private static final Function<? super EventLoopGroup,
             ? extends AddressResolverGroup<? extends InetSocketAddress>>
@@ -77,7 +77,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
             ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE.newValue(false),
             ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY.newValue(DEFAULT_EVENT_LOOP_SCHEDULER_FACTORY),
             ClientFactoryOption.CHANNEL_OPTIONS.newValue(new Object2ObjectArrayMap<>()),
-            ClientFactoryOption.SSL_CONTEXT_CUSTOMIZER.newValue(DEFAULT_SSL_CONTEXT_CUSTOMIZER),
+            ClientFactoryOption.TLS_CUSTOMIZER.newValue(DEFAULT_TLS_CUSTOMIZER),
             ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY),
             ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE.newValue(
                     Flags.defaultHttp2InitialConnectionWindowSize()),
@@ -260,9 +260,20 @@ public final class ClientFactoryOptions extends AbstractOptions {
     /**
      * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
      * applied to the SSL session.
+     *
+     * @deprecated Use {@link #tlsCustomizer()}.
      */
+    @Deprecated
     public Consumer<? super SslContextBuilder> sslContextCustomizer() {
-        return get0(ClientFactoryOption.SSL_CONTEXT_CUSTOMIZER).get();
+        return tlsCustomizer();
+    }
+
+    /**
+     * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
+     * applied to the SSL session.
+     */
+    public Consumer<? super SslContextBuilder> tlsCustomizer() {
+        return get0(ClientFactoryOption.TLS_CUSTOMIZER).get();
     }
 
     /**

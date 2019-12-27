@@ -77,7 +77,7 @@ final class HttpHeaderUtil {
                                                       List<ClientAddressSource> clientAddressSources,
                                                       @Nullable ProxiedAddresses proxiedAddresses,
                                                       InetSocketAddress remoteAddress,
-                                                      Predicate<InetAddress> filter) {
+                                                      Predicate<? super InetAddress> filter) {
         for (final ClientAddressSource source : clientAddressSources) {
             if (source.isProxyProtocol()) {
                 if (proxiedAddresses != null) {
@@ -112,7 +112,7 @@ final class HttpHeaderUtil {
     @VisibleForTesting
     static void getAllValidAddress(@Nullable String headerValue,
                                    Function<String, String> valueConverter,
-                                   Predicate<InetAddress> filter,
+                                   Predicate<? super InetAddress> filter,
                                    ImmutableList.Builder<InetSocketAddress> accumulator) {
         if (Strings.isNullOrEmpty(headerValue)) {
             return;

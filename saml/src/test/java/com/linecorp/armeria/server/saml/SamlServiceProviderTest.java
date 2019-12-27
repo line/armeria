@@ -99,6 +99,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -106,8 +108,6 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
-import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 public class SamlServiceProviderTest {
@@ -311,8 +311,8 @@ public class SamlServiceProviderTest {
         assertThat(location).isNotNull();
         assertThat(p.matcher(location).matches()).isTrue();
 
-        final QueryStringDecoder decoder = new QueryStringDecoder(location, true);
-        assertThat(decoder.parameters().get(SIGNATURE_ALGORITHM).get(0)).isEqualTo(signatureAlgorithm);
+        assertThat(QueryParams.fromQueryString(location)
+                              .get(SIGNATURE_ALGORITHM)).isEqualTo(signatureAlgorithm);
     }
 
     @Test
@@ -528,26 +528,23 @@ public class SamlServiceProviderTest {
     private AggregatedHttpResponse sendViaHttpPostBindingProtocol(
             String path, String paramName, SignableSAMLObject signableObj) throws Exception {
         final String encoded = toSignedBase64(signableObj, idpCredential, signatureAlgorithm);
-        final QueryStringEncoder encoder = new QueryStringEncoder("/");
-        encoder.addParam(paramName, encoded);
-
         final HttpRequest req = HttpRequest.of(HttpMethod.POST, path, MediaType.FORM_DATA,
-                                               encoder.toUri().getRawQuery());
+                                               QueryParams.of(paramName, encoded).toQueryString());
         return client.execute(req).aggregate().join();
     }
 
     private AggregatedHttpResponse sendViaHttpRedirectBindingProtocol(
             String path, String paramName, SAMLObject samlObject) throws Exception {
 
-        final QueryStringEncoder encoder = new QueryStringEncoder("/");
-        encoder.addParam(paramName, toDeflatedBase64(samlObject));
-        encoder.addParam(SIGNATURE_ALGORITHM, signatureAlgorithm);
-        final String input = encoder.toUri().getRawQuery();
+        final QueryParamsBuilder params = QueryParams.builder();
+        params.add(paramName, toDeflatedBase64(samlObject));
+        params.add(SIGNATURE_ALGORITHM, signatureAlgorithm);
+        final String input = params.toQueryString();
         final String output = generateSignature(idpCredential, signatureAlgorithm, input);
-        encoder.addParam(SIGNATURE, output);
+        params.add(SIGNATURE, output);
 
         final HttpRequest req = HttpRequest.of(HttpMethod.POST, path, MediaType.FORM_DATA,
-                                               encoder.toUri().getRawQuery());
+                                               params.toQueryString());
         return client.execute(req).aggregate().join();
     }
 }

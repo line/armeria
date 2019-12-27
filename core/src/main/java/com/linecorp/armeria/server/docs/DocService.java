@@ -60,9 +60,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.composition.AbstractCompositeService;
 import com.linecorp.armeria.server.file.AbstractHttpVfs;
+import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.file.HttpFileBuilder;
-import com.linecorp.armeria.server.file.HttpFileService;
 
 /**
  * An {@link HttpService} that provides information about the {@link Service}s running in a
@@ -112,15 +112,15 @@ public class DocService extends AbstractCompositeService<HttpService, HttpReques
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
                DocServiceFilter filter) {
 
-        super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
-              ofExact("/versions.json", HttpFileService.forVfs(new DocServiceVfs())),
+        super(ofExact("/specification.json", FileService.forVfs(new DocServiceVfs())),
+              ofExact("/versions.json", FileService.forVfs(new DocServiceVfs())),
               ofExact("/injected.js",
                       (ctx, req) -> HttpResponse.of(MediaType.JAVASCRIPT_UTF_8,
                                                     injectedScriptSuppliers.stream()
                                                                            .map(f -> f.apply(ctx, req))
                                                                            .collect(Collectors.joining("\n")))),
-              ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
-                                                      "com/linecorp/armeria/server/docs")));
+              ofCatchAll(FileService.forClassPath(DocService.class.getClassLoader(),
+                                                  "com/linecorp/armeria/server/docs")));
         this.exampleHttpHeaders = immutableCopyOf(exampleHttpHeaders, "exampleHttpHeaders");
         this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
         this.filter = requireNonNull(filter, "filter");
@@ -321,7 +321,7 @@ public class DocService extends AbstractCompositeService<HttpService, HttpReques
     }
 
     private DocServiceVfs vfs(int index) {
-        return (DocServiceVfs) ((HttpFileService) serviceAt(index)).config().vfs();
+        return (DocServiceVfs) ((FileService) serviceAt(index)).config().vfs();
     }
 
     private static Set<ServiceConfig> findSupportedServices(

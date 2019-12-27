@@ -52,11 +52,12 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.saml.SamlService.SamlParameters;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.QueryStringEncoder;
 
 /**
  * A utility class which supports HTTP-Redirect binding protocol.
@@ -102,8 +103,8 @@ final class HttpRedirectBindingUtil {
         requireNonNull(signingCredential, "signingCredential");
         requireNonNull(signatureAlgorithm, "signatureAlgorithm");
 
-        final QueryStringEncoder encoder = new QueryStringEncoder("");
-        encoder.addParam(messageParamName, toDeflatedBase64(msg));
+        final QueryParamsBuilder params = QueryParams.builder();
+        params.add(messageParamName, toDeflatedBase64(msg));
 
         if (relayState != null) {
             // RelayState data MAY be included with a SAML protocol message transmitted with this binding.
@@ -113,17 +114,17 @@ final class HttpRedirectBindingUtil {
             if (relayState.length() > 80) {
                 throw new IllegalArgumentException("too long relayState string: " + relayState.length());
             }
-            encoder.addParam(RELAY_STATE, relayState);
+            params.add(RELAY_STATE, relayState);
         }
 
-        encoder.addParam(SIGNATURE_ALGORITHM, signatureAlgorithm);
+        params.add(SIGNATURE_ALGORITHM, signatureAlgorithm);
 
         // Use URL-encoded query string as input.
-        final String input = encoder.toString().substring(1);
+        final String input = params.toQueryString();
         final String output = generateSignature(signingCredential, signatureAlgorithm, input);
-        encoder.addParam(SIGNATURE, output);
+        params.add(SIGNATURE, output);
 
-        return endpointUrl + encoder;
+        return endpointUrl + '?' + params.toQueryString();
     }
 
     /**
@@ -142,16 +143,16 @@ final class HttpRedirectBindingUtil {
         // The order is one of the followings:
         // - SAMLRequest={value}&RelayState={value}=SigAlg={value}
         // - SAMLResponse={value}&RelayState={value}=SigAlg={value}
-        final QueryStringEncoder encoder = new QueryStringEncoder("");
-        encoder.addParam(messageParamName, parameters.getFirstValue(messageParamName));
+        final QueryParamsBuilder params = QueryParams.builder();
+        params.add(messageParamName, parameters.getFirstValue(messageParamName));
 
         final String relayState = parameters.getFirstValueOrNull(RELAY_STATE);
         if (relayState != null) {
-            encoder.addParam(RELAY_STATE, relayState);
+            params.add(RELAY_STATE, relayState);
         }
-        encoder.addParam(SIGNATURE_ALGORITHM, sigAlg);
+        params.add(SIGNATURE_ALGORITHM, sigAlg);
 
-        final byte[] input = encoder.toString().substring(1).getBytes(StandardCharsets.UTF_8);
+        final byte[] input = params.toQueryString().getBytes(StandardCharsets.UTF_8);
 
         try {
             final byte[] decodedSignature = Base64.getMimeDecoder().decode(signature);

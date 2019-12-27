@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLException;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -50,13 +49,12 @@ class ServerTlsValidationTest {
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, "keypassword".toCharArray());
 
-        assertThatThrownBy(() -> {
-            final Server server = Server.builder()
-                                        .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
-                                        .tls(kmf, sslContextBuilder -> {})
-                                        .build();
-        }).isInstanceOf(SSLException.class)
-          .hasMessageContaining("failed to validate SSL/TLS configuration");
+        assertThatThrownBy(() -> Server.builder()
+                                       .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
+                                       .tls(kmf)
+                                       .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("failed to validate SSL/TLS configuration");
     }
 
     @Test
@@ -72,12 +70,11 @@ class ServerTlsValidationTest {
         final KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, "password".toCharArray());
 
-        assertThatThrownBy(() -> {
-            final Server server = Server.builder()
-                                        .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
-                                        .tls(kmf, sslContextBuilder -> {})
-                                        .build();
-        }).isInstanceOf(SSLException.class)
-          .hasMessageContaining("failed to validate SSL/TLS configuration");
+        assertThatThrownBy(() -> Server.builder()
+                                       .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
+                                       .tls(kmf)
+                                       .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("failed to validate SSL/TLS configuration");
     }
 }

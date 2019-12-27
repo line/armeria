@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
@@ -55,7 +57,9 @@ public class DnsAddressEndpointGroupTest {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))
-                                         .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4"))
+                                         .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4")),
+                new DefaultDnsQuestion("foo.com.", AAAA),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))
         ))) {
             try (DnsAddressEndpointGroup group =
                          DnsAddressEndpointGroup.builder("foo.com")
@@ -73,6 +77,8 @@ public class DnsAddressEndpointGroupTest {
     @Test
     public void ipV6Only() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("bar.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("bar.com.", "1.1.1.1")),
                 new DefaultDnsQuestion("bar.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("bar.com.", "::1"))
                                          .addRecord(ANSWER, newAddressRecord("bar.com.", "::1234:5678:90ab"))
@@ -241,9 +247,11 @@ public class DnsAddressEndpointGroupTest {
                 // Start to respond correctly.
                 server.setResponses(ImmutableMap.of(
                         new DefaultDnsQuestion("backoff.com.", A),
-                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("backoff.com", "1.1.1.1")),
+                        new DefaultDnsResponse(0)
+                                .addRecord(ANSWER, newAddressRecord("backoff.com", "1.1.1.1", 1)),
                         new DefaultDnsQuestion("backoff.com.", AAAA),
-                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("backoff.com", "::1"))));
+                        new DefaultDnsResponse(0)
+                                .addRecord(ANSWER, newAddressRecord("backoff.com", "::1", 1))));
 
                 await().untilAsserted(() -> assertThat(group.endpoints()).containsExactly(
                         Endpoint.of("backoff.com").withIpAddr("1.1.1.1"),
@@ -272,9 +280,11 @@ public class DnsAddressEndpointGroupTest {
                 // Start to respond correctly.
                 server.setResponses(ImmutableMap.of(
                         new DefaultDnsQuestion("empty.com.", A),
-                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("empty.com", "1.1.1.1")),
+                        new DefaultDnsResponse(0)
+                                .addRecord(ANSWER, newAddressRecord("empty.com", "1.1.1.1", 1)),
                         new DefaultDnsQuestion("empty.com.", AAAA),
-                        new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("empty.com", "::1"))));
+                        new DefaultDnsResponse(0)
+                                .addRecord(ANSWER, newAddressRecord("empty.com", "::1", 1))));
 
                 await().untilAsserted(() -> assertThat(group.endpoints()).containsExactly(
                         Endpoint.of("empty.com").withIpAddr("1.1.1.1"),
@@ -283,8 +293,9 @@ public class DnsAddressEndpointGroupTest {
         }
     }
 
-    @Test
-    public void partialResponse() throws Exception {
+    @EnumSource(value = ResolvedAddressTypes.class, names = { "IPV4_PREFERRED", "IPV6_PREFERRED" })
+    @ParameterizedTest
+    public void partialIpV4Response(ResolvedAddressTypes resolvedAddressTypes) throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 // Respond A record only.
                 // Respond with NXDOMAIN for AAAA.
@@ -294,12 +305,34 @@ public class DnsAddressEndpointGroupTest {
             try (DnsAddressEndpointGroup group =
                          DnsAddressEndpointGroup.builder("partial.com")
                                                 .serverAddresses(server.addr())
-                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .resolvedAddressTypes(resolvedAddressTypes)
                                                 .backoff(Backoff.fixed(500))
                                                 .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("partial.com").withIpAddr("1.1.1.1"));
+            }
+        }
+    }
+
+    @EnumSource(value = ResolvedAddressTypes.class, names = { "IPV4_PREFERRED", "IPV6_PREFERRED" })
+    @ParameterizedTest
+    public void partialIpV6Response(ResolvedAddressTypes resolvedAddressTypes) throws Exception {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                // Respond AAAA record only.
+                // Respond with NXDOMAIN for A.
+                new DefaultDnsQuestion("partial.com.", AAAA),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("partial.com", "::1"))
+        ))) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("partial.com")
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(resolvedAddressTypes)
+                                                .backoff(Backoff.fixed(500))
+                                                .build()) {
+
+                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                        Endpoint.of("partial.com").withIpAddr("::1"));
             }
         }
     }
