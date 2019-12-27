@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -34,6 +36,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -461,17 +464,26 @@ public interface RequestContext extends AttributeMap {
     <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener);
 
     /**
-     * Returns a {@link CompletionStage} that makes sure the current {@link CompletionStage} is set and
+     * Returns a {@link CompletionStage} that makes sure the current {@link RequestContext} is set and
      * then invokes the input {@code stage}.
      */
     <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage);
 
     /**
-     * Returns a {@link CompletableFuture} that makes sure the current {@link CompletableFuture} is set and
+     * Returns a {@link CompletableFuture} that makes sure the current {@link RequestContext} is set and
      * then invokes the input {@code future}.
      */
     default <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
         return makeContextAware((CompletionStage<T>) future).toCompletableFuture();
+    }
+
+    /**
+     * Returns a {@link Logger} which prepends this {@link RequestContext} to the log message.
+     *
+     * @param logger the {@link Logger} to decorate.
+     */
+    default Logger makeContextAware(Logger logger) {
+        return new RequestContextAwareLogger(this, requireNonNull(logger, "logger"));
     }
 
     /**

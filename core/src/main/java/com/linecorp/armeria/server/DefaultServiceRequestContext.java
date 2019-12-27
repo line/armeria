@@ -34,9 +34,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -83,7 +80,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private final InetAddress clientAddress;
 
     private final DefaultRequestLog log;
-    private final Logger logger;
 
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
@@ -191,22 +187,10 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         // now.
         log.requestFirstBytesTransferred();
 
-        logger = newLogger(cfg);
-
         requestTimeoutMillis = cfg.requestTimeoutMillis();
         maxRequestLength = cfg.maxRequestLength();
         additionalResponseHeaders = HttpHeaders.of();
         additionalResponseTrailers = HttpHeaders.of();
-    }
-
-    private RequestContextAwareLogger newLogger(ServiceConfig cfg) {
-        String loggerName = cfg.loggerName().orElse(null);
-        if (loggerName == null) {
-            loggerName = cfg.route().loggerName();
-        }
-
-        return new RequestContextAwareLogger(this, LoggerFactory.getLogger(
-                cfg.server().config().serviceLoggerPrefix() + '.' + loggerName));
     }
 
     @Nonnull
@@ -336,11 +320,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public EventLoop eventLoop() {
         return ch.eventLoop();
-    }
-
-    @Override
-    public Logger logger() {
-        return logger;
     }
 
     @Nullable

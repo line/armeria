@@ -19,12 +19,13 @@ package com.linecorp.armeria.server.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.function.Function;
@@ -33,7 +34,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.slf4j.Logger;
@@ -65,8 +65,8 @@ public class LoggingServiceTest {
     private static final HttpHeaders RESPONSE_TRAILERS = HttpHeaders.of(HttpHeaderNames.CONTENT_MD5,
                                                                         "darmeria");
 
-    private static final String REQUEST_FORMAT = "Request: {}";
-    private static final String RESPONSE_FORMAT = "Response: {}";
+    private static final String REQUEST_FORMAT = "{} Request: {}";
+    private static final String RESPONSE_FORMAT = "{} Response: {}";
 
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
@@ -95,7 +95,6 @@ public class LoggingServiceTest {
             listener.onRequestLog(log);
             return null;
         }).when(log).addListener(isA(RequestLogListener.class), isA(RequestLogAvailability.class));
-        when(ctx.logger()).thenReturn(logger);
 
         when(log.toStringRequestOnly(any(), any(), any())).thenAnswer(
                 invocation -> {
@@ -121,63 +120,48 @@ public class LoggingServiceTest {
     @Test
     public void defaults_success() throws Exception {
         final LoggingService service =
-                LoggingService.builder().newDecorator().apply(delegate);
+                LoggingService.builder()
+                              .logger(logger)
+                              .newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
-        verify(logger, never()).info(isA(String.class), isA(Object.class));
+        verify(logger, times(2)).isTraceEnabled();
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
     public void defaults_error() throws Exception {
         final LoggingService service =
-                LoggingService.builder().newDecorator().apply(delegate);
+                LoggingService.builder()
+                              .logger(logger)
+                              .newDecorator().apply(delegate);
         final IllegalStateException cause = new IllegalStateException("Failed");
         when(log.responseCause()).thenReturn(cause);
         service.serve(ctx, REQUEST);
-        verify(logger).warn(REQUEST_FORMAT,
+        verify(logger, times(2)).isTraceEnabled();
+        verify(logger, times(1)).isWarnEnabled();
+        verify(logger).warn(REQUEST_FORMAT, ctx,
                             "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
                             ", trailers: " + REQUEST_TRAILERS);
-        verify(logger).warn(RESPONSE_FORMAT,
+        verify(logger).warn(RESPONSE_FORMAT, ctx,
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
                             ", trailers: " + RESPONSE_TRAILERS,
                             cause);
-    }
-
-    @Test
-    public void logger() throws Exception {
-        final Logger customLogger = Mockito.mock(Logger.class);
-
-        when(customLogger.isInfoEnabled()).thenReturn(true);
-
-        final LoggingService service =
-                LoggingService.builder()
-                              .logger(customLogger)
-                              .requestLogLevel(LogLevel.INFO)
-                              .successfulResponseLogLevel(LogLevel.INFO)
-                              .newDecorator().apply(delegate);
-
-        service.serve(ctx, REQUEST);
-        verify(customLogger).info(REQUEST_FORMAT,
-                                  "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
-                                  ", trailers: " + REQUEST_TRAILERS);
-        verify(customLogger).info(RESPONSE_FORMAT,
-                                  "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
-                                  ", trailers: " + RESPONSE_TRAILERS);
-
-        verify(logger, never()).info(anyString());
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
     public void infoLevel() throws Exception {
         final LoggingService service =
                 LoggingService.builder()
+                              .logger(logger)
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
                               .newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
-        verify(logger).info(REQUEST_FORMAT,
+        verify(logger).info(REQUEST_FORMAT, ctx,
                             "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
                             ", trailers: " + REQUEST_TRAILERS);
-        verify(logger).info(RESPONSE_FORMAT,
+        verify(logger).info(RESPONSE_FORMAT, ctx,
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
                             ", trailers: " + RESPONSE_TRAILERS);
     }
@@ -190,6 +174,7 @@ public class LoggingServiceTest {
 
         final LoggingService service =
                 LoggingService.builder()
+                              .logger(logger)
                               .requestLogLevelMapper(log -> {
                                   if (log.requestHeaders().contains("x-req")) {
                                       return LogLevel.WARN;
@@ -207,22 +192,26 @@ public class LoggingServiceTest {
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, REQUEST);
-        verify(logger).warn(REQUEST_FORMAT,
+        verify(logger, times(2)).isWarnEnabled();
+        verify(logger).warn(REQUEST_FORMAT, ctx,
                             "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
                             ", trailers: " + REQUEST_TRAILERS);
-        verify(logger).warn(RESPONSE_FORMAT,
+        verify(logger).warn(RESPONSE_FORMAT, ctx,
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
                             ", trailers: " + RESPONSE_TRAILERS);
 
+        clearInvocations(logger);
         when(log.requestHeaders()).thenAnswer(invocation -> RequestHeaders.of(HttpMethod.GET, "/"));
 
         service.serve(ctx, REQUEST);
-        verify(logger).info(REQUEST_FORMAT,
+        verify(logger, times(2)).isInfoEnabled();
+        verify(logger).info(REQUEST_FORMAT, ctx,
                             "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
                             ", trailers: " + REQUEST_TRAILERS);
-        verify(logger).info(RESPONSE_FORMAT,
+        verify(logger).info(RESPONSE_FORMAT, ctx,
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
                             ", trailers: " + RESPONSE_TRAILERS);
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -311,6 +300,7 @@ public class LoggingServiceTest {
 
         final LoggingService service =
                 LoggingService.builder()
+                              .logger(logger)
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
                               .requestHeadersSanitizer(requestHeadersSanitizer)
@@ -322,12 +312,14 @@ public class LoggingServiceTest {
                               .responseTrailersSanitizer(responseTrailersSanitizer)
                               .newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
-        verify(logger).info(REQUEST_FORMAT,
+        verify(logger, times(2)).isInfoEnabled();
+        verify(logger).info(REQUEST_FORMAT, ctx,
                             "headers: " + sanitizedRequestHeaders + ", content: clean request" +
                             ", trailers: " + sanitizedRequestTrailers);
-        verify(logger).info(RESPONSE_FORMAT,
+        verify(logger).info(RESPONSE_FORMAT, ctx,
                             "headers: " + sanitizedResponseHeaders + ", content: clean response" +
                             ", trailers: " + sanitizedResponseTrailers);
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -340,19 +332,25 @@ public class LoggingServiceTest {
         };
         final LoggingService service =
                 LoggingService.builder()
+                              .logger(logger)
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
                               .responseCauseSanitizer(responseCauseSanitizer)
                               .newDecorator().apply(delegate);
         when(log.responseCause()).thenReturn(dirtyCause);
         service.serve(ctx, REQUEST);
-        verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS +
-                                            ", content: " + REQUEST_CONTENT +
-                                            ", trailers: " + REQUEST_TRAILERS);
-        verify(logger).warn(RESPONSE_FORMAT, "headers: " + RESPONSE_HEADERS +
-                                             ", content: " + RESPONSE_CONTENT +
-                                             ", trailers: " + RESPONSE_TRAILERS,
+        verify(logger, times(2)).isInfoEnabled();
+        verify(logger).info(REQUEST_FORMAT, ctx,
+                            "headers: " + REQUEST_HEADERS +
+                            ", content: " + REQUEST_CONTENT +
+                            ", trailers: " + REQUEST_TRAILERS);
+        verify(logger, times(1)).isWarnEnabled();
+        verify(logger).warn(RESPONSE_FORMAT, ctx,
+                            "headers: " + RESPONSE_HEADERS +
+                            ", content: " + RESPONSE_CONTENT +
+                            ", trailers: " + RESPONSE_TRAILERS,
                             cleanCause);
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -364,22 +362,31 @@ public class LoggingServiceTest {
         };
         final LoggingService service =
                 LoggingService.builder()
+                              .logger(logger)
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
                               .responseCauseSanitizer(responseCauseSanitizer)
                               .newDecorator().apply(delegate);
         when(log.responseCause()).thenReturn(dirtyCause);
         service.serve(ctx, REQUEST);
-        verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
-                                            ", trailers: " + REQUEST_TRAILERS);
-        verify(logger).warn(RESPONSE_FORMAT, "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT +
-                                             ", trailers: " + RESPONSE_TRAILERS);
+        verify(logger, times(2)).isInfoEnabled();
+        verify(logger).info(REQUEST_FORMAT, ctx,
+                            "headers: " + REQUEST_HEADERS +
+                            ", content: " + REQUEST_CONTENT +
+                            ", trailers: " + REQUEST_TRAILERS);
+        verify(logger, times(1)).isWarnEnabled();
+        verify(logger).warn(RESPONSE_FORMAT, ctx,
+                            "headers: " + RESPONSE_HEADERS +
+                            ", content: " + RESPONSE_CONTENT +
+                            ", trailers: " + RESPONSE_TRAILERS);
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
     public void sample() throws Exception {
         final LoggingService service =
                 LoggingService.builder()
+                              .logger(logger)
                               .requestLogLevel(LogLevel.INFO)
                               .successfulResponseLogLevel(LogLevel.INFO)
                               .samplingRate(0.0f)

@@ -92,8 +92,6 @@ public final class ServerConfig {
 
     private final MeterRegistry meterRegistry;
 
-    private final String serviceLoggerPrefix;
-
     private final int proxyProtocolMaxTlvSize;
 
     private final Map<ChannelOption<?>, ?> channelOptions;
@@ -120,8 +118,7 @@ public final class ServerConfig {
             int http1MaxInitialLineLength, int http1MaxHeaderSize, int http1MaxChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
-            MeterRegistry meterRegistry, String serviceLoggerPrefix,
-            int proxyProtocolMaxTlvSize,
+            MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
@@ -168,7 +165,6 @@ public final class ServerConfig {
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
         this.channelOptions = Collections.unmodifiableMap(
                 new Object2ObjectArrayMap<>(requireNonNull(channelOptions, "channelOptions")));
         this.childChannelOptions = Collections.unmodifiableMap(
@@ -573,13 +569,6 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the prefix of {@linkplain ServiceRequestContext#logger() service logger}'s names.
-     */
-    public String serviceLoggerPrefix() {
-        return serviceLoggerPrefix;
-    }
-
-    /**
      * Returns the access log writer.
      *
      * @deprecated Use {@link ServiceConfig#accessLogWriter()} or
@@ -672,8 +661,7 @@ public final class ServerConfig {
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
                     proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop(),
-                    meterRegistry(), serviceLoggerPrefix(),
-                    channelOptions(), childChannelOptions(),
+                    meterRegistry(),channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled());
@@ -692,7 +680,7 @@ public final class ServerConfig {
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
-            @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
+            @Nullable MeterRegistry meterRegistry,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
@@ -775,8 +763,6 @@ public final class ServerConfig {
             buf.append(", meterRegistry: ");
             buf.append(meterRegistry);
         }
-        buf.append(", serviceLoggerPrefix: ");
-        buf.append(serviceLoggerPrefix);
         buf.append(", channelOptions: ");
         buf.append(channelOptions);
         buf.append(", childChannelOptions: ");

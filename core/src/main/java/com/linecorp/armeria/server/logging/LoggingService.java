@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
@@ -25,6 +26,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -34,6 +36,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogListener;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -43,6 +46,9 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  * Decorates an {@link HttpService} to log {@link HttpRequest}s and {@link HttpResponse}s.
  */
 public final class LoggingService extends SimpleDecoratingHttpService {
+
+    private static final Logger defaultLogger = LoggerFactory.getLogger(LoggingService.class);
+
     /**
      * Returns a new {@link HttpService} decorator that logs {@link HttpRequest}s and {@link HttpResponse}s at
      * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
@@ -63,7 +69,9 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         return new LoggingServiceBuilder();
     }
 
-    @Nullable
+    private final RequestLogListener requestLogger = new RequestLogger();
+    private final RequestLogListener responseLogger = new ResponseLogger();
+
     private final Logger logger;
     private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
@@ -80,7 +88,6 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     /**
      * Creates a new instance that logs {@link HttpRequest}s and {@link HttpResponse}s at the specified
      * {@link LogLevel}s with the specified sanitizers.
-     * If the logger is null, it means that the logger from {@link ServiceRequestContext#logger()} is used.
      */
     LoggingService(
             HttpService delegate,
@@ -95,8 +102,10 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             Function<? super HttpHeaders, ?> responseTrailersSanitizer,
             Function<? super Throwable, ?> responseCauseSanitizer,
             Sampler<? super ServiceRequestContext> sampler) {
+
         super(requireNonNull(delegate, "delegate"));
-        this.logger = logger;
+
+        this.logger = firstNonNull(logger, defaultLogger);
         this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
@@ -113,24 +122,35 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            final Logger logger = this.logger != null ? this.logger : ctx.logger();
-            ctx.log().addListener(log -> logRequest(logger, log,
-                                                    requestLogLevelMapper,
-                                                    requestHeadersSanitizer,
-                                                    requestContentSanitizer, requestTrailersSanitizer),
-                                  RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(log -> logResponse(logger, log,
-                                                     requestLogLevelMapper,
-                                                     responseLogLevelMapper,
-                                                     requestHeadersSanitizer,
-                                                     requestContentSanitizer,
-                                                     requestTrailersSanitizer,
-                                                     responseHeadersSanitizer,
-                                                     responseContentSanitizer,
-                                                     responseTrailersSanitizer,
-                                                     responseCauseSanitizer),
-                                  RequestLogAvailability.COMPLETE);
+            ctx.log().addListener(requestLogger, RequestLogAvailability.REQUEST_END);
+            ctx.log().addListener(responseLogger, RequestLogAvailability.COMPLETE);
         }
         return delegate().serve(ctx, req);
+    }
+
+    private class RequestLogger implements RequestLogListener {
+        @Override
+        public void onRequestLog(RequestLog log) throws Exception {
+            logRequest(logger, log,
+                       requestLogLevelMapper,
+                       requestHeadersSanitizer,
+                       requestContentSanitizer, requestTrailersSanitizer);
+        }
+    }
+
+    private class ResponseLogger implements RequestLogListener {
+        @Override
+        public void onRequestLog(RequestLog log) throws Exception {
+            logResponse(logger, log,
+                        requestLogLevelMapper,
+                        responseLogLevelMapper,
+                        requestHeadersSanitizer,
+                        requestContentSanitizer,
+                        requestTrailersSanitizer,
+                        responseHeadersSanitizer,
+                        responseContentSanitizer,
+                        responseTrailersSanitizer,
+                        responseCauseSanitizer);
+        }
     }
 }
