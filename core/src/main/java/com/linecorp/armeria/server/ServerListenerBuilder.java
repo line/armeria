@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableList;
  * Builds a new {@link ServerListener}.
  * <h2>Example</h2>
  * <pre>{@code
- * ServerListenerBuilder slb = new ServerListenerBuilder();
+ * ServerListenerBuilder slb = ServerListener.builder();
  * // Add a {@link ServerListener#serverStarting(Server)} callback.
  * slb.addStartingCallback((Server server) -> {...});
  * // Add multiple {@link ServerListener#serverStarted(Server)} callbacks, one by one.
@@ -67,6 +67,14 @@ public final class ServerListenerBuilder {
      * {@link Consumer}s invoked when the {@link Server} is stopped.
      * */
     private final List<Consumer<? super Server>> serverStoppedCallbacks = new ArrayList<>();
+
+    /**
+     * Returns a new {@link ServerListenerBuilder}.
+     *
+     * @deprecated Use {@link ServerListener#builder()}.
+     */
+    @Deprecated
+    public ServerListenerBuilder() {}
 
     private static class CallbackServerListener implements ServerListener {
         /**
@@ -129,7 +137,7 @@ public final class ServerListenerBuilder {
     }
 
     /**
-     * Add {@link Runnable} invoked when the {@link Server} is starting.
+     *  * Add {@link Runnable} invoked when the {@link Server} is starting.
      * (see: {@link ServerListener#serverStarting(Server)})
      */
     public ServerListenerBuilder addStartingCallback(Runnable runnable) {
