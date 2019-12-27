@@ -146,6 +146,14 @@ public final class SamlServiceProviderBuilder {
     };
 
     /**
+     * Creates a new {@link SamlServiceProviderBuilder}.
+     *
+     * @deprecated Use {@link SamlServiceProvider#builder()}.
+     */
+    @Deprecated
+    SamlServiceProviderBuilder() {}
+
+    /**
      * Set an {@link Authorizer} which is used for this service provider's authentication.
      */
     public SamlServiceProviderBuilder authorizer(Authorizer<HttpRequest> authorizer) {
