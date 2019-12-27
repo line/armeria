@@ -77,7 +77,10 @@ public final class ZooKeeperUpdatingListenerBuilder {
      *
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
+     *
+     * @deprecated Use {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}.
      */
+    @Deprecated
     public ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath) {
         this.client = requireNonNull(client, "client");
         connectionStr = null;
@@ -90,7 +93,10 @@ public final class ZooKeeperUpdatingListenerBuilder {
      *
      * @param connectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
+     *
+     * @deprecated Use {@link ZooKeeperUpdatingListener#builder(String, String)}
      */
+    @Deprecated
     public ZooKeeperUpdatingListenerBuilder(String connectionStr, String zNodePath) {
         this.connectionStr = requireNonNull(connectionStr, "connectionStr");
         checkArgument(!this.connectionStr.isEmpty(), "connectionStr can't be empty");
