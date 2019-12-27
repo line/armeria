@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.channel.EventLoop;
 
 /**
  * A base class for implementing a user's entry point for sending a {@link Request}.
@@ -126,26 +125,24 @@ public abstract class UserClient<I extends Request, O extends Response>
      */
     protected final O execute(HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
-        return execute(null, endpoint, method, path, query, fragment, req, fallback);
+        return execute(endpoint, method, path, query, fragment, req, fallback);
     }
 
     /**
      * Executes the specified {@link Request} via {@link #delegate()}.
-     *
-     * @param eventLoop the {@link EventLoop} to execute the {@link Request}
-     * @param endpoint the {@link Endpoint} of the {@link Request}
+     *  @param endpoint the {@link Endpoint} of the {@link Request}
      * @param method the method of the {@link Request}
      * @param path the path part of the {@link Request} URI
      * @param query the query part of the {@link Request} URI
      * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
      * @param fallback the fallback response {@link BiFunction} to use when
-     *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
+*                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
      */
-    protected final O execute(@Nullable EventLoop eventLoop, Endpoint endpoint,
+    protected final O execute(Endpoint endpoint,
                               HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
-        final DefaultClientRequestContext ctx;
+
         final HttpRequest httpReq;
         final RpcRequest rpcReq;
         final RequestId id = nextRequestId();
@@ -158,15 +155,10 @@ public abstract class UserClient<I extends Request, O extends Response>
             rpcReq = (RpcRequest) req;
         }
 
-        if (eventLoop == null) {
-            ctx = new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
-                                                  id, method, path, query, fragment, options(),
-                                                  httpReq, rpcReq);
-        } else {
-            ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol,
-                                                  id, method, path, query, fragment, options(),
-                                                  httpReq, rpcReq);
-        }
+        final DefaultClientRequestContext ctx =
+                new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
+                                                id, method, path, query, fragment, options(),
+                                                httpReq, rpcReq);
 
         return initContextAndExecuteWithFallback(delegate(), ctx, endpoint, fallback);
     }
