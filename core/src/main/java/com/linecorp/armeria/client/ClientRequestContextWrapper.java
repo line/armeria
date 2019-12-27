@@ -47,8 +47,8 @@ public class ClientRequestContextWrapper
 
     @Nullable
     @Override
-    public ServiceRequestContext rootContext() {
-        return delegate().rootContext();
+    public ServiceRequestContext root() {
+        return delegate().root();
     }
 
     @Override

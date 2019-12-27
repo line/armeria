@@ -21,14 +21,11 @@ import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,9 +40,9 @@ import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 import io.netty.channel.EventLoop;
 
+@MockitoSettings(strictness = Strictness.LENIENT)
 class RequestContextCurrentTraceContextTest {
 
-    @Nullable
     RequestContext ctx;
     @Mock
     EventLoop eventLoop;
@@ -56,7 +53,7 @@ class RequestContextCurrentTraceContextTest {
 
     @BeforeEach
     void setUp() {
-        Mockito.lenient().when(eventLoop.inEventLoop()).thenReturn(true);
+        when(eventLoop.inEventLoop()).thenReturn(true);
         ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                    .eventLoop(eventLoop)
                                    .build();

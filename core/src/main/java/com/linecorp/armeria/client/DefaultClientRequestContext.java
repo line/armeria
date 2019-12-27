@@ -84,7 +84,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Nullable
     private final String fragment;
     @Nullable
-    private final ServiceRequestContext rootContext;
+    private final ServiceRequestContext root;
 
     private final DefaultRequestLog log;
 
@@ -152,15 +152,15 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable ServiceRequestContext rootContext) {
+            @Nullable ServiceRequestContext root) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq,
-              rootContext);
+              root);
 
         this.factory = factory;
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
         this.fragment = fragment;
-        this.rootContext = rootContext;
+        this.root = root;
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
                                     options.responseContentPreviewerFactory());
@@ -178,7 +178,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             return (ServiceRequestContext) current;
         }
         if (current instanceof ClientRequestContext) {
-            return ((ClientRequestContext) current).rootContext();
+            return ((ClientRequestContext) current).root();
         }
         return null;
     }
@@ -287,7 +287,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                                         @Nullable RpcRequest rpcReq,
                                         Endpoint endpoint) {
         super(ctx.meterRegistry(), ctx.sessionProtocol(), id, ctx.method(), ctx.path(), ctx.query(),
-              req, rpcReq, ctx.rootContext());
+              req, rpcReq, ctx.root());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -302,7 +302,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         endpointSelector = ctx.endpointSelector();
         updateEndpoint(requireNonNull(endpoint, "endpoint"));
         fragment = ctx.fragment();
-        rootContext = ctx.rootContext();
+        root = ctx.root();
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
                                     options.responseContentPreviewerFactory());
@@ -325,8 +325,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Nullable
     @Override
-    public ServiceRequestContext rootContext() {
-        return rootContext;
+    public ServiceRequestContext root() {
+        return root;
     }
 
     @Override

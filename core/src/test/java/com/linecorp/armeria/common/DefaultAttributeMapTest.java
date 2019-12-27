@@ -224,7 +224,7 @@ class DefaultAttributeMapTest {
         assertThat(child.ownAttr(foo)).isEqualTo("foo1");
         // The value of entry is changed.
         assertThat(next.getValue()).isEqualTo("foo1");
-        // root context attribute remains unaffected.
+        // root attribute remains unaffected.
         assertThat(root.attr(foo)).isEqualTo("foo");
 
         // Set a new attribute to child.

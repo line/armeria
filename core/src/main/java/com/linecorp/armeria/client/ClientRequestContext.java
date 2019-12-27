@@ -171,25 +171,25 @@ public interface ClientRequestContext extends RequestContext {
      * was not made in the context of a server request.
      */
     @Nullable
-    ServiceRequestContext rootContext();
+    ServiceRequestContext root();
 
     /**
      * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
      * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
      *
-     * <p>If the value does not exist in this context but only in {@link #rootContext()},
-     * this method will return the value from the {@link #rootContext()}.
+     * <p>If the value does not exist in this context but only in {@link #root()},
+     * this method will return the value from the {@link #root()}.
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * assert ctx.rootContext().attr(KEY).equals("root");
+     * assert ctx.root().attr(KEY).equals("root");
      * assert ctx.attr(KEY).equals("root");
      * assert ctx.ownAttr(KEY) == null;
      * }</pre>
-     * If the value exists both in this context and {@link #rootContext()},
+     * If the value exists both in this context and {@link #root()},
      * this method will return the value from this context.
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * assert ctx.rootContext().attr(KEY).equals("root");
+     * assert ctx.root().attr(KEY).equals("root");
      * assert ctx.ownAttr(KEY).equals("child");
      * assert ctx.attr(KEY).equals("child");
      * }</pre>
@@ -203,7 +203,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
      * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
-     * Unlike {@link #attr(AttributeKey)}, this does not search in {@link #rootContext()}.
+     * Unlike {@link #attr(AttributeKey)}, this does not search in {@link #root()}.
      *
      * @see #attr(AttributeKey)
      */
@@ -213,45 +213,45 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the {@link Iterator} of all {@link Entry}s this context contains.
      *
      * <p>The {@link Iterator} returned by this method will also yield the {@link Entry}s from the
-     * {@link #rootContext()} except those whose {@link AttributeKey} exist already in this context, e.g.
+     * {@link #root()} except those whose {@link AttributeKey} exist already in this context, e.g.
      * <pre>{@code
      * ClientRequestContext ctx = ...;
      * assert ctx.ownAttr(KEY_A).equals("child_a");
-     * assert ctx.rootContext().attr(KEY_A).equals("root_a");
-     * assert ctx.rootContext().attr(KEY_B).equals("root_b");
+     * assert ctx.root().attr(KEY_A).equals("root_a");
+     * assert ctx.root().attr(KEY_B).equals("root_b");
      *
      * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
      * assert attrs.next().getValue().equals("child_a"); // KEY_A
-     * // Skip KEY_A in the root context.
+     * // Skip KEY_A in the root.
      * assert attrs.next().getValue().equals("root_b"); // KEY_B
      * assert attrs.hasNext() == false;
      * }</pre>
      * Please note that any changes made to the {@link Entry} returned by {@link Iterator#next()} never
-     * affects the {@link Entry} owned by {@link #rootContext()}. For example:
+     * affects the {@link Entry} owned by {@link #root()}. For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * assert ctx.rootContext().attr(KEY).equals("root");
+     * assert ctx.root().attr(KEY).equals("root");
      * assert ctx.ownAttr(KEY) == null;
      *
      * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
      * Entry<AttributeKey<?>, Object> next = attrs.next();
      * assert next.getKey() == KEY;
-     * // Overriding the root context entry creates the client context's own entry.
+     * // Overriding the root entry creates the client context's own entry.
      * next.setValue("child");
      * assert ctx.attr(KEY).equals("child");
      * assert ctx.ownAttr(KEY).equals("child");
-     * // root context attribute remains unaffected.
-     * assert ctx.rootContext().attr(KEY).equals("root");
+     * // root attribute remains unaffected.
+     * assert ctx.root().attr(KEY).equals("root");
      * }</pre>
-     * If you want to change the value from the root context while iterating, please call
-     * {@link #attrs()} from {@link #rootContext()}.
+     * If you want to change the value from the root while iterating, please call
+     * {@link #attrs()} from {@link #root()}.
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * assert ctx.rootContext().attr(KEY).equals("root");
+     * assert ctx.root().attr(KEY).equals("root");
      * assert ctx.ownAttr(KEY) == null;
      *
-     * // Call attrs() from the root context to set a value directly while iterating.
-     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.rootContext().attrs();
+     * // Call attrs() from the root to set a value directly while iterating.
+     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.root().attrs();
      * Entry<AttributeKey<?>, Object> next = attrs.next();
      * assert next.getKey() == KEY;
      * next.setValue("another_root");
@@ -267,7 +267,7 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns the {@link Iterator} of all {@link Entry}s this context contains.
-     * Unlike {@link #attrs()}, this does not iterate {@link #rootContext()}.
+     * Unlike {@link #attrs()}, this does not iterate {@link #root()}.
      *
      * @see #attrs()
      */

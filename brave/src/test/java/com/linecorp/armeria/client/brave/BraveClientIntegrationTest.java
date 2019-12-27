@@ -77,7 +77,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     @Before
     @Override
-    public void setUp() {
+    public void setup() {
         currentTraceContext =
                 RequestContextCurrentTraceContext.builder()
                                                  .addScopeDecorator(StrictScopeDecorator.create())
