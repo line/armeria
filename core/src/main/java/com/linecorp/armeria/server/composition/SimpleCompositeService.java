@@ -32,6 +32,13 @@ public final class SimpleCompositeService
         extends AbstractCompositeService<HttpService, HttpRequest, HttpResponse> implements HttpService {
 
     /**
+     * Returns a new {@link SimpleCompositeServiceBuilder}.
+     */
+    public static SimpleCompositeServiceBuilder builder() {
+        return new SimpleCompositeServiceBuilder();
+    }
+
+    /**
      * Creates a new instance that is composed of the specified entries.
      */
     @SafeVarargs
