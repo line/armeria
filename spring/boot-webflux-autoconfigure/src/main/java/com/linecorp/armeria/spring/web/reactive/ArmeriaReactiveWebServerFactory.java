@@ -40,6 +40,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.server.docs.DocService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -228,7 +229,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                            : null;
 
         configurePorts(sb, settings.getPorts());
-        final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
+        final DocServiceBuilder docServiceBuilder = DocService.builder();
         configureThriftServices(sb,
                                 docServiceBuilder,
                                 findBeans(ThriftServiceRegistrationBean.class),

@@ -31,6 +31,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.server.docs.DocService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -102,7 +103,7 @@ public class ArmeriaAutoConfiguration {
             configurePorts(serverBuilder, ports);
         }
 
-        final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
+        final DocServiceBuilder docServiceBuilder = DocService.builder();
         docServiceConfigurators.ifPresent(
                 configurators -> configurators.forEach(
                         configurator -> configurator.configure(docServiceBuilder)));

@@ -2,13 +2,14 @@ package example.armeria.grpc.reactor;
 
 import java.net.InetSocketAddress;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
@@ -56,15 +57,20 @@ public final class Main {
                      .service(grpcService)
                      // You can access the documentation service at http://127.0.0.1:8080/docs.
                      // See https://line.github.io/armeria/server-docservice.html for more information.
-                     .serviceUnder("/docs", new DocServiceBuilder()
-                         .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,
-                                                  "Hello", exampleRequest)
-                         .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,
-                                                  "LazyHello", exampleRequest)
-                         .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,
-                                                  "BlockingHello", exampleRequest)
-                         .exclude(DocServiceFilter.ofServiceName(ServerReflectionGrpc.SERVICE_NAME))
-                         .build())
+                     .serviceUnder("/docs",
+                             DocService.builder()
+                                       .exampleRequestForMethod(
+                                               HelloServiceGrpc.SERVICE_NAME,
+                                               "Hello", exampleRequest)
+                                       .exampleRequestForMethod(
+                                               HelloServiceGrpc.SERVICE_NAME,
+                                               "LazyHello", exampleRequest)
+                                       .exampleRequestForMethod(
+                                               HelloServiceGrpc.SERVICE_NAME,
+                                               "BlockingHello", exampleRequest)
+                                       .exclude(DocServiceFilter.ofServiceName(
+                                               ServerReflectionGrpc.SERVICE_NAME))
+                                       .build())
                      .build();
     }
 

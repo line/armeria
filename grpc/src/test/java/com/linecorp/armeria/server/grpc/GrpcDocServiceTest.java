@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.util.List;
 
+import com.linecorp.armeria.server.docs.*;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -51,10 +52,6 @@ import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceIm
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
-import com.linecorp.armeria.server.docs.DocServiceFilter;
-import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.TestUtil;
@@ -112,8 +109,8 @@ public class GrpcDocServiceTest {
                                        .build());
             sb.serviceUnder(
                     "/docs/",
-                    new DocServiceBuilder()
-                            .exampleRequestForMethod(
+                    DocService.builder()
+                              .exampleRequestForMethod(
                                     TestServiceGrpc.SERVICE_NAME,
                                     "UnaryCall",
                                     SimpleRequest.newBuilder()
@@ -121,14 +118,14 @@ public class GrpcDocServiceTest {
                                                          Payload.newBuilder()
                                                                 .setBody(ByteString.copyFromUtf8("world")))
                                                  .build())
-                            .injectedScript(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
-                            .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
-                            .exclude(DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall"))
-                            .build()
+                              .injectedScript(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
+                              .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
+                              .exclude(DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall"))
+                              .build()
                             .decorate(LoggingService.newDecorator()));
-            sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
-                    .exclude(DocServiceFilter.ofGrpc())
-                    .build());
+            sb.serviceUnder("/excludeAll/", DocService.builder()
+                                                                .exclude(DocServiceFilter.ofGrpc())
+                                                                .build());
             sb.serviceUnder("/",
                             GrpcService.builder()
                                        .addService(mock(ReconnectServiceImplBase.class))
