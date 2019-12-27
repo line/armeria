@@ -17,7 +17,10 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +32,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
@@ -37,16 +41,7 @@ class DefaultClientRequestContextTest {
 
     @Test
     void deriveContext() {
-        final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
-                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                RequestId.random(), HttpMethod.POST, "/foo", null, null,
-                ClientOptions.of(),
-                HttpRequest.of(RequestHeaders.of(
-                        HttpMethod.POST, "/foo",
-                        HttpHeaderNames.SCHEME, "http",
-                        HttpHeaderNames.AUTHORITY, "example.com:8080")),
-                null);
-        originalCtx.init(Endpoint.of("example.com", 8080));
+        final DefaultClientRequestContext originalCtx = newContext();
 
         setAdditionalHeaders(originalCtx);
 
@@ -89,6 +84,36 @@ class DefaultClientRequestContextTest {
 
         // the Attribute added to the original context after creation is not propagated to the derived context
         assertThat(derivedCtx.attr(bar).get()).isEqualTo(null);
+    }
+
+    @Test
+    void derivedContextMustNotCallCustomizers() {
+        final AtomicInteger counter = new AtomicInteger();
+        try (SafeCloseable unused = Clients.withContextCustomizer(unused2 -> counter.incrementAndGet())) {
+            final DefaultClientRequestContext ctx = newContext();
+            assertThat(counter).hasValue(1);
+
+            // Create a derived context, which should never call customizers or captor.
+            Clients.captureNextContext();
+            ctx.newDerivedContext(RequestId.random(), ctx.request(), null, ctx.endpoint());
+            assertThat(counter).hasValue(1);
+            assertThatThrownBy(Clients::capturedContext).isInstanceOf(IllegalStateException.class)
+                                                        .hasMessageContaining("no request was made");
+        }
+    }
+
+    private static DefaultClientRequestContext newContext() {
+        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
+                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
+                RequestId.random(), HttpMethod.POST, "/foo", null, null,
+                ClientOptions.of(),
+                HttpRequest.of(RequestHeaders.of(
+                        HttpMethod.POST, "/foo",
+                        HttpHeaderNames.SCHEME, "http",
+                        HttpHeaderNames.AUTHORITY, "example.com:8080")),
+                null);
+        ctx.init(Endpoint.of("example.com", 8080));
+        return ctx;
     }
 
     private static void setAdditionalHeaders(ClientRequestContext originalCtx) {
