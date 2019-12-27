@@ -39,10 +39,10 @@ public final class GrpcUnsafeBufferUtil {
      * {@link #releaseBuffer(Object, RequestContext)}.
      */
     public static void storeBuffer(ByteBuf buf, Object message, RequestContext ctx) {
-        IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS).get();
+        IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS);
         if (buffers == null) {
             buffers = new IdentityHashMap<>();
-            ctx.attr(BUFFERS).set(buffers);
+            ctx.setAttr(BUFFERS, buffers);
         }
         buffers.put(message, buf);
     }
@@ -51,7 +51,7 @@ public final class GrpcUnsafeBufferUtil {
      * Releases the {@link ByteBuf} backing the provided {@link Message}.
      */
     public static void releaseBuffer(Object message, RequestContext ctx) {
-        final IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS).get();
+        final IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS);
         checkState(buffers != null,
                    "Releasing buffer even though storeBuffer has not been called.");
         final ByteBuf removed = buffers.remove(message);

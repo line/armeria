@@ -29,7 +29,7 @@ public class HelloApplicationIntegrationTest {
     private WebClient client;
 
     @Before
-    public void setup() {
+    public void setUp() {
         client = WebClient.of("http://localhost:" + server.activeLocalPort());
     }
 

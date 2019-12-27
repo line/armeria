@@ -35,7 +35,7 @@ public class PathParsingBenchmark {
 
     @Setup(Level.Invocation)
     @SuppressWarnings("RedundantStringConstructorCall")
-    public void setup() {
+    public void setUp() {
         // Create a new String for paths every time to avoid constant folding.
         path1 = new String("/armeria/services/hello-world");
         path2 = new String("/armeria/services/goodbye-world");

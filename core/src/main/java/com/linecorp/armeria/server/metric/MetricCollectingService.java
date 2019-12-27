@@ -28,6 +28,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.util.AttributeKey;
 
 /**
  * Decorates an {@link HttpService} to collect metrics into {@link MeterRegistry}.
@@ -46,6 +47,10 @@ import io.micrometer.core.instrument.MeterRegistry;
  * seemingly harmless refactoring such as rename may break metric collection.
  */
 public final class MetricCollectingService extends SimpleDecoratingHttpService {
+
+    // A variable to make sure setup method is not called twice.
+    private static final AttributeKey<Boolean> REQUEST_METRICS_SET =
+            AttributeKey.valueOf(MetricCollectingService.class, "REQUEST_METRICS_SET");
 
     /**
      * Returns a new {@link HttpService} decorator that tracks request stats using {@link MeterRegistry}.
@@ -66,7 +71,7 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        RequestMetricSupport.setup(ctx, meterIdPrefixFunction, true);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
         return delegate().serve(ctx, req);
     }
 }

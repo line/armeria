@@ -53,7 +53,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 /**
  * Default {@link ServiceRequestContext} implementation.
@@ -163,7 +163,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
               requireNonNull(routingResult, "routingResult").query(),
-              requireNonNull(req, "req"), null);
+              requireNonNull(req, "req"), null, null);
 
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");
@@ -245,16 +245,15 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             ctx.setAdditionalResponseTrailers(additionalTrailers);
         }
 
-        for (final Iterator<Attribute<?>> i = attrs(); i.hasNext();/* noop */) {
+        for (final Iterator<Entry<AttributeKey<?>, Object>> i = attrs(); i.hasNext();/* noop */) {
             ctx.addAttr(i.next());
         }
         return ctx;
     }
 
     @SuppressWarnings("unchecked")
-    private <T> void addAttr(Attribute<?> attribute) {
-        final Attribute<T> a = (Attribute<T>) attribute;
-        attr(a.key()).set(a.get());
+    private <T> void addAttr(Entry<AttributeKey<?>, Object> attribute) {
+        setAttr((AttributeKey<T>) attribute.getKey(), (T) attribute.getValue());
     }
 
     @Override
