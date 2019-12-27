@@ -43,7 +43,6 @@ import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 import io.netty.channel.EventLoop;
 
-@ExtendWith(MockitoExtension.class)
 class RequestContextCurrentTraceContextTest {
 
     @Nullable
@@ -56,7 +55,7 @@ class RequestContextCurrentTraceContextTest {
     private static final TraceContext traceContext = TraceContext.newBuilder().traceId(1).spanId(1).build();
 
     @BeforeEach
-    void setup() {
+    void setUp() {
         Mockito.lenient().when(eventLoop.inEventLoop()).thenReturn(true);
         ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                    .eventLoop(eventLoop)

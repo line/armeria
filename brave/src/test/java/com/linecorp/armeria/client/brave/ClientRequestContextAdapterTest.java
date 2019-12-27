@@ -54,7 +54,7 @@ class ClientRequestContextAdapterTest {
     private HttpClientResponse response;
 
     @BeforeEach
-    void setup() {
+    void setUp() {
         request = ClientRequestContextAdapter.asHttpClientRequest(ctx, headersBuilder);
         response = ClientRequestContextAdapter.asHttpClientResponse(ctx);
     }

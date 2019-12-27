@@ -39,7 +39,7 @@ class RoundRobinStrategyTest {
     private final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
     @BeforeEach
-    void setup() {
+    void setUp() {
         EndpointGroupRegistry.register("endpoint", ENDPOINT_GROUP, strategy);
         EndpointGroupRegistry.register("empty", EMPTY_ENDPOINT_GROUP, strategy);
     }
