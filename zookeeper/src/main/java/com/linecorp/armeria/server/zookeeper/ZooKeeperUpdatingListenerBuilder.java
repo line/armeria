@@ -94,7 +94,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
      * @param connectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
      *
-     * @deprecated Use {@link ZooKeeperUpdatingListener#builder(String, String)}
+     * @deprecated Use {@link ZooKeeperUpdatingListener#builder(String, String)}.
      */
     @Deprecated
     public ZooKeeperUpdatingListenerBuilder(String connectionStr, String zNodePath) {

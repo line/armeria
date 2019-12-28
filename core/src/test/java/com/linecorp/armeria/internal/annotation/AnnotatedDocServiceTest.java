@@ -39,7 +39,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
-import com.linecorp.armeria.server.docs.*;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -76,6 +75,14 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
+import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
+import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldLocation;
+import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.ServiceSpecification;
+import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.testing.internal.TestUtil;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -101,14 +108,13 @@ public class AnnotatedDocServiceTest {
                               .exampleHttpHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
                               .exampleHttpHeaders(MyService.class,"pathParams", EXAMPLE_HEADERS_METHOD)
                               .exampleRequestForMethod(MyService.class, "pathParams",
-                                             ImmutableList.of(mapper.readTree(
-                                                     "{\"hello\":\"armeria\"}")))
+                                             ImmutableList.of(mapper.readTree("{\"hello\":\"armeria\"}")))
                               .exclude(DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude1").or(
-                                DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude2")))
+                                       DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude2")))
                               .build());
             sb.serviceUnder("/excludeAll/", DocService.builder()
-                                                                .exclude(DocServiceFilter.ofAnnotated())
-                                                                .build());
+                                                      .exclude(DocServiceFilter.ofAnnotated())
+                                                      .build());
         }
     };
 

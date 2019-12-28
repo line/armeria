@@ -25,7 +25,7 @@ package com.linecorp.armeria.server;
 public interface ServerListener {
 
     /**
-     * Creates a new {@link ServerListenerBuilder}.
+     * Returns a new {@link ServerListenerBuilder}.
      */
     static ServerListenerBuilder builder() {
         return new ServerListenerBuilder();

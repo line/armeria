@@ -69,7 +69,7 @@ public final class ServerListenerBuilder {
     private final List<Consumer<? super Server>> serverStoppedCallbacks = new ArrayList<>();
 
     /**
-     * Returns a new {@link ServerListenerBuilder}.
+     * Creates a new {@link ServerListenerBuilder}.
      *
      * @deprecated Use {@link ServerListener#builder()}.
      */
@@ -137,7 +137,7 @@ public final class ServerListenerBuilder {
     }
 
     /**
-     *  * Add {@link Runnable} invoked when the {@link Server} is starting.
+     * Add {@link Runnable} invoked when the {@link Server} is starting.
      * (see: {@link ServerListener#serverStarting(Server)})
      */
     public ServerListenerBuilder addStartingCallback(Runnable runnable) {

@@ -151,7 +151,7 @@ public final class SamlServiceProviderBuilder {
      * @deprecated Use {@link SamlServiceProvider#builder()}.
      */
     @Deprecated
-    SamlServiceProviderBuilder() {}
+    public SamlServiceProviderBuilder() {}
 
     /**
      * Set an {@link Authorizer} which is used for this service provider's authentication.

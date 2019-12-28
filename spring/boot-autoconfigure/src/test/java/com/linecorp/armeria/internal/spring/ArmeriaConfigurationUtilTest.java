@@ -25,7 +25,6 @@ import static org.mockito.Mockito.verify;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.server.docs.DocService;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -43,6 +42,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Path;
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;

@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
-import com.linecorp.armeria.server.docs.*;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -49,6 +48,10 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
+import com.linecorp.armeria.server.docs.EndpointInfo;
+import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.service.test.thrift.cassandra.Cassandra;
@@ -61,7 +64,7 @@ import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.testing.internal.TestUtil;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
-public class ThriftDocServiceTest {
+public  class ThriftDocServiceTest {
 
     private static final HelloService.AsyncIface HELLO_SERVICE_HANDLER =
             (name, resultHandler) -> resultHandler.onComplete("Hello " + name);
@@ -105,8 +108,7 @@ public class ThriftDocServiceTest {
             sb.service("/hbase", hbaseService);
             sb.service("/oneway", onewayHelloService);
 
-            sb.serviceUnder(
-                    "/docs/",
+            sb.serviceUnder("/docs/",
                     DocService.builder()
                               .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
                               .exampleHttpHeaders(HelloService.class, EXAMPLE_HEADERS_HELLO)
@@ -114,9 +116,10 @@ public class ThriftDocServiceTest {
                               .exampleHttpHeaders(FooService.class, "bar1", EXAMPLE_HEADERS_FOO_BAR1)
                               .exampleRequest(EXAMPLE_HELLO)
                               .build());
-            sb.serviceUnder("/excludeAll/", DocService.builder()
-                                                                .exclude(DocServiceFilter.ofThrift())
-                                                                .build());
+            sb.serviceUnder("/excludeAll/",
+                    DocService.builder()
+                              .exclude(DocServiceFilter.ofThrift())
+                              .build());
         }
     };
 

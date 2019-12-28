@@ -68,7 +68,7 @@ public final class JettyServiceBuilder {
     /**
      * Creates a new {@link JettyServiceBuilder}.
      *
-     * @deprecated Use {@link JettyService#builder()}
+     * @deprecated Use {@link JettyService#builder()}.
      */
     @Deprecated
     public JettyServiceBuilder() {}

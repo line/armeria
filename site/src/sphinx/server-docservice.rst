@@ -114,13 +114,13 @@ with a :api:`DocServiceBuilder`:
     ServerBuilder sb = Server.builder();
     ...
     sb.serviceUnder("/docs", DocService.builder()
-                                        // Include Thrift services and Annotated services.
-                                        .include(DocServiceFilter.ofThrift().or(
+                                       // Include Thrift services and Annotated services.
+                                       .include(DocServiceFilter.ofThrift().or(
                                             DocServiceFilter.ofAnnotated()))
-                                        // Exclude the method whose name is "foo" in Thrift services.
-                                        .exclude(DocServiceFilter.ofThrift().and(
+                                       // Exclude the method whose name is "foo" in Thrift services.
+                                       .exclude(DocServiceFilter.ofThrift().and(
                                             DocServiceFilter.ofMethodName("foo")))
-                                        .build());
+                                       .build());
     ...
 
 The inclusion rule is as follows:
@@ -144,16 +144,16 @@ with a :api:`DocServiceBuilder`:
     ServerBuilder sb = Server.builder();
     ...
     sb.serviceUnder("/docs", DocService.builder()
-                                        // HTTP headers for all services
-                                        .exampleHttpHeaders(
+                                       // HTTP headers for all services
+                                       .exampleHttpHeaders(
                                             HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"))
-                                        // Thrift example request for 'ThriftHelloService.hello()'
-                                        .exampleRequest(new ThriftHelloService.hello_args("Armeria"))
-                                        // gRPC example request for 'GrpcHelloService.Hello()'
-                                        .exampleRequestForMethod(GrpcHelloServiceGrpc.SERVICE_NAME,
+                                       // Thrift example request for 'ThriftHelloService.hello()'
+                                       .exampleRequest(new ThriftHelloService.hello_args("Armeria"))
+                                       // gRPC example request for 'GrpcHelloService.Hello()'
+                                       .exampleRequestForMethod(GrpcHelloServiceGrpc.SERVICE_NAME,
                                             "Hello", // Method name
                                             HelloRequest.newBuilder().setName("Armeria").build())
-                                        .build());
+                                       .build());
     ...
 
 By adding examples to :api:`DocService`, your users will be able to play with the services you wrote

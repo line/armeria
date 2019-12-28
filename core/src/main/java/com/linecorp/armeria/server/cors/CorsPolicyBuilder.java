@@ -33,7 +33,7 @@ import com.google.common.collect.ImmutableList;
 public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder<CorsPolicyBuilder> {
 
     /**
-     * Creates a new instance with the specified {@code origins}.
+     * Creates a new instance {@link CorsPolicyBuilder}.
      *
      * @deprecated Use {@link CorsPolicy#builder()}.
      */
