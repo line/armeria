@@ -31,10 +31,11 @@ import io.netty.channel.EventLoop;
 public abstract class TimeoutController {
 
     private long timeoutMillis;
+    private long firstStartTimeNanos;
+    private long lastStartTimeNanos;
 
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
-    private long startTimeNanos;
 
     protected TimeoutController() {}
 
@@ -43,16 +44,16 @@ public abstract class TimeoutController {
     }
 
     /**
-     * Initialize the timeout scheduler with the {@code timeoutMillis} specified by the constructor.
+     * Initialize the timeout scheduler with the {@code timeoutMillis} initialized by the constructor.
      */
-    public void initTimeout() {
+    public final void initTimeout() {
         initTimeout(timeoutMillis);
     }
 
     /**
      * Initialize the timeout scheduler with the specified {@code timeoutMillis}.
      */
-    public void initTimeout(long timeoutMillis) {
+    public final void initTimeout(long timeoutMillis) {
         if (timeoutFuture != null || timeoutMillis <= 0 || !isReady()) {
             // No need to schedule a response timeout if:
             // - the timeout has been scheduled already,
@@ -61,7 +62,7 @@ public abstract class TimeoutController {
             return;
         }
         this.timeoutMillis = timeoutMillis;
-        startTimeNanos = System.nanoTime();
+        firstStartTimeNanos = lastStartTimeNanos = System.nanoTime();
         timeoutFuture = eventLoop().schedule(this::onTimeout, timeoutMillis, TimeUnit.MILLISECONDS);
     }
 
@@ -70,7 +71,7 @@ public abstract class TimeoutController {
      *
      * @param adjustmentMillis the adjustment of time amount value in milliseconds.
      */
-    public void adjustTimeout(long adjustmentMillis) {
+    public final void adjustTimeout(long adjustmentMillis) {
         if (adjustmentMillis == 0) {
             return;
         }
@@ -80,9 +81,11 @@ public abstract class TimeoutController {
 
         if (!isDone()) {
             // Calculate the amount of time passed since the creation of this subscriber.
-            final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+            final long currentNanoTime = System.nanoTime();
+            final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
             final long newTimeoutMillis = timeoutMillis + adjustmentMillis - passedTimeMillis;
             timeoutMillis = newTimeoutMillis;
+            lastStartTimeNanos = currentNanoTime;
             if (newTimeoutMillis > 0) {
                 timeoutFuture = eventLoop().schedule(
                         this::onTimeout, newTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -98,16 +101,17 @@ public abstract class TimeoutController {
      *
      * @param newTimeoutMillis the new timeout value in milliseconds. {@code 0} if disabled.
      */
-    public void resetTimeout(long newTimeoutMillis) {
+    public final void resetTimeout(long newTimeoutMillis) {
         if (newTimeoutMillis <= 0) {
             cancelTimeout();
             return;
         }
 
         if (!isDone()) {
-            // Calculate the amount of time passed since the creation of this subscriber.
-            final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+            final long currentNanoTime = System.nanoTime();
+            final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
             final long remainingTimeoutMillis = timeoutMillis - passedTimeMillis;
+            lastStartTimeNanos = currentNanoTime;
             if (remainingTimeoutMillis == newTimeoutMillis) {
                 return;
             }
@@ -115,20 +119,15 @@ public abstract class TimeoutController {
             // Cancel the previously scheduled timeout, if exists.
             cancelTimeout();
             timeoutMillis = newTimeoutMillis;
-            if (remainingTimeoutMillis > 0) {
-                timeoutFuture = eventLoop().schedule(
-                        this::onTimeout, newTimeoutMillis, TimeUnit.MILLISECONDS);
-            } else {
-                onTimeout();
-            }
+            timeoutFuture = eventLoop().schedule(this::onTimeout, newTimeoutMillis, TimeUnit.MILLISECONDS);
         }
     }
 
     /**
      * Returns the start time of the initial timeout in nanoseconds.
      */
-    public long startTimeNanos() {
-        return startTimeNanos;
+    public final long startTimeNanos() {
+        return firstStartTimeNanos;
     }
 
     protected abstract EventLoop eventLoop();
@@ -139,7 +138,7 @@ public abstract class TimeoutController {
 
     protected abstract void onTimeout();
 
-    protected boolean cancelTimeout() {
+    protected final boolean cancelTimeout() {
         final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
         if (timeoutFuture == null) {
             return true;

@@ -115,6 +115,7 @@ final class HttpResponseSubscriber extends TimeoutController implements Subscrib
     @Override
     protected void onTimeout() {
         if (!isDone()) {
+            logger.info("run timeout");
             reqCtx.setTimedOut();
             final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
             if (requestTimeoutHandler != null) {
