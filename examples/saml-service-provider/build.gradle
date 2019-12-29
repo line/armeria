@@ -7,7 +7,6 @@ dependencies {
     compile project(':saml')
     runtime 'org.slf4j:slf4j-simple'
 
-    testCompile 'junit:junit'
     testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
     testCompile 'org.assertj:assertj-core'
 }

@@ -10,7 +10,6 @@ dependencies {
     runtime 'org.slf4j:slf4j-simple'
 
     testCompile 'jakarta.annotation:jakarta.annotation-api'
-    testCompile 'junit:junit'
     testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
     testCompile 'org.assertj:assertj-core'
     testCompile 'org.awaitility:awaitility'

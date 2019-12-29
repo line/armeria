@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
@@ -20,13 +20,13 @@ import com.linecorp.armeria.server.Server;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
-public class MainTest {
+class MainTest {
 
     private static Server server;
     private static WebClient client;
 
-    @BeforeClass
-    public static void beforeClass() throws Exception {
+    @BeforeAll
+    static void beforeClass() throws Exception {
         final AtomicLong sequence = new AtomicLong();
 
         // The server emits only 5 events here because this test is to show how the events are encoded.
@@ -36,8 +36,8 @@ public class MainTest {
         client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
     }
 
-    @AfterClass
-    public static void afterClass() {
+    @AfterAll
+    static void afterClass() {
         if (server != null) {
             server.stop().join();
         }
@@ -47,7 +47,7 @@ public class MainTest {
     }
 
     @Test
-    public void testServerSentEvents() {
+    void testServerSentEvents() {
         StepVerifier.create(Flux.from(client.get("/long")).log())
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM))

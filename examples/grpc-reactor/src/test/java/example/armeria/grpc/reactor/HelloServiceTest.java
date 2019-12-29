@@ -8,9 +8,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.FutureCallback;
@@ -25,20 +25,20 @@ import example.armeria.grpc.reactor.Hello.HelloReply;
 import example.armeria.grpc.reactor.Hello.HelloRequest;
 import io.grpc.stub.StreamObserver;
 
-public class HelloServiceTest {
+class HelloServiceTest {
 
     private static Server server;
     private static HelloServiceGrpc.HelloServiceStub helloService;
 
-    @BeforeClass
-    public static void beforeClass() throws Exception {
+    @BeforeAll
+    static void beforeClass() throws Exception {
         server = Main.newServer(0, 0);
         server.start().join();
         helloService = Clients.newClient(uri(), HelloServiceGrpc.HelloServiceStub.class);
     }
 
-    @AfterClass
-    public static void afterClass() {
+    @AfterAll
+    static void afterClass() {
         if (server != null) {
             server.stop().join();
         }
@@ -49,7 +49,7 @@ public class HelloServiceTest {
     }
 
     @Test
-    public void getReply() {
+    void getReply() {
         final HelloServiceGrpc.HelloServiceBlockingStub helloService =
                 Clients.newClient(uri(), HelloServiceGrpc.HelloServiceBlockingStub.class);
         assertThat(helloService.hello(HelloRequest.newBuilder().setName("Armeria").build()).getMessage())
@@ -57,7 +57,7 @@ public class HelloServiceTest {
     }
 
     @Test
-    public void getReplyWithDelay() {
+    void getReplyWithDelay() {
         final HelloServiceGrpc.HelloServiceFutureStub helloService =
                 Clients.newClient(uri(), HelloServiceGrpc.HelloServiceFutureStub.class);
         final ListenableFuture<HelloReply> future =
@@ -81,7 +81,7 @@ public class HelloServiceTest {
     }
 
     @Test
-    public void getReplyFromServerSideBlockingCall() {
+    void getReplyFromServerSideBlockingCall() {
         final HelloServiceGrpc.HelloServiceBlockingStub helloService =
                 Clients.newClient(uri(), HelloServiceGrpc.HelloServiceBlockingStub.class);
         final Stopwatch watch = Stopwatch.createStarted();
@@ -91,7 +91,7 @@ public class HelloServiceTest {
     }
 
     @Test
-    public void getLotsOfReplies() {
+    void getLotsOfReplies() {
         final AtomicBoolean completed = new AtomicBoolean();
         helloService.lotsOfReplies(
                 HelloRequest.newBuilder().setName("Armeria").build(),
@@ -120,7 +120,7 @@ public class HelloServiceTest {
     }
 
     @Test
-    public void blockForLotsOfReplies() throws Exception {
+    void blockForLotsOfReplies() throws Exception {
         final BlockingQueue<HelloReply> replies = new LinkedBlockingQueue<>();
         final AtomicBoolean completed = new AtomicBoolean();
         helloService.lotsOfReplies(
@@ -157,7 +157,7 @@ public class HelloServiceTest {
     }
 
     @Test
-    public void sendLotsOfGreetings() {
+    void sendLotsOfGreetings() {
         final String[] names = { "Armeria", "Grpc", "Streaming" };
         final AtomicBoolean completed = new AtomicBoolean();
         final StreamObserver<HelloRequest> request =
@@ -193,7 +193,7 @@ public class HelloServiceTest {
     }
 
     @Test
-    public void bidirectionalHello() {
+    void bidirectionalHello() {
         final String[] names = { "Armeria", "Grpc", "Streaming" };
         final AtomicBoolean completed = new AtomicBoolean();
         final StreamObserver<HelloRequest> request =
