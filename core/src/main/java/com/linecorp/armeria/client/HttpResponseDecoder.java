@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -125,7 +126,7 @@ abstract class HttpResponseDecoder {
         return disconnectWhenFinished;
     }
 
-    static final class HttpWrapper extends TimeoutController implements StreamWriter<HttpObject> {
+    static final class HttpWrapper implements StreamWriter<HttpObject>, TimeoutController {
 
         enum State {
             WAIT_NON_INFORMATIONAL,
@@ -138,6 +139,7 @@ abstract class HttpResponseDecoder {
         private final ClientRequestContext ctx;
         private final long maxContentLength;
         private final EventLoop eventLoop;
+        private final TimeoutController requestTimeoutController;
 
         private boolean loggedResponseFirstBytesTransferred;
 
@@ -145,7 +147,6 @@ abstract class HttpResponseDecoder {
 
         HttpWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
                     EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
-            super(responseTimeoutMillis);
             this.delegate = delegate;
             this.ctx = ctx;
             this.eventLoop = eventLoop;
@@ -171,36 +172,6 @@ abstract class HttpResponseDecoder {
                 }
                 loggedResponseFirstBytesTransferred = true;
             }
-        }
-
-        @Override
-        protected void onTimeout() {
-            final Runnable responseTimeoutHandler = ctx != null ? ctx.responseTimeoutHandler() : null;
-            if (responseTimeoutHandler != null) {
-                responseTimeoutHandler.run();
-            } else {
-                final ResponseTimeoutException cause = ResponseTimeoutException.get();
-                delegate.close(cause);
-                if (ctx != null) {
-                    ctx.logBuilder().endResponse(cause);
-                    ctx.request().abort(cause);
-                }
-            }
-        }
-
-        @Override
-        protected EventLoop eventLoop() {
-            return eventLoop;
-        }
-
-        @Override
-        protected boolean isReady() {
-            return isOpen();
-        }
-
-        @Override
-        protected boolean isDone() {
-            return state == State.DONE;
         }
 
         @Override
@@ -324,7 +295,7 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnTimeoutCancelled) {
 
-            if (cancelTimeout()) {
+            if (requestTimeoutController.cancelTimeout()) {
                 // There's no timeout or the response has not been timed out.
                 actionOnTimeoutCancelled.accept(cause);
                 return;
@@ -351,9 +322,39 @@ abstract class HttpResponseDecoder {
             logger.warn(logMsg.append(':').toString(), cause);
         }
 
+        private TimeoutTask newTimeoutTask() {
+            return new TimeoutTask() {
+                @Override
+                public boolean isReady() {
+                    return delegate.isOpen();
+                }
+
+                @Override
+                public boolean isDone() {
+                    return state == State.DONE;
+                }
+
+                @Override
+                public void onTimeout() {
+                    final Runnable responseTimeoutHandler = ctx != null ? ctx.responseTimeoutHandler() : null;
+                    if (responseTimeoutHandler != null) {
+                        responseTimeoutHandler.run();
+                    } else {
+                        final ResponseTimeoutException cause = ResponseTimeoutException.get();
+                        delegate.close(cause);
+                        if (ctx != null) {
+                            ctx.logBuilder().endResponse(cause);
+                            ctx.request().abort(cause);
+                        }
+                    }
+                }
+            };
+        }
+
         @Override
         public String toString() {
             return delegate.toString();
         }
+
     }
 }

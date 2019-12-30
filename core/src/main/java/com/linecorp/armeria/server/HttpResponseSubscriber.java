@@ -96,6 +96,7 @@ final class HttpResponseSubscriber extends TimeoutController implements Subscrib
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
                            boolean enableServerHeader, boolean enableDateHeader) {
+        super(timeoutTask, eventLoopSupplier);
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;

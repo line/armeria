@@ -250,15 +250,15 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the amount of time allowed until receiving the current {@link Request} and sending
-     * the corresponding {@link Response} completely.
+     * Returns the amount of time allowed from the start time of the {@link Request} until receiving
+     * the current {@link Request} and sending the corresponding {@link Response} completely.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      */
     long requestTimeoutMillis();
 
     /**
-     * Sets the amount of time allowed until receiving the current {@link Request} and sending
-     * the corresponding {@link Response} completely.
+     * Sets the amount of time allowed from the start time of the request until receiving
+     * the current {@link Request} and sending the corresponding {@link Response} completely.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * @deprecated Use {@link #adjustRequestTimeoutMillis(long)})} or {@link #resetRequestTimeoutMillis(long)}
@@ -267,8 +267,8 @@ public interface ServiceRequestContext extends RequestContext {
     void setRequestTimeoutMillis(long requestTimeoutMillis);
 
     /**
-     * Sets the amount of time allowed until receiving the current {@link Request} and sending
-     * the corresponding {@link Response} completely.
+     * Sets the amount of time allowed from the start time of the request until receiving
+     * the current {@link Request} and sending the corresponding {@link Response} completely.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * @deprecated Use {@link #adjustRequestTimeout(Duration)} or {@link #resetRequestTimeout(Duration)}
