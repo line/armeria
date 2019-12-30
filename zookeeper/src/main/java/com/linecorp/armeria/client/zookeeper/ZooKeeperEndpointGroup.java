@@ -37,7 +37,7 @@ import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
  * {@link Endpoint}s from a ZooKeeper using {@link NodeValueCodec} and updates it when the children of the
  * zNode changes.
  */
-public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
+public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
 
@@ -56,7 +56,7 @@ public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
      * @param sessionTimeout  ZooKeeper session timeout in milliseconds
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.DEFAULT);
+        this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.ofDefault());
     }
 
     /**

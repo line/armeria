@@ -107,7 +107,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
                                         .sessionTimeoutMs(sessionTimeout)
                                         .build();
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
-        nodeValueCodec = NodeValueCodec.DEFAULT;
+        nodeValueCodec = NodeValueCodec.ofDefault();
         this.endpoint = endpoint;
         closeClientOnStop = true;
     }
