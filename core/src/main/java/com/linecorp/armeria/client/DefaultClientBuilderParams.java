@@ -23,7 +23,10 @@ import com.google.common.base.MoreObjects;
 
 /**
  * Default {@link ClientBuilderParams} implementation.
+ *
+ * @deprecated Use {@link ClientBuilderParams#of(ClientFactory, URI, Class, ClientOptions)}.
  */
+@Deprecated
 public class DefaultClientBuilderParams implements ClientBuilderParams {
 
     private final ClientFactory factory;
@@ -33,7 +36,10 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link ClientBuilderParams#of(ClientFactory, URI, Class, ClientOptions)}.
      */
+    @Deprecated
     public DefaultClientBuilderParams(ClientFactory factory, URI uri, Class<?> type,
                                       ClientOptions options) {
         this.factory = requireNonNull(factory, "factory");

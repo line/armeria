@@ -16,12 +16,27 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 
 /**
  * Provides the construction parameters of a client.
  */
 public interface ClientBuilderParams {
+
+    /**
+     * Returns a newly created {@link ClientBuilderParams} from the specified properties.
+     */
+    static ClientBuilderParams of(ClientFactory factory, URI uri, Class<?> type,
+                                  ClientOptions options) {
+        requireNonNull(factory, "factory");
+        requireNonNull(uri, "uri");
+        requireNonNull(type, "type");
+        requireNonNull(options, "options");
+        return new DefaultClientBuilderParams(factory, uri, type, options);
+    }
+
     /**
      * Returns the {@link ClientFactory} who created the client.
      */

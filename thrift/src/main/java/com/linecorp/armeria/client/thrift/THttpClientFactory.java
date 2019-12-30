@@ -27,10 +27,10 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
-import com.linecorp.armeria.client.DefaultClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
@@ -98,13 +98,13 @@ final class THttpClientFactory extends DecoratingClientFactory {
             // Create a THttpClient with path.
             @SuppressWarnings("unchecked")
             final T client = (T) new DefaultTHttpClient(
-                    new DefaultClientBuilderParams(this, uri, THttpClient.class, options),
+                    ClientBuilderParams.of(this, uri, THttpClient.class, options),
                     delegate, meterRegistry(), scheme.sessionProtocol(), endpoint);
             return client;
         } else {
             // Create a THttpClient without path.
             final THttpClient thriftClient = new DefaultTHttpClient(
-                    new DefaultClientBuilderParams(this, pathlessUri(uri), THttpClient.class, options),
+                    ClientBuilderParams.of(this, pathlessUri(uri), THttpClient.class, options),
                     delegate, meterRegistry(), scheme.sessionProtocol(), endpoint);
 
             @SuppressWarnings("unchecked")
@@ -112,7 +112,7 @@ final class THttpClientFactory extends DecoratingClientFactory {
                     clientType.getClassLoader(),
                     new Class<?>[] { clientType },
                     new THttpClientInvocationHandler(
-                            new DefaultClientBuilderParams(this, uri, clientType, options),
+                            ClientBuilderParams.of(this, uri, clientType, options),
                             thriftClient,
                             firstNonNull(uri.getRawPath(), "/"),
                             uri.getFragment()));
