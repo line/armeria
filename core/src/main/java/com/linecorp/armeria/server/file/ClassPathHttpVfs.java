@@ -52,7 +52,7 @@ final class ClassPathHttpVfs extends AbstractHttpVfs {
                         HttpHeaders additionalHeaders) {
         RouteUtil.ensureAbsolutePath(path, "path");
         final String resourcePath = rootDir.isEmpty() ? path.substring(1) : rootDir + path;
-        final HttpFileBuilder builder = HttpFileBuilder.ofResource(classLoader, resourcePath);
+        final HttpFileBuilder builder = HttpFile.builder(classLoader, resourcePath);
         return FileSystemHttpVfs.build(builder, clock, path, contentEncoding, additionalHeaders);
     }
 

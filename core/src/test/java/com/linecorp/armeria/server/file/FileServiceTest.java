@@ -78,63 +78,66 @@ class FileServiceTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+
+            final ClassLoader classLoader = getClass().getClassLoader();
+
             sb.serviceUnder(
                     "/cached/fs/",
-                    FileServiceBuilder.forFileSystem(tmpDir)
-                                      .autoIndex(true)
-                                      .build());
+                    FileService.builder(tmpDir)
+                               .autoIndex(true)
+                               .build());
 
             sb.serviceUnder(
                     "/uncached/fs/",
-                    FileServiceBuilder.forFileSystem(tmpDir)
-                                      .maxCacheEntries(0)
-                                      .autoIndex(true)
-                                      .build());
+                    FileService.builder(tmpDir)
+                               .maxCacheEntries(0)
+                               .autoIndex(true)
+                               .build());
 
             sb.serviceUnder(
                     "/cached/compressed/",
-                    FileServiceBuilder.forClassPath(baseResourceDir + "foo")
-                                      .serveCompressedFiles(true)
-                                      .build());
+                    FileService.builder(classLoader, baseResourceDir + "foo")
+                               .serveCompressedFiles(true)
+                               .build());
             sb.serviceUnder(
                     "/uncached/compressed/",
-                    FileServiceBuilder.forClassPath(baseResourceDir + "foo")
-                                      .serveCompressedFiles(true)
-                                      .maxCacheEntries(0)
-                                      .build());
+                    FileService.builder(classLoader, baseResourceDir + "foo")
+                               .serveCompressedFiles(true)
+                               .maxCacheEntries(0)
+                               .build());
 
             sb.serviceUnder(
                     "/cached/classes/",
-                    FileService.forClassPath("/"));
+                    FileService.of(classLoader, "/"));
             sb.serviceUnder(
                     "/uncached/classes/",
-                    FileServiceBuilder.forClassPath("/")
-                                      .maxCacheEntries(0)
-                                      .build());
+                    FileService.builder(classLoader, "/")
+                               .maxCacheEntries(0)
+                               .build());
 
             sb.serviceUnder(
                     "/cached/by-entry/classes/",
-                    FileServiceBuilder.forClassPath("/")
-                                      .entryCacheSpec("maximumSize=512")
-                                      .build());
+                    FileService.builder(classLoader, "/")
+                               .entryCacheSpec("maximumSize=512")
+                               .build());
             sb.serviceUnder(
                     "/uncached/by-entry/classes/",
-                    FileServiceBuilder.forClassPath("/")
-                                      .entryCacheSpec("off")
-                                      .build());
+                    FileService.builder(classLoader, "/")
+                               .entryCacheSpec("off")
+                               .build());
 
             sb.serviceUnder(
                     "/cached/",
-                    FileService.forClassPath(baseResourceDir + "foo")
-                               .orElse(FileService.forClassPath(baseResourceDir + "bar")));
+                    FileService.of(classLoader, baseResourceDir + "foo")
+                               .orElse(FileService.of(classLoader, baseResourceDir + "bar")));
             sb.serviceUnder(
                     "/uncached/",
-                    FileServiceBuilder.forClassPath(baseResourceDir + "foo")
-                                      .maxCacheEntries(0)
-                                      .build()
-                                      .orElse(FileServiceBuilder.forClassPath(baseResourceDir + "bar")
-                                                                .maxCacheEntries(0)
-                                                                .build()));
+                    FileService.builder(classLoader, baseResourceDir + "foo")
+                               .maxCacheEntries(0)
+                               .build()
+                               .orElse(FileService.builder(classLoader, baseResourceDir + "bar")
+                                                  .maxCacheEntries(0)
+                                                  .build()));
 
             sb.decorator(LoggingService.newDecorator());
         }

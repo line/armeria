@@ -19,10 +19,15 @@ package com.linecorp.armeria.server.cors;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isCorsPreflightRequest;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -50,6 +55,38 @@ public final class CorsService extends SimpleDecoratingHttpService {
 
     static final String ANY_ORIGIN = "*";
     static final String NULL_ORIGIN = "null";
+
+    /**
+     * Returns a new {@link CorsServiceBuilder} with its origin set with {@code "*"} (any origin).
+     */
+    public static CorsServiceBuilder builderForAnyOrigin() {
+        return new CorsServiceBuilder();
+    }
+
+    /**
+     * Returns a new {@link CorsServiceBuilder} with the specified {@code origins}.
+     */
+    public static CorsServiceBuilder builder(String... origins) {
+        return builder(ImmutableList.copyOf(requireNonNull(origins, "origins")));
+    }
+
+    /**
+     * Returns a new {@link CorsServiceBuilder} with the specified {@code origins}.
+     */
+    public static CorsServiceBuilder builder(Iterable<String> origins) {
+        requireNonNull(origins, "origins");
+        final List<String> copied = ImmutableList.copyOf(origins);
+        if (copied.contains(ANY_ORIGIN)) {
+            if (copied.size() > 1) {
+                logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
+                            copied.stream()
+                                  .filter(c -> !ANY_ORIGIN.equals(c))
+                                  .collect(Collectors.joining(",")));
+            }
+            return builderForAnyOrigin();
+        }
+        return new CorsServiceBuilder(copied);
+    }
 
     private final CorsConfig config;
 

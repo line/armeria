@@ -15,7 +15,10 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Clock;
 import java.util.Map.Entry;
 
@@ -33,49 +36,49 @@ public class HttpFileServiceBuilder extends FileServiceBuilder {
     /**
      * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
      *
-     * @deprecated Use {@link FileServiceBuilder#forFileSystem(String)}.
+     * @deprecated Use {@link FileService#builder(Path)}.
      */
     @Deprecated
     public static HttpFileServiceBuilder forFileSystem(String rootDir) {
-        return forVfs(HttpVfs.ofFileSystem(rootDir));
+        return forVfs(HttpVfs.of(Paths.get(requireNonNull(rootDir, "rootDir"))));
     }
 
     /**
      * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
      *
-     * @deprecated Use {@link FileServiceBuilder#forFileSystem(Path)}.
+     * @deprecated Use {@link FileService#builder(Path)}.
      */
     @Deprecated
     public static HttpFileServiceBuilder forFileSystem(Path rootDir) {
-        return forVfs(HttpVfs.ofFileSystem(rootDir));
+        return forVfs(HttpVfs.of(rootDir));
     }
 
     /**
      * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in the current class
      * path.
      *
-     * @deprecated Use {@link FileServiceBuilder#forClassPath(String)}.
+     * @deprecated Use {@link FileService#builder(ClassLoader, String)}.
      */
     @Deprecated
     public static HttpFileServiceBuilder forClassPath(String rootDir) {
-        return forVfs(HttpVfs.ofClassPath(rootDir));
+        return forVfs(HttpVfs.of(HttpVfs.class.getClassLoader(), rootDir));
     }
 
     /**
      * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in the current class
      * path.
      *
-     * @deprecated Use {@link FileServiceBuilder#forClassPath(ClassLoader, String)}.
+     * @deprecated Use {@link FileService#builder(ClassLoader, String)}.
      */
     @Deprecated
     public static HttpFileServiceBuilder forClassPath(ClassLoader classLoader, String rootDir) {
-        return forVfs(HttpVfs.ofClassPath(classLoader, rootDir));
+        return forVfs(HttpVfs.of(classLoader, rootDir));
     }
 
     /**
      * Creates a new {@link FileServiceBuilder} with the specified {@link HttpVfs}.
      *
-     * @deprecated Use {@link FileServiceBuilder#forVfs(HttpVfs)}.
+     * @deprecated Use {@link FileService#builder(HttpVfs)}.
      */
     @Deprecated
     public static HttpFileServiceBuilder forVfs(HttpVfs vfs) {

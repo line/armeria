@@ -71,11 +71,11 @@ public class UnmanagedTomcatServiceTest {
             tomcatWithoutWebApp.start();
 
             // Bind them to the Server.
-            sb.serviceUnder("/empty/", TomcatService.forConnector("someHost", new Connector()))
+            sb.serviceUnder("/empty/", TomcatService.of(new Connector(), "someHost"))
               .serviceUnder("/some-webapp-nohostname/",
-                            TomcatService.forConnector(tomcatWithWebApp.getConnector()))
-              .serviceUnder("/no-webapp/", TomcatService.forTomcat(tomcatWithoutWebApp))
-              .serviceUnder("/some-webapp/", TomcatService.forTomcat(tomcatWithWebApp));
+                            TomcatService.of(tomcatWithWebApp.getConnector()))
+              .serviceUnder("/no-webapp/", TomcatService.of(tomcatWithoutWebApp))
+              .serviceUnder("/some-webapp/", TomcatService.of(tomcatWithWebApp));
         }
     };
 

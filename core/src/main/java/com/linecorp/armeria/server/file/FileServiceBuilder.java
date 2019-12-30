@@ -22,7 +22,6 @@ import static com.linecorp.armeria.server.file.FileServiceConfig.validateMaxCach
 import static com.linecorp.armeria.server.file.FileServiceConfig.validateNonNegativeParameter;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.file.Path;
 import java.time.Clock;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -44,43 +43,6 @@ public class FileServiceBuilder {
 
     private static final Optional<String> DEFAULT_ENTRY_CACHE_SPEC = Flags.fileServiceCacheSpec();
     private static final int DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES = 65536;
-
-    /**
-     * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
-     */
-    public static FileServiceBuilder forFileSystem(String rootDir) {
-        return forVfs(HttpVfs.ofFileSystem(rootDir));
-    }
-
-    /**
-     * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
-     */
-    public static FileServiceBuilder forFileSystem(Path rootDir) {
-        return forVfs(HttpVfs.ofFileSystem(rootDir));
-    }
-
-    /**
-     * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in the current class
-     * path.
-     */
-    public static FileServiceBuilder forClassPath(String rootDir) {
-        return forVfs(HttpVfs.ofClassPath(rootDir));
-    }
-
-    /**
-     * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in the current class
-     * path.
-     */
-    public static FileServiceBuilder forClassPath(ClassLoader classLoader, String rootDir) {
-        return forVfs(HttpVfs.ofClassPath(classLoader, rootDir));
-    }
-
-    /**
-     * Creates a new {@link FileServiceBuilder} with the specified {@link HttpVfs}.
-     */
-    public static FileServiceBuilder forVfs(HttpVfs vfs) {
-        return new FileServiceBuilder(vfs);
-    }
 
     final HttpVfs vfs;
     Clock clock = Clock.systemUTC();

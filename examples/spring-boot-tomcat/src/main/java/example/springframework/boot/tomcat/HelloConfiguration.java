@@ -45,7 +45,7 @@ public class HelloConfiguration {
      */
     @Bean
     public TomcatService tomcatService(ServletWebServerApplicationContext applicationContext) {
-        return TomcatService.forConnector(getConnector(applicationContext));
+        return TomcatService.of(getConnector(applicationContext));
     }
 
     /**

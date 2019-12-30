@@ -31,7 +31,7 @@ public final class HttpFileService extends FileService {
     /**
      * Creates a new {@link HttpFileService} for the specified {@code rootDir} in an O/S file system.
      *
-     * @deprecated Use {@link FileService#forFileSystem(String)}.
+     * @deprecated Use {@link FileService#of(Path)}.
      */
     @Deprecated
     public static HttpFileService forFileSystem(String rootDir) {
@@ -41,7 +41,7 @@ public final class HttpFileService extends FileService {
     /**
      * Creates a new {@link HttpFileService} for the specified {@code rootDir} in an O/S file system.
      *
-     * @deprecated Use {@link FileService#forFileSystem(Path)}.
+     * @deprecated Use {@link FileService#of(Path)}.
      */
     @Deprecated
     public static HttpFileService forFileSystem(Path rootDir) {
@@ -51,7 +51,7 @@ public final class HttpFileService extends FileService {
     /**
      * Creates a new {@link HttpFileService} for the specified {@code rootDir} in the current class path.
      *
-     * @deprecated Use {@link FileService#forClassPath(String)}.
+     * @deprecated Use {@link FileService#of(ClassLoader, String)}.
      */
     @Deprecated
     public static HttpFileService forClassPath(String rootDir) {
@@ -61,7 +61,7 @@ public final class HttpFileService extends FileService {
     /**
      * Creates a new {@link HttpFileService} for the specified {@code rootDir} in the current class path.
      *
-     * @deprecated Use {@link FileService#forClassPath(ClassLoader, String)}.
+     * @deprecated Use {@link FileService#of(ClassLoader, String)}.
      */
     @Deprecated
     public static HttpFileService forClassPath(ClassLoader classLoader, String rootDir) {
@@ -71,7 +71,7 @@ public final class HttpFileService extends FileService {
     /**
      * Creates a new {@link HttpFileService} for the specified {@link HttpVfs}.
      *
-     * @deprecated Use {@link FileService#forVfs(HttpVfs)}.
+     * @deprecated Use {@link FileService#of(HttpVfs)}.
      */
     @Deprecated
     public static HttpFileService forVfs(HttpVfs vfs) {
