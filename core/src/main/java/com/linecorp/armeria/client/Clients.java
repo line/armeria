@@ -21,6 +21,7 @@ import java.net.URI;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
@@ -585,7 +586,7 @@ public final class Clients {
             Consumer<? super ClientRequestContext> contextCustomizer) {
         requireNonNull(contextCustomizer, "contextCustomizer");
 
-        final ClientRequestContextCustomizers customizers = maybeCreateContextCustomizers();
+        final ClientThreadLocalState customizers = maybeCreateContextCustomizers();
         customizers.add(contextCustomizer);
 
         return new SafeCloseable() {
@@ -605,50 +606,24 @@ public final class Clients {
 
     /**
      * Prepare to capture the {@link ClientRequestContext} of the next request sent from the current thread.
-     * Use {@link #capturedContext()} to retrieve the captured {@link ClientRequestContext}.
+     * Call {@link Supplier#get()} on the returned captor to retrieve the captured {@link ClientRequestContext}.
      * <pre>{@code
-     * Clients.captureNextContext();
+     * Supplier<ClientRequestContext> captor = Clients.newContextCaptor();
      * WebClient.of().get("https://www.example.com/hello");
-     * ClientRequestContext ctx = Clients.capturedContext();
+     * ClientRequestContext ctx = captor.get();
      * assert ctx.path().equals("/hello");
      * }</pre>
      *
      * <p>Note: Only the first {@link ClientRequestContext} is captured if you made more than one request.</p>
      */
-    public static void captureNextContext() {
-        maybeCreateContextCustomizers().captureNextContext();
+    public static Supplier<ClientRequestContext> newContextCaptor() {
+        return maybeCreateContextCustomizers().newContextCaptor();
     }
 
-    /**
-     * Retrieves the {@link ClientRequestContext} captured after {@link #captureNextContext()}.
-     *
-     * <p>Note: The captured {@link ClientRequestContext} is cleared when this method is invoked.
-     * There's no way to re-retrieve the captured {@link ClientRequestContext}. You also need to call
-     * {@link #captureNextContext()} to capture another.</p>
-     *
-     * @return the retrieved {@link ClientRequestContext}.
-     *
-     * @throws IllegalStateException if 1) {@link #captureNextContext()} was not called or
-     *                               2) no request was made in between.
-     */
-    public static ClientRequestContext capturedContext() {
-        final ClientRequestContextCustomizers customizers =
-                DefaultClientRequestContext.threadLocalCustomizers.get();
+    private static ClientThreadLocalState maybeCreateContextCustomizers() {
+        ClientThreadLocalState customizers = DefaultClientRequestContext.threadLocalCustomizers.get();
         if (customizers == null) {
-            throw new IllegalStateException("captureNextContext() was not called.");
-        }
-
-        final ClientRequestContext ctx = customizers.capturedContext();
-        if (ctx == null) {
-            throw new IllegalStateException("No context was captured; no request was made?");
-        }
-        return ctx;
-    }
-
-    private static ClientRequestContextCustomizers maybeCreateContextCustomizers() {
-        ClientRequestContextCustomizers customizers = DefaultClientRequestContext.threadLocalCustomizers.get();
-        if (customizers == null) {
-            customizers = new ClientRequestContextCustomizers();
+            customizers = new ClientThreadLocalState();
             DefaultClientRequestContext.threadLocalCustomizers.set(customizers);
         }
         return customizers;

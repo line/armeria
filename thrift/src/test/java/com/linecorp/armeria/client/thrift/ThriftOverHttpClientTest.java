@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.apache.thrift.TApplicationException;
@@ -314,15 +315,13 @@ class ThriftOverHttpClientTest {
             final HelloService.Iface client = Clients.newClient(clientFactory,
                                                                 uri(Handlers.HELLO, format, protocol),
                                                                 Handlers.HELLO.iface(), clientOptions);
-            Clients.captureNextContext();
+            final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
             client.hello("kukuman");
-            final ClientRequestContext ctx = Clients.capturedContext();
+            final ClientRequestContext ctx = ctxCaptor.get();
             final RpcRequest rpcReq = ctx.rpcRequest();
             assertThat(rpcReq).isNotNull();
             assertThat(rpcReq.method()).isEqualTo("hello");
             assertThat(rpcReq.params()).containsExactly("kukuman");
-            assertThatThrownBy(Clients::capturedContext).isInstanceOf(IllegalStateException.class)
-                                                        .hasMessageContaining("no request was made");
         });
     }
 
@@ -337,15 +336,13 @@ class ThriftOverHttpClientTest {
                                       Handlers.HELLO.asyncIface(),
                                       clientOptions);
 
-            Clients.captureNextContext();
+            final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
             client.hello("kukuman", new ThriftCompletableFuture<>());
-            final ClientRequestContext ctx = Clients.capturedContext();
+            final ClientRequestContext ctx = ctxCaptor.get();
             final RpcRequest rpcReq = ctx.rpcRequest();
             assertThat(rpcReq).isNotNull();
             assertThat(rpcReq.method()).isEqualTo("hello");
             assertThat(rpcReq.params()).containsExactly("kukuman");
-            assertThatThrownBy(Clients::capturedContext).isInstanceOf(IllegalStateException.class)
-                                                        .hasMessageContaining("no request was made");
         });
     }
 

@@ -65,7 +65,7 @@ import io.netty.util.AttributeKey;
  */
 public class DefaultClientRequestContext extends NonWrappingRequestContext implements ClientRequestContext {
 
-    static final ThreadLocal<ClientRequestContextCustomizers> threadLocalCustomizers = new ThreadLocal<>();
+    static final ThreadLocal<ClientThreadLocalState> threadLocalCustomizers = new ThreadLocal<>();
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -100,6 +100,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Nullable
     private String strVal;
 
+    // We use null checks which are faster than checking if a list is empty,
+    // because it is more common to have no customizers than to have any.
     @Nullable
     private volatile List<Consumer<? super ClientRequestContext>> customizers;
 
@@ -326,7 +328,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Nullable
     private List<Consumer<? super ClientRequestContext>> copyThreadLocalCustomizers() {
-        final ClientRequestContextCustomizers customizers = threadLocalCustomizers.get();
+        final ClientThreadLocalState customizers = threadLocalCustomizers.get();
         if (customizers == null) {
             return null;
         }

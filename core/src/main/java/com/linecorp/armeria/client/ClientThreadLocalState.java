@@ -15,22 +15,26 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-final class ClientRequestContextCustomizers {
+import com.linecorp.armeria.common.util.SafeCloseable;
+
+final class ClientThreadLocalState {
 
     @Nullable
     private ArrayList<Consumer<? super ClientRequestContext>> customizers;
 
-    private boolean pendingContextCapture;
     @Nullable
-    private ClientRequestContext capturedContext;
+    private ClientRequestContextCaptor pendingContextCaptor;
 
     void add(Consumer<? super ClientRequestContext> customizer) {
         if (customizers == null) {
@@ -41,6 +45,7 @@ final class ClientRequestContextCustomizers {
 
     void remove(Consumer<? super ClientRequestContext> customizer) {
         if (customizers != null) {
+            // Iterate in reverse order since we add/remove in LIFO order.
             for (int i = customizers.size() - 1; i >= 0; i--) {
                 if (customizers.get(i) == customizer) {
                     customizers.remove(i);
@@ -50,25 +55,21 @@ final class ClientRequestContextCustomizers {
         }
 
         // Should not reach here, but may happen if a user tried to call from a wrong thread.
-        throw new IllegalStateException("Failed to remove a context customizer: " + customizer);
+        final String safeCloseable = SafeCloseable.class.getSimpleName();
+        throw new IllegalStateException(
+                "Failed to remove a context customizer. Did you call " + safeCloseable +
+                ".close() manually on a different thread? Use try-resources or make sure " + safeCloseable +
+                ".close() is called on the same thread as the one that created it.");
     }
 
-    void captureNextContext() {
-        pendingContextCapture = true;
-    }
-
-    @Nullable
-    ClientRequestContext capturedContext() {
-        final ClientRequestContext capturedContext = this.capturedContext;
-        this.capturedContext = null;
-        pendingContextCapture = false;
-        return capturedContext;
+    Supplier<ClientRequestContext> newContextCaptor() {
+        return pendingContextCaptor = new ClientRequestContextCaptor();
     }
 
     void setCapturedContext(ClientRequestContext ctx) {
-        if (pendingContextCapture) {
-            capturedContext = ctx;
-            pendingContextCapture = false;
+        if (pendingContextCaptor != null) {
+            pendingContextCaptor.ctx = ctx;
+            pendingContextCaptor = null;
         }
     }
 
@@ -79,5 +80,17 @@ final class ClientRequestContextCustomizers {
         }
 
         return ImmutableList.copyOf(customizers);
+    }
+
+    private static final class ClientRequestContextCaptor implements Supplier<ClientRequestContext> {
+
+        @Nullable
+        private ClientRequestContext ctx;
+
+        @Override
+        public ClientRequestContext get() {
+            checkState(ctx != null, "No context was captured; no request was made?");
+            return ctx;
+        }
     }
 }

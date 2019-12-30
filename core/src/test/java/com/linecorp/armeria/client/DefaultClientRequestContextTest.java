@@ -23,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
@@ -137,11 +138,11 @@ class DefaultClientRequestContextTest {
             assertThat(counter).hasValue(1);
 
             // Create a derived context, which should never call customizers or captor.
-            Clients.captureNextContext();
+            final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
             ctx.newDerivedContext(RequestId.random(), ctx.request(), null, ctx.endpoint());
             assertThat(counter).hasValue(1);
-            assertThatThrownBy(Clients::capturedContext).isInstanceOf(IllegalStateException.class)
-                                                        .hasMessageContaining("no request was made");
+            assertThatThrownBy(ctxCaptor::get).isInstanceOf(IllegalStateException.class)
+                                              .hasMessageContaining("no request was made");
         }
     }
 
