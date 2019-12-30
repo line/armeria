@@ -51,4 +51,9 @@ public interface TimeoutController {
      * Cancel the existing timeout.
      */
     boolean cancelTimeout();
+
+    /**
+     * Returns the start time of the initial timeout in nanoseconds.
+     */
+    long startTimeNanos();
 }

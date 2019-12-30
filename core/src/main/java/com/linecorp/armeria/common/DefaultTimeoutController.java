@@ -36,7 +36,7 @@ import io.netty.channel.EventLoop;
  */
 public final class DefaultTimeoutController implements TimeoutController {
 
-    private TimeoutTask timeoutTask;
+    private final TimeoutTask timeoutTask;
     private final Supplier<? extends EventLoop> eventLoopSupplier;
 
     private long timeoutMillis;
@@ -47,12 +47,12 @@ public final class DefaultTimeoutController implements TimeoutController {
     private ScheduledFuture<?> timeoutFuture;
 
     public DefaultTimeoutController(TimeoutTask timeoutTask,
-                             Supplier<EventLoop> eventLoopSupplier) {
+                             Supplier<? extends EventLoop> eventLoopSupplier) {
         this(timeoutTask, eventLoopSupplier, 0);
     }
 
     public DefaultTimeoutController(TimeoutTask timeoutTask,
-                             Supplier<EventLoop> eventLoopSupplier,
+                             Supplier<? extends EventLoop> eventLoopSupplier,
                              long timeoutMillis) {
         requireNonNull(timeoutTask, "timeoutTask");
         requireNonNull(eventLoopSupplier, "eventLoopSupplier");
@@ -92,7 +92,7 @@ public final class DefaultTimeoutController implements TimeoutController {
         // Cancel the previously scheduled timeout, if exists.
         cancelTimeout();
 
-        if (!timeoutTask.isDone()) {
+        if (!timeoutTask.canReschedule()) {
             // Calculate the amount of time passed since the creation of this subscriber.
             final long currentNanoTime = System.nanoTime();
             final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
@@ -112,13 +112,13 @@ public final class DefaultTimeoutController implements TimeoutController {
     @Override
     public void resetTimeout(long newTimeoutMillis) {
         ensureInitialized();
-
         if (newTimeoutMillis <= 0) {
+            timeoutMillis = newTimeoutMillis;
             cancelTimeout();
             return;
         }
 
-        if (!timeoutTask.isDone()) {
+        if (timeoutTask.canReschedule()) {
             final long currentNanoTime = System.nanoTime();
             final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
             final long remainingTimeoutMillis = timeoutMillis - passedTimeMillis;
@@ -157,6 +157,7 @@ public final class DefaultTimeoutController implements TimeoutController {
     /**
      * Returns the start time of the initial timeout in nanoseconds.
      */
+    @Override
     public long startTimeNanos() {
         return firstStartTimeNanos;
     }
@@ -169,16 +170,28 @@ public final class DefaultTimeoutController implements TimeoutController {
         return timeoutMillis;
     }
 
+    /**
+     * Returns a {@link ScheduledFuture} which schedules the current timeout.
+     */
+    @Nullable
+    @VisibleForTesting
+    ScheduledFuture<?> timeoutFuture() {
+        return timeoutFuture;
+    }
+
+    /**
+     * A timeout task that is invoked when the deadline is exceeded.
+     */
     public interface TimeoutTask extends Runnable {
         /**
-         * Returns {@code true} if this timeout controller is ready to start the timeout scheduler.
+         * Returns {@code true} the timeout task is ready to start.
          */
         boolean isReady();
 
         /**
-         * Returns {@code true} if a task using this timeout scheduler is complete.
+         * Returns {@code true} if the timeout task can be rescheduled.
          */
-        boolean isDone();
+        boolean canReschedule();
 
         /**
          * Invoked when the deadline is exceeded.

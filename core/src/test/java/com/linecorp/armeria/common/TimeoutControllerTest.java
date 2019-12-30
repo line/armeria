@@ -24,63 +24,114 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.netty.channel.EventLoop;
+import com.google.common.util.concurrent.Uninterruptibles;
+
+import com.linecorp.armeria.common.DefaultTimeoutController.TimeoutTask;
 
 class TimeoutControllerTest {
 
     static {
-        // call workerGroup early to avoid lazy initialization
+        // call workerGroup early to avoid initializing contexts while testing
         CommonPools.workerGroup();
     }
 
+    DefaultTimeoutController timeoutController;
+    volatile boolean isTimeout;
+
     @BeforeEach
     void setUp() {
-    }
-
-    @Test
-    void shouldCallInitTimeout() {
-        TimeoutController timeoutController = new TimeoutController(timeoutTask, eventLoopSupplier) {
-
+        isTimeout = false;
+        final TimeoutTask timeoutTask = new TimeoutTask() {
             @Override
-            protected EventLoop eventLoop() {
-                return CommonPools.workerGroup().next();
-            }
-
-            @Override
-            protected boolean isReady() {
+            public boolean isReady() {
                 return true;
             }
 
             @Override
-            protected boolean isDone() {
-                return false;
+            public boolean canReschedule() {
+                return true;
             }
 
             @Override
-            protected void onTimeout() {
+            public void onTimeout() {
+                isTimeout = true;
             }
         };
-
-        assertThatThrownBy(() -> timeoutController.adjustTimeout(10))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("initTimeout(timeoutMillis) is not called yet");
-        timeoutController.initTimeout(100);
-        timeoutController.adjustTimeout(10);
-        assertThat(timeoutController.timeoutMillis()).isBetween(110L, 115L);
+        timeoutController = new DefaultTimeoutController(timeoutTask, CommonPools.workerGroup()::next);
     }
 
     @Test
-    void testCommonWorkGroupNext() {
-        Flags.numCommonWorkers();
-        long start = System.nanoTime();
-        System.out.println("start = " + start);
-        System.out.println(
-                "System.nanoTime() - start = " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
-
-        start = System.nanoTime();
-        System.out.println("start = " + start);
-        CommonPools.workerGroup().next();
-        System.out.println(
-                "System.nanoTime() - start = " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
+    void shouldCallInitTimeout() {
+        assertThatThrownBy(() -> timeoutController.adjustTimeout(10))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("initTimeout(timeoutMillis) is not called yet");
     }
+
+    @Test
+    void adjustTimeout() {
+        final long initTimeoutMillis = 100;
+        final long adjustmentMillis = 10;
+        final long tolerance = 5;
+
+        timeoutController.initTimeout(initTimeoutMillis);
+        final long startTimeNanos = timeoutController.startTimeNanos();
+
+        timeoutController.adjustTimeout(adjustmentMillis);
+        final long passedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+        assertThat(timeoutController.timeoutMillis()).isBetween(
+                initTimeoutMillis + adjustmentMillis - passedMillis - tolerance,
+                initTimeoutMillis + adjustmentMillis - passedMillis + tolerance);
+
+        final long adjustmentMillis2 = -20;
+        timeoutController.adjustTimeout(adjustmentMillis2);
+        final long passedMillis2 = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+        assertThat(timeoutController.timeoutMillis()).isBetween(
+                initTimeoutMillis + adjustmentMillis + adjustmentMillis2 - passedMillis2 - tolerance,
+                initTimeoutMillis + adjustmentMillis + adjustmentMillis2 - passedMillis2 + tolerance);
+    }
+
+    @Test
+    void resetTimeout() {
+        timeoutController.initTimeout(100);
+        timeoutController.resetTimeout(10);
+        assertThat(timeoutController.timeoutMillis()).isEqualTo(10);
+    }
+
+    @Test
+    void resetTimout_multipleZero() {
+        timeoutController.initTimeout(100);
+        timeoutController.resetTimeout(0);
+        timeoutController.resetTimeout(0);
+    }
+
+    @Test
+    void resetTimout_multipleNonZero() {
+        timeoutController.initTimeout(100);
+        timeoutController.resetTimeout(0);
+        timeoutController.resetTimeout(20);
+    }
+
+    @Test
+    void cancelTimeout_beforeDeadline() {
+        timeoutController.initTimeout(100);
+        assertThat(timeoutController.cancelTimeout()).isTrue();
+        assertThat(isTimeout).isFalse();
+    }
+
+    @Test
+    void cancelTimeout_afterDeadline() {
+        timeoutController.initTimeout(100);
+        Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
+        assertThat(timeoutController.cancelTimeout()).isFalse();
+        assertThat(isTimeout).isTrue();
+    }
+
+    @Test
+    void cancelTimeout_byResetTimeoutZero() {
+        timeoutController.initTimeout(100);
+        timeoutController.resetTimeout(0);
+        assertThat(timeoutController.timeoutMillis()).isEqualTo(0);
+        assertThat((Object) timeoutController.timeoutFuture()).isNull();
+    }
+
 }

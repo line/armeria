@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -31,6 +32,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.DefaultTimeoutController;
+import com.linecorp.armeria.common.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -57,7 +60,7 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseSubscriber extends TimeoutController implements Subscriber<HttpObject> {
+final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutController {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
@@ -85,6 +88,7 @@ final class HttpResponseSubscriber extends TimeoutController implements Subscrib
     private final DefaultServiceRequestContext reqCtx;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
+    private final TimeoutController requestTimeoutController;
 
     @Nullable
     private Subscription subscription;
@@ -96,13 +100,13 @@ final class HttpResponseSubscriber extends TimeoutController implements Subscrib
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
                            boolean enableServerHeader, boolean enableDateHeader) {
-        super(timeoutTask, eventLoopSupplier);
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
+        requestTimeoutController = newRequestTimeoutController(ctx.channel()::eventLoop);
     }
 
     private HttpService service() {
@@ -111,36 +115,6 @@ final class HttpResponseSubscriber extends TimeoutController implements Subscrib
 
     private RequestLogBuilder logBuilder() {
         return reqCtx.logBuilder();
-    }
-
-    @Override
-    protected void onTimeout() {
-        if (!isDone()) {
-            logger.info("run timeout");
-            reqCtx.setTimedOut();
-            final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
-            if (requestTimeoutHandler != null) {
-                requestTimeoutHandler.run();
-            } else {
-                failAndRespond(RequestTimeoutException.get(),
-                               SERVICE_UNAVAILABLE_MESSAGE, Http2Error.INTERNAL_ERROR);
-            }
-        }
-    }
-
-    @Override
-    protected boolean isReady() {
-        return true;
-    }
-
-    @Override
-    protected boolean isDone() {
-        return state == State.DONE;
-    }
-
-    @Override
-    protected EventLoop eventLoop() {
-        return ctx.channel().eventLoop();
     }
 
     @Override
@@ -309,6 +283,36 @@ final class HttpResponseSubscriber extends TimeoutController implements Subscrib
                 write(HttpData.EMPTY_DATA, true);
             }
         }
+    }
+
+    @Override
+    public void initTimeout() {
+        requestTimeoutController.initTimeout();
+    }
+
+    @Override
+    public void initTimeout(long timeoutMillis) {
+        requestTimeoutController.initTimeout(timeoutMillis);
+    }
+
+    @Override
+    public void adjustTimeout(long adjustmentMillis) {
+        requestTimeoutController.adjustTimeout(adjustmentMillis);
+    }
+
+    @Override
+    public void resetTimeout(long newTimeoutMillis) {
+        requestTimeoutController.resetTimeout(newTimeoutMillis);
+    }
+
+    @Override
+    public boolean cancelTimeout() {
+        return requestTimeoutController.cancelTimeout();
+    }
+
+    @Override
+    public long startTimeNanos() {
+        return requestTimeoutController.startTimeNanos();
     }
 
     private void write(HttpObject o, boolean endOfStream) {
@@ -504,5 +508,34 @@ final class HttpResponseSubscriber extends TimeoutController implements Subscrib
         final IllegalStateException cause = new IllegalStateException(msg);
         failAndRespond(cause, INTERNAL_SERVER_ERROR_MESSAGE, Http2Error.INTERNAL_ERROR);
         return cause;
+    }
+
+    private TimeoutController newRequestTimeoutController(Supplier<? extends EventLoop> eventLoopSupplier) {
+        final TimeoutTask timeoutTask = new TimeoutTask() {
+            @Override
+            public boolean isReady() {
+                return true;
+            }
+
+            @Override
+            public boolean canReschedule() {
+                return state != State.DONE;
+            }
+
+            @Override
+            public void onTimeout() {
+                if (!canReschedule()) {
+                    reqCtx.setTimedOut();
+                    final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
+                    if (requestTimeoutHandler != null) {
+                        requestTimeoutHandler.run();
+                    } else {
+                        failAndRespond(RequestTimeoutException.get(),
+                                       SERVICE_UNAVAILABLE_MESSAGE, Http2Error.INTERNAL_ERROR);
+                    }
+                }
+            }
+        };
+        return new DefaultTimeoutController(timeoutTask, eventLoopSupplier);
     }
 }

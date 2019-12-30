@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.DefaultTimeoutController;
 import com.linecorp.armeria.common.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -138,8 +139,7 @@ abstract class HttpResponseDecoder {
         @Nullable
         private final ClientRequestContext ctx;
         private final long maxContentLength;
-        private final EventLoop eventLoop;
-        private final TimeoutController requestTimeoutController;
+        private final TimeoutController responseTimeoutController;
 
         private boolean loggedResponseFirstBytesTransferred;
 
@@ -149,8 +149,8 @@ abstract class HttpResponseDecoder {
                     EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
             this.delegate = delegate;
             this.ctx = ctx;
-            this.eventLoop = eventLoop;
             this.maxContentLength = maxContentLength;
+            responseTimeoutController = newResponseTimeoutController(eventLoop, responseTimeoutMillis);
         }
 
         CompletableFuture<Void> completionFuture() {
@@ -295,7 +295,7 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnTimeoutCancelled) {
 
-            if (requestTimeoutController.cancelTimeout()) {
+            if (responseTimeoutController.cancelTimeout()) {
                 // There's no timeout or the response has not been timed out.
                 actionOnTimeoutCancelled.accept(cause);
                 return;
@@ -322,16 +322,47 @@ abstract class HttpResponseDecoder {
             logger.warn(logMsg.append(':').toString(), cause);
         }
 
-        private TimeoutTask newTimeoutTask() {
-            return new TimeoutTask() {
+        @Override
+        public void initTimeout() {
+            responseTimeoutController.initTimeout();
+        }
+
+        @Override
+        public void initTimeout(long timeoutMillis) {
+            responseTimeoutController.initTimeout(timeoutMillis);
+        }
+
+        @Override
+        public void adjustTimeout(long adjustmentMillis) {
+            responseTimeoutController.adjustTimeout(adjustmentMillis);
+        }
+
+        @Override
+        public void resetTimeout(long newTimeoutMillis) {
+            responseTimeoutController.resetTimeout(newTimeoutMillis);
+        }
+
+        @Override
+        public boolean cancelTimeout() {
+            return responseTimeoutController.cancelTimeout();
+        }
+
+        @Override
+        public long startTimeNanos() {
+            return responseTimeoutController.startTimeNanos();
+        }
+
+        private TimeoutController newResponseTimeoutController(EventLoop eventLoop,
+                                                               long responseTimeoutMillis) {
+            final TimeoutTask timeoutTask = new TimeoutTask() {
                 @Override
                 public boolean isReady() {
                     return delegate.isOpen();
                 }
 
                 @Override
-                public boolean isDone() {
-                    return state == State.DONE;
+                public boolean canReschedule() {
+                    return state != State.DONE;
                 }
 
                 @Override
@@ -349,6 +380,8 @@ abstract class HttpResponseDecoder {
                     }
                 }
             };
+
+            return new DefaultTimeoutController(timeoutTask, () -> eventLoop, responseTimeoutMillis);
         }
 
         @Override
