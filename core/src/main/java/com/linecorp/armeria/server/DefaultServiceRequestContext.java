@@ -354,20 +354,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public void adjustRequestTimeoutMillis(long adjustmentMillis) {
-        if (adjustmentMillis < 0) {
-            throw new IllegalArgumentException(
-                    "adjustmentMillis: " + adjustmentMillis + " (expected: >= 0)");
+        if (adjustmentMillis == 0) {
+            return;
         }
-        if (adjustmentMillis > 0) {
-            final long oldRequestTimeoutMillis = requestTimeoutMillis;
-            requestTimeoutMillis = LongMath.saturatedAdd(oldRequestTimeoutMillis, adjustmentMillis);
-            final TimeoutController requestTimeoutController = this.requestTimeoutController;
-            if (requestTimeoutController != null) {
-                if (ch.eventLoop().inEventLoop()) {
-                    requestTimeoutController.adjustTimeout(adjustmentMillis);
-                } else {
-                    ch.eventLoop().execute(() -> requestTimeoutController.adjustTimeout(adjustmentMillis));
-                }
+
+        final long oldRequestTimeoutMillis = requestTimeoutMillis;
+        requestTimeoutMillis = LongMath.saturatedAdd(oldRequestTimeoutMillis, adjustmentMillis);
+        final TimeoutController requestTimeoutController = this.requestTimeoutController;
+        if (requestTimeoutController != null) {
+            if (ch.eventLoop().inEventLoop()) {
+                requestTimeoutController.adjustTimeout(adjustmentMillis);
+            } else {
+                ch.eventLoop().execute(() -> requestTimeoutController.adjustTimeout(adjustmentMillis));
             }
         }
     }
@@ -397,7 +395,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             }
         }
 
-        requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, newTimeoutMillis);
+        if (newTimeoutMillis == 0) {
+            requestTimeoutMillis = 0;
+        } else {
+            requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, newTimeoutMillis);
+        }
     }
 
     @Override

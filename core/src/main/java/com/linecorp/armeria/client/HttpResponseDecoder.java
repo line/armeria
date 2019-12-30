@@ -140,6 +140,7 @@ abstract class HttpResponseDecoder {
         private final ClientRequestContext ctx;
         private final long maxContentLength;
         private final TimeoutController responseTimeoutController;
+        private final long responseTimeoutMillis;
 
         private boolean loggedResponseFirstBytesTransferred;
 
@@ -150,7 +151,8 @@ abstract class HttpResponseDecoder {
             this.delegate = delegate;
             this.ctx = ctx;
             this.maxContentLength = maxContentLength;
-            responseTimeoutController = newResponseTimeoutController(eventLoop, responseTimeoutMillis);
+            responseTimeoutController = newResponseTimeoutController(eventLoop);
+            this.responseTimeoutMillis = responseTimeoutMillis;
         }
 
         CompletableFuture<Void> completionFuture() {
@@ -322,9 +324,8 @@ abstract class HttpResponseDecoder {
             logger.warn(logMsg.append(':').toString(), cause);
         }
 
-        @Override
-        public void initTimeout() {
-            responseTimeoutController.initTimeout();
+        void initTimeout() {
+            responseTimeoutController.initTimeout(responseTimeoutMillis);
         }
 
         @Override
@@ -352,8 +353,7 @@ abstract class HttpResponseDecoder {
             return responseTimeoutController.startTimeNanos();
         }
 
-        private TimeoutController newResponseTimeoutController(EventLoop eventLoop,
-                                                               long responseTimeoutMillis) {
+        private TimeoutController newResponseTimeoutController(EventLoop eventLoop) {
             final TimeoutTask timeoutTask = new TimeoutTask() {
                 @Override
                 public boolean isReady() {
@@ -381,7 +381,7 @@ abstract class HttpResponseDecoder {
                 }
             };
 
-            return new DefaultTimeoutController(timeoutTask, () -> eventLoop, responseTimeoutMillis);
+            return new DefaultTimeoutController(timeoutTask, () -> eventLoop);
         }
 
         @Override

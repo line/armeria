@@ -16,17 +16,12 @@
 package com.linecorp.armeria.common;
 
 /**
- * A controller that is set to a deadline or resets to a timeout when the timeout setting is changed.
+ * A controller that schedules the timeout task with the initial value or reschedule when the timeout
+ * setting is changed.
  *
- * <p>Note: This interface is meant for internal use to schedule an initial timeout task or
- * reschedule a timeout task when a user updates the timeout configuration.
+ * <p>Note: This interface is meant for internal use only.
  */
 public interface TimeoutController {
-
-    /**
-     * Initialize the timeout scheduler with the {@code timeoutMillis} initialized by the constructor.
-     */
-    void initTimeout();
 
     /**
      * Initialize the timeout scheduler with the specified {@code timeoutMillis}.

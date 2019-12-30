@@ -29,10 +29,10 @@ import com.google.common.annotations.VisibleForTesting;
 import io.netty.channel.EventLoop;
 
 /**
- * A controller that is set to a deadline or resets to a timeout when the timeout setting is changed.
+ * A controller that schedules the timeout task with the initial value or reschedule when the timeout
+ * setting is changed.
  *
- * <p>Note: This class is meant for internal use to schedule an initial timeout task or
- * reschedule a timeout task when a user updates the timeout configuration.
+ * <p>Note: This interface is meant for internal use only.
  */
 public final class DefaultTimeoutController implements TimeoutController {
 
@@ -49,27 +49,11 @@ public final class DefaultTimeoutController implements TimeoutController {
     /**
      * Creates a new instance.
      */
-    public DefaultTimeoutController(TimeoutTask timeoutTask,
-                             Supplier<? extends EventLoop> eventLoopSupplier) {
-        this(timeoutTask, eventLoopSupplier, 0);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public DefaultTimeoutController(TimeoutTask timeoutTask,
-                             Supplier<? extends EventLoop> eventLoopSupplier,
-                             long timeoutMillis) {
+    public DefaultTimeoutController(TimeoutTask timeoutTask, Supplier<? extends EventLoop> eventLoopSupplier) {
         requireNonNull(timeoutTask, "timeoutTask");
         requireNonNull(eventLoopSupplier, "eventLoopSupplier");
         this.timeoutTask = timeoutTask;
         this.eventLoopSupplier = eventLoopSupplier;
-        this.timeoutMillis = timeoutMillis;
-    }
-
-    @Override
-    public void initTimeout() {
-        initTimeout(timeoutMillis);
     }
 
     @Override
@@ -90,7 +74,6 @@ public final class DefaultTimeoutController implements TimeoutController {
     @Override
     public void adjustTimeout(long adjustmentMillis) {
         ensureInitialized();
-
         if (adjustmentMillis == 0) {
             return;
         }
@@ -98,7 +81,7 @@ public final class DefaultTimeoutController implements TimeoutController {
         // Cancel the previously scheduled timeout, if exists.
         cancelTimeout();
 
-        if (!timeoutTask.canReschedule()) {
+        if (timeoutTask.canReschedule()) {
             // Calculate the amount of time passed since the creation of this subscriber.
             final long currentNanoTime = System.nanoTime();
             final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
@@ -157,9 +140,6 @@ public final class DefaultTimeoutController implements TimeoutController {
                    "initTimeout(timeoutMillis) is not called yet.");
     }
 
-    /**
-     * Returns the start time of the initial timeout in nanoseconds.
-     */
     @Override
     public long startTimeNanos() {
         return firstStartTimeNanos;
@@ -181,7 +161,7 @@ public final class DefaultTimeoutController implements TimeoutController {
      */
     public interface TimeoutTask extends Runnable {
         /**
-         * Returns {@code true} the timeout task is ready to start.
+         * Returns {@code true} if the timeout task is ready to start.
          */
         boolean isReady();
 

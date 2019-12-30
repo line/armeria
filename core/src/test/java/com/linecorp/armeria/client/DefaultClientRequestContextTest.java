@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -31,6 +32,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TimeoutController;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -134,6 +136,58 @@ class DefaultClientRequestContextTest {
 
         // the Attribute added to the original context after creation is not propagated to the derived context
         assertThat(derivedCtx.attr(bar)).isEqualTo(null);
+    }
+
+    @Test
+    void adjustResponseTimeout() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
+        final TimeoutController timeoutController = mock(TimeoutController.class);
+        ctx.setResponseTimeoutController(timeoutController);
+
+        final long oldResponseTimeout1 = ctx.responseTimeoutMillis();
+        ctx.adjustResponseTimeoutMillis(1000);
+        assertThat(ctx.responseTimeoutMillis()).isEqualTo(oldResponseTimeout1 + 1000);
+
+        final long oldResponseTimeout2 = ctx.responseTimeoutMillis();
+        ctx.adjustResponseTimeoutMillis(-2000);
+        assertThat(ctx.responseTimeoutMillis()).isEqualTo(oldResponseTimeout2 - 2000);
+
+        final long oldResponseTimeout3 = ctx.responseTimeoutMillis();
+        ctx.adjustResponseTimeoutMillis(0);
+        assertThat(ctx.responseTimeoutMillis()).isEqualTo(oldResponseTimeout3);
+    }
+
+    @Test
+    void resetResponseTimeout() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
+        final long tolerance = 10;
+
+        final TimeoutController timeoutController = mock(TimeoutController.class);
+        when(timeoutController.startTimeNanos()).thenReturn(System.nanoTime());
+        ctx.setResponseTimeoutController(timeoutController);
+
+        ctx.resetResponseTimeoutMillis(1000);
+        assertThat(ctx.responseTimeoutMillis()).isBetween(1000 - tolerance, 1000 + tolerance);
+        ctx.resetResponseTimeoutMillis(0);
+        assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
+    }
+
+    @Test
+    void setResponseTimeout() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
+
+        final TimeoutController timeoutController = mock(TimeoutController.class);
+        ctx.setResponseTimeoutController(timeoutController);
+
+        ctx.setResponseTimeoutMillis(1000);
+        assertThat(ctx.responseTimeoutMillis()).isEqualTo(1000);
+        ctx.setResponseTimeoutMillis(2000);
+        assertThat(ctx.responseTimeoutMillis()).isEqualTo(2000);
+        ctx.setResponseTimeoutMillis(0);
+        assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }
 
     private static void setAdditionalHeaders(ClientRequestContext originalCtx) {

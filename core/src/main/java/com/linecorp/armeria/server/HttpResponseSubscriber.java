@@ -286,11 +286,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
     }
 
     @Override
-    public void initTimeout() {
-        requestTimeoutController.initTimeout();
-    }
-
-    @Override
     public void initTimeout(long timeoutMillis) {
         requestTimeoutController.initTimeout(timeoutMillis);
     }
@@ -522,7 +517,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
 
             @Override
             public void onTimeout() {
-                if (!canReschedule()) {
+                if (state != State.DONE) {
                     reqCtx.setTimedOut();
                     final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
                     if (requestTimeoutHandler != null) {
