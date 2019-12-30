@@ -44,8 +44,6 @@ import org.slf4j.MDC;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.DefaultRpcRequest;
-import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -81,8 +79,8 @@ public class RequestContextExportingAppenderTest {
     private static final AttributeKey<CustomValue> MY_ATTR =
             AttributeKey.valueOf(RequestContextExportingAppenderTest.class, "MY_ATTR");
 
-    private static final RpcRequest RPC_REQ = new DefaultRpcRequest(Object.class, "hello", "world");
-    private static final RpcResponse RPC_RES = new DefaultRpcResponse("Hello, world!");
+    private static final RpcRequest RPC_REQ = RpcRequest.of(Object.class, "hello", "world");
+    private static final RpcResponse RPC_RES = RpcResponse.of("Hello, world!");
     private static final ThriftCall THRIFT_CALL =
             new ThriftCall(new TMessage("hello", TMessageType.CALL, 1),
                            new hello_args("world"));

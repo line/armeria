@@ -28,10 +28,7 @@ import com.google.common.base.MoreObjects;
 
 /**
  * Default {@link RpcResponse} implementation.
- *
- * @deprecated Use the factory methods in {@link RpcResponse}.
  */
-@Deprecated
 public class DefaultRpcResponse extends CompletableFuture<Object> implements RpcResponse {
 
     private static final AtomicReferenceFieldUpdater<DefaultRpcResponse, Throwable> causeUpdater =
@@ -42,10 +39,7 @@ public class DefaultRpcResponse extends CompletableFuture<Object> implements Rpc
 
     /**
      * Creates a new incomplete response.
-     *
-     * @deprecated Use the factory methods in {@link RpcResponse}.
      */
-    @Deprecated
     public DefaultRpcResponse() {}
 
     /**

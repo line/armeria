@@ -65,6 +65,7 @@ public class DefaultRpcRequest implements RpcRequest {
      *
      * @deprecated Use the factory methods in {@link RpcRequest}.
      */
+    @Deprecated
     public DefaultRpcRequest(Class<?> serviceType, String method, Iterable<?> params) {
         this(serviceType, method, copyParams(params));
     }
@@ -74,6 +75,7 @@ public class DefaultRpcRequest implements RpcRequest {
      *
      * @deprecated Use the factory methods in {@link RpcRequest}.
      */
+    @Deprecated
     public DefaultRpcRequest(Class<?> serviceType, String method, Object... params) {
         this(serviceType, method, copyParams(params));
     }
