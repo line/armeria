@@ -90,6 +90,13 @@ public class DocService extends AbstractCompositeService<HttpService, HttpReques
     static final List<DocServicePlugin> plugins = Streams.stream(ServiceLoader.load(
             DocServicePlugin.class, DocService.class.getClassLoader())).collect(toImmutableList());
 
+    /**
+     * Returns a new {@link DocServiceBuilder}.
+     */
+    public static DocServiceBuilder builder() {
+        return new DocServiceBuilder();
+    }
+
     private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders;
     private final Map<String, ListMultimap<String, String>> exampleRequests;
     private final DocServiceFilter filter;

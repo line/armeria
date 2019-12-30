@@ -34,6 +34,14 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder<Logging
     private Sampler<? super ServiceRequestContext> sampler = Sampler.always();
 
     /**
+     * Creates a new {@link LoggingServiceBuilder}.
+     *
+     * @deprecated Use {@link LoggingService#builder()}.
+     */
+    @Deprecated
+    public LoggingServiceBuilder() {}
+
+    /**
      * Sets the {@link Sampler} that determines which request needs logging.
      */
     public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
