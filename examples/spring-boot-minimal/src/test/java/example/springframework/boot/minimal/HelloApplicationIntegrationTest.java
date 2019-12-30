@@ -39,7 +39,7 @@ class HelloApplicationIntegrationTest {
     }
 
     @Test
-    public void failure() {
+    void failure() {
         final AggregatedHttpResponse response = client.get("/hello/a").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThatJson(response.contentUtf8())
