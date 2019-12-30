@@ -117,7 +117,7 @@ class ServiceBindingTest {
     };
 
     @BeforeEach
-    void setup() {
+    void setUp() {
         accessLogWriterCheckLatch = new CountDownLatch(1);
         propertyCheckLatch = new CountDownLatch(1);
     }

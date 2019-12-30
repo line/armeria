@@ -127,7 +127,6 @@ import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 class GrpcServiceServerTest {
@@ -264,13 +263,12 @@ class GrpcServiceServerTest {
         public StreamObserver<SimpleRequest> checkRequestContext(
                 StreamObserver<SimpleResponse> responseObserver) {
             final ServiceRequestContext ctx = ServiceRequestContext.current();
-            ctx.attr(CHECK_REQUEST_CONTEXT_COUNT).set(0);
+            ctx.setAttr(CHECK_REQUEST_CONTEXT_COUNT, 0);
             return new StreamObserver<SimpleRequest>() {
                 @Override
                 public void onNext(SimpleRequest value) {
                     final ServiceRequestContext ctx = ServiceRequestContext.current();
-                    final Attribute<Integer> attr = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT);
-                    attr.set(attr.get() + 1);
+                    ctx.setAttr(CHECK_REQUEST_CONTEXT_COUNT, ctx.attr(CHECK_REQUEST_CONTEXT_COUNT) + 1);
                 }
 
                 @Override
@@ -279,7 +277,7 @@ class GrpcServiceServerTest {
                 @Override
                 public void onCompleted() {
                     final ServiceRequestContext ctx = ServiceRequestContext.current();
-                    final int count = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT).get();
+                    final int count = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT);
                     responseObserver.onNext(
                             SimpleResponse.newBuilder()
                                           .setPayload(

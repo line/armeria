@@ -23,17 +23,17 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
@@ -42,9 +42,9 @@ import io.netty.util.AttributeKey;
 public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
     private final MeterRegistry meterRegistry;
-    private final DefaultAttributeMap attrs = new DefaultAttributeMap();
+    private final DefaultAttributeMap attrs;
     private final SessionProtocol sessionProtocol;
-    private RequestId id;
+    private final RequestId id;
     private final HttpMethod method;
     private final String path;
     @Nullable
@@ -75,9 +75,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query,
-            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            @Nullable RequestContext rootAttributeMap) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        attrs = new DefaultAttributeMap(rootAttributeMap);
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.id = requireNonNull(id, "id");
         this.method = requireNonNull(method, "method");
@@ -191,19 +193,62 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
         return meterRegistry;
     }
 
+    @Nullable
     @Override
-    public <T> Attribute<T> attr(AttributeKey<T> key) {
+    public <V> V attr(AttributeKey<V> key) {
+        requireNonNull(key, "key");
         return attrs.attr(key);
     }
 
-    @Override
-    public <T> boolean hasAttr(AttributeKey<T> key) {
-        return attrs.hasAttr(key);
+    /**
+     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
+     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
+     * Unlike {@link #attr(AttributeKey)}, this does not search in {@code rootAttributeMap}.
+     *
+     * @see #attr(AttributeKey)
+     */
+    @Nullable
+    public <V> V ownAttr(AttributeKey<V> key) {
+        requireNonNull(key, "key");
+        return attrs.ownAttr(key);
     }
 
     @Override
-    public Iterator<Attribute<?>> attrs() {
+    public <V> void setAttr(AttributeKey<V> key, @Nullable V value) {
+        requireNonNull(key, "key");
+        attrs.setAttr(key, value);
+    }
+
+    @Nullable
+    @Override
+    public <V> V setAttrIfAbsent(AttributeKey<V> key, V value) {
+        requireNonNull(key, "key");
+        requireNonNull(value, "value");
+        return attrs.setAttrIfAbsent(key, value);
+    }
+
+    @Nullable
+    @Override
+    public <V> V computeAttrIfAbsent(AttributeKey<V> key,
+                                     Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
+        requireNonNull(key, "key");
+        requireNonNull(mappingFunction, "mappingFunction");
+        return attrs.computeAttrIfAbsent(key, mappingFunction);
+    }
+
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
         return attrs.attrs();
+    }
+
+    /**
+     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
+     * Unlike {@link #attrs()}, this does not iterate {@code rootAttributeMap}.
+     *
+     * @see #attrs()
+     */
+    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
+        return attrs.ownAttrs();
     }
 
     @Override

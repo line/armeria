@@ -67,7 +67,6 @@ import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 public class AnnotatedServiceAnnotationAliasTest {
@@ -123,7 +122,7 @@ public class AnnotatedServiceAnnotationAliasTest {
         public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                      Class<?> expectedResultType) throws Exception {
             if (expectedResultType == MyRequest.class) {
-                final String decorated = ctx.attr(decoratedFlag).get();
+                final String decorated = ctx.attr(decoratedFlag);
                 return new MyRequest(request.contentUtf8() + decorated);
             }
             return RequestConverterFunction.fallthrough();
@@ -200,9 +199,8 @@ public class AnnotatedServiceAnnotationAliasTest {
             AttributeKey.valueOf(AnnotatedServiceAnnotationAliasTest.class, "decorated");
 
     private static void appendAttribute(ServiceRequestContext ctx, String value) {
-        final Attribute<String> attr = ctx.attr(decoratedFlag);
-        final String v = attr.get();
-        attr.set((v == null ? "" : v) + value);
+        final String v = ctx.attr(decoratedFlag);
+        ctx.setAttr(decoratedFlag, (v == null ? "" : v) + value);
     }
 
     @ClassRule

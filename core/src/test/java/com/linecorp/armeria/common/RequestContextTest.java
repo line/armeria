@@ -458,7 +458,7 @@ public class RequestContextTest {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
                   RequestId.random(), HttpMethod.GET, "/", null,
-                  HttpRequest.streaming(HttpMethod.GET, "/"), null);
+                  HttpRequest.streaming(HttpMethod.GET, "/"), null, null);
         }
 
         @Override

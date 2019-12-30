@@ -411,7 +411,7 @@ public class RequestContextExportingAppenderTest {
                                              ProxiedAddresses.of(new InetSocketAddress("9.10.11.12", 0)))
                                      .build();
 
-        ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
         return ctx;
     }
 
@@ -528,7 +528,7 @@ public class RequestContextExportingAppenderTest {
                                     .sslSession(newSslSession())
                                     .build();
 
-        ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
         return ctx;
     }
 

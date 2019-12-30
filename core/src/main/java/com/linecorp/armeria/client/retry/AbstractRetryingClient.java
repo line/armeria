@@ -115,7 +115,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         final State state =
                 new State(maxTotalAttempts, responseTimeoutMillisForEachAttempt, ctx.responseTimeoutMillis());
-        ctx.attr(STATE).set(state);
+        ctx.setAttr(STATE, state);
         return doExecute(ctx, req);
     }
 
@@ -186,7 +186,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
     protected final boolean resetResponseTimeout(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        final long responseTimeoutMillis = ctx.attr(STATE).get().responseTimeoutMillis();
+        final long responseTimeoutMillis = ctx.attr(STATE).responseTimeoutMillis();
         if (responseTimeoutMillis < 0) {
             return false;
         }
@@ -221,7 +221,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
         requireNonNull(ctx, "ctx");
         requireNonNull(backoff, "backoff");
-        final State state = ctx.attr(STATE).get();
+        final State state = ctx.attr(STATE);
         final int currentAttemptNo = state.currentAttemptNoWith(backoff);
 
         if (currentAttemptNo < 0) {
@@ -249,7 +249,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * {@link ClientRequestContext}.
      */
     protected static int getTotalAttempts(ClientRequestContext ctx) {
-        final State state = ctx.attr(STATE).get();
+        final State state = ctx.attr(STATE);
         if (state == null) {
             return 0;
         }

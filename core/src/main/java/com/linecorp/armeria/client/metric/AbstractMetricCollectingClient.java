@@ -26,12 +26,17 @@ import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.util.AttributeKey;
 
 /**
  * Decorates a {@link Client} to collect metrics into {@link MeterRegistry}.
  */
 abstract class AbstractMetricCollectingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
+
+    // A variable to make sure setup method is not called twice.
+    private static final AttributeKey<Boolean> REQUEST_METRICS_SET =
+            AttributeKey.valueOf(AbstractMetricCollectingClient.class, "REQUEST_METRICS_SET");
 
     private final MeterIdPrefixFunction meterIdPrefixFunction;
 
@@ -42,7 +47,7 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
-        RequestMetricSupport.setup(ctx, meterIdPrefixFunction, false);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
         return delegate().execute(ctx, req);
     }
 }

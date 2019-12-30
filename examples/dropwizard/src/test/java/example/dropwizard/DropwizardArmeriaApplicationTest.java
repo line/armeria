@@ -37,7 +37,7 @@ public class DropwizardArmeriaApplicationTest {
     private static String endpoint;
 
     @BeforeAll
-    public static void setup() {
+    public static void setUp() {
         objectMapper = EXTENSION.getObjectMapper();
         endpoint = "http://localhost:" + EXTENSION.getLocalPort();
         client = EXTENSION.client().target(endpoint);
