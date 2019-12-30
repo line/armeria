@@ -106,7 +106,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
         this.reqCtx = reqCtx;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
-        requestTimeoutController = newRequestTimeoutController(ctx.channel()::eventLoop);
+        requestTimeoutController = newRequestTimeoutController(() -> ctx.channel().eventLoop());
     }
 
     private HttpService service() {
