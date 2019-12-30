@@ -64,7 +64,7 @@ public class ThrottlingRpcServiceTest {
     private HelloService.Iface serviceHandler;
 
     @Before
-    public void setup() {
+    public void setUp() {
         // Start server here to avoid Rule ordering issue. Remove once
         // https://github.com/junit-team/junit4/pull/1445 will release.
         server.start();

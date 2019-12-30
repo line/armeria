@@ -31,8 +31,6 @@ import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -250,15 +248,6 @@ public interface ServiceRequestContext extends RequestContext {
     default MediaType negotiatedProduceType() {
         return negotiatedResponseMediaType();
     }
-
-    /**
-     * Returns the {@link Logger} of the {@link Service}.
-     *
-     * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
-     *             {@code armeria-logback}.
-     */
-    @Deprecated
-    Logger logger();
 
     /**
      * Returns the amount of time allowed until receiving the current {@link Request} and sending

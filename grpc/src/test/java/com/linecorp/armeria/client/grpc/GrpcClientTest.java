@@ -310,7 +310,7 @@ public class GrpcClientTest {
                 try {
                     final ClientRequestContext ctx = ClientRequestContext.current();
                     assertThat(value).isEqualTo(goldenResponse);
-                    final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
+                    final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get(value);
                     assertThat(buf.refCnt()).isNotZero();
                     GrpcUnsafeBufferUtil.releaseBuffer(value, ctx);
                     assertThat(buf.refCnt()).isZero();

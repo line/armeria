@@ -123,7 +123,7 @@ public class ArmeriaServerCallTest {
         call.setListener(listener);
         call.messageReader().onSubscribe(subscription);
 
-        ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).set(buffersAttr);
+        ctx.setAttr(GrpcUnsafeBufferUtil.BUFFERS, buffersAttr);
     }
 
     @After

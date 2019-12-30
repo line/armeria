@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
-import com.linecorp.armeria.internal.brave.TraceContextUtil;
 
 import brave.Span;
 import brave.Tracer;
@@ -111,9 +110,6 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         final Span span = handler.handleSend(request);
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
-
-        // Ensure the trace context propagates to children
-        ctx.onChild(TraceContextUtil::copy);
 
         // For no-op spans, we only need to inject into headers and don't set any other attributes.
         if (span.isNoop()) {

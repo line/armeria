@@ -24,7 +24,7 @@ public class HelloApplicationIntegrationTest {
     private WebTestClient client;
 
     @PostConstruct
-    public void setup() {
+    public void setUp() {
         // Use ArmeriaClientHttpConnector if you want to send an HTTP request to the running
         // Spring Boot application via Armeria HTTP client.
         client = WebTestClient.bindToServer(new ArmeriaClientHttpConnector())

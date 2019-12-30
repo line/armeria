@@ -141,4 +141,31 @@ public enum LogLevel {
                 throw new Error();
         }
     }
+
+    /**
+     * Logs a message at this level.
+     */
+    @SuppressWarnings("MethodParameterNamingConvention")
+    public void log(Logger logger, String format,
+                    @Nullable Object arg1, @Nullable Object arg2, @Nullable Object arg3) {
+        switch (this) {
+            case TRACE:
+                logger.trace(format, arg1, arg2, arg3);
+                break;
+            case DEBUG:
+                logger.debug(format, arg1, arg2, arg3);
+                break;
+            case INFO:
+                logger.info(format, arg1, arg2, arg3);
+                break;
+            case WARN:
+                logger.warn(format, arg1, arg2, arg3);
+                break;
+            case ERROR:
+                logger.error(format, arg1, arg2, arg3);
+                break;
+            default:
+                throw new Error();
+        }
+    }
 }

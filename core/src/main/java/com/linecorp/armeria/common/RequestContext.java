@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -34,6 +37,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -49,8 +53,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeMap;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
@@ -63,7 +66,7 @@ import io.netty.util.concurrent.Promise;
  * A server-side {@link Request} has a {@link ServiceRequestContext} and
  * a client-side {@link Request} has a {@link ClientRequestContext}.
  */
-public interface RequestContext extends AttributeMap {
+public interface RequestContext {
 
     /**
      * Returns the context of the {@link Request} that is being handled in the current thread.
@@ -111,6 +114,50 @@ public interface RequestContext extends AttributeMap {
 
         return null;
     }
+
+    /**
+     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
+     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
+     */
+    @Nullable
+    <V> V attr(AttributeKey<V> key);
+
+    /**
+     * Associates the specified value with the given {@link AttributeKey} in this context.
+     * If this context previously contained a mapping for the {@link AttributeKey},
+     * the old value is replaced by the specified value. Set {@code null} not to iterate the mapping from
+     * {@link #attrs()}.
+     */
+    <V> void setAttr(AttributeKey<V> key, @Nullable V value);
+
+    /**
+     * Associates the specified value with the given {@link AttributeKey} in this context only
+     * if this context does not contain a mapping for the {@link AttributeKey}.
+     *
+     * @return {@code null} if there was no mapping for the {@link AttributeKey} or the old value if there's
+     *         a mapping for the {@link AttributeKey}.
+     */
+    @Nullable
+    <V> V setAttrIfAbsent(AttributeKey<V> key, V value);
+
+    /**
+     * If the specified {@link AttributeKey} is not already associated with a value (or is mapped
+     * to {@code null}), attempts to compute its value using the given mapping
+     * function and stores it into this context.
+     *
+     * <p>If the mapping function returns {@code null}, no mapping is recorded.
+     *
+     * @return the current (existing or computed) value associated with
+     *         the specified {@link AttributeKey}, or {@code null} if the computed value is {@code null}
+     */
+    @Nullable
+    <V> V computeAttrIfAbsent(
+            AttributeKey<V> key, Function<? super AttributeKey<V>, ? extends V> mappingFunction);
+
+    /**
+     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
+     */
+    Iterator<Entry<AttributeKey<?>, Object>> attrs();
 
     /**
      * Returns the {@link HttpRequest} associated with this context, or {@code null} if there's no
@@ -212,11 +259,6 @@ public interface RequestContext extends AttributeMap {
      * Returns the {@link MeterRegistry} that collects various stats.
      */
     MeterRegistry meterRegistry();
-
-    /**
-     * Returns all {@link Attribute}s set in this context.
-     */
-    Iterator<Attribute<?>> attrs();
 
     /**
      * Returns the {@link Executor} that is handling the current {@link Request}.
@@ -461,17 +503,26 @@ public interface RequestContext extends AttributeMap {
     <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener);
 
     /**
-     * Returns a {@link CompletionStage} that makes sure the current {@link CompletionStage} is set and
+     * Returns a {@link CompletionStage} that makes sure the current {@link RequestContext} is set and
      * then invokes the input {@code stage}.
      */
     <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage);
 
     /**
-     * Returns a {@link CompletableFuture} that makes sure the current {@link CompletableFuture} is set and
+     * Returns a {@link CompletableFuture} that makes sure the current {@link RequestContext} is set and
      * then invokes the input {@code future}.
      */
     default <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
         return makeContextAware((CompletionStage<T>) future).toCompletableFuture();
+    }
+
+    /**
+     * Returns a {@link Logger} which prepends this {@link RequestContext} to the log message.
+     *
+     * @param logger the {@link Logger} to decorate.
+     */
+    default Logger makeContextAware(Logger logger) {
+        return new RequestContextAwareLogger(this, requireNonNull(logger, "logger"));
     }
 
     /**
@@ -527,13 +578,10 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Registers {@code callback} to be run when this context is replaced by a child context.
-     * You could use this method to inherit an attribute of this context to the child contexts or
-     * register a callback to the child contexts that may be created later:
+     * You could use this method to the child contexts that may be created later:
      * <pre>{@code
      * ctx.onChild((curCtx, newCtx) -> {
      *     assert ctx == curCtx && curCtx != newCtx;
-     *     // Inherit the value of the 'MY_ATTR' attribute to the child context.
-     *     newCtx.attr(MY_ATTR).set(curCtx.attr(MY_ATTR).get());
      *     // Add a callback to the child context.
      *     newCtx.onExit(() -> { ... });
      * });
@@ -654,7 +702,7 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
+     * Creates a new {@link RequestContext} whose properties and {@link #attrs()} are copied from this
      * {@link RequestContext}, except having a different pair of {@link HttpRequest} and {@link RpcRequest}
      * and its own {@link RequestLog}.
      */

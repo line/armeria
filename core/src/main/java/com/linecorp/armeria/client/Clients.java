@@ -554,18 +554,17 @@ public final class Clients {
      * variable automatically:
      * <pre>{@code
      * try (SafeCloseable ignored = withContextCustomizer(ctx -> {
-     *     ctx.attr(USER_ID).set(userId);
-     *     ctx.attr(USER_SECRET).set(secret);
+     *     ctx.setAttr(USER_ID, userId);
+     *     ctx.setAttr(USER_SECRET, secret);
      * })) {
      *     client.executeSomething(..);
      * }
      * }</pre>
      * You can also nest the request context customization:
      * <pre>{@code
-     * try (SafeCloseable ignored = withContextCustomizer(ctx -> ctx.attr(USER_ID).set(userId))) {
+     * try (SafeCloseable ignored = withContextCustomizer(ctx -> ctx.setAttr(USER_ID, userId))) {
      *     String secret = client.getSecret();
-     *     try (SafeCloseable ignored2 = withContextCustomizer(ctx -> ctx.attr(USER_SECRET)
-     *                                                                   .set(secret))) {
+     *     try (SafeCloseable ignored2 = withContextCustomizer(ctx -> ctx.setAttr(USER_SECRET, secret))) {
      *         // Both USER_ID and USER_SECRET will be set.
      *         client.executeSomething(..);
      *     }

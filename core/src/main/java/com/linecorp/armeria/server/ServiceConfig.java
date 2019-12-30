@@ -18,9 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -41,16 +39,10 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  */
 public final class ServiceConfig {
 
-    private static final Pattern LOGGER_NAME_PATTERN =
-            Pattern.compile("^\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*" +
-                            "(?:\\.\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)*$");
-
     @Nullable
     private final VirtualHost virtualHost;
 
     private final Route route;
-    @Nullable
-    private final String loggerName;
     private final HttpService service;
 
     private final long requestTimeoutMillis;
@@ -66,14 +58,12 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    ServiceConfig(Route route,
-                  HttpService service,
-                  @Nullable String loggerName, long requestTimeoutMillis,
-                  long maxRequestLength, boolean verboseResponses,
+    ServiceConfig(Route route, HttpService service,
+                  long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
                   ContentPreviewerFactory requestContentPreviewerFactory,
                   ContentPreviewerFactory responseContentPreviewerFactory, AccessLogWriter accessLogWriter,
                   boolean shutdownAccessLogWriterOnStop) {
-        this(null, route, service, loggerName, requestTimeoutMillis, maxRequestLength,
+        this(null, route, service, requestTimeoutMillis, maxRequestLength,
              verboseResponses, requestContentPreviewerFactory, responseContentPreviewerFactory,
              accessLogWriter, shutdownAccessLogWriterOnStop);
     }
@@ -81,17 +71,14 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    private ServiceConfig(@Nullable VirtualHost virtualHost, Route route,
-                          HttpService service,
-                          @Nullable String loggerName, long requestTimeoutMillis,
-                          long maxRequestLength, boolean verboseResponses,
+    private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
+                          long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
                           ContentPreviewerFactory requestContentPreviewerFactory,
                           ContentPreviewerFactory responseContentPreviewerFactory,
                           AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
-        this.loggerName = loggerName != null ? validateLoggerName(loggerName, "loggerName") : null;
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         this.verboseResponses = verboseResponses;
@@ -103,14 +90,6 @@ public final class ServiceConfig {
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
 
         handlesCorsPreflight = service.as(CorsService.class).isPresent();
-    }
-
-    static String validateLoggerName(String value, String propertyName) {
-        requireNonNull(value, propertyName);
-        if (!LOGGER_NAME_PATTERN.matcher(value).matches()) {
-            throw new IllegalArgumentException(propertyName + ": " + value);
-        }
-        return value;
     }
 
     static long validateRequestTimeoutMillis(long requestTimeoutMillis) {
@@ -130,15 +109,15 @@ public final class ServiceConfig {
 
     ServiceConfig withVirtualHost(VirtualHost virtualHost) {
         requireNonNull(virtualHost, "virtualHost");
-        return new ServiceConfig(virtualHost, route, service, loggerName, requestTimeoutMillis,
-                                 maxRequestLength, verboseResponses, requestContentPreviewerFactory,
-                                 responseContentPreviewerFactory, accessLogWriter,
-                                 shutdownAccessLogWriterOnStop);
+        return new ServiceConfig(virtualHost, route, service,
+                                 requestTimeoutMillis, maxRequestLength, verboseResponses,
+                                 requestContentPreviewerFactory, responseContentPreviewerFactory,
+                                 accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
-        return new ServiceConfig(virtualHost, route, service.decorate(decorator), loggerName,
+        return new ServiceConfig(virtualHost, route, service.decorate(decorator),
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  requestContentPreviewerFactory, responseContentPreviewerFactory,
                                  accessLogWriter, shutdownAccessLogWriterOnStop);
@@ -173,17 +152,6 @@ public final class ServiceConfig {
      */
     public HttpService service() {
         return service;
-    }
-
-    /**
-     * Returns the logger name for the {@link HttpService}.
-     *
-     * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
-     *             {@code armeria-logback}.
-     */
-    @Deprecated
-    public Optional<String> loggerName() {
-        return Optional.ofNullable(loggerName);
     }
 
     /**
@@ -268,7 +236,6 @@ public final class ServiceConfig {
             toStringHelper.add("hostnamePattern", virtualHost.hostnamePattern());
         }
         return toStringHelper.add("route", route)
-                             .add("loggerName", loggerName)
                              .add("service", service)
                              .add("requestTimeoutMillis", requestTimeoutMillis)
                              .add("maxRequestLength", maxRequestLength)

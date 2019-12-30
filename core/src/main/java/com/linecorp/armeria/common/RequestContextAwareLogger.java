@@ -14,12 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
 
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.google.common.base.MoreObjects;
 
 @SuppressWarnings("MethodParameterNamingConvention")
 final class RequestContextAwareLogger implements Logger {
@@ -447,6 +447,9 @@ final class RequestContextAwareLogger implements Logger {
 
     @Override
     public String toString() {
-        return "ServiceAwareLogger(" + logger + ')';
+        return MoreObjects.toStringHelper(this)
+                          .add("context", ctx)
+                          .add("logger", logger)
+                          .toString();
     }
 }

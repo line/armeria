@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.client.logging;
 
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -73,12 +74,15 @@ class LoggingClientTest {
         customLoggerClient.execute(context, request);
 
         // verify request log
-        verify(logger).info(eq("Request: {}"), argThat((String actLog) -> actLog
-                .endsWith("headers=[:method=GET, :path=/]}")));
+        verify(logger).info(eq("{} Request: {}"), eq(context),
+                            argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).info(eq("Response: {}"), argThat((String actLog) -> actLog
-                .endsWith("duration=0ns, headers=[:status=0]}")));
+        verify(logger).info(eq("{} Response: {}"), eq(context),
+                            argThat((String actLog) -> actLog.endsWith("duration=0ns, headers=[:status=0]}")));
+
+        verifyNoMoreInteractions(logger);
+        clearInvocations(logger);
 
         // use default logger
         final LoggingClient defaultLoggerClient =
@@ -88,6 +92,6 @@ class LoggingClientTest {
                              .build(delegate);
 
         defaultLoggerClient.execute(context, request);
-        verify(logger, never()).info(anyString());
+        verifyNoInteractions(logger);
     }
 }

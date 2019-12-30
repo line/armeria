@@ -56,7 +56,7 @@ will define an appender called ``RCEA`` which exports the following:
 
 - ``attrs.some_value``
 
-  - a custom attribute set via ``RequestContext.attr(AttributeKey.valueOf(AttrKeys.class, "SOME_VALUE")).set(...)``
+  - a custom attribute set via ``RequestContext.setAttr(AttributeKey.valueOf(AttrKeys.class, "SOME_KEY"), "SOME_VALUE")``
 
 ... to the `MDC`_ property map and forwards the log message to the appender ``CONSOLE``, as defined in the
 ``<appender-ref />`` element.
