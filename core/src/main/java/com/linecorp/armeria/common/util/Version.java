@@ -185,47 +185,80 @@ public final class Version {
         this.repositoryStatus = repositoryStatus;
     }
 
+    /**
+     * Returns the Maven artifact ID of the component, such as {@code "armeria-grpc"}.
+     */
     @JsonProperty
     public String artifactId() {
         return artifactId;
     }
 
+    /**
+     * Returns the Maven artifact version of the component, such as {@code "1.0.0"}.
+     */
     @JsonProperty
     public String artifactVersion() {
         return artifactVersion;
     }
 
+    /**
+     * Returns when the release commit was created.
+     */
     @JsonProperty
     public long commitTimeMillis() {
         return commitTimeMillis;
     }
 
+    /**
+     * Returns the short hash of the release commit.
+     */
     @JsonProperty
     public String shortCommitHash() {
         return shortCommitHash;
     }
 
+    /**
+     * Returns the long hash of the release commit.
+     */
     @JsonProperty
     public String longCommitHash() {
         return longCommitHash;
     }
 
+    /**
+     * Returns the status of the repository when performing the release process.
+     *
+     * @return {@code "clean"} if the repository was clean. {@code "dirty"} otherwise.
+     */
     @JsonProperty
     public String repositoryStatus() {
         return repositoryStatus;
     }
 
-    @Override
-    public String toString() {
-        return artifactId + '-' + artifactVersion + '.' + shortCommitHash +
-                (isClean() ? "" : "(repository: " + repositoryStatus + ')');
+    /**
+     * Returns whether the repository was clean when performing the release process.
+     * This method is a shortcut for {@code "clean".equals(repositoryStatus())}.
+     *
+     * @deprecated Use {@link #isRepositoryClean()}.
+     */
+    @JsonIgnore
+    @Deprecated
+    public boolean isClean() {
+        return isRepositoryClean();
     }
 
     /**
-     * Returns true if repository status is not dirty.
+     * Returns whether the repository was clean when performing the release process.
+     * This method is a shortcut for {@code "clean".equals(repositoryStatus())}.
      */
     @JsonIgnore
-    public boolean isClean() {
+    public boolean isRepositoryClean() {
         return "clean".equals(repositoryStatus);
+    }
+
+    @Override
+    public String toString() {
+        return artifactId + '-' + artifactVersion + '.' + shortCommitHash +
+                (isRepositoryClean() ? "" : "(repository: " + repositoryStatus + ')');
     }
 }

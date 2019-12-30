@@ -51,6 +51,9 @@ import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 
+/**
+ * Spring Boot {@link Configuration} that provides Armeria integration.
+ */
 @Configuration
 @EnableConfigurationProperties(ArmeriaSettings.class)
 @ConditionalOnMissingBean(Server.class)

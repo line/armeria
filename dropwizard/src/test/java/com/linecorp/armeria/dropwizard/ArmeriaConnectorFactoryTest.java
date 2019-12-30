@@ -210,7 +210,7 @@ class ArmeriaConnectorFactoryTest {
 
             assertThat(factory.getInitialConnectionWindowSize())
                     .isEqualTo(Flags.defaultHttp2InitialConnectionWindowSize());
-            assertThat(factory.getInitialStreamingWindowSize())
+            assertThat(factory.getInitialStreamWindowSize())
                     .isEqualTo(Flags.defaultHttp2InitialStreamWindowSize());
             assertThat(factory.getMaxStreamsPerConnection())
                     .isEqualTo(Flags.defaultHttp2MaxStreamsPerConnection());
@@ -240,8 +240,8 @@ class ArmeriaConnectorFactoryTest {
             factory.setInitialConnectionWindowSize(0);
             assertThat(factory.getInitialConnectionWindowSize()).isEqualTo(0);
 
-            factory.setInitialStreamingWindowSize(0);
-            assertThat(factory.getInitialStreamingWindowSize()).isEqualTo(0);
+            factory.setInitialStreamWindowSize(0);
+            assertThat(factory.getInitialStreamWindowSize()).isEqualTo(0);
 
             factory.setMaxStreamsPerConnection(0);
             assertThat(factory.getMaxStreamsPerConnection()).isEqualTo(0);
