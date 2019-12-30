@@ -18,7 +18,7 @@ package com.linecorp.armeria.common;
 /**
  * A controller that is set to a deadline or resets to a timeout when the timeout setting is changed.
  *
- * <p>Note: This interface is meant for internal used to schedule an initial timeout task or
+ * <p>Note: This interface is meant for internal use to schedule an initial timeout task or
  * reschedule a timeout task when a user updates the timeout configuration.
  */
 public interface TimeoutController {
@@ -48,7 +48,7 @@ public interface TimeoutController {
     void resetTimeout(long newTimeoutMillis);
 
     /**
-     * Cancel the existing timeout.
+     * Cancel the current timeout scheduled.
      */
     boolean cancelTimeout();
 

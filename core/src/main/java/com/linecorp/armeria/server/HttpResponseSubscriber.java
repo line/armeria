@@ -358,8 +358,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
 
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
-                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log,
-                                             RequestLogAvailability.COMPLETE);
+                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
                 }
 
                 subscription.request(1);
@@ -439,8 +438,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
                     logBuilder().endResponse(cause);
-                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log,
-                                             RequestLogAvailability.COMPLETE);
+                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
                 }
             });
         }
@@ -536,6 +534,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
                 }
             }
         };
+
         return new DefaultTimeoutController(timeoutTask, eventLoopSupplier);
     }
 }

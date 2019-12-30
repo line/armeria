@@ -50,7 +50,7 @@ abstract class HttpResponseDecoder {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseDecoder.class);
 
-    private final IntObjectMap<HttpWrapper> responses = new IntObjectHashMap<>();
+    private final IntObjectMap<HttpResponseWrapper> responses = new IntObjectHashMap<>();
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
     private boolean disconnectWhenFinished;
@@ -68,13 +68,13 @@ abstract class HttpResponseDecoder {
         return inboundTrafficController;
     }
 
-    HttpWrapper addResponse(
+    HttpResponseWrapper addResponse(
             int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
-        final HttpWrapper newRes =
-                new HttpWrapper(res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
-        final HttpWrapper oldRes = responses.put(id, newRes);
+        final HttpResponseWrapper newRes =
+                new HttpResponseWrapper(res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
+        final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
@@ -83,17 +83,17 @@ abstract class HttpResponseDecoder {
     }
 
     @Nullable
-    final HttpWrapper getResponse(int id) {
+    final HttpResponseWrapper getResponse(int id) {
         return responses.get(id);
     }
 
     @Nullable
-    final HttpWrapper getResponse(int id, boolean remove) {
+    final HttpResponseWrapper getResponse(int id, boolean remove) {
         return remove ? removeResponse(id) : getResponse(id);
     }
 
     @Nullable
-    final HttpWrapper removeResponse(int id) {
+    final HttpResponseWrapper removeResponse(int id) {
         return responses.remove(id);
     }
 
@@ -107,7 +107,7 @@ abstract class HttpResponseDecoder {
 
     final void failUnfinishedResponses(Throwable cause) {
         try {
-            for (HttpWrapper res : responses.values()) {
+            for (HttpResponseWrapper res : responses.values()) {
                 res.close(cause);
             }
         } finally {
@@ -127,7 +127,7 @@ abstract class HttpResponseDecoder {
         return disconnectWhenFinished;
     }
 
-    static final class HttpWrapper implements StreamWriter<HttpObject>, TimeoutController {
+    static final class HttpResponseWrapper implements StreamWriter<HttpObject>, TimeoutController {
 
         enum State {
             WAIT_NON_INFORMATIONAL,
@@ -145,8 +145,8 @@ abstract class HttpResponseDecoder {
 
         private State state = State.WAIT_NON_INFORMATIONAL;
 
-        HttpWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
-                    EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
+        HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
+                            EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
             this.delegate = delegate;
             this.ctx = ctx;
             this.maxContentLength = maxContentLength;

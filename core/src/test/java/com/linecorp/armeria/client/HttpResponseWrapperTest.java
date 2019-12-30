@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpWrapper;
+import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -41,7 +41,7 @@ class HttpResponseWrapperTest {
     @Test
     void headersAndData() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final HttpWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
@@ -57,7 +57,7 @@ class HttpResponseWrapperTest {
     @Test
     void headersAndTrailers() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final HttpWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
@@ -72,7 +72,7 @@ class HttpResponseWrapperTest {
     @Test
     void dataIsIgnoreAfterSecondHeaders() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final HttpWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
         assertThat(wrapper.tryWrite(
@@ -89,7 +89,7 @@ class HttpResponseWrapperTest {
     @Test
     void splitTrailersIsIgnored() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final HttpWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
@@ -105,7 +105,7 @@ class HttpResponseWrapperTest {
     @Test
     void splitTrailersAfterDataIsIgnored() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final HttpWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
@@ -124,7 +124,7 @@ class HttpResponseWrapperTest {
     @Test
     void informationalHeadersHeadersDataAndTrailers() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final HttpWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(100))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("a"), "b"))).isTrue();
@@ -143,7 +143,7 @@ class HttpResponseWrapperTest {
                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
-    private static HttpWrapper httpResponseWrapper(DecodedHttpResponse res) {
+    private static HttpResponseWrapper httpResponseWrapper(DecodedHttpResponse res) {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
         final InboundTrafficController controller = InboundTrafficController.disabled();

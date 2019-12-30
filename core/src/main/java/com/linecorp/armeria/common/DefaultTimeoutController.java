@@ -31,7 +31,7 @@ import io.netty.channel.EventLoop;
 /**
  * A controller that is set to a deadline or resets to a timeout when the timeout setting is changed.
  *
- * <p>Note: This interface is meant for internal use to schedule a initial timeout task or
+ * <p>Note: This class is meant for internal use to schedule an initial timeout task or
  * reschedule a timeout task when a user updates the timeout configuration.
  */
 public final class DefaultTimeoutController implements TimeoutController {
@@ -46,11 +46,17 @@ public final class DefaultTimeoutController implements TimeoutController {
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
 
+    /**
+     * Creates a new instance
+     */
     public DefaultTimeoutController(TimeoutTask timeoutTask,
                              Supplier<? extends EventLoop> eventLoopSupplier) {
         this(timeoutTask, eventLoopSupplier, 0);
     }
 
+    /**
+     * Creates a new instance
+     */
     public DefaultTimeoutController(TimeoutTask timeoutTask,
                              Supplier<? extends EventLoop> eventLoopSupplier,
                              long timeoutMillis) {
@@ -135,9 +141,6 @@ public final class DefaultTimeoutController implements TimeoutController {
         }
     }
 
-    /**
-     * Cancel the existing timeout.
-     */
     @Override
     public boolean cancelTimeout() {
         final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
@@ -162,17 +165,11 @@ public final class DefaultTimeoutController implements TimeoutController {
         return firstStartTimeNanos;
     }
 
-    /**
-     * Returns the amount of time allowed since {@code lastStartTimeNanos}.
-     */
     @VisibleForTesting
     long timeoutMillis() {
         return timeoutMillis;
     }
 
-    /**
-     * Returns a {@link ScheduledFuture} which schedules the current timeout.
-     */
     @Nullable
     @VisibleForTesting
     ScheduledFuture<?> timeoutFuture() {
@@ -180,7 +177,7 @@ public final class DefaultTimeoutController implements TimeoutController {
     }
 
     /**
-     * A timeout task that is invoked when the deadline is exceeded.
+     * A timeout task that is invoked when the deadline exceeded.
      */
     public interface TimeoutTask extends Runnable {
         /**
@@ -194,7 +191,7 @@ public final class DefaultTimeoutController implements TimeoutController {
         boolean canReschedule();
 
         /**
-         * Invoked when the deadline is exceeded.
+         * Invoked when the deadline exceeded.
          */
         void onTimeout();
 

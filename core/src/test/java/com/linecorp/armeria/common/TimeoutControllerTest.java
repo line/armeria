@@ -133,5 +133,4 @@ class TimeoutControllerTest {
         assertThat(timeoutController.timeoutMillis()).isEqualTo(0);
         assertThat((Object) timeoutController.timeoutFuture()).isNull();
     }
-
 }

@@ -270,19 +270,19 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         final boolean attemptUpgrade;
         switch (httpPreference) {
-            case HTTP1_REQUIRED:
-                attemptUpgrade = false;
-                break;
-            case HTTP2_PREFERRED:
-                assert remoteAddress != null;
-                attemptUpgrade = !SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C);
-                break;
-            case HTTP2_REQUIRED:
-                attemptUpgrade = true;
-                break;
-            default:
-                // Should never reach here.
-                throw new Error();
+        case HTTP1_REQUIRED:
+            attemptUpgrade = false;
+            break;
+        case HTTP2_PREFERRED:
+            assert remoteAddress != null;
+            attemptUpgrade = !SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C);
+            break;
+        case HTTP2_REQUIRED:
+            attemptUpgrade = true;
+            break;
+        default:
+            // Should never reach here.
+            throw new Error();
         }
 
         if (attemptUpgrade) {

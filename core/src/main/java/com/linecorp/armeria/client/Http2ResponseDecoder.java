@@ -65,11 +65,11 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     }
 
     @Override
-    HttpWrapper addResponse(
+    HttpResponseWrapper addResponse(
             int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
-        final HttpWrapper resWrapper =
+        final HttpResponseWrapper resWrapper =
                 super.addResponse(id, res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
 
         resWrapper.completionFuture().handle((unused, cause) -> {
@@ -83,7 +83,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         return resWrapper;
     }
 
-    private void onWrapperCompleted(HttpWrapper resWrapper, int id, @Nullable Throwable cause) {
+    private void onWrapperCompleted(HttpResponseWrapper resWrapper, int id, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
         resWrapper.onSubscriptionCancelled(cause);
 
@@ -125,7 +125,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onStreamClosed(Http2Stream stream) {
         goAwayHandler.onStreamClosed(channel(), stream);
 
-        final HttpWrapper res = getResponse(streamIdToId(stream.id()), true);
+        final HttpResponseWrapper res = getResponse(streamIdToId(stream.id()), true);
         if (res == null) {
             return;
         }
@@ -175,7 +175,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
-        final HttpWrapper res = getResponse(streamIdToId(streamId), endOfStream);
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -219,7 +219,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             int padding, boolean endOfStream) throws Http2Exception {
 
         final int dataLength = data.readableBytes();
-        final HttpWrapper res = getResponse(streamIdToId(streamId), endOfStream);
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -258,7 +258,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
-        final HttpWrapper res = removeResponse(streamIdToId(streamId));
+        final HttpResponseWrapper res = removeResponse(streamIdToId(streamId));
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {

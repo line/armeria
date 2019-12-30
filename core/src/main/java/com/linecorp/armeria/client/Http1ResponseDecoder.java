@@ -56,7 +56,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     /** The request being decoded currently. */
     @Nullable
-    private HttpWrapper res;
+    private HttpResponseWrapper res;
     private int resId = 1;
     private State state = State.NEED_HEADERS;
 
@@ -65,12 +65,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     @Override
-    HttpWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
-            EventLoop eventLoop,
+    HttpResponseWrapper addResponse(
+            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx, EventLoop eventLoop,
             long responseTimeoutMillis, long maxContentLength) {
 
-        final HttpWrapper resWrapper =
+        final HttpResponseWrapper resWrapper =
                 super.addResponse(id, res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
 
         resWrapper.completionFuture().handle((unused, cause) -> {
@@ -85,7 +84,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         return resWrapper;
     }
 
-    private void onWrapperCompleted(HttpWrapper resWrapper, @Nullable Throwable cause) {
+    private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
         resWrapper.onSubscriptionCancelled(cause);
 
@@ -147,7 +146,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             disconnectWhenFinished();
                         }
 
-                        final HttpWrapper res = getResponse(resId);
+                        final HttpResponseWrapper res = getResponse(resId);
                         assert res != null;
                         this.res = res;
 
@@ -195,7 +194,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         if (msg instanceof LastHttpContent) {
-                            final HttpWrapper res = removeResponse(resId++);
+                            final HttpResponseWrapper res = removeResponse(resId++);
                             assert res != null;
                             assert this.res == res;
                             this.res = null;
@@ -233,7 +232,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
         state = State.DISCARD;
 
-        final HttpWrapper res = this.res;
+        final HttpResponseWrapper res = this.res;
         this.res = null;
 
         if (res != null) {
