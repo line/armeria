@@ -137,7 +137,7 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
      * @param fallback the fallback response {@link BiFunction} to use when
-     *        {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
+     *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
      */
     protected final O execute(Endpoint endpoint,
                               HttpMethod method, String path, @Nullable String query, @Nullable String fragment,

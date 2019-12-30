@@ -65,8 +65,6 @@ import io.netty.util.AttributeKey;
  */
 public class DefaultClientRequestContext extends NonWrappingRequestContext implements ClientRequestContext {
 
-    static final ThreadLocal<ClientThreadLocalState> threadLocalState = new ThreadLocal<>();
-
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
                     DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
@@ -328,7 +326,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Nullable
     private List<Consumer<? super ClientRequestContext>> copyThreadLocalCustomizers() {
-        final ClientThreadLocalState state = threadLocalState.get();
+        final ClientThreadLocalState state = ClientThreadLocalState.get();
         if (state == null) {
             return null;
         }

@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -144,6 +143,18 @@ class DefaultClientRequestContextTest {
             assertThatThrownBy(ctxCaptor::get).isInstanceOf(IllegalStateException.class)
                                               .hasMessageContaining("no request was made");
         }
+
+        // Thread-local state must be cleaned up.
+        assertThat(ClientThreadLocalState.get()).isNull();
+    }
+
+    @Test
+    void contextCaptorMustBeCleanedUp() {
+        final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
+        assertThat(ClientThreadLocalState.get()).isNotNull();
+        final DefaultClientRequestContext ctx = newContext();
+        assertThat(ctxCaptor.get()).isSameAs(ctx);
+        assertThat(ClientThreadLocalState.get()).isNull();
     }
 
     private static DefaultClientRequestContext newContext() {

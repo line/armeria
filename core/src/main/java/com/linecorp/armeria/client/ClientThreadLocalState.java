@@ -30,6 +30,22 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class ClientThreadLocalState {
 
+    private static final ThreadLocal<ClientThreadLocalState> threadLocalState = new ThreadLocal<>();
+
+    @Nullable
+    static ClientThreadLocalState get() {
+        return threadLocalState.get();
+    }
+
+    static ClientThreadLocalState maybeCreate() {
+        ClientThreadLocalState state = threadLocalState.get();
+        if (state == null) {
+            state = new ClientThreadLocalState();
+            threadLocalState.set(state);
+        }
+        return state;
+    }
+
     @Nullable
     private ArrayList<Consumer<? super ClientRequestContext>> customizers;
 
@@ -49,17 +65,14 @@ final class ClientThreadLocalState {
             for (int i = customizers.size() - 1; i >= 0; i--) {
                 if (customizers.get(i) == customizer) {
                     customizers.remove(i);
+                    maybeRemoveThreadLocal();
                     return;
                 }
             }
         }
 
         // Should not reach here, but may happen if a user tried to call from a wrong thread.
-        final String safeCloseable = SafeCloseable.class.getSimpleName();
-        throw new IllegalStateException(
-                "Failed to remove a context customizer. Did you call " + safeCloseable +
-                ".close() manually on a different thread? Use try-resources or make sure " + safeCloseable +
-                ".close() is called on the same thread as the one that created it.");
+        reportThreadSafetyViolation();
     }
 
     Supplier<ClientRequestContext> newContextCaptor() {
@@ -69,8 +82,31 @@ final class ClientThreadLocalState {
     void setCapturedContext(ClientRequestContext ctx) {
         if (pendingContextCaptor != null) {
             pendingContextCaptor.ctx = ctx;
-            pendingContextCaptor = null;
+            pendingContextCaptor.cleanup();
         }
+    }
+
+    void maybeRemoveThreadLocal() {
+        if (pendingContextCaptor != null || customizers != null && !customizers.isEmpty()) {
+            // State not empty. Do not remove.
+            return;
+        }
+
+        final ClientThreadLocalState actualState = threadLocalState.get();
+        if (actualState != this) {
+            reportThreadSafetyViolation();
+            return;
+        }
+
+        threadLocalState.remove();
+    }
+
+    private static void reportThreadSafetyViolation() {
+        final String safeCloseable = SafeCloseable.class.getSimpleName();
+        throw new IllegalStateException(
+                "Failed to remove a context customizer. Did you call " + safeCloseable +
+                ".close() manually on a different thread? Use try-resources or make sure " + safeCloseable +
+                ".close() is called on the same thread as the one that created it.");
     }
 
     @Nullable
@@ -82,15 +118,23 @@ final class ClientThreadLocalState {
         return ImmutableList.copyOf(customizers);
     }
 
-    private static final class ClientRequestContextCaptor implements Supplier<ClientRequestContext> {
+    private final class ClientRequestContextCaptor implements Supplier<ClientRequestContext> {
 
         @Nullable
         private ClientRequestContext ctx;
 
         @Override
         public ClientRequestContext get() {
+            cleanup();
             checkState(ctx != null, "No context was captured; no request was made?");
             return ctx;
+        }
+
+        void cleanup() {
+            if (pendingContextCaptor == this) {
+                pendingContextCaptor = null;
+                maybeRemoveThreadLocal();
+            }
         }
     }
 }

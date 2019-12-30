@@ -586,7 +586,7 @@ public final class Clients {
             Consumer<? super ClientRequestContext> contextCustomizer) {
         requireNonNull(contextCustomizer, "contextCustomizer");
 
-        final ClientThreadLocalState customizers = maybeCreateContextCustomizers();
+        final ClientThreadLocalState customizers = ClientThreadLocalState.maybeCreate();
         customizers.add(contextCustomizer);
 
         return new SafeCloseable() {
@@ -617,16 +617,7 @@ public final class Clients {
      * <p>Note: Only the first {@link ClientRequestContext} is captured if you made more than one request.</p>
      */
     public static Supplier<ClientRequestContext> newContextCaptor() {
-        return maybeCreateContextCustomizers().newContextCaptor();
-    }
-
-    private static ClientThreadLocalState maybeCreateContextCustomizers() {
-        ClientThreadLocalState customizers = DefaultClientRequestContext.threadLocalState.get();
-        if (customizers == null) {
-            customizers = new ClientThreadLocalState();
-            DefaultClientRequestContext.threadLocalState.set(customizers);
-        }
-        return customizers;
+        return ClientThreadLocalState.maybeCreate().newContextCaptor();
     }
 
     private Clients() {}
