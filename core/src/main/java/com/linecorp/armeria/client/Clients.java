@@ -621,10 +621,10 @@ public final class Clients {
     }
 
     private static ClientThreadLocalState maybeCreateContextCustomizers() {
-        ClientThreadLocalState customizers = DefaultClientRequestContext.threadLocalCustomizers.get();
+        ClientThreadLocalState customizers = DefaultClientRequestContext.threadLocalState.get();
         if (customizers == null) {
             customizers = new ClientThreadLocalState();
-            DefaultClientRequestContext.threadLocalCustomizers.set(customizers);
+            DefaultClientRequestContext.threadLocalState.set(customizers);
         }
         return customizers;
     }
