@@ -37,7 +37,7 @@ final class RequestContextScalarCallableCompletable<T> extends Completable
 
     @Override
     protected void subscribeActual(CompletableObserver s) {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             source.subscribe(new RequestContextCompletableObserver(s, assemblyContext));
         }
     }
@@ -45,7 +45,7 @@ final class RequestContextScalarCallableCompletable<T> extends Completable
     @SuppressWarnings("unchecked")
     @Override
     public T call() {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             return ((ScalarCallable<T>) source).call();
         }
     }

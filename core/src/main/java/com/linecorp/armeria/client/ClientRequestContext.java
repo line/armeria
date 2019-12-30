@@ -17,12 +17,16 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootAndOldCtx;
+import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootCtx;
+import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -39,6 +43,8 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.RequestContextThreadLocal;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -288,6 +294,66 @@ public interface ClientRequestContext extends RequestContext {
     @Nullable
     @Override
     RpcRequest rpcRequest();
+
+    /**
+     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
+     * <pre>{@code
+     * try (PushHandle ignored = ctx.push(true)) {
+     *     ...
+     * }
+     * }</pre>
+     *
+     * <p>In order to call this method, the current thread-local state must meet one of the
+     * following conditions:
+     * <ul>
+     *   <li>the thread-local does not have any {@link RequestContext} in it</li>
+     *   <li>the thread-local has the same {@link ClientRequestContext} as this - reentrance</li>
+     *   <li>the thread-local has the {@link ServiceRequestContext} which is the same as {@link #root()}</li>
+     *   <li>the thread-local has the {@link ClientRequestContext} whose {@link #root()}
+     *       is the same {@link #root()}</li>
+     *   <li>the thread-local has the {@link ClientRequestContext} whose {@link #root()} is {@code null}
+     *       and this {@link #root()} is {@code null}</li>
+     * </ul>
+     * If it doesn't, this will throw an {@link IllegalStateException}.
+     *
+     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
+     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
+     *                     removed from the thread-local stack respectively.
+     *                     NOTE: In case of reentrance, the callbacks will never run.
+     */
+    @Override
+    default SafeCloseable push(boolean runCallbacks) {
+        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        if (oldCtx == this) {
+            // Reentrance
+            return () -> { /* no-op */ };
+        }
+
+        if (oldCtx == null) {
+            return pushWithoutRootCtx(this, runCallbacks);
+        }
+
+        final ServiceRequestContext root = root();
+        if (oldCtx instanceof ServiceRequestContext && oldCtx == root) {
+            return pushWithRootCtx(this, root, runCallbacks);
+        }
+
+        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
+            if (root == null) {
+                return pushWithoutRootCtx(this, runCallbacks);
+            }
+
+            return pushWithRootAndOldCtx(this, root, oldCtx, runCallbacks);
+        }
+
+        // Put the oldCtx back before throwing an exception.
+        RequestContextThreadLocal.set(oldCtx);
+        throw new IllegalStateException(
+                "Trying to call object wrapped with context " + this + ", but context is currently " +
+                "set to " + oldCtx + ". This means the callback was called from " +
+                "unexpected thread or forgetting to close previous context.");
+    }
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this

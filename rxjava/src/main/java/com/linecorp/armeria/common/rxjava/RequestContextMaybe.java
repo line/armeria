@@ -35,7 +35,7 @@ final class RequestContextMaybe<T> extends Maybe<T> {
 
     @Override
     protected void subscribeActual(MaybeObserver<? super T> s) {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             source.subscribe(new RequestContextMaybeObserver<>(s, assemblyContext));
         }
     }

@@ -39,7 +39,7 @@ final class RequestContextCallableFlowable<T> extends Flowable<T> implements Cal
     @SuppressWarnings("unchecked")
     @Override
     protected void subscribeActual(Subscriber<? super T> s) {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             if (s instanceof ConditionalSubscriber) {
                 source.subscribe(new RequestContextConditionalSubscriber<>(
                         (ConditionalSubscriber<? super T>) s, assemblyContext
@@ -53,7 +53,7 @@ final class RequestContextCallableFlowable<T> extends Flowable<T> implements Cal
     @SuppressWarnings("unchecked")
     @Override
     public T call() throws Exception {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             return ((Callable<T>) source).call();
         }
     }

@@ -57,7 +57,7 @@ final class RequestContextParallelFlowable<T> extends ParallelFlowable<T> {
                 parents[i] = new RequestContextSubscriber<>(z, assemblyContext);
             }
         }
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             source.subscribe(parents);
         }
     }

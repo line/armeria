@@ -185,7 +185,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             if (!closeCalled) {
                 // Closed by client, not by server.
                 cancelled = true;
-                try (SafeCloseable ignore = ctx.pushIfAbsent()) {
+                try (SafeCloseable ignore = ctx.push()) {
                     close(Status.CANCELLED, new Metadata());
                 }
             }

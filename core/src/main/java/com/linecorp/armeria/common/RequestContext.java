@@ -45,6 +45,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.JavaVersionSpecific;
+import com.linecorp.armeria.internal.RequestContextThreadLocal;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -312,6 +314,10 @@ public interface RequestContext {
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
      *
+     * <p>This method may throw an {@link IllegalStateException} according to the status of the current
+     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
+     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
+     *
      * @deprecated Use {@link #push()}.
      */
     @Deprecated
@@ -322,6 +328,10 @@ public interface RequestContext {
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
+     *
+     * <p>This method may throw an {@link IllegalStateException} according to the status of the current
+     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
+     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
      *
      * @deprecated Use {@link #push(boolean)}.
      */
@@ -342,7 +352,9 @@ public interface RequestContext {
      * <p>The callbacks added by {@link #onEnter(Consumer)} and {@link #onExit(Consumer)} will be invoked
      * when the context is pushed to and removed from the thread-local stack respectively.
      *
-     * <p>NOTE: In case of re-entrance, the callbacks will never run.
+     * <p>This method may throw an {@link IllegalStateException} according to the status of the current
+     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
+     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
      */
     default SafeCloseable push() {
         return push(true);
@@ -357,8 +369,9 @@ public interface RequestContext {
      * }
      * }</pre>
      *
-     * <p>NOTE: This method is only useful when it is undesirable to invoke the callbacks, such as replacing
-     *          the current context with another. Prefer {@link #push()} otherwise.
+     * <p>This method may throw an {@link IllegalStateException} according to the status of the current
+     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
+     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
      *
      * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
      *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
@@ -366,52 +379,21 @@ public interface RequestContext {
      *                     If {@code false}, no callbacks will be executed.
      *                     NOTE: In case of re-entrance, the callbacks will never run.
      */
-    default SafeCloseable push(boolean runCallbacks) {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
-        if (oldCtx == this) {
-            // Reentrance
-            return () -> { /* no-op */ };
-        }
-
-        if (runCallbacks) {
-            if (oldCtx != null) {
-                oldCtx.invokeOnChildCallbacks(this);
-                invokeOnEnterCallbacks();
-                return () -> {
-                    invokeOnExitCallbacks();
-                    RequestContextThreadLocal.set(oldCtx);
-                };
-            } else {
-                invokeOnEnterCallbacks();
-                return () -> {
-                    invokeOnExitCallbacks();
-                    RequestContextThreadLocal.remove();
-                };
-            }
-        } else {
-            if (oldCtx != null) {
-                return () -> RequestContextThreadLocal.set(oldCtx);
-            } else {
-                return RequestContextThreadLocal::remove;
-            }
-        }
-    }
+    SafeCloseable push(boolean runCallbacks);
 
     /**
-     * Pushes this context to the thread-local stack if there is no current context. If there is and it is not
-     * same with this context (i.e. not reentrance), this method will throw an {@link IllegalStateException}.
-     * To pop the context from the stack, call {@link SafeCloseable#close()},
-     * which can be done using a {@code try-with-resources} block.
+     * Pushes this context to the thread-local stack. To pop the context from the stack,
+     * call {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
+     *
+     * <p>This method may throw an {@link IllegalStateException} according to the status of the current
+     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
+     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
+     *
+     * @deprecated Use {@link #push()}.
      */
+    @Deprecated
     default SafeCloseable pushIfAbsent() {
-        final RequestContext currentRequestContext = RequestContextThreadLocal.get();
-        if (currentRequestContext != null && currentRequestContext != this) {
-            throw new IllegalStateException(
-                    "Trying to call object wrapped with context " + this + ", but context is currently " +
-                    "set to " + currentRequestContext + ". This means the callback was called from " +
-                    "unexpected thread or forgetting to close previous context.");
-        }
-        return push();
+        return push(true);
     }
 
     /**
@@ -443,37 +425,73 @@ public interface RequestContext {
      * Returns a {@link Callable} that makes sure the current {@link RequestContext} is set and then invokes
      * the input {@code callable}.
      */
-    <T> Callable<T> makeContextAware(Callable<T> callable);
+    default <T> Callable<T> makeContextAware(Callable<T> callable) {
+        return () -> {
+            try (SafeCloseable ignored = push()) {
+                return callable.call();
+            }
+        };
+    }
 
     /**
      * Returns a {@link Runnable} that makes sure the current {@link RequestContext} is set and then invokes
      * the input {@code runnable}.
      */
-    Runnable makeContextAware(Runnable runnable);
+    default Runnable makeContextAware(Runnable runnable) {
+        return () -> {
+            try (SafeCloseable ignored = push()) {
+                runnable.run();
+            }
+        };
+    }
 
     /**
      * Returns a {@link Function} that makes sure the current {@link RequestContext} is set and then invokes
      * the input {@code function}.
      */
-    <T, R> Function<T, R> makeContextAware(Function<T, R> function);
+    default <T, R> Function<T, R> makeContextAware(Function<T, R> function) {
+        return t -> {
+            try (SafeCloseable ignored = push()) {
+                return function.apply(t);
+            }
+        };
+    }
 
     /**
      * Returns a {@link BiFunction} that makes sure the current {@link RequestContext} is set and then invokes
      * the input {@code function}.
      */
-    <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function);
+    default <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function) {
+        return (t, u) -> {
+            try (SafeCloseable ignored = push()) {
+                return function.apply(t, u);
+            }
+        };
+    }
 
     /**
      * Returns a {@link Consumer} that makes sure the current {@link RequestContext} is set and then invokes
      * the input {@code action}.
      */
-    <T> Consumer<T> makeContextAware(Consumer<T> action);
+    default <T> Consumer<T> makeContextAware(Consumer<T> action) {
+        return t -> {
+            try (SafeCloseable ignored = push()) {
+                action.accept(t);
+            }
+        };
+    }
 
     /**
      * Returns a {@link BiConsumer} that makes sure the current {@link RequestContext} is set and then invokes
      * the input {@code action}.
      */
-    <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action);
+    default <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action) {
+        return (t, u) -> {
+            try (SafeCloseable ignored = push()) {
+                action.accept(t, u);
+            }
+        };
+    }
 
     /**
      * Returns a {@link FutureListener} that makes sure the current {@link RequestContext} is set and then
@@ -482,7 +500,13 @@ public interface RequestContext {
      * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated
-    <T> FutureListener<T> makeContextAware(FutureListener<T> listener);
+    default <T> FutureListener<T> makeContextAware(FutureListener<T> listener) {
+        return future -> {
+            try (SafeCloseable ignored = push()) {
+                listener.operationComplete(future);
+            }
+        };
+    }
 
     /**
      * Returns a {@link ChannelFutureListener} that makes sure the current {@link RequestContext} is set and
@@ -491,7 +515,13 @@ public interface RequestContext {
      * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated
-    ChannelFutureListener makeContextAware(ChannelFutureListener listener);
+    default ChannelFutureListener makeContextAware(ChannelFutureListener listener) {
+        return future -> {
+            try (SafeCloseable ignored = push()) {
+                listener.operationComplete(future);
+            }
+        };
+    }
 
     /**
      * Returns a {@link GenericFutureListener} that makes sure the current {@link RequestContext} is set and
@@ -500,13 +530,34 @@ public interface RequestContext {
      * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated
-    <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener);
+    default <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener) {
+        return future -> {
+            try (SafeCloseable ignored = push()) {
+                listener.operationComplete(future);
+            }
+        };
+    }
 
     /**
      * Returns a {@link CompletionStage} that makes sure the current {@link RequestContext} is set and
      * then invokes the input {@code stage}.
      */
-    <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage);
+    default <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
+        final CompletableFuture<T> future = JavaVersionSpecific.get().newRequestContextAwareFuture(this);
+        stage.handle((result, cause) -> {
+            try (SafeCloseable ignored = push()) {
+                if (cause != null) {
+                    future.completeExceptionally(cause);
+                } else {
+                    future.complete(result);
+                }
+            } catch (Throwable t) {
+                future.completeExceptionally(t);
+            }
+            return null;
+        });
+        return future;
+    }
 
     /**
      * Returns a {@link CompletableFuture} that makes sure the current {@link RequestContext} is set and
@@ -524,15 +575,6 @@ public interface RequestContext {
     default Logger makeContextAware(Logger logger) {
         return new RequestContextAwareLogger(this, requireNonNull(logger, "logger"));
     }
-
-    /**
-     * Returns whether this {@link RequestContext} has been timed-out (e.g., when the corresponding request
-     * passes a deadline).
-     *
-     * @deprecated Use {@link ServiceRequestContext#isTimedOut()}.
-     */
-    @Deprecated
-    boolean isTimedOut();
 
     /**
      * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
@@ -577,22 +619,6 @@ public interface RequestContext {
     }
 
     /**
-     * Registers {@code callback} to be run when this context is replaced by a child context.
-     * You could use this method to the child contexts that may be created later:
-     * <pre>{@code
-     * ctx.onChild((curCtx, newCtx) -> {
-     *     assert ctx == curCtx && curCtx != newCtx;
-     *     // Add a callback to the child context.
-     *     newCtx.onExit(() -> { ... });
-     * });
-     * }</pre>
-     *
-     * @param callback a {@link BiConsumer} whose first argument is this context and
-     *                 whose second argument is the new context that replaces this context
-     */
-    void onChild(BiConsumer<? super RequestContext, ? super RequestContext> callback);
-
-    /**
      * Invokes all {@link #onEnter(Consumer)} callbacks. It is discouraged to use this method directly.
      * Use {@link #makeContextAware(Runnable)} or {@link #push(boolean)} instead so that the callbacks are
      * invoked automatically.
@@ -605,13 +631,6 @@ public interface RequestContext {
      * invoked automatically.
      */
     void invokeOnExitCallbacks();
-
-    /**
-     * Invokes all {@link #onChild(BiConsumer)} callbacks. It is discouraged to use this method directly.
-     * Use {@link #makeContextAware(Runnable)} or {@link #push(boolean)} instead so that the callbacks are
-     * invoked automatically.
-     */
-    void invokeOnChildCallbacks(RequestContext newCtx);
 
     /**
      * Resolves the specified {@code promise} with the specified {@code result} so that the {@code promise} is

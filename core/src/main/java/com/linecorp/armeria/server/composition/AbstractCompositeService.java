@@ -32,8 +32,8 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.RequestContextThreadLocal;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
@@ -165,8 +165,12 @@ public abstract class AbstractCompositeService<T extends Service<I, O>, I extend
 
             final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
                     ctx, newRoute, result.routingResult().path());
-            try (SafeCloseable ignored = newCtx.push(false)) {
+            final ServiceRequestContext oldCtx = RequestContextThreadLocal.getAndSet(newCtx);
+            assert oldCtx == ctx;
+            try {
                 return result.value().serve(newCtx, req);
+            } finally {
+                RequestContextThreadLocal.set(oldCtx);
             }
         } else {
             return result.value().serve(ctx, req);

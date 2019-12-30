@@ -14,37 +14,55 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal;
+
+import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 
-final class RequestContextThreadLocal {
+public final class RequestContextThreadLocal {
 
     private static final FastThreadLocal<RequestContext> context = new FastThreadLocal<>();
 
+    /**
+     * Returns the current {@link RequestContext} in the thread-local.
+     */
     @Nullable
     @SuppressWarnings("unchecked")
-    static <T extends RequestContext> T get() {
+    public static <T extends RequestContext> T get() {
         return (T) context.get();
     }
 
+    /**
+     * Sets the specified {@link RequestContext} in the thread-local and returns the old {@link RequestContext}.
+     */
     @Nullable
     @SuppressWarnings("unchecked")
-    static <T extends RequestContext> T getAndSet(RequestContext ctx) {
+    public static <T extends RequestContext> T getAndSet(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
         final InternalThreadLocalMap map = InternalThreadLocalMap.get();
         final RequestContext oldCtx = context.get(map);
         context.set(map, ctx);
         return (T) oldCtx;
     }
 
-    static void set(RequestContext ctx) {
+    /**
+     * Sets the specified {@link RequestContext} in the thread-local.
+     */
+    public static void set(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
         context.set(ctx);
     }
 
-    static void remove() {
+    /**
+     * Removes the current {@link RequestContext} in the thread-local.
+     */
+    public static void remove() {
         context.remove();
     }
 

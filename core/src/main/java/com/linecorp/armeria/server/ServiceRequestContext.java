@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -25,12 +26,15 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,6 +47,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.RequestContextThreadLocal;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -162,6 +168,77 @@ public interface ServiceRequestContext extends RequestContext {
         final InetSocketAddress remoteAddress = remoteAddress();
         return remoteAddress.getAddress();
     }
+
+    /**
+     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
+     * <pre>{@code
+     * try (PushHandle ignored = ctx.push(true)) {
+     *     ...
+     * }
+     * }</pre>
+     *
+     * <p>In order to call this method, the current thread-local state must meet one of the
+     * following conditions:
+     * <ul>
+     *   <li>the thread-local does not have any {@link RequestContext} in it</li>
+     *   <li>the thread-local has the same {@link ServiceRequestContext} as this - reentrance</li>
+     *   <li>the thread-local has the {@link ClientRequestContext} whose {@link ClientRequestContext#root()}
+     *       is the same {@link ServiceRequestContext} as this</li>
+     * </ul>
+     * If it doesn't, this will throw an {@link IllegalStateException}.
+     *
+     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
+     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
+     *                     removed from the thread-local stack respectively. The callbacks are executed only
+     *                     when the thread-local does not have any {@link RequestContext} in it.
+     */
+    @Override
+    default SafeCloseable push(boolean runCallbacks) {
+        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        if (oldCtx == this) {
+            // Reentrance
+            return () -> { /* no-op */ };
+        }
+
+        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
+            return () -> { /* no-op */ };
+        }
+
+        if (oldCtx == null) {
+            return pushWithoutRootCtx(this, runCallbacks);
+        }
+
+        // Put the oldCtx back before throwing an exception.
+        RequestContextThreadLocal.set(oldCtx);
+        throw new IllegalStateException(
+                "Trying to call object wrapped with context " + this + ", but context is currently " +
+                "set to " + oldCtx + ". This means the callback was called from " +
+                "unexpected thread or forgetting to close previous context.");
+    }
+
+    /**
+     * Registers {@code callback} to be run when this context is replaced by a child context.
+     * You could use this method to the child contexts that may be created later:
+     * <pre>{@code
+     * ctx.onChild((curCtx, newCtx) -> {
+     *     assert ctx == curCtx && curCtx != newCtx;
+     *     // Add a callback to the child context.
+     *     newCtx.onExit(() -> { ... });
+     * });
+     * }</pre>
+     *
+     * @param callback a {@link BiConsumer} whose first argument is this context and
+     *                 whose second argument is the new context that replaces this context
+     */
+    void onChild(BiConsumer<? super ServiceRequestContext, ? super ClientRequestContext> callback);
+
+    /**
+     * Invokes all {@link #onChild(BiConsumer)} callbacks. It is discouraged to use this method directly.
+     * Use {@link #makeContextAware(Runnable)} or {@link #push(boolean)} instead so that the callbacks are
+     * invoked automatically.
+     */
+    void invokeOnChildCallbacks(ClientRequestContext newCtx);
 
     @Override
     ServiceRequestContext newDerivedContext(RequestId id,
@@ -301,7 +378,6 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns whether this {@link ServiceRequestContext} has been timed-out (e.g., when the
      * corresponding request passes a deadline).
      */
-    @Override
     boolean isTimedOut();
 
     /**

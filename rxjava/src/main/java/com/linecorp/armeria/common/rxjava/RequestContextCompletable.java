@@ -35,7 +35,7 @@ final class RequestContextCompletable extends Completable {
 
     @Override
     protected void subscribeActual(CompletableObserver s) {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             source.subscribe(new RequestContextCompletableObserver(s, assemblyContext));
         }
     }
