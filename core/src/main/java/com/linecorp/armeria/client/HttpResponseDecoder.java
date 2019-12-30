@@ -388,6 +388,5 @@ abstract class HttpResponseDecoder {
         public String toString() {
             return delegate.toString();
         }
-
     }
 }

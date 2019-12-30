@@ -47,7 +47,7 @@ public final class DefaultTimeoutController implements TimeoutController {
     private ScheduledFuture<?> timeoutFuture;
 
     /**
-     * Creates a new instance
+     * Creates a new instance.
      */
     public DefaultTimeoutController(TimeoutTask timeoutTask,
                              Supplier<? extends EventLoop> eventLoopSupplier) {
@@ -55,7 +55,7 @@ public final class DefaultTimeoutController implements TimeoutController {
     }
 
     /**
-     * Creates a new instance
+     * Creates a new instance.
      */
     public DefaultTimeoutController(TimeoutTask timeoutTask,
                              Supplier<? extends EventLoop> eventLoopSupplier,
