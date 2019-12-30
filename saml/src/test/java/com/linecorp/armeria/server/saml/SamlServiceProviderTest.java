@@ -169,37 +169,42 @@ public class SamlServiceProviderTest {
     public static ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final SamlServiceProvider sp = new SamlServiceProviderBuilder()
-                    // A request will be authenticated if it contains 'test=test' cookie in Cookie header.
-                    .authorizer(new CookieBasedAuthorizer("test", "test"))
-                    .ssoHandler(new CookieBasedSsoHandler("test", "test"))
-                    // My entity ID
-                    .entityId(spEntityId)
-                    .hostname(spHostname)
-                    //.scheme(SessionProtocol.HTTP)
-                    .credentialResolver(spCredentialResolver)
-                    .signatureAlgorithm(signatureAlgorithm)
-                    // Add a dummy IdP which supports HTTP-Post binding protocol for SSO.
-                    .idp()
-                    .entityId("http://idp.example.com/post")
-                    .ssoEndpoint(ofHttpPost("http://idp.example.com/saml/sso/post"))
-                    .sloResEndpoint(ofHttpPost("http://idp.example.com/saml/slo/post"))
-                    .and()
-                    // Add one more dummy IdP which supports HTTP-Redirect binding protocol for SSO.
-                    .idp()
-                    .entityId("http://idp.example.com/redirect")
-                    .ssoEndpoint(ofHttpRedirect("http://idp.example.com/saml/sso/redirect"))
-                    .sloResEndpoint(ofHttpRedirect("http://idp.example.com/saml/slo/redirect"))
-                    .and()
-                    // We have two IdP config so one of them will be selected by the path variable.
-                    .idpConfigSelector((configurator, ctx, req) -> {
-                        final String idpEntityId = "http://idp.example.com/" +
-                                                   ctx.pathParam("bindingProtocol");
+            final SamlIdentityProviderConfigSelector configSelector =
+                    (configurator, ctx, req) -> {
+                        final String idpEntityId = "http://idp.example.com/" + ctx.pathParam("bindingProtocol");
                         return CompletableFuture.completedFuture(
                                 configurator.idpConfigs().get(idpEntityId));
-                    })
-                    .requestIdManager(requestIdManager)
-                    .build();
+                    };
+            final SamlServiceProvider sp =
+                    SamlServiceProvider.builder()
+                                       // A request will be authenticated if it contains 'test=test'
+                                       // cookie in Cookie header.
+                                       .authorizer(new CookieBasedAuthorizer("test", "test"))
+                                       .ssoHandler(new CookieBasedSsoHandler("test", "test"))
+                                       // My entity ID
+                                       .entityId(spEntityId)
+                                       .hostname(spHostname)
+                                       //.scheme(SessionProtocol.HTTP)
+                                       .credentialResolver(spCredentialResolver)
+                                       .signatureAlgorithm(signatureAlgorithm)
+                                       // Add a dummy IdP which supports HTTP-Post binding protocol for SSO.
+                                       .idp()
+                                       .entityId("http://idp.example.com/post")
+                                       .ssoEndpoint(ofHttpPost("http://idp.example.com/saml/sso/post"))
+                                       .sloResEndpoint(ofHttpPost("http://idp.example.com/saml/slo/post"))
+                                       .and()
+                                       // Add one more dummy IdP which supports
+                                       // HTTP-Redirect binding protocol for SSO.
+                                       .idp()
+                                       .entityId("http://idp.example.com/redirect")
+                                       .ssoEndpoint(ofHttpRedirect("http://idp.example.com/saml/sso/redirect"))
+                                       .sloResEndpoint(ofHttpRedirect("http://idp.example.com/saml/slo/redirect"))
+                                       .and()
+                                       // We have two IdP config so one of them
+                                       // will be selected by the path variable.
+                                       .idpConfigSelector(configSelector)
+                                       .requestIdManager(requestIdManager)
+                                       .build();
 
             sb.service(sp.newSamlService())
               .annotatedService("/", new Object() {

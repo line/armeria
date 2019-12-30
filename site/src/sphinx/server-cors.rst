@@ -96,12 +96,12 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
                               .exposeHeaders("expose_header_1", "expose_header_2")
                               .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                               .maxAge(3600)
-                              .addPolicy(new CorsPolicyBuilder("http://example2.com")
-                                                 .allowCredentials()
-                                                 .allowRequestMethods(HttpMethod.GET)
-                                                 .allowRequestHeaders("allow_request_header2")
-                                                 .exposeHeaders("expose_header_3", "expose_header_4")
-                                                 .build())
+                              .addPolicy(CorsPolicy.builder("http://example2.com")
+                                                   .allowCredentials()
+                                                   .allowRequestMethods(HttpMethod.GET)
+                                                   .allowRequestHeaders("allow_request_header2")
+                                                   .exposeHeaders("expose_header_3", "expose_header_4")
+                                                   .build())
                               .newDecorator();
     ServerBuilder sb = Server.builder()
                              .service("/message", myService.decorate(corsService));

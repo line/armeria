@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.saml.KeyStoreCredentialResolverBuilder;
 import com.linecorp.armeria.server.saml.SamlServiceProvider;
-import com.linecorp.armeria.server.saml.SamlServiceProviderBuilder;
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
@@ -47,35 +46,39 @@ public class Main {
      */
     private static SamlServiceProvider samlServiceProvider() throws IOException, GeneralSecurityException {
         final MyAuthHandler authHandler = new MyAuthHandler();
-        return new SamlServiceProviderBuilder()
-                // Specify information about your keystore. The keystore contains two key pairs
-                // which are identified as 'signing' and 'encryption'.
-                .credentialResolver(new KeyStoreCredentialResolverBuilder("sample.jks")
+        return SamlServiceProvider.builder()
+                                  // Specify information about your keystore.
+                                  // The keystore contains two key pairs.
+                                  // which are identified as 'signing' and 'encryption'.
+                                  .credentialResolver(new KeyStoreCredentialResolverBuilder("sample.jks")
                                             .type("PKCS12")
                                             .password("N5^X[hvG")
                                             // You need to specify your key pair and its password here.
                                             .addKeyPassword("signing", "N5^X[hvG")
                                             .addKeyPassword("encryption", "N5^X[hvG")
                                             .build())
-                // Specify the entity ID of this service provider. You can specify what you want.
-                .entityId("armeria-sp")
-                .hostname("localhost")
-                // Specify an authorizer in order to authenticate a request.
-                .authorizer(authHandler)
-                // Speicify an SAML single sign-on handler which sends a response to an end user
-                // after he or she is authenticated or not.
-                .ssoHandler(authHandler)
-                // Specify the signature algorithm of your key.
-                .signatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA)
-                // The following information is from https://idp.ssocircle.com/meta-idp.xml.
-                .idp()
-                // Specify the entity ID of the identity provider. It can be found from the metadata of
-                // the identity provider.
-                .entityId("https://idp.ssocircle.com")
-                // Specify the endpoint that is supposed to send an authentication request.
-                .ssoEndpoint(ofHttpPost("https://idp.ssocircle.com:443/sso/SSOPOST/metaAlias/publicidp"))
-                .and()
-                .build();
+                                  // Specify the entity ID of this service provider.
+                                  // You can specify what you want.
+                                  .entityId("armeria-sp")
+                                  .hostname("localhost")
+                                  // Specify an authorizer in order to authenticate a request.
+                                  .authorizer(authHandler)
+                                  // Speicify an SAML single sign-on handler
+                                  // which sends a response to an end user
+                                  // after he or she is authenticated or not.
+                                  .ssoHandler(authHandler)
+                                  // Specify the signature algorithm of your key.
+                                  .signatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA)
+                                  // The following information is from
+                                  // https://idp.ssocircle.com/meta-idp.xml.
+                                  .idp()
+                                  // Specify the entity ID of the identity provider.
+                                  // It can be found from the metadata of the identity provider.
+                                  .entityId("https://idp.ssocircle.com")
+                                  // Specify the endpoint that is supposed to send an authentication request.
+                                  .ssoEndpoint(ofHttpPost("https://idp.ssocircle.com:443/sso/SSOPOST/metaAlias/publicidp"))
+                                  .and()
+                                  .build();
     }
 
     public static void main(String[] args) throws Exception {

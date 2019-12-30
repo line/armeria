@@ -75,7 +75,7 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -102,19 +102,19 @@ public class AnnotatedDocServiceTest {
                 sb.http(8080);
             }
             sb.annotatedService("/service", new MyService());
-            sb.serviceUnder("/docs", new DocServiceBuilder()
-                    .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
-                    .exampleHttpHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
-                    .exampleHttpHeaders(MyService.class, "pathParams", EXAMPLE_HEADERS_METHOD)
-                    .exampleRequestForMethod(MyService.class, "pathParams",
-                                             ImmutableList.of(mapper.readTree(
-                                                     "{\"hello\":\"armeria\"}")))
-                    .exclude(DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude1").or(
-                            DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude2")))
-                    .build());
-            sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
-                    .exclude(DocServiceFilter.ofAnnotated())
-                    .build());
+            sb.serviceUnder("/docs",
+                    DocService.builder()
+                              .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
+                              .exampleHttpHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
+                              .exampleHttpHeaders(MyService.class,"pathParams", EXAMPLE_HEADERS_METHOD)
+                              .exampleRequestForMethod(MyService.class, "pathParams",
+                                             ImmutableList.of(mapper.readTree("{\"hello\":\"armeria\"}")))
+                              .exclude(DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude1").or(
+                                       DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude2")))
+                              .build());
+            sb.serviceUnder("/excludeAll/", DocService.builder()
+                                                      .exclude(DocServiceFilter.ofAnnotated())
+                                                      .build());
         }
     };
 

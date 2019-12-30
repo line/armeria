@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
@@ -102,7 +103,7 @@ public class ArmeriaAutoConfiguration {
             configurePorts(serverBuilder, ports);
         }
 
-        final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
+        final DocServiceBuilder docServiceBuilder = DocService.builder();
         docServiceConfigurators.ifPresent(
                 configurators -> configurators.forEach(
                         configurator -> configurator.configure(docServiceBuilder)));

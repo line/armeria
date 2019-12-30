@@ -44,6 +44,13 @@ import com.linecorp.armeria.server.auth.Authorizer;
  */
 public final class SamlServiceProvider {
 
+    /**
+     * Returns a new {@link SamlServiceProviderBuilder}.
+     */
+    public static SamlServiceProviderBuilder builder() {
+        return new SamlServiceProviderBuilder();
+    }
+
     private final Authorizer<HttpRequest> authorizer;
 
     private final String entityId;
