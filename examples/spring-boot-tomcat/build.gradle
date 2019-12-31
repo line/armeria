@@ -25,5 +25,6 @@ dependencies {
     runtime project(':spring:boot-actuator-starter')
 
     testCompile 'org.assertj:assertj-core'
+    testCompile 'org.junit.jupiter:junit-jupiter-api'
     testCompile 'org.springframework.boot:spring-boot-starter-test'
 }

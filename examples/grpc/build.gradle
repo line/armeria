@@ -13,6 +13,7 @@ dependencies {
     testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
     testCompile 'org.assertj:assertj-core'
     testCompile 'org.awaitility:awaitility'
+    testCompile 'org.junit.jupiter:junit-jupiter-api'
 }
 
 application {

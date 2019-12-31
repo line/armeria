@@ -10,6 +10,7 @@ dependencies {
     testCompile 'io.projectreactor:reactor-test'
     testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
     testCompile 'org.assertj:assertj-core'
+    testCompile 'org.junit.jupiter:junit-jupiter-api'
 }
 
 application {
