@@ -335,8 +335,8 @@ public interface ServiceRequestContext extends RequestContext {
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
-     * ctx.resetRequestTimeoutMillis(1000);
      * // Do something...
+     * ctx.resetRequestTimeoutMillis(1000);
      * long passedTimeFromStartMillis = ...;
      * assert ctx.requestTimeoutMillis() == passedTimeFromStartMillis + 1000;
      * }</pre>
@@ -352,8 +352,8 @@ public interface ServiceRequestContext extends RequestContext {
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
-     * ctx.resetRequestTimeout(Duration.ofSeconds(1));
      * // Do something...
+     * ctx.resetRequestTimeout(Duration.ofSeconds(1));
      * long passedTimeFromStartMillis = ...;
      * assert ctx.requestTimeoutMillis() == passedTimeFromStartMillis + 1000;
      * }</pre>

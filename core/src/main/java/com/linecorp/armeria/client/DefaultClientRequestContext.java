@@ -464,8 +464,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             return;
         }
 
-        final long oldRequestTimeoutMillis = responseTimeoutMillis;
-        responseTimeoutMillis = LongMath.saturatedAdd(oldRequestTimeoutMillis, adjustmentMillis);
+        final long oldResponseTimeoutMillis = responseTimeoutMillis;
+        responseTimeoutMillis = LongMath.saturatedAdd(oldResponseTimeoutMillis, adjustmentMillis);
         final TimeoutController responseTimeoutController = this.responseTimeoutController;
         if (responseTimeoutController != null) {
             if (eventLoop().inEventLoop()) {
@@ -525,15 +525,15 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     /**
      * Sets the {@code responseTimeoutController} that is set to a new timeout when
-     * the {@linkplain #responseTimeoutMillis()} request timeout} setting is changed.
+     * the {@linkplain #responseTimeoutMillis()} response timeout} setting is changed.
      *
      * <p>Note: This method is meant for internal use by client-side protocol implementation to reschedule
-     * a timeout task when a user updates the request timeout configuration.
+     * a timeout task when a user updates the response timeout configuration.
      */
     public void setResponseTimeoutController(TimeoutController responseTimeoutController) {
         requireNonNull(responseTimeoutController, "responseTimeoutController");
         if (this.responseTimeoutController != null) {
-            throw new IllegalStateException("requestTimeoutChangeListener is set already.");
+            throw new IllegalStateException("responseTimeoutController is set already.");
         }
         this.responseTimeoutController = responseTimeoutController;
     }
