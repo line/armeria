@@ -158,8 +158,9 @@ final class DefaultRoutingContext implements RoutingContext {
     // 0 : VirtualHost
     // 1 : HttpMethod
     // 2 : Path
-    // 3 : Content-Type
-    // 4 : Accept
+    // 3 : Query
+    // 4 : Headers
+    // 5 : Boolean properties
 
     @Override
     public int hashCode() {
@@ -173,14 +174,15 @@ final class DefaultRoutingContext implements RoutingContext {
         result *= 31;
         result += routingCtx.path().hashCode();
         result *= 31;
-        final MediaType contentType = routingCtx.contentType();
-        if (contentType != null) {
-            result += contentType.hashCode();
-        }
-        for (MediaType mediaType : routingCtx.acceptTypes()) {
-            result *= 31;
-            result += mediaType.hashCode();
-        }
+        result += Objects.hashCode(routingCtx.query());
+        result *= 31;
+        result += routingCtx.headers().hashCode();
+        result *= 31;
+        result += Boolean.hashCode(routingCtx.isCorsPreflight());
+        result *= 31;
+        result += Boolean.hashCode(routingCtx.requiresMatchingParamsPredicates());
+        result *= 31;
+        result += Boolean.hashCode(routingCtx.requiresMatchingHeadersPredicates());
         return result;
     }
 
@@ -200,10 +202,13 @@ final class DefaultRoutingContext implements RoutingContext {
 
         final RoutingContext other = (RoutingContext) obj;
         return self.virtualHost().equals(other.virtualHost()) &&
-               self.method().equals(other.method()) &&
+               self.method() == other.method() &&
                self.path().equals(other.path()) &&
-               Objects.equals(self.contentType(), other.contentType()) &&
-               self.acceptTypes().equals(other.acceptTypes());
+               Objects.equals(self.query(), other.query()) &&
+               self.headers().equals(other.headers()) &&
+               self.isCorsPreflight() == other.isCorsPreflight() &&
+               self.requiresMatchingParamsPredicates() == other.requiresMatchingParamsPredicates() &&
+               self.requiresMatchingHeadersPredicates() == other.requiresMatchingHeadersPredicates();
     }
 
     @Override
@@ -221,6 +226,9 @@ final class DefaultRoutingContext implements RoutingContext {
         if (!routingCtx.acceptTypes().isEmpty()) {
             helper.add("acceptTypes", routingCtx.acceptTypes());
         }
+        helper.add("isCorsPreflight", routingCtx.isCorsPreflight())
+              .add("requiresMatchingParamsPredicates", routingCtx.requiresMatchingParamsPredicates())
+              .add("requiresMatchingHeadersPredicates", routingCtx.requiresMatchingHeadersPredicates());
         return helper.toString();
     }
 
