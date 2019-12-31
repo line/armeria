@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -21,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -64,8 +64,6 @@ import io.netty.util.AttributeKey;
  * Default {@link ClientRequestContext} implementation.
  */
 public class DefaultClientRequestContext extends NonWrappingRequestContext implements ClientRequestContext {
-    static final ThreadLocal<Consumer<ClientRequestContext>> THREAD_LOCAL_CONTEXT_CUSTOMIZER =
-            new ThreadLocal<>();
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -99,6 +97,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Nullable
     private String strVal;
+
+    // We use null checks which are faster than checking if a list is empty,
+    // because it is more common to have no customizers than to have any.
+    @Nullable
+    private volatile List<Consumer<? super ClientRequestContext>> customizers;
 
     /**
      * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
@@ -169,6 +172,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         responseTimeoutMillis = options.responseTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
         additionalRequestHeaders = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.of());
+        customizers = copyThreadLocalCustomizers();
     }
 
     @Nullable
@@ -210,12 +214,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 // Note: thread-local customizer must be run before EndpointSelector.select()
                 //       so that the customizer can inject the attributes which may be required
                 //       by the EndpointSelector.
-                runThreadLocalContextCustomizer();
+                runThreadLocalContextCustomizers();
                 updateEndpoint(endpointSelector.select(this));
             } else {
                 endpointSelector = null;
                 updateEndpoint(endpoint);
-                runThreadLocalContextCustomizer();
+                runThreadLocalContextCustomizers();
             }
 
             if (eventLoop == null) {
@@ -243,10 +247,13 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         autoFillSchemeAndAuthority();
     }
 
-    private void runThreadLocalContextCustomizer() {
-        final Consumer<ClientRequestContext> customizer = THREAD_LOCAL_CONTEXT_CUSTOMIZER.get();
-        if (customizer != null) {
-            customizer.accept(this);
+    private void runThreadLocalContextCustomizers() {
+        final List<Consumer<? super ClientRequestContext>> customizers = this.customizers;
+        if (customizers != null) {
+            this.customizers = null;
+            for (Consumer<? super ClientRequestContext> c : customizers) {
+                c.accept(this);
+            }
         }
     }
 
@@ -315,7 +322,17 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
-        runThreadLocalContextCustomizer();
+    }
+
+    @Nullable
+    private List<Consumer<? super ClientRequestContext>> copyThreadLocalCustomizers() {
+        final ClientThreadLocalState state = ClientThreadLocalState.get();
+        if (state == null) {
+            return null;
+        }
+
+        state.addCapturedContext(this);
+        return state.copyCustomizers();
     }
 
     @SuppressWarnings("unchecked")
