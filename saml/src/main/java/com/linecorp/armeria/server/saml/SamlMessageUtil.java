@@ -60,8 +60,8 @@ final class SamlMessageUtil {
 
     private static final SignatureBuilder signatureBuilder = new SignatureBuilder();
 
-    private static final SAMLSignatureProfileValidator signatureProfileValidator
-            = new SAMLSignatureProfileValidator();
+    private static final SAMLSignatureProfileValidator signatureProfileValidator =
+            new SAMLSignatureProfileValidator();
 
     static {
         SamlInitializer.ensureAvailability();

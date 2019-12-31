@@ -39,7 +39,7 @@ final class RequestContextScalarCallableFlowable<T> extends Flowable<T>
     @SuppressWarnings("unchecked")
     @Override
     protected void subscribeActual(Subscriber<? super T> s) {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             if (s instanceof ConditionalSubscriber) {
                 source.subscribe(new RequestContextConditionalSubscriber<>(
                         (ConditionalSubscriber<? super T>) s, assemblyContext
@@ -53,7 +53,7 @@ final class RequestContextScalarCallableFlowable<T> extends Flowable<T>
     @SuppressWarnings("unchecked")
     @Override
     public T call() {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             return ((ScalarCallable<T>) source).call();
         }
     }

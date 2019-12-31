@@ -165,7 +165,7 @@ public abstract class AbstractCompositeService<T extends Service<I, O>, I extend
 
             final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
                     ctx, newRoute, result.routingResult().path());
-            try (SafeCloseable ignored = newCtx.push(false)) {
+            try (SafeCloseable ignored = newCtx.replace()) {
                 return result.value().serve(newCtx, req);
             }
         } else {
