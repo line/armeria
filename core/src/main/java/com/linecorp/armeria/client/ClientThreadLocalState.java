@@ -26,9 +26,11 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.netty.util.concurrent.FastThreadLocal;
+
 final class ClientThreadLocalState {
 
-    private static final ThreadLocal<ClientThreadLocalState> threadLocalState = new ThreadLocal<>();
+    private static final FastThreadLocal<ClientThreadLocalState> threadLocalState = new FastThreadLocal<>();
 
     @Nullable
     static ClientThreadLocalState get() {
