@@ -70,19 +70,21 @@ attach it to your :api:`Server`.
 
 .. code-block:: java
 
+    // Specify information about your keystore.
+    // The keystore contains two key pairs, which are identified as 'signing' and 'encryption'.
+    KeyStoreCredentialResolver credentialResolver =
+            new KeyStoreCredentialResolverBuilder(ClassLoader.getSystemClassLoader(),
+                                                  "sample.jks")
+                    .type("PKCS12")
+                    .password("N5^X[hvG")
+                    // You need to specify your key pair and its password here.
+                    .addKeyPassword("signing", "N5^X[hvG")
+                    .addKeyPassword("encryption", "N5^X[hvG")
+                    .build();
+
     SamlServiceProvider ssp =
             SamlServiceProvider.builder()
-                               // Specify information about your keystore.
-                               // The keystore contains two key pairs
-                               // which are identified as 'signing' and 'encryption'.
-                               .credentialResolver(
-                                    new KeyStoreCredentialResolverBuilder("sample.jks")
-                                            .type("PKCS12")
-                                            .password("N5^X[hvG")
-                                            // You need to specify your key pair and its password here.
-                                            .addKeyPassword("signing", "N5^X[hvG")
-                                            .addKeyPassword("encryption", "N5^X[hvG")
-                                            .build())
+                               .credentialResolver(credentialResolver)
                                // Specify the entity ID of this service provider.
                                // You can specify what you want.
                                .entityId("your-sp-id")

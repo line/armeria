@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
+import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,17 +47,20 @@ public class Main {
      */
     private static SamlServiceProvider samlServiceProvider() throws IOException, GeneralSecurityException {
         final MyAuthHandler authHandler = new MyAuthHandler();
+
+        // Specify information about your keystore.
+        // The keystore contains two key pairs, which are identified as 'signing' and 'encryption'.
+        final KeyStoreCredentialResolver credentialResolver =
+                new KeyStoreCredentialResolverBuilder(Main.class.getClassLoader(), "sample.jks")
+                        .type("PKCS12")
+                        .password("N5^X[hvG")
+                        // You need to specify your key pair and its password here.
+                        .addKeyPassword("signing", "N5^X[hvG")
+                        .addKeyPassword("encryption", "N5^X[hvG")
+                        .build();
+
         return SamlServiceProvider.builder()
-                                  // Specify information about your keystore.
-                                  // The keystore contains two key pairs.
-                                  // which are identified as 'signing' and 'encryption'.
-                                  .credentialResolver(new KeyStoreCredentialResolverBuilder("sample.jks")
-                                            .type("PKCS12")
-                                            .password("N5^X[hvG")
-                                            // You need to specify your key pair and its password here.
-                                            .addKeyPassword("signing", "N5^X[hvG")
-                                            .addKeyPassword("encryption", "N5^X[hvG")
-                                            .build())
+                                  .credentialResolver(credentialResolver)
                                   // Specify the entity ID of this service provider.
                                   // You can specify what you want.
                                   .entityId("armeria-sp")

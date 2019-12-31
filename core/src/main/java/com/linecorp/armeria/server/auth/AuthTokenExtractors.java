@@ -27,22 +27,52 @@ import com.linecorp.armeria.common.RequestHeaders;
 public final class AuthTokenExtractors {
 
     /**
-     * A {@link BasicToken} extractor function instance.
+     * A {@link BasicToken} extractor function.
+     *
+     * @deprecated Use {@link #basic()}.
      */
+    @Deprecated
     public static final Function<RequestHeaders, BasicToken> BASIC =
             new BasicTokenExtractor(HttpHeaderNames.AUTHORIZATION);
 
     /**
-     * An {@link OAuth1aToken} extractor function instance.
+     * An {@link OAuth1aToken} extractor function.
+     *
+     * @deprecated Use {@link #oAuth1a()}.
      */
+    @Deprecated
     public static final Function<RequestHeaders, OAuth1aToken> OAUTH1A =
             new OAuth1aTokenExtractor(HttpHeaderNames.AUTHORIZATION);
 
     /**
-     * An {@link OAuth2Token} extractor function instance.
+     * An {@link OAuth2Token} extractor function.
+     *
+     * @deprecated Use {@link #oAuth2()}.
      */
+    @Deprecated
     public static final Function<RequestHeaders, OAuth2Token> OAUTH2 =
             new OAuth2TokenExtractor(HttpHeaderNames.AUTHORIZATION);
+
+    /**
+     * Returns a {@link BasicToken} extractor function.
+     */
+    public static Function<RequestHeaders, BasicToken> basic() {
+        return BASIC;
+    }
+
+    /**
+     * Returns an {@link OAuth1aToken} extractor function.
+     */
+    public static Function<RequestHeaders, OAuth1aToken> oAuth1a() {
+        return OAUTH1A;
+    }
+
+    /**
+     * Returns an {@link OAuth2Token} extractor function.
+     */
+    public static Function<RequestHeaders, OAuth2Token> oAuth2() {
+        return OAUTH2;
+    }
 
     private AuthTokenExtractors() {}
 }

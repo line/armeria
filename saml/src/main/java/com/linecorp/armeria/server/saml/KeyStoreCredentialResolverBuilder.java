@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.saml;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -23,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.HashMap;
@@ -30,7 +32,6 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import org.opensaml.security.credential.CredentialResolver;
 import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
 
 /**
@@ -59,19 +60,39 @@ public final class KeyStoreCredentialResolverBuilder {
     }
 
     /**
-     * Creates a builder with the specified {@code resourcePath} and the default {@link ClassLoader}.
+     * Creates a builder with the file at the specified {@link Path}.
      */
+    public KeyStoreCredentialResolverBuilder(Path path) {
+        this(requireNonNull(path, "path").toFile());
+    }
+
+    /**
+     * Creates a builder with the specified {@link ClassLoader} and {@code resourcePath}.
+     */
+    public KeyStoreCredentialResolverBuilder(ClassLoader classLoader, String resourcePath) {
+        this.classLoader = requireNonNull(classLoader, "classLoader");
+        this.resourcePath = requireNonNull(resourcePath, "resourcePath");
+        file = null;
+    }
+
+    /**
+     * Creates a builder with the specified {@code resourcePath} and the default {@link ClassLoader}.
+     *
+     * @deprecated Use {@link #KeyStoreCredentialResolverBuilder(ClassLoader, String)}.
+     */
+    @Deprecated
     public KeyStoreCredentialResolverBuilder(String resourcePath) {
-        this(resourcePath, null);
+        this(KeyStoreCredentialResolverBuilder.class.getClassLoader(), resourcePath);
     }
 
     /**
      * Creates a builder with the specified {@code resourcePath} and {@link ClassLoader}.
+     *
+     * @deprecated Use {@link #KeyStoreCredentialResolverBuilder(ClassLoader, String)}.
      */
+    @Deprecated
     public KeyStoreCredentialResolverBuilder(String resourcePath, @Nullable ClassLoader classLoader) {
-        this.resourcePath = requireNonNull(resourcePath, "resourcePath");
-        this.classLoader = classLoader;
-        file = null;
+        this(firstNonNull(classLoader, KeyStoreCredentialResolverBuilder.class.getClassLoader()), resourcePath);
     }
 
     /**
@@ -114,7 +135,7 @@ public final class KeyStoreCredentialResolverBuilder {
     /**
      * Creates a new {@link KeyStoreCredentialResolver}.
      */
-    public CredentialResolver build() throws IOException, GeneralSecurityException {
+    public KeyStoreCredentialResolver build() throws IOException, GeneralSecurityException {
         final KeyStore ks = KeyStore.getInstance(type);
         try (InputStream is = open()) {
             ks.load(is, password != null ? password.toCharArray() : null);

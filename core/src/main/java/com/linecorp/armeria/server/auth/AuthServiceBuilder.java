@@ -79,7 +79,7 @@ public class AuthServiceBuilder {
      * Adds an HTTP basic {@link Authorizer}.
      */
     public AuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer) {
-        return addTokenAuthorizer(AuthTokenExtractors.BASIC,
+        return addTokenAuthorizer(AuthTokenExtractors.basic(),
                                   requireNonNull(authorizer, "authorizer"));
     }
 
@@ -95,7 +95,7 @@ public class AuthServiceBuilder {
      * Adds an OAuth1a {@link Authorizer}.
      */
     public AuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer) {
-        return addTokenAuthorizer(AuthTokenExtractors.OAUTH1A,
+        return addTokenAuthorizer(AuthTokenExtractors.oAuth1a(),
                                   requireNonNull(authorizer, "authorizer"));
     }
 
@@ -111,7 +111,7 @@ public class AuthServiceBuilder {
      * Adds an OAuth2 {@link Authorizer}.
      */
     public AuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer) {
-        return addTokenAuthorizer(AuthTokenExtractors.OAUTH2, requireNonNull(authorizer, "authorizer"));
+        return addTokenAuthorizer(AuthTokenExtractors.oAuth2(), requireNonNull(authorizer, "authorizer"));
     }
 
     /**

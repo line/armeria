@@ -34,10 +34,10 @@
  */
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.InputStream;
 import java.net.URL;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Enumeration;
@@ -46,8 +46,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
-
-import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -74,13 +72,13 @@ public final class Version {
     private static final String PROP_REPO_STATUS = ".repoStatus";
 
     /**
-     * Retrieves the version information of Armeria artifacts using the current
-     * {@linkplain Thread#getContextClassLoader() context class loader}.
+     * Retrieves the version information of Armeria artifacts.
+     * This method is a shortcut for {@code identify(Version.class.getClassLoader())}.
      *
      * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
      */
     public static Map<String, Version> identify() {
-        return identify(null);
+        return identify(Version.class.getClassLoader());
     }
 
     /**
@@ -88,10 +86,8 @@ public final class Version {
      *
      * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
      */
-    public static Map<String, Version> identify(@Nullable ClassLoader classLoader) {
-        if (classLoader == null) {
-            classLoader = getContextClassLoader();
-        }
+    public static Map<String, Version> identify(ClassLoader classLoader) {
+        requireNonNull(classLoader, "classLoader");
 
         // Collect all properties.
         final Properties props = new Properties();
@@ -148,15 +144,6 @@ public final class Version {
         }
 
         return versions;
-    }
-
-    private static ClassLoader getContextClassLoader() {
-        if (System.getSecurityManager() == null) {
-            return Thread.currentThread().getContextClassLoader();
-        } else {
-            return AccessController.doPrivileged(
-                    (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader());
-        }
     }
 
     private static long parseIso8601(String value) {

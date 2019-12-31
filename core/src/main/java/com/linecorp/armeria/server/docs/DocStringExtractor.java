@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -59,6 +60,7 @@ public abstract class DocStringExtractor {
      * {@link #getDocStringsFromFiles(Map)} for actual processing.
      */
     public Map<String, String> getAllDocStrings(ClassLoader classLoader) {
+        requireNonNull(classLoader, "classLoader");
         return cached.computeIfAbsent(classLoader, this::getAllDocStrings0);
     }
 

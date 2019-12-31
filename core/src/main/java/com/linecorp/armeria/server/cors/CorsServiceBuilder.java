@@ -475,6 +475,6 @@ public final class CorsServiceBuilder {
 
     @Override
     public String toString() {
-        return CorsConfig.toString(this, true, anyOriginSupported, shortCircuit, policies);
+        return CorsConfig.toString(this, anyOriginSupported, shortCircuit, policies);
     }
 }
