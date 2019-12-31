@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.saml;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -92,7 +91,8 @@ public final class KeyStoreCredentialResolverBuilder {
      */
     @Deprecated
     public KeyStoreCredentialResolverBuilder(String resourcePath, @Nullable ClassLoader classLoader) {
-        this(firstNonNull(classLoader, KeyStoreCredentialResolverBuilder.class.getClassLoader()), resourcePath);
+        this(classLoader != null ? classLoader : KeyStoreCredentialResolverBuilder.class.getClassLoader(),
+             resourcePath);
     }
 
     /**

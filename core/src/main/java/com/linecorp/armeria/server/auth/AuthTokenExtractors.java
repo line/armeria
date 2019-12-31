@@ -32,7 +32,7 @@ public final class AuthTokenExtractors {
      * @deprecated Use {@link #basic()}.
      */
     @Deprecated
-    public static final Function<RequestHeaders, BasicToken> BASIC =
+    public static final Function<? super RequestHeaders, BasicToken> BASIC =
             new BasicTokenExtractor(HttpHeaderNames.AUTHORIZATION);
 
     /**
@@ -41,7 +41,7 @@ public final class AuthTokenExtractors {
      * @deprecated Use {@link #oAuth1a()}.
      */
     @Deprecated
-    public static final Function<RequestHeaders, OAuth1aToken> OAUTH1A =
+    public static final Function<? super RequestHeaders, OAuth1aToken> OAUTH1A =
             new OAuth1aTokenExtractor(HttpHeaderNames.AUTHORIZATION);
 
     /**
@@ -50,27 +50,27 @@ public final class AuthTokenExtractors {
      * @deprecated Use {@link #oAuth2()}.
      */
     @Deprecated
-    public static final Function<RequestHeaders, OAuth2Token> OAUTH2 =
+    public static final Function<? super RequestHeaders, OAuth2Token> OAUTH2 =
             new OAuth2TokenExtractor(HttpHeaderNames.AUTHORIZATION);
 
     /**
      * Returns a {@link BasicToken} extractor function.
      */
-    public static Function<RequestHeaders, BasicToken> basic() {
+    public static Function<? super RequestHeaders, BasicToken> basic() {
         return BASIC;
     }
 
     /**
      * Returns an {@link OAuth1aToken} extractor function.
      */
-    public static Function<RequestHeaders, OAuth1aToken> oAuth1a() {
+    public static Function<? super RequestHeaders, OAuth1aToken> oAuth1a() {
         return OAUTH1A;
     }
 
     /**
      * Returns an {@link OAuth2Token} extractor function.
      */
-    public static Function<RequestHeaders, OAuth2Token> oAuth2() {
+    public static Function<? super RequestHeaders, OAuth2Token> oAuth2() {
         return OAUTH2;
     }
 
