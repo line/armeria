@@ -405,7 +405,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     try {
       if (useRequestBody) {
-        validateJsonObject(requestBody, 'request body');
+        // Validate requestBody only if it's not empty string.
+        if (!!requestBody.trim()) {
+          validateJsonObject(requestBody, 'request body');
+        }
 
         // Do not round-trip through JSON.parse to minify the text so as to not lose numeric precision.
         // See: https://github.com/line/armeria/issues/273
