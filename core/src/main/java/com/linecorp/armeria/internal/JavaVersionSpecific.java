@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -23,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcResponse;
 
 /**
  * Contains APIs that are implemented differently based on the version of Java being run. This class implements
@@ -64,6 +67,13 @@ public class JavaVersionSpecific {
      * Returns a {@link CompletableFuture} which executes all callbacks with the {@link RequestContext}.
      */
     public <T> CompletableFuture<T> newRequestContextAwareFuture(RequestContext ctx) {
-        return new RequestContextAwareCompletableFuture<>(ctx);
+        return new RequestContextAwareCompletableFuture<>(requireNonNull(ctx, "ctx"));
+    }
+
+    /**
+     * Returns an {@link RpcResponse} which executes all callbacks with the {@link RequestContext}.
+     */
+    public RpcResponse newRequestContextAwareRpcResponse(RequestContext ctx) {
+        return new RequestContextAwareRpcResponse(requireNonNull(ctx, "ctx"));
     }
 }

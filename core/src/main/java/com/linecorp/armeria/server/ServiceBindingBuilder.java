@@ -22,6 +22,7 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -157,6 +158,37 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
         return (ServiceBindingBuilder) super.produces(produceTypes);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesParams(String... paramPredicates) {
+        return (ServiceBindingBuilder) super.matchesParams(paramPredicates);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesParams(Iterable<String> paramPredicates) {
+        return (ServiceBindingBuilder) super.matchesParams(paramPredicates);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesParams(String paramName, Predicate<? super String> valuePredicate) {
+        return (ServiceBindingBuilder) super.matchesParams(paramName, valuePredicate);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesHeaders(String... headerPredicates) {
+        return (ServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
+        return (ServiceBindingBuilder) super.matchesHeaders(headerPredicates);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesHeaders(CharSequence headerName,
+                                                Predicate<? super String> valuePredicate) {
+        return (ServiceBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
     }
 
     @Override

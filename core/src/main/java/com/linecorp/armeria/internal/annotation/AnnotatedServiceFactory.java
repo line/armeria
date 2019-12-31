@@ -69,6 +69,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -99,6 +100,8 @@ import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
+import com.linecorp.armeria.server.annotation.MatchesHeader;
+import com.linecorp.armeria.server.annotation.MatchesParam;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
@@ -248,6 +251,12 @@ public final class AnnotatedServiceFactory {
                                                 .methods(httpMethod)
                                                 .consumes(consumableMediaTypes)
                                                 .produces(producibleMediaTypes)
+                                                .matchesParams(
+                                                        predicates(method, clazz, MatchesParam.class,
+                                                                   MatchesParam::value))
+                                                .matchesHeaders(
+                                                        predicates(method, clazz, MatchesHeader.class,
+                                                                   MatchesHeader::value))
                                                 .build());
                 }).collect(toImmutableList());
 
@@ -435,6 +444,19 @@ public final class AnnotatedServiceFactory {
                       })
                       .collect(toImmutableList());
         return listToSet(types, Produces.class);
+    }
+
+    /**
+     * Returns a list of predicates which will be used to evaluate whether a request can be accepted
+     * by a service method.
+     */
+    private static <T extends Annotation> List<String> predicates(Method method, Class<?> clazz,
+                                                                  Class<T> annotationType,
+                                                                  Function<T, String> toStringPredicate) {
+        final List<T> classLevel = findAll(clazz, annotationType);
+        final List<T> methodLevel = findAll(method, annotationType);
+        return Streams.concat(classLevel.stream(), methodLevel.stream())
+                      .map(toStringPredicate).collect(toImmutableList());
     }
 
     /**

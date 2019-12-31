@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
@@ -35,12 +34,13 @@ import io.netty.util.AttributeKey;
  * {@link RouteDecoratingService} is used for binding your {@link HttpService} to multiple {@code decorator}s
  * with {@link Route}s. e.g.
  * <pre>{@code
- * > Server server = Server.builder()
- * >                       .service("/api/users",  userService)
- * >                       .decoratorUnder("/", loggingDecorator)
- * >                       .decoratorUnder("/api", authDecorator)
- * >                       .decoratorUnder("/api/users", traceDecorator)
- * >                       .build();
+ * > Server server =
+ * >     Server.builder()
+ * >           .service("/api/users", userService)
+ * >           .decoratorUnder("/", loggingDecorator)
+ * >           .decoratorUnder("/api", authDecorator)
+ * >           .decoratorUnder("/api/users", traceDecorator)
+ * >           .build();
  * }</pre>
  *
  * {@link VirtualHostBuilder} wraps each specified {@code decorator} with {@link RouteDecoratingService} and
