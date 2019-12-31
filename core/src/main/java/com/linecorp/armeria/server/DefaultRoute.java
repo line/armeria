@@ -96,11 +96,7 @@ final class DefaultRoute implements Route {
             return RoutingResult.empty();
         }
 
-        if (methods.isEmpty()) {
-            return builder.build();
-        }
-
-        if (!methods.contains(routingCtx.method())) {
+        if (!methods.isEmpty() && !methods.contains(routingCtx.method())) {
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (routingCtx.deferredStatusException() == null) {

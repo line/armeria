@@ -144,13 +144,13 @@ class RouteDecoratingTest {
     static ServerExtension headersAndParamsExpectingServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.decorator(Route.builder().methods(HttpMethod.GET).path("/")
+            sb.decorator(Route.builder().path("/")
                               .matchesHeaders("dest=headers-decorator").build(),
                          (delegate, ctx, req) -> HttpResponse.of("headers-decorator"))
               .service(Route.builder().methods(HttpMethod.GET).path("/")
                             .matchesHeaders("dest=headers-service").build(),
                        (ctx, req) -> HttpResponse.of("headers-service"))
-              .decorator(Route.builder().methods(HttpMethod.GET).path("/")
+              .decorator(Route.builder().path("/")
                               .matchesParams("dest=params-decorator").build(),
                          (delegate, ctx, req) -> HttpResponse.of("params-decorator"))
               .service(Route.builder().methods(HttpMethod.GET).path("/")
