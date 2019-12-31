@@ -49,12 +49,12 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TimeoutController;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -509,6 +509,9 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     /**
      * Sets the {@code responseTimeoutController} that is set to a new timeout when
      * the {@linkplain #responseTimeoutMillis()} request timeout} setting is changed.
+     *
+     * <p>Note: This method is meant for internal use by client-side protocol implementation to reschedule
+     * a timeout task when a user updates the request timeout configuration.
      */
     public void setResponseTimeoutController(TimeoutController responseTimeoutController) {
         requireNonNull(responseTimeoutController, "responseTimeoutController");

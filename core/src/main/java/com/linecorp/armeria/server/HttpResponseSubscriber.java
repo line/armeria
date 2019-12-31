@@ -20,7 +20,6 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -32,8 +31,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.DefaultTimeoutController;
-import com.linecorp.armeria.common.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -44,10 +41,12 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.common.TimeoutController;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.DefaultTimeoutController;
+import com.linecorp.armeria.common.util.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
@@ -106,7 +105,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
         this.reqCtx = reqCtx;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
-        requestTimeoutController = newRequestTimeoutController(() -> ctx.channel().eventLoop());
+        requestTimeoutController = newRequestTimeoutController(ctx.channel().eventLoop());
     }
 
     private HttpService service() {
@@ -503,7 +502,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
         return cause;
     }
 
-    private TimeoutController newRequestTimeoutController(Supplier<? extends EventLoop> eventLoopSupplier) {
+    private TimeoutController newRequestTimeoutController(EventLoop eventLoop) {
         final TimeoutTask timeoutTask = new TimeoutTask() {
             @Override
             public boolean isReady() {
@@ -516,7 +515,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
             }
 
             @Override
-            public void onTimeout() {
+            public void run() {
                 if (state != State.DONE) {
                     reqCtx.setTimedOut();
                     final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
@@ -530,6 +529,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
             }
         };
 
-        return new DefaultTimeoutController(timeoutTask, eventLoopSupplier);
+        return new DefaultTimeoutController(timeoutTask, eventLoop);
     }
 }

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.util;
 
 /**
  * A controller that schedules the timeout task with the initial value or reschedule when the timeout

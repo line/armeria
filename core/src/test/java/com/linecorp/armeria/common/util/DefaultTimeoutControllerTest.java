@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,9 +26,10 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 
-import com.linecorp.armeria.common.DefaultTimeoutController.TimeoutTask;
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.util.DefaultTimeoutController.TimeoutTask;
 
-class TimeoutControllerTest {
+class DefaultTimeoutControllerTest {
 
     static {
         // call workerGroup early to avoid initializing contexts while testing
@@ -53,11 +54,11 @@ class TimeoutControllerTest {
             }
 
             @Override
-            public void onTimeout() {
+            public void run() {
                 isTimeout = true;
             }
         };
-        timeoutController = new DefaultTimeoutController(timeoutTask, CommonPools.workerGroup()::next);
+        timeoutController = new DefaultTimeoutController(timeoutTask, CommonPools.workerGroup().next());
     }
 
     @Test

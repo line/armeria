@@ -13,18 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.util;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.math.LongMath;
 
 import io.netty.channel.EventLoop;
 
@@ -37,7 +37,7 @@ import io.netty.channel.EventLoop;
 public final class DefaultTimeoutController implements TimeoutController {
 
     private final TimeoutTask timeoutTask;
-    private final Supplier<? extends EventLoop> eventLoopSupplier;
+    private final EventLoop eventLoop;
 
     private long timeoutMillis;
     private long firstStartTimeNanos;
@@ -49,11 +49,11 @@ public final class DefaultTimeoutController implements TimeoutController {
     /**
      * Creates a new instance.
      */
-    public DefaultTimeoutController(TimeoutTask timeoutTask, Supplier<? extends EventLoop> eventLoopSupplier) {
+    public DefaultTimeoutController(TimeoutTask timeoutTask, EventLoop eventLoop) {
         requireNonNull(timeoutTask, "timeoutTask");
-        requireNonNull(eventLoopSupplier, "eventLoopSupplier");
+        requireNonNull(eventLoop, "eventLoopSupplier");
         this.timeoutTask = timeoutTask;
-        this.eventLoopSupplier = eventLoopSupplier;
+        this.eventLoop = eventLoop;
     }
 
     @Override
@@ -67,8 +67,8 @@ public final class DefaultTimeoutController implements TimeoutController {
         }
         this.timeoutMillis = timeoutMillis;
         firstStartTimeNanos = lastStartTimeNanos = System.nanoTime();
-        timeoutFuture = eventLoopSupplier.get().schedule(timeoutTask, timeoutMillis,
-                                                         TimeUnit.MILLISECONDS);
+        timeoutFuture = eventLoop.schedule(timeoutTask, timeoutMillis,
+                                           TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -85,15 +85,17 @@ public final class DefaultTimeoutController implements TimeoutController {
             // Calculate the amount of time passed since the creation of this subscriber.
             final long currentNanoTime = System.nanoTime();
             final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
-            final long newTimeoutMillis = timeoutMillis + adjustmentMillis - passedTimeMillis;
+            // newTimeoutMillis = timeoutMillis - passedTimeMillis + adjustmentMillis
+            final long newTimeoutMillis = LongMath.saturatedAdd(
+                    LongMath.saturatedSubtract(timeoutMillis, passedTimeMillis), adjustmentMillis);
             timeoutMillis = newTimeoutMillis;
             lastStartTimeNanos = currentNanoTime;
             if (newTimeoutMillis > 0) {
-                timeoutFuture = eventLoopSupplier.get().schedule(
+                timeoutFuture = eventLoop.schedule(
                         timeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
             } else {
                 // We went past the dead line set by the new timeout already.
-                timeoutTask.onTimeout();
+                timeoutTask.run();
             }
         }
     }
@@ -110,7 +112,7 @@ public final class DefaultTimeoutController implements TimeoutController {
         if (timeoutTask.canReschedule()) {
             final long currentNanoTime = System.nanoTime();
             final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
-            final long remainingTimeoutMillis = timeoutMillis - passedTimeMillis;
+            final long remainingTimeoutMillis = LongMath.saturatedSubtract(timeoutMillis, passedTimeMillis);
             lastStartTimeNanos = currentNanoTime;
             if (remainingTimeoutMillis == newTimeoutMillis) {
                 return;
@@ -119,8 +121,8 @@ public final class DefaultTimeoutController implements TimeoutController {
             // Cancel the previously scheduled timeout, if exists.
             cancelTimeout();
             timeoutMillis = newTimeoutMillis;
-            timeoutFuture = eventLoopSupplier.get().schedule(timeoutTask, newTimeoutMillis,
-                                                             TimeUnit.MILLISECONDS);
+            timeoutFuture = eventLoop.schedule(timeoutTask, newTimeoutMillis,
+                                               TimeUnit.MILLISECONDS);
         }
     }
 
@@ -173,11 +175,7 @@ public final class DefaultTimeoutController implements TimeoutController {
         /**
          * Invoked when the deadline exceeded.
          */
-        void onTimeout();
-
         @Override
-        default void run() {
-            onTimeout();
-        }
+        void run();
     }
 }

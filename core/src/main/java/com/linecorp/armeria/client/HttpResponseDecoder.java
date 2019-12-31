@@ -25,8 +25,6 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.DefaultTimeoutController;
-import com.linecorp.armeria.common.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -34,10 +32,12 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.TimeoutController;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
+import com.linecorp.armeria.common.util.DefaultTimeoutController;
+import com.linecorp.armeria.common.util.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.Channel;
@@ -366,7 +366,7 @@ abstract class HttpResponseDecoder {
                 }
 
                 @Override
-                public void onTimeout() {
+                public void run() {
                     final Runnable responseTimeoutHandler = ctx != null ? ctx.responseTimeoutHandler() : null;
                     if (responseTimeoutHandler != null) {
                         responseTimeoutHandler.run();
@@ -381,7 +381,7 @@ abstract class HttpResponseDecoder {
                 }
             };
 
-            return new DefaultTimeoutController(timeoutTask, () -> eventLoop);
+            return new DefaultTimeoutController(timeoutTask, eventLoop);
         }
 
         @Override
