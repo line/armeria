@@ -102,11 +102,7 @@ public final class AppRootFinder {
         }
 
         final Path path = f.toPath();
-        if (isZip(path)) {
-            return path;
-        }
-
-        if (!Files.isDirectory(path)) {
+        if (!Files.isDirectory(path) && !isZip(path)) {
             throw new IllegalArgumentException(f + " is not a JAR, WAR or directory.");
         }
 
