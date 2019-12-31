@@ -38,8 +38,7 @@ import io.netty.util.ReferenceCountUtil;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
- * HTTP/2 data. Helpers in this class create {@link HttpData} objects that leave the stream open.
- * To create an {@link HttpData} that closes the stream, directly instantiate {@link DefaultHttpData}.
+ * HTTP/2 data.
  *
  * <p>Implementations should generally extend {@link AbstractHttpData} to interact with other {@link HttpData}
  * implementations.
@@ -48,19 +47,29 @@ public interface HttpData extends HttpObject {
 
     /**
      * Empty HTTP/2 data.
+     *
+     * @deprecated Use {@link #empty()}.
      */
-    HttpData EMPTY_DATA = new DefaultHttpData(new byte[0], false);
+    @Deprecated
+    HttpData EMPTY_DATA = empty();
+
+    /**
+     * Returns an empty {@link HttpData}.
+     */
+    static HttpData empty() {
+        return DefaultHttpData.EMPTY;
+    }
 
     /**
      * Creates a new instance from the specified byte array. The array is not copied; any changes made in the
      * array later will be visible to {@link HttpData}.
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of the specified array is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the length of the specified array is 0.
      */
     static HttpData wrap(byte[] data) {
         requireNonNull(data, "data");
         if (data.length == 0) {
-            return EMPTY_DATA;
+            return empty();
         }
 
         return new DefaultHttpData(data, false);
@@ -70,7 +79,7 @@ public interface HttpData extends HttpObject {
      * Creates a new instance from the specified byte array, {@code offset} and {@code length}.
      * The array is not copied; any changes made in the array later will be visible to {@link HttpData}.
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if {@code length} is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if {@code length} is 0.
      *
      * @throws ArrayIndexOutOfBoundsException if {@code offset} and {@code length} are out of bounds
      */
@@ -81,7 +90,7 @@ public interface HttpData extends HttpObject {
                     "offset: " + offset + ", length: " + length + ", data.length: " + data.length);
         }
         if (length == 0) {
-            return EMPTY_DATA;
+            return empty();
         }
 
         if (data.length == length) {
@@ -97,12 +106,12 @@ public interface HttpData extends HttpObject {
      * {@link HttpData}. If you still need to use it after calling this method, make sure to call
      * {@link ByteBuf#retain()} first.
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the readable bytes of {@code buf} is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the readable bytes of {@code buf} is 0.
      */
     static HttpData wrap(ByteBuf buf) {
         requireNonNull(buf, "buf");
         if (!buf.isReadable()) {
-            return EMPTY_DATA;
+            return empty();
         }
         return new ByteBufHttpData(buf, false);
     }
@@ -110,12 +119,12 @@ public interface HttpData extends HttpObject {
     /**
      * Creates a new instance from the specified byte array by first copying it.
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of the specified array is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the length of the specified array is 0.
      */
     static HttpData copyOf(byte[] data) {
         requireNonNull(data, "data");
         if (data.length == 0) {
-            return EMPTY_DATA;
+            return empty();
         }
 
         return new DefaultHttpData(data.clone(), false);
@@ -125,7 +134,7 @@ public interface HttpData extends HttpObject {
      * Creates a new instance from the specified byte array, {@code offset} and {@code length} by first copying
      * it.
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if {@code length} is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if {@code length} is 0.
      *
      * @throws ArrayIndexOutOfBoundsException if {@code offset} and {@code length} are out of bounds
      */
@@ -136,7 +145,7 @@ public interface HttpData extends HttpObject {
                     "offset: " + offset + ", length: " + length + ", data.length: " + data.length);
         }
         if (length == 0) {
-            return EMPTY_DATA;
+            return empty();
         }
 
         return new DefaultHttpData(Arrays.copyOfRange(data, offset, offset + length), false);
@@ -146,12 +155,12 @@ public interface HttpData extends HttpObject {
      * Creates a new instance from the specified {@link ByteBuf} by first copying it's content. The reference
      * count of {@link ByteBuf} will not be changed.
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of the specified array is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the length of the specified array is 0.
      */
     static HttpData copyOf(ByteBuf data) {
         requireNonNull(data, "data");
         if (!data.isReadable()) {
-            return EMPTY_DATA;
+            return empty();
         }
 
         return wrap(ByteBufUtil.getBytes(data));
@@ -185,7 +194,7 @@ public interface HttpData extends HttpObject {
      * @param charset the {@link Charset} to use for encoding {@code text}
      * @param text the {@link String} to convert
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the length of {@code text} is 0.
      */
     static HttpData of(Charset charset, CharSequence text) {
         requireNonNull(charset, "charset");
@@ -196,7 +205,7 @@ public interface HttpData extends HttpObject {
         }
 
         if (text.length() == 0) {
-            return EMPTY_DATA;
+            return empty();
         }
 
         final CharBuffer cb = CharBuffer.wrap(text);
@@ -214,13 +223,13 @@ public interface HttpData extends HttpObject {
      * @param charset the {@link Charset} to use for encoding {@code text}
      * @param text the {@link String} to convert
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the length of {@code text} is 0.
      */
     static HttpData of(Charset charset, String text) {
         requireNonNull(charset, "charset");
         requireNonNull(text, "text");
         if (text.isEmpty()) {
-            return EMPTY_DATA;
+            return empty();
         }
 
         return wrap(text.getBytes(charset));
@@ -245,7 +254,7 @@ public interface HttpData extends HttpObject {
      * @param format {@linkplain Formatter the format string} of the response content
      * @param args the arguments referenced by the format specifiers in the format string
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if {@code format} is empty.
+     * @return a new {@link HttpData}. {@link #empty()} if {@code format} is empty.
      */
     static HttpData of(Charset charset, String format, Object... args) {
         requireNonNull(charset, "charset");
@@ -253,7 +262,7 @@ public interface HttpData extends HttpObject {
         requireNonNull(args, "args");
 
         if (format.isEmpty()) {
-            return EMPTY_DATA;
+            return empty();
         }
 
         return wrap(String.format(Locale.ENGLISH, format, args).getBytes(charset));
@@ -264,7 +273,7 @@ public interface HttpData extends HttpObject {
      *
      * @param text the {@link String} to convert
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the length of {@code text} is 0.
      */
     static HttpData ofUtf8(CharSequence text) {
         return of(StandardCharsets.UTF_8, text);
@@ -275,7 +284,7 @@ public interface HttpData extends HttpObject {
      *
      * @param text the {@link String} to convert
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the length of {@code text} is 0.
      */
     static HttpData ofUtf8(String text) {
         return of(StandardCharsets.UTF_8, text);
@@ -288,7 +297,7 @@ public interface HttpData extends HttpObject {
      * @param format {@linkplain Formatter the format string} of the response content
      * @param args the arguments referenced by the format specifiers in the format string
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if {@code format} is empty.
+     * @return a new {@link HttpData}. {@link #empty()} if {@code format} is empty.
      */
     static HttpData ofUtf8(String format, Object... args) {
         return of(StandardCharsets.UTF_8, format, args);
@@ -299,7 +308,7 @@ public interface HttpData extends HttpObject {
      *
      * @param text the {@link String} to convert
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the length of {@code text} is 0.
      */
     static HttpData ofAscii(CharSequence text) {
         return of(StandardCharsets.US_ASCII, text);
@@ -310,7 +319,7 @@ public interface HttpData extends HttpObject {
      *
      * @param text the {@link String} to convert
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of {@code text} is 0.
+     * @return a new {@link HttpData}. {@link #empty()} if the length of {@code text} is 0.
      */
     static HttpData ofAscii(String text) {
         return of(StandardCharsets.US_ASCII, text);
@@ -323,7 +332,7 @@ public interface HttpData extends HttpObject {
      * @param format {@linkplain Formatter the format string} of the response content
      * @param args the arguments referenced by the format specifiers in the format string
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if {@code format} is empty.
+     * @return a new {@link HttpData}. {@link #empty()} if {@code format} is empty.
      */
     static HttpData ofAscii(String format, Object... args) {
         return of(StandardCharsets.US_ASCII, format, args);
@@ -423,4 +432,9 @@ public interface HttpData extends HttpObject {
     default Reader toReaderAscii() {
         return toReader(StandardCharsets.US_ASCII);
     }
+
+    /**
+     * Returns a new {@link HttpData} whose HTTP/2 {@code endOfStream} flag is set.
+     */
+    HttpData withEndOfStream();
 }

@@ -101,11 +101,17 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         @Nullable
         private final InputStream stream;
 
+        /**
+         * Creates a new instance with the specified {@link ByteBuf} and {@code type}.
+         */
         @VisibleForTesting
         public DeframedMessage(ByteBuf buf, int type) {
             this(requireNonNull(buf, "buf"), null, type);
         }
 
+        /**
+         * Creates a new instance with the specified {@link InputStream} and {@code type}.
+         */
         @VisibleForTesting
         public DeframedMessage(InputStream stream, int type) {
             this(null, requireNonNull(stream, "stream"), type);
@@ -117,16 +123,31 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             this.type = type;
         }
 
+        /**
+         * Returns the {@link ByteBuf}.
+         *
+         * @return the {@link ByteBuf}. {@code null} if not created with
+         *         {@link #DeframedMessage(ByteBuf, int)}.
+         */
         @Nullable
         public ByteBuf buf() {
             return buf;
         }
 
+        /**
+         * Returns the {@link InputStream}.
+         *
+         * @return the {@link InputStream}. {@code null} if not created with
+         *         {@link #DeframedMessage(InputStream, int)}.
+         */
         @Nullable
         public InputStream stream() {
             return stream;
         }
 
+        /**
+         * Returns the type.
+         */
         public int type() {
             return type;
         }

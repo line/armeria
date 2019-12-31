@@ -31,14 +31,14 @@ class UnmanagedTomcatService extends TomcatService {
     private final Optional<Connector> connector;
 
     UnmanagedTomcatService(Tomcat tomcat) {
-        this.hostName = null;
+        hostName = null;
         this.tomcat = Optional.of(tomcat);
-        this.connector = Optional.empty();
+        connector = Optional.empty();
     }
 
-    UnmanagedTomcatService(@Nullable String hostName, Connector connector) {
+    UnmanagedTomcatService(Connector connector, @Nullable String hostName) {
         this.hostName = hostName;
-        this.tomcat = Optional.empty();
+        tomcat = Optional.empty();
         this.connector = Optional.of(connector);
     }
 

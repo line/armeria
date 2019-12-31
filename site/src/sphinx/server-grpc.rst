@@ -155,21 +155,22 @@ you build a :api:`GrpcService`:
 .. code-block:: java
 
     import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
+    import com.linecorp.armeria.server.cors.CorsService;
     import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 
     ServerBuilder sb = Server.builder();
     ...
 
     final CorsServiceBuilder corsBuilder =
-            CorsServiceBuilder.forOrigin("http://foo.com")
-                              .allowRequestMethods(HttpMethod.POST) // Allow POST method.
-                              // Allow Content-type and X-GRPC-WEB headers.
-                              .allowRequestHeaders(HttpHeaderNames.CONTENT_TYPE,
-                                                   HttpHeaderNames.of("X-GRPC-WEB"))
-                              // Expose trailers of the HTTP response to the client.
-                              .exposeHeaders(GrpcHeaderNames.GRPC_STATUS,
-                                             GrpcHeaderNames.GRPC_MESSAGE,
-                                             GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
+            CorsService.builder("http://foo.com")
+                       .allowRequestMethods(HttpMethod.POST) // Allow POST method.
+                       // Allow Content-type and X-GRPC-WEB headers.
+                       .allowRequestHeaders(HttpHeaderNames.CONTENT_TYPE,
+                                            HttpHeaderNames.of("X-GRPC-WEB"))
+                       // Expose trailers of the HTTP response to the client.
+                       .exposeHeaders(GrpcHeaderNames.GRPC_STATUS,
+                                      GrpcHeaderNames.GRPC_MESSAGE,
+                                      GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
 
     sb.service(GrpcService.builder()
                           .addService(new MyHelloService())

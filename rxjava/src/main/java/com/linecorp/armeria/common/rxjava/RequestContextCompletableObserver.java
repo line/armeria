@@ -39,21 +39,21 @@ final class RequestContextCompletableObserver implements CompletableObserver, Di
             return;
         }
         disposable = d;
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             actual.onSubscribe(this);
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             actual.onError(t);
         }
     }
 
     @Override
     public void onComplete() {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             actual.onComplete();
         }
     }

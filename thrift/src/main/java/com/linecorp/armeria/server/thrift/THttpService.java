@@ -50,7 +50,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
-import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -655,7 +654,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         try (SafeCloseable ignored = ctx.push()) {
             reply = delegate().serve(ctx, call);
         } catch (Throwable cause) {
-            handleException(ctx, new DefaultRpcResponse(cause), res, serializationFormat, seqId, func, cause);
+            handleException(ctx, RpcResponse.ofFailure(cause), res, serializationFormat, seqId, func, cause);
             return;
         }
 
@@ -673,7 +672,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             try {
                 handleSuccess(ctx, reply, res, serializationFormat, seqId, func, result);
             } catch (Throwable t) {
-                handleException(ctx, new DefaultRpcResponse(t), res, serializationFormat, seqId, func, t);
+                handleException(ctx, RpcResponse.ofFailure(t), res, serializationFormat, seqId, func, t);
             }
 
             return null;
@@ -755,7 +754,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             SerializationFormat serializationFormat, int seqId, String methodName) {
 
         final HttpData content = encodeException(
-                ctx, new DefaultRpcResponse(cause), serializationFormat, seqId, methodName, cause);
+                ctx, RpcResponse.ofFailure(cause), serializationFormat, seqId, methodName, cause);
         respond(serializationFormat, content, httpRes);
     }
 

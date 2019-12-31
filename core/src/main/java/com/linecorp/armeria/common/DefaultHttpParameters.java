@@ -24,13 +24,19 @@ import io.netty.util.HashingStrategy;
 /**
  * Default implementation of {@link HttpParameters} which uses the {@link HashingStrategy#JAVA_HASHER}
  * to support case-sensitive parameter names.
+ *
+ * @deprecated Use {@link QueryParams}.
  */
+@Deprecated
 public class DefaultHttpParameters
         extends DefaultHeaders<String, String, HttpParameters> implements HttpParameters {
 
     /**
      * Creates a new instance with a default value converter.
+     *
+     * @deprecated Use {@link QueryParams}.
      */
+    @Deprecated
     @SuppressWarnings("unchecked")
     public DefaultHttpParameters() {
         super(JAVA_HASHER, StringValueConverter.INSTANCE);
@@ -41,7 +47,10 @@ public class DefaultHttpParameters
      *
      * @param arraySizeHint A hint as to how large the hash data structure should be.
      *        The next positive power of two will be used. An upper bound may be enforced.
+     *
+     * @deprecated Use {@link QueryParams}.
      */
+    @Deprecated
     @SuppressWarnings("unchecked")
     public DefaultHttpParameters(int arraySizeHint) {
         super(JAVA_HASHER, StringValueConverter.INSTANCE, NameValidator.NOT_NULL, arraySizeHint);

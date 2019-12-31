@@ -46,7 +46,10 @@ public class DefaultRpcResponse extends CompletableFuture<Object> implements Rpc
      * Creates a new successfully complete response.
      *
      * @param result the result or an RPC call
+     *
+     * @deprecated Use the factory methods in {@link RpcResponse}.
      */
+    @Deprecated
     public DefaultRpcResponse(@Nullable Object result) {
         complete(result);
     }
@@ -55,7 +58,10 @@ public class DefaultRpcResponse extends CompletableFuture<Object> implements Rpc
      * Creates a new exceptionally complete response.
      *
      * @param cause the cause of failure
+     *
+     * @deprecated Use the factory methods in {@link RpcResponse}.
      */
+    @Deprecated
     public DefaultRpcResponse(Throwable cause) {
         requireNonNull(cause, "cause");
         completeExceptionally(cause);

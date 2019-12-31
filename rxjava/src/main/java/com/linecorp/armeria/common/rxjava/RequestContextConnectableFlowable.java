@@ -38,7 +38,7 @@ final class RequestContextConnectableFlowable<T> extends ConnectableFlowable<T> 
     @SuppressWarnings("unchecked")
     @Override
     protected void subscribeActual(Subscriber<? super T> s) {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             if (s instanceof ConditionalSubscriber) {
                 source.subscribe(new RequestContextConditionalSubscriber<>(
                         (ConditionalSubscriber<? super T>) s, assemblyContext
@@ -51,7 +51,7 @@ final class RequestContextConnectableFlowable<T> extends ConnectableFlowable<T> 
 
     @Override
     public void connect(Consumer<? super Disposable> connection) {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             source.connect(connection);
         }
     }

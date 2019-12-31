@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
@@ -228,7 +229,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                            : null;
 
         configurePorts(sb, settings.getPorts());
-        final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
+        final DocServiceBuilder docServiceBuilder = DocService.builder();
         configureThriftServices(sb,
                                 docServiceBuilder,
                                 findBeans(ThriftServiceRegistrationBean.class),

@@ -222,11 +222,11 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                     }
 
                     final HttpFileBuilder builder =
-                            HttpFileBuilder.of(array != null ? HttpData.wrap(array)
-                                                             : new ByteBufHttpData(buf, true),
-                                               attrs.lastModifiedMillis())
-                                           .date(isDateEnabled())
-                                           .lastModified(isLastModifiedEnabled());
+                            HttpFile.builder(array != null ? HttpData.wrap(array)
+                                                           : new ByteBufHttpData(buf, true),
+                                             attrs.lastModifiedMillis())
+                                    .date(isDateEnabled())
+                                    .lastModified(isLastModifiedEnabled());
 
                     if (contentType() != null) {
                         builder.contentType(contentType());

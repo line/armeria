@@ -25,7 +25,6 @@ import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.UserClient;
-import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -67,6 +66,6 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
 
         final RpcRequest call = RpcRequest.of(serviceType, method, args);
         return execute(HttpMethod.POST, pathAndQuery.path(), null, serviceName, call,
-                       (ctx, cause) -> new DefaultRpcResponse(cause));
+                       (ctx, cause) -> RpcResponse.ofFailure(cause));
     }
 }

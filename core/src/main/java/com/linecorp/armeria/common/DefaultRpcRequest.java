@@ -30,7 +30,10 @@ import com.google.common.base.MoreObjects;
 
 /**
  * Default {@link RpcRequest} implementation.
+ *
+ * @deprecated Use the factory methods in {@link RpcRequest}.
  */
+@Deprecated
 public class DefaultRpcRequest implements RpcRequest {
 
     private final Class<?> serviceType;
@@ -39,28 +42,40 @@ public class DefaultRpcRequest implements RpcRequest {
 
     /**
      * Creates a new instance with no parameter.
+     *
+     * @deprecated Use the factory methods in {@link RpcRequest}.
      */
+    @Deprecated
     public DefaultRpcRequest(Class<?> serviceType, String method) {
         this(serviceType, method, Collections.emptyList());
     }
 
     /**
      * Creates a new instance with a single parameter.
+     *
+     * @deprecated Use the factory methods in {@link RpcRequest}.
      */
+    @Deprecated
     public DefaultRpcRequest(Class<?> serviceType, String method, @Nullable Object parameter) {
         this(serviceType, method, Collections.singletonList(parameter));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use the factory methods in {@link RpcRequest}.
      */
+    @Deprecated
     public DefaultRpcRequest(Class<?> serviceType, String method, Iterable<?> params) {
         this(serviceType, method, copyParams(params));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use the factory methods in {@link RpcRequest}.
      */
+    @Deprecated
     public DefaultRpcRequest(Class<?> serviceType, String method, Object... params) {
         this(serviceType, method, copyParams(params));
     }

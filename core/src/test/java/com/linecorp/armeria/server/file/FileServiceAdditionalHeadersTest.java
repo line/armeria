@@ -36,12 +36,12 @@ public class FileServiceAdditionalHeadersTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.serviceUnder(
                     "/",
-                    FileServiceBuilder.forClassPath("/")
-                                      .addHeader("foo", "1")
-                                      .addHeader("foo", "2")
-                                      .setHeader("bar", "3")
-                                      .cacheControl(ServerCacheControl.REVALIDATED)
-                                      .build());
+                    FileService.builder(getClass().getClassLoader(), "/")
+                               .addHeader("foo", "1")
+                               .addHeader("foo", "2")
+                               .setHeader("bar", "3")
+                               .cacheControl(ServerCacheControl.REVALIDATED)
+                               .build());
         }
     };
 

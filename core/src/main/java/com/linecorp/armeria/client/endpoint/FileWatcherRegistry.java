@@ -130,8 +130,8 @@ final class FileWatcherRegistry implements AutoCloseable {
         }
     }
 
-    private final Map<FileSystem, FileSystemWatchContext> fileSystemWatchServiceMap
-            = new HashMap<>();
+    private final Map<FileSystem, FileSystemWatchContext> fileSystemWatchServiceMap =
+            new HashMap<>();
 
     /**
      * Registers a {@code filePath} and {@code callback} to the {@link WatchService}. When the

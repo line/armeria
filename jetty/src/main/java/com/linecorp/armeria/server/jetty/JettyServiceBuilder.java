@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -64,6 +65,14 @@ public final class JettyServiceBuilder {
     private Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
     @Nullable
     private Long stopTimeoutMillis;
+
+    /**
+     * Creates a new {@link JettyServiceBuilder}.
+     *
+     * @deprecated Use {@link JettyService#builder()}.
+     */
+    @Deprecated
+    public JettyServiceBuilder() {}
 
     /**
      * Sets the default hostname of the Jetty {@link Server}.
@@ -217,10 +226,52 @@ public final class JettyServiceBuilder {
      * Returns a newly-created {@link JettyService} based on the properties of this builder.
      */
     public JettyService build() {
-        return JettyService.forConfig(new JettyServiceConfig(
+        final JettyServiceConfig config = new JettyServiceConfig(
                 hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler, requestLog,
                 sessionIdManagerFactory, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
-                configurators));
+                configurators);
+
+        final Function<ScheduledExecutorService, Server> serverFactory = blockingTaskExecutor -> {
+            final Server server = new Server(new ArmeriaThreadPool(blockingTaskExecutor));
+
+            config.dumpAfterStart().ifPresent(server::setDumpAfterStart);
+            config.dumpBeforeStop().ifPresent(server::setDumpBeforeStop);
+            config.stopTimeoutMillis().ifPresent(server::setStopTimeout);
+
+            config.handler().ifPresent(server::setHandler);
+            config.requestLog().ifPresent(server::setRequestLog);
+            config.sessionIdManagerFactory().ifPresent(
+                    factory -> server.setSessionIdManager(factory.apply(server)));
+
+            config.handlerWrappers().forEach(server::insertHandler);
+            config.attrs().forEach(server::setAttribute);
+            config.beans().forEach(bean -> {
+                final Boolean managed = bean.isManaged();
+                if (managed == null) {
+                    server.addBean(bean.bean());
+                } else {
+                    server.addBean(bean.bean(), managed);
+                }
+            });
+
+            config.eventListeners().forEach(server::addEventListener);
+            config.lifeCycleListeners().forEach(server::addLifeCycleListener);
+
+            config.configurators().forEach(c -> c.accept(server));
+
+            return server;
+        };
+
+        final Consumer<Server> postStopTask = server -> {
+            try {
+                JettyService.logger.info("Destroying an embedded Jetty: {}", server);
+                server.destroy();
+            } catch (Exception e) {
+                JettyService.logger.warn("Failed to destroy an embedded Jetty: {}", server, e);
+            }
+        };
+
+        return new JettyService(config.hostname().orElse(null), serverFactory, postStopTask);
     }
 
     @Override

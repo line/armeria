@@ -93,7 +93,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
     @JsonProperty
     private @Min(0) int initialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     @JsonProperty
-    private @Min(0) int initialStreamingWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
+    private @Min(0) int initialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     @JsonProperty
     private @Min(0) int maxFrameSize = Flags.defaultHttp2MaxFrameSize();
     @JsonProperty
@@ -101,18 +101,30 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
     @JsonProperty
     private @Min(0L) long maxHeaderListSize = Flags.defaultHttp2MaxHeaderListSize();
 
+    /**
+     * Returns the TLS certificate chain file.
+     */
     public String getKeyCertChainFile() {
         return keyCertChainFile;
     }
 
+    /**
+     * Sets the TLS certificate chain file.
+     */
     public void setKeyCertChainFile(String keyCertChainFile) {
         this.keyCertChainFile = keyCertChainFile;
     }
 
+    /**
+     * Returns whether to generate a self-signed TLS key pair.
+     */
     public boolean isSelfSigned() {
         return selfSigned;
     }
 
+    /**
+     * Sets whether to generate a self-signed TLS key pair.
+     */
     public void setSelfSigned(boolean selfSigned) {
         this.selfSigned = selfSigned;
     }
@@ -123,7 +135,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
 
         sb.port(getPort(), getSessionProtocols())
           .http2InitialConnectionWindowSize(initialConnectionWindowSize)
-          .http2InitialStreamWindowSize(initialStreamingWindowSize)
+          .http2InitialStreamWindowSize(initialStreamWindowSize)
           .http2MaxFrameSize(maxFrameSize)
           .http2MaxStreamsPerConnection(maxStreamsPerConnection)
           .http2MaxHeaderListSize(maxHeaderListSize);
@@ -162,42 +174,92 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory
         return sb;
     }
 
+    /**
+     * Returns the initial connection-level HTTP/2 flow control window size.
+     *
+     * @see ServerBuilder#http2InitialConnectionWindowSize(int)
+     */
     public int getInitialConnectionWindowSize() {
         return initialConnectionWindowSize;
     }
 
+    /**
+     * Sets the initial connection-level HTTP/2 flow control window size.
+     *
+     * @see ServerBuilder#http2InitialConnectionWindowSize(int)
+     */
     public void setInitialConnectionWindowSize(int initialConnectionWindowSize) {
         this.initialConnectionWindowSize = initialConnectionWindowSize;
     }
 
-    public int getInitialStreamingWindowSize() {
-        return initialStreamingWindowSize;
+    /**
+     * Returns the initial stream-level HTTP/2 flow control window size.
+     *
+     * @see ServerBuilder#http2InitialStreamWindowSize(int)
+     */
+    public int getInitialStreamWindowSize() {
+        return initialStreamWindowSize;
     }
 
-    public void setInitialStreamingWindowSize(int initialStreamingWindowSize) {
-        this.initialStreamingWindowSize = initialStreamingWindowSize;
+    /**
+     * Sets the initial stream-level HTTP/2 flow control window size.
+     *
+     * @see ServerBuilder#http2InitialStreamWindowSize(int)
+     */
+    public void setInitialStreamWindowSize(int initialStreamWindowSize) {
+        this.initialStreamWindowSize = initialStreamWindowSize;
     }
 
+    /**
+     * Returns the maximum size of HTTP/2 frame that can be received.
+     *
+     * @see ServerBuilder#http2MaxFrameSize(int)
+     */
     public int getMaxFrameSize() {
         return maxFrameSize;
     }
 
+    /**
+     * Sets the maximum size of HTTP/2 frame that can be received.
+     *
+     * @see ServerBuilder#http2MaxFrameSize(int)
+     */
     public void setMaxFrameSize(int maxFrameSize) {
         this.maxFrameSize = maxFrameSize;
     }
 
+    /**
+     * Returns the maximum number of concurrent streams per HTTP/2 connection.
+     *
+     * @see ServerBuilder#http2MaxStreamsPerConnection(long)
+     */
     public long getMaxStreamsPerConnection() {
         return maxStreamsPerConnection;
     }
 
+    /**
+     * Sets the maximum number of concurrent streams per HTTP/2 connection.
+     *
+     * @see ServerBuilder#http2MaxStreamsPerConnection(long)
+     */
     public void setMaxStreamsPerConnection(long maxStreamsPerConnection) {
         this.maxStreamsPerConnection = maxStreamsPerConnection;
     }
 
+    /**
+     * Returns the maximum size of HTTP/2 headers that can be received.
+     *
+     * @see ServerBuilder#http2MaxHeaderListSize(long)
+     */
     public long getMaxHeaderListSize() {
         return maxHeaderListSize;
     }
 
+    /**
+     * Sets the maximum size of HTTP/2 headers that can be received.
+     *
+     * @see ServerBuilder#http2MaxHeaderListSize(long)
+     */
     public void setMaxHeaderListSize(long maxHeaderListSize) {
         this.maxHeaderListSize = maxHeaderListSize;
     }

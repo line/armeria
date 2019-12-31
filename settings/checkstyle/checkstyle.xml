@@ -184,16 +184,12 @@
       <property name="scope" value="protected"/>
       <property name="excludeScope" value="package"/>
       <property name="allowMissingParamTags" value="true"/>
-      <property name="allowMissingThrowsTags" value="true"/>
       <property name="allowMissingReturnTag" value="true"/>
       <property name="allowedAnnotations" value="Override, Test"/>
-      <property name="allowThrowsTagsForSubclasses" value="true"/>
-      <property name="allowUndeclaredRTE" value="true"/>
-      <property name="suppressLoadErrors" value="true"/>
     </module>
-    <!--<module name="MissingJavadocMethod"/>
+    <module name="MissingJavadocMethod"/>
     <module name="MissingJavadocPackage"/>
-    <module name="MissingJavadocType"/>-->
+    <module name="MissingJavadocType"/>
     <module name="JavadocParagraph"/>
     <module name="JavadocTagContinuationIndentation"/>
     <module name="NonEmptyAtclauseDescription"/>

@@ -40,20 +40,26 @@ public class ServerListenerTest {
               .service("/", (req, ctx) -> HttpResponse.of("Hello!"));
 
             // Record when the method triggered
-            final ServerListener sl = new ServerListenerBuilder()
-                    // add a callback.
-                    .addStartingCallback((Server server) -> STARTING_AT = System.currentTimeMillis())
-                    // add multiple callbacks, one by one.
-                    .addStartedCallback((Server server) -> STARTED_AT = -1)
-                    .addStartedCallback((Server server) -> STARTED_AT = System.currentTimeMillis())
-                    // add multiple callbacks at once, with vargs api.
-                    .addStoppingCallbacks((Server server) -> STOPPING_AT = System.currentTimeMillis(),
-                                          (Server server) -> STARTING_AT = 0L)
-                    // add multiple callbacks at once, with iterable api.
-                    .addStoppedCallbacks(
-                            Lists.newArrayList((Server server) -> STOPPED_AT = System.currentTimeMillis(),
-                                               (Server server) -> STARTED_AT = 0L))
-                    .build();
+            final ServerListener sl =
+                    ServerListener.builder()
+                                  // add a callback.
+                                  .addStartingCallback((Server server) ->
+                                          STARTING_AT = System.currentTimeMillis())
+                                  // add multiple callbacks, one by one.
+                                  .addStartedCallback((Server server) ->
+                                          STARTED_AT = -1)
+                                  .addStartedCallback((Server server) ->
+                                          STARTED_AT = System.currentTimeMillis())
+                                  // add multiple callbacks at once, with vargs api.
+                                  .addStoppingCallbacks((Server server) ->
+                                                    STOPPING_AT = System.currentTimeMillis(),
+                                                    (Server server) -> STARTING_AT = 0L)
+                                  // add multiple callbacks at once, with iterable api.
+                                  .addStoppedCallbacks(
+                                    Lists.newArrayList((Server server) ->
+                                                    STOPPED_AT = System.currentTimeMillis(),
+                                                    (Server server) -> STARTED_AT = 0L))
+                                  .build();
             sb.serverListener(sl);
         }
     };

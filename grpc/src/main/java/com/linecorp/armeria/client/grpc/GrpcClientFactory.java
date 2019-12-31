@@ -34,10 +34,10 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
-import com.linecorp.armeria.client.DefaultClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.Scheme;
@@ -138,9 +138,9 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                         stubMethods(stubClass),
                         options.getOrElse(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER, NO_OP)) : null;
         final ArmeriaChannel channel = new ArmeriaChannel(
-                new DefaultClientBuilderParams(this,
-                                               Strings.isNullOrEmpty(uri.getPath()) ? rootPathUri(uri) : uri,
-                                               clientType, options),
+                ClientBuilderParams.of(this,
+                                       Strings.isNullOrEmpty(uri.getPath()) ? rootPathUri(uri) : uri,
+                                       clientType, options),
                 httpClient,
                 meterRegistry(),
                 scheme.sessionProtocol(),
