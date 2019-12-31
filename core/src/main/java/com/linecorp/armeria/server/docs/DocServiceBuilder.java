@@ -60,6 +60,14 @@ public final class DocServiceBuilder {
             new ArrayList<>();
 
     /**
+     * Creates a new {@link DocServiceBuilder}.
+     *
+     * @deprecated Use {@link DocService#builder()}.
+     */
+    @Deprecated
+    public DocServiceBuilder() {}
+
+    /**
      * Adds the example {@link HttpHeaders} which are applicable to any services.
      */
     public DocServiceBuilder exampleHttpHeaders(HttpHeaders... exampleHttpHeaders) {

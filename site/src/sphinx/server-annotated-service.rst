@@ -875,12 +875,12 @@ decorator annotation which applies :api:`LoggingService` to an annotated service
     public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFunction<LoggingDecorator> {
         @Override
         public Function<? super HttpService, ? extends HttpService> newDecorator(LoggingDecorator parameter) {
-            return new LoggingServiceBuilder()
-                    .requestLogLevel(parameter.requestLogLevel())
-                    .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
-                    .failureResponseLogLevel(parameter.failureResponseLogLevel())
-                    .samplingRate(parameter.samplingRate())
-                    .newDecorator();
+            return LoggingService.builder()
+                                 .requestLogLevel(parameter.requestLogLevel())
+                                 .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
+                                 .failureResponseLogLevel(parameter.failureResponseLogLevel())
+                                 .samplingRate(parameter.samplingRate())
+                                 .newDecorator();
         }
     }
 

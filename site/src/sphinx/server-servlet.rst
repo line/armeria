@@ -46,7 +46,7 @@ Unlike Apache Tomcat, you need more dependencies and bootstrap code due to its m
 .. code-block:: java
 
     import com.linecorp.armeria.server.ServerBuilder;
-    import com.linecorp.armeria.server.jetty.JettyServiceBuilder;
+    import com.linecorp.armeria.server.jetty.JettyService;
 
     import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
     import org.eclipse.jetty.apache.jsp.JettyJasperInitializer
@@ -57,8 +57,9 @@ Unlike Apache Tomcat, you need more dependencies and bootstrap code due to its m
     ServerBuilder sb = Server.builder();
 
     sb.serviceUnder("/jetty/api/rest/v2/",
-                    new JettyServiceBuilder().handler(newWebAppContext("/webapp"))
-                                             .build());
+                    JettyService.builder()
+                                .handler(newWebAppContext("/webapp"))
+                                .build());
 
     static WebAppContext newWebAppContext(String resourcePath) throws MalformedURLException {
         final WebAppContext handler = new WebAppContext();

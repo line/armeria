@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
@@ -64,7 +64,7 @@ import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.testing.internal.TestUtil;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
-public class ThriftDocServiceTest {
+public  class ThriftDocServiceTest {
 
     private static final HelloService.AsyncIface HELLO_SERVICE_HANDLER =
             (name, resultHandler) -> resultHandler.onComplete("Hello " + name);
@@ -108,18 +108,18 @@ public class ThriftDocServiceTest {
             sb.service("/hbase", hbaseService);
             sb.service("/oneway", onewayHelloService);
 
-            sb.serviceUnder(
-                    "/docs/",
-                    new DocServiceBuilder()
-                            .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
-                            .exampleHttpHeaders(HelloService.class, EXAMPLE_HEADERS_HELLO)
-                            .exampleHttpHeaders(FooService.class, EXAMPLE_HEADERS_FOO)
-                            .exampleHttpHeaders(FooService.class, "bar1", EXAMPLE_HEADERS_FOO_BAR1)
-                            .exampleRequest(EXAMPLE_HELLO)
-                            .build());
-            sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
-                    .exclude(DocServiceFilter.ofThrift())
-                    .build());
+            sb.serviceUnder("/docs/",
+                    DocService.builder()
+                              .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
+                              .exampleHttpHeaders(HelloService.class, EXAMPLE_HEADERS_HELLO)
+                              .exampleHttpHeaders(FooService.class, EXAMPLE_HEADERS_FOO)
+                              .exampleHttpHeaders(FooService.class, "bar1", EXAMPLE_HEADERS_FOO_BAR1)
+                              .exampleRequest(EXAMPLE_HELLO)
+                              .build());
+            sb.serviceUnder("/excludeAll/",
+                    DocService.builder()
+                              .exclude(DocServiceFilter.ofThrift())
+                              .build());
         }
     };
 

@@ -48,16 +48,22 @@ public class CustomAccessLogWriterFactory implements AccessLogWriterFactory {
     @JsonProperty
     private String format;
 
+    /**
+     * Returns the access log format string.
+     */
     public String getFormat() {
         return format;
     }
 
+    /**
+     * Sets the access log format string.
+     */
     public void setFormat(String format) {
         this.format = format;
     }
 
     @Override
     public AccessLogWriter getWriter() {
-        return AccessLogWriter.custom(this.format);
+        return AccessLogWriter.custom(format);
     }
 }

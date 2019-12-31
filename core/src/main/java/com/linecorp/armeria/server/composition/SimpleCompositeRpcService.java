@@ -32,6 +32,13 @@ public final class SimpleCompositeRpcService
         extends AbstractCompositeService<RpcService, RpcRequest, RpcResponse> implements RpcService {
 
     /**
+     * Returns a new {@link SimpleCompositeRpcServiceBuilder}.
+     */
+    public static SimpleCompositeRpcServiceBuilder builder() {
+        return new SimpleCompositeRpcServiceBuilder();
+    }
+
+    /**
      * Creates a new instance that is composed of the specified entries.
      */
     @SafeVarargs

@@ -53,6 +53,28 @@ public final class CorsPolicy {
 
     private static final String DELIMITER = ",";
     private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
+
+    /**
+     * Returns a new {@link CorsPolicyBuilder}.
+     */
+    public static CorsPolicyBuilder builder() {
+        return new CorsPolicyBuilder();
+    }
+
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with the specified {@code origins}.
+     */
+    public static CorsPolicyBuilder builder(String... origins) {
+        return new CorsPolicyBuilder(origins);
+    }
+
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with the specified {@code origins}.
+     */
+    public static CorsPolicyBuilder builder(Iterable<String> origins) {
+        return new CorsPolicyBuilder(origins);
+    }
+
     private final Set<String> origins;
     private final List<Route> routes;
     private final boolean credentialsAllowed;

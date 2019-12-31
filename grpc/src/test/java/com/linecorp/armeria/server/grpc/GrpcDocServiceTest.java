@@ -51,7 +51,7 @@ import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceIm
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
@@ -110,25 +110,27 @@ public class GrpcDocServiceTest {
                                        .supportedSerializationFormats(GrpcSerializationFormats.values())
                                        .enableUnframedRequests(true)
                                        .build());
-            sb.serviceUnder(
-                    "/docs/",
-                    new DocServiceBuilder()
-                            .exampleRequestForMethod(
-                                    TestServiceGrpc.SERVICE_NAME,
-                                    "UnaryCall",
-                                    SimpleRequest.newBuilder()
-                                                 .setPayload(
-                                                         Payload.newBuilder()
-                                                                .setBody(ByteString.copyFromUtf8("world")))
-                                                 .build())
-                            .injectedScript(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
-                            .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
-                            .exclude(DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall"))
-                            .build()
-                            .decorate(LoggingService.newDecorator()));
-            sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
-                    .exclude(DocServiceFilter.ofGrpc())
-                    .build());
+            sb.serviceUnder("/docs/",
+                            DocService.builder()
+                                      .exampleRequestForMethod(
+                                            TestServiceGrpc.SERVICE_NAME,
+                                            "UnaryCall",
+                                            SimpleRequest.newBuilder()
+                                                         .setPayload(
+                                                             Payload.newBuilder()
+                                                                    .setBody(ByteString.copyFromUtf8("world")))
+                                                         .build())
+                                      .injectedScript(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
+                                      .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
+                                      .exclude(DocServiceFilter.ofMethodName(
+                                                        TestServiceGrpc.SERVICE_NAME,
+                                                        "EmptyCall"))
+                                      .build()
+                                      .decorate(LoggingService.newDecorator()));
+            sb.serviceUnder("/excludeAll/",
+                            DocService.builder()
+                                      .exclude(DocServiceFilter.ofGrpc())
+                                      .build());
             sb.serviceUnder("/",
                             GrpcService.builder()
                                        .addService(mock(ReconnectServiceImplBase.class))
