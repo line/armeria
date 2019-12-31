@@ -49,7 +49,6 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
-import com.linecorp.armeria.client.retry.RetryingRpcClientBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
