@@ -41,7 +41,6 @@ public final class EventCount {
         return new EventCount(success, failure);
     }
 
-
     private final long success;
 
     private final long failure;
