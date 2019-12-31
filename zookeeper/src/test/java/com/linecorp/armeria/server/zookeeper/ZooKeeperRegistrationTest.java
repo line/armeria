@@ -86,7 +86,7 @@ public class ZooKeeperRegistrationTest extends ZooKeeperTestBase {
             try {
                 sampleEndpoints.forEach(endpoint -> {
                     try {
-                        assertThat(NodeValueCodec.DEFAULT.decode(zk.getData(
+                        assertThat(NodeValueCodec.ofDefault().decode(zk.getData(
                                 zNode + '/' + endpoint.host() + '_' + endpoint.port()).get()))
                                 .isEqualTo(endpoint);
                     } catch (Throwable throwable) {

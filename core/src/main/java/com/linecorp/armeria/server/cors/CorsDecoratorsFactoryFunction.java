@@ -36,7 +36,7 @@ public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunc
         ensureValidConfig(parameter);
         final CorsDecorator[] policies = parameter.value();
         final CorsDecorator corsDecorator = policies[0];
-        final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(corsDecorator.origins());
+        final CorsServiceBuilder cb = CorsService.builder(corsDecorator.origins());
         if (parameter.shortCircuit()) {
             cb.shortCircuit();
         }

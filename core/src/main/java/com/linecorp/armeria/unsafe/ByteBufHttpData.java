@@ -169,4 +169,9 @@ public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
     public InputStream toInputStream() {
         return new ByteBufInputStream(buf.retainedDuplicate(), true);
     }
+
+    @Override
+    public ByteBufHttpData withEndOfStream() {
+        return new ByteBufHttpData(buf, true);
+    }
 }

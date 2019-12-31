@@ -62,7 +62,6 @@ import com.linecorp.armeria.server.composition.AbstractCompositeService;
 import com.linecorp.armeria.server.file.AbstractHttpVfs;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.HttpFile;
-import com.linecorp.armeria.server.file.HttpFileBuilder;
 
 /**
  * An {@link HttpService} that provides information about the {@link Service}s running in a
@@ -119,15 +118,15 @@ public class DocService extends AbstractCompositeService<HttpService, HttpReques
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
                DocServiceFilter filter) {
 
-        super(ofExact("/specification.json", FileService.forVfs(new DocServiceVfs())),
-              ofExact("/versions.json", FileService.forVfs(new DocServiceVfs())),
+        super(ofExact("/specification.json", FileService.of(new DocServiceVfs())),
+              ofExact("/versions.json", FileService.of(new DocServiceVfs())),
               ofExact("/injected.js",
                       (ctx, req) -> HttpResponse.of(MediaType.JAVASCRIPT_UTF_8,
                                                     injectedScriptSuppliers.stream()
                                                                            .map(f -> f.apply(ctx, req))
                                                                            .collect(Collectors.joining("\n")))),
-              ofCatchAll(FileService.forClassPath(DocService.class.getClassLoader(),
-                                                  "com/linecorp/armeria/server/docs")));
+              ofCatchAll(FileService.of(DocService.class.getClassLoader(),
+                                        "com/linecorp/armeria/server/docs")));
         this.exampleHttpHeaders = immutableCopyOf(exampleHttpHeaders, "exampleHttpHeaders");
         this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
         this.filter = requireNonNull(filter, "filter");
@@ -365,10 +364,10 @@ public class DocService extends AbstractCompositeService<HttpService, HttpReques
 
         void setContent(byte[] content, MediaType mediaType) {
             assert file == HttpFile.nonExistent();
-            file = HttpFileBuilder.of(HttpData.wrap(content))
-                                  .contentType(mediaType)
-                                  .cacheControl(ServerCacheControl.REVALIDATED)
-                                  .build();
+            file = HttpFile.builder(HttpData.wrap(content))
+                           .contentType(mediaType)
+                           .cacheControl(ServerCacheControl.REVALIDATED)
+                           .build();
         }
     }
 }

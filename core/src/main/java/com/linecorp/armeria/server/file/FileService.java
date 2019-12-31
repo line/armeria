@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.file;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.EnumSet;
@@ -68,38 +69,60 @@ public class FileService extends AbstractHttpService {
     private static final Splitter COMMA_SPLITTER = Splitter.on(',');
 
     /**
-     * Creates a new {@link FileService} for the specified {@code rootDir} in an O/S file system.
+     * Returns a new {@link FileService} for the specified {@code rootDir} in an O/S file system.
      */
-    public static FileService forFileSystem(String rootDir) {
-        return FileServiceBuilder.forFileSystem(rootDir).build();
+    public static FileService of(File rootDir) {
+        return builder(rootDir).build();
     }
 
     /**
-     * Creates a new {@link FileService} for the specified {@code rootDir} in an O/S file system.
+     * Returns a new {@link FileService} for the specified {@code rootDir} in an O/S file system.
      */
-    public static FileService forFileSystem(Path rootDir) {
-        return FileServiceBuilder.forFileSystem(rootDir).build();
+    public static FileService of(Path rootDir) {
+        return builder(rootDir).build();
     }
 
     /**
-     * Creates a new {@link FileService} for the specified {@code rootDir} in the current class path.
+     * Returns a new {@link FileService} for the specified {@code rootDir} in the current class path.
      */
-    public static FileService forClassPath(String rootDir) {
-        return FileServiceBuilder.forClassPath(rootDir).build();
+    public static FileService of(ClassLoader classLoader, String rootDir) {
+        return builder(classLoader, rootDir).build();
     }
 
     /**
-     * Creates a new {@link FileService} for the specified {@code rootDir} in the current class path.
+     * Returns a new {@link FileService} for the specified {@link HttpVfs}.
      */
-    public static FileService forClassPath(ClassLoader classLoader, String rootDir) {
-        return FileServiceBuilder.forClassPath(classLoader, rootDir).build();
+    public static FileService of(HttpVfs vfs) {
+        return builder(vfs).build();
     }
 
     /**
-     * Creates a new {@link FileService} for the specified {@link HttpVfs}.
+     * Returns a new {@link FileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
      */
-    public static FileService forVfs(HttpVfs vfs) {
-        return FileServiceBuilder.forVfs(vfs).build();
+    public static FileServiceBuilder builder(File rootDir) {
+        return builder(HttpVfs.of(rootDir));
+    }
+
+    /**
+     * Returns a new {@link FileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
+     */
+    public static FileServiceBuilder builder(Path rootDir) {
+        return builder(HttpVfs.of(rootDir));
+    }
+
+    /**
+     * Returns a new {@link FileServiceBuilder} with the specified {@code rootDir} in the current class
+     * path.
+     */
+    public static FileServiceBuilder builder(ClassLoader classLoader, String rootDir) {
+        return builder(HttpVfs.of(classLoader, rootDir));
+    }
+
+    /**
+     * Returns a new {@link FileServiceBuilder} with the specified {@link HttpVfs}.
+     */
+    public static FileServiceBuilder builder(HttpVfs vfs) {
+        return new FileServiceBuilder(vfs);
     }
 
     private final FileServiceConfig config;
@@ -206,10 +229,10 @@ public class FileService extends AbstractHttpService {
                 final List<String> listing = config.vfs().list(decodedMappedPath);
                 final HttpData autoIndex =
                         AutoIndex.listingToHtml(ctx.decodedPath(), decodedMappedPath, listing);
-                return HttpFileBuilder.of(autoIndex)
-                                      .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8)
-                                      .setHeaders(config.headers())
-                                      .build();
+                return HttpFile.builder(autoIndex)
+                               .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8)
+                               .setHeaders(config.headers())
+                               .build();
             }
         } else {
             // Redirect to the slash appended path if 1) /index.html exists or 2) it has a directory listing.

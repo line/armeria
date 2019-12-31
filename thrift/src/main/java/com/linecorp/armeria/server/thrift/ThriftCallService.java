@@ -133,12 +133,12 @@ public final class ThriftCallService implements RpcService {
                     return reply;
                 }
                 // Should never reach here because of the way ThriftServiceEntry is created
-                return new DefaultRpcResponse(new TApplicationException(
+                return RpcResponse.ofFailure(new TApplicationException(
                         TApplicationException.UNKNOWN, "null implementation: " + call.method()));
             }
         }
 
-        return new DefaultRpcResponse(new TApplicationException(
+        return RpcResponse.ofFailure(new TApplicationException(
                 TApplicationException.UNKNOWN_METHOD, "unknown method: " + call.method()));
     }
 

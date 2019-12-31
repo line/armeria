@@ -13,21 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.tomcat;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
-import java.security.CodeSource;
-import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -36,6 +30,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Realm;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardEngine;
@@ -43,8 +38,8 @@ import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
 import org.apache.catalina.realm.NullRealm;
 import org.apache.catalina.startup.Tomcat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.util.AppRootFinder;
 
 /**
  * Builds a {@link TomcatService}. Use the factory methods in {@link TomcatService} if you do not override
@@ -52,125 +47,73 @@ import org.slf4j.LoggerFactory;
  */
 public final class TomcatServiceBuilder {
 
-    private static final Logger logger = LoggerFactory.getLogger(TomcatServiceBuilder.class);
-
     // From Tomcat conf/server.xml
     private static final String DEFAULT_SERVICE_NAME = "Catalina";
 
     /**
      * Creates a new {@link TomcatServiceBuilder} with the web application at the root directory inside the
      * JAR/WAR/directory where the caller class is located at.
+     *
+     * @deprecated Use {@link AppRootFinder#findCurrent()} and {@link TomcatService#builder(Path)}.
      */
+    @Deprecated
     public static TomcatServiceBuilder forCurrentClassPath() {
-        return forCurrentClassPath(2);
+        return TomcatService.builder(AppRootFinder.findCurrent(1));
     }
 
     /**
      * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base
      * directory inside the JAR/WAR/directory where the caller class is located at.
+     *
+     * @deprecated Use {@link AppRootFinder#findCurrent()} and {@link TomcatService#builder(Path, String)}.
      */
+    @Deprecated
     public static TomcatServiceBuilder forCurrentClassPath(String docBase) {
-        return forCurrentClassPath(docBase, 2);
-    }
-
-    static TomcatServiceBuilder forCurrentClassPath(int callDepth) {
-        return forCurrentClassPath("", callDepth);
-    }
-
-    static TomcatServiceBuilder forCurrentClassPath(String docBase, int callDepth) {
-        final Class<?> callerClass = TomcatUtil.classContext()[callDepth];
-        logger.debug("Creating a Tomcat service with the caller class: {}", callerClass.getName());
-        return forClassPath(callerClass, docBase);
+        return TomcatService.builder(AppRootFinder.findCurrent(1), docBase);
     }
 
     /**
      * Creates a new {@link TomcatServiceBuilder} with the web application at the root directory inside the
      * JAR/WAR/directory where the specified class is located at.
+     *
+     * @deprecated Use {@link AppRootFinder#find(Class)} and {@link TomcatService#builder(Path)}.
      */
+    @Deprecated
     public static TomcatServiceBuilder forClassPath(Class<?> clazz) {
-        return forClassPath(clazz, "");
+        return TomcatService.builder(AppRootFinder.find(clazz));
     }
 
     /**
      * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base
      * directory inside the JAR/WAR/directory where the specified class is located at.
+     *
+     * @deprecated Use {@link AppRootFinder#find(Class)} and {@link TomcatService#builder(Path, String)}.
      */
+    @Deprecated
     public static TomcatServiceBuilder forClassPath(Class<?> clazz, String docBaseOrJarRoot) {
-        requireNonNull(clazz, "clazz");
-        requireNonNull(docBaseOrJarRoot, "docBaseOrJarRoot");
-
-        final ProtectionDomain pd = clazz.getProtectionDomain();
-        if (pd == null) {
-            throw new IllegalArgumentException(clazz + " does not have a protection domain.");
-        }
-        final CodeSource cs = pd.getCodeSource();
-        if (cs == null) {
-            throw new IllegalArgumentException(clazz + " does not have a code source.");
-        }
-        final URL url = cs.getLocation();
-        if (url == null) {
-            throw new IllegalArgumentException(clazz + " does not have a location.");
-        }
-
-        if (!"file".equalsIgnoreCase(url.getProtocol())) {
-            throw new IllegalArgumentException(clazz + " is not on a file system: " + url);
-        }
-
-        File f;
-        try {
-            f = new File(url.toURI());
-        } catch (URISyntaxException ignored) {
-            f = new File(url.getPath());
-        }
-
-        if (TomcatUtil.isZip(f.toPath())) {
-            return new TomcatServiceBuilder(f.toPath(), docBaseOrJarRoot);
-        }
-
-        f = fileSystemDocBase(f, docBaseOrJarRoot);
-
-        if (!f.isDirectory()) {
-            throw new IllegalArgumentException(f + " is not a directory.");
-        }
-
-        return forFileSystem(f.toPath());
-    }
-
-    private static File fileSystemDocBase(File rootDir, String relativeDocBase) {
-        // Append the specified docBase to the root directory to build the actual docBase on file system.
-        String fileSystemDocBase = rootDir.getPath();
-        relativeDocBase = relativeDocBase.replace('/', File.separatorChar);
-        if (fileSystemDocBase.endsWith(File.separator)) {
-            if (relativeDocBase.startsWith(File.separator)) {
-                fileSystemDocBase += relativeDocBase.substring(1);
-            } else {
-                fileSystemDocBase += relativeDocBase;
-            }
-        } else {
-            if (relativeDocBase.startsWith(File.separator)) {
-                fileSystemDocBase += relativeDocBase;
-            } else {
-                fileSystemDocBase = fileSystemDocBase + File.separatorChar + relativeDocBase;
-            }
-        }
-
-        return new File(fileSystemDocBase);
+        return TomcatService.builder(AppRootFinder.find(clazz), docBaseOrJarRoot);
     }
 
     /**
      * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base,
      * which can be a directory or a JAR/WAR file.
+     *
+     * @deprecated Use {@link TomcatService#builder(Path)}.
      */
+    @Deprecated
     public static TomcatServiceBuilder forFileSystem(String docBase) {
-        return forFileSystem(Paths.get(requireNonNull(docBase, "docBase")));
+        return TomcatService.builder(Paths.get(requireNonNull(docBase, "docBase")));
     }
 
     /**
      * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base,
      * which can be a directory or a JAR/WAR file.
+     *
+     * @deprecated Use {@link TomcatService#builder(Path)}.
      */
+    @Deprecated
     public static TomcatServiceBuilder forFileSystem(Path docBase) {
-        return new TomcatServiceBuilder(docBase, null);
+        return TomcatService.builder(docBase);
     }
 
     private final Path docBase;
@@ -188,47 +131,9 @@ public final class TomcatServiceBuilder {
     @Nullable
     private String hostname;
 
-    private TomcatServiceBuilder(Path docBase, @Nullable String jarRoot) {
-        this.docBase = validateDocBase(docBase);
-        if (TomcatUtil.isZip(docBase)) {
-            this.jarRoot = normalizeJarRoot(jarRoot);
-        } else {
-            assert jarRoot == null;
-            this.jarRoot = null;
-        }
-    }
-
-    private static Path validateDocBase(Path docBase) {
-        requireNonNull(docBase, "docBase");
-
-        docBase = docBase.toAbsolutePath();
-
-        if (!Files.exists(docBase)) {
-            throw new IllegalArgumentException("docBase: " + docBase + " (non-existent)");
-        }
-
-        if (!Files.isDirectory(docBase) && !TomcatUtil.isZip(docBase)) {
-            throw new IllegalArgumentException(
-                    "docBase: " + docBase + " (expected: a directory or a WAR/JAR file)");
-        }
-
-        return docBase;
-    }
-
-    private static String normalizeJarRoot(@Nullable String jarRoot) {
-        if (jarRoot == null || jarRoot.isEmpty() || "/".equals(jarRoot)) {
-            return "/";
-        }
-
-        if (!jarRoot.startsWith("/")) {
-            jarRoot = '/' + jarRoot;
-        }
-
-        if (jarRoot.endsWith("/")) {
-            jarRoot = jarRoot.substring(0, jarRoot.length() - 1);
-        }
-
-        return jarRoot;
+    TomcatServiceBuilder(Path docBase, @Nullable String jarRoot) {
+        this.docBase = docBase;
+        this.jarRoot = jarRoot;
     }
 
     /**
@@ -333,9 +238,24 @@ public final class TomcatServiceBuilder {
             realm = new NullRealm();
         }
 
-        return TomcatService.forConfig(new TomcatServiceConfig(
+        final Consumer<Connector> postStopTask = connector -> {
+            @SuppressWarnings("UnnecessaryFullyQualifiedName")
+            final org.apache.catalina.Server server = connector.getService().getServer();
+            if (server.getState() == LifecycleState.STOPPED) {
+                try {
+                    TomcatService.logger.info("Destroying an embedded Tomcat: {}",
+                                              TomcatService.toString(server));
+                    server.destroy();
+                } catch (Exception e) {
+                    TomcatService.logger.warn("Failed to destroy an embedded Tomcat: {}",
+                                              TomcatService.toString(server), e);
+                }
+            }
+        };
+
+        return new ManagedTomcatService(null, new ManagedConnectorFactory(new TomcatServiceConfig(
                 serviceName, engineName, baseDir, realm, hostname, docBase, jarRoot,
-                Collections.unmodifiableList(configurators)));
+                Collections.unmodifiableList(configurators))), postStopTask);
     }
 
     @Override

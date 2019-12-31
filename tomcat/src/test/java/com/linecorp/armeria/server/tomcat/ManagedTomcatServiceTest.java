@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.tomcat;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +30,7 @@ import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.util.AppRootFinder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
@@ -55,25 +55,25 @@ public class ManagedTomcatServiceTest extends WebAppContainerTest {
 
             sb.serviceUnder(
                     "/jsp/",
-                    TomcatServiceBuilder.forFileSystem(webAppRoot().toPath())
-                                        .serviceName(SERVICE_NAME)
-                                        .configurator(s -> Collections.addAll(tomcatServices, s.findServices()))
-                                        .build()
-                                        .decorate(LoggingService.newDecorator()));
+                    TomcatService.builder(webAppRoot())
+                                 .serviceName(SERVICE_NAME)
+                                 .configurator(s -> Collections.addAll(tomcatServices, s.findServices()))
+                                 .build()
+                                 .decorate(LoggingService.newDecorator()));
 
             sb.serviceUnder(
                     "/jar/",
-                    TomcatServiceBuilder.forClassPath(Future.class)
-                                        .serviceName("TomcatServiceTest-JAR")
-                                        .build()
-                                        .decorate(LoggingService.newDecorator()));
+                    TomcatService.builder(AppRootFinder.find(Future.class))
+                                 .serviceName("TomcatServiceTest-JAR")
+                                 .build()
+                                 .decorate(LoggingService.newDecorator()));
 
             sb.serviceUnder(
                     "/jar_altroot/",
-                    TomcatServiceBuilder.forClassPath(Future.class, "/io/netty/util/concurrent")
-                                        .serviceName("TomcatServiceTest-JAR-AltRoot")
-                                        .build()
-                                        .decorate(LoggingService.newDecorator()));
+                    TomcatService.builder(AppRootFinder.find(Future.class), "/io/netty/util/concurrent")
+                                 .serviceName("TomcatServiceTest-JAR-AltRoot")
+                                 .build()
+                                 .decorate(LoggingService.newDecorator()));
         }
     };
 

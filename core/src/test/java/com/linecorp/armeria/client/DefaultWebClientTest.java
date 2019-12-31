@@ -87,9 +87,9 @@ class DefaultWebClientTest {
         assertThat(concatPath).isEqualTo("/helloWorld/test");
     }
 
-    private DefaultWebClient createDefaultWebClient(String clientUriPath, HttpClient mockClientDelegate,
-                                                    String endpoint) throws URISyntaxException {
-        final ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(
+    private static DefaultWebClient createDefaultWebClient(String clientUriPath, HttpClient mockClientDelegate,
+                                                           String endpoint) throws URISyntaxException {
+        final ClientBuilderParams clientBuilderParams = ClientBuilderParams.of(
                 ClientFactory.ofDefault(), new URI(clientUriPath), WebClient.class, ClientOptions.of());
         return new DefaultWebClient(
                 clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),

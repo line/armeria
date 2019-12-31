@@ -28,14 +28,14 @@ public class HttpFileTest {
 
     @Test
     public void additionalHeaders() throws Exception {
-        final HttpFile f = HttpFileBuilder.ofResource(ClassLoader.getSystemClassLoader(),
-                                                      "java/lang/Object.class")
-                                          .addHeader("foo", "1")
-                                          .addHeader("foo", "2")
-                                          .setHeader("bar", "3")
-                                          .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                          .cacheControl(ServerCacheControl.REVALIDATED)
-                                          .build();
+        final HttpFile f = HttpFile.builder(ClassLoader.getSystemClassLoader(),
+                                            "java/lang/Object.class")
+                                   .addHeader("foo", "1")
+                                   .addHeader("foo", "2")
+                                   .setHeader("bar", "3")
+                                   .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                   .cacheControl(ServerCacheControl.REVALIDATED)
+                                   .build();
 
         // Make sure content-type auto-detection is disabled.
         assertThat(((AbstractHttpFile) f).contentType()).isNull();
@@ -53,7 +53,7 @@ public class HttpFileTest {
 
     @Test
     public void leadingSlashInResourcePath() throws Exception {
-        final HttpFile f = HttpFile.ofResource(ClassLoader.getSystemClassLoader(), "/java/lang/Object.class");
+        final HttpFile f = HttpFile.of(ClassLoader.getSystemClassLoader(), "/java/lang/Object.class");
         final HttpFileAttributes attrs = f.readAttributes();
         assertThat(attrs).isNotNull();
         assertThat(attrs.length()).isPositive();

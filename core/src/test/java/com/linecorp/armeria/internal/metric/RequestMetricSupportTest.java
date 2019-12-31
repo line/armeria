@@ -29,11 +29,11 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
-import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -303,7 +303,7 @@ class RequestMetricSupportTest {
 
         ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/bar"));
         ctx.logBuilder().requestFirstBytesTransferred();
-        ctx.logBuilder().requestContent(new DefaultRpcRequest(Object.class, "baz"), null);
+        ctx.logBuilder().requestContent(RpcRequest.of(Object.class, "baz"), null);
 
         assertThat(measureAll(registry)).containsEntry("bar.activeRequests#value{method=baz}", 1.0);
     }

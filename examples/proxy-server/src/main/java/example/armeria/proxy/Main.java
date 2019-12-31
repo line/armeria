@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.file.HttpFileBuilder;
+import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.server.logging.LoggingService;
 
@@ -56,10 +56,10 @@ public final class Main {
                      // Disable timeout to serve infinite streaming response.
                      .requestTimeoutMillis(0)
                      // Serve /index.html file.
-                     .service("/", HttpFileBuilder.ofResource(Main.class.getClassLoader(), "index.html")
-                                                  .cacheControl(ServerCacheControl.REVALIDATED)
-                                                  .build()
-                                                  .asService())
+                     .service("/", HttpFile.builder(Main.class.getClassLoader(), "index.html")
+                                           .cacheControl(ServerCacheControl.REVALIDATED)
+                                           .build()
+                                           .asService())
                      .service("/animation", new AnimationService(frameIntervalMillis))
                      // Serve health check.
                      .service("/internal/l7check", new HttpHealthCheckService())

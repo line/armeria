@@ -120,6 +120,7 @@ public final class ServerPort implements Comparable<ServerPort> {
      *
      * @deprecated Use {@link #protocols()}.
      */
+    @Nullable
     @Deprecated
     public SessionProtocol protocol() {
         return Iterables.getFirst(protocols, null);

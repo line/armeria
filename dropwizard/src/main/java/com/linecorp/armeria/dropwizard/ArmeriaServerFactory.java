@@ -286,10 +286,9 @@ class ArmeriaServerFactory extends SimpleServerFactory {
      * @param jettyServer An instance of a Jetty {@link Server}
      * @return Armeria {@link JettyService} for the provided jettyServer
      */
-    @JsonIgnore
-    private JettyService getJettyService(Server jettyServer) {
+    private static JettyService getJettyService(Server jettyServer) {
         Objects.requireNonNull(jettyServer, "Armeria cannot build a service from a null server");
-        return JettyService.forServer(jettyServer);
+        return JettyService.of(jettyServer);
     }
 
     /**
