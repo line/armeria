@@ -28,6 +28,15 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class RequestContextUtil {
 
+    private static final SafeCloseable noopSafeCloseable = () -> { /* no-op */ };
+
+    /**
+     * Returns the {@link SafeCloseable} which doesn't do anything.
+     */
+    public static SafeCloseable noopSafeCloseable() {
+        return noopSafeCloseable;
+    }
+
     /**
      * Runs callbacks if {@code runCallbacks} is {@code true} and returns the {@link SafeCloseable}
      * which will remove the current {@link RequestContext} in the thread-local when

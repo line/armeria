@@ -47,10 +47,10 @@ class ServiceRequestContextTest {
 
         final ServiceRequestContext ctx = serviceRequestContext();
         try (SafeCloseable unused = ctx.push()) {
-            assertThat(onEnterExitStack.size()).isOne();
+            assertThat(onEnterExitStack).hasSize(1);
             assertThat(ServiceRequestContext.current()).isSameAs(ctx);
         }
-        assertThat(onEnterExitStack.size()).isZero();
+        assertThat(onEnterExitStack).isEmpty();
 
         try (SafeCloseable unused = clientRequestContext().push()) {
             assertThatThrownBy(ServiceRequestContext::current)
@@ -65,10 +65,10 @@ class ServiceRequestContextTest {
 
         final ServiceRequestContext ctx = serviceRequestContext();
         try (SafeCloseable unused = ctx.push()) {
-            assertThat(onEnterExitStack.size()).isOne();
+            assertThat(onEnterExitStack).hasSize(1);
             assertThat(ServiceRequestContext.currentOrNull()).isSameAs(ctx);
         }
-        assertThat(onEnterExitStack.size()).isZero();
+        assertThat(onEnterExitStack).isEmpty();
 
         try (SafeCloseable unused = clientRequestContext().push()) {
             assertThatThrownBy(ServiceRequestContext::currentOrNull)
@@ -84,11 +84,11 @@ class ServiceRequestContextTest {
 
         final ServiceRequestContext ctx = serviceRequestContext();
         try (SafeCloseable unused = ctx.push()) {
-            assertThat(onEnterExitStack.size()).isOne();
+            assertThat(onEnterExitStack).hasSize(1);
             assertThat(ServiceRequestContext.mapCurrent(c -> "foo", () -> "bar")).isEqualTo("foo");
             assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isSameAs(ctx);
         }
-        assertThat(onEnterExitStack.size()).isZero();
+        assertThat(onEnterExitStack).isEmpty();
 
         try (SafeCloseable unused = clientRequestContext().push()) {
             assertThatThrownBy(() -> ServiceRequestContext.mapCurrent(c -> "foo", () -> "bar"))
@@ -101,38 +101,48 @@ class ServiceRequestContextTest {
     void pushReentrance() {
         final ServiceRequestContext ctx = serviceRequestContext();
         try (SafeCloseable ignored = ctx.push()) {
-            assertThat(onEnterExitStack.size()).isOne();
+            assertCurrentCtx(ctx);
+            assertThat(onEnterExitStack).hasSize(1);
             try (SafeCloseable ignored2 = ctx.push()) {
-                assertThat(onEnterExitStack.size()).isOne();
+                assertCurrentCtx(ctx);
+                assertThat(onEnterExitStack).hasSize(1);
             }
-            assertThat(onEnterExitStack.size()).isOne();
+            assertCurrentCtx(ctx);
+            assertThat(onEnterExitStack).hasSize(1);
         }
-        assertThat(onEnterExitStack.size()).isZero();
+        assertThat(onEnterExitStack).isEmpty();
     }
 
     @Test
     void pushWithOldClientCtxWhoseRootIsThisServiceCtx() {
         final ServiceRequestContext sctx = serviceRequestContext();
         try (SafeCloseable ignored = sctx.push()) {
-            assertThat(onEnterExitStack.size()).isOne();
+            assertCurrentCtx(sctx);
+            assertThat(onEnterExitStack).hasSize(1);
             // The root of ClientRequestContext is sctx.
-            try (SafeCloseable ignored1 = clientRequestContext().push()) {
-                assertThat(onEnterExitStack.size()).isEqualTo(2);
+            final ClientRequestContext cctx = clientRequestContext();
+            try (SafeCloseable ignored1 = cctx.push()) {
+                assertCurrentCtx(cctx);
+                assertThat(onEnterExitStack).hasSize(2);
                 try (SafeCloseable ignored2 = sctx.push()) {
-                    assertThat(onEnterExitStack.size()).isEqualTo(2);
+                    assertCurrentCtx(sctx);
+                    assertThat(onEnterExitStack).hasSize(2);
                 }
-                assertThat(onEnterExitStack.size()).isEqualTo(2);
+                assertCurrentCtx(cctx);
+                assertThat(onEnterExitStack).hasSize(2);
             }
-            assertThat(onEnterExitStack.size()).isOne();
+            assertCurrentCtx(sctx);
+            assertThat(onEnterExitStack).hasSize(1);
         }
-        assertThat(onEnterExitStack.size()).isZero();
+        assertThat(onEnterExitStack).isEmpty();
     }
 
     @Test
     void pushWithOldIrrelevantClientCtx() {
         final ClientRequestContext cctx = clientRequestContext();
         try (SafeCloseable ignored = cctx.push()) {
-            assertThat(onEnterExitStack.size()).isOne();
+            assertCurrentCtx(cctx);
+            assertThat(onEnterExitStack).hasSize(1);
             final ServiceRequestContext sctx = serviceRequestContext();
             assertThatThrownBy(sctx::push).isInstanceOf(IllegalStateException.class);
         }
@@ -143,9 +153,15 @@ class ServiceRequestContextTest {
         final ServiceRequestContext sctx1 = serviceRequestContext();
         final ServiceRequestContext sctx2 = serviceRequestContext();
         try (SafeCloseable ignored = sctx1.push()) {
-            assertThat(onEnterExitStack.size()).isOne();
+            assertCurrentCtx(sctx1);
+            assertThat(onEnterExitStack).hasSize(1);
             assertThatThrownBy(sctx2::push).isInstanceOf(IllegalStateException.class);
         }
+    }
+
+    private static void assertCurrentCtx(RequestContext ctx) {
+        final RequestContext current = RequestContext.current();
+        assertThat(current).isSameAs(ctx);
     }
 
     private ServiceRequestContext serviceRequestContext() {

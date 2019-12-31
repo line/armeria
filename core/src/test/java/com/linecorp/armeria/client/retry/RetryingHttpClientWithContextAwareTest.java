@@ -54,8 +54,7 @@ class RetryingHttpClientWithContextAwareTest {
                                                   .newDecorator())
                          .build();
 
-        final ServiceRequestContext dummyCtx =
-                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final ServiceRequestContext dummyCtx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         try (SafeCloseable ignored = dummyCtx.push()) {
             final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
             assertThatThrownBy(() -> dummyCtx.makeContextAware(future).join()).hasCauseInstanceOf(

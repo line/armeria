@@ -316,7 +316,7 @@ public interface RequestContext {
      *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
      * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
+     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
      *
      * @deprecated Use {@link #push()}.
      */
@@ -331,7 +331,7 @@ public interface RequestContext {
      *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
      * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
+     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
      *
      * @deprecated Use {@link #push(boolean)}.
      */
@@ -354,7 +354,7 @@ public interface RequestContext {
      *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
      * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
+     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
      */
     default SafeCloseable push() {
         return push(true);
@@ -364,14 +364,14 @@ public interface RequestContext {
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
-     * try (PushHandle ignored = ctx.push(true)) {
+     * try (SafeCloseable ignored = ctx.push(true)) {
      *     ...
      * }
      * }</pre>
      *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
      * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
+     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
      *
      * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
      *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
@@ -387,13 +387,32 @@ public interface RequestContext {
      *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
      * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the conditions.
+     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
      *
      * @deprecated Use {@link #push()}.
      */
     @Deprecated
     default SafeCloseable pushIfAbsent() {
         return push(true);
+    }
+
+    /**
+     * Replaces the current {@link RequestContext} in the thread-local with this context without any validation.
+     * This method also does not run any callbacks.
+     *
+     * <p><strong>Note:</strong> Do not use this if you don't know what you are doing. This method does not
+     * prevent the situation where a wrong {@link RequestContext} is pushed into the thread-local.
+     * Use {@link #push()} instead.
+     *
+     * @see ClientRequestContext#push(boolean)
+     * @see ServiceRequestContext#push(boolean)
+     */
+    default SafeCloseable replace() {
+        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        if (oldCtx == null) {
+            return RequestContextThreadLocal::remove;
+        }
+        return () -> RequestContextThreadLocal.set(oldCtx);
     }
 
     /**

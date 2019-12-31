@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
 
 import java.net.InetAddress;
@@ -170,10 +171,10 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
+     * Pushes this context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
-     * try (PushHandle ignored = ctx.push(true)) {
+     * try (SafeCloseable ignored = ctx.push(true)) {
      *     ...
      * }
      * }</pre>
@@ -186,7 +187,7 @@ public interface ServiceRequestContext extends RequestContext {
      *   <li>the thread-local has the {@link ClientRequestContext} whose {@link ClientRequestContext#root()}
      *       is the same {@link ServiceRequestContext} as this</li>
      * </ul>
-     * If it doesn't, this will throw an {@link IllegalStateException}.
+     * Otherwise, this method will throw an {@link IllegalStateException}.
      *
      * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
      *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
@@ -198,11 +199,11 @@ public interface ServiceRequestContext extends RequestContext {
         final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance
-            return () -> { /* no-op */ };
+            return noopSafeCloseable();
         }
 
         if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == this) {
-            return () -> { /* no-op */ };
+            return () -> RequestContextThreadLocal.set(oldCtx);
         }
 
         if (oldCtx == null) {

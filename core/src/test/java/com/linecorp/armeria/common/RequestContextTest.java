@@ -57,6 +57,7 @@ import org.mockito.junit.MockitoRule;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
@@ -321,6 +322,19 @@ public class RequestContextTest {
             assertDepth(0);
         }).run();
         assertDepth(0);
+    }
+
+    @Test
+    public void replace() {
+        final RequestContext ctx1 = createContext(false);
+        final RequestContext ctx2 = createContext(false);
+        try (SafeCloseable ignored = ctx1.push()) {
+            assertCurrentContext(ctx1);
+            try (SafeCloseable ignored2 = ctx2.replace()) {
+                assertCurrentContext(ctx2);
+            }
+            assertCurrentContext(ctx1);
+        }
     }
 
     private void assertDepth(int expectedDepth) {
