@@ -22,7 +22,6 @@ import static org.mockito.Mockito.mock;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
@@ -137,11 +136,12 @@ class DefaultClientRequestContextTest {
             assertThat(counter).hasValue(1);
 
             // Create a derived context, which should never call customizers or captor.
-            final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
-            ctx.newDerivedContext(RequestId.random(), ctx.request(), null, ctx.endpoint());
-            assertThat(counter).hasValue(1);
-            assertThatThrownBy(ctxCaptor::get).isInstanceOf(IllegalStateException.class)
-                                              .hasMessageContaining("no request was made");
+            try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+                ctx.newDerivedContext(RequestId.random(), ctx.request(), null, ctx.endpoint());
+                assertThat(counter).hasValue(1);
+                assertThatThrownBy(ctxCaptor::get).isInstanceOf(IllegalStateException.class)
+                                                  .hasMessageContaining("no request was made");
+            }
         }
 
         // Thread-local state must be cleaned up.
@@ -150,10 +150,42 @@ class DefaultClientRequestContextTest {
 
     @Test
     void contextCaptorMustBeCleanedUp() {
-        final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
-        assertThat(ClientThreadLocalState.get()).isNotNull();
-        final DefaultClientRequestContext ctx = newContext();
-        assertThat(ctxCaptor.get()).isSameAs(ctx);
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            assertThat(ClientThreadLocalState.get()).isNotNull();
+            final DefaultClientRequestContext ctx = newContext();
+            assertThat(ctxCaptor.get()).isSameAs(ctx);
+        }
+
+        // Thread-local state must be cleaned up.
+        assertThat(ClientThreadLocalState.get()).isNull();
+    }
+
+    @Test
+    void nestedContextCaptors() {
+        try (ClientRequestContextCaptor ctxCaptor1 = Clients.newContextCaptor()) {
+            final DefaultClientRequestContext ctx1 = newContext();
+            assertThat(ctxCaptor1.getAll()).containsExactly(ctx1);
+
+            final ClientRequestContext ctx2;
+            ClientRequestContextCaptor ctxCaptor2 = null;
+            try {
+                ctxCaptor2 = Clients.newContextCaptor();
+                ctx2 = newContext();
+                // The context captured by the second captor should not affect the first captor.
+                assertThat(ctxCaptor1.getAll()).containsExactly(ctx1);
+                assertThat(ctxCaptor2.getAll()).containsExactly(ctx2);
+            } finally {
+                if (ctxCaptor2 != null) {
+                    ctxCaptor2.close();
+                }
+            }
+
+            final DefaultClientRequestContext ctx3 = newContext();
+            assertThat(ctxCaptor1.getAll()).containsExactly(ctx1, ctx3);
+            assertThat(ctxCaptor2.getAll()).containsExactly(ctx2);
+        }
+
+        // Thread-local state must be cleaned up.
         assertThat(ClientThreadLocalState.get()).isNull();
     }
 

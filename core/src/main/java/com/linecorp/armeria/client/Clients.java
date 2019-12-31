@@ -21,7 +21,6 @@ import java.net.URI;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
@@ -606,17 +605,26 @@ public final class Clients {
 
     /**
      * Prepare to capture the {@link ClientRequestContext} of the next request sent from the current thread.
-     * Call {@link Supplier#get()} on the returned captor to retrieve the captured {@link ClientRequestContext}.
+     * Use the {@code try-with-resources} block with the returned {@link ClientRequestContextCaptor}
+     * to retrieve the captured {@link ClientRequestContext} and to unset the thread-local variable
+     * automatically.
      * <pre>{@code
-     * Supplier<ClientRequestContext> captor = Clients.newContextCaptor();
-     * WebClient.of().get("https://www.example.com/hello");
-     * ClientRequestContext ctx = captor.get();
-     * assert ctx.path().equals("/hello");
-     * }</pre>
-     *
-     * <p>Note: Only the first {@link ClientRequestContext} is captured if you made more than one request.</p>
+     * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+     *     WebClient.of().get("https://www.example.com/hello");
+     *     ClientRequestContext ctx = captor.get();
+     *     assert ctx.path().equals("/hello");
+     * }}</pre>
+     * Note that you can also capture more than one {@link ClientRequestContext}:
+     * <pre>{@code
+     * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+     *     WebClient.of().get("https://www.example.com/foo");
+     *     WebClient.of().get("https://www.example.com/bar");
+     *     List<ClientRequestContext> contexts = captor.getAll();
+     *     assert contexts.get(0).path().equals("/foo");
+     *     assert contexts.get(1).path().equals("/bar");
+     * }}</pre>
      */
-    public static Supplier<ClientRequestContext> newContextCaptor() {
+    public static ClientRequestContextCaptor newContextCaptor() {
         return ClientThreadLocalState.maybeCreate().newContextCaptor();
     }
 

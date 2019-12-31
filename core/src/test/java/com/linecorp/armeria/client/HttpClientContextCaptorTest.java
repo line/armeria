@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.function.Supplier;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -40,30 +38,33 @@ class HttpClientContextCaptorTest {
     @Test
     void simple() {
         final WebClient client = WebClient.of(server.httpUri("/"));
-        final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
-        final HttpResponse res = client.get("/foo");
-        final ClientRequestContext ctx = ctxCaptor.get();
-        assertThat(ctx.path()).isEqualTo("/foo");
-        res.aggregate();
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            final HttpResponse res = client.get("/foo");
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(ctx.path()).isEqualTo("/foo");
+            res.aggregate();
+        }
     }
 
     @Test
     void connectionRefused() {
-        final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
-        final HttpResponse res = WebClient.of().get("http://127.0.0.1:1/foo");
-        final ClientRequestContext ctx = ctxCaptor.get();
-        assertThat(ctx.path()).isEqualTo("/foo");
-        res.aggregate();
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            final HttpResponse res = WebClient.of().get("http://127.0.0.1:1/foo");
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(ctx.path()).isEqualTo("/foo");
+            res.aggregate();
+        }
     }
 
     @Test
     void badPath() {
-        final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
-        // Send a request with a bad path.
-        // Note: A colon cannot come in the first path component.
-        final HttpResponse res = WebClient.of().get("http://127.0.0.1:1/:");
-        assertThatThrownBy(ctxCaptor::get).isInstanceOf(IllegalStateException.class)
-                                          .hasMessageContaining("no request was made");
-        res.aggregate();
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            // Send a request with a bad path.
+            // Note: A colon cannot come in the first path component.
+            final HttpResponse res = WebClient.of().get("http://127.0.0.1:1/:");
+            assertThatThrownBy(ctxCaptor::get).isInstanceOf(IllegalStateException.class)
+                                              .hasMessageContaining("no request was made");
+            res.aggregate();
+        }
     }
 }

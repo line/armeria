@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.apache.thrift.TApplicationException;
@@ -51,6 +50,7 @@ import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
@@ -315,13 +315,14 @@ class ThriftOverHttpClientTest {
             final HelloService.Iface client = Clients.newClient(clientFactory,
                                                                 uri(Handlers.HELLO, format, protocol),
                                                                 Handlers.HELLO.iface(), clientOptions);
-            final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
-            client.hello("kukuman");
-            final ClientRequestContext ctx = ctxCaptor.get();
-            final RpcRequest rpcReq = ctx.rpcRequest();
-            assertThat(rpcReq).isNotNull();
-            assertThat(rpcReq.method()).isEqualTo("hello");
-            assertThat(rpcReq.params()).containsExactly("kukuman");
+            try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+                client.hello("kukuman");
+                final ClientRequestContext ctx = ctxCaptor.get();
+                final RpcRequest rpcReq = ctx.rpcRequest();
+                assertThat(rpcReq).isNotNull();
+                assertThat(rpcReq.method()).isEqualTo("hello");
+                assertThat(rpcReq.params()).containsExactly("kukuman");
+            }
         });
     }
 
@@ -336,13 +337,14 @@ class ThriftOverHttpClientTest {
                                       Handlers.HELLO.asyncIface(),
                                       clientOptions);
 
-            final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
-            client.hello("kukuman", new ThriftCompletableFuture<>());
-            final ClientRequestContext ctx = ctxCaptor.get();
-            final RpcRequest rpcReq = ctx.rpcRequest();
-            assertThat(rpcReq).isNotNull();
-            assertThat(rpcReq.method()).isEqualTo("hello");
-            assertThat(rpcReq.params()).containsExactly("kukuman");
+            try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+                client.hello("kukuman", new ThriftCompletableFuture<>());
+                final ClientRequestContext ctx = ctxCaptor.get();
+                final RpcRequest rpcReq = ctx.rpcRequest();
+                assertThat(rpcReq).isNotNull();
+                assertThat(rpcReq.method()).isEqualTo("hello");
+                assertThat(rpcReq.params()).containsExactly("kukuman");
+            }
         });
     }
 

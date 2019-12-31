@@ -39,7 +39,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -59,6 +58,7 @@ import com.google.protobuf.StringValue;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -243,18 +243,20 @@ public class GrpcClientTest {
 
     @Test
     public void contextCaptorBlocking() {
-        final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
-        blockingStub.emptyCall(EMPTY);
-        final ClientRequestContext ctx = ctxCaptor.get();
-        assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub.emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        }
     }
 
     @Test
     public void contextCaptorAsync() {
-        final Supplier<ClientRequestContext> ctxCaptor = Clients.newContextCaptor();
-        asyncStub.emptyCall(EMPTY, StreamRecorder.create());
-        final ClientRequestContext ctx = ctxCaptor.get();
-        assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            asyncStub.emptyCall(EMPTY, StreamRecorder.create());
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        }
     }
 
     @Test

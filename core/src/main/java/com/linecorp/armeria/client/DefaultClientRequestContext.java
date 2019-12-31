@@ -331,7 +331,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             return null;
         }
 
-        state.setCapturedContext(this);
+        state.addCapturedContext(this);
         return state.copyCustomizers();
     }
 

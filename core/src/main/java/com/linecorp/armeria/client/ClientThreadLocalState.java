@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -50,7 +49,7 @@ final class ClientThreadLocalState {
     private ArrayList<Consumer<? super ClientRequestContext>> customizers;
 
     @Nullable
-    private ClientRequestContextCaptor pendingContextCaptor;
+    private DefaultClientRequestContextCaptor pendingContextCaptor;
 
     void add(Consumer<? super ClientRequestContext> customizer) {
         if (customizers == null) {
@@ -75,14 +74,14 @@ final class ClientThreadLocalState {
         reportThreadSafetyViolation();
     }
 
-    Supplier<ClientRequestContext> newContextCaptor() {
-        return pendingContextCaptor = new ClientRequestContextCaptor();
+    ClientRequestContextCaptor newContextCaptor() {
+        final DefaultClientRequestContextCaptor oldPendingContextCaptor = pendingContextCaptor;
+        return pendingContextCaptor = new DefaultClientRequestContextCaptor(oldPendingContextCaptor);
     }
 
-    void setCapturedContext(ClientRequestContext ctx) {
+    void addCapturedContext(ClientRequestContext ctx) {
         if (pendingContextCaptor != null) {
-            pendingContextCaptor.ctx = ctx;
-            pendingContextCaptor.cleanup();
+            pendingContextCaptor.captured.add(ctx);
         }
     }
 
@@ -118,23 +117,32 @@ final class ClientThreadLocalState {
         return ImmutableList.copyOf(customizers);
     }
 
-    private final class ClientRequestContextCaptor implements Supplier<ClientRequestContext> {
+    private final class DefaultClientRequestContextCaptor implements ClientRequestContextCaptor {
+
+        final List<ClientRequestContext> captured = new ArrayList<>();
 
         @Nullable
-        private ClientRequestContext ctx;
+        private final DefaultClientRequestContextCaptor oldCaptor;
+
+        DefaultClientRequestContextCaptor(@Nullable DefaultClientRequestContextCaptor oldCaptor) {
+            this.oldCaptor = oldCaptor;
+        }
 
         @Override
         public ClientRequestContext get() {
-            cleanup();
-            checkState(ctx != null, "No context was captured; no request was made?");
-            return ctx;
+            checkState(!captured.isEmpty(), "No context was captured; no request was made?");
+            return captured.get(0);
         }
 
-        void cleanup() {
-            if (pendingContextCaptor == this) {
-                pendingContextCaptor = null;
-                maybeRemoveThreadLocal();
-            }
+        @Override
+        public List<ClientRequestContext> getAll() {
+            return ImmutableList.copyOf(captured);
+        }
+
+        @Override
+        public void close() {
+            pendingContextCaptor = oldCaptor;
+            maybeRemoveThreadLocal();
         }
     }
 }
