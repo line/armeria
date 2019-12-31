@@ -143,6 +143,11 @@ final class ClientThreadLocalState {
         }
 
         @Override
+        public int size() {
+            return captured.size();
+        }
+
+        @Override
         public void close() {
             pendingContextCaptor = oldCaptor;
             maybeRemoveThreadLocal();

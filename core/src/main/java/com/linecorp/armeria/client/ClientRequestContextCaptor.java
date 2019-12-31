@@ -41,4 +41,16 @@ public interface ClientRequestContextCaptor extends SafeCloseable, Supplier<Clie
      * if no {@link ClientRequestContext} was captured so far.
      */
     List<ClientRequestContext> getAll();
+
+    /**
+     * Returns the number of {@link ClientRequestContext} captured so far.
+     */
+    int size();
+
+    /**
+     * Returns whether a {@link ClientRequestContext} was captured so far.
+     */
+    default boolean isEmpty() {
+        return size() == 0;
+    }
 }
