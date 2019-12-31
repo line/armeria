@@ -349,8 +349,8 @@ public final class Clients {
      *
      * <pre>{@code
      * WebClient derivedWebClient = Clients.newDerivedClient(webClient, options -> {
-     *     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
-     *     builder.decorator(...);  // Add a decorator.
+     *     ClientOptionsBuilder builder = options.toBuilder();
+     *     builder.decorator(...);     // Add a decorator.
      *     builder.addHttpHeader(...); // Add an HTTP header.
      *     return builder.build();
      * });

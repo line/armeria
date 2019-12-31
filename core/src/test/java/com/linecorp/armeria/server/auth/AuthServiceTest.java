@@ -98,13 +98,13 @@ public class AuthServiceTest {
             };
             sb.service(
                     "/basic",
-                    ok.decorate(new AuthServiceBuilder().addBasicAuth(httpBasicAuthorizer).newDecorator())
+                    ok.decorate(AuthService.builder().addBasicAuth(httpBasicAuthorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
             sb.service(
                     "/basic-custom",
-                    ok.decorate(new AuthServiceBuilder()
-                                        .addBasicAuth(httpBasicAuthorizer, CUSTOM_TOKEN_HEADER)
-                                        .newDecorator())
+                    ok.decorate(AuthService.builder()
+                                           .addBasicAuth(httpBasicAuthorizer, CUSTOM_TOKEN_HEADER)
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with OAuth1a
@@ -112,12 +112,12 @@ public class AuthServiceTest {
                     completedFuture("dummy_signature".equals(token.signature()));
             sb.service(
                     "/oauth1a",
-                    ok.decorate(new AuthServiceBuilder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
+                    ok.decorate(AuthService.builder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
             sb.service(
                     "/oauth1a-custom",
-                    ok.decorate(new AuthServiceBuilder().addOAuth1a(oAuth1aAuthorizer, CUSTOM_TOKEN_HEADER)
-                                                        .newDecorator())
+                    ok.decorate(AuthService.builder().addOAuth1a(oAuth1aAuthorizer, CUSTOM_TOKEN_HEADER)
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with OAuth2
@@ -125,40 +125,41 @@ public class AuthServiceTest {
                     completedFuture("dummy_oauth2_token".equals(token.accessToken()));
             sb.service(
                     "/oauth2",
-                    ok.decorate(new AuthServiceBuilder().addOAuth2(oAuth2Authorizer).newDecorator())
+                    ok.decorate(AuthService.builder().addOAuth2(oAuth2Authorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with OAuth2 on custom header
             sb.service(
                     "/oauth2-custom",
-                    ok.decorate(new AuthServiceBuilder().addOAuth2(oAuth2Authorizer, CUSTOM_TOKEN_HEADER)
-                                                        .newDecorator())
+                    ok.decorate(AuthService.builder()
+                                           .addOAuth2(oAuth2Authorizer, CUSTOM_TOKEN_HEADER)
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with arbitrary token extractor
             final Authorizer<InsecureToken> insecureTokenAuthorizer = (ctx, token) ->
                     completedFuture(new InsecureToken().accessToken().equals(token.accessToken()));
             sb.service("/insecuretoken",
-                       ok.decorate(new AuthServiceBuilder()
-                                           .addTokenAuthorizer(INSECURE_TOKEN_EXTRACTOR,
-                                                               insecureTokenAuthorizer)
-                                           .newDecorator())
+                       ok.decorate(AuthService.builder()
+                                              .addTokenAuthorizer(INSECURE_TOKEN_EXTRACTOR,
+                                                                  insecureTokenAuthorizer)
+                                              .newDecorator())
                          .decorate(LoggingService.newDecorator()));
 
             // Auth with all predicates above!
             sb.service(
                     "/composite",
-                    new AuthServiceBuilder().add(authorizer)
-                                            .addBasicAuth(httpBasicAuthorizer)
-                                            .addOAuth1a(oAuth1aAuthorizer)
-                                            .addOAuth2(oAuth2Authorizer)
-                                            .build(ok)
-                                            .decorate(LoggingService.newDecorator()));
+                    AuthService.builder().add(authorizer)
+                               .addBasicAuth(httpBasicAuthorizer)
+                               .addOAuth1a(oAuth1aAuthorizer)
+                               .addOAuth2(oAuth2Authorizer)
+                               .build(ok)
+                               .decorate(LoggingService.newDecorator()));
 
             // Authorizer fails with an exception.
             sb.service(
                     "/authorizer_exception",
-                    ok.decorate(new AuthServiceBuilder().add((ctx, data) -> {
+                    ok.decorate(AuthService.builder().add((ctx, data) -> {
                         throw new AnticipatedException("bug!");
                     }).newDecorator())
                       .decorate(LoggingService.newDecorator()));
@@ -166,35 +167,35 @@ public class AuthServiceTest {
             // Authorizer returns a future that resolves to null.
             sb.service(
                     "/authorizer_resolve_null",
-                    ok.decorate(new AuthServiceBuilder().add((ctx, data) -> completedFuture(null))
-                                                        .newDecorator())
+                    ok.decorate(AuthService.builder().add((ctx, data) -> completedFuture(null))
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Authorizer returns null.
             sb.service(
                     "/authorizer_null",
-                    ok.decorate(new AuthServiceBuilder().add((ctx, data) -> null)
-                                                        .newDecorator())
+                    ok.decorate(AuthService.builder().add((ctx, data) -> null)
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // AuthService fails when building a success message.
             sb.service(
                     "/on_success_exception",
-                    ok.decorate(new AuthServiceBuilder().add((ctx, req) -> completedFuture(true))
-                                                        .onSuccess((delegate, ctx, req) -> {
-                                                                throw new AnticipatedException("bug!");
-                                                            })
-                                                        .newDecorator())
+                    ok.decorate(AuthService.builder().add((ctx, req) -> completedFuture(true))
+                                           .onSuccess((delegate, ctx, req) -> {
+                                               throw new AnticipatedException("bug!");
+                                           })
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // AuthService fails when building a failure message.
             sb.service(
                     "/on_failure_exception",
-                    ok.decorate(new AuthServiceBuilder().add((ctx, req) -> completedFuture(false))
-                                                        .onFailure((delegate, ctx, req, cause) -> {
-                                                                throw new AnticipatedException("bug!");
-                                                            })
-                                                        .newDecorator())
+                    ok.decorate(AuthService.builder().add((ctx, req) -> completedFuture(false))
+                                           .onFailure((delegate, ctx, req, cause) -> {
+                                               throw new AnticipatedException("bug!");
+                                           })
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
         }
     };
@@ -410,9 +411,9 @@ public class AuthServiceTest {
     private static HttpRequestBase basicGetRequest(String path, BasicToken basicToken, AsciiString header) {
         final HttpGet request = new HttpGet(server.uri(path));
         request.addHeader(header.toString(), "Basic " +
-                                           BASE64_ENCODER.encodeToString(
-                                                   (basicToken.username() + ':' + basicToken.password())
-                                                           .getBytes(StandardCharsets.US_ASCII)));
+                                             BASE64_ENCODER.encodeToString(
+                                                     (basicToken.username() + ':' + basicToken.password())
+                                                             .getBytes(StandardCharsets.US_ASCII)));
         return request;
     }
 

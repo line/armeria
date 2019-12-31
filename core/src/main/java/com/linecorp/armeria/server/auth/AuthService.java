@@ -49,7 +49,7 @@ public class AuthService extends SimpleDecoratingHttpService {
      */
     public static Function<? super HttpService, AuthService> newDecorator(
             Iterable<? extends Authorizer<HttpRequest>> authorizers) {
-        return new AuthServiceBuilder().add(authorizers).newDecorator();
+        return builder().add(authorizers).newDecorator();
     }
 
     /**

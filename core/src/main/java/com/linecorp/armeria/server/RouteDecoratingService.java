@@ -35,12 +35,12 @@ import io.netty.util.AttributeKey;
  * {@link RouteDecoratingService} is used for binding your {@link HttpService} to multiple {@code decorator}s
  * with {@link Route}s. e.g.
  * <pre>{@code
- * > Server server = new ServerBuilder()
- * >     .service("/api/users",  userService)
- * >     .decoratorUnder("/", loggingDecorator)
- * >     .decoratorUnder("/api", authDecorator)
- * >     .decoratorUnder("/api/users", traceDecorator)
- * >     .build();
+ * > Server server = Server.builder()
+ * >                       .service("/api/users",  userService)
+ * >                       .decoratorUnder("/", loggingDecorator)
+ * >                       .decoratorUnder("/api", authDecorator)
+ * >                       .decoratorUnder("/api/users", traceDecorator)
+ * >                       .build();
  * }</pre>
  *
  * {@link VirtualHostBuilder} wraps each specified {@code decorator} with {@link RouteDecoratingService} and

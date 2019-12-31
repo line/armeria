@@ -44,7 +44,7 @@ public final class HttpAuthService extends AuthService {
     @Deprecated
     public static Function<? super HttpService, AuthService> newDecorator(
             Iterable<? extends Authorizer<HttpRequest>> authorizers) {
-        return new AuthServiceBuilder().add(authorizers).newDecorator();
+        return builder().add(authorizers).newDecorator();
     }
 
     /**

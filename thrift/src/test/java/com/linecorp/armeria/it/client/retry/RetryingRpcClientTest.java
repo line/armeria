@@ -158,9 +158,9 @@ public class RetryingRpcClientTest {
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts, BlockingQueue<RequestLog> logQueue) {
         return new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(new RetryingRpcClientBuilder(strategy)
-                                      .maxTotalAttempts(maxAttempts)
-                                      .newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                               .maxTotalAttempts(maxAttempts)
+                                               .newDecorator())
                 .rpcDecorator((delegate, ctx, req) -> {
                     ctx.log().addListener(logQueue::add, RequestLogAvailability.COMPLETE);
                     return delegate.execute(ctx, req);

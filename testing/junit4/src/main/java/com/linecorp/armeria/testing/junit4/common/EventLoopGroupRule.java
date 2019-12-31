@@ -29,9 +29,9 @@ import io.netty.channel.EventLoopGroup;
  * >
  * >     @Test
  * >     public void test() {
- * >         ClientFactory f = new ClientFactoryBuilder()
- * >                 .workerGroup(eventLoopGroup.get())
- * >                 .build();
+ * >         ClientFactory f = ClientFactory.builder()
+ * >                                        .workerGroup(eventLoopGroup.get())
+ * >                                        .build();
  * >         ...
  * >     }
  * > }

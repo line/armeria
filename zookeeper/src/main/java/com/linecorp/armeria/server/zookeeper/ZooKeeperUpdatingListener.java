@@ -43,7 +43,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
      */
-    public ZooKeeperUpdatingListenerBuilder builder(CuratorFramework client, String zNodePath) {
+    public static ZooKeeperUpdatingListenerBuilder builder(CuratorFramework client, String zNodePath) {
         return new ZooKeeperUpdatingListenerBuilder(client, zNodePath);
     }
 
@@ -53,7 +53,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * @param connectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
      */
-    public ZooKeeperUpdatingListenerBuilder builder(String connectionStr, String zNodePath) {
+    public static ZooKeeperUpdatingListenerBuilder builder(String connectionStr, String zNodePath) {
         return new ZooKeeperUpdatingListenerBuilder(connectionStr, zNodePath);
     }
 
@@ -61,13 +61,13 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * Creates a ZooKeeper server listener, which registers server into ZooKeeper.
      *
      * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
-     * {@link ZooKeeperUpdatingListenerBuilder} instead.
+     * {@link #builder(String, String)} instead.
      *
      * @param zkConnectionStr ZooKeeper connection string
      * @param zNodePath       ZooKeeper node path(under which this server will be registered)
      */
     public static ZooKeeperUpdatingListener of(String zkConnectionStr, String zNodePath) {
-        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath).build();
+        return builder(zkConnectionStr, zNodePath).build();
     }
 
     private final CuratorFramework client;
