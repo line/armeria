@@ -29,5 +29,8 @@ import io.dropwizard.jackson.Discoverable;
         property = "type"
 )
 public interface AccessLogWriterFactory extends Discoverable {
+    /**
+     * Returns the {@link AccessLogWriter}.
+     */
     AccessLogWriter getWriter();
 }

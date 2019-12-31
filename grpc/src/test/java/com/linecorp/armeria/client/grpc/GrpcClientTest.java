@@ -28,6 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -57,6 +58,7 @@ import com.google.protobuf.StringValue;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -237,6 +239,24 @@ public class GrpcClientTest {
         final TestServiceBlockingStub stub = new ClientBuilder("gproto-web+" + server.httpUri("/"))
                 .build(TestServiceBlockingStub.class);
         assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
+    }
+
+    @Test
+    public void contextCaptorBlocking() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub.emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        }
+    }
+
+    @Test
+    public void contextCaptorAsync() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            asyncStub.emptyCall(EMPTY, StreamRecorder.create());
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        }
     }
 
     @Test
@@ -1177,7 +1197,8 @@ public class GrpcClientTest {
         requestObserver.onCompleted();
 
         final ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
-        verify(responseObserver, timeout(operationTimeoutMillis())).onError(captor.capture());
+        verify(responseObserver,
+               timeout(Duration.ofMillis(operationTimeoutMillis()))).onError(captor.capture());
         assertThat(GrpcStatus.fromThrowable(captor.getValue()).getCode()).isEqualTo(Status.UNKNOWN.getCode());
         assertThat(GrpcStatus.fromThrowable(captor.getValue()).getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);

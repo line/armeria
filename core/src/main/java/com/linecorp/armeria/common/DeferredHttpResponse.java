@@ -36,8 +36,14 @@ public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> impl
     @Nullable
     private final EventExecutor executor;
 
+    /**
+     * Creates a new instance.
+     *
+     * @deprecated Use {@link HttpResponse#from(CompletionStage)}.
+     */
+    @Deprecated
     public DeferredHttpResponse() {
-        this.executor = null;
+        executor = null;
     }
 
     DeferredHttpResponse(EventExecutor executor) {

@@ -74,18 +74,30 @@ public class ArmeriaHttpConnectorFactory extends HttpConnectorFactory
         // more HTTP1 settings?
     }
 
+    /**
+     * Returns the maximum allowed length of an HTTP/1 request chunk, when chunked transfer encoding is used.
+     */
     public Size getMaxChunkSize() {
         return maxChunkSize;
     }
 
+    /**
+     * Sets the maximum allowed length of an HTTP/1 request chunk, when chunked transfer encoding is used.
+     */
     public void setMaxChunkSize(Size maxChunkSize) {
         this.maxChunkSize = maxChunkSize;
     }
 
+    /**
+     * Returns the maximum allowed length of the initial line in an HTTP/1 request.
+     */
     public int getMaxInitialLineLength() {
         return maxInitialLineLength;
     }
 
+    /**
+     * Sets the maximum allowed length of the initial line in an HTTP/1 request.
+     */
     public void setMaxInitialLineLength(int maxInitialLineLength) {
         this.maxInitialLineLength = maxInitialLineLength;
     }

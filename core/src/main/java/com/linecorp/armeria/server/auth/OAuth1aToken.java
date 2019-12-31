@@ -145,43 +145,65 @@ public final class OAuth1aToken {
         }
     }
 
+    /**
+     * Returns the value of the {@value #REALM} property.
+     */
     public String realm() {
         return params.get(REALM);
     }
 
+    /**
+     * Returns the value of the {@value #OAUTH_CONSUMER_KEY} property.
+     */
     public String consumerKey() {
         return params.get(OAUTH_CONSUMER_KEY);
     }
 
+    /**
+     * Returns the value of the {@value #OAUTH_TOKEN} property.
+     */
     public String token() {
         return params.get(OAUTH_TOKEN);
     }
 
+    /**
+     * Returns the value of {@value #OAUTH_SIGNATURE_METHOD} property.
+     */
     public String signatureMethod() {
         return params.get(OAUTH_SIGNATURE_METHOD);
     }
 
+    /**
+     * Returns the value of {@value #OAUTH_SIGNATURE} property.
+     */
     public String signature() {
         return params.get(OAUTH_SIGNATURE);
     }
 
+    /**
+     * Returns the value of {@value #OAUTH_TIMESTAMP} property.
+     */
     public String timestamp() {
         return params.get(OAUTH_TIMESTAMP);
     }
 
+    /**
+     * Returns the value of {@value #OAUTH_NONCE} property.
+     */
     public String nonce() {
         return params.get(OAUTH_NONCE);
     }
 
     /**
-     * Returns version. If not set, returns default value (1.0).
+     * Returns the value of {@value #OAUTH_VERSION} property.
+     * If not set, returns the default value of {@code "1.0"}.
      */
     public String version() {
         return params.getOrDefault(OAUTH_VERSION, "1.0");
     }
 
     /**
-     * Returns additional (or, user-defined) parameters.
+     * Returns additional (or user-defined) parameters.
      */
     public Map<String, String> additionals() {
         final ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();

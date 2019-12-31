@@ -38,6 +38,9 @@ public final class OAuth2Token {
         this.accessToken = requireNonNull(accessToken, "accessToken");
     }
 
+    /**
+     * Returns the access token.
+     */
     public String accessToken() {
         return accessToken;
     }
