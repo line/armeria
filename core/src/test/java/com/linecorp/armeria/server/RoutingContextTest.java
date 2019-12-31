@@ -106,8 +106,9 @@ class RoutingContextTest {
         ctx2 = new DefaultRoutingContext(virtualHost, "example.com",
                                          RequestHeaders.of(HttpMethod.GET, "/hello"), "/hello", "a=1", false);
 
-        assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
-        assertThat(ctx1).isEqualTo(ctx2);
+        // Queries are different.
+        assertThat(ctx1.hashCode()).isNotEqualTo(ctx2.hashCode());
+        assertThat(ctx1).isNotEqualTo(ctx2);
     }
 
     static RoutingContext create(String path) {
