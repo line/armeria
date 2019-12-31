@@ -177,6 +177,8 @@ for a specific service, you can use fluent API:
       .post("/foo/bar")                          // Matched when the path is "/foo/bar" and the method is POST.
       .consumes(MediaType.JSON)                  // Matched when the "content-type" header is "application/json".
       .produces(MediaType.JSON)                  // Matched when the "accept" headers is "application/json".
+      .matchesHeaders("baz=qux")                 // Matched when the "baz" header is "qux".
+      .matchesParams("quux=quuz")                // Matched when the "quux" parameter is "quuz".
       .requestTimeoutMillis(5000)
       .maxRequestLength(8192)
       .verboseResponses(true)

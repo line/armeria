@@ -36,7 +36,7 @@ import io.netty.util.AttributeKey;
  * with {@link Route}s. e.g.
  * <pre>{@code
  * > Server server = new ServerBuilder()
- * >     .service("/api/users",  userService)
+ * >     .service("/api/users", userService)
  * >     .decoratorUnder("/", loggingDecorator)
  * >     .decoratorUnder("/api", authDecorator)
  * >     .decoratorUnder("/api/users", traceDecorator)

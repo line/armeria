@@ -22,6 +22,8 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.RequestHeaders;
 
 class RoutingContextWrapper implements RoutingContext {
 
@@ -57,6 +59,11 @@ class RoutingContextWrapper implements RoutingContext {
         return delegate.query();
     }
 
+    @Override
+    public QueryParams params() {
+        return delegate.params();
+    }
+
     @Nullable
     @Override
     public MediaType contentType() {
@@ -66,6 +73,11 @@ class RoutingContextWrapper implements RoutingContext {
     @Override
     public List<MediaType> acceptTypes() {
         return delegate.acceptTypes();
+    }
+
+    @Override
+    public RequestHeaders headers() {
+        return delegate.headers();
     }
 
     @Override
@@ -79,8 +91,23 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
+    public RoutingContext overridePath(String path) {
+        return delegate.overridePath(path);
+    }
+
+    @Override
     public boolean isCorsPreflight() {
         return delegate.isCorsPreflight();
+    }
+
+    @Override
+    public boolean requiresMatchingParamsPredicates() {
+        return delegate.requiresMatchingParamsPredicates();
+    }
+
+    @Override
+    public boolean requiresMatchingHeadersPredicates() {
+        return delegate.requiresMatchingHeadersPredicates();
     }
 
     @Override
