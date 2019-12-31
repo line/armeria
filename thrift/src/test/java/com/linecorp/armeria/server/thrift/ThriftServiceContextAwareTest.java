@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -63,6 +64,10 @@ class ThriftServiceContextAwareTest {
         final String uri = BINARY.uriText() + "+http://127.0.0.1:" + server.activeLocalPort() + "/hello";
         final HelloService.Iface client = new ClientBuilder(uri).build(HelloService.Iface.class);
         final String res = client.hello("foo");
+        assertThat(res).isEqualTo("hello, foo");
+        // There's a chance that the response comes first before setting the context
+        // because callbacks adding to the incomplete future are executed in inverse order.
+        await().until(() -> rpcResponseContextAwareCtxHolder.get() != null);
         assertThat(ctxHolder.get()).isEqualTo(rpcResponseContextAwareCtxHolder.get());
         server.stop().join();
     }
