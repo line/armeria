@@ -264,8 +264,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         }
 
         if (wroteNothing(state)) {
-            logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(),
-                        service());
+            logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
             responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR);
             return;
         }

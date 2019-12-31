@@ -24,7 +24,7 @@ package com.linecorp.armeria.common.util;
 public interface TimeoutController {
 
     /**
-     * Initialize the timeout scheduler with the specified {@code timeoutMillis}.
+     * Initializes the timeout scheduler with the specified {@code timeoutMillis}.
      */
     void initTimeout(long timeoutMillis);
 
@@ -43,7 +43,7 @@ public interface TimeoutController {
     void resetTimeout(long newTimeoutMillis);
 
     /**
-     * Cancel the current timeout scheduled.
+     * Cancels the current timeout scheduled.
      */
     boolean cancelTimeout();
 

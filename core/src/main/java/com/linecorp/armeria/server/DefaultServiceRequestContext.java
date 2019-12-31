@@ -590,7 +590,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public void setRequestTimeoutController(TimeoutController requestTimeoutController) {
         requireNonNull(requestTimeoutController, "requestTimeoutController");
         if (this.requestTimeoutController != null) {
-            throw new IllegalStateException("requestTimeoutChangeListener is set already.");
+            throw new IllegalStateException("requestTimeoutController is set already.");
         }
         this.requestTimeoutController = requestTimeoutController;
     }
