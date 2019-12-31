@@ -6,9 +6,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -19,20 +19,20 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.Server;
 
-public class AnnotatedServiceTest {
+class AnnotatedServiceTest {
 
     private static Server server;
     private static WebClient client;
 
-    @BeforeClass
-    public static void beforeClass() {
+    @BeforeAll
+    static void beforeClass() {
         server = newServer(0);
         server.start().join();
         client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
     }
 
-    @AfterClass
-    public static void afterClass() {
+    @AfterAll
+    static void afterClass() {
         if (server != null) {
             server.stop().join();
         }
@@ -42,7 +42,7 @@ public class AnnotatedServiceTest {
     }
 
     @Test
-    public void testPathPatternService() {
+    void testPathPatternService() {
         AggregatedHttpResponse res;
 
         res = client.get("/pathPattern/path/armeria").aggregate().join();
@@ -59,7 +59,7 @@ public class AnnotatedServiceTest {
     }
 
     @Test
-    public void testInjectionService() {
+    void testInjectionService() {
         AggregatedHttpResponse res;
 
         res = client.get("/injection/param/armeria/1?gender=male").aggregate().join();
@@ -87,7 +87,7 @@ public class AnnotatedServiceTest {
     }
 
     @Test
-    public void testMessageConverterService() {
+    void testMessageConverterService() {
         AggregatedHttpResponse res;
         String body;
 
@@ -118,7 +118,7 @@ public class AnnotatedServiceTest {
     }
 
     @Test
-    public void testExceptionHandlerService() {
+    void testExceptionHandlerService() {
         AggregatedHttpResponse res;
 
         res = client.get("/exception/locallySpecific").aggregate().join();
