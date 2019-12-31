@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-final class Java9RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
+class Java9RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
 
     private final RequestContext ctx;
 

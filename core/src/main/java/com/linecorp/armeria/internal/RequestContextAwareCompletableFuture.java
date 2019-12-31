@@ -26,7 +26,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.RequestContext;
 
-final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
+class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
 
     private final RequestContext ctx;
 
