@@ -15,10 +15,9 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -130,7 +129,9 @@ final class ClientThreadLocalState {
 
         @Override
         public ClientRequestContext get() {
-            checkState(!captured.isEmpty(), "No context was captured; no request was made?");
+            if (captured.isEmpty()) {
+                throw new NoSuchElementException("No context was captured; no request was made?");
+            }
             return captured.get(0);
         }
 

@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.NoSuchElementException;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -62,7 +64,7 @@ class HttpClientContextCaptorTest {
             // Send a request with a bad path.
             // Note: A colon cannot come in the first path component.
             final HttpResponse res = WebClient.of().get("http://127.0.0.1:1/:");
-            assertThatThrownBy(ctxCaptor::get).isInstanceOf(IllegalStateException.class)
+            assertThatThrownBy(ctxCaptor::get).isInstanceOf(NoSuchElementException.class)
                                               .hasMessageContaining("no request was made");
             res.aggregate();
         }

@@ -21,6 +21,7 @@ import static org.mockito.Mockito.mock;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -139,7 +140,7 @@ class DefaultClientRequestContextTest {
             try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
                 ctx.newDerivedContext(RequestId.random(), ctx.request(), null, ctx.endpoint());
                 assertThat(counter).hasValue(1);
-                assertThatThrownBy(ctxCaptor::get).isInstanceOf(IllegalStateException.class)
+                assertThatThrownBy(ctxCaptor::get).isInstanceOf(NoSuchElementException.class)
                                                   .hasMessageContaining("no request was made");
             }
         }
