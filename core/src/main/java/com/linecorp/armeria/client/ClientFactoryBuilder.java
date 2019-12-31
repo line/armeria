@@ -62,14 +62,15 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * <h2>Example</h2>
  * <pre>{@code
- * final ClientFactory factory = new ClientFactoryBuilder();
- *     // Set the connection timeout to 5 seconds.
- *     .connectTimeoutMillis(5000)
- *     // Set the socket send buffer to 1 MiB.
- *     .socketOption(ChannelOption.SO_SNDBUF, 1048576)
- *     // Disable certificate verification; never do this in production!
- *     .tlsNoVerify()
- *     .build();
+ * final ClientFactory factory =
+ *         ClientFactory.builder()
+ *                      // Set the connection timeout to 5 seconds.
+ *                      .connectTimeoutMillis(5000)
+ *                      // Set the socket send buffer to 1 MiB.
+ *                      .socketOption(ChannelOption.SO_SNDBUF, 1048576)
+ *                      // Disable certificate verification; never do this in production!
+ *                      .tlsNoVerify()
+ *                      .build();
  * }</pre>
  */
 public final class ClientFactoryBuilder {

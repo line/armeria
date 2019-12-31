@@ -20,15 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class GrpcDocStringExtractorTest {
+class GrpcDocStringExtractorTest {
 
     private static final Map<String, String> DOCSTRINGS = new GrpcDocStringExtractor().getAllDocStrings(
             GrpcDocStringExtractorTest.class.getClassLoader());
 
     @Test
-    public void service() {
+    void service() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.TestService",
                 " A simple service to test the various types of RPCs and experiment with\n" +
@@ -36,21 +36,21 @@ public class GrpcDocStringExtractorTest {
     }
 
     @Test
-    public void method() {
+    void method() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.TestService/UnaryCall",
                 " One request followed by one response.\n");
     }
 
     @Test
-    public void message() {
+    void message() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.SimpleRequest",
                 " Unary request.\n");
     }
 
     @Test
-    public void field() {
+    void field() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.SimpleRequest/response_type",
                 " Desired payload type in the response from the server.\n" +
@@ -58,42 +58,42 @@ public class GrpcDocStringExtractorTest {
     }
 
     @Test
-    public void nestedMessage() {
+    void nestedMessage() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.SimpleRequest.NestedRequest",
                 " A request nested in another request.\n");
     }
 
     @Test
-    public void nestedMessageField() {
+    void nestedMessageField() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.SimpleRequest.NestedRequest/nested_payload",
                 " The payload for a nested request.\n");
     }
 
     @Test
-    public void enumType() {
+    void enumType() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.CompressionType",
                 " Compression algorithms\n");
     }
 
     @Test
-    public void enumValue() {
+    void enumValue() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.CompressionType/NONE",
                 " No compression\n");
     }
 
     @Test
-    public void nestedEnumType() {
+    void nestedEnumType() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.SimpleRequest.NestedEnum",
                 " An enum nested in a request.\n");
     }
 
     @Test
-    public void nestedEnumValue() {
+    void nestedEnumValue() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.SimpleRequest.NestedEnum/OK",
                 " We're ok.\n");

@@ -112,14 +112,12 @@ public final class CorsService extends SimpleDecoratingHttpService {
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         // check if CORS preflight must be returned, or if
         // we need to forbid access because origin could not be validated
-        if (config.isEnabled()) {
-            if (isCorsPreflightRequest(req)) {
-                return handleCorsPreflight(ctx, req);
-            }
-            if (config.isShortCircuit() &&
-                config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN), ctx.routingContext()) == null) {
-                return forbidden();
-            }
+        if (isCorsPreflightRequest(req)) {
+            return handleCorsPreflight(ctx, req);
+        }
+        if (config.isShortCircuit() &&
+            config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN), ctx.routingContext()) == null) {
+            return forbidden();
         }
 
         return new FilteredHttpResponse(delegate().serve(ctx, req)) {
@@ -195,9 +193,6 @@ public final class CorsService extends SimpleDecoratingHttpService {
     @Nullable
     private CorsPolicy setCorsOrigin(ServiceRequestContext ctx, HttpRequest request,
                                      ResponseHeadersBuilder headers) {
-        if (!config.isEnabled()) {
-            return null;
-        }
 
         final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
         if (origin != null) {

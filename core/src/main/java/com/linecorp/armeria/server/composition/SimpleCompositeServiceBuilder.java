@@ -53,6 +53,6 @@ public final class SimpleCompositeServiceBuilder extends AbstractCompositeServic
      * builder.
      */
     public SimpleCompositeService build() {
-        return new SimpleCompositeService(services());
+        return SimpleCompositeService.of(services());
     }
 }

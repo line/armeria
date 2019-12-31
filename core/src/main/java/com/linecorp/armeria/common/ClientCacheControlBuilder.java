@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
  *
  * <pre>{@code
  * ClientCacheControl cacheControl =
- *     new ClientCacheControlBuilder().noCache().build();
+ *     ClientCacheControl.builder().noCache().build();
  * }</pre>
  *
  * @see ServerCacheControlBuilder

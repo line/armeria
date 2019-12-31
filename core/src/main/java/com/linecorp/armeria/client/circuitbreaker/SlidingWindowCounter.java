@@ -136,7 +136,7 @@ final class SlidingWindowCounter implements EventCounter {
             }
         }
 
-        return new EventCount(success, failure);
+        return EventCount.of(success, failure);
     }
 
     private enum Event {

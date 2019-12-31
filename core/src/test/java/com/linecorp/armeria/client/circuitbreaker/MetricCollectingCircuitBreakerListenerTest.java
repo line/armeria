@@ -36,7 +36,7 @@ public class MetricCollectingCircuitBreakerListenerTest {
         final CircuitBreaker cb = CircuitBreaker.builder("bar").build();
 
         // Trigger the first event so that the metric group is registered.
-        l.onEventCountUpdated(cb.name(), new EventCount(1, 2));
+        l.onEventCountUpdated(cb.name(), EventCount.of(1, 2));
 
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry("foo.requests#value{name=bar,result=success}", 1.0)

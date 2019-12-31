@@ -33,9 +33,19 @@ public final class PrometheusMeterRegistries {
 
     /**
      * The default {@link PrometheusMeterRegistry} that uses {@link CollectorRegistry#defaultRegistry}.
+     *
+     * @deprecated Use {@link #defaultRegistry()}.
      */
+    @Deprecated
     public static final PrometheusMeterRegistry defaultRegistry =
             newRegistry(CollectorRegistry.defaultRegistry);
+
+    /**
+     * Returns the default {@link PrometheusMeterRegistry} that uses {@link CollectorRegistry#defaultRegistry}.
+     */
+    public static PrometheusMeterRegistry defaultRegistry() {
+        return defaultRegistry;
+    }
 
     /**
      * Returns a newly-created {@link PrometheusMeterRegistry} instance with a new {@link CollectorRegistry}.

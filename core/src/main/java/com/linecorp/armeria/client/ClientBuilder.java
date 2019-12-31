@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.SessionProtocol;
  * a {@link ClientOption#DECORATION} or a {@link ClientOption#HTTP_HEADERS}, this builder will not simply
  * replace the old option but <em>merge</em> the specified option into the previous option value. For example:
  * <pre>{@code
- * ClientOptionsBuilder b = new ClientOptionsBuilder();
+ * ClientOptionsBuilder b = ClientOptions.builder();
  * b.option(ClientOption.HTTP_HEADERS, headersA);
  * b.option(ClientOption.HTTP_HEADERS, headersB);
  * b.option(ClientOption.DECORATION, decorationA);

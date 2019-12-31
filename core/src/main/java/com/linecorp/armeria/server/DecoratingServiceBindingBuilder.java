@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.MediaType;
  * to build the {@code decorator} and return to the {@link ServerBuilder}.
  *
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  *
  * sb.routeDecorator()                                // Configure a decorator with route.
  *   .pathPrefix("/api/users")

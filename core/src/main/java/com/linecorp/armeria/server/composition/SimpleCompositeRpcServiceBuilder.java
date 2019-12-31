@@ -53,6 +53,6 @@ public final class SimpleCompositeRpcServiceBuilder extends AbstractCompositeSer
      * builder.
      */
     public SimpleCompositeRpcService build() {
-        return new SimpleCompositeRpcService(services());
+        return SimpleCompositeRpcService.of(services());
     }
 }
