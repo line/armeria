@@ -29,6 +29,9 @@ import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
+/**
+ * Provides an {@link ObservableResponseConverterFunction} to annotated services.
+ */
 public class ObservableResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
     @Nullable

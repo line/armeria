@@ -23,6 +23,14 @@ package com.linecorp.armeria.server;
  * @see Server#removeListener(ServerListener)
  */
 public interface ServerListener {
+
+    /**
+     * Returns a new {@link ServerListenerBuilder}.
+     */
+    static ServerListenerBuilder builder() {
+        return new ServerListenerBuilder();
+    }
+
     /**
      * Invoked when a {@link Server} begins its startup procedure. Note that the {@link Server} will abort
      * its startup when a {@link ServerListener#serverStarting(Server)} throws an exception.

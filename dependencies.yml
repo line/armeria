@@ -107,7 +107,7 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.10' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.27' }
+  checkstyle: { version: '8.28' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.0' }

@@ -36,10 +36,12 @@ import java.io.OutputStream;
 
 /**
  * Represents a message compressor.
- *
- * <p>Copied from {@linkplain io.grpc.Compressor https://github.com/grpc/grpc-java/blob/80c3c992a66aa21ccf3e12e38000316e45f97e64/api/src/main/java/io/grpc/Compressor.java}.
  */
 public interface Compressor {
+
+    // Copied from `io.grpc.Compressor` at:
+    // https://github.com/grpc/grpc-java/blob/80c3c992a66aa21ccf3e12e38000316e45f97e64/api/src/main/java/io/grpc/Compressor.java
+
     /**
      * Returns the message encoding that this compressor uses.
      *

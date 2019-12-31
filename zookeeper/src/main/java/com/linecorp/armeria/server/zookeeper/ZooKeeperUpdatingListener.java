@@ -37,6 +37,27 @@ import com.linecorp.armeria.server.ServerListenerAdapter;
 public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     /**
+     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
+     * path.
+     *
+     * @param client the curator framework instance
+     * @param zNodePath the ZooKeeper node to register
+     */
+    public ZooKeeperUpdatingListenerBuilder builder(CuratorFramework client, String zNodePath) {
+        return new ZooKeeperUpdatingListenerBuilder(client, zNodePath);
+    }
+
+    /**
+     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a zNode path.
+     *
+     * @param connectionStr the ZooKeeper connection string
+     * @param zNodePath the ZooKeeper node to register
+     */
+    public ZooKeeperUpdatingListenerBuilder builder(String connectionStr, String zNodePath) {
+        return new ZooKeeperUpdatingListenerBuilder(connectionStr, zNodePath);
+    }
+
+    /**
      * Creates a ZooKeeper server listener, which registers server into ZooKeeper.
      *
      * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
