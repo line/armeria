@@ -36,8 +36,8 @@ import retrofit2.Invocation;
  * Returns the default function for retrofit that creates a {@link MeterIdPrefix} with the specified name and
  * the {@link Tag}s derived from the {@link RequestLog} properties and {@link Invocation}.
  * <ul>
- *     <li>{@code service} - Retrofit service interface name or defaultServiceName if Retrofit service interface
- *                           name is not available</li>　
+ *     <li>{@code serviceTagName} - Retrofit service interface name or defaultServiceName
+ *                                  if Retrofit service interface name is not available</li>　
  *     <li>{@code method} - Retrofit service interface method name or {@link HttpMethod#name()} if Retrofit
  *                          service interface name is not available</li>
  *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
@@ -48,7 +48,7 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
     /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the specified {@code name}.
      */
-    public static RetrofitMeterIdPrefixFunction of(String name) {
+    public static MeterIdPrefixFunction of(String name) {
         return builder(name).build();
     }
 
