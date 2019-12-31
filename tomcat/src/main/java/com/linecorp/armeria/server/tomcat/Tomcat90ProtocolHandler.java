@@ -120,22 +120,6 @@ public final class Tomcat90ProtocolHandler implements ProtocolHandler {
         return false;
     }
 
-    /**
-     * Returns whether comet is supported.
-     */
-    @SuppressWarnings("unused") // NB: Do not remove; required for Tomcat 8.0 and older.
-    public boolean isCometSupported() {
-        return false;
-    }
-
-    /**
-     * Returns whether comet timeout is supported.
-     */
-    @SuppressWarnings("unused") // NB: Do not remove; required for Tomcat 8.0 and older.
-    public boolean isCometTimeoutSupported() {
-        return false;
-    }
-
     @Override
     public boolean isSendfileSupported() {
         return false;
