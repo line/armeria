@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  *
  * <pre>{@code
  * // Include Thrift and gRPC only.
- * DocServiceBuilder builder = new DocServiceBuilder();
+ * DocServiceBuilder builder = DocService.builder();
  * DocServiceFilter filter = DocServiceFilter.ofThrift().or(DocServiceFilter.ofGrpc());
  * builder.include(filter);
  *

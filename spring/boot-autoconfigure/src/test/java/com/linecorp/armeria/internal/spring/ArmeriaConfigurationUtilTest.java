@@ -42,6 +42,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Path;
+import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
@@ -58,7 +59,7 @@ public class ArmeriaConfigurationUtilTest {
                 .setDecorators(decorator);
 
         final ServerBuilder sb1 = Server.builder();
-        final DocServiceBuilder dsb1 = new DocServiceBuilder();
+        final DocServiceBuilder dsb1 = DocService.builder();
         configureAnnotatedServices(sb1, dsb1, ImmutableList.of(bean),
                                        MeterIdPrefixFunctionFactory.DEFAULT, null);
         final Server s1 = sb1.build();
@@ -68,7 +69,7 @@ public class ArmeriaConfigurationUtilTest {
         reset(decorator);
 
         final ServerBuilder sb2 = Server.builder();
-        final DocServiceBuilder dsb2 = new DocServiceBuilder();
+        final DocServiceBuilder dsb2 = DocService.builder();
         configureAnnotatedServices(sb2, dsb2, ImmutableList.of(bean),
                                        null, null);
         final Server s2 = sb2.build();
@@ -86,7 +87,7 @@ public class ArmeriaConfigurationUtilTest {
                 .setDecorators(decorator);
 
         final ServerBuilder sb = Server.builder();
-        final DocServiceBuilder dsb = new DocServiceBuilder();
+        final DocServiceBuilder dsb = DocService.builder();
         configureAnnotatedServices(sb, dsb, ImmutableList.of(bean), null, null);
         final Server s = sb.build();
         verify(decorator, times(2)).apply(any());

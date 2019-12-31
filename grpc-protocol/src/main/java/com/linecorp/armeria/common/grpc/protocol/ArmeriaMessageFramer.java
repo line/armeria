@@ -125,10 +125,18 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         }
     }
 
+    /**
+     * Enables or disables message compression.
+     *
+     * @param messageCompression whether to enable message compression.
+     */
     public void setMessageCompression(boolean messageCompression) {
         this.messageCompression = messageCompression;
     }
 
+    /**
+     * Sets the {@link Compressor}.
+     */
     public void setCompressor(@Nullable Compressor compressor) {
         this.compressor = compressor;
     }

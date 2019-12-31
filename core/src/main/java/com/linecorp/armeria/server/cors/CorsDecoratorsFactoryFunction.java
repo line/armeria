@@ -42,7 +42,7 @@ public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunc
         }
         cb.firstPolicyBuilder.setConfig(corsDecorator);
         for (int i = 1; i < policies.length; i++) {
-            final CorsPolicyBuilder builder = new CorsPolicyBuilder(policies[i].origins());
+            final CorsPolicyBuilder builder = CorsPolicy.builder(policies[i].origins());
             builder.setConfig(policies[i]);
             cb.addPolicy(builder.build());
         }

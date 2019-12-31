@@ -419,6 +419,9 @@ public interface ServiceRequestContext extends RequestContext {
      */
     boolean verboseResponses();
 
+    /**
+     * Returns the {@link AccessLogWriter}.
+     */
     AccessLogWriter accessLogWriter();
 
     /**

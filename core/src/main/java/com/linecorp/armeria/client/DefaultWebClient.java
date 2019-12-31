@@ -22,8 +22,6 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isAbsoluteUri;
 
 import java.net.URI;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +33,6 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.channel.EventLoop;
 
 final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
 
@@ -48,10 +45,6 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     @Override
     public HttpResponse execute(HttpRequest req) {
-        return execute(null, req);
-    }
-
-    private HttpResponse execute(@Nullable EventLoop eventLoop, HttpRequest req) {
         URI uri;
 
         if (isAbsoluteUri(req.path())) {
@@ -71,7 +64,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             final String path = uri.getRawPath();
             final HttpRequest newReq = req.withHeaders(req.headers().toBuilder()
                     .path(query == null ? path : path + '?' + query));
-            return execute(eventLoop, endpoint, newReq);
+            return execute(endpoint, newReq);
         }
 
         if (isUndefinedUri(uri())) {
@@ -89,17 +82,17 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         } else {
             newReq = req;
         }
-        return execute(eventLoop, endpoint(), newReq);
+        return execute(endpoint(), newReq);
     }
 
-    private HttpResponse execute(@Nullable EventLoop eventLoop, Endpoint endpoint, HttpRequest req) {
+    private HttpResponse execute(Endpoint endpoint, HttpRequest req) {
         final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             req.abort(cause);
             return HttpResponse.ofFailure(cause);
         }
-        return execute(eventLoop, endpoint, req.method(),
+        return execute(endpoint, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req,
                        (ctx, cause) -> {
                            if (ctx != null && !ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
@@ -117,10 +110,6 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     @Override
     public HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
-        return execute(null, aggregatedReq);
-    }
-
-    HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpRequest aggregatedReq) {
-        return execute(eventLoop, aggregatedReq.toHttpRequest());
+        return execute(aggregatedReq.toHttpRequest());
     }
 }

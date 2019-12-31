@@ -13,15 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -84,16 +86,7 @@ class DefaultClientRequestContextTest {
 
     @Test
     void deriveContext() {
-        final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
-                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                RequestId.random(), HttpMethod.POST, "/foo", null, null,
-                ClientOptions.of(),
-                HttpRequest.of(RequestHeaders.of(
-                        HttpMethod.POST, "/foo",
-                        HttpHeaderNames.SCHEME, "http",
-                        HttpHeaderNames.AUTHORITY, "example.com:8080")),
-                null);
-        originalCtx.init(Endpoint.of("example.com", 8080));
+        final DefaultClientRequestContext originalCtx = newContext();
 
         setAdditionalHeaders(originalCtx);
 
@@ -136,6 +129,81 @@ class DefaultClientRequestContextTest {
 
         // the Attribute added to the original context after creation is not propagated to the derived context
         assertThat(derivedCtx.attr(bar)).isEqualTo(null);
+    }
+
+    @Test
+    void derivedContextMustNotCallCustomizers() {
+        final AtomicInteger counter = new AtomicInteger();
+        try (SafeCloseable unused = Clients.withContextCustomizer(unused2 -> counter.incrementAndGet())) {
+            final DefaultClientRequestContext ctx = newContext();
+            assertThat(counter).hasValue(1);
+
+            // Create a derived context, which should never call customizers or captor.
+            try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+                ctx.newDerivedContext(RequestId.random(), ctx.request(), null, ctx.endpoint());
+                assertThat(counter).hasValue(1);
+                assertThatThrownBy(ctxCaptor::get).isInstanceOf(NoSuchElementException.class)
+                                                  .hasMessageContaining("no request was made");
+            }
+        }
+
+        // Thread-local state must be cleaned up.
+        assertThat(ClientThreadLocalState.get()).isNull();
+    }
+
+    @Test
+    void contextCaptorMustBeCleanedUp() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            assertThat(ClientThreadLocalState.get()).isNotNull();
+            final DefaultClientRequestContext ctx = newContext();
+            assertThat(ctxCaptor.get()).isSameAs(ctx);
+        }
+
+        // Thread-local state must be cleaned up.
+        assertThat(ClientThreadLocalState.get()).isNull();
+    }
+
+    @Test
+    void nestedContextCaptors() {
+        try (ClientRequestContextCaptor ctxCaptor1 = Clients.newContextCaptor()) {
+            final DefaultClientRequestContext ctx1 = newContext();
+            assertThat(ctxCaptor1.getAll()).containsExactly(ctx1);
+
+            final ClientRequestContext ctx2;
+            ClientRequestContextCaptor ctxCaptor2 = null;
+            try {
+                ctxCaptor2 = Clients.newContextCaptor();
+                ctx2 = newContext();
+                // The context captured by the second captor should not affect the first captor.
+                assertThat(ctxCaptor1.getAll()).containsExactly(ctx1);
+                assertThat(ctxCaptor2.getAll()).containsExactly(ctx2);
+            } finally {
+                if (ctxCaptor2 != null) {
+                    ctxCaptor2.close();
+                }
+            }
+
+            final DefaultClientRequestContext ctx3 = newContext();
+            assertThat(ctxCaptor1.getAll()).containsExactly(ctx1, ctx3);
+            assertThat(ctxCaptor2.getAll()).containsExactly(ctx2);
+        }
+
+        // Thread-local state must be cleaned up.
+        assertThat(ClientThreadLocalState.get()).isNull();
+    }
+
+    private static DefaultClientRequestContext newContext() {
+        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
+                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
+                RequestId.random(), HttpMethod.POST, "/foo", null, null,
+                ClientOptions.of(),
+                HttpRequest.of(RequestHeaders.of(
+                        HttpMethod.POST, "/foo",
+                        HttpHeaderNames.SCHEME, "http",
+                        HttpHeaderNames.AUTHORITY, "example.com:8080")),
+                null);
+        ctx.init(Endpoint.of("example.com", 8080));
+        return ctx;
     }
 
     @Test

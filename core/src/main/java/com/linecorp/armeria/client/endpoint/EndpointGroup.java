@@ -149,7 +149,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
     @Override
     default void close() {}
 
-    /*
+    /**
      * Creates a new {@link EndpointGroup} that tries this {@link EndpointGroup} first and then the specified
      * {@link EndpointGroup} when this {@link EndpointGroup} does not have a requested resource.
      *

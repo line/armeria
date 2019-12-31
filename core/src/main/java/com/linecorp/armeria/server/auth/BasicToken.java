@@ -44,10 +44,16 @@ public final class BasicToken {
         this.password = requireNonNull(password, "password");
     }
 
+    /**
+     * Returns the username.
+     */
     public String username() {
         return username;
     }
 
+    /**
+     * Returns the password.
+     */
     public String password() {
         return password;
     }

@@ -37,6 +37,9 @@ import io.dropwizard.util.Size;
 import io.dropwizard.validation.MaxSize;
 import io.dropwizard.validation.MinSize;
 
+/**
+ * Armeria {@link ConnectorFactory} for PROXY protocol.
+ */
 public abstract class ArmeriaProxyConnectorFactory implements ConnectorFactory, ArmeriaServerDecorator {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaProxyConnectorFactory.class);
@@ -60,10 +63,20 @@ public abstract class ArmeriaProxyConnectorFactory implements ConnectorFactory, 
         // are there other proxy settings?
     }
 
+    /**
+     * Returns the maximum size of additional data for PROXY protocol.
+     *
+     * @see ServerBuilder#proxyProtocolMaxTlvSize(int)
+     */
     public Size getMaxTlvSize() {
         return maxTlvSize;
     }
 
+    /**
+     * Sets the maximum size of additional data for PROXY protocol.
+     *
+     * @see ServerBuilder#proxyProtocolMaxTlvSize(int)
+     */
     public void setMaxTlvSize(Size maxTlvSize) {
         this.maxTlvSize = maxTlvSize;
     }

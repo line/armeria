@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.DefaultClientRequestContext.THREAD_LOCAL_CONTEXT_CUSTOMIZER;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -539,7 +538,8 @@ public final class Clients {
      *
      * @see #withHttpHeader(CharSequence, String)
      */
-    public static SafeCloseable withHttpHeaders(Function<HttpHeaders, HttpHeaders> headerManipulator) {
+    public static SafeCloseable withHttpHeaders(
+            Function<? super HttpHeaders, ? extends HttpHeaders> headerManipulator) {
         requireNonNull(headerManipulator, "headerManipulator");
         return withContextCustomizer(ctx -> {
             final HttpHeaders manipulatedHeaders = headerManipulator.apply(ctx.additionalRequestHeaders());
@@ -581,18 +581,51 @@ public final class Clients {
      *
      * @see #withHttpHeaders(Function)
      */
-    public static SafeCloseable withContextCustomizer(Consumer<ClientRequestContext> contextCustomizer) {
+    public static SafeCloseable withContextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
         requireNonNull(contextCustomizer, "contextCustomizer");
 
-        final Consumer<ClientRequestContext> oldCustomizer = THREAD_LOCAL_CONTEXT_CUSTOMIZER.get();
+        final ClientThreadLocalState customizers = ClientThreadLocalState.maybeCreate();
+        customizers.add(contextCustomizer);
 
-        if (oldCustomizer != null) {
-            THREAD_LOCAL_CONTEXT_CUSTOMIZER.set(oldCustomizer.andThen(contextCustomizer));
-            return () -> THREAD_LOCAL_CONTEXT_CUSTOMIZER.set(oldCustomizer);
-        } else {
-            THREAD_LOCAL_CONTEXT_CUSTOMIZER.set(contextCustomizer);
-            return THREAD_LOCAL_CONTEXT_CUSTOMIZER::remove;
-        }
+        return new SafeCloseable() {
+            boolean closed;
+
+            @Override
+            public void close() {
+                if (closed) {
+                    return;
+                }
+
+                closed = true;
+                customizers.remove(contextCustomizer);
+            }
+        };
+    }
+
+    /**
+     * Prepare to capture the {@link ClientRequestContext} of the next request sent from the current thread.
+     * Use the {@code try-with-resources} block with the returned {@link ClientRequestContextCaptor}
+     * to retrieve the captured {@link ClientRequestContext} and to unset the thread-local variable
+     * automatically.
+     * <pre>{@code
+     * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+     *     WebClient.of().get("https://www.example.com/hello");
+     *     ClientRequestContext ctx = captor.get();
+     *     assert ctx.path().equals("/hello");
+     * }}</pre>
+     * Note that you can also capture more than one {@link ClientRequestContext}:
+     * <pre>{@code
+     * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+     *     WebClient.of().get("https://www.example.com/foo");
+     *     WebClient.of().get("https://www.example.com/bar");
+     *     List<ClientRequestContext> contexts = captor.getAll();
+     *     assert contexts.get(0).path().equals("/foo");
+     *     assert contexts.get(1).path().equals("/bar");
+     * }}</pre>
+     */
+    public static ClientRequestContextCaptor newContextCaptor() {
+        return ClientThreadLocalState.maybeCreate().newContextCaptor();
     }
 
     private Clients() {}

@@ -207,6 +207,7 @@ public interface ClientRequestContext extends RequestContext {
      *
      * @see #attr(AttributeKey)
      */
+    @Nullable
     <V> V ownAttr(AttributeKey<V> key);
 
     /**
