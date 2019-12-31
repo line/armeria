@@ -35,9 +35,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.DefaultTimeoutController;
-import com.linecorp.armeria.common.util.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.Channel;
@@ -127,7 +125,8 @@ abstract class HttpResponseDecoder {
         return disconnectWhenFinished;
     }
 
-    static final class HttpResponseWrapper implements StreamWriter<HttpObject>, TimeoutController {
+    static final class HttpResponseWrapper
+            extends DefaultTimeoutController implements StreamWriter<HttpObject> {
 
         enum State {
             WAIT_NON_INFORMATIONAL,
@@ -139,7 +138,6 @@ abstract class HttpResponseDecoder {
         @Nullable
         private final ClientRequestContext ctx;
         private final long maxContentLength;
-        private final TimeoutController responseTimeoutController;
         private final long responseTimeoutMillis;
 
         private boolean loggedResponseFirstBytesTransferred;
@@ -148,11 +146,12 @@ abstract class HttpResponseDecoder {
 
         HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
                             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
+            super(eventLoop);
             this.delegate = delegate;
             this.ctx = ctx;
             this.maxContentLength = maxContentLength;
-            responseTimeoutController = newResponseTimeoutController(eventLoop);
             this.responseTimeoutMillis = responseTimeoutMillis;
+            setTimeoutTask(newTimeoutTask());
         }
 
         CompletableFuture<Void> completionFuture() {
@@ -297,7 +296,7 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnTimeoutCancelled) {
 
-            if (responseTimeoutController.cancelTimeout()) {
+            if (cancelTimeout()) {
                 // There's no timeout or the response has not been timed out.
                 actionOnTimeoutCancelled.accept(cause);
                 return;
@@ -325,36 +324,11 @@ abstract class HttpResponseDecoder {
         }
 
         void initTimeout() {
-            responseTimeoutController.initTimeout(responseTimeoutMillis);
+            initTimeout(responseTimeoutMillis);
         }
 
-        @Override
-        public void initTimeout(long timeoutMillis) {
-            responseTimeoutController.initTimeout(timeoutMillis);
-        }
-
-        @Override
-        public void adjustTimeout(long adjustmentMillis) {
-            responseTimeoutController.adjustTimeout(adjustmentMillis);
-        }
-
-        @Override
-        public void resetTimeout(long newTimeoutMillis) {
-            responseTimeoutController.resetTimeout(newTimeoutMillis);
-        }
-
-        @Override
-        public boolean cancelTimeout() {
-            return responseTimeoutController.cancelTimeout();
-        }
-
-        @Override
-        public long startTimeNanos() {
-            return responseTimeoutController.startTimeNanos();
-        }
-
-        private TimeoutController newResponseTimeoutController(EventLoop eventLoop) {
-            final TimeoutTask timeoutTask = new TimeoutTask() {
+        private TimeoutTask newTimeoutTask() {
+            return new TimeoutTask() {
                 @Override
                 public boolean isReady() {
                     return delegate.isOpen();
@@ -380,8 +354,6 @@ abstract class HttpResponseDecoder {
                     }
                 }
             };
-
-            return new DefaultTimeoutController(timeoutTask, eventLoop);
         }
 
         @Override

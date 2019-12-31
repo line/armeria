@@ -69,6 +69,15 @@ class DefaultTimeoutControllerTest {
     }
 
     @Test
+    void shouldHaveTimeoutTask() {
+        final TimeoutController emptyTaskTimeoutController =
+                new DefaultTimeoutController(CommonPools.workerGroup().next());
+        assertThatThrownBy(() -> emptyTaskTimeoutController.adjustTimeout(10))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("setTimeoutTask(timeoutTask) is not called yet");
+    }
+
+    @Test
     void adjustTimeout() {
         final long initTimeoutMillis = 100;
         final long adjustmentMillis = 10;

@@ -34,9 +34,10 @@ import io.netty.channel.EventLoop;
  *
  * <p>Note: This interface is meant for internal use only.
  */
-public final class DefaultTimeoutController implements TimeoutController {
+public class DefaultTimeoutController implements TimeoutController {
 
-    private final TimeoutTask timeoutTask;
+    @Nullable
+    private TimeoutTask timeoutTask;
     private final EventLoop eventLoop;
 
     private long timeoutMillis;
@@ -47,18 +48,39 @@ public final class DefaultTimeoutController implements TimeoutController {
     private ScheduledFuture<?> timeoutFuture;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance with the specified {@link TimeoutTask} and {@link EventLoop}.
      */
     public DefaultTimeoutController(TimeoutTask timeoutTask, EventLoop eventLoop) {
         requireNonNull(timeoutTask, "timeoutTask");
-        requireNonNull(eventLoop, "eventLoopSupplier");
+        requireNonNull(eventLoop, "eventLoop");
         this.timeoutTask = timeoutTask;
         this.eventLoop = eventLoop;
     }
 
+    /**
+     * Creates a new instance with the specified {@link EventLoop}.
+     */
+    public DefaultTimeoutController(EventLoop eventLoop) {
+        requireNonNull(eventLoop, "eventLoop");
+        this.eventLoop = eventLoop;
+    }
+
+    /**
+     * Sets the {@link TimeoutTask} that is invoked when the deadline exceeded.
+     */
+    public void setTimeoutTask(TimeoutTask timeoutTask) {
+        this.timeoutTask = requireNonNull(timeoutTask, "timeoutTask");
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
+     * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     */
     @Override
     public void initTimeout(long timeoutMillis) {
-        if (timeoutFuture != null || timeoutMillis <= 0 || !timeoutTask.isReady()) {
+        if (timeoutFuture != null || timeoutMillis <= 0 || timeoutTask == null || !timeoutTask.isReady()) {
             // No need to schedule a response timeout if:
             // - the timeout has been scheduled already,
             // - the timeout has been disabled or
@@ -138,6 +160,8 @@ public final class DefaultTimeoutController implements TimeoutController {
     }
 
     private void ensureInitialized() {
+        checkState(timeoutTask != null,
+                   "setTimeoutTask(timeoutTask) is not called yet.");
         checkState(firstStartTimeNanos > 0,
                    "initTimeout(timeoutMillis) is not called yet.");
     }

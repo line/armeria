@@ -44,9 +44,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.DefaultTimeoutController;
-import com.linecorp.armeria.common.util.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
@@ -54,12 +52,11 @@ import com.linecorp.armeria.internal.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutController {
+final class HttpResponseSubscriber extends DefaultTimeoutController implements Subscriber<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
@@ -87,7 +84,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
     private final DefaultServiceRequestContext reqCtx;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-    private final TimeoutController requestTimeoutController;
 
     @Nullable
     private Subscription subscription;
@@ -99,13 +95,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
                            boolean enableServerHeader, boolean enableDateHeader) {
+        super(ctx.channel().eventLoop());
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
-        requestTimeoutController = newRequestTimeoutController(ctx.channel().eventLoop());
+        setTimeoutTask(newTimeoutTask());
     }
 
     private HttpService service() {
@@ -282,31 +279,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
                 write(HttpData.EMPTY_DATA, true);
             }
         }
-    }
-
-    @Override
-    public void initTimeout(long timeoutMillis) {
-        requestTimeoutController.initTimeout(timeoutMillis);
-    }
-
-    @Override
-    public void adjustTimeout(long adjustmentMillis) {
-        requestTimeoutController.adjustTimeout(adjustmentMillis);
-    }
-
-    @Override
-    public void resetTimeout(long newTimeoutMillis) {
-        requestTimeoutController.resetTimeout(newTimeoutMillis);
-    }
-
-    @Override
-    public boolean cancelTimeout() {
-        return requestTimeoutController.cancelTimeout();
-    }
-
-    @Override
-    public long startTimeNanos() {
-        return requestTimeoutController.startTimeNanos();
     }
 
     private void write(HttpObject o, boolean endOfStream) {
@@ -502,8 +474,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
         return cause;
     }
 
-    private TimeoutController newRequestTimeoutController(EventLoop eventLoop) {
-        final TimeoutTask timeoutTask = new TimeoutTask() {
+    private TimeoutTask newTimeoutTask() {
+        return new TimeoutTask() {
             @Override
             public boolean isReady() {
                 return true;
@@ -528,7 +500,5 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, TimeoutCon
                 }
             }
         };
-
-        return new DefaultTimeoutController(timeoutTask, eventLoop);
     }
 }
