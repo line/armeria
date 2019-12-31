@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -39,7 +38,7 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link RequestContext} implementation.
  */
-public abstract class NonWrappingRequestContext extends AbstractRequestContext {
+public abstract class NonWrappingRequestContext implements RequestContext {
 
     private final MeterRegistry meterRegistry;
     private final DefaultAttributeMap attrs;
@@ -61,8 +60,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private List<Consumer<? super RequestContext>> onEnterCallbacks;
     @Nullable
     private List<Consumer<? super RequestContext>> onExitCallbacks;
-    @Nullable
-    private List<BiConsumer<? super RequestContext, ? super RequestContext>> onChildCallbacks;
 
     /**
      * Creates a new instance.
@@ -270,15 +267,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     }
 
     @Override
-    public final void onChild(BiConsumer<? super RequestContext, ? super RequestContext> callback) {
-        requireNonNull(callback, "callback");
-        if (onChildCallbacks == null) {
-            onChildCallbacks = new ArrayList<>(4);
-        }
-        onChildCallbacks.add(callback);
-    }
-
-    @Override
     public void invokeOnEnterCallbacks() {
         invokeCallbacks(onEnterCallbacks);
     }
@@ -295,18 +283,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
         for (Consumer<? super RequestContext> callback : callbacks) {
             callback.accept(this);
-        }
-    }
-
-    @Override
-    public void invokeOnChildCallbacks(RequestContext newCtx) {
-        final List<BiConsumer<? super RequestContext, ? super RequestContext>> callbacks = onChildCallbacks;
-        if (callbacks == null) {
-            return;
-        }
-
-        for (BiConsumer<? super RequestContext, ? super RequestContext> callback : callbacks) {
-            callback.accept(this, newCtx);
         }
     }
 }

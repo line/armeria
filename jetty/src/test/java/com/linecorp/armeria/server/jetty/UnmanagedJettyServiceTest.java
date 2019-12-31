@@ -42,7 +42,7 @@ public class UnmanagedJettyServiceTest extends WebAppContainerTest {
             jetty.start();
             sb.serviceUnder(
                     "/jsp/",
-                    JettyService.forServer(jetty).decorate(LoggingService.newDecorator()));
+                    JettyService.of(jetty).decorate(LoggingService.newDecorator()));
         }
     };
 

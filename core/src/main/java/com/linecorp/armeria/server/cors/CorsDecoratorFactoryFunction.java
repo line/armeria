@@ -31,7 +31,7 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(CorsDecorator parameter) {
         requireNonNull(parameter, "parameter");
-        final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(parameter.origins());
+        final CorsServiceBuilder cb = CorsService.builder(parameter.origins());
         cb.firstPolicyBuilder.setConfig(parameter);
 
         final Function<? super HttpService, CorsService> decorator = cb.newDecorator();

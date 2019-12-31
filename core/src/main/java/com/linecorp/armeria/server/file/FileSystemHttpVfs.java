@@ -55,7 +55,7 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
                         HttpHeaders additionalHeaders) {
         path = normalizePath(path);
 
-        final HttpFileBuilder builder = HttpFileBuilder.of(Paths.get(rootDir + path));
+        final HttpFileBuilder builder = HttpFile.builder(Paths.get(rootDir + path));
         return build(builder, clock, path, contentEncoding, additionalHeaders);
     }
 

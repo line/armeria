@@ -69,7 +69,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.DefaultHttpData;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -386,16 +385,14 @@ class HttpServerTest {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
                 final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
-                                       new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
-                                                           true));
+                                       HttpData.ofUtf8(payload).withEndOfStream());
             });
 
             sb.service("/additional-trailers-no-eos", (ctx, req) -> {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
                 final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
-                                       new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
-                                                           false));
+                                       HttpData.ofUtf8(payload).withEndOfStream());
             });
 
             sb.serviceUnder("/not-cached-paths", (ctx, req) -> HttpResponse.of(HttpStatus.OK));

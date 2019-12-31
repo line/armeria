@@ -270,7 +270,7 @@ final class Java9RequestContextAwareCompletableFuture<T> extends CompletableFutu
 
     private Supplier<T> makeContextAware(Supplier<? extends T> action) {
         return () -> {
-            try (SafeCloseable ignored = ctx.pushIfAbsent()) {
+            try (SafeCloseable ignored = ctx.push()) {
                 return action.get();
             }
         };

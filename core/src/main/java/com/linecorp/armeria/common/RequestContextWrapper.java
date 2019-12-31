@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -41,7 +40,7 @@ import io.netty.util.AttributeKey;
  *
  * @param <T> the self type
  */
-public abstract class RequestContextWrapper<T extends RequestContext> extends AbstractRequestContext {
+public abstract class RequestContextWrapper<T extends RequestContext> implements RequestContext {
 
     private final T delegate;
 
@@ -159,11 +158,6 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public void onChild(BiConsumer<? super RequestContext, ? super RequestContext> callback) {
-        delegate().onChild(callback);
-    }
-
-    @Override
     public void invokeOnEnterCallbacks() {
         delegate().invokeOnEnterCallbacks();
     }
@@ -171,11 +165,6 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public void invokeOnExitCallbacks() {
         delegate().invokeOnExitCallbacks();
-    }
-
-    @Override
-    public void invokeOnChildCallbacks(RequestContext newCtx) {
-        delegate().invokeOnChildCallbacks(newCtx);
     }
 
     @Nullable

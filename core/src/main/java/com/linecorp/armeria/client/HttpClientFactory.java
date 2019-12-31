@@ -268,7 +268,7 @@ final class HttpClientFactory extends AbstractClientFactory {
     private DefaultWebClient newWebClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
                                           HttpClient delegate) {
         return new DefaultWebClient(
-                new DefaultClientBuilderParams(this, uri, WebClient.class, options),
+                ClientBuilderParams.of(this, uri, WebClient.class, options),
                 delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
     }
 

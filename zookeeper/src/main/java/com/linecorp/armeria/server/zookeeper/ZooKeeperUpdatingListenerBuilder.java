@@ -69,7 +69,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
     private int sessionTimeoutMillis = ZooKeeperDefaults.DEFAULT_SESSION_TIMEOUT_MS;
     @Nullable
     private Endpoint endpoint;
-    private NodeValueCodec nodeValueCodec = NodeValueCodec.DEFAULT;
+    private NodeValueCodec nodeValueCodec = NodeValueCodec.ofDefault();
 
     /**
      * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode

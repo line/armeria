@@ -8,9 +8,9 @@ dependencies {
     runtime 'org.slf4j:slf4j-simple'
 
     testCompile 'io.projectreactor:reactor-test'
-    testCompile 'junit:junit'
     testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
     testCompile 'org.assertj:assertj-core'
+    testCompile 'org.junit.jupiter:junit-jupiter-api'
 }
 
 application {

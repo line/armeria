@@ -98,7 +98,7 @@ public class ZooKeeperEndpointGroupTest extends ZooKeeperTestBase {
             children.forEach(endpoint -> {
                 try {
                     zk.create(zNode + '/' + endpoint.host() + '_' + endpoint.port(),
-                              NodeValueCodec.DEFAULT.encode(endpoint),
+                              NodeValueCodec.ofDefault().encode(endpoint),
                               Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 } catch (Exception e) {
                     Exceptions.throwUnsafely(e);

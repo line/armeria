@@ -13,26 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.tomcat;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
@@ -61,6 +62,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.util.AppRootFinder;
 import com.linecorp.armeria.internal.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -76,7 +78,7 @@ import io.netty.util.AsciiString;
  */
 public abstract class TomcatService implements HttpService {
 
-    private static final Logger logger = LoggerFactory.getLogger(TomcatService.class);
+    static final Logger logger = LoggerFactory.getLogger(TomcatService.class);
 
     private static final MethodHandle INPUT_BUFFER_CONSTRUCTOR;
     private static final MethodHandle OUTPUT_BUFFER_CONSTRUCTOR;
@@ -129,54 +131,36 @@ public abstract class TomcatService implements HttpService {
     private static final HttpData INVALID_AUTHORITY_DATA =
             HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nInvalid authority");
 
-    TomcatService() {}
-
     /**
-     * Creates a new {@link TomcatService} with the web application at the root directory inside the
-     * JAR/WAR/directory where the caller class is located at.
+     * Creates a new {@link TomcatService} with the web application at the specified document base, which can
+     * be a directory or a JAR/WAR file.
      */
-    public static TomcatService forCurrentClassPath() {
-        return TomcatServiceBuilder.forCurrentClassPath(3).build();
-    }
-
-    /**
-     * Creates a new {@link TomcatService} with the web application at the specified document base directory
-     * inside the JAR/WAR/directory where the caller class is located at.
-     */
-    public static TomcatService forCurrentClassPath(String docBase) {
-        return TomcatServiceBuilder.forCurrentClassPath(docBase, 3).build();
-    }
-
-    /**
-     * Creates a new {@link TomcatService} with the web application at the root directory inside the
-     * JAR/WAR/directory where the specified class is located at.
-     */
-    public static TomcatService forClassPath(Class<?> clazz) {
-        return TomcatServiceBuilder.forClassPath(clazz).build();
-    }
-
-    /**
-     * Creates a new {@link TomcatService} with the web application at the specified document base directory
-     * inside the JAR/WAR/directory where the specified class is located at.
-     */
-    public static TomcatService forClassPath(Class<?> clazz, String docBase) {
-        return TomcatServiceBuilder.forClassPath(clazz, docBase).build();
+    public static TomcatService of(File docBase) {
+        return builder(docBase).build();
     }
 
     /**
      * Creates a new {@link TomcatService} with the web application at the specified document base, which can
      * be a directory or a JAR/WAR file.
      */
-    public static TomcatService forFileSystem(String docBase) {
-        return TomcatServiceBuilder.forFileSystem(docBase).build();
+    public static TomcatService of(Path docBase) {
+        return builder(docBase).build();
     }
 
     /**
      * Creates a new {@link TomcatService} with the web application at the specified document base, which can
      * be a directory or a JAR/WAR file.
      */
-    public static TomcatService forFileSystem(Path docBase) {
-        return TomcatServiceBuilder.forFileSystem(docBase).build();
+    public static TomcatService of(File rootDir, String relativeDocBase) {
+        return builder(rootDir, relativeDocBase).build();
+    }
+
+    /**
+     * Creates a new {@link TomcatService} with the web application at the specified document base, which can
+     * be a directory or a JAR/WAR file.
+     */
+    public static TomcatService of(Path rootDir, String relativeDocBase) {
+        return builder(rootDir, relativeDocBase).build();
     }
 
     /**
@@ -186,10 +170,8 @@ public abstract class TomcatService implements HttpService {
      *
      * @return a new {@link TomcatService}, which will not manage the provided {@link Tomcat} instance.
      */
-    public static TomcatService forTomcat(Tomcat tomcat) {
-        requireNonNull(tomcat, "tomcat");
-
-        return new UnmanagedTomcatService(tomcat);
+    public static TomcatService of(Tomcat tomcat) {
+        return new UnmanagedTomcatService(requireNonNull(tomcat, "tomcat"));
     }
 
     /**
@@ -199,42 +181,214 @@ public abstract class TomcatService implements HttpService {
      *
      * @return a new {@link TomcatService}, which will not manage the provided {@link Connector} instance.
      */
-    public static TomcatService forConnector(Connector connector) {
+    public static TomcatService of(Connector connector) {
+        return new UnmanagedTomcatService(requireNonNull(connector, "connector"), null);
+    }
+
+    /**
+     * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
+     * If the specified {@link Connector} instance is not configured properly, the returned
+     * {@link TomcatService} may respond with '503 Service Not Available' error.
+     *
+     * @return a new {@link TomcatService}, which will not manage the provided {@link Connector} instance.
+     */
+    public static TomcatService of(Connector connector, String hostname) {
         requireNonNull(connector, "connector");
-        return new UnmanagedTomcatService(null, connector);
-    }
-
-    /**
-     * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
-     * If the specified {@link Connector} instance is not configured properly, the returned
-     * {@link TomcatService} may respond with '503 Service Not Available' error.
-     *
-     * @return a new {@link TomcatService}, which will not manage the provided {@link Connector} instance.
-     */
-    public static TomcatService forConnector(String hostname, Connector connector) {
         requireNonNull(hostname, "hostname");
-        requireNonNull(connector, "connector");
-
-        return new UnmanagedTomcatService(hostname, connector);
+        return new UnmanagedTomcatService(connector, hostname);
     }
 
-    static TomcatService forConfig(TomcatServiceConfig config) {
-        final Consumer<Connector> postStopTask = connector -> {
-            final org.apache.catalina.Server server = connector.getService().getServer();
-            if (server.getState() == LifecycleState.STOPPED) {
-                try {
-                    logger.info("Destroying an embedded Tomcat: {}", toString(server));
-                    server.destroy();
-                } catch (Exception e) {
-                    logger.warn("Failed to destroy an embedded Tomcat: {}", toString(server), e);
-                }
+    /**
+     * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base,
+     * which can be a directory or a JAR/WAR file.
+     */
+    public static TomcatServiceBuilder builder(File docBase) {
+        return builder(requireNonNull(docBase, "docBase").toPath());
+    }
+
+    /**
+     * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base,
+     * which can be a directory or a JAR/WAR file.
+     */
+    public static TomcatServiceBuilder builder(Path docBase) {
+        final Path absoluteDocBase = requireNonNull(docBase, "docBase").toAbsolutePath();
+        if (TomcatUtil.isZip(absoluteDocBase)) {
+            return new TomcatServiceBuilder(absoluteDocBase, "/");
+        }
+
+        checkArgument(Files.isDirectory(absoluteDocBase),
+                      "docBase: %s (expected: a directory, WAR or JAR)", docBase);
+
+        return new TomcatServiceBuilder(absoluteDocBase, null);
+    }
+
+    /**
+     * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base,
+     * which can be a directory or a JAR/WAR file.
+     */
+    public static TomcatServiceBuilder builder(File rootDirOrDocBase, String relativePath) {
+        return builder(requireNonNull(rootDirOrDocBase, "rootDirOrDocBase").toPath(), relativePath);
+    }
+
+    /**
+     * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base,
+     * which can be a directory or a JAR/WAR file.
+     */
+    public static TomcatServiceBuilder builder(Path rootDirOrDocBase, String relativePath) {
+        requireNonNull(rootDirOrDocBase, "rootDirOrDocBase");
+        requireNonNull(relativePath, "relativePath");
+        final Path absoluteRootDirOrDocBase = rootDirOrDocBase.toAbsolutePath();
+        if (TomcatUtil.isZip(absoluteRootDirOrDocBase)) {
+            return new TomcatServiceBuilder(absoluteRootDirOrDocBase, normalizeJarRoot(relativePath));
+        }
+
+        checkArgument(Files.isDirectory(absoluteRootDirOrDocBase),
+                      "rootDirOrDocBase: %s (expected: a directory, WAR or JAR)", rootDirOrDocBase);
+
+        final Path rootDir = fileSystemDocBase(rootDirOrDocBase, relativePath);
+        checkArgument(Files.isDirectory(rootDir),
+                      "relativePath: %s (expected: a directory)", relativePath);
+
+        return new TomcatServiceBuilder(rootDir, null);
+    }
+
+    private static String normalizeJarRoot(@Nullable String jarRoot) {
+        if (jarRoot == null || jarRoot.isEmpty() || "/".equals(jarRoot)) {
+            return "/";
+        }
+
+        if (!jarRoot.startsWith("/")) {
+            jarRoot = '/' + jarRoot;
+        }
+
+        if (jarRoot.endsWith("/")) {
+            jarRoot = jarRoot.substring(0, jarRoot.length() - 1);
+        }
+
+        return jarRoot;
+    }
+
+    private static Path fileSystemDocBase(Path rootDir, String relativePath) {
+        // Append the specified docBase to the root directory to build the actual docBase on file system.
+        String fileSystemDocBase = rootDir.toString();
+        relativePath = relativePath.replace('/', File.separatorChar);
+        if (fileSystemDocBase.endsWith(File.separator)) {
+            if (relativePath.startsWith(File.separator)) {
+                fileSystemDocBase += relativePath.substring(1);
+            } else {
+                fileSystemDocBase += relativePath;
             }
-        };
+        } else {
+            if (relativePath.startsWith(File.separator)) {
+                fileSystemDocBase += relativePath;
+            } else {
+                fileSystemDocBase = fileSystemDocBase + File.separatorChar + relativePath;
+            }
+        }
 
-        return new ManagedTomcatService(null, new ManagedConnectorFactory(config), postStopTask);
+        return Paths.get(fileSystemDocBase);
     }
 
-    static String toString(org.apache.catalina.Server server) {
+    /**
+     * Creates a new {@link TomcatService} with the web application at the root directory inside the
+     * JAR/WAR/directory where the caller class is located at.
+     *
+     * @deprecated Use {@link AppRootFinder#findCurrent()} and {@link #of(Path)}.
+     */
+    @Deprecated
+    public static TomcatService forCurrentClassPath() {
+        return of(AppRootFinder.findCurrent(1));
+    }
+
+    /**
+     * Creates a new {@link TomcatService} with the web application at the specified document base directory
+     * inside the JAR/WAR/directory where the caller class is located at.
+     *
+     * @deprecated Use {@link AppRootFinder#findCurrent()} and {@link #of(Path, String)}.
+     */
+    @Deprecated
+    public static TomcatService forCurrentClassPath(String docBase) {
+        return of(AppRootFinder.findCurrent(1), docBase);
+    }
+
+    /**
+     * Creates a new {@link TomcatService} with the web application at the root directory inside the
+     * JAR/WAR/directory where the specified class is located at.
+     *
+     * @deprecated Use {@link AppRootFinder#find(Class)} and {@link #of(Path)}.
+     */
+    @Deprecated
+    public static TomcatService forClassPath(Class<?> clazz) {
+        return of(AppRootFinder.find(clazz));
+    }
+
+    /**
+     * Creates a new {@link TomcatService} with the web application at the specified document base directory
+     * inside the JAR/WAR/directory where the specified class is located at.
+     *
+     * @deprecated Use {@link AppRootFinder#find(Class)} and {@link #of(Path, String)}.
+     */
+    @Deprecated
+    public static TomcatService forClassPath(Class<?> clazz, String docBase) {
+        return of(AppRootFinder.find(clazz), docBase);
+    }
+
+    /**
+     * Creates a new {@link TomcatService} with the web application at the specified document base, which can
+     * be a directory or a JAR/WAR file.
+     *
+     * @deprecated Use {@link #of(Path)}.
+     */
+    @Deprecated
+    public static TomcatService forFileSystem(Path docBase) {
+        return of(docBase);
+    }
+
+    /**
+     * Creates a new {@link TomcatService} from an existing {@link Tomcat} instance.
+     * If the specified {@link Tomcat} instance is not configured properly, the returned {@link TomcatService}
+     * may respond with '503 Service Not Available' error.
+     *
+     * @return a new {@link TomcatService}, which will not manage the provided {@link Tomcat} instance.
+     *
+     * @deprecated Use {@link #of(Tomcat)}.
+     */
+    @Deprecated
+    public static TomcatService forTomcat(Tomcat tomcat) {
+        return of(tomcat);
+    }
+
+    /**
+     * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
+     * If the specified {@link Connector} instance is not configured properly, the returned
+     * {@link TomcatService} may respond with '503 Service Not Available' error.
+     *
+     * @return a new {@link TomcatService}, which will not manage the provided {@link Connector} instance.
+     *
+     * @deprecated Use {@link #of(Connector)}.
+     */
+    @Deprecated
+    public static TomcatService forConnector(Connector connector) {
+        return of(connector);
+    }
+
+    /**
+     * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
+     * If the specified {@link Connector} instance is not configured properly, the returned
+     * {@link TomcatService} may respond with '503 Service Not Available' error.
+     *
+     * @return a new {@link TomcatService}, which will not manage the provided {@link Connector} instance.
+     *
+     * @deprecated Use {@link #of(Connector, String)}.
+     */
+    @Deprecated
+    public static TomcatService forConnector(String hostname, Connector connector) {
+        return of(connector, hostname);
+    }
+
+    static String toString(
+            @SuppressWarnings("UnnecessaryFullyQualifiedName") org.apache.catalina.Server server) {
+
         requireNonNull(server, "server");
 
         final Service[] services = server.findServices();
@@ -257,6 +411,8 @@ public abstract class TomcatService implements HttpService {
 
         return buf.toString();
     }
+
+    TomcatService() {}
 
     /**
      * Returns Tomcat {@link Connector}.

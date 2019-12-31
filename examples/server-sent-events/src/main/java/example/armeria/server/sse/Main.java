@@ -75,7 +75,7 @@ public final class Main {
                                                                   .build());
                          }
                      })
-                     .service("/", HttpFile.ofResource(Main.class.getClassLoader(), "index.html").asService())
+                     .service("/", HttpFile.of(Main.class.getClassLoader(), "index.html").asService())
                      .decorator(LoggingService.newDecorator())
                      .disableServerHeader()
                      .disableDateHeader()
