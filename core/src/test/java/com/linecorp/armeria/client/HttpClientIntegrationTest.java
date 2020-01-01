@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -94,6 +95,7 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
@@ -765,6 +767,20 @@ class HttpClientIntegrationTest {
         assertThatThrownBy(() -> response.aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCause(badState);
+    }
+
+    @Test
+    void httpsRequstToPlainTextEndpoint() throws Exception {
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .sslContextCustomizer(
+                                     s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .build();
+        final WebClient client = WebClient.builder(SessionProtocol.HTTPS, newEndpoint())
+                                          .factory(clientFactory).build();
+        assertThatThrownBy(() -> client.get("/hello/world").aggregate().get())
+                .hasRootCauseInstanceOf(SSLException.class);
+        clientFactory.close();
     }
 
     @Nested

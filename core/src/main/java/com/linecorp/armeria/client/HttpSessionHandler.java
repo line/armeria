@@ -52,6 +52,7 @@ import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWritte
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
@@ -63,6 +64,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      * 2^29 - We could have used 2^30 but this should be large enough.
      */
     private static final int MAX_NUM_REQUESTS_SENT = 536870912;
+
+    static final AttributeKey<Throwable> NESTED_THROWABLE =
+            AttributeKey.valueOf(HttpSessionHandler.class, "NESTED_THROWABLE");
 
     private final HttpChannelPool channelPool;
     private final Channel channel;
@@ -311,12 +315,17 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             channelPool.connect(channel.remoteAddress(), H1C, sessionPromise);
         } else {
             // Fail all pending responses.
-            failUnfinishedResponses(ClosedSessionException.get());
-
+            final Throwable throwable;
+            if (ctx.channel().hasAttr(NESTED_THROWABLE)) {
+                throwable = ClosedSessionException.get(ctx.channel().attr(NESTED_THROWABLE).get());
+            } else {
+                throwable = ClosedSessionException.get();
+            }
+            failUnfinishedResponses(throwable);
             // Cancel the timeout and reject the sessionPromise just in case the connection has been closed
             // even before the session protocol negotiation is done.
             sessionTimeoutFuture.cancel(false);
-            sessionPromise.tryFailure(ClosedSessionException.get());
+            sessionPromise.tryFailure(throwable);
         }
     }
 
