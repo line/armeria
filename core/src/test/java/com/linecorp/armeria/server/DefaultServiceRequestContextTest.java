@@ -19,7 +19,7 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -187,7 +187,7 @@ class DefaultServiceRequestContextTest {
         ctx.setRequestTimeoutController(timeoutController);
 
         ctx.clearRequestTimeout();
-        verify(timeoutController, times(1))
+        verify(timeoutController, timeout(Duration.ofSeconds(1)).times(1))
                 .cancelTimeout();
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
