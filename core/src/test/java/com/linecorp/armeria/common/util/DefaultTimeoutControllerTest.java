@@ -63,7 +63,7 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void shouldCallInitTimeout() {
-        assertThatThrownBy(() -> timeoutController.adjustTimeout(10))
+        assertThatThrownBy(() -> timeoutController.extendTimeout(10))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("initTimeout(timeoutMillis) is not called yet");
     }
@@ -72,7 +72,7 @@ class DefaultTimeoutControllerTest {
     void shouldHaveTimeoutTask() {
         final TimeoutController emptyTaskTimeoutController =
                 new DefaultTimeoutController(CommonPools.workerGroup().next());
-        assertThatThrownBy(() -> emptyTaskTimeoutController.adjustTimeout(10))
+        assertThatThrownBy(() -> emptyTaskTimeoutController.extendTimeout(10))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("setTimeoutTask(timeoutTask) is not called yet");
     }
@@ -86,14 +86,14 @@ class DefaultTimeoutControllerTest {
         timeoutController.initTimeout(initTimeoutMillis);
         final long startTimeNanos = timeoutController.startTimeNanos();
 
-        timeoutController.adjustTimeout(adjustmentMillis);
+        timeoutController.extendTimeout(adjustmentMillis);
         final long passedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
         assertThat(timeoutController.timeoutMillis()).isBetween(
                 initTimeoutMillis + adjustmentMillis - passedMillis - tolerance,
                 initTimeoutMillis + adjustmentMillis - passedMillis + tolerance);
 
         final long adjustmentMillis2 = -20;
-        timeoutController.adjustTimeout(adjustmentMillis2);
+        timeoutController.extendTimeout(adjustmentMillis2);
         final long passedMillis2 = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
         assertThat(timeoutController.timeoutMillis()).isBetween(
                 initTimeoutMillis + adjustmentMillis + adjustmentMillis2 - passedMillis2 - tolerance,

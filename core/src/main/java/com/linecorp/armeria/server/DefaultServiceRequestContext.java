@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -367,6 +369,23 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
+    public void clearRequestTimeout() {
+        if (requestTimeoutMillis == 0) {
+            return;
+        }
+
+        final TimeoutController requestTimeoutController = this.requestTimeoutController;
+        requestTimeoutMillis = 0;
+        if (requestTimeoutController != null) {
+            if (ch.eventLoop().inEventLoop()) {
+                requestTimeoutController.cancelTimeout();
+            } else {
+                ch.eventLoop().execute(requestTimeoutController::cancelTimeout);
+            }
+        }
+    }
+
+    @Override
     public void setRequestTimeoutMillis(long requestTimeoutMillis) {
         if (requestTimeoutMillis < 0) {
             throw new IllegalArgumentException(
@@ -374,7 +393,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         }
         final long adjustmentMillis =
                 LongMath.saturatedSubtract(requestTimeoutMillis, this.requestTimeoutMillis);
-        adjustRequestTimeoutMillis(adjustmentMillis);
+        extendRequestTimeoutMillis(adjustmentMillis);
     }
 
     @Override
@@ -383,7 +402,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public void adjustRequestTimeoutMillis(long adjustmentMillis) {
+    public void extendRequestTimeoutMillis(long adjustmentMillis) {
         if (adjustmentMillis == 0) {
             return;
         }
@@ -393,24 +412,22 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         final TimeoutController requestTimeoutController = this.requestTimeoutController;
         if (requestTimeoutController != null) {
             if (ch.eventLoop().inEventLoop()) {
-                requestTimeoutController.adjustTimeout(adjustmentMillis);
+                requestTimeoutController.extendTimeout(adjustmentMillis);
             } else {
-                ch.eventLoop().execute(() -> requestTimeoutController.adjustTimeout(adjustmentMillis));
+                ch.eventLoop().execute(() -> requestTimeoutController.extendTimeout(adjustmentMillis));
             }
         }
     }
 
     @Override
-    public void adjustRequestTimeout(Duration adjustment) {
-        adjustRequestTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
+    public void extendRequestTimeout(Duration adjustment) {
+        extendRequestTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
     }
 
     @Override
-    public void resetRequestTimeoutMillis(long newTimeoutMillis) {
-        if (newTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "newTimeoutMillis: " + newTimeoutMillis + " (expected: >= 0)");
-        }
+    public void setRequestTimeoutAfterMillis(long responseTimeoutMillis) {
+        checkArgument(responseTimeoutMillis > 0,
+                      "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: > 0)");
 
         long passedTimeMillis = 0;
         final TimeoutController requestTimeoutController = this.requestTimeoutController;
@@ -418,23 +435,36 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - requestTimeoutController.startTimeNanos());
             if (ch.eventLoop().inEventLoop()) {
-                requestTimeoutController.resetTimeout(newTimeoutMillis);
+                requestTimeoutController.resetTimeout(responseTimeoutMillis);
             } else {
                 ch.eventLoop().execute(() -> requestTimeoutController
-                        .resetTimeout(newTimeoutMillis));
+                        .resetTimeout(responseTimeoutMillis));
             }
         }
 
-        if (newTimeoutMillis == 0) {
+        if (responseTimeoutMillis == 0) {
             requestTimeoutMillis = 0;
         } else {
-            requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, newTimeoutMillis);
+            requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, responseTimeoutMillis);
         }
     }
 
     @Override
-    public void resetRequestTimeout(Duration newTimeout) {
-        resetRequestTimeoutMillis(requireNonNull(newTimeout, "newTimeout").toMillis());
+    public void setRequestTimeoutAfter(Duration responseTimeout) {
+        setRequestTimeoutAfterMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
+
+    @Override
+    public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
+        checkArgument(requestTimeoutAtMillis >= 0,
+                      "requestTimeoutAtMillis: " + requestTimeoutAtMillis + " (expected: >= 0)");
+        final long requestTimeoutAfter = requestTimeoutAtMillis - Instant.now().toEpochMilli();
+        setRequestTimeoutAfterMillis(requestTimeoutAfter);
+    }
+
+    @Override
+    public void setRequestTimeoutAt(Instant requestTimeoutAt) {
+        setRequestTimeoutAtMillis(requireNonNull(requestTimeoutAt, "requestTimeoutAt").toEpochMilli());
     }
 
     @Nullable

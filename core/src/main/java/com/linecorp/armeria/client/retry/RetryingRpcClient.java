@@ -111,7 +111,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                     "the response returned to the client has been cancelled"), initialAttempt);
             return;
         }
-        if (!resetResponseTimeout(ctx)) {
+        if (!setResponseTimeout(ctx)) {
             handleException(ctx, future, ResponseTimeoutException.get(), initialAttempt);
             return;
         }

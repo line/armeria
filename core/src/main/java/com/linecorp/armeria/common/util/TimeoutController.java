@@ -33,10 +33,10 @@ public interface TimeoutController {
      *
      * @param adjustmentMillis the adjustment of time amount value in milliseconds.
      */
-    void adjustTimeout(long adjustmentMillis);
+    void extendTimeout(long adjustmentMillis);
 
     /**
-     * Sets the new timeout that is after the specified {@code newTimeoutMillis} from the now.
+     * Sets the amount of time that is after the specified {@code newTimeoutMillis} from now.
      *
      * @param newTimeoutMillis the new timeout value in milliseconds. {@code 0} if disabled.
      */

@@ -47,9 +47,9 @@ public final class Main {
                      .service("/long", (ctx, req) -> {
                          // Note that you MUST adjust the request timeout if you want to send events for a
                          // longer period than the configured request timeout. The timeout can be disabled by
-                         // setting 0 like the below, but it is NOT RECOMMENDED in the real world application,
-                         // because it can leave a lot of unfinished requests.
-                         ctx.resetRequestTimeout(Duration.ZERO);
+                         // 'clearRequestTimeout()' like the below, but it is NOT RECOMMENDED in
+                         // the real world application, because it can leave a lot of unfinished requests.
+                         ctx.clearRequestTimeout();
                          return ServerSentEvents.fromPublisher(
                                  Flux.interval(sendingInterval)
                                      .take(eventCount)

@@ -193,7 +193,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                 callOptions.getDeadline());
                 close(status, new Metadata());
             } else {
-                ctx.resetResponseTimeoutMillis(remainingMillis);
+                ctx.setResponseTimeoutAfterMillis(remainingMillis);
                 ctx.setResponseTimeoutHandler(() -> {
                     final Status status = Status.DEADLINE_EXCEEDED
                             .augmentDescription(

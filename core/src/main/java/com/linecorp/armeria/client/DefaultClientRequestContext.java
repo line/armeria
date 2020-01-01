@@ -15,10 +15,12 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -425,10 +427,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public void setWriteTimeoutMillis(long writeTimeoutMillis) {
-        if (writeTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "writeTimeoutMillis: " + writeTimeoutMillis + " (expected: >= 0)");
-        }
+        checkArgument(writeTimeoutMillis >= 0,
+                      "writeTimeoutMillis: " + writeTimeoutMillis + " (expected: >= 0)");
         this.writeTimeoutMillis = writeTimeoutMillis;
     }
 
@@ -443,14 +443,29 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public void setResponseTimeoutMillis(long responseTimeoutMillis) {
-        if (responseTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: >= 0)");
+    public void clearResponseTimeout() {
+        if (responseTimeoutMillis == 0) {
+            return;
         }
+
+        final TimeoutController responseTimeoutController = this.responseTimeoutController;
+        responseTimeoutMillis = 0;
+        if (responseTimeoutController != null) {
+            if (eventLoop().inEventLoop()) {
+                responseTimeoutController.cancelTimeout();
+            } else {
+                eventLoop().execute(responseTimeoutController::cancelTimeout);
+            }
+        }
+    }
+
+    @Override
+    public void setResponseTimeoutMillis(long responseTimeoutMillis) {
+        checkArgument(responseTimeoutMillis >= 0,
+                      "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: >= 0)");
         final long adjustmentMillis =
                 LongMath.saturatedSubtract(responseTimeoutMillis, this.responseTimeoutMillis);
-        adjustResponseTimeoutMillis(adjustmentMillis);
+        extendResponseTimeoutMillis(adjustmentMillis);
     }
 
     @Override
@@ -459,7 +474,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public void adjustResponseTimeoutMillis(long adjustmentMillis) {
+    public void extendResponseTimeoutMillis(long adjustmentMillis) {
         if (adjustmentMillis == 0) {
             return;
         }
@@ -469,24 +484,22 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         final TimeoutController responseTimeoutController = this.responseTimeoutController;
         if (responseTimeoutController != null) {
             if (eventLoop().inEventLoop()) {
-                responseTimeoutController.adjustTimeout(adjustmentMillis);
+                responseTimeoutController.extendTimeout(adjustmentMillis);
             } else {
-                eventLoop().execute(() -> responseTimeoutController.adjustTimeout(adjustmentMillis));
+                eventLoop().execute(() -> responseTimeoutController.extendTimeout(adjustmentMillis));
             }
         }
     }
 
     @Override
-    public void adjustResponseTimeout(Duration adjustment) {
-        adjustResponseTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
+    public void extendResponseTimeout(Duration adjustment) {
+        extendResponseTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
     }
 
     @Override
-    public void resetResponseTimeoutMillis(long newTimeoutMillis) {
-        if (newTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "newTimeoutMillis: " + newTimeoutMillis + " (expected: >= 0)");
-        }
+    public void setResponseTimeoutAfterMillis(long responseTimeoutMillis) {
+        checkArgument(responseTimeoutMillis > 0,
+                      "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: > 0)");
 
         long passedTimeMillis = 0;
         final TimeoutController responseTimeoutController = this.responseTimeoutController;
@@ -494,22 +507,32 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - responseTimeoutController.startTimeNanos());
             if (channel().eventLoop().inEventLoop()) {
-                responseTimeoutController.resetTimeout(newTimeoutMillis);
+                responseTimeoutController.resetTimeout(responseTimeoutMillis);
             } else {
-                channel().eventLoop().execute(() -> responseTimeoutController.resetTimeout(newTimeoutMillis));
+                channel().eventLoop().execute(
+                        () -> responseTimeoutController.resetTimeout(responseTimeoutMillis));
             }
         }
 
-        if (newTimeoutMillis == 0) {
-            responseTimeoutMillis = 0;
-        } else {
-            responseTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, newTimeoutMillis);
-        }
+        this.responseTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, responseTimeoutMillis);
     }
 
     @Override
-    public void resetResponseTimeout(Duration responseTimeout) {
-        resetResponseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    public void setResponseTimeoutAfter(Duration responseTimeout) {
+        setResponseTimeoutAfterMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
+
+    @Override
+    public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
+        checkArgument(responseTimeoutAtMillis >= 0,
+                      "responseTimeoutAtMillis: " + responseTimeoutAtMillis + " (expected: >= 0)");
+        final long responseTimeoutAfter = responseTimeoutAtMillis - Instant.now().toEpochMilli();
+        setResponseTimeoutAfterMillis(responseTimeoutAfter);
+    }
+
+    @Override
+    public void setResponseTimeoutAt(Instant responseTimeoutAt) {
+        setResponseTimeoutAtMillis(requireNonNull(responseTimeoutAt, "responseTimeoutAt").toEpochMilli());
     }
 
     @Override

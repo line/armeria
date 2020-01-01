@@ -148,8 +148,11 @@ public class ServerTest {
                     s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                            ctx.resetRequestTimeoutMillis(
-                                    "/timeout-not".equals(ctx.path()) ? 0 : requestTimeoutMillis);
+                            if ("/timeout-not".equals(ctx.path())) {
+                               ctx.clearRequestTimeout();
+                            } else {
+                                ctx.setRequestTimeoutAfterMillis(requestTimeoutMillis);
+                            }
                             return delegate().serve(ctx, req);
                         }
                     };

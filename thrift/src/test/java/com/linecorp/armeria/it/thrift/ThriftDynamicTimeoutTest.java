@@ -132,7 +132,7 @@ class ThriftDynamicTimeoutTest {
 
         @Override
         public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
-            ctx.adjustRequestTimeoutMillis(((Number) req.params().get(0)).longValue());
+            ctx.extendRequestTimeoutMillis(((Number) req.params().get(0)).longValue());
             return delegate().serve(ctx, req);
         }
     }
@@ -145,7 +145,7 @@ class ThriftDynamicTimeoutTest {
 
         @Override
         public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
-            ctx.resetRequestTimeoutMillis(0);
+            ctx.clearRequestTimeout();
             return delegate().serve(ctx, req);
         }
     }
@@ -158,7 +158,7 @@ class ThriftDynamicTimeoutTest {
 
         @Override
         public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
-            ctx.adjustResponseTimeoutMillis(((Number) req.params().get(0)).longValue());
+            ctx.extendResponseTimeoutMillis(((Number) req.params().get(0)).longValue());
             return delegate().execute(ctx, req);
         }
     }
@@ -171,7 +171,7 @@ class ThriftDynamicTimeoutTest {
 
         @Override
         public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
-            ctx.resetResponseTimeoutMillis(0);
+            ctx.clearResponseTimeout();
             return delegate().execute(ctx, req);
         }
     }

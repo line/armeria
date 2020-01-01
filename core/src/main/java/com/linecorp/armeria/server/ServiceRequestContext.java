@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
@@ -335,6 +336,11 @@ public interface ServiceRequestContext extends RequestContext {
     long requestTimeoutMillis();
 
     /**
+     * Clears the request timeout.
+     */
+    void clearRequestTimeout();
+
+    /**
      * Sets the amount of time allowed from the start time of the request until receiving
      * the current {@link Request} and sending the corresponding {@link Response} completely.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
@@ -349,7 +355,10 @@ public interface ServiceRequestContext extends RequestContext {
      * assert ctx.requestTimeoutMillis() == 2000;
      * }</pre>
      *
-     * @deprecated Use {@link #adjustRequestTimeoutMillis(long)})} or {@link #resetRequestTimeoutMillis(long)}
+     * @param requestTimeoutMillis the amount of time in milliseconds from the start time of the request
+     *
+     * @deprecated Use {@link #extendRequestTimeoutMillis(long)})}, {@link #setRequestTimeoutAfterMillis(long)}
+     *             or {@link #setRequestTimeoutAtMillis(long)}
      */
     @Deprecated
     void setRequestTimeoutMillis(long requestTimeoutMillis);
@@ -369,74 +378,123 @@ public interface ServiceRequestContext extends RequestContext {
      * assert ctx.requestTimeoutMillis() == 2000;
      * }</pre>
      *
-     * @deprecated Use {@link #adjustRequestTimeout(Duration)} or {@link #resetRequestTimeout(Duration)}
+     * @deprecated Use {@link #extendRequestTimeout(Duration)}, {@link #setRequestTimeoutAfter(Duration)}
+     *             or {@link #setRequestTimeoutAt(Instant)}
+     *
+     * @param requestTimeout the amount of time from the start time of the request
      */
     @Deprecated
     void setRequestTimeout(Duration requestTimeout);
 
     /**
-     * Adjusts the existing timeout allowed by the specified {@code adjustmentMillis} until receiving
+     * Extends the existing timeout allowed by the specified {@code adjustmentMillis} until receiving
      * the current {@link Request} and sending the corresponding {@link Response} completely.
-     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     * Note that the negative {@code adjustment} reduces the existing timeout.
+     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
      * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
-     * ctx.adjustRequestTimeoutMillis(1000);
+     * ctx.extendRequestTimeoutMillis(1000);
      * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
+     * ctx.extendRequestTimeoutMillis(-500);
+     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
      * }</pre>
+     *
+     * @param adjustmentMillis the amount of time in milliseconds to extend the existing timeout
      */
-    void adjustRequestTimeoutMillis(long adjustmentMillis);
+    void extendRequestTimeoutMillis(long adjustmentMillis);
 
     /**
-     * Adjusts the existing timeout allowed by the specified {@code adjustment} until receiving
+     * Extends the existing timeout allowed by the specified {@code adjustment} until receiving
      * the current {@link Request} and sending the corresponding {@link Response} completely.
-     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     * Note that the negative {@code adjustment} reduces the existing timeout.
+     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
      * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
-     * ctx.adjustRequestTimeout(Duration.ofSeconds(1));
+     * ctx.extendRequestTimeout(Duration.ofSeconds(1));
      * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 1000;
+     * ctx.extendRequestTimeout(Duration.ofMillis(-500));
+     * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
      * }</pre>
+     *
+     * @param adjustment the amount of time to extend the existing timeout
      */
-    void adjustRequestTimeout(Duration adjustment);
+    void extendRequestTimeout(Duration adjustment);
 
     /**
-     * Sets the new request timeout allowed that is after the specified {@code requestTimeoutMillis}
-     * from the now until receiving the current {@link Request} and sending the corresponding
+     * Sets the amount of time allowed that is after the specified {@code requestTimeoutMillis}
+     * from now until receiving the current {@link Request} and sending the corresponding
      * {@link Response} completely.
-     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     * Note that the specified {@code requestTimeoutMillis} must be positive.
+     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ServiceRequestContext ctx = ...;
+     * // Set the deadline to 'now' + 1000
+     * ctx.setRequestTimeoutAfterMillis(1000);
+     * }</pre>
+     *
+     * @param requestTimeoutMillis the amount of time allowed in milliseconds from now
+     */
+    void setRequestTimeoutAfterMillis(long requestTimeoutMillis);
+
+    /**
+     * Sets the amount of time allowed that is after the specified {@code requestTimeout}
+     * from now until receiving the current {@link Request} and sending the corresponding
+     * {@link Response} completely.
+     * Note that the specified {@code requestTimeout} must be positive.
+     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ServiceRequestContext ctx = ...;
+     * // Set the deadline to 'now' + Duration.ofSeconds(1)
+     * ctx.setRequestTimeoutAfter(Duration.ofSeconds(1));
+     * }</pre>
+     *
+     * @param requestTimeout the amount of time allowed from now
+     */
+    void setRequestTimeoutAfter(Duration requestTimeout);
+
+    /**
+     * Sets the absolute request timeout allowed in milliseconds from the epoch of 1970-01-01T00:00:00Z
+     * until receiving the {@link Response} completely since the transfer of the {@link Response} started.
+     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
      * // Do something...
-     * ctx.resetRequestTimeoutMillis(1000);
-     * long passedTimeFromStartMillis = ...;
-     * assert ctx.requestTimeoutMillis() == passedTimeFromStartMillis + 1000;
+     * long responseTimeoutAt = Instant.now().plus(1, ChronoUnit.SECONDS).toEpochMilli();
+     * ctx.setRequestTimeoutAtMillis(responseTimeoutAt);
      * }</pre>
+     *
+     * @param requestTimeoutAtMillis the request timeout in milliseconds from
+     *                               the epoch of 1970-01-01T00:00:00Z
      */
-    void resetRequestTimeoutMillis(long requestTimeoutMillis);
+    void setRequestTimeoutAtMillis(long requestTimeoutAtMillis);
 
     /**
-     * Sets the new request timeout allowed that is after the specified {@code requestTimeout}
-     * from the now until receiving the current {@link Request} and sending the corresponding
-     * {@link Response} completely.
-     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
+     * Sets the absolute request timeout allowed until receiving the {@link Response} completely
+     * since the transfer of the {@link Response} started.
+     * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
      * // Do something...
-     * ctx.resetRequestTimeout(Duration.ofSeconds(1));
-     * long passedTimeFromStartMillis = ...;
-     * assert ctx.requestTimeoutMillis() == passedTimeFromStartMillis + 1000;
+     * ctx.setRequestTimeoutAt(Instant.now().plus(1, ChronoUnit.SECONDS));
      * }</pre>
+     *
+     * @param requestTimeoutAt the request timeout epoch instant.
      */
-    void resetRequestTimeout(Duration requestTimeout);
+    void setRequestTimeoutAt(Instant requestTimeoutAt);
 
     /**
      * Returns {@link Request} timeout handler which is executed when

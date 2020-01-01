@@ -406,7 +406,7 @@ public final class HealthCheckService implements TransientHttpService {
     private static void updateRequestTimeout(ServiceRequestContext ctx, long longPollingTimeoutMillis) {
         final long requestTimeoutMillis = ctx.requestTimeoutMillis();
         if (requestTimeoutMillis > 0) {
-            ctx.adjustRequestTimeoutMillis(longPollingTimeoutMillis);
+            ctx.extendRequestTimeoutMillis(longPollingTimeoutMillis);
         }
     }
 

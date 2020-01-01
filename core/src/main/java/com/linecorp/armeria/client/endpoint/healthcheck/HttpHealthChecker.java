@@ -166,7 +166,7 @@ final class HttpHealthChecker implements AsyncCloseable {
             if (maxLongPollingSeconds > 0) {
                 final long responseTimeoutMillis = ctx.responseTimeoutMillis();
                 if (responseTimeoutMillis > 0) {
-                    ctx.adjustResponseTimeoutMillis(TimeUnit.SECONDS.toMillis(maxLongPollingSeconds));
+                    ctx.extendResponseTimeoutMillis(TimeUnit.SECONDS.toMillis(maxLongPollingSeconds));
                 }
             }
             return delegate().execute(ctx, req);

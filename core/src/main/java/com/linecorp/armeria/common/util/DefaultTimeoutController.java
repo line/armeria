@@ -94,7 +94,7 @@ public class DefaultTimeoutController implements TimeoutController {
     }
 
     @Override
-    public void adjustTimeout(long adjustmentMillis) {
+    public void extendTimeout(long adjustmentMillis) {
         ensureInitialized();
         if (adjustmentMillis == 0) {
             return;

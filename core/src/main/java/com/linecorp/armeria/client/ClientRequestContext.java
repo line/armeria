@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
@@ -436,6 +437,11 @@ public interface ClientRequestContext extends RequestContext {
     long responseTimeoutMillis();
 
     /**
+     * Clears the response timeout.
+     */
+    void clearResponseTimeout();
+
+    /**
      * Sets the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started. This value is initially set from
      * {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
@@ -450,7 +456,11 @@ public interface ClientRequestContext extends RequestContext {
      * assert ctx.responseTimeoutMillis() == 2000;
      * }</pre>
      *
-     * @deprecated Use {@link #adjustResponseTimeoutMillis(long)} or {@link #resetResponseTimeoutMillis(long)}
+     * @param responseTimeoutMillis the amount of time allowed in milliseconds from the start time
+     *                              of the request
+     *
+     * @deprecated Use {@link #extendResponseTimeoutMillis(long)}, {@link #setResponseTimeoutAfterMillis(long)}
+     *             or {@link #setResponseTimeoutAfterMillis(long)}
      */
     @Deprecated
     void setResponseTimeoutMillis(long responseTimeoutMillis);
@@ -463,80 +473,129 @@ public interface ClientRequestContext extends RequestContext {
      * <p>For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
-     * ctx.setResponseTimeoutMillis(1000);
+     * ctx.setResponseTimeout(Duration.ofSeconds(1));
      * assert ctx.responseTimeoutMillis() == 1000;
      * // Do something...
-     * ctx.setResponseTimeoutMillis(2000);
+     * ctx.setResponseTimeout(Duration.ofSeconds(2));
      * assert ctx.responseTimeoutMillis() == 2000;
      * }</pre>
-     * @deprecated Use {@link #adjustResponseTimeout(Duration)} or {@link #resetResponseTimeout(Duration)}
+     *
+     * @param responseTimeout the amount of time allowed from the start time of the request
+     *
+     * @deprecated Use {@link #extendResponseTimeout(Duration)}, {@link #setResponseTimeoutAfter(Duration)}
+     *             or {@link #setResponseTimeoutAt(Instant)}
      */
     @Deprecated
     void setResponseTimeout(Duration responseTimeout);
 
     /**
-     * Adjusts the existing response timeout allowed by the specified {@code adjustmentMillis} until
+     * Extends the existing response timeout allowed by the specified {@code adjustmentMillis} until
      * receiving the {@link Response} completely since the transfer of the {@link Response} started.
-     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * Note that the negative {@code adjustmentMillis} reduces the existing timeout.
+     * The initial timeout is set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <p>For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
      * long oldResponseTimeoutMillis = ctx.responseTimeoutMillis();
-     * ctx.adjustResponseTimeoutMillis(1000);
+     * ctx.extendResponseTimeoutMillis(1000);
      * assert ctx.responseTimeoutMillis() == oldResponseTimeoutMillis + 1000;
+     * ctx.extendResponseTimeoutMillis(-500);
+     * assert ctx.responseTimeoutMillis() == oldResponseTimeoutMillis + 500;
      * }</pre>
+     *
+     * @param adjustmentMillis the amount of time in milliseconds to extend the existing timeout
      */
-    void adjustResponseTimeoutMillis(long adjustmentMillis);
+    void extendResponseTimeoutMillis(long adjustmentMillis);
 
     /**
-     * Adjusts the existing response timeout allowed by the specified {@code adjustment} until
+     * Extends the existing response timeout allowed by the specified {@code adjustment} until
      * since the transfer of the {@link Response} started.
-     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * Note that the negative {@code adjustment} reduces the existing timeout.
+     * The initial timeout is set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <p>For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
      * long oldResponseTimeoutMillis = ctx.responseTimeoutMillis();
-     * ctx.adjustResponseTimeout(Duration.ofSeconds(1));
+     * ctx.extendResponseTimeout(Duration.ofSeconds(1));
      * assert ctx.responseTimeoutMillis() == oldResponseTimeoutMillis + 1000;
+     * ctx.extendResponseTimeout(Duration.ofMillis(-500));
+     * assert ctx.responseTimeoutMillis() == oldResponseTimeoutMillis + 500;
      * }</pre>
+     *
+     * @param adjustment the amount of time to extend the existing timeout
      */
-    void adjustResponseTimeout(Duration adjustment);
+    void extendResponseTimeout(Duration adjustment);
 
     /**
-     * Sets the new response timeout allowed that is after the specified {@code responseTimeoutMillis}
-     * from the now until receiving the {@link Response} completely since the transfer
+     * Sets the amount of time allowed that is after the specified {@code responseTimeoutMillis}
+     * from now until receiving the {@link Response} completely since the transfer
      * of the {@link Response} started.
-     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * Note that the specified {@code responseTimeoutMillis} must be positive.
+     * The initial timeout is set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ClientRequestContext ctx = ...;
+     * // Set the deadline to 'now' + 1000
+     * ctx.setResponseTimeoutAfterMillis(1000);
+     * }</pre>
+     *
+     * @param responseTimeoutMillis the amount of time allowed in milliseconds from now
+     */
+    void setResponseTimeoutAfterMillis(long responseTimeoutMillis);
+
+    /**
+     * Sets the amount of time allowed that is after the specified {@code responseTimeout}
+     * from now until receiving the {@link Response} completely since the transfer
+     * of the {@link Response} started.
+     * Note that the specified {@code responseTimeout} must be positive.
+     * The initial timeout is set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * ClientRequestContext ctx = ...;
+     * // Set the deadline to 'now' + Duration.ofSeconds(1)
+     * ctx.setResponseTimeoutAfter(Duration.ofSeconds(1));
+     * }</pre>
+     *
+     * @param responseTimeout the amount of time allowed from now
+     */
+    void setResponseTimeoutAfter(Duration responseTimeout);
+
+    /**
+     * Sets the absolute response timeout allowed in milliseconds from the epoch of 1970-01-01T00:00:00Z
+     * until receiving the {@link Response} completely since the transfer of the {@link Response} started.
+     * The initial timeout is set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <p>For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
      * // Do something...
-     * ctx.resetResponseTimeoutMillis(1000);
-     * long passedTimeFromStartMillis = ...;
-     * assert ctx.responseTimeoutMillis() == passedTimeFromStartMillis + 1000;
+     * long responseTimeoutAt = Instant.now().plus(1, ChronoUnit.SECONDS).toEpochMilli();
+     * ctx.setResponseTimeoutAtMillis(responseTimeoutAt);
      * }</pre>
+     *
+     * @param responseTimeoutAtMillis the response timeout in milliseconds from 1970-01-01T00:00:00Z
      */
-    void resetResponseTimeoutMillis(long responseTimeoutMillis);
+    void setResponseTimeoutAtMillis(long responseTimeoutAtMillis);
 
     /**
-     * Sets the new response timeout allowed that is after the specified {@code responseTimeout}
-     * from the now until receiving the {@link Response} completely since the transfer
-     * of the {@link Response} started.
-     * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     * Sets the absolute response timeout allowed until receiving the {@link Response} completely
+     * since the transfer of the {@link Response} started.
+     * The initial timeout is set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <p>For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
      * // Do something...
-     * ctx.resetResponseTimeout(Duration.ofSeconds(1));
-     * long passedTimeFromStartMillis = ...;
-     * assert ctx.responseTimeoutMillis() == passedTimeFromStartMillis + 1000;
+     * ctx.setResponseTimeoutAt(Instant.now().plus(1, ChronoUnit.SECONDS));
      * }</pre>
+     *
+     * @param responseTimeoutAt the response timeout epoch instant.
      */
-    void resetResponseTimeout(Duration responseTimeout);
+    void setResponseTimeoutAt(Instant responseTimeoutAt);
 
     /**
      * Returns {@link Response} timeout handler which is executed when
