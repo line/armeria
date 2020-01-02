@@ -36,8 +36,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.linecorp.armeria.client.ClientBuilder;
-import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
@@ -135,23 +133,20 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void contentTypeNotThrift() throws Exception {
         // Browser clients often send a non-Thrift content type.
-        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE,
-                                                   "text/plain; charset=utf-8");
         final HelloService.Iface client =
-                Clients.newClient(server.uri(BINARY, "/hello"),
-                                  HelloService.Iface.class,
-                                  ClientOption.HTTP_HEADERS.newValue(headers));
+                Clients.builder(server.uri(BINARY, "/hello"))
+                       .setHttpHeader(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
+                       .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
     public void acceptNotSameAsContentType() throws Exception {
-        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.ACCEPT,
-                                                   "application/x-thrift; protocol=TBINARY");
+        final HttpHeaders headers = HttpHeaders.of();
         final HelloService.Iface client =
-                Clients.newClient(server.uri(TEXT, "/hello"),
-                                  HelloService.Iface.class,
-                                  ClientOption.HTTP_HEADERS.newValue(headers));
+                Clients.builder(server.uri(TEXT, "/hello"))
+                       .setHttpHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
+                       .build(HelloService.Iface.class);
         thrown.expect(InvalidResponseHeadersException.class);
         thrown.expectMessage(":status=406");
         client.hello("Trustin");
@@ -179,14 +174,14 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void givenClients_whenBinary_thenBuildClient() throws Exception {
         HelloService.Iface client =
-                new ClientBuilder(Scheme.of(BINARY, SessionProtocol.HTTP), newEndpoint(BINARY))
-                        .path("/hello")
-                        .build(HelloService.Iface.class);
+                Clients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), newEndpoint(BINARY))
+                       .path("/hello")
+                       .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
 
-        client = new ClientBuilder(Scheme.of(TEXT, SessionProtocol.HTTP), newEndpoint(TEXT))
-                .path("/hello")
-                .build(HelloService.Iface.class);
+        client = Clients.builder(Scheme.of(TEXT, SessionProtocol.HTTP), newEndpoint(TEXT))
+                        .path("/hello")
+                        .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 

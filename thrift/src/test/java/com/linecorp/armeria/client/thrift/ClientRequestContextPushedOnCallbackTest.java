@@ -26,8 +26,8 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -50,12 +50,13 @@ class ClientRequestContextPushedOnCallbackTest {
     @Test
     void pushedContextOnAsyncMethodCallback() throws Exception {
         final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
-        final AsyncIface client = new ClientBuilder(server.uri(BINARY, "/hello"))
-                .rpcDecorator((delegate, ctx, req) -> {
-                    ctxHolder.set(ctx);
-                    return delegate.execute(ctx, req);
-                })
-                .build(AsyncIface.class);
+        final AsyncIface client =
+                Clients.builder(server.uri(BINARY, "/hello"))
+                       .rpcDecorator((delegate, ctx, req) -> {
+                           ctxHolder.set(ctx);
+                           return delegate.execute(ctx, req);
+                       })
+                       .build(AsyncIface.class);
 
         final AtomicReference<ClientRequestContext> ctxHolder2 = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
@@ -78,12 +79,13 @@ class ClientRequestContextPushedOnCallbackTest {
     @Test
     void pushedContextOnRpcResponseCallback() throws Exception {
         final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
-        final THttpClient client = new ClientBuilder(server.uri(BINARY, "/"))
-                .rpcDecorator((delegate, ctx, req) -> {
-                    ctxHolder.set(ctx);
-                    return delegate.execute(ctx, req);
-                })
-                .build(THttpClient.class);
+        final THttpClient client =
+                Clients.builder(server.uri(BINARY, "/"))
+                       .rpcDecorator((delegate, ctx, req) -> {
+                           ctxHolder.set(ctx);
+                           return delegate.execute(ctx, req);
+                       })
+                       .build(THttpClient.class);
 
         final AtomicReference<ClientRequestContext> ctxHolder2 = new AtomicReference<>();
         final RpcResponse rpcRes = client.execute("/hello", AsyncIface.class, "hello", "foo");

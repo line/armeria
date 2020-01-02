@@ -22,7 +22,6 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -34,11 +33,12 @@ class THttpClientUnwrapTest {
 
     @Test
     void test() {
-        final HelloService.Iface client = new ClientBuilder("tbinary+http://127.0.0.1:1/")
-                .decorator(LoggingClient.newDecorator())
-                .rpcDecorator(RetryingRpcClient.newDecorator(
-                        (ctx, response) -> CompletableFuture.completedFuture(null)))
-                .build(HelloService.Iface.class);
+        final HelloService.Iface client =
+                Clients.builder("tbinary+http://127.0.0.1:1/")
+                       .decorator(LoggingClient.newDecorator())
+                       .rpcDecorator(RetryingRpcClient.newDecorator(
+                               (ctx, response) -> CompletableFuture.completedFuture(null)))
+                       .build(HelloService.Iface.class);
 
         assertThat(Clients.unwrap(client, HelloService.Iface.class)).containsSame(client);
 

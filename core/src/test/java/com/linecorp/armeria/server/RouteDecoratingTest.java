@@ -212,7 +212,9 @@ class RouteDecoratingTest {
                 ClientFactory.builder()
                              .addressResolverGroupFactory(eventLoop -> MockAddressResolverGroup.localhost())
                              .build();
-        final WebClient client = WebClient.of(factory, "http://" + host + ':' + virtualHostServer.httpPort());
+        final WebClient client = WebClient.builder("http://" + host + ':' + virtualHostServer.httpPort())
+                                          .factory(factory)
+                                          .build();
         final RequestHeaders headers;
         if (authorization != null) {
             headers = RequestHeaders.of(HttpMethod.GET, path, HttpHeaderNames.AUTHORIZATION, authorization);

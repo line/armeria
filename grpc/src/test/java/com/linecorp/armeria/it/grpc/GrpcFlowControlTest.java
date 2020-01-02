@@ -36,7 +36,7 @@ import org.junit.rules.Timeout;
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.FlowControlTestServiceGrpc.FlowControlTestServiceImplBase;
@@ -205,11 +205,11 @@ public class GrpcFlowControlTest {
 
     @Before
     public void setUp() {
-        client = new ClientBuilder(server.uri(GrpcSerializationFormats.PROTO, "/"))
-                .maxResponseLength(0)
-                .responseTimeoutMillis(0)
-                .option(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(Integer.MAX_VALUE))
-                .build(FlowControlTestServiceStub.class);
+        client = Clients.builder(server.uri(GrpcSerializationFormats.PROTO, "/"))
+                        .maxResponseLength(0)
+                        .responseTimeoutMillis(0)
+                        .option(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(Integer.MAX_VALUE))
+                        .build(FlowControlTestServiceStub.class);
     }
 
     @Test

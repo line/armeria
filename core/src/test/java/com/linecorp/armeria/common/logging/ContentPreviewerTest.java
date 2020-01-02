@@ -34,7 +34,6 @@ import org.junit.Test;
 import com.google.common.base.Strings;
 import com.google.common.io.BaseEncoding;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -142,7 +141,7 @@ public class ContentPreviewerTest {
             private final WebClient client;
 
             Client(String path) {
-                client = WebClient.of(ClientFactory.ofDefault(), serverRule.uri(path));
+                client = WebClient.of(serverRule.uri(path));
             }
 
             public RequestLog get(String path) throws Exception {

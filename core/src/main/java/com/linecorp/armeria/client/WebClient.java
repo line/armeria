@@ -36,41 +36,81 @@ import com.linecorp.armeria.common.util.Unwrappable;
 public interface WebClient extends ClientBuilderParams, Unwrappable {
 
     /**
-     * Creates a new web client without a base URI using the default {@link ClientFactory} and
+     * Returns a {@link WebClient} without a base URI using the default {@link ClientFactory} and
      * the default {@link ClientOptions}.
      */
     static WebClient of() {
-        return builder().options(ClientOptions.of()).build();
+        return DefaultWebClient.DEFAULT;
     }
 
     /**
-     * Creates a new web client that connects to the specified {@code uri} using the default
+     * Returns a new {@link WebClient} that connects to the specified {@code uri} using the default options.
+     *
+     * @param uri the URI of the server endpoint
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     */
+    static WebClient of(String uri) {
+        return builder(uri).build();
+    }
+
+    /**
+     * Returns a new {@link WebClient} that connects to the specified {@link URI} using the default options.
+     *
+     * @param uri the {@link URI} of the server endpoint
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@link URI} is not an HTTP scheme
+     */
+    static WebClient of(URI uri) {
+        return builder(uri).build();
+    }
+
+    /**
+     * Returns a new {@link WebClient} client that connects to the specified {@link Endpoint} with
+     * the {@link SessionProtocol} using the default {@link ClientFactory} and the default
+     * {@link ClientOptions}.
+     *
+     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
+     * @param endpoint the server {@link Endpoint}
+     */
+    static WebClient of(SessionProtocol protocol, Endpoint endpoint) {
+        return builder(protocol, endpoint).build();
+    }
+
+    /**
+     * Returns a new {@link WebClient} that connects to the specified {@code uri} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     *
+     * @deprecated Use {@link #builder(String)} and {@link WebClientBuilder#option(ClientOptionValue)}.
      */
+    @Deprecated
     static WebClient of(String uri, ClientOptionValue<?>... options) {
-        return of(ClientFactory.ofDefault(), uri, options);
+        return builder(uri).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@code uri} using the default
+     * Returns a new web client that connects to the specified {@code uri} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     *
+     * @deprecated Use {@link #builder(String)} and {@link WebClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     static WebClient of(String uri, ClientOptions options) {
-        return of(ClientFactory.ofDefault(), uri, options);
+        return builder(uri).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@code uri} using an alternative
+     * Returns a new web client that connects to the specified {@code uri} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -78,13 +118,17 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     *
+     * @deprecated Use {@link #builder(String)}, {@link WebClientBuilder#factory(ClientFactory)}
+     *             and {@link WebClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     static WebClient of(ClientFactory factory, String uri, ClientOptionValue<?>... options) {
         return builder(uri).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@code uri} using an alternative
+     * Returns a new web client that connects to the specified {@code uri} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -92,39 +136,49 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     *
+     * @deprecated Use {@link #builder(String)}, {@link WebClientBuilder#factory(ClientFactory)}
+     *             and {@link WebClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     static WebClient of(ClientFactory factory, String uri, ClientOptions options) {
         return builder(uri).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@link URI} using the default
+     * Returns a new web client that connects to the specified {@link URI} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     *
+     * @deprecated Use {@link #builder(URI)} and {@link WebClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     static WebClient of(URI uri, ClientOptionValue<?>... options) {
-        return of(ClientFactory.ofDefault(), uri, options);
+        return builder(uri).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@link URI} using the default
+     * Returns a new web client that connects to the specified {@link URI} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     *
+     * @deprecated Use {@link #builder(URI)} and {@link WebClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     static WebClient of(URI uri, ClientOptions options) {
-        return of(ClientFactory.ofDefault(), uri, options);
+        return builder(uri).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@link URI} using an alternative
+     * Returns a new web client that connects to the specified {@link URI} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -132,13 +186,17 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     *
+     * @deprecated Use {@link #builder(URI)}, {@link WebClientBuilder#factory(ClientFactory)}
+     *             and {@link WebClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     static WebClient of(ClientFactory factory, URI uri, ClientOptionValue<?>... options) {
         return builder(uri).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@link URI} using an alternative
+     * Returns a new web client that connects to the specified {@link URI} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -146,58 +204,80 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     *
+     * @deprecated Use {@link #builder(URI)}, {@link WebClientBuilder#factory(ClientFactory)}
+     *             and {@link WebClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     static WebClient of(ClientFactory factory, URI uri, ClientOptions options) {
         return builder(uri).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@link Endpoint} with
+     * Returns a new web client that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using the default {@link ClientFactory}.
      *
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptionValue}s
+     *
+     * @deprecated Use {@link #builder(SessionProtocol, Endpoint)}
+     *             and {@link WebClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     static WebClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptionValue<?>... options) {
-        return of(ClientFactory.ofDefault(), protocol, endpoint, options);
+        return builder(protocol, endpoint).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@link Endpoint} with
+     * Returns a new web client that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using the default {@link ClientFactory}.
      *
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptions}
+     *
+     * @deprecated Use {@link #builder(SessionProtocol, Endpoint)}
+     *             and {@link WebClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     static WebClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptions options) {
-        return of(ClientFactory.ofDefault(), protocol, endpoint, options);
+        return builder(protocol, endpoint).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@link Endpoint} with
+     * Returns a new web client that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptionValue}s
+     *
+     * @deprecated Use {@link #builder(SessionProtocol, Endpoint)},
+     *             {@link WebClientBuilder#factory(ClientFactory)}
+     *             and {@link WebClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     static WebClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
                         ClientOptionValue<?>... options) {
         return builder(protocol, endpoint).factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new web client that connects to the specified {@link Endpoint} with
+     * Returns a new web client that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptions}
+     *
+     * @deprecated Use {@link #builder(SessionProtocol, Endpoint)},
+     *             {@link WebClientBuilder#factory(ClientFactory)}
+     *             and {@link WebClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     static WebClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
                         ClientOptions options) {
         return builder(protocol, endpoint).factory(factory).options(options).build();

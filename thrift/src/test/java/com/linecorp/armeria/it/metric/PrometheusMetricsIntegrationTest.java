@@ -37,8 +37,8 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingRpcClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -291,11 +291,11 @@ public class PrometheusMetricsIntegrationTest {
     }
 
     private static void makeRequest(String path, String serviceName, String name) throws TException {
-        final Iface client = new ClientBuilder(server.uri(BINARY, path))
-                .factory(clientFactory)
-                .rpcDecorator(MetricCollectingRpcClient.newDecorator(
-                        new MeterIdPrefixFunctionImpl("client", serviceName)))
-                .build(Iface.class);
+        final Iface client = Clients.builder(server.uri(BINARY, path))
+                                    .factory(clientFactory)
+                                    .rpcDecorator(MetricCollectingRpcClient.newDecorator(
+                                            new MeterIdPrefixFunctionImpl("client", serviceName)))
+                                    .build(Iface.class);
         client.hello(name);
     }
 

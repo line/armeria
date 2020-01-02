@@ -107,9 +107,10 @@ public class ArmeriaSslConfigurationTest {
     }
 
     private void verify(SessionProtocol protocol) {
-        final HttpResponse response = WebClient.of(clientFactory, newUrl(protocol)).get("/ok");
-
-        final AggregatedHttpResponse res = response.aggregate().join();
+        final AggregatedHttpResponse res = WebClient.builder(newUrl(protocol))
+                                                    .factory(clientFactory)
+                                                    .build()
+                                                    .get("/ok").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("ok");
     }

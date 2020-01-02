@@ -21,13 +21,11 @@
  * <h1>Setup Client with Circuit Breaker</h1>
  * <h2>Example</h2>
  * <pre>{@code
- * Iface helloClient = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
- *                     .decorator(
- *                         CircuitBreakerClient.newDecorator(
- *                             CircuitBreaker.builder("hello").build()
- *                         )
- *                     )
- *                     .build(Iface.class);
+ * Iface helloClient =
+ *     Clients.builder("tbinary+http://127.0.0.1:8080/hello")
+ *            .decorator(CircuitBreakerClient.newDecorator(
+ *                    CircuitBreaker.builder("hello").build()))
+ *            .build(Iface.class);
  * }</pre>
  *
  * <h1>A Unit of Failure Detection</h1>
@@ -41,13 +39,11 @@
  * <h2>Example</h2>
  * <pre>{@code
  * // Setup with per-method failure detection
- * AsyncIface helloClient = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
- *                          .decorator(
- *                              CircuitBreakerClient.newPerMethodDecorator(
- *                                  method -> CircuitBreaker.builder(method).build()
- *                              )
- *                          )
- *                          .build(AsyncIface.class);
+ * AsyncIface helloClient =
+ *     Clients.builder("tbinary+http://127.0.0.1:8080/hello")
+ *            .decorator(CircuitBreakerClient.newPerMethodDecorator(
+ *                    method -> CircuitBreaker.builder(method).build()))
+ *            .build(AsyncIface.class);
  * }</pre>
  *
  * <h1>Fallback</h1>

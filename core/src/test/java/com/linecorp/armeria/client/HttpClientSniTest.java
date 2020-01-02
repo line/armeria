@@ -116,7 +116,9 @@ class HttpClientSniTest {
     }
 
     private static String get(String fqdn) throws Exception {
-        final WebClient client = WebClient.of(clientFactory, "https://" + fqdn + ':' + httpsPort);
+        final WebClient client = WebClient.builder("https://" + fqdn + ':' + httpsPort)
+                                          .factory(clientFactory)
+                                          .build();
 
         final AggregatedHttpResponse response = client.get("/").aggregate().get();
 
@@ -140,7 +142,9 @@ class HttpClientSniTest {
 
     @Test
     void testCustomAuthorityWithAdditionalHeaders() throws Exception {
-        final WebClient client = WebClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
+        final WebClient client = WebClient.builder("https://127.0.0.1:" + httpsPort)
+                                          .factory(clientFactory)
+                                          .build();
         try (SafeCloseable unused = Clients.withHttpHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
             final AggregatedHttpResponse response = client.get("/").aggregate().get();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);

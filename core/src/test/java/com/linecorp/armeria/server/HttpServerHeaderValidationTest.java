@@ -79,10 +79,13 @@ class HttpServerHeaderValidationTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H1, H2C, H2)
-                         .map(protocol -> Arguments.of(WebClient.of(
-                                 ClientFactory.insecure(),
-                                 protocol.uriText() + "://127.0.0.1:" +
-                                 (protocol.isTls() ? server.httpsPort() : server.httpPort()))));
+                         .map(protocol -> {
+                             final String uri = protocol.uriText() + "://127.0.0.1:" +
+                                                (protocol.isTls() ? server.httpsPort() : server.httpPort());
+                             return Arguments.of(WebClient.builder(uri)
+                                                          .factory(ClientFactory.insecure())
+                                                          .build());
+                         });
         }
     }
 }

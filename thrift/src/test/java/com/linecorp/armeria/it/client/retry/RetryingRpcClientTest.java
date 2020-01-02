@@ -42,9 +42,9 @@ import org.apache.thrift.TApplicationException;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
@@ -147,31 +147,32 @@ public class RetryingRpcClientTest {
 
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts) {
-        return new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(RetryingRpcClient.builder(strategy)
-                                               .maxTotalAttempts(maxAttempts)
-                                               .newDecorator())
-                .build(HelloService.Iface.class);
+        return Clients.builder(server.uri(BINARY, "/thrift"))
+                      .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                                     .maxTotalAttempts(maxAttempts)
+                                                     .newDecorator())
+                      .build(HelloService.Iface.class);
     }
 
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts, BlockingQueue<RequestLog> logQueue) {
-        return new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(RetryingRpcClient.builder(strategy)
-                                               .maxTotalAttempts(maxAttempts)
-                                               .newDecorator())
-                .rpcDecorator((delegate, ctx, req) -> {
-                    ctx.log().addListener(logQueue::add, RequestLogAvailability.COMPLETE);
-                    return delegate.execute(ctx, req);
-                })
-                .build(HelloService.Iface.class);
+        return Clients.builder(server.uri(BINARY, "/thrift"))
+                      .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                                     .maxTotalAttempts(maxAttempts)
+                                                     .newDecorator())
+                      .rpcDecorator((delegate, ctx, req) -> {
+                          ctx.log().addListener(logQueue::add, RequestLogAvailability.COMPLETE);
+                          return delegate.execute(ctx, req);
+                      })
+                      .build(HelloService.Iface.class);
     }
 
     @Test
     public void execute_void() throws Exception {
-        final DevNullService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-devnull"))
-                .rpcDecorator(RetryingRpcClient.newDecorator(retryOnException, 10))
-                .build(DevNullService.Iface.class);
+        final DevNullService.Iface client =
+                Clients.builder(server.uri(BINARY, "/thrift-devnull"))
+                       .rpcDecorator(RetryingRpcClient.newDecorator(retryOnException, 10))
+                       .build(DevNullService.Iface.class);
 
         doThrow(new IllegalArgumentException())
                 .doThrow(new IllegalArgumentException())
@@ -192,12 +193,13 @@ public class RetryingRpcClientTest {
                     return CompletableFuture.completedFuture(Backoff.fixed(8000));
                 };
 
-        final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .responseTimeoutMillis(10000)
-                .factory(factory)
-                .rpcDecorator(RetryingRpcClient.builder(strategy)
-                                               .newDecorator())
-                .build(HelloService.Iface.class);
+        final HelloService.Iface client =
+                Clients.builder(server.uri(BINARY, "/thrift"))
+                       .responseTimeoutMillis(10000)
+                       .factory(factory)
+                       .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                                      .newDecorator())
+                       .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
         // There's no way to notice that the RetryingClient has scheduled the next retry.
@@ -227,16 +229,17 @@ public class RetryingRpcClientTest {
     @Test
     public void doNotRetryWhenResponseIsCancelled() throws Exception {
         final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
-        final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(RetryingRpcClient.builder(retryAlways)
-                                               .newDecorator())
-                .rpcDecorator((delegate, ctx, req) -> {
-                    context.set(ctx);
-                    final RpcResponse res = delegate.execute(ctx, req);
-                    res.cancel(true);
-                    return res;
-                })
-                .build(HelloService.Iface.class);
+        final HelloService.Iface client =
+                Clients.builder(server.uri(BINARY, "/thrift"))
+                       .rpcDecorator(RetryingRpcClient.builder(retryAlways)
+                                                      .newDecorator())
+                       .rpcDecorator((delegate, ctx, req) -> {
+                           context.set(ctx);
+                           final RpcResponse res = delegate.execute(ctx, req);
+                           res.cancel(true);
+                           return res;
+                       })
+                       .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
         assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
