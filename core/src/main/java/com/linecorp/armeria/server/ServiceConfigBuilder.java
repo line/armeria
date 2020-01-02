@@ -29,8 +29,6 @@ final class ServiceConfigBuilder {
 
     private final Route route;
     private final HttpService service;
-    @Nullable
-    private String loggerName;
 
     @Nullable
     private Long requestTimeoutMillis;
@@ -49,11 +47,6 @@ final class ServiceConfigBuilder {
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
-    }
-
-    ServiceConfigBuilder loggerName(String loggerName) {
-        this.loggerName = requireNonNull(loggerName, "loggerName");
-        return this;
     }
 
     @Nullable
@@ -127,7 +120,7 @@ final class ServiceConfigBuilder {
                         AccessLogWriter defaultAccessLogWriter,
                         boolean defaultShutdownAccessLogWriterOnStop) {
         return new ServiceConfig(
-                route, service, loggerName,
+                route, service,
                 requestTimeoutMillis != null ? requestTimeoutMillis : defaultRequestTimeoutMillis,
                 maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
@@ -144,7 +137,6 @@ final class ServiceConfigBuilder {
         return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("route", route)
                           .add("service", service)
-                          .add("loggerName", loggerName)
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)

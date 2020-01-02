@@ -69,7 +69,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.DefaultHttpData;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -89,14 +88,13 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.server.encoding.HttpEncodingService;
+import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
 
@@ -108,7 +106,7 @@ class HttpServerTest {
             ClientFactory.builder()
                          .workerGroup(workerGroup, false) // Will be shut down by the Server.
                          .idleTimeout(Duration.ofSeconds(3))
-                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .tlsNoVerify()
                          .build();
 
     private static final long MAX_CONTENT_LENGTH = 65536;
@@ -301,7 +299,7 @@ class HttpServerTest {
                             HttpData.ofUtf8("is "),
                             HttpData.ofUtf8("awesome!"));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/images", new AbstractHttpService() {
                 @Override
@@ -313,7 +311,7 @@ class HttpServerTest {
                             HttpData.ofUtf8("is "),
                             HttpData.ofUtf8("awesome!"));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/small", new AbstractHttpService() {
                 @Override
@@ -325,7 +323,7 @@ class HttpServerTest {
                                                HttpHeaderNames.CONTENT_LENGTH, response.length()),
                             HttpData.ofUtf8(response));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/large", new AbstractHttpService() {
                 @Override
@@ -337,7 +335,7 @@ class HttpServerTest {
                                                HttpHeaderNames.CONTENT_LENGTH, response.length()),
                             HttpData.ofUtf8(response));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/sslsession", new AbstractHttpService() {
                 @Override
@@ -349,7 +347,7 @@ class HttpServerTest {
                     }
                     return HttpResponse.of(HttpStatus.OK);
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/headers", new AbstractHttpService() {
                 @Override
@@ -361,7 +359,7 @@ class HttpServerTest {
                                                HttpHeaderNames.of("X-Custom-Header2"), "custom2"),
                             HttpData.ofUtf8("headers"));
                 }
-            }.decorate(HttpEncodingService.class));
+            }.decorate(EncodingService.class));
 
             sb.service("/trailers", new AbstractHttpService() {
                 @Override
@@ -387,16 +385,14 @@ class HttpServerTest {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
                 final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
-                                       new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
-                                                           true));
+                                       HttpData.ofUtf8(payload).withEndOfStream());
             });
 
             sb.service("/additional-trailers-no-eos", (ctx, req) -> {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
                 final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
-                                       new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
-                                                           false));
+                                       HttpData.ofUtf8(payload).withEndOfStream());
             });
 
             sb.serviceUnder("/not-cached-paths", (ctx, req) -> HttpResponse.of(HttpStatus.OK));

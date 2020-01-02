@@ -70,34 +70,42 @@ attach it to your :api:`Server`.
 
 .. code-block:: java
 
-    SamlServiceProvider ssp = new SamlServiceProviderBuilder()
-            // Specify information about your keystore. The keystore contains two key pairs
-            // which are identified as 'signing' and 'encryption'.
-            .credentialResolver(new KeyStoreCredentialResolverBuilder("sample.jks")
-                                        .type("PKCS12")
-                                        .password("N5^X[hvG")
-                                        // You need to specify your key pair and its password here.
-                                        .addKeyPassword("signing", "N5^X[hvG")
-                                        .addKeyPassword("encryption", "N5^X[hvG")
-                                        .build())
-            // Specify the entity ID of this service provider. You can specify what you want.
-            .entityId("your-sp-id")
-            .hostname("your-service-domain-name")
-            // Specify an authorizer in order to authenticate a request.
-            .authorizer(new Authorizer<HttpRequest>() { ... })
-            // Speicify an SAML single sign-on handler which sends a response to an end user
-            // after he or she is authenticated or not.
-            .ssoHandler(new SamlSingleSignOnHandler() { ... })
-            // Specify the signature algorithm of your key.
-            .signatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA)
-            .idp()
-            // Specify the entity ID of the identity provider. It can be found from the metadata of
-            // the identity provider.
-            .entityId("https://idp.ssocircle.com")
-            // Specify the endpoint that is supposed to send an authentication request.
-            .ssoEndpoint(ofHttpPost("https://idp.ssocircle.com:443/sso/SSOPOST/metaAlias/publicidp"))
-            .and()
-            .build();
+    // Specify information about your keystore.
+    // The keystore contains two key pairs, which are identified as 'signing' and 'encryption'.
+    KeyStoreCredentialResolver credentialResolver =
+            new KeyStoreCredentialResolverBuilder(ClassLoader.getSystemClassLoader(),
+                                                  "sample.jks")
+                    .type("PKCS12")
+                    .password("N5^X[hvG")
+                    // You need to specify your key pair and its password here.
+                    .addKeyPassword("signing", "N5^X[hvG")
+                    .addKeyPassword("encryption", "N5^X[hvG")
+                    .build();
+
+    SamlServiceProvider ssp =
+            SamlServiceProvider.builder()
+                               .credentialResolver(credentialResolver)
+                               // Specify the entity ID of this service provider.
+                               // You can specify what you want.
+                               .entityId("your-sp-id")
+                               .hostname("your-service-domain-name")
+                               // Specify an authorizer in order to authenticate a request.
+                               .authorizer(new Authorizer<HttpRequest>() { ... })
+                               // Speicify an SAML single sign-on handler
+                               // which sends a response to an end user
+                               // after he or she is authenticated or not.
+                               .ssoHandler(new SamlSingleSignOnHandler() { ... })
+                               // Specify the signature algorithm of your key.
+                               .signatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA)
+                               .idp()
+                               // Specify the entity ID of the identity provider.
+                               // It can be found from the metadata of the identity provider.
+                               .entityId("https://idp.ssocircle.com")
+                               // Specify the endpoint that is supposed to send an authentication request.
+                               .ssoEndpoint(
+                                   ofHttpPost("https://idp.ssocircle.com:443/sso/SSOPOST/metaAlias/publicidp"))
+                               .and()
+                               .build();
 
     Server server = Server.builder()
                           .https(8443)

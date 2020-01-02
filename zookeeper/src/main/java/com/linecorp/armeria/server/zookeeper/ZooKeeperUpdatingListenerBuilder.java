@@ -37,10 +37,10 @@ import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
  * <h2>Examples</h2>
  * <pre>{@code
  * ZooKeeperUpdatingListener listener =
- *     new ZooKeeperUpdatingListenerBuilder("myZooKeeperHost:2181", "/myProductionEndpoints")
- *         .sessionTimeoutMillis(10000)
- *         .nodeValueCodec(NodeValueCodec.DEFAULT)
- *         .build();
+ *     ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints")
+ *                              .sessionTimeoutMillis(10000)
+ *                              .nodeValueCodec(NodeValueCodec.ofDefault())
+ *                              .build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>
@@ -52,9 +52,9 @@ import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
  *
  * <pre>{@code
  * ZooKeeperUpdatingListener listener =
- *     new ZooKeeperUpdatingListenerBuilder(curatorFramework, "/myProductionEndpoints")
- *         .nodeValueCodec(NodeValueCodec.DEFAULT)
- *         .build();
+ *     ZooKeeperUpdatingListener.builder(curatorFramework, "/myProductionEndpoints")
+ *                              .nodeValueCodec(NodeValueCodec.DEFAULT)
+ *                              .build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>
@@ -69,7 +69,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
     private int sessionTimeoutMillis = ZooKeeperDefaults.DEFAULT_SESSION_TIMEOUT_MS;
     @Nullable
     private Endpoint endpoint;
-    private NodeValueCodec nodeValueCodec = NodeValueCodec.DEFAULT;
+    private NodeValueCodec nodeValueCodec = NodeValueCodec.ofDefault();
 
     /**
      * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
@@ -77,7 +77,10 @@ public final class ZooKeeperUpdatingListenerBuilder {
      *
      * @param client the curator framework instance
      * @param zNodePath the ZooKeeper node to register
+     *
+     * @deprecated Use {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}.
      */
+    @Deprecated
     public ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath) {
         this.client = requireNonNull(client, "client");
         connectionStr = null;
@@ -90,7 +93,10 @@ public final class ZooKeeperUpdatingListenerBuilder {
      *
      * @param connectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
+     *
+     * @deprecated Use {@link ZooKeeperUpdatingListener#builder(String, String)}.
      */
+    @Deprecated
     public ZooKeeperUpdatingListenerBuilder(String connectionStr, String zNodePath) {
         this.connectionStr = requireNonNull(connectionStr, "connectionStr");
         checkArgument(!this.connectionStr.isEmpty(), "connectionStr can't be empty");
@@ -109,7 +115,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
      * @param connectTimeout the connect timeout
      *
      * @throws IllegalStateException if this builder is constructed with
-     *                               {@link #ZooKeeperUpdatingListenerBuilder(CuratorFramework, String)}
+     *                               {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}
      */
     public ZooKeeperUpdatingListenerBuilder connectTimeout(Duration connectTimeout) {
         requireNonNull(connectTimeout, "connectTimeout");
@@ -124,7 +130,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
      * @param connectTimeoutMillis the connect timeout
      *
      * @throws IllegalStateException if this builder is constructed with
-     *                               {@link #ZooKeeperUpdatingListenerBuilder(CuratorFramework, String)}
+     *                               {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}
      */
     public ZooKeeperUpdatingListenerBuilder connectTimeoutMillis(long connectTimeoutMillis) {
         ensureInternalClient();
@@ -140,7 +146,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
      * @param sessionTimeout the session timeout
      *
      * @throws IllegalStateException if this builder is constructed with
-     *                               {@link #ZooKeeperUpdatingListenerBuilder(CuratorFramework, String)}
+     *                               {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}
      */
     public ZooKeeperUpdatingListenerBuilder sessionTimeout(Duration sessionTimeout) {
         requireNonNull(sessionTimeout, "sessionTimeout");
@@ -155,7 +161,7 @@ public final class ZooKeeperUpdatingListenerBuilder {
      * @param sessionTimeoutMillis the session timeout
      *
      * @throws IllegalStateException if this builder is constructed with
-     *                               {@link #ZooKeeperUpdatingListenerBuilder(CuratorFramework, String)}
+     *                               {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}
      */
     public ZooKeeperUpdatingListenerBuilder sessionTimeoutMillis(long sessionTimeoutMillis) {
         ensureInternalClient();

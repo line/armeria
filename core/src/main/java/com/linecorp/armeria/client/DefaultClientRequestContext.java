@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -21,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
@@ -50,20 +51,19 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 /**
  * Default {@link ClientRequestContext} implementation.
  */
 public class DefaultClientRequestContext extends NonWrappingRequestContext implements ClientRequestContext {
-    static final ThreadLocal<Consumer<ClientRequestContext>> THREAD_LOCAL_CONTEXT_CUSTOMIZER =
-            new ThreadLocal<>();
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -81,6 +81,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private Endpoint endpoint;
     @Nullable
     private final String fragment;
+    @Nullable
+    private final ServiceRequestContext root;
 
     private final DefaultRequestLog log;
 
@@ -95,6 +97,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Nullable
     private String strVal;
+
+    // We use null checks which are faster than checking if a list is empty,
+    // because it is more common to have no customizers than to have any.
+    @Nullable
+    private volatile List<Consumer<? super ClientRequestContext>> customizers;
 
     /**
      * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
@@ -139,12 +146,24 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq);
+        this(factory, eventLoop, meterRegistry, sessionProtocol,
+             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext());
+    }
+
+    private DefaultClientRequestContext(
+            @Nullable ClientFactory factory, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
+            SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
+            @Nullable String query, @Nullable String fragment, ClientOptions options,
+            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            @Nullable ServiceRequestContext root) {
+        super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq,
+              root);
 
         this.factory = factory;
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
         this.fragment = fragment;
+        this.root = root;
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
                                     options.responseContentPreviewerFactory());
@@ -153,6 +172,19 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         responseTimeoutMillis = options.responseTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
         additionalRequestHeaders = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.of());
+        customizers = copyThreadLocalCustomizers();
+    }
+
+    @Nullable
+    private static ServiceRequestContext serviceRequestContext() {
+        final RequestContext current = RequestContext.currentOrNull();
+        if (current instanceof ServiceRequestContext) {
+            return (ServiceRequestContext) current;
+        }
+        if (current instanceof ClientRequestContext) {
+            return ((ClientRequestContext) current).root();
+        }
+        return null;
     }
 
     /**
@@ -182,12 +214,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 // Note: thread-local customizer must be run before EndpointSelector.select()
                 //       so that the customizer can inject the attributes which may be required
                 //       by the EndpointSelector.
-                runThreadLocalContextCustomizer();
+                runThreadLocalContextCustomizers();
                 updateEndpoint(endpointSelector.select(this));
             } else {
                 endpointSelector = null;
                 updateEndpoint(endpoint);
-                runThreadLocalContextCustomizer();
+                runThreadLocalContextCustomizers();
             }
 
             if (eventLoop == null) {
@@ -215,10 +247,13 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         autoFillSchemeAndAuthority();
     }
 
-    private void runThreadLocalContextCustomizer() {
-        final Consumer<ClientRequestContext> customizer = THREAD_LOCAL_CONTEXT_CUSTOMIZER.get();
-        if (customizer != null) {
-            customizer.accept(this);
+    private void runThreadLocalContextCustomizers() {
+        final List<Consumer<? super ClientRequestContext>> customizers = this.customizers;
+        if (customizers != null) {
+            this.customizers = null;
+            for (Consumer<? super ClientRequestContext> c : customizers) {
+                c.accept(this);
+            }
         }
     }
 
@@ -259,7 +294,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                                         @Nullable RpcRequest rpcReq,
                                         Endpoint endpoint) {
         super(ctx.meterRegistry(), ctx.sessionProtocol(), id, ctx.method(), ctx.path(), ctx.query(),
-              req, rpcReq);
+              req, rpcReq, ctx.root());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -274,6 +309,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         endpointSelector = ctx.endpointSelector();
         updateEndpoint(requireNonNull(endpoint, "endpoint"));
         fragment = ctx.fragment();
+        root = ctx.root();
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
                                     options.responseContentPreviewerFactory());
@@ -283,16 +319,31 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
-        for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
+        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
-        runThreadLocalContextCustomizer();
+    }
+
+    @Nullable
+    private List<Consumer<? super ClientRequestContext>> copyThreadLocalCustomizers() {
+        final ClientThreadLocalState state = ClientThreadLocalState.get();
+        if (state == null) {
+            return null;
+        }
+
+        state.addCapturedContext(this);
+        return state.copyCustomizers();
     }
 
     @SuppressWarnings("unchecked")
-    private <T> void addAttr(Attribute<?> attribute) {
-        final Attribute<T> a = (Attribute<T>) attribute;
-        attr(a.key()).set(a.get());
+    private <T> void addAttr(Entry<AttributeKey<?>, Object> attribute) {
+        setAttr((AttributeKey<T>) attribute.getKey(), (T) attribute.getValue());
+    }
+
+    @Nullable
+    @Override
+    public ServiceRequestContext root() {
+        return root;
     }
 
     @Override

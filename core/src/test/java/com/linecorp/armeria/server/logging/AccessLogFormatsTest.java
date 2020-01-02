@@ -47,7 +47,6 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -56,6 +55,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -192,7 +192,7 @@ class AccessLogFormatsTest {
                                      .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
                                      .id(id)
                                      .build();
-        ctx.attr(Attr.ATTR_KEY).set(new Attr("line"));
+        ctx.setAttr(Attr.ATTR_KEY, new Attr("line"));
 
         final RequestLog log = ctx.log();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
@@ -303,7 +303,7 @@ class AccessLogFormatsTest {
         // RequestLogAvailabilityException will be raised inside AccessLogger#format before injecting each
         // component to RequestLog. So we cannot get the expected log message here.
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
-        logBuilder.requestContent(new DefaultRpcRequest(Object.class, "rpcMethod"), null);
+        logBuilder.requestContent(RpcRequest.of(Object.class, "rpcMethod"), null);
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
         logBuilder.endRequest();
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);

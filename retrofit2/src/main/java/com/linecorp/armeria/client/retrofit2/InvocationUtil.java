@@ -35,7 +35,7 @@ public final class InvocationUtil {
      */
     @Nullable
     public static Invocation getInvocation(RequestLog log) {
-        return log.context().attr(RETROFIT_INVOCATION).get();
+        return log.context().attr(RETROFIT_INVOCATION);
     }
 
     /**
@@ -45,7 +45,7 @@ public final class InvocationUtil {
         if (invocation == null) {
             return;
         }
-        log.context().attr(RETROFIT_INVOCATION).set(invocation);
+        log.context().setAttr(RETROFIT_INVOCATION, invocation);
     }
 
     private InvocationUtil() {}

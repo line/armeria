@@ -70,42 +70,41 @@ class RoutingContextTest {
     void testEquals() {
         final VirtualHost virtualHost = virtualHost();
 
-        RoutingContext ctx1;
-        RoutingContext ctx2;
-        final RoutingContext ctx3;
-
-        ctx1 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         RequestHeaders.of(HttpMethod.GET, "/hello",
-                                                           HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                                           HttpHeaderNames.ACCEPT,
-                                                           MediaType.JSON_UTF_8 + ", " +
-                                                           MediaType.XML_UTF_8 + "; q=0.8"),
-                                         "/hello", null, false);
-        ctx2 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         RequestHeaders.of(HttpMethod.GET, "/hello",
-                                                           HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                                           HttpHeaderNames.ACCEPT,
-                                                           MediaType.JSON_UTF_8 + ", " +
-                                                           MediaType.XML_UTF_8 + "; q=0.8"),
-                                         "/hello", null, false);
-        ctx3 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         RequestHeaders.of(HttpMethod.GET, "/hello",
-                                                           HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                                           HttpHeaderNames.ACCEPT,
-                                                           MediaType.XML_UTF_8 + ", " +
-                                                           MediaType.JSON_UTF_8 + "; q=0.8"),
-                                         "/hello", null, false);
+        final RoutingContext ctx1 =
+                new DefaultRoutingContext(virtualHost, "example.com",
+                                          RequestHeaders.of(HttpMethod.GET, "/hello",
+                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                                            HttpHeaderNames.ACCEPT,
+                                                            MediaType.JSON_UTF_8 + ", " +
+                                                            MediaType.XML_UTF_8 + "; q=0.8"),
+                                          "/hello", null, false);
+        final RoutingContext ctx2 =
+                new DefaultRoutingContext(virtualHost, "example.com",
+                                          RequestHeaders.of(HttpMethod.GET, "/hello",
+                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                                            HttpHeaderNames.ACCEPT,
+                                                            MediaType.JSON_UTF_8 + ", " +
+                                                            MediaType.XML_UTF_8 + "; q=0.8"),
+                                          "/hello", null, false);
+        final RoutingContext ctx3 =
+                new DefaultRoutingContext(virtualHost, "example.com",
+                                          RequestHeaders.of(HttpMethod.GET, "/hello",
+                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                                            HttpHeaderNames.ACCEPT,
+                                                            MediaType.XML_UTF_8 + ", " +
+                                                            MediaType.JSON_UTF_8 + "; q=0.8"),
+                                          "/hello", null, false);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
         assertThat(ctx1).isNotEqualTo(ctx3);
+    }
 
-        ctx1 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         RequestHeaders.of(HttpMethod.GET, "/hello"),
-                                         "/hello", "a=1&b=1", false);
-        ctx2 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         RequestHeaders.of(HttpMethod.GET, "/hello"), "/hello", "a=1", false);
-
+    @Test
+    void queryDoesNotMatterWhenComparing() {
+        final VirtualHost virtualHost = virtualHost();
+        final RoutingContext ctx1 = create(virtualHost, "/hello", "a=1&b=1");
+        final RoutingContext ctx2 = create(virtualHost, "/hello", "a=1");
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
     }
@@ -115,9 +114,13 @@ class RoutingContextTest {
     }
 
     static RoutingContext create(String path, @Nullable String query) {
+        return create(virtualHost(), path, query);
+    }
+
+    static RoutingContext create(VirtualHost virtualHost, String path, @Nullable String query) {
         final String requestPath = query != null ? path + '?' + query : path;
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, requestPath);
-        return DefaultRoutingContext.of(virtualHost(), "example.com",
+        return DefaultRoutingContext.of(virtualHost, "example.com",
                                         path, query, headers, false);
     }
 

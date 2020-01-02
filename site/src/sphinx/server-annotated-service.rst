@@ -132,6 +132,29 @@ you can use :api:`@StatusCode` annotation as follows.
         public void deleteUser(@Param("name") String name) { ... }
     }
 
+You can define a service method which handles a request only if it contains a header or parameter the method
+requires. The following methods are bound to the same path ``/users`` but a request may be routed based on the
+``client-type`` header.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+
+        // Handles a request which contains 'client-type: android' header.
+        @Get("/users")
+        @ConditionalHeader("client-type=android")
+        public User getUsers1() { ... }
+
+        // Handles a request which contains 'client-type' header. Any values of the 'client-type' header are accepted.
+        @Get("/users")
+        @ConditionalHeader("client-type")
+        public User getUsers2() { ... }
+
+        // Handles a request which doesn't contain 'client-type' header.
+        @Get("/users")
+        public User getUsers3() { ... }
+    }
+
 .. _parameter-injection:
 
 Parameter injection
@@ -875,12 +898,12 @@ decorator annotation which applies :api:`LoggingService` to an annotated service
     public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFunction<LoggingDecorator> {
         @Override
         public Function<? super HttpService, ? extends HttpService> newDecorator(LoggingDecorator parameter) {
-            return new LoggingServiceBuilder()
-                    .requestLogLevel(parameter.requestLogLevel())
-                    .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
-                    .failureResponseLogLevel(parameter.failureResponseLogLevel())
-                    .samplingRate(parameter.samplingRate())
-                    .newDecorator();
+            return LoggingService.builder()
+                                 .requestLogLevel(parameter.requestLogLevel())
+                                 .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
+                                 .failureResponseLogLevel(parameter.failureResponseLogLevel())
+                                 .samplingRate(parameter.samplingRate())
+                                 .newDecorator();
         }
     }
 

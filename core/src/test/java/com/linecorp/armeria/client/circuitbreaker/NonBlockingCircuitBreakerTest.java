@@ -201,7 +201,7 @@ class NonBlockingCircuitBreakerTest {
         cb.onFailure();
 
         // Notify updated event count
-        verify(listener, times(1)).onEventCountUpdated(name, new EventCount(0, 1));
+        verify(listener, times(1)).onEventCountUpdated(name, EventCount.of(0, 1));
         reset(listener);
 
         // Notify circuit tripped

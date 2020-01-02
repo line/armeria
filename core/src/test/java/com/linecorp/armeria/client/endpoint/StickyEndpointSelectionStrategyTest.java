@@ -56,7 +56,7 @@ class StickyEndpointSelectionStrategyTest {
     private static final DynamicEndpointGroup DYNAMIC_ENDPOINT_GROUP = new DynamicEndpointGroup();
 
     @BeforeEach
-    void setup() {
+    void setUp() {
         EndpointGroupRegistry.register("static", STATIC_ENDPOINT_GROUP, strategy);
         EndpointGroupRegistry.register("dynamic", DYNAMIC_ENDPOINT_GROUP, strategy);
     }

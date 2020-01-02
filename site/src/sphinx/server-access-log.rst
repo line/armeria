@@ -87,6 +87,8 @@ log4j2
       </Loggers>
     </Configuration>
 
+.. _customizing-log-format:
+
 Customizing a log format
 ------------------------
 

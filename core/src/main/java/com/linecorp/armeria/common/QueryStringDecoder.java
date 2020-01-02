@@ -38,13 +38,11 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
-import io.netty.util.internal.PlatformDependent;
-
 final class QueryStringDecoder {
 
     @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
     private static final char UNKNOWN_CHAR = '\uFFFD';
-    private static final byte[] OCTETS_TO_HEX = new byte['f' + 1];
+    private static final byte[] OCTETS_TO_HEX = new byte[Character.MAX_VALUE + 1];
 
     static {
         Arrays.fill(OCTETS_TO_HEX, (byte) -1);
@@ -261,25 +259,9 @@ final class QueryStringDecoder {
     }
 
     private static int decodeHexByte(char c1, char c2) {
-        final int hi = decodeHexNibble(c1);
-        final int lo = decodeHexNibble(c2);
+        final int hi = OCTETS_TO_HEX[c1];
+        final int lo = OCTETS_TO_HEX[c2];
         return (hi << 4) | lo;
-    }
-
-    private static int decodeHexNibble(char c) {
-        // Widen explicitly so that JVM doesn't have to widen many times.
-        @SuppressWarnings("UnnecessaryLocalVariable")
-        final int index = c;
-        if (index >= OCTETS_TO_HEX.length) {
-            return -1;
-        }
-
-        if (PlatformDependent.hasUnsafe()) {
-            // Avoid boundary checks
-            return PlatformDependent.getByte(OCTETS_TO_HEX, index);
-        }
-
-        return OCTETS_TO_HEX[index];
     }
 
     private static boolean isContinuation(int b) {

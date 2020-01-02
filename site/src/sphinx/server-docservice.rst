@@ -108,17 +108,19 @@ with a :api:`DocServiceBuilder`:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.server.docs.DocServiceBuilder;
+    import com.linecorp.armeria.server.docs.DocService;
     import com.linecorp.armeria.server.docs.DocServiceFilter;
 
     ServerBuilder sb = Server.builder();
     ...
-    sb.serviceUnder("/docs", new DocServiceBuilder()
-            // Include Thrift services and Annotated services.
-            .include(DocServiceFilter.ofThrift().or(DocServiceFilter.ofAnnotated()))
-            // Exclude the method whose name is "foo" in Thrift services.
-            .exclude(DocServiceFilter.ofThrift().and(DocServiceFilter.ofMethodName("foo")))
-            .build());
+    sb.serviceUnder("/docs", DocService.builder()
+                                       // Include Thrift services and Annotated services.
+                                       .include(DocServiceFilter.ofThrift().or(
+                                            DocServiceFilter.ofAnnotated()))
+                                       // Exclude the method whose name is "foo" in Thrift services.
+                                       .exclude(DocServiceFilter.ofThrift().and(
+                                            DocServiceFilter.ofMethodName("foo")))
+                                       .build());
     ...
 
 The inclusion rule is as follows:
@@ -141,16 +143,17 @@ with a :api:`DocServiceBuilder`:
 
     ServerBuilder sb = Server.builder();
     ...
-    sb.serviceUnder("/docs", new DocServiceBuilder()
-            // HTTP headers for all services
-            .exampleHttpHeaders(HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"))
-            // Thrift example request for 'ThriftHelloService.hello()'
-            .exampleRequest(new ThriftHelloService.hello_args("Armeria"))
-            // gRPC example request for 'GrpcHelloService.Hello()'
-            .exampleRequestForMethod(GrpcHelloServiceGrpc.SERVICE_NAME,
-                                     "Hello", // Method name
-                                     HelloRequest.newBuilder().setName("Armeria").build())
-            .build());
+    sb.serviceUnder("/docs", DocService.builder()
+                                       // HTTP headers for all services
+                                       .exampleHttpHeaders(
+                                            HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"))
+                                       // Thrift example request for 'ThriftHelloService.hello()'
+                                       .exampleRequest(new ThriftHelloService.hello_args("Armeria"))
+                                       // gRPC example request for 'GrpcHelloService.Hello()'
+                                       .exampleRequestForMethod(GrpcHelloServiceGrpc.SERVICE_NAME,
+                                            "Hello", // Method name
+                                            HelloRequest.newBuilder().setName("Armeria").build())
+                                       .build());
     ...
 
 By adding examples to :api:`DocService`, your users will be able to play with the services you wrote

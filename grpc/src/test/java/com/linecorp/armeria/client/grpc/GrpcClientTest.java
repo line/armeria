@@ -28,6 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -57,6 +58,7 @@ import com.google.protobuf.StringValue;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -240,6 +242,24 @@ public class GrpcClientTest {
     }
 
     @Test
+    public void contextCaptorBlocking() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub.emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        }
+    }
+
+    @Test
+    public void contextCaptorAsync() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            asyncStub.emptyCall(EMPTY, StreamRecorder.create());
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(ctx.path()).isEqualTo("/armeria.grpc.testing.TestService/EmptyCall");
+        }
+    }
+
+    @Test
     public void largeUnary() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
@@ -290,7 +310,7 @@ public class GrpcClientTest {
                 try {
                     final ClientRequestContext ctx = ClientRequestContext.current();
                     assertThat(value).isEqualTo(goldenResponse);
-                    final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
+                    final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get(value);
                     assertThat(buf.refCnt()).isNotZero();
                     GrpcUnsafeBufferUtil.releaseBuffer(value, ctx);
                     assertThat(buf.refCnt()).isZero();
@@ -497,23 +517,23 @@ public class GrpcClientTest {
                                            .build());
 
         final ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<>(5);
-        final StreamObserver<StreamingOutputCallRequest> requestObserver
-                = asyncStub.fullDuplexCall(new StreamObserver<StreamingOutputCallResponse>() {
-            @Override
-            public void onNext(StreamingOutputCallResponse response) {
-                queue.add(response);
-            }
+        final StreamObserver<StreamingOutputCallRequest> requestObserver =
+                asyncStub.fullDuplexCall(new StreamObserver<StreamingOutputCallResponse>() {
+                    @Override
+                    public void onNext(StreamingOutputCallResponse response) {
+                        queue.add(response);
+                    }
 
-            @Override
-            public void onError(Throwable t) {
-                queue.add(t);
-            }
+                    @Override
+                    public void onError(Throwable t) {
+                        queue.add(t);
+                    }
 
-            @Override
-            public void onCompleted() {
-                queue.add("Completed");
-            }
-        });
+                    @Override
+                    public void onCompleted() {
+                        queue.add("Completed");
+                    }
+                });
         for (int i = 0; i < requests.size(); i++) {
             assertThat(queue.peek()).isNull();
             requestObserver.onNext(requests.get(i));
@@ -532,8 +552,8 @@ public class GrpcClientTest {
     @Test
     public void emptyStream() throws Exception {
         final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
-        final StreamObserver<StreamingOutputCallRequest> requestObserver
-                = asyncStub.fullDuplexCall(responseObserver);
+        final StreamObserver<StreamingOutputCallRequest> requestObserver =
+                asyncStub.fullDuplexCall(responseObserver);
         requestObserver.onCompleted();
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
 
@@ -578,8 +598,8 @@ public class GrpcClientTest {
                                            .build();
 
         final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
-        final StreamObserver<StreamingOutputCallRequest> requestObserver
-                = asyncStub.fullDuplexCall(responseObserver);
+        final StreamObserver<StreamingOutputCallRequest> requestObserver =
+                asyncStub.fullDuplexCall(responseObserver);
         requestObserver.onNext(request);
         await().untilAsserted(() -> assertThat(responseObserver.firstValue().get()).isEqualTo(goldenResponse));
         requestObserver.onError(new RuntimeException());
@@ -1171,13 +1191,14 @@ public class GrpcClientTest {
         @SuppressWarnings("unchecked")
         final StreamObserver<StreamingOutputCallResponse> responseObserver =
                 mock(StreamObserver.class);
-        final StreamObserver<StreamingOutputCallRequest> requestObserver
-                = asyncStub.fullDuplexCall(responseObserver);
+        final StreamObserver<StreamingOutputCallRequest> requestObserver =
+                asyncStub.fullDuplexCall(responseObserver);
         requestObserver.onNext(streamingRequest);
         requestObserver.onCompleted();
 
         final ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
-        verify(responseObserver, timeout(operationTimeoutMillis())).onError(captor.capture());
+        verify(responseObserver,
+               timeout(Duration.ofMillis(operationTimeoutMillis()))).onError(captor.capture());
         assertThat(GrpcStatus.fromThrowable(captor.getValue()).getCode()).isEqualTo(Status.UNKNOWN.getCode());
         assertThat(GrpcStatus.fromThrowable(captor.getValue()).getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);
@@ -1233,8 +1254,8 @@ public class GrpcClientTest {
                 ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(1L));
 
         final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
-        final StreamObserver<StreamingOutputCallRequest> requestObserver
-                = stub.fullDuplexCall(responseObserver);
+        final StreamObserver<StreamingOutputCallRequest> requestObserver =
+                stub.fullDuplexCall(responseObserver);
 
         final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest

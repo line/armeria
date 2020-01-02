@@ -49,7 +49,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -102,8 +101,7 @@ public class ArmeriaWebClientTest {
     static WebClient webClient = WebClient.builder().clientConnector(
             new ArmeriaClientHttpConnector(builder -> builder.factory(
                     ClientFactory.builder()
-                                 .sslContextCustomizer(
-                                         b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                                 .tlsNoVerify()
                                  .addressResolverGroupFactory(unused -> MockAddressResolverGroup.localhost())
                                  .build()))).build();
 

@@ -27,7 +27,8 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.Response;
 
 /**
- * A skeletal builder implementation that builds a new {@link CircuitBreakerClient} or its decorator function.
+ * A skeletal builder implementation that builds a new {@link AbstractCircuitBreakerClient} or
+ * its decorator function.
  *
  * @param <O> the type of incoming {@link Response} of the {@link Client}
  */

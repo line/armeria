@@ -112,46 +112,46 @@ public class HttpServerCorsTest {
                 }
             };
             sb.service("/cors", myService.decorate(
-                    CorsServiceBuilder.forOrigin("http://example.com")
-                                      .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-                                      .allowRequestHeaders("allow_request_header")
-                                      .exposeHeaders("expose_header_1", "expose_header_2")
-                                      .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-                                      .andForOrigins("http://example2.com")
-                                      .allowRequestMethods(HttpMethod.GET)
-                                      .allowRequestHeaders(HttpHeaderNames.of("allow_request_header2"))
-                                      .exposeHeaders(HttpHeaderNames.of("expose_header_3"),
-                                                     HttpHeaderNames.of("expose_header_4"))
-                                      .maxAge(3600)
-                                      .and()
-                                      .newDecorator()));
+                    CorsService.builder("http://example.com")
+                               .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                               .allowRequestHeaders("allow_request_header")
+                               .exposeHeaders("expose_header_1", "expose_header_2")
+                               .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                               .andForOrigins("http://example2.com")
+                               .allowRequestMethods(HttpMethod.GET)
+                               .allowRequestHeaders(HttpHeaderNames.of("allow_request_header2"))
+                               .exposeHeaders(HttpHeaderNames.of("expose_header_3"),
+                                              HttpHeaderNames.of("expose_header_4"))
+                               .maxAge(3600)
+                               .and()
+                               .newDecorator()));
             // Support short circuit.
             sb.service("/cors2", myService.decorate(
-                    CorsServiceBuilder.forOrigin("http://example.com")
-                                      .shortCircuit()
-                                      .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-                                      .allowRequestHeaders(HttpHeaderNames.of("allow_request_header"))
-                                      .exposeHeaders(HttpHeaderNames.of("expose_header_1"),
-                                                     HttpHeaderNames.of("expose_header_2"))
-                                      .preflightResponseHeader("x-preflight-cors", "Hello CORS", "Hello CORS2")
-                                      .maxAge(3600)
-                                      .andForOrigins("http://example2.com")
-                                      .allowNullOrigin()
-                                      .allowRequestMethods(HttpMethod.GET)
-                                      .allowRequestHeaders(HttpHeaderNames.of("allow_request_header2"))
-                                      .exposeHeaders(HttpHeaderNames.of("expose_header_3"),
-                                                     HttpHeaderNames.of("expose_header_4"))
-                                      .maxAge(1800)
-                                      .and()
-                                      .newDecorator()));
+                    CorsService.builder("http://example.com")
+                               .shortCircuit()
+                               .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                               .allowRequestHeaders(HttpHeaderNames.of("allow_request_header"))
+                               .exposeHeaders(HttpHeaderNames.of("expose_header_1"),
+                                              HttpHeaderNames.of("expose_header_2"))
+                               .preflightResponseHeader("x-preflight-cors", "Hello CORS", "Hello CORS2")
+                               .maxAge(3600)
+                               .andForOrigins("http://example2.com")
+                               .allowNullOrigin()
+                               .allowRequestMethods(HttpMethod.GET)
+                               .allowRequestHeaders(HttpHeaderNames.of("allow_request_header2"))
+                               .exposeHeaders(HttpHeaderNames.of("expose_header_3"),
+                                              HttpHeaderNames.of("expose_header_4"))
+                               .maxAge(1800)
+                               .and()
+                               .newDecorator()));
             sb.service("/cors3", myService.decorate(
-                    CorsServiceBuilder.forAnyOrigin()
-                                      .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-                                      .allowRequestHeaders("allow_request_header")
-                                      .exposeHeaders("expose_header_1", "expose_header_2")
-                                      .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-                                      .maxAge(3600)
-                                      .newDecorator()));
+                    CorsService.builderForAnyOrigin()
+                               .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                               .allowRequestHeaders("allow_request_header")
+                               .exposeHeaders("expose_header_1", "expose_header_2")
+                               .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                               .maxAge(3600)
+                               .newDecorator()));
             final Object myAnnotatedService = new Object() {
                 // We don't need to specify '@Options` annotation here to support a CORS preflight request.
                 @Post("/post")
@@ -163,9 +163,9 @@ public class HttpServerCorsTest {
                 public void options() {}
             };
             sb.annotatedService("/cors4", myAnnotatedService,
-                                CorsServiceBuilder.forOrigin("http://example.com")
-                                                  .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-                                                  .newDecorator());
+                                CorsService.builder("http://example.com")
+                                           .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                                           .newDecorator());
             // No CORS decorator.
             sb.annotatedService("/cors5", myAnnotatedService);
 
@@ -198,11 +198,9 @@ public class HttpServerCorsTest {
                 }
 
                 @Get("/multi/get")
-                @CorsDecorator(
-                        origins = "http://example.com", exposedHeaders = { "expose_header_1" },
+                @CorsDecorator(origins = "http://example.com", exposedHeaders = "expose_header_1",
                         allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
-                @CorsDecorator(
-                        origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
+                @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2",
                         allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
                 public HttpResponse multiGet() {
                     return HttpResponse.of(HttpStatus.OK);
@@ -220,19 +218,19 @@ public class HttpServerCorsTest {
 
                 @Get("/movies/{title}/actors")
                 public void actors(@Param String title) {}
-            }, CorsServiceBuilder.forOrigin("http://example.com")
-                                 // Note that configuring mappings for specific paths first because the
-                                 // policies will be visited in the configured order.
-                                 .route("glob:/**/actors")
-                                 .allowRequestMethods(HttpMethod.GET, HttpMethod.POST)
-                                 .andForOrigin("http://example.com")
-                                 .route("/cors8/movies/{title}")
-                                 .allowRequestMethods(HttpMethod.POST)
-                                 .andForOrigin("http://example.com")
-                                 .route("prefix:/cors8")
-                                 .allowRequestMethods(HttpMethod.GET)
-                                 .and()
-                                 .newDecorator());
+            }, CorsService.builder("http://example.com")
+                          // Note that configuring mappings for specific paths first because the
+                          // policies will be visited in the configured order.
+                          .route("glob:/**/actors")
+                          .allowRequestMethods(HttpMethod.GET, HttpMethod.POST)
+                          .andForOrigin("http://example.com")
+                          .route("/cors8/movies/{title}")
+                          .allowRequestMethods(HttpMethod.POST)
+                          .andForOrigin("http://example.com")
+                          .route("prefix:/cors8")
+                          .allowRequestMethods(HttpMethod.GET)
+                          .and()
+                          .newDecorator());
 
             sb.annotatedService("/cors9", new Object() {
                 @Get("/movies")
@@ -243,16 +241,16 @@ public class HttpServerCorsTest {
 
                 @Get("/movies/{title}/actors")
                 public void actors(@Param String title) {}
-            }, CorsServiceBuilder.forOrigin("http://example.com")
-                                 // Note that this prefix path mapping is configured first, so all preflight
-                                 // requests with a path starting with "/cors9/" will be matched.
-                                 .route("prefix:/cors9")
-                                 .allowRequestMethods(HttpMethod.GET)
-                                 .andForOrigin("http://example.com")
-                                 .route("/cors9/movies/{title}")
-                                 .allowRequestMethods(HttpMethod.POST)
-                                 .and()
-                                 .newDecorator());
+            }, CorsService.builder("http://example.com")
+                          // Note that this prefix path mapping is configured first, so all preflight
+                          // requests with a path starting with "/cors9/" will be matched.
+                          .route("prefix:/cors9")
+                          .allowRequestMethods(HttpMethod.GET)
+                          .andForOrigin("http://example.com")
+                          .route("/cors9/movies/{title}")
+                          .allowRequestMethods(HttpMethod.POST)
+                          .and()
+                          .newDecorator());
 
             sb.annotatedService("/cors10", new MyAnnotatedService2());
 
@@ -260,10 +258,10 @@ public class HttpServerCorsTest {
             sb.route().get("/cors11/get")
               .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
             sb.routeDecorator().pathPrefix("/cors11")
-              .build(CorsServiceBuilder.forOrigin("http://example.com")
-                                       .shortCircuit()
-                                       .allowRequestMethods(HttpMethod.GET)
-                                       .newDecorator());
+              .build(CorsService.builder("http://example.com")
+                                .shortCircuit()
+                                .allowRequestMethods(HttpMethod.GET)
+                                .newDecorator());
 
             // No CORS decorator & not bound for OPTIONS.
             sb.route().get("/cors12/get")
@@ -328,36 +326,36 @@ public class HttpServerCorsTest {
     // Makes sure if it throws an Exception when an improper setting is set.
     @Test
     public void testCorsBuilderException() {
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().maxAge(-1)).isInstanceOf(
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().maxAge(-1)).isInstanceOf(
                 IllegalStateException.class);
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowNullOrigin()).isInstanceOf(
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().allowNullOrigin()).isInstanceOf(
                 IllegalStateException.class);
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().shortCircuit()).isInstanceOf(
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().shortCircuit()).isInstanceOf(
                 IllegalStateException.class);
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowRequestHeaders("", null, ""))
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().allowRequestHeaders("", null, ""))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowRequestMethods(HttpMethod.GET, null))
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().allowRequestMethods(HttpMethod.GET, null))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(
-                () -> CorsServiceBuilder.forAnyOrigin().preflightResponseHeader("header", null, null))
+                () -> CorsService.builderForAnyOrigin().preflightResponseHeader("header", null, null))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().preflightResponseHeader("header", Arrays
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().preflightResponseHeader("header", Arrays
                 .asList("11", null))).isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().preflightResponseHeader("123")).isInstanceOf(
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().preflightResponseHeader("123")).isInstanceOf(
                 IllegalArgumentException.class);
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().preflightResponseHeader("123",
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().preflightResponseHeader("123",
                                                                                            ImmutableList.of()));
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().exposeHeaders()).isInstanceOf(
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().exposeHeaders()).isInstanceOf(
                 IllegalArgumentException.class);
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowRequestMethods()).isInstanceOf(
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().allowRequestMethods()).isInstanceOf(
                 IllegalArgumentException.class);
-        assertThatThrownBy(() -> CorsServiceBuilder.forAnyOrigin().allowRequestHeaders()).isInstanceOf(
+        assertThatThrownBy(() -> CorsService.builderForAnyOrigin().allowRequestHeaders()).isInstanceOf(
                 IllegalArgumentException.class);
 
         // Ensure double decoration is prohibited.
         assertThatThrownBy(() -> {
             final Function<? super HttpService, CorsService> decorator =
-                    CorsServiceBuilder.forAnyOrigin().newDecorator();
+                    CorsService.builderForAnyOrigin().newDecorator();
             final HttpService service = (ctx, req) -> HttpResponse.of("OK");
             service.decorate(decorator).decorate(decorator);
         }).isInstanceOf(IllegalArgumentException.class)

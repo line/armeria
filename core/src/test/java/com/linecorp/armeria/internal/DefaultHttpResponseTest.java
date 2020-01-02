@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -42,10 +43,52 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 class DefaultHttpResponseTest {
+
+    @Test
+    void closeWithAggregatedResponse() {
+        // Always headers only.
+        final HttpResponseWriter res1 = HttpResponse.streaming();
+        res1.close(AggregatedHttpResponse.of(204));
+        assertThat(res1.drainAll().join()).containsExactly(ResponseHeaders.of(204));
+
+        // Headers only.
+        final HttpResponseWriter res2 = HttpResponse.streaming();
+        res2.close(AggregatedHttpResponse.of(ResponseHeaders.of(200)));
+        assertThat(res2.drainAll().join()).containsExactly(
+                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 0));
+
+        // Headers and body.
+        final HttpResponseWriter res3 = HttpResponse.streaming();
+        res3.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), HttpData.ofUtf8("foo")));
+        assertThat(res3.drainAll().join()).containsExactly(
+                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3),
+                HttpData.ofUtf8("foo"));
+
+        // Headers, body and trailers.
+        final HttpResponseWriter res4 = HttpResponse.streaming();
+        res4.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), HttpData.ofUtf8("bar"),
+                                             HttpHeaders.of("x-trailer", true)));
+        assertThat(res4.drainAll().join()).containsExactly(
+                ResponseHeaders.of(200),
+                HttpData.ofUtf8("bar"),
+                HttpHeaders.of("x-trailer", true));
+    }
+
+    @Test
+    void closeMustReleaseAggregatedContent() {
+        final HttpResponseWriter res = HttpResponse.streaming();
+        final ByteBufHttpData data =
+                new ByteBufHttpData(Unpooled.copiedBuffer("foo", StandardCharsets.UTF_8), true);
+        res.close();
+        res.close(AggregatedHttpResponse.of(ResponseHeaders.of(200), data));
+        assertThat(data.refCnt()).isZero();
+    }
 
     /**
      * The aggregation future must be completed even if the response being aggregated has been aborted.

@@ -44,8 +44,6 @@ import org.slf4j.MDC;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.DefaultRpcRequest;
-import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -56,6 +54,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logback.HelloService.hello_args;
 import com.linecorp.armeria.common.logback.HelloService.hello_result;
+import com.linecorp.armeria.common.logging.BuiltInProperty;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -80,8 +79,8 @@ public class RequestContextExportingAppenderTest {
     private static final AttributeKey<CustomValue> MY_ATTR =
             AttributeKey.valueOf(RequestContextExportingAppenderTest.class, "MY_ATTR");
 
-    private static final RpcRequest RPC_REQ = new DefaultRpcRequest(Object.class, "hello", "world");
-    private static final RpcResponse RPC_RES = new DefaultRpcResponse("Hello, world!");
+    private static final RpcRequest RPC_REQ = RpcRequest.of(Object.class, "hello", "world");
+    private static final RpcResponse RPC_RES = RpcResponse.of("Hello, world!");
     private static final ThriftCall THRIFT_CALL =
             new ThriftCall(new TMessage("hello", TMessageType.CALL, 1),
                            new hello_args("world"));
@@ -410,7 +409,7 @@ public class RequestContextExportingAppenderTest {
                                              ProxiedAddresses.of(new InetSocketAddress("9.10.11.12", 0)))
                                      .build();
 
-        ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
         return ctx;
     }
 
@@ -527,7 +526,7 @@ public class RequestContextExportingAppenderTest {
                                     .sslSession(newSslSession())
                                     .build();
 
-        ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
         return ctx;
     }
 

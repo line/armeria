@@ -56,7 +56,7 @@ class ServerRequestContextAdapterTest {
     private HttpServerResponse response;
 
     @BeforeEach
-    void setup() {
+    void setUp() {
         request = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         response = ServiceRequestContextAdapter.asHttpServerResponse(ctx);
     }

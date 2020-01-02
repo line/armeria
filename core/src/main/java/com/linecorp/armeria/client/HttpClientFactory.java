@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
@@ -31,6 +32,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -62,7 +64,7 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
     private final Bootstrap baseBootstrap;
-    private final Consumer<? super SslContextBuilder> sslContextCustomizer;
+    private final List<Consumer<? super SslContextBuilder>> tlsCustomizers;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -110,7 +112,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         shutdownWorkerGroupOnClose = options.shutdownWorkerGroupOnClose();
         eventLoopScheduler = options.eventLoopSchedulerFactory().apply(workerGroup);
         baseBootstrap = bootstrap;
-        sslContextCustomizer = options.sslContextCustomizer();
+        tlsCustomizers = ImmutableList.of(options.tlsCustomizer());
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
         http2MaxFrameSize = options.http2MaxFrameSize();
@@ -137,8 +139,8 @@ final class HttpClientFactory extends AbstractClientFactory {
         return baseBootstrap.clone();
     }
 
-    Consumer<? super SslContextBuilder> sslContextCustomizer() {
-        return sslContextCustomizer;
+    List<Consumer<? super SslContextBuilder>> tlsCustomizers() {
+        return tlsCustomizers;
     }
 
     int http2InitialConnectionWindowSize() {
@@ -266,7 +268,7 @@ final class HttpClientFactory extends AbstractClientFactory {
     private DefaultWebClient newWebClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
                                           HttpClient delegate) {
         return new DefaultWebClient(
-                new DefaultClientBuilderParams(this, uri, WebClient.class, options),
+                ClientBuilderParams.of(this, uri, WebClient.class, options),
                 delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
     }
 

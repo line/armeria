@@ -53,10 +53,11 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
     default void respond(HttpStatus status) {
         requireNonNull(status, "status");
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-            write(ResponseHeaders.of(status));
+            tryWrite(ResponseHeaders.of(status));
         } else if (status.isContentAlwaysEmpty()) {
-            write(ResponseHeaders.of(status));
-            close();
+            if (tryWrite(ResponseHeaders.of(status))) {
+                close();
+            }
         } else {
             respond(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());
         }
@@ -144,64 +145,80 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
      * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, HttpData, HttpHeaders)}.
      */
     @Deprecated
-    default void respond(HttpStatus status, MediaType mediaType, HttpData content,
-                         HttpHeaders trailers) {
-        requireNonNull(status, "status");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
-        requireNonNull(trailers, "trailers");
+    default void respond(HttpStatus status, MediaType mediaType, HttpData content, HttpHeaders trailers) {
+        boolean transferredContent = false;
+        try {
+            requireNonNull(status, "status");
+            requireNonNull(mediaType, "mediaType");
+            requireNonNull(content, "content");
+            requireNonNull(trailers, "trailers");
 
-        final ResponseHeaders headers =
-                ResponseHeaders.of(status,
-                                   HttpHeaderNames.CONTENT_TYPE, mediaType,
-                                   HttpHeaderNames.CONTENT_LENGTH, content.length());
+            final boolean contentAlwaysEmpty = isContentAlwaysEmptyWithValidation(status, content, trailers);
+            final ResponseHeaders headers =
+                    ResponseHeaders.of(status,
+                                       HttpHeaderNames.CONTENT_TYPE, mediaType,
+                                       HttpHeaderNames.CONTENT_LENGTH, content.length());
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailers)) {
-            ReferenceCountUtil.safeRelease(content);
-            write(headers);
-        } else {
-            write(headers);
+            if (!tryWrite(headers)) {
+                return;
+            }
+
             // Add content if not empty.
-            if (!content.isEmpty()) {
-                write(content);
+            if (!contentAlwaysEmpty && !content.isEmpty()) {
+                transferredContent = true;
+                if (!tryWrite(content)) {
+                    return;
+                }
+            }
+
+            // Add trailers if not empty.
+            if (!trailers.isEmpty()) {
+                tryWrite(trailers);
+            }
+        } finally {
+            close();
+            if (!transferredContent) {
+                ReferenceCountUtil.release(content);
             }
         }
-
-        // Add trailers if not empty.
-        if (!trailers.isEmpty()) {
-            write(trailers);
-        }
-
-        close();
     }
 
     /**
      * Writes the specified HTTP response and closes the stream.
      */
     default void close(AggregatedHttpResponse res) {
-        requireNonNull(res, "res");
+        boolean transferredContent = false;
+        HttpData content = null;
+        try {
+            requireNonNull(res, "res");
 
-        final ResponseHeaders headers = res.headers();
-        final HttpStatus status = headers.status();
-        final HttpData content = res.content();
-        final HttpHeaders trailers = res.trailers();
+            final ResponseHeaders headers = res.headers();
+            final HttpStatus status = headers.status();
+            content = res.content();
+            final HttpHeaders trailers = res.trailers();
+            final boolean contentAlwaysEmpty = isContentAlwaysEmptyWithValidation(status, content, trailers);
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailers)) {
-            ReferenceCountUtil.safeRelease(content);
-            write(headers);
-        } else {
-            write(headers);
+            if (!tryWrite(headers)) {
+                return;
+            }
+
             // Add content if not empty.
-            if (!content.isEmpty()) {
-                write(content);
+            if (!contentAlwaysEmpty && !content.isEmpty()) {
+                transferredContent = true;
+                if (!tryWrite(content)) {
+                    return;
+                }
+            }
+
+            // Add trailers if not empty.
+            if (!trailers.isEmpty()) {
+                tryWrite(trailers);
+            }
+        } finally {
+            close();
+            if (!transferredContent) {
+                ReferenceCountUtil.release(content);
             }
         }
-
-        // Add trailers if not empty.
-        if (!trailers.isEmpty()) {
-            write(trailers);
-        }
-
-        close();
     }
 }

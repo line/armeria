@@ -7,11 +7,12 @@
 //
 // See also: ../thrift0.11/build.gradle
 
-final def THRIFT_VERSION = '0.9.3'
+final def THRIFT_VERSION = '0.9.3-1'
 
 dependencyManagement {
     dependencies {
         dependency("org.apache.thrift:libthrift:${THRIFT_VERSION}") {
+            exclude group: 'javax.annotation',          name: 'javax.annotation-api'
             exclude group: 'org.apache.httpcomponents', name: 'httpcore'
             exclude group: 'org.apache.httpcomponents', name: 'httpclient'
         }

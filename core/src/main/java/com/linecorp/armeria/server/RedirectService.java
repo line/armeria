@@ -116,7 +116,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * the following location function never preserves the original query string:</p>
  *
  * <pre>{@code
- * ServiceBuilder sb = new ServiceBuilder();
+ * ServiceBuilder sb = Server.builder();
  * // /old?foo=bar -> /new?redirected=1 (?foo=bar is ignored.)
  * sb.service("/old", new RedirectService("/new?redirected=1"));
  * }</pre>

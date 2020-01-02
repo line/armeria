@@ -18,19 +18,17 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseDuplicator;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 /**
  * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
+ *
+ * @deprecated Use {@link CircuitBreakerClient}.
  */
-public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpRequest, HttpResponse>
-        implements HttpClient {
+@Deprecated
+public final class CircuitBreakerHttpClient extends CircuitBreakerClient {
 
     /**
      * Creates a new decorator using the specified {@link CircuitBreaker} instance and
@@ -38,8 +36,11 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
+     *
+     * @deprecated Use {@link CircuitBreakerClient#newDecorator(CircuitBreaker, CircuitBreakerStrategy)}.
      */
-    public static Function<? super HttpClient, CircuitBreakerHttpClient>
+    @Deprecated
+    public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerStrategy strategy) {
         return newDecorator((ctx, req) -> circuitBreaker, strategy);
     }
@@ -50,10 +51,13 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      *
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
+     *
+     * @deprecated Use {@link CircuitBreakerClient#newDecorator(CircuitBreakerMapping, CircuitBreakerStrategy)}.
      */
-    public static Function<? super HttpClient, CircuitBreakerHttpClient>
+    @Deprecated
+    public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerStrategy strategy) {
-        return delegate -> new CircuitBreakerHttpClient(delegate, mapping, strategy);
+        return delegate -> new CircuitBreakerClient(delegate, mapping, strategy);
     }
 
     /**
@@ -64,8 +68,10 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      * unrelated services.
      *
      * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}
+     * @deprecated Use {@link CircuitBreakerClient#newPerMethodDecorator(Function, CircuitBreakerStrategy)}.
      */
-    public static Function<? super HttpClient, CircuitBreakerHttpClient>
+    @Deprecated
+    public static Function<? super HttpClient, CircuitBreakerClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory,
                           CircuitBreakerStrategy strategy) {
         return newDecorator(CircuitBreakerMapping.perMethod(factory), strategy);
@@ -79,8 +85,10 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      * unrelated services.
      *
      * @param factory a function that takes a host name and creates a new {@link CircuitBreaker}
+     * @deprecated Use {@link CircuitBreakerClient#newPerHostDecorator(Function, CircuitBreakerStrategy)}.
      */
-    public static Function<? super HttpClient, CircuitBreakerHttpClient>
+    @Deprecated
+    public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostDecorator(Function<String, CircuitBreaker> factory,
                         CircuitBreakerStrategy strategy) {
         return newDecorator(CircuitBreakerMapping.perHost(factory), strategy);
@@ -94,8 +102,11 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      * unrelated services.
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}
+     * @deprecated Use
+     *             {@link CircuitBreakerClient#newPerHostAndMethodDecorator(Function, CircuitBreakerStrategy)}.
      */
-    public static Function<? super HttpClient, CircuitBreakerHttpClient>
+    @Deprecated
+    public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory,
                                  CircuitBreakerStrategy strategy) {
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), strategy);
@@ -104,7 +115,10 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
     /**
      * Returns a new {@link CircuitBreakerHttpClientBuilder} with
      * the specified {@link CircuitBreakerStrategy}.
+     *
+     * @deprecated Use {@link CircuitBreakerClient#builder(CircuitBreakerStrategy)}.
      */
+    @Deprecated
     public static CircuitBreakerHttpClientBuilder builder(CircuitBreakerStrategy strategy) {
         return new CircuitBreakerHttpClientBuilder(strategy);
     }
@@ -112,68 +126,18 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
     /**
      * Returns a new {@link CircuitBreakerHttpClientBuilder} with
      * the specified {@link CircuitBreakerStrategyWithContent}.
+     *
+     * @deprecated Use {@link CircuitBreakerClient#builder(CircuitBreakerStrategyWithContent)}.
      */
+    @Deprecated
     public static CircuitBreakerHttpClientBuilder builder(
             CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
         return new CircuitBreakerHttpClientBuilder(strategyWithContent);
     }
 
-    private final boolean needsContentInStrategy;
-
-    /**
-     * Creates a new instance that decorates the specified {@link HttpClient}.
-     */
-    CircuitBreakerHttpClient(HttpClient delegate, CircuitBreakerMapping mapping,
+    CircuitBreakerHttpClient(HttpClient delegate,
+                             CircuitBreakerMapping mapping,
                              CircuitBreakerStrategy strategy) {
         super(delegate, mapping, strategy);
-        needsContentInStrategy = false;
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link HttpClient}.
-     */
-    CircuitBreakerHttpClient(HttpClient delegate, CircuitBreakerMapping mapping,
-                             CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
-        super(delegate, mapping, strategyWithContent);
-        needsContentInStrategy = true;
-    }
-
-    @Override
-    protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req, CircuitBreaker circuitBreaker)
-            throws Exception {
-        final HttpResponse response;
-        try {
-            response = delegate().execute(ctx, req);
-        } catch (Throwable cause) {
-            if (needsContentInStrategy) {
-                reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(
-                        ctx, HttpResponse.ofFailure(cause)));
-            } else {
-                reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(ctx, cause));
-            }
-            throw cause;
-        }
-
-        if (needsContentInStrategy) {
-            final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(
-                    response, maxSignalLength(ctx.maxResponseLength()), ctx.eventLoop());
-            reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(
-                    ctx, resDuplicator.duplicateStream()));
-            return resDuplicator.duplicateStream(true);
-        }
-
-        ctx.log().addListener(log -> {
-            final Throwable cause =
-                    log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;
-            reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(ctx, cause));
-        }, RequestLogAvailability.RESPONSE_HEADERS);
-        return response;
-    }
-
-    private static int maxSignalLength(long maxResponseLength) {
-        if (maxResponseLength == 0 || maxResponseLength > Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
-        }
-        return (int) maxResponseLength;
     }
 }

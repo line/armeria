@@ -24,7 +24,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 
 /**
- * A bean with information for registering a http service.
+ * A bean with information for registering an http service.
  * It enables Micrometer metric collection of the service automatically.
  * <pre>{@code
  * > @Bean

@@ -125,13 +125,12 @@ in your configuration as follows:
          * Returns a custom ClientFactory with TLS certificate validation disabled,
          * which means any certificate received from the server will be accepted without any verification.
          * It is used for an example which makes the client send an HTTPS request to the server running
-         * on localhost with a self-signed certificate. Do NOT use the InsecureTrustManagerFactory
-         * in production.
+         * on localhost with a self-signed certificate. Do NOT use ClientFactory.insecure() or
+         * ClientFactoryBuilder.tlsNoVerify() in production.
          */
         @Bean
         public ClientFactory clientFactory() {
-            return new ClientFactoryBuilder().sslContextCustomizer(
-                    b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
+            return ClientFactory.insecure();
         }
 
         /**
@@ -143,8 +142,8 @@ in your configuration as follows:
             return builder -> {
                 // Use a circuit breaker for each remote host.
                 final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-                builder.decorator(CircuitBreakerHttpClient.builder(strategy)
-                                                          .newDecorator());
+                builder.decorator(CircuitBreakerClient.builder(strategy)
+                                                      .newDecorator());
 
                 // Set a custom client factory.
                 builder.factory(clientFactory);

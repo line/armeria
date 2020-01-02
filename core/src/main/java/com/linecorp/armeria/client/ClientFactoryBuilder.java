@@ -35,6 +35,8 @@ import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -49,6 +51,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
@@ -59,14 +62,15 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * <h2>Example</h2>
  * <pre>{@code
- * final ClientFactory factory = new ClientFactoryBuilder();
- *     // Set the connection timeout to 5 seconds.
- *     .connectTimeoutMillis(5000)
- *     // Set the socket send buffer to 1 MiB.
- *     .socketOption(ChannelOption.SO_SNDBUF, 1048576)
- *     // Disable certificate verification; never do this in production!
- *     .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
- *     .build();
+ * final ClientFactory factory =
+ *         ClientFactory.builder()
+ *                      // Set the connection timeout to 5 seconds.
+ *                      .connectTimeoutMillis(5000)
+ *                      // Set the socket send buffer to 1 MiB.
+ *                      .socketOption(ChannelOption.SO_SNDBUF, 1048576)
+ *                      // Disable certificate verification; never do this in production!
+ *                      .tlsNoVerify()
+ *                      .build();
  * }</pre>
  */
 public final class ClientFactoryBuilder {
@@ -224,10 +228,49 @@ public final class ClientFactoryBuilder {
      * applied to the SSL session. For example, use {@link SslContextBuilder#trustManager} to configure a
      * custom server CA or {@link SslContextBuilder#keyManager} to configure a client certificate for SSL
      * authorization.
+     *
+     * @deprecated Use {@link #tlsCustomizer(Consumer)}.
      */
+    @Deprecated
     public ClientFactoryBuilder sslContextCustomizer(Consumer<? super SslContextBuilder> sslContextCustomizer) {
-        option(ClientFactoryOption.SSL_CONTEXT_CUSTOMIZER,
+        option(ClientFactoryOption.TLS_CUSTOMIZER,
                requireNonNull(sslContextCustomizer, "sslContextCustomizer"));
+        return this;
+    }
+
+    /**
+     * Disables the verification of server's key certificate chain. This method is a shortcut for:
+     * {@code tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))}.
+     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see InsecureTrustManagerFactory
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ClientFactoryBuilder tlsNoVerify() {
+        tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
+        return this;
+    }
+
+    /**
+     * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
+     * applied to the SSL session. For example, use {@link SslContextBuilder#trustManager(TrustManagerFactory)}
+     * to configure a custom server CA or {@link SslContextBuilder#keyManager(KeyManagerFactory)} to configure
+     * a client certificate for SSL authorization.
+     */
+    public ClientFactoryBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
+        requireNonNull(tlsCustomizer, "tlsCustomizer");
+        final ClientFactoryOptionValue<?> oldTlsCustomizerValue =
+                options.get(ClientFactoryOption.TLS_CUSTOMIZER);
+
+        @SuppressWarnings("unchecked")
+        final Consumer<SslContextBuilder> oldTlsCustomizer =
+                oldTlsCustomizerValue == null ? ClientFactoryOptions.DEFAULT_TLS_CUSTOMIZER
+                                              : (Consumer<SslContextBuilder>) oldTlsCustomizerValue.value();
+        if (oldTlsCustomizer == ClientFactoryOptions.DEFAULT_TLS_CUSTOMIZER) {
+            option(ClientFactoryOption.TLS_CUSTOMIZER, tlsCustomizer);
+        } else {
+            option(ClientFactoryOption.TLS_CUSTOMIZER, oldTlsCustomizer.andThen(tlsCustomizer));
+        }
         return this;
     }
 

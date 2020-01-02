@@ -13,11 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+
+import java.util.Iterator;
+import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +34,8 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
@@ -36,22 +43,53 @@ import io.netty.util.AttributeKey;
 class DefaultClientRequestContextTest {
 
     @Test
+    void canBringAttributeInServiceRequestContext() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext serviceContext = ServiceRequestContext.of(req);
+        final AttributeKey<String> fooKey = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
+        serviceContext.setAttr(fooKey, "foo");
+        try (SafeCloseable ignored = serviceContext.push()) {
+            final ClientRequestContext clientContext = ClientRequestContext.of(req);
+            assertThat(clientContext.attr(fooKey)).isEqualTo("foo");
+            assertThat(clientContext.attrs().hasNext()).isTrue();
+
+            final ClientRequestContext derivedContext = clientContext.newDerivedContext(
+                    clientContext.id(), clientContext.request(),
+                    clientContext.rpcRequest());
+            assertThat(derivedContext.attr(fooKey)).isNotNull();
+            // Attributes in serviceContext is not copied to clientContext when derived.
+
+            final AttributeKey<String> barKey = AttributeKey.valueOf(DefaultClientRequestContextTest.class,
+                                                                     "bar");
+            clientContext.setAttr(barKey, "bar");
+            assertThat(serviceContext.attr(barKey)).isNull();
+        }
+    }
+
+    @Test
+    void attrsDoNotIterateRootWhenKeyIsSame() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext serviceContext = ServiceRequestContext.of(req);
+        try (SafeCloseable ignored = serviceContext.push()) {
+            final ClientRequestContext clientContext = ClientRequestContext.of(req);
+            final AttributeKey<String> fooKey = AttributeKey.valueOf(DefaultClientRequestContextTest.class,
+                                                                     "foo");
+            clientContext.setAttr(fooKey, "foo");
+            serviceContext.setAttr(fooKey, "bar");
+            final Iterator<Entry<AttributeKey<?>, Object>> attrs = clientContext.attrs();
+            assertThat(attrs.next().getValue()).isEqualTo("foo");
+            assertThat(attrs.hasNext()).isFalse();
+        }
+    }
+
+    @Test
     void deriveContext() {
-        final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
-                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                RequestId.random(), HttpMethod.POST, "/foo", null, null,
-                ClientOptions.of(),
-                HttpRequest.of(RequestHeaders.of(
-                        HttpMethod.POST, "/foo",
-                        HttpHeaderNames.SCHEME, "http",
-                        HttpHeaderNames.AUTHORITY, "example.com:8080")),
-                null);
-        originalCtx.init(Endpoint.of("example.com", 8080));
+        final DefaultClientRequestContext originalCtx = newContext();
 
         setAdditionalHeaders(originalCtx);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
-        originalCtx.attr(foo).set("foo");
+        originalCtx.setAttr(foo, "foo");
 
         final RequestId newId = RequestId.random();
         final HttpRequest newRequest = HttpRequest.of(RequestHeaders.of(
@@ -79,16 +117,91 @@ class DefaultClientRequestContextTest {
         assertThat(derivedCtx.additionalRequestHeaders().get(HttpHeaderNames.of("my-header#4")))
                 .isEqualTo("value#4");
         // the attribute is derived as well
-        assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
+        assertThat(derivedCtx.attr(foo)).isEqualTo("foo");
 
         // log is different
         assertThat(derivedCtx.log()).isNotSameAs(originalCtx.log());
 
         final AttributeKey<String> bar = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "bar");
-        originalCtx.attr(bar).set("bar");
+        originalCtx.setAttr(bar, "bar");
 
         // the Attribute added to the original context after creation is not propagated to the derived context
-        assertThat(derivedCtx.attr(bar).get()).isEqualTo(null);
+        assertThat(derivedCtx.attr(bar)).isEqualTo(null);
+    }
+
+    @Test
+    void derivedContextMustNotCallCustomizers() {
+        final AtomicInteger counter = new AtomicInteger();
+        try (SafeCloseable unused = Clients.withContextCustomizer(unused2 -> counter.incrementAndGet())) {
+            final DefaultClientRequestContext ctx = newContext();
+            assertThat(counter).hasValue(1);
+
+            // Create a derived context, which should never call customizers or captor.
+            try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+                ctx.newDerivedContext(RequestId.random(), ctx.request(), null, ctx.endpoint());
+                assertThat(counter).hasValue(1);
+                assertThatThrownBy(ctxCaptor::get).isInstanceOf(NoSuchElementException.class)
+                                                  .hasMessageContaining("no request was made");
+            }
+        }
+
+        // Thread-local state must be cleaned up.
+        assertThat(ClientThreadLocalState.get()).isNull();
+    }
+
+    @Test
+    void contextCaptorMustBeCleanedUp() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            assertThat(ClientThreadLocalState.get()).isNotNull();
+            final DefaultClientRequestContext ctx = newContext();
+            assertThat(ctxCaptor.get()).isSameAs(ctx);
+        }
+
+        // Thread-local state must be cleaned up.
+        assertThat(ClientThreadLocalState.get()).isNull();
+    }
+
+    @Test
+    void nestedContextCaptors() {
+        try (ClientRequestContextCaptor ctxCaptor1 = Clients.newContextCaptor()) {
+            final DefaultClientRequestContext ctx1 = newContext();
+            assertThat(ctxCaptor1.getAll()).containsExactly(ctx1);
+
+            final ClientRequestContext ctx2;
+            ClientRequestContextCaptor ctxCaptor2 = null;
+            try {
+                ctxCaptor2 = Clients.newContextCaptor();
+                ctx2 = newContext();
+                // The context captured by the second captor should not affect the first captor.
+                assertThat(ctxCaptor1.getAll()).containsExactly(ctx1);
+                assertThat(ctxCaptor2.getAll()).containsExactly(ctx2);
+            } finally {
+                if (ctxCaptor2 != null) {
+                    ctxCaptor2.close();
+                }
+            }
+
+            final DefaultClientRequestContext ctx3 = newContext();
+            assertThat(ctxCaptor1.getAll()).containsExactly(ctx1, ctx3);
+            assertThat(ctxCaptor2.getAll()).containsExactly(ctx2);
+        }
+
+        // Thread-local state must be cleaned up.
+        assertThat(ClientThreadLocalState.get()).isNull();
+    }
+
+    private static DefaultClientRequestContext newContext() {
+        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
+                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
+                RequestId.random(), HttpMethod.POST, "/foo", null, null,
+                ClientOptions.of(),
+                HttpRequest.of(RequestHeaders.of(
+                        HttpMethod.POST, "/foo",
+                        HttpHeaderNames.SCHEME, "http",
+                        HttpHeaderNames.AUTHORITY, "example.com:8080")),
+                null);
+        ctx.init(Endpoint.of("example.com", 8080));
+        return ctx;
     }
 
     private static void setAdditionalHeaders(ClientRequestContext originalCtx) {

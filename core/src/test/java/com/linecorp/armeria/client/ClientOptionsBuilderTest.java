@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.encoding.HttpDecodingClient;
+import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -82,7 +82,7 @@ class ClientOptionsBuilderTest {
 
         // Add another decorator to ensure that the builder does not replace the previous one.
         final Function<? super HttpClient, ? extends HttpClient> decorator2 =
-                HttpDecodingClient.newDecorator();
+                DecodingClient.newDecorator();
         b.option(ClientOption.DECORATION.newValue(ClientDecoration.builder()
                                                                   .add(decorator2)
                                                                   .build()));

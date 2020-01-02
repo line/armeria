@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.it.client.retry;
 
-import static com.linecorp.armeria.client.retry.RetryingClient.ARMERIA_RETRY_COUNT;
+import static com.linecorp.armeria.client.retry.AbstractRetryingClient.ARMERIA_RETRY_COUNT;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,7 +49,6 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
-import com.linecorp.armeria.client.retry.RetryingRpcClientBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -158,9 +157,9 @@ public class RetryingRpcClientTest {
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts, BlockingQueue<RequestLog> logQueue) {
         return new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(new RetryingRpcClientBuilder(strategy)
-                                      .maxTotalAttempts(maxAttempts)
-                                      .newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                               .maxTotalAttempts(maxAttempts)
+                                               .newDecorator())
                 .rpcDecorator((delegate, ctx, req) -> {
                     ctx.log().addListener(logQueue::add, RequestLogAvailability.COMPLETE);
                     return delegate.execute(ctx, req);

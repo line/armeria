@@ -38,7 +38,7 @@ final class RequestContextCallableObservable<T> extends Observable<T>
 
     @Override
     protected void subscribeActual(Observer<? super T> s) {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             source.subscribe(new RequestContextObserver<>(s, assemblyContext));
         }
     }
@@ -46,7 +46,7 @@ final class RequestContextCallableObservable<T> extends Observable<T>
     @SuppressWarnings("unchecked")
     @Override
     public T call() throws Exception {
-        try (SafeCloseable ignored = assemblyContext.pushIfAbsent()) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
             return ((Callable<T>) source).call();
         }
     }

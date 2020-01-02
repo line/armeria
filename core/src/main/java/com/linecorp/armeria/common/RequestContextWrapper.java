@@ -20,8 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.util.Iterator;
-import java.util.function.BiConsumer;
+import java.util.Map.Entry;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -32,7 +33,6 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
@@ -40,7 +40,7 @@ import io.netty.util.AttributeKey;
  *
  * @param <T> the self type
  */
-public abstract class RequestContextWrapper<T extends RequestContext> extends AbstractRequestContext {
+public abstract class RequestContextWrapper<T extends RequestContext> implements RequestContext {
 
     private final T delegate;
 
@@ -143,11 +143,6 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public Iterator<Attribute<?>> attrs() {
-        return delegate().attrs();
-    }
-
-    @Override
     public EventLoop eventLoop() {
         return delegate().eventLoop();
     }
@@ -163,11 +158,6 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public void onChild(BiConsumer<? super RequestContext, ? super RequestContext> callback) {
-        delegate().onChild(callback);
-    }
-
-    @Override
     public void invokeOnEnterCallbacks() {
         delegate().invokeOnEnterCallbacks();
     }
@@ -177,19 +167,33 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
         delegate().invokeOnExitCallbacks();
     }
 
+    @Nullable
     @Override
-    public void invokeOnChildCallbacks(RequestContext newCtx) {
-        delegate().invokeOnChildCallbacks(newCtx);
-    }
-
-    @Override
-    public <V> Attribute<V> attr(AttributeKey<V> key) {
+    public <V> V attr(AttributeKey<V> key) {
         return delegate().attr(key);
     }
 
     @Override
-    public <V> boolean hasAttr(AttributeKey<V> key) {
-        return delegate().hasAttr(key);
+    public <V> void setAttr(AttributeKey<V> key, @Nullable V value) {
+        delegate().setAttr(key, value);
+    }
+
+    @Nullable
+    @Override
+    public <V> V setAttrIfAbsent(AttributeKey<V> key, V value) {
+        return delegate().setAttrIfAbsent(key, value);
+    }
+
+    @Nullable
+    @Override
+    public <V> V computeAttrIfAbsent(
+            AttributeKey<V> key, Function<? super AttributeKey<V>, ? extends V> mappingFunction) {
+        return delegate().computeAttrIfAbsent(key, mappingFunction);
+    }
+
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        return delegate().attrs();
     }
 
     @Override

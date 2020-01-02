@@ -193,7 +193,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
     }
 
     @Before
-    public void setup() {
+    public void setUp() {
         SessionProtocolNegotiationCache.clear();
         sendConnectionClose.set(false);
     }

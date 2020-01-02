@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -30,6 +32,10 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.file.HttpFileBuilder.ClassPathHttpFileBuilder;
+import com.linecorp.armeria.server.file.HttpFileBuilder.FileSystemHttpFileBuilder;
+import com.linecorp.armeria.server.file.HttpFileBuilder.HttpDataFileBuilder;
+import com.linecorp.armeria.server.file.HttpFileBuilder.NonExistentHttpFileBuilder;
 
 import io.netty.buffer.ByteBufAllocator;
 
@@ -50,14 +56,25 @@ public interface HttpFile {
      * Creates a new {@link HttpFile} which streams the specified {@link File}.
      */
     static HttpFile of(File file) {
-        return HttpFileBuilder.of(file).build();
+        return builder(file).build();
     }
 
     /**
      * Creates a new {@link HttpFile} which streams the file at the specified {@link Path}.
      */
     static HttpFile of(Path path) {
-        return HttpFileBuilder.of(path).build();
+        return builder(path).build();
+    }
+
+    /**
+     * Creates a new {@link HttpFile} which streams the resource at the specified {@code path}, loaded by
+     * the specified {@link ClassLoader}.
+     *
+     * @param classLoader the {@link ClassLoader} which will load the resource at the {@code path}
+     * @param path the path to the resource
+     */
+    static HttpFile of(ClassLoader classLoader, String path) {
+        return builder(classLoader, path).build();
     }
 
     /**
@@ -65,7 +82,7 @@ public interface HttpFile {
      * a shortcut for {@code HttpFile.of(data, System.currentTimeMillis()}.
      */
     static AggregatedHttpFile of(HttpData data) {
-        return (AggregatedHttpFile) HttpFileBuilder.of(data).build();
+        return (AggregatedHttpFile) builder(data).build();
     }
 
     /**
@@ -77,15 +94,18 @@ public interface HttpFile {
      *                           millisecond since the epoch
      */
     static AggregatedHttpFile of(HttpData data, long lastModifiedMillis) {
-        return (AggregatedHttpFile) HttpFileBuilder.of(data, lastModifiedMillis).build();
+        return (AggregatedHttpFile) builder(data, lastModifiedMillis).build();
     }
 
     /**
      * Creates a new {@link HttpFile} which streams the resource at the specified {@code path}. This method is
      * a shortcut for {@code HttpFile.of(HttpFile.class.getClassLoader(), path)}.
+     *
+     * @deprecated Use {@link #of(ClassLoader, String)}.
      */
+    @Deprecated
     static HttpFile ofResource(String path) {
-        return HttpFileBuilder.ofResource(path).build();
+        return of(HttpFile.class.getClassLoader(), path);
     }
 
     /**
@@ -94,9 +114,12 @@ public interface HttpFile {
      *
      * @param classLoader the {@link ClassLoader} which will load the resource at the {@code path}
      * @param path the path to the resource
+     *
+     * @deprecated Use {@link #of(ClassLoader, String)}.
      */
+    @Deprecated
     static HttpFile ofResource(ClassLoader classLoader, String path) {
-        return HttpFileBuilder.ofResource(classLoader, path).build();
+        return of(classLoader, path);
     }
 
     /**
@@ -122,6 +145,90 @@ public interface HttpFile {
      */
     static AggregatedHttpFile nonExistent() {
         return NonExistentHttpFile.INSTANCE;
+    }
+
+    /**
+     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the file at the specified
+     * {@link File}.
+     */
+    static HttpFileBuilder builder(File file) {
+        return builder(requireNonNull(file, "file").toPath());
+    }
+
+    /**
+     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the file at the specified
+     * {@link Path}.
+     */
+    static HttpFileBuilder builder(Path path) {
+        return new FileSystemHttpFileBuilder(path);
+    }
+
+    /**
+     * Returns a new {@link HttpFileBuilder} that builds an {@link AggregatedHttpFile} from the specified
+     * {@link HttpData}. The last modified date of the file is set to 'now'. Note that the
+     * {@link HttpFileBuilder#build()} method of the returned builder will always return
+     * an {@link AggregatedHttpFile}, which guarantees a safe downcast:
+     * <pre>{@code
+     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo")).build();
+     * }</pre>
+     */
+    static HttpFileBuilder builder(HttpData data) {
+        return builder(data, System.currentTimeMillis());
+    }
+
+    /**
+     * Returns a new {@link HttpFileBuilder} that builds an {@link AggregatedHttpFile} from the specified
+     * {@link HttpData} and {@code lastModifiedMillis}. Note that the {@link HttpFileBuilder#build()} method
+     * of the returned builder will always return an {@link AggregatedHttpFile}, which guarantees a safe
+     * downcast:
+     * <pre>{@code
+     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo"), 1546923055020)
+     *                                                     .build();
+     * }</pre>
+     *
+     * @param data the content of the file
+     * @param lastModifiedMillis the last modified time represented as the number of milliseconds
+     *                           since the epoch
+     */
+    static HttpFileBuilder builder(HttpData data, long lastModifiedMillis) {
+        requireNonNull(data, "data");
+        return new HttpDataFileBuilder(data, lastModifiedMillis)
+                .autoDetectedContentType(false); // Can't auto-detect because there's no path or URI.
+    }
+
+    /**
+     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the classpath resource
+     * at the specified {@code path} using the specified {@link ClassLoader}.
+     */
+    static HttpFileBuilder builder(ClassLoader classLoader, String path) {
+        requireNonNull(classLoader, "classLoader");
+        requireNonNull(path, "path");
+
+        // Strip the leading slash.
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+        // Retrieve the resource URL.
+        final URL url = classLoader.getResource(path);
+        if (url == null || url.getPath().endsWith("/")) {
+            // Non-existent resource.
+            return new NonExistentHttpFileBuilder();
+        }
+
+        // Convert to a real file if possible.
+        if ("file".equals(url.getProtocol())) {
+            File f;
+            try {
+                f = new File(url.toURI());
+            } catch (URISyntaxException ignored) {
+                f = new File(url.getPath());
+            }
+
+            return builder(f.toPath());
+        }
+
+        return new ClassPathHttpFileBuilder(url);
     }
 
     /**

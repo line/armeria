@@ -17,11 +17,17 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
+import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootAndOldCtx;
+import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootCtx;
+import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -38,8 +44,13 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.RequestContextThreadLocal;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
@@ -162,6 +173,115 @@ public interface ClientRequestContext extends RequestContext {
     }
 
     /**
+     * Returns the {@link ServiceRequestContext} whose {@link Service} invokes the {@link Client}
+     * {@link Request} which created this {@link ClientRequestContext}, or {@code null} if this client request
+     * was not made in the context of a server request.
+     */
+    @Nullable
+    ServiceRequestContext root();
+
+    /**
+     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
+     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
+     *
+     * <p>If the value does not exist in this context but only in {@link #root()},
+     * this method will return the value from the {@link #root()}.
+     * <pre>{@code
+     * ClientRequestContext ctx = ...;
+     * assert ctx.root().attr(KEY).equals("root");
+     * assert ctx.attr(KEY).equals("root");
+     * assert ctx.ownAttr(KEY) == null;
+     * }</pre>
+     * If the value exists both in this context and {@link #root()},
+     * this method will return the value from this context.
+     * <pre>{@code
+     * ClientRequestContext ctx = ...;
+     * assert ctx.root().attr(KEY).equals("root");
+     * assert ctx.ownAttr(KEY).equals("child");
+     * assert ctx.attr(KEY).equals("child");
+     * }</pre>
+     *
+     * @see #ownAttr(AttributeKey)
+     */
+    @Nullable
+    @Override
+    <V> V attr(AttributeKey<V> key);
+
+    /**
+     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
+     * {@link #setAttr(AttributeKey, Object)} or {@link #setAttrIfAbsent(AttributeKey, Object)}.
+     * Unlike {@link #attr(AttributeKey)}, this does not search in {@link #root()}.
+     *
+     * @see #attr(AttributeKey)
+     */
+    @Nullable
+    <V> V ownAttr(AttributeKey<V> key);
+
+    /**
+     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
+     *
+     * <p>The {@link Iterator} returned by this method will also yield the {@link Entry}s from the
+     * {@link #root()} except those whose {@link AttributeKey} exist already in this context, e.g.
+     * <pre>{@code
+     * ClientRequestContext ctx = ...;
+     * assert ctx.ownAttr(KEY_A).equals("child_a");
+     * assert ctx.root().attr(KEY_A).equals("root_a");
+     * assert ctx.root().attr(KEY_B).equals("root_b");
+     *
+     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
+     * assert attrs.next().getValue().equals("child_a"); // KEY_A
+     * // Skip KEY_A in the root.
+     * assert attrs.next().getValue().equals("root_b"); // KEY_B
+     * assert attrs.hasNext() == false;
+     * }</pre>
+     * Please note that any changes made to the {@link Entry} returned by {@link Iterator#next()} never
+     * affects the {@link Entry} owned by {@link #root()}. For example:
+     * <pre>{@code
+     * ClientRequestContext ctx = ...;
+     * assert ctx.root().attr(KEY).equals("root");
+     * assert ctx.ownAttr(KEY) == null;
+     *
+     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
+     * Entry<AttributeKey<?>, Object> next = attrs.next();
+     * assert next.getKey() == KEY;
+     * // Overriding the root entry creates the client context's own entry.
+     * next.setValue("child");
+     * assert ctx.attr(KEY).equals("child");
+     * assert ctx.ownAttr(KEY).equals("child");
+     * // root attribute remains unaffected.
+     * assert ctx.root().attr(KEY).equals("root");
+     * }</pre>
+     * If you want to change the value from the root while iterating, please call
+     * {@link #attrs()} from {@link #root()}.
+     * <pre>{@code
+     * ClientRequestContext ctx = ...;
+     * assert ctx.root().attr(KEY).equals("root");
+     * assert ctx.ownAttr(KEY) == null;
+     *
+     * // Call attrs() from the root to set a value directly while iterating.
+     * Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.root().attrs();
+     * Entry<AttributeKey<?>, Object> next = attrs.next();
+     * assert next.getKey() == KEY;
+     * next.setValue("another_root");
+     * // The ctx does not have its own attribute.
+     * assert ctx.ownAttr(KEY) == null;
+     * assert ctx.attr(KEY).equals("another_root");
+     * }</pre>
+     *
+     * @see #ownAttrs()
+     */
+    @Override
+    Iterator<Entry<AttributeKey<?>, Object>> attrs();
+
+    /**
+     * Returns the {@link Iterator} of all {@link Entry}s this context contains.
+     * Unlike {@link #attrs()}, this does not iterate {@link #root()}.
+     *
+     * @see #attrs()
+     */
+    Iterator<Entry<AttributeKey<?>, Object>> ownAttrs();
+
+    /**
      * {@inheritDoc} For example, when you send an RPC request, this method will return {@code null} until
      * the RPC request is translated into an HTTP request.
      */
@@ -176,6 +296,66 @@ public interface ClientRequestContext extends RequestContext {
     @Nullable
     @Override
     RpcRequest rpcRequest();
+
+    /**
+     * Pushes this context to the thread-local stack. To pop the context from the stack, call
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
+     * <pre>{@code
+     * try (SafeCloseable ignored = ctx.push(true)) {
+     *     ...
+     * }
+     * }</pre>
+     *
+     * <p>In order to call this method, the current thread-local state must meet one of the
+     * following conditions:
+     * <ul>
+     *   <li>the thread-local does not have any {@link RequestContext} in it</li>
+     *   <li>the thread-local has the same {@link ClientRequestContext} as this - reentrance</li>
+     *   <li>the thread-local has the {@link ServiceRequestContext} which is the same as {@link #root()}</li>
+     *   <li>the thread-local has the {@link ClientRequestContext} whose {@link #root()}
+     *       is the same {@link #root()}</li>
+     *   <li>the thread-local has the {@link ClientRequestContext} whose {@link #root()} is {@code null}
+     *       and this {@link #root()} is {@code null}</li>
+     * </ul>
+     * Otherwise, this method will throw an {@link IllegalStateException}.
+     *
+     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
+     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
+     *                     removed from the thread-local stack respectively.
+     *                     NOTE: In case of reentrance, the callbacks will never run.
+     */
+    @Override
+    default SafeCloseable push(boolean runCallbacks) {
+        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        if (oldCtx == this) {
+            // Reentrance
+            return noopSafeCloseable();
+        }
+
+        if (oldCtx == null) {
+            return pushWithoutRootCtx(this, runCallbacks);
+        }
+
+        final ServiceRequestContext root = root();
+        if (oldCtx instanceof ServiceRequestContext && oldCtx == root) {
+            return pushWithRootCtx(this, root, runCallbacks);
+        }
+
+        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
+            if (root == null) {
+                return pushWithoutRootCtx(this, runCallbacks);
+            }
+
+            return pushWithRootAndOldCtx(this, root, oldCtx, runCallbacks);
+        }
+
+        // Put the oldCtx back before throwing an exception.
+        RequestContextThreadLocal.set(oldCtx);
+        throw new IllegalStateException(
+                "Trying to call object wrapped with context " + this + ", but context is currently " +
+                "set to " + oldCtx + ". This means the callback was called from " +
+                "unexpected thread or forgetting to close previous context.");
+    }
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this

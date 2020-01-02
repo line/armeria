@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -50,9 +49,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.channel.Channel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
-import io.netty.util.AttributeMap;
 
 /**
  * A set of informational properties collected while processing a {@link Request} and its {@link Response}.
@@ -66,15 +62,7 @@ import io.netty.util.AttributeMap;
  * @see RequestLogAvailability
  * @see RequestLogListener
  */
-public interface RequestLog extends AttributeMap {
-
-    /**
-     * Returns all {@link Attribute}s set in this log.
-     *
-     * @deprecated Use {@code RequestLog.context().attrs()}
-     */
-    @Deprecated
-    Iterator<Attribute<?>> attrs();
+public interface RequestLog {
 
     /**
      * Returns the list of child {@link RequestLog}s, ordered by the time it was added.
@@ -621,22 +609,4 @@ public interface RequestLog extends AttributeMap {
     String toStringResponseOnly(Function<? super ResponseHeaders, ?> headersSanitizer,
                                 Function<Object, ?> contentSanitizer,
                                 Function<? super HttpHeaders, ?> trailersSanitizer);
-
-    /**
-     * {@inheritDoc}
-     *
-     * @deprecated Use {@code RequestLog.context().attr()}.
-     */
-    @Override
-    @Deprecated
-    <T> Attribute<T> attr(AttributeKey<T> key);
-
-    /**
-     * {@inheritDoc}
-     *
-     * @deprecated Use {@code RequestLog.context().hasAttr()}.
-     */
-    @Override
-    @Deprecated
-    <T> boolean hasAttr(AttributeKey<T> key);
 }

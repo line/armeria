@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 
 /**
@@ -64,6 +65,8 @@ final class DefaultRoutingContext implements RoutingContext {
     @Nullable
     private final String query;
     private final List<MediaType> acceptTypes;
+    @Nullable
+    private volatile QueryParams queryParams;
     private final boolean isCorsPreflight;
     @Nullable
     private HttpStatusException deferredCause;
@@ -105,6 +108,20 @@ final class DefaultRoutingContext implements RoutingContext {
         return query;
     }
 
+    @Override
+    public QueryParams params() {
+        QueryParams queryParams = this.queryParams;
+        if (queryParams == null) {
+            if (query == null) {
+                queryParams = QueryParams.of();
+            } else {
+                queryParams = QueryParams.fromQueryString(query);
+            }
+            this.queryParams = queryParams;
+        }
+        return queryParams;
+    }
+
     @Nullable
     @Override
     public MediaType contentType() {
@@ -119,6 +136,11 @@ final class DefaultRoutingContext implements RoutingContext {
     @Override
     public boolean isCorsPreflight() {
         return isCorsPreflight;
+    }
+
+    @Override
+    public RequestHeaders headers() {
+        return headers;
     }
 
     @Override
@@ -138,6 +160,10 @@ final class DefaultRoutingContext implements RoutingContext {
     // 2 : Path
     // 3 : Content-Type
     // 4 : Accept
+    //
+    // Note that we don't use query(), params() and header() for generating hashCode and comparing objects,
+    // because this class can be cached in RouteCache class. Using all properties may cause cache misses
+    // from RouteCache so it would be better if we choose the properties which can be a cache key.
 
     @Override
     public int hashCode() {
@@ -151,10 +177,7 @@ final class DefaultRoutingContext implements RoutingContext {
         result *= 31;
         result += routingCtx.path().hashCode();
         result *= 31;
-        final MediaType contentType = routingCtx.contentType();
-        if (contentType != null) {
-            result += contentType.hashCode();
-        }
+        result += Objects.hashCode(routingCtx.contentType());
         for (MediaType mediaType : routingCtx.acceptTypes()) {
             result *= 31;
             result += mediaType.hashCode();
@@ -178,7 +201,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
         final RoutingContext other = (RoutingContext) obj;
         return self.virtualHost().equals(other.virtualHost()) &&
-               self.method().equals(other.method()) &&
+               self.method() == other.method() &&
                self.path().equals(other.path()) &&
                Objects.equals(self.contentType(), other.contentType()) &&
                self.acceptTypes().equals(other.acceptTypes());
@@ -195,10 +218,14 @@ final class DefaultRoutingContext implements RoutingContext {
                                                  .add("virtualHost", routingCtx.virtualHost())
                                                  .add("method", routingCtx.method())
                                                  .add("path", routingCtx.path())
+                                                 .add("query", routingCtx.query())
                                                  .add("contentType", routingCtx.contentType());
         if (!routingCtx.acceptTypes().isEmpty()) {
             helper.add("acceptTypes", routingCtx.acceptTypes());
         }
+        helper.add("isCorsPreflight", routingCtx.isCorsPreflight())
+              .add("requiresMatchingParamsPredicates", routingCtx.requiresMatchingParamsPredicates())
+              .add("requiresMatchingHeadersPredicates", routingCtx.requiresMatchingHeadersPredicates());
         return helper.toString();
     }
 

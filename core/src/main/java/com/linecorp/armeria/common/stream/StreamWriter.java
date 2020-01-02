@@ -41,6 +41,7 @@ import io.netty.util.ReferenceCounted;
  *   <li>{@link #tryWrite(Supplier)}</li>
  *   <li>{@link #write(Object)}</li>
  *   <li>{@link #write(Supplier)}</li>
+ *   <li>{@link #close(Object)}</li>
  * </ul>
  * the object will be released automatically by the stream when it's no longer in use, such as when:
  * <ul>
@@ -132,10 +133,20 @@ public interface StreamWriter<T> {
     void close(Throwable cause);
 
     /**
-     * Writes the given object and closes the stream successfully.
+     * Writes the given object and closes the stream successfully. The written object will be transferred to
+     * the {@link Subscriber}.
+     *
+     * @throws ClosedPublisherException if the stream was already closed.
+     * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
+     *
+     * @deprecated Use {@link #tryWrite(Object)} and {@link #close()}.
      */
+    @Deprecated
     default void close(T obj) {
-        write(obj);
-        close();
+        try {
+            write(obj);
+        } finally {
+            close();
+        }
     }
 }

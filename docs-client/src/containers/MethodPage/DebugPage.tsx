@@ -50,7 +50,7 @@ import RequestBody from './RequestBody';
 
 interface OwnProps {
   method: Method;
-  isAnnotatedHttpService: boolean;
+  isAnnotatedService: boolean;
   exampleHeaders: Option[];
   exactPathMapping: boolean;
   useRequestBody: boolean;
@@ -103,7 +103,7 @@ const escapeSingleQuote = (text: string) => text.replace(/'/g, `'\\''`);
 const DebugPage: React.FunctionComponent<Props> = ({
   exactPathMapping,
   exampleHeaders,
-  isAnnotatedHttpService,
+  isAnnotatedService,
   history,
   location,
   match,
@@ -146,7 +146,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     let urlQueries = '';
     let urlEndpointPath = '';
-    if (isAnnotatedHttpService) {
+    if (isAnnotatedService) {
       if (exactPathMapping) {
         if (urlParams.has('queries')) {
           urlQueries = urlParams.get('queries')!;
@@ -296,7 +296,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       );
       let uri;
 
-      if (isAnnotatedHttpService) {
+      if (isAnnotatedService) {
         if (exactPathMapping) {
           const queries = additionalQueries;
           uri =
@@ -335,7 +335,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     requestBody,
     additionalHeaders,
     method,
-    isAnnotatedHttpService,
+    isAnnotatedService,
     exactPathMapping,
   ]);
 
@@ -363,7 +363,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
       let queries;
       let executedEndpointPath;
-      if (isAnnotatedHttpService) {
+      if (isAnnotatedService) {
         if (exactPathMapping) {
           const queriesText = params.get('queries');
           queries = queriesText ? queriesText : '';
@@ -393,7 +393,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
       setDebugResponse(executedDebugResponse);
     },
-    [useRequestBody, isAnnotatedHttpService, exactPathMapping, method],
+    [useRequestBody, isAnnotatedService, exactPathMapping, method],
   );
 
   const onSubmit = useCallback(() => {
@@ -405,7 +405,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     try {
       if (useRequestBody) {
-        validateJsonObject(requestBody, 'request body');
+        // Validate requestBody only if it's not empty string.
+        if (!!requestBody.trim()) {
+          validateJsonObject(requestBody, 'request body');
+        }
 
         // Do not round-trip through JSON.parse to minify the text so as to not lose numeric precision.
         // See: https://github.com/line/armeria/issues/273
@@ -415,7 +418,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         params.set('request_body', minifiedRequestBody);
       }
 
-      if (isAnnotatedHttpService) {
+      if (isAnnotatedService) {
         if (exactPathMapping) {
           if (queries) {
             params.set('queries', queries);
@@ -459,7 +462,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     additionalHeaders,
     location,
     useRequestBody,
-    isAnnotatedHttpService,
+    isAnnotatedService,
     exactPathMapping,
     validateEndpointPath,
     stickyHeaders,
@@ -475,7 +478,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
             <Typography variant="h6" paragraph>
               Debug
             </Typography>
-            {isAnnotatedHttpService &&
+            {isAnnotatedService &&
               (exactPathMapping ? (
                 <>
                   <HttpQueryString

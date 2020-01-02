@@ -19,47 +19,47 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class EventCountTest {
+class EventCountTest {
 
     @Test
-    public void testCounts() {
-        assertThat(new EventCount(0, 0).success()).isEqualTo(0L);
-        assertThat(new EventCount(1, 0).success()).isEqualTo(1L);
-        assertThat(new EventCount(1, 1).success()).isEqualTo(1L);
-        assertThat(new EventCount(0, 0).failure()).isEqualTo(0L);
-        assertThat(new EventCount(0, 1).failure()).isEqualTo(1L);
-        assertThat(new EventCount(1, 1).failure()).isEqualTo(1L);
-        assertThat(new EventCount(0, 0).total()).isEqualTo(0L);
-        assertThat(new EventCount(1, 1).total()).isEqualTo(2L);
+    void testCounts() {
+        assertThat(EventCount.of(0, 0).success()).isEqualTo(0L);
+        assertThat(EventCount.of(1, 0).success()).isEqualTo(1L);
+        assertThat(EventCount.of(1, 1).success()).isEqualTo(1L);
+        assertThat(EventCount.of(0, 0).failure()).isEqualTo(0L);
+        assertThat(EventCount.of(0, 1).failure()).isEqualTo(1L);
+        assertThat(EventCount.of(1, 1).failure()).isEqualTo(1L);
+        assertThat(EventCount.of(0, 0).total()).isEqualTo(0L);
+        assertThat(EventCount.of(1, 1).total()).isEqualTo(2L);
     }
 
     @Test
-    public void testRates() {
-        assertThatThrownBy(() -> new EventCount(0, 0).successRate()).isInstanceOf(ArithmeticException.class);
+    void testRates() {
+        assertThatThrownBy(() -> EventCount.of(0, 0).successRate()).isInstanceOf(ArithmeticException.class);
 
-        assertThat(new EventCount(1, 0).successRate()).isEqualTo(1.0);
-        assertThat(new EventCount(1, 1).successRate()).isEqualTo(0.5);
+        assertThat(EventCount.of(1, 0).successRate()).isEqualTo(1.0);
+        assertThat(EventCount.of(1, 1).successRate()).isEqualTo(0.5);
 
-        assertThatThrownBy(() -> new EventCount(0, 0).failureRate()).isInstanceOf(ArithmeticException.class);
+        assertThatThrownBy(() -> EventCount.of(0, 0).failureRate()).isInstanceOf(ArithmeticException.class);
 
-        assertThat(new EventCount(0, 1).failureRate()).isEqualTo(1.0);
-        assertThat(new EventCount(1, 1).failureRate()).isEqualTo(0.5);
+        assertThat(EventCount.of(0, 1).failureRate()).isEqualTo(1.0);
+        assertThat(EventCount.of(1, 1).failureRate()).isEqualTo(0.5);
     }
 
     @Test
-    public void testInvalidArguments() {
-        assertThatThrownBy(() -> new EventCount(-1, 0)).isInstanceOf(AssertionError.class);
-        assertThatThrownBy(() -> new EventCount(0, -1)).isInstanceOf(AssertionError.class);
+    void testInvalidArguments() {
+        assertThatThrownBy(() -> EventCount.of(-1, 0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EventCount.of(0, -1)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void testEquals() {
-        final EventCount ec = new EventCount(1, 1);
+    void testEquals() {
+        final EventCount ec = EventCount.of(1, 1);
         assertThat(ec).isEqualTo(ec);
-        assertThat(new EventCount(0, 0)).isEqualTo(new EventCount(0, 0));
-        assertThat(new EventCount(1, 0)).isNotEqualTo(new EventCount(0, 0));
-        assertThat(new EventCount(1, 0)).isNotEqualTo(new Object());
+        assertThat(EventCount.of(0, 0)).isEqualTo(EventCount.of(0, 0));
+        assertThat(EventCount.of(1, 0)).isNotEqualTo(EventCount.of(0, 0));
+        assertThat(EventCount.of(1, 0)).isNotEqualTo(new Object());
     }
 }

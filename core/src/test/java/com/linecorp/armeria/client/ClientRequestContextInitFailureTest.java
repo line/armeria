@@ -62,6 +62,9 @@ class ClientRequestContextInitFailureTest {
                 assertThat(actualCause).isSameAs(cause);
             });
         }
+
+        // Thread-local state must be cleaned up.
+        assertThat(ClientThreadLocalState.get()).isNull();
     }
 
     private static void assertFailure(String authority, Consumer<Throwable> requirements) {

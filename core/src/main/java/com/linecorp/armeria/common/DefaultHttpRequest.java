@@ -34,7 +34,10 @@ public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> impleme
 
     /**
      * Creates a new instance with the specified headers.
+     *
+     * @deprecated Use {@link HttpRequest#streaming(RequestHeaders)}.
      */
+    @Deprecated
     public DefaultHttpRequest(RequestHeaders headers) {
         this.headers = requireNonNull(headers, "headers");
     }

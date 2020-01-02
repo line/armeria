@@ -7,7 +7,7 @@ Serving static files
 
     Visit `armeria-examples <https://github.com/line/armeria-examples>`_ to find a fully working example.
 
-Use :api:`HttpFileService` to serve static files under a certain directory. :api:`HttpFileService` supports
+Use :api:`FileService` to serve static files under a certain directory. :api:`FileService` supports
 ``GET`` and ``HEAD`` HTTP methods and will auto-fill ``Date``, ``Last-Modified``, ``ETag`` and auto-detected
 ``Content-Type`` headers for you. It is also capable of sending a ``304 Not Modified`` response based on
 ``If-None-Match`` and ``If-Modified-Since`` header values.
@@ -15,33 +15,34 @@ Use :api:`HttpFileService` to serve static files under a certain directory. :api
 .. code-block:: java
 
     import com.linecorp.armeria.server.ServerBuilder;
-    import com.linecorp.armeria.server.file.HttpFileService;
+    import com.linecorp.armeria.server.file.FileService;
 
     ServerBuilder sb = Server.builder();
     sb.serviceUnder("/images/",
-                    HttpFileService.forFileSystem("/var/lib/www/images"));
+                    FileService.of(Paths.get("/var/lib/www/images"));
 
     // You can also serve the resources in the class path.
     sb.serviceUnder("/resources",
-                    HttpFileService.forClassPath("/com/example/resources"));
+                    FileService.of(ClassLoader.getSystemClassLoader(),
+                                   "/com/example/resources"));
 
 Auto-generating directory listings
 ----------------------------------
 
-You can configure :api:`HttpFileService` to generate the directory listing of the directories without
-an ``index.html`` file using the ``autoIndex(boolean)`` method in :api:`HttpFileServiceBuilder`.
+You can configure :api:`FileService` to generate the directory listing of the directories without
+an ``index.html`` file using the ``autoIndex(boolean)`` method in :api:`FileServiceBuilder`.
 
 .. code-block:: java
 
-    import com.linecorp.armeria.server.file.HttpFileServiceBuilder;
+    import com.linecorp.armeria.server.file.FileServiceBuilder;
 
-    HttpFileServiceBuilder fsb =
-            HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
+    FileServiceBuilder fsb =
+            FileService.builder(Paths.get("/var/lib/www/images"));
 
     // Enable auto-index.
     fsb.autoIndex(true);
 
-    HttpFileService fs = fsb.build();
+    FileService fs = fsb.build();
 
 .. note::
 
@@ -57,8 +58,8 @@ You can specify additional response headers such as ``cache-control`` and other 
     import com.linecorp.armeria.common.ServerCacheControl;
     import com.linecorp.armeria.common.ServerCacheControlBuilder;
 
-    HttpFileServiceBuilder fsb =
-            HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
+    FileServiceBuilder fsb =
+            FileService.builder(Paths.get("/var/lib/www/images"));
 
     // Specify cache control directives.
     ServerCacheControl cc = new ServerCacheControlBuilder()
@@ -70,25 +71,25 @@ You can specify additional response headers such as ``cache-control`` and other 
     // Specify a custom header.
     fsb.setHeader("foo", "bar");
 
-    HttpFileService fs = fsb.build();
+    FileService fs = fsb.build();
 
 Adjusting static file cache
 ---------------------------
 
-By default, :api:`HttpFileService` caches up to 1024 files whose length is less than or equal to
-65,536 bytes. You can customize this behavior using :api:`HttpFileServiceBuilder`.
+By default, :api:`FileService` caches up to 1024 files whose length is less than or equal to
+65,536 bytes. You can customize this behavior using :api:`FileServiceBuilder`.
 
 .. code-block:: java
 
-    HttpFileServiceBuilder fsb =
-            HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
+    FileServiceBuilder fsb =
+            FileService.builder(Paths.get("/var/lib/www/images"));
 
     // Cache up to 4096 files.
     fsb.entryCacheSpec("maximumSize=4096");
     // Cache files whose length is less than or equal to 1 MiB.
     fsb.maxCacheEntrySizeBytes(1048576);
 
-    HttpFileService fs = fsb.build();
+    FileService fs = fsb.build();
 
 The cache can be disabled by specifying ``0`` for ``maxCacheEntries()``.
 You can also specify a custom cache specification using ``entryCacheSpec()``,
@@ -99,7 +100,7 @@ the JVM property ``-Dcom.linecorp.armeria.fileServiceCache=<spec>``.
 Serving pre-compressed files
 ----------------------------
 
-:api:`HttpFileService` can be configured to serve a pre-compressed file based on the value of the
+:api:`FileService` can be configured to serve a pre-compressed file based on the value of the
 ``Accept-Encoding`` header. For example, if a client sent the following HTTP request:
 
 .. code-block:: http
@@ -108,7 +109,7 @@ Serving pre-compressed files
     Host: example.com
     Accept-Encoding: gzip, identity
 
-:api:`HttpFileService` could look for ``/index.html.gz`` first and send the following response with the
+:api:`FileService` could look for ``/index.html.gz`` first and send the following response with the
 ``Content-Encoding: gzip`` header if it exists:
 
 .. code-block:: http
@@ -133,23 +134,24 @@ content:
 
     <uncompressed content>
 
-This behavior is enabled by calling ``serveCompressedFiles(true)`` for :api:`HttpFileServiceBuilder`.
+This behavior is enabled by calling ``serveCompressedFiles(true)`` for :api:`FileServiceBuilder`.
 ``.gz`` (gzip) and ``.br`` (Brotli) files are supported currently.
 
 .. code-block:: java
 
-    HttpFileServiceBuilder fsb =
-            HttpFileServiceBuilder.forClassPath("/com/example/resources");
+    FileServiceBuilder fsb =
+            FileService.builder(ClassLoader.getSystemClassLoader(),
+                                "/com/example/resources");
 
     // Enable serving pre-compressed files.
     fsb.serveCompressedFiles(true);
 
-    HttpFileService fs = fsb.build();
+    FileService fs = fsb.build();
 
 Serving an individual file
 --------------------------
 
-You can also serve an individual file using :api:`HttpFile`. Like :api:`HttpFileService` does, :api:`HttpFile`
+You can also serve an individual file using :api:`HttpFile`. Like :api:`FileService` does, :api:`HttpFile`
 supports ``GET`` and ``HEAD`` HTTP methods and will auto-fill ``Date``, ``Last-Modified``, ``ETag`` and
 auto-detected ``Content-Type`` headers for you. It is also capable of sending a ``304 Not Modified`` response
 based on ``If-None-Match`` and ``If-Modified-Since`` header values.
@@ -158,7 +160,7 @@ based on ``If-None-Match`` and ``If-Modified-Since`` header values.
 
     import com.linecorp.armeria.server.file.HttpFile;
 
-    HttpFile favicon = HttpFile.of(new File("/var/lib/www/favicon.ico"));
+    HttpFile favicon = HttpFile.of(Paths.get("/var/lib/www/favicon.ico"));
 
     ServerBuilder sb = Server.builder();
     // Serve the favicon.ico file by converting an HttpFile into a service.
@@ -169,14 +171,14 @@ path, which is useful when serving a frontend application with client-side routi
 
 .. code-block:: java
 
-    HttpFile index = HttpFile.of(new File("/var/lib/www/index.html"));
+    HttpFile index = HttpFile.of(Paths.get("/var/lib/www/index.html"));
 
     ServerBuilder sb = Server.builder();
     // Register the file service for assets.
     sb.serviceUnder("/node_modules",
-                    HttpFileService.forFileSystem("/var/lib/www/node_modules"));
+                    FileService.of(Paths.get("/var/lib/www/node_modules")));
     sb.serviceUnder("/static",
-                    HttpFileService.forFileSystem("/var/lib/www/static"));
+                    FileService.of(Paths.get("/var/lib/www/static")));
     // Register the fallback file service.
     sb.serviceUnder("/", index.asService());
 
@@ -186,7 +188,7 @@ You can also achieve the same behavior using :ref:`server-annotated-service`:
 
     // Register the fallback file service.
     sb.annotatedService(new Object() {
-        final HttpFile index = HttpFile.of(new File("/var/lib/www/index.html"));
+        final HttpFile index = HttpFile.of(Paths.get("/var/lib/www/index.html"));
         @Get
         @Head
         @Path("glob:/**")
@@ -207,9 +209,10 @@ An :api:`HttpFile` can be configured to send different headers than the auto-fil
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.file.HttpFile;
     import com.linecorp.armeria.server.file.HttpFileBuilder;
 
-    HttpFileBuilder fb = HttpFileBuilder.of(new File("/var/lib/www/index.html"));
+    HttpFileBuilder fb = HttpFile.builder(Paths.get("/var/lib/www/index.html"));
     // Disable the 'Date' header.
     fb.date(false);
     // Disable the 'Last-Modified' header.
@@ -229,12 +232,12 @@ An :api:`HttpFile` can be configured to send different headers than the auto-fil
 Caching ``HttpFile``
 --------------------
 
-Unlike :api:`HttpFileService`, :api:`HttpFile` does not cache the file content. Use ``HttpFile.ofCached()``
+Unlike :api:`FileService`, :api:`HttpFile` does not cache the file content. Use ``HttpFile.ofCached()``
 to enable content caching for an existing :api:`HttpFile`:
 
 .. code-block:: java
 
-    HttpFile uncachedFile = HttpFile.of(new File("/var/lib/www/index.html"));
+    HttpFile uncachedFile = HttpFile.of(Paths.get("/var/lib/www/index.html"));
     HttpFile cachedFile = HttpFile.ofCached(uncachedFile, 65536);
 
 Note that you need to specify the maximum allowed length of the cached content. In the above example, the file
@@ -253,7 +256,7 @@ that file I/O does not occur on each retrieval, you can use the ``aggregate()`` 
     // because file I/O is often a blocking operation.
     Executor ioExecutor = ...;
 
-    HttpFile file = HttpFile.of(new File("/var/lib/www/img/logo.png");
+    HttpFile file = HttpFile.of(Paths.get("/var/lib/www/img/logo.png");
     CompletableFuture<AggregatedHttpFile> future = file.aggregate(ioExecutor);
     AggregatedHttpFile aggregated = future.join();
 
@@ -271,7 +274,7 @@ Building ``AggregatedHttpFile`` from ``HttpData``
 -------------------------------------------------
 
 The content you need to serve is not always from an external resource but sometimes from memory, such as
-``byte[]`` or ``String``. Use ``HttpFile.of(HttpData)`` or ``HttpFileBuilder.of(HttpData)`` to build an
+``byte[]`` or ``String``. Use ``HttpFile.of(HttpData)`` or ``HttpFile.builder(HttpData)`` to build an
 ``AggregatedHttpFile`` from an in-memory resource:
 
 .. code-block:: java
@@ -286,6 +289,6 @@ The content you need to serve is not always from an external resource but someti
     // Note: HttpFileBuilder.build() returns an AggregatedHttpFile
     //       if HttpFileBuilder was created from an HttpData.
     AggregatedHttpFile f3 =
-        (AggregatedHttpFile) HttpFileBuilder.of(HttpData.ofAscii("Armeria"))
-                                            .lastModified(false)
-                                            .build();
+        (AggregatedHttpFile) HttpFile.builder(HttpData.ofAscii("Armeria"))
+                                     .lastModified(false)
+                                     .build();

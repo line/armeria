@@ -58,11 +58,11 @@ public class ZooKeeperRegistrationTest extends ZooKeeperTestBase {
                                         .http(endpoint.port())
                                         .service("/", new EchoService())
                                         .build();
-            final ServerListener listener = new ZooKeeperUpdatingListenerBuilder(
-                    instance().connectString().get(), zNode)
-                    .sessionTimeoutMillis(sessionTimeoutMillis)
-                    .endpoint(endpoint)
-                    .build();
+            final ServerListener listener =
+                    ZooKeeperUpdatingListener.builder(instance().connectString().get(), zNode)
+                                             .sessionTimeoutMillis(sessionTimeoutMillis)
+                                             .endpoint(endpoint)
+                                             .build();
             server.addListener(listener);
             server.start().join();
             servers.add(server);
@@ -86,7 +86,7 @@ public class ZooKeeperRegistrationTest extends ZooKeeperTestBase {
             try {
                 sampleEndpoints.forEach(endpoint -> {
                     try {
-                        assertThat(NodeValueCodec.DEFAULT.decode(zk.getData(
+                        assertThat(NodeValueCodec.ofDefault().decode(zk.getData(
                                 zNode + '/' + endpoint.host() + '_' + endpoint.port()).get()))
                                 .isEqualTo(endpoint);
                     } catch (Throwable throwable) {

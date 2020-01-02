@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.cors;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -26,7 +25,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,17 +40,17 @@ import com.linecorp.armeria.server.HttpService;
  * <pre>{@code
  * ServerBuilder sb = Server.builder();
  * sb.service("/cors", myService.decorate(
- *          CorsServiceBuilder.forOrigins("http://example.com", "http://example2.com")
- *                            .shortCircuit()
- *                            .allowNullOrigin()
- *                            .allowCredentials()
- *                            .allowRequestMethods(HttpMethod.GET, HttpMethod.POST)
- *                            .allowRequestHeaders("allow_request_header1", "allow_request_header2")
- *                            .andForOrigins("http://example3.com")
- *                            .allowCredentials()
- *                            .allowRequestMethods(HttpMethod.GET)
- *                            .and()
- *                            .newDecorator()));
+ *          CorsService.builder("http://example.com", "http://example2.com")
+ *                     .shortCircuit()
+ *                     .allowNullOrigin()
+ *                     .allowCredentials()
+ *                     .allowRequestMethods(HttpMethod.GET, HttpMethod.POST)
+ *                     .allowRequestHeaders("allow_request_header1", "allow_request_header2")
+ *                     .andForOrigins("http://example3.com")
+ *                     .allowCredentials()
+ *                     .allowRequestMethods(HttpMethod.GET)
+ *                     .and()
+ *                     .newDecorator()));
  * }</pre>
  */
 public final class CorsServiceBuilder {
@@ -60,43 +58,43 @@ public final class CorsServiceBuilder {
     private static final Logger logger = LoggerFactory.getLogger(CorsServiceBuilder.class);
 
     /**
-     * Creates a new builder with its origin set to '*'.
+     * Creates a new builder with its origin set with '*'.
+     *
+     * @deprecated Use {@link CorsService#builderForAnyOrigin()}.
      */
+    @Deprecated
     public static CorsServiceBuilder forAnyOrigin() {
-        return new CorsServiceBuilder();
+        return CorsService.builderForAnyOrigin();
     }
 
     /**
      * Creates a new builder with the specified origin.
+     *
+     * @deprecated Use {@link CorsService#builder(String...)}.
      */
+    @Deprecated
     public static CorsServiceBuilder forOrigin(String origin) {
         return forOrigins(requireNonNull(origin, "origin"));
     }
 
     /**
      * Creates a new builder with the specified origins.
+     *
+     * @deprecated Use {@link CorsService#builder(String...)}.
      */
+    @Deprecated
     public static CorsServiceBuilder forOrigins(String... origins) {
-        requireNonNull(origins, "origins");
-        return forOrigins(ImmutableList.copyOf(origins));
+        return CorsService.builder(origins);
     }
 
     /**
      * Creates a new builder with the specified origins.
+     *
+     * @deprecated Use {@link CorsService#builder(Iterable)}.
      */
+    @Deprecated
     public static CorsServiceBuilder forOrigins(Iterable<String> origins) {
-        requireNonNull(origins, "origins");
-        final List<String> copied = ImmutableList.copyOf(origins);
-        if (copied.contains(ANY_ORIGIN)) {
-            if (copied.size() > 1) {
-                logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
-                            copied.stream()
-                                  .filter(c -> !ANY_ORIGIN.equals(c))
-                                  .collect(Collectors.joining(",")));
-            }
-            return forAnyOrigin();
-        }
-        return new CorsServiceBuilder(copied);
+        return CorsService.builder(origins);
     }
 
     final boolean anyOriginSupported;
@@ -477,6 +475,6 @@ public final class CorsServiceBuilder {
 
     @Override
     public String toString() {
-        return CorsConfig.toString(this, true, anyOriginSupported, shortCircuit, policies);
+        return CorsConfig.toString(this, anyOriginSupported, shortCircuit, policies);
     }
 }

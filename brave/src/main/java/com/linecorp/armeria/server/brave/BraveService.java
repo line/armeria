@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
-import com.linecorp.armeria.internal.brave.TraceContextUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -78,9 +77,6 @@ public final class BraveService extends SimpleDecoratingHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Span span = handler.handleReceive(ServiceRequestContextAdapter.asHttpServerRequest(ctx));
-
-        // Ensure the trace context propagates to children
-        ctx.onChild(TraceContextUtil::copy);
 
         // For no-op spans, nothing special to do.
         if (span.isNoop()) {

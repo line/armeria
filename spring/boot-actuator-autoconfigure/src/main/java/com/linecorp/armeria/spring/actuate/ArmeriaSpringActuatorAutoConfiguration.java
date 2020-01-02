@@ -62,6 +62,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
@@ -124,8 +125,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         return sb -> {
             final CorsServiceBuilder cors;
             if (!corsProperties.getAllowedOrigins().isEmpty()) {
-                cors = CorsServiceBuilder.forOrigins(
-                        corsProperties.getAllowedOrigins());
+                cors = CorsService.builder(corsProperties.getAllowedOrigins());
 
                 if (!corsProperties.getAllowedMethods().contains("*")) {
                     if (corsProperties.getAllowedMethods().isEmpty()) {
@@ -164,7 +164,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                    path,
                                                    predicate.getConsumes(),
                                                    predicate.getProduces());
-                         sb.service(route, new WebOperationHttpService(operation, healthMapper));
+                         sb.service(route, new WebOperationService(operation, healthMapper));
                          if (cors != null) {
                              cors.route(path);
                          }

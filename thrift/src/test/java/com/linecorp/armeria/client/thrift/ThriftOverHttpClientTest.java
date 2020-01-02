@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.apache.thrift.TApplicationException;
@@ -50,6 +49,8 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
@@ -66,6 +67,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftCompletableFuture;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -84,8 +86,6 @@ import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.TimeService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.AsciiString;
 
 @SuppressWarnings("unchecked")
@@ -207,21 +207,18 @@ class ThriftOverHttpClientTest {
 
     @BeforeAll
     static void init() throws Exception {
-        final Consumer<SslContextBuilder> sslContextCustomizer =
-                b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE);
-
         final ConnectionPoolListener connectionPoolListener =
                 ENABLE_CONNECTION_POOL_LOGGING ? new ConnectionPoolLoggingListener()
                                                : ConnectionPoolListener.noop();
 
         clientFactoryWithUseHttp2Preface = ClientFactory.builder()
-                                                        .sslContextCustomizer(sslContextCustomizer)
+                                                        .tlsNoVerify()
                                                         .connectionPoolListener(connectionPoolListener)
                                                         .useHttp2Preface(true)
                                                         .build();
 
         clientFactoryWithoutUseHttp2Preface = ClientFactory.builder()
-                                                           .sslContextCustomizer(sslContextCustomizer)
+                                                           .tlsNoVerify()
                                                            .connectionPoolListener(connectionPoolListener)
                                                            .useHttp2Preface(false)
                                                            .build();
@@ -305,6 +302,48 @@ class ThriftOverHttpClientTest {
             for (int i = 0; i < testCount; i++) {
                 final AbstractMap.SimpleEntry<Integer, ?> pair = resultQueue.take();
                 assertThat(pair.getValue()).isEqualTo("Hello, kukuman" + pair.getKey() + '!');
+            }
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void contextCaptorSync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final HelloService.Iface client = Clients.newClient(clientFactory,
+                                                                uri(Handlers.HELLO, format, protocol),
+                                                                Handlers.HELLO.iface(), clientOptions);
+            try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+                client.hello("kukuman");
+                final ClientRequestContext ctx = ctxCaptor.get();
+                final RpcRequest rpcReq = ctx.rpcRequest();
+                assertThat(rpcReq).isNotNull();
+                assertThat(rpcReq.method()).isEqualTo("hello");
+                assertThat(rpcReq.params()).containsExactly("kukuman");
+            }
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void contextCaptorAsync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final HelloService.AsyncIface client =
+                    Clients.newClient(clientFactory, uri(Handlers.HELLO, format, protocol),
+                                      Handlers.HELLO.asyncIface(),
+                                      clientOptions);
+
+            try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+                client.hello("kukuman", new ThriftCompletableFuture<>());
+                final ClientRequestContext ctx = ctxCaptor.get();
+                final RpcRequest rpcReq = ctx.rpcRequest();
+                assertThat(rpcReq).isNotNull();
+                assertThat(rpcReq.method()).isEqualTo("hello");
+                assertThat(rpcReq.params()).containsExactly("kukuman");
             }
         });
     }

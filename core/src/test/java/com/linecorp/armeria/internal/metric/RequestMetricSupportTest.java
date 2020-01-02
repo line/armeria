@@ -22,31 +22,36 @@ import static org.mockito.Mockito.mock;
 
 import java.util.Map;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
-import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
+import io.netty.util.AttributeKey;
 
-public class RequestMetricSupportTest {
+class RequestMetricSupportTest {
+
+    private static final AttributeKey<Boolean> REQUEST_METRICS_SET =
+            AttributeKey.valueOf(RequestMetricSupportTest.class, "REQUEST_METRICS_SET");
 
     @Test
-    public void httpSuccess() {
+    void httpSuccess() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
@@ -101,7 +106,7 @@ public class RequestMetricSupportTest {
     }
 
     @Test
-    public void httpFailure() {
+    void httpFailure() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
@@ -125,7 +130,7 @@ public class RequestMetricSupportTest {
     }
 
     @Test
-    public void actualRequestsIncreasedWhenRetrying() {
+    void actualRequestsIncreasedWhenRetrying() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
@@ -165,7 +170,7 @@ public class RequestMetricSupportTest {
     }
 
     @Test
-    public void responseTimedOutInClientSide() {
+    void responseTimedOutInClientSide() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
@@ -190,7 +195,7 @@ public class RequestMetricSupportTest {
     }
 
     @Test
-    public void writeTimedOutInClientSide() {
+    void writeTimedOutInClientSide() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
@@ -222,7 +227,7 @@ public class RequestMetricSupportTest {
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
 
         ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
-        RequestMetricSupport.setup(ctx, meterIdPrefixFunction, false);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
         return ctx;
     }
 
@@ -246,7 +251,7 @@ public class RequestMetricSupportTest {
     }
 
     @Test
-    public void requestTimedOutInServerSide() {
+    void requestTimedOutInServerSide() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ServiceRequestContext ctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
@@ -254,9 +259,7 @@ public class RequestMetricSupportTest {
                                      .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-
-        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
-        RequestMetricSupport.setup(ctx, meterIdPrefixFunction, true);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
 
         ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestFirstBytesTransferred();
@@ -285,7 +288,7 @@ public class RequestMetricSupportTest {
     }
 
     @Test
-    public void rpc() {
+    void rpc() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/bar"))
@@ -296,12 +299,66 @@ public class RequestMetricSupportTest {
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
 
         ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
-        RequestMetricSupport.setup(ctx, meterIdPrefixFunction, false);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
 
         ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/bar"));
         ctx.logBuilder().requestFirstBytesTransferred();
-        ctx.logBuilder().requestContent(new DefaultRpcRequest(Object.class, "baz"), null);
+        ctx.logBuilder().requestContent(RpcRequest.of(Object.class, "baz"), null);
 
         assertThat(measureAll(registry)).containsEntry("bar.activeRequests#value{method=baz}", 1.0);
+    }
+
+    @Test
+    void serviceAndClientContext() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
+                                     .meterRegistry(registry)
+                                     .build();
+
+        RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET, MeterIdPrefixFunction.ofDefault("foo"), true);
+        sctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
+        sctx.logBuilder().endRequest();
+        try (SafeCloseable ignored = sctx.push()) {
+            final ClientRequestContext cctx =
+                    ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
+                                        .meterRegistry(registry)
+                                        .endpoint(Endpoint.of("example.com", 8080))
+                                        .build();
+            cctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
+            RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
+                                       MeterIdPrefixFunction.ofDefault("bar"), false);
+            cctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
+            cctx.logBuilder().endRequest();
+            cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
+            cctx.logBuilder().endResponse();
+        }
+        sctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
+        sctx.logBuilder().endResponse();
+
+        final Map<String, Double> measurements = measureAll(registry);
+        assertThat(measurements)
+                // clientRequestContext
+                .containsEntry("bar.activeRequests#value{method=POST}", 0.0)
+                .containsEntry("bar.requests#count{httpStatus=200,method=POST,result=success}",
+                               1.0)
+                .containsEntry("bar.requests#count{httpStatus=200,method=POST,result=failure}",
+                               0.0)
+                .containsEntry("bar.responseDuration#count{httpStatus=200,method=POST}", 1.0)
+                .containsEntry("bar.responseLength#count{httpStatus=200,method=POST}", 1.0)
+                .containsEntry("bar.totalDuration#count{httpStatus=200,method=POST}", 1.0)
+                // serviceRequestContext
+                .containsEntry("foo.activeRequests#value{hostnamePattern=*,method=POST," +
+                               "route=exact:/foo}", 0.0)
+                .containsEntry("foo.requests#count{hostnamePattern=*,httpStatus=200,method=POST," +
+                               "result=success,route=exact:/foo}", 1.0)
+                .containsEntry("foo.requests#count{hostnamePattern=*,httpStatus=200,method=POST," +
+                               "result=failure,route=exact:/foo}", 0.0)
+                .containsEntry("foo.responseDuration#count{hostnamePattern=*,httpStatus=200,method=POST," +
+                               "route=exact:/foo}", 1.0)
+                .containsEntry("foo.responseLength#count{hostnamePattern=*,httpStatus=200,method=POST," +
+                               "route=exact:/foo}", 1.0)
+                .containsEntry("foo.totalDuration#count{hostnamePattern=*,httpStatus=200,method=POST," +
+                               "route=exact:/foo}", 1.0);
     }
 }

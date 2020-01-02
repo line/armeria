@@ -32,16 +32,44 @@ public final class SimpleCompositeRpcService
         extends AbstractCompositeService<RpcService, RpcRequest, RpcResponse> implements RpcService {
 
     /**
-     * Creates a new instance that is composed of the specified entries.
+     * Returns a new {@link SimpleCompositeRpcService} that is composed of the specified entries.
      */
     @SafeVarargs
+    public static SimpleCompositeRpcService of(CompositeServiceEntry<RpcService>... services) {
+        return new SimpleCompositeRpcService(services);
+    }
+
+    /**
+     * Returns a new {@link SimpleCompositeRpcService} that is composed of the specified entries.
+     */
+    public static SimpleCompositeRpcService of(Iterable<CompositeServiceEntry<RpcService>> services) {
+        return new SimpleCompositeRpcService(services);
+    }
+
+    /**
+     * Returns a new {@link SimpleCompositeRpcServiceBuilder}.
+     */
+    public static SimpleCompositeRpcServiceBuilder builder() {
+        return new SimpleCompositeRpcServiceBuilder();
+    }
+
+    /**
+     * Creates a new instance that is composed of the specified entries.
+     *
+     * @deprecated Use {@link #of(CompositeServiceEntry[])}.
+     */
+    @SafeVarargs
+    @Deprecated
     public SimpleCompositeRpcService(CompositeServiceEntry<RpcService>... services) {
         super(services);
     }
 
     /**
      * Creates a new instance that is composed of the specified entries.
+     *
+     * @deprecated Use {@link #of(Iterable)}.
      */
+    @Deprecated
     public SimpleCompositeRpcService(Iterable<CompositeServiceEntry<RpcService>> services) {
         super(services);
     }

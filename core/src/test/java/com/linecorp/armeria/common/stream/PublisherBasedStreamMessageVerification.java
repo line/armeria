@@ -42,8 +42,8 @@ public class PublisherBasedStreamMessageVerification extends StreamMessageVerifi
     @Override
     public StreamMessage<Long> createAbortedPublisher(long elements) {
         if (elements == 0) {
-            final PublisherBasedStreamMessage<Long> stream
-                    = new PublisherBasedStreamMessage<>(s -> { /* noop */ });
+            final PublisherBasedStreamMessage<Long> stream =
+                    new PublisherBasedStreamMessage<>(s -> { /* noop */ });
             stream.abort();
             return stream;
         }

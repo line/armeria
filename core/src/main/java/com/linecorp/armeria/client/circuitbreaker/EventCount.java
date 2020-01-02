@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import javax.annotation.Nullable;
 
 /**
@@ -28,18 +30,32 @@ public final class EventCount {
      */
     public static final EventCount ZERO = new EventCount(0, 0);
 
+    /**
+     * Returns a new {@link EventCount} with the specified number of successes and failures.
+     */
+    public static EventCount of(long success, long failure) {
+        if (success == 0 && failure == 0) {
+            return ZERO;
+        }
+
+        return new EventCount(success, failure);
+    }
+
     private final long success;
 
     private final long failure;
 
     /**
      * Creates a new instance with the specified number of successes and failures.
+     *
+     * @deprecated Use {@link EventCount#of(long, long)}.
      */
+    @Deprecated
     public EventCount(long success, long failure) {
+        checkArgument(success >= 0, "success: %s (expected: >= 0)", success);
+        checkArgument(failure >= 0, "failure: %s (expected: >= 0)", failure);
         this.success = success;
         this.failure = failure;
-        assert 0 <= success;
-        assert 0 <= failure;
     }
 
     /**

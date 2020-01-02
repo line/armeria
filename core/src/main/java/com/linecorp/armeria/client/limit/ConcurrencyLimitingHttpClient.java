@@ -16,79 +16,51 @@
 
 package com.linecorp.armeria.client.limit;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-
-import io.netty.channel.EventLoop;
 
 /**
  * An {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
  *
  * <p>For example:
  * <pre>{@code
- * ClientBuilder builder = new ClientBuilder(...);
- * builder.decorator(ConcurrencyLimitingHttpClient.newDecorator(16));
- * client = builder.build(...);
+ * WebClientBuilder builder = WebClient.builder(...);
+ * builder.decorator(ConcurrencyLimitingClient.newDecorator(16));
+ * WebClient client = builder.build();
  * }</pre>
  *
+ * @deprecated Use {@link ConcurrencyLimitingClient}
  */
-public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClient<HttpRequest, HttpResponse>
-        implements HttpClient {
+@Deprecated
+public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClient {
 
     /**
      * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
+     *
+     * @deprecated Use {@link ConcurrencyLimitingClient#newDecorator(int)}
      */
-    public static Function<? super HttpClient, ConcurrencyLimitingHttpClient>
+    @Deprecated
+    public static Function<? super HttpClient, ConcurrencyLimitingClient>
     newDecorator(int maxConcurrency) {
         validateMaxConcurrency(maxConcurrency);
-        return delegate -> new ConcurrencyLimitingHttpClient(delegate, maxConcurrency);
+        return ConcurrencyLimitingClient.newDecorator(maxConcurrency);
     }
 
     /**
      * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
+     *
+     * @deprecated Use {@link ConcurrencyLimitingClient#newDecorator(int, long, TimeUnit)}
      */
-    public static Function<? super HttpClient, ConcurrencyLimitingHttpClient> newDecorator(
+    @Deprecated
+    public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
             int maxConcurrency, long timeout, TimeUnit unit) {
         validateAll(maxConcurrency, timeout, unit);
-        return delegate -> new ConcurrencyLimitingHttpClient(delegate, maxConcurrency, timeout, unit);
+        return ConcurrencyLimitingClient.newDecorator(maxConcurrency, timeout, unit);
     }
 
-    private ConcurrencyLimitingHttpClient(HttpClient delegate, int maxConcurrency) {
+    ConcurrencyLimitingHttpClient(HttpClient delegate, int maxConcurrency) {
         super(delegate, maxConcurrency);
-    }
-
-    private ConcurrencyLimitingHttpClient(HttpClient delegate,
-                                          int maxConcurrency, long timeout, TimeUnit unit) {
-        super(delegate, maxConcurrency, timeout, unit);
-    }
-
-    @Override
-    protected Deferred<HttpResponse> defer(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final EventLoop eventLoop = ctx.eventLoop();
-        return new Deferred<HttpResponse>() {
-            private final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            private final HttpResponse res = HttpResponse.from(responseFuture, eventLoop);
-
-            @Override
-            public HttpResponse response() {
-                return res;
-            }
-
-            @Override
-            public void delegate(HttpResponse response) {
-                responseFuture.complete(response);
-            }
-
-            @Override
-            public void close(Throwable cause) {
-                responseFuture.completeExceptionally(cause);
-            }
-        };
     }
 }

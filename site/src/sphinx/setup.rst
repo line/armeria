@@ -28,6 +28,9 @@ the list of major Armeria artifacts which might interest you:
 +-----------------------------------------------+-------------------------------------------------------------------+
 | ``armeria-brave``                             | Distributed tracing with Brave. See :ref:`advanced-zipkin`.       |
 +-----------------------------------------------+-------------------------------------------------------------------+
+| ``armeria-dropwizard``                        | Provides a Dropwizard Bundle around ``armeria-jetty``.            |
+|                                               | See :ref:`advanced-dropwizard-integration`.                       |
++-----------------------------------------------+-------------------------------------------------------------------+
 | ``armeria-grpc``                              | gRPC client and server support.                                   |
 |                                               | See :ref:`server-grpc` and :ref:`client-grpc`.                    |
 +-----------------------------------------------+-------------------------------------------------------------------+

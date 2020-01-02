@@ -37,16 +37,37 @@ import com.linecorp.armeria.server.ServerListenerAdapter;
 public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     /**
+     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode
+     * path.
+     *
+     * @param client the curator framework instance
+     * @param zNodePath the ZooKeeper node to register
+     */
+    public static ZooKeeperUpdatingListenerBuilder builder(CuratorFramework client, String zNodePath) {
+        return new ZooKeeperUpdatingListenerBuilder(client, zNodePath);
+    }
+
+    /**
+     * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a zNode path.
+     *
+     * @param connectionStr the ZooKeeper connection string
+     * @param zNodePath the ZooKeeper node to register
+     */
+    public static ZooKeeperUpdatingListenerBuilder builder(String connectionStr, String zNodePath) {
+        return new ZooKeeperUpdatingListenerBuilder(connectionStr, zNodePath);
+    }
+
+    /**
      * Creates a ZooKeeper server listener, which registers server into ZooKeeper.
      *
      * <p>If you need a fully customized {@link ZooKeeperUpdatingListener} instance, use
-     * {@link ZooKeeperUpdatingListenerBuilder} instead.
+     * {@link #builder(String, String)} instead.
      *
      * @param zkConnectionStr ZooKeeper connection string
      * @param zNodePath       ZooKeeper node path(under which this server will be registered)
      */
     public static ZooKeeperUpdatingListener of(String zkConnectionStr, String zNodePath) {
-        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath).build();
+        return builder(zkConnectionStr, zNodePath).build();
     }
 
     private final CuratorFramework client;
@@ -86,7 +107,7 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
                                         .sessionTimeoutMs(sessionTimeout)
                                         .build();
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
-        nodeValueCodec = NodeValueCodec.DEFAULT;
+        nodeValueCodec = NodeValueCodec.ofDefault();
         this.endpoint = endpoint;
         closeClientOnStop = true;
     }

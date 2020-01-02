@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.file;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -33,38 +32,44 @@ import com.linecorp.armeria.common.MediaType;
  * Builds an {@link HttpFile} from a file, a classpath resource or an {@link HttpData}.
  * <pre>{@code
  * // Build from a file.
- * HttpFile f = HttpFileBuilder.of(new File("/var/www/index.html"))
- *                             .lastModified(false)
- *                             .setHeader(HttpHeaderNames.CONTENT_LANGUAGE, "en-US")
- *                             .build();
+ * HttpFile f = HttpFile.builder(Paths.get("/var/www/index.html"))
+ *                      .lastModified(false)
+ *                      .setHeader(HttpHeaderNames.CONTENT_LANGUAGE, "en-US")
+ *                      .build();
  *
  * // Build from a classpath resource.
- * HttpFile f = HttpFileBuilder.ofResource(MyClass.class.getClassLoader(), "/foo.txt.gz")
- *                             .setHeader(HttpHeaderNames.CONTENT_ENCODING, "gzip")
- *                             .build();
+ * HttpFile f = HttpFile.builder(MyClass.class.getClassLoader(), "/foo.txt.gz")
+ *                      .setHeader(HttpHeaderNames.CONTENT_ENCODING, "gzip")
+ *                      .build();
  *
  * // Build from an HttpData. Can be downcast into AggregatedHttpFile.
  * AggregatedHttpFile f = (AggregatedHttpFile)
- *         HttpFileBuilder.of(HttpData.ofUtf8("content"), System.currentTimeMillis())
- *                        .entityTag((pathOrUri, attrs) -> "myCustomEntityTag")
- *                        .build();
+ *         HttpFile.builder(HttpData.ofUtf8("content"), System.currentTimeMillis())
+ *                 .entityTag((pathOrUri, attrs) -> "myCustomEntityTag")
+ *                 .build();
  * }</pre>
  */
 public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
 
     /**
      * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the specified {@link File}.
+     *
+     * @deprecated Use {@link HttpFile#builder(File)}.
      */
+    @Deprecated
     public static HttpFileBuilder of(File file) {
-        return of(requireNonNull(file, "file").toPath());
+        return HttpFile.builder(requireNonNull(file, "file").toPath());
     }
 
     /**
      * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the file at the specified
      * {@link Path}.
+     *
+     * @deprecated Use {@link HttpFile#builder(Path)}.
      */
+    @Deprecated
     public static HttpFileBuilder of(Path path) {
-        return new FileSystemHttpFileBuilder(path);
+        return HttpFile.builder(path);
     }
 
     /**
@@ -73,11 +78,14 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
      * method of the returned builder will always return an {@link AggregatedHttpFile}, which guarantees
      * a safe downcast:
      * <pre>{@code
-     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFileBuilder.of(HttpData.ofUtf8("foo")).build();
+     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo")).build();
      * }</pre>
+     *
+     * @deprecated Use {@link HttpFile#builder(HttpData)}.
      */
+    @Deprecated
     public static HttpFileBuilder of(HttpData data) {
-        return of(data, System.currentTimeMillis());
+        return HttpFile.builder(data);
     }
 
     /**
@@ -85,71 +93,50 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
      * {@link HttpData} and {@code lastModifiedMillis}. Note that the {@link #build()} method of the returned
      * builder will always return an {@link AggregatedHttpFile}, which guarantees a safe downcast:
      * <pre>{@code
-     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFileBuilder.of(HttpData.ofUtf8("foo"), 1546923055020)
-     *                                                             .build();
+     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo"), 1546923055020)
+     *                                                     .build();
      * }</pre>
      *
      * @param data the content of the file
      * @param lastModifiedMillis the last modified time represented as the number of milliseconds
      *                           since the epoch
+     *
+     * @deprecated Use {@link HttpFile#builder(HttpData, long)}.
      */
+    @Deprecated
     public static HttpFileBuilder of(HttpData data, long lastModifiedMillis) {
-        requireNonNull(data, "data");
-        return new HttpDataFileBuilder(data, lastModifiedMillis)
-                .autoDetectedContentType(false); // Can't auto-detect because there's no path or URI.
+        return HttpFile.builder(data, lastModifiedMillis);
     }
 
     /**
      * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the classpath resource
      * at the specified {@code path}. This method is a shortcut for
-     * {@code HttpFileBuilder.ofResource(HttpFile.class.getClassLoader(), path)}.
+     * {@code HttpFile.builder(HttpFile.class.getClassLoader(), path)}.
+     *
+     * @deprecated Use {@link HttpFile#builder(ClassLoader, String)}.
      */
+    @Deprecated
     public static HttpFileBuilder ofResource(String path) {
-        requireNonNull(path, "path");
-        return ofResource(HttpFile.class.getClassLoader(), path);
+        return HttpFile.builder(HttpFile.class.getClassLoader(), path);
     }
 
     /**
      * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the classpath resource
      * at the specified {@code path} using the specified {@link ClassLoader}.
+     *
+     * @deprecated Use {@link HttpFile#builder(ClassLoader, String)}.
      */
+    @Deprecated
     public static HttpFileBuilder ofResource(ClassLoader classLoader, String path) {
-        requireNonNull(classLoader, "classLoader");
-        requireNonNull(path, "path");
-
-        // Strip the leading slash.
-        if (path.startsWith("/")) {
-            path = path.substring(1);
-        }
-
-        // Retrieve the resource URL.
-        final URL url = classLoader.getResource(path);
-        if (url == null || url.getPath().endsWith("/")) {
-            // Non-existent resource.
-            return new NonExistentHttpFileBuilder();
-        }
-
-        // Convert to a real file if possible.
-        if ("file".equals(url.getProtocol())) {
-            File f;
-            try {
-                f = new File(url.toURI());
-            } catch (URISyntaxException ignored) {
-                f = new File(url.getPath());
-            }
-
-            return of(f);
-        }
-
-        return new ClassPathHttpFileBuilder(url);
+        return HttpFile.builder(classLoader, path);
     }
 
     HttpFileBuilder() {}
 
     /**
      * Returns a newly created {@link HttpFile} with the properties configured so far. If this builder was
-     * created with {@link #of(HttpData)} or {@link #of(HttpData, long)}, the returned instance will always be
-     * an {@link AggregatedHttpFile}.
+     * created with {@link HttpFile#builder(HttpData)} or {@link HttpFile#builder(HttpData, long)},
+     * the returned instance will always be an {@link AggregatedHttpFile}.
      */
     public abstract HttpFile build();
 
@@ -227,7 +214,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
 
     // Builder implementations
 
-    private static final class FileSystemHttpFileBuilder extends HttpFileBuilder {
+    static final class FileSystemHttpFileBuilder extends HttpFileBuilder {
 
         private final Path path;
 
@@ -242,7 +229,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
         }
     }
 
-    private static final class ClassPathHttpFileBuilder extends HttpFileBuilder {
+    static final class ClassPathHttpFileBuilder extends HttpFileBuilder {
 
         private final URL url;
 
@@ -257,14 +244,14 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
         }
     }
 
-    private static final class NonExistentHttpFileBuilder extends HttpFileBuilder {
+    static final class NonExistentHttpFileBuilder extends HttpFileBuilder {
         @Override
         public HttpFile build() {
             return HttpFile.nonExistent();
         }
     }
 
-    private static final class HttpDataFileBuilder extends HttpFileBuilder {
+    static final class HttpDataFileBuilder extends HttpFileBuilder {
 
         private final HttpData content;
         private final long lastModifiedMillis;

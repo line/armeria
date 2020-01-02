@@ -40,7 +40,7 @@ class SlidingWindowCounterTest {
         final SlidingWindowCounter counter = new SlidingWindowCounter(ticker::get, Duration.ofSeconds(10),
                                                                       Duration.ofSeconds(1));
 
-        assertThat(counter.count()).isEqualTo(new EventCount(0, 0));
+        assertThat(counter.count()).isEqualTo(EventCount.of(0, 0));
     }
 
     @Test
@@ -51,8 +51,8 @@ class SlidingWindowCounterTest {
         assertThat(counter.onSuccess()).isEmpty();
 
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(1));
-        assertThat(counter.onFailure()).contains(new EventCount(1, 0));
-        assertThat(counter.count()).isEqualTo(new EventCount(1, 0));
+        assertThat(counter.onFailure()).contains(EventCount.of(1, 0));
+        assertThat(counter.count()).isEqualTo(EventCount.of(1, 0));
     }
 
     @Test
@@ -63,8 +63,8 @@ class SlidingWindowCounterTest {
         assertThat(counter.onFailure()).isEmpty();
 
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(1));
-        assertThat(counter.onFailure()).contains(new EventCount(0, 1));
-        assertThat(counter.count()).isEqualTo(new EventCount(0, 1));
+        assertThat(counter.onFailure()).contains(EventCount.of(0, 1));
+        assertThat(counter.count()).isEqualTo(EventCount.of(0, 1));
     }
 
     @Test
@@ -76,12 +76,12 @@ class SlidingWindowCounterTest {
         assertThat(counter.onFailure()).isEmpty();
 
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(1));
-        assertThat(counter.onFailure()).contains(new EventCount(1, 1));
-        assertThat(counter.count()).isEqualTo(new EventCount(1, 1));
+        assertThat(counter.onFailure()).contains(EventCount.of(1, 1));
+        assertThat(counter.count()).isEqualTo(EventCount.of(1, 1));
 
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(11));
-        assertThat(counter.onFailure()).contains(new EventCount(0, 0));
-        assertThat(counter.count()).isEqualTo(new EventCount(0, 0));
+        assertThat(counter.onFailure()).contains(EventCount.of(0, 0));
+        assertThat(counter.count()).isEqualTo(EventCount.of(0, 0));
     }
 
     @Test
@@ -132,7 +132,7 @@ class SlidingWindowCounterTest {
         }
 
         await().untilAsserted(() -> assertThat(counter.onFailure()).isPresent());
-        assertThat(counter.count()).isEqualTo(new EventCount(success.get(), failure.get()));
+        assertThat(counter.count()).isEqualTo(EventCount.of(success.get(), failure.get()));
     }
 
     @Test
@@ -142,6 +142,6 @@ class SlidingWindowCounterTest {
 
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(-1));
         assertThat(counter.onSuccess()).isEmpty();
-        assertThat(counter.count()).isEqualTo(new EventCount(0, 0));
+        assertThat(counter.count()).isEqualTo(EventCount.of(0, 0));
     }
 }

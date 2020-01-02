@@ -13,248 +13,149 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.file;
 
-import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.server.file.HttpFileServiceConfig.validateEntryCacheSpec;
-import static com.linecorp.armeria.server.file.HttpFileServiceConfig.validateMaxCacheEntrySizeBytes;
-import static com.linecorp.armeria.server.file.HttpFileServiceConfig.validateNonNegativeParameter;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Clock;
 import java.util.Map.Entry;
-import java.util.Optional;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.CacheControl;
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * Builds a new {@link HttpFileService} and its {@link HttpFileServiceConfig}. Use the factory methods in
- * {@link HttpFileService} if you do not override the default settings.
+ * Builds a new {@link FileService} and its {@link FileServiceConfig}. Use the factory methods in
+ * {@link FileService} if you do not override the default settings.
+ *
+ * @deprecated Use {@link FileServiceBuilder}.
  */
-public final class HttpFileServiceBuilder {
-
-    private static final Optional<String> DEFAULT_ENTRY_CACHE_SPEC = Flags.fileServiceCacheSpec();
-    private static final int DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES = 65536;
+@Deprecated
+public class HttpFileServiceBuilder extends FileServiceBuilder {
 
     /**
-     * Creates a new {@link HttpFileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
+     * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
+     *
+     * @deprecated Use {@link FileService#builder(Path)}.
      */
+    @Deprecated
     public static HttpFileServiceBuilder forFileSystem(String rootDir) {
-        return forVfs(HttpVfs.ofFileSystem(rootDir));
+        return forVfs(HttpVfs.of(Paths.get(requireNonNull(rootDir, "rootDir"))));
     }
 
     /**
-     * Creates a new {@link HttpFileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
+     * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in an O/S file system.
+     *
+     * @deprecated Use {@link FileService#builder(Path)}.
      */
+    @Deprecated
     public static HttpFileServiceBuilder forFileSystem(Path rootDir) {
-        return forVfs(HttpVfs.ofFileSystem(rootDir));
+        return forVfs(HttpVfs.of(rootDir));
     }
 
     /**
-     * Creates a new {@link HttpFileServiceBuilder} with the specified {@code rootDir} in the current class
+     * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in the current class
      * path.
+     *
+     * @deprecated Use {@link FileService#builder(ClassLoader, String)}.
      */
+    @Deprecated
     public static HttpFileServiceBuilder forClassPath(String rootDir) {
-        return forVfs(HttpVfs.ofClassPath(rootDir));
+        return forVfs(HttpVfs.of(HttpVfs.class.getClassLoader(), rootDir));
     }
 
     /**
-     * Creates a new {@link HttpFileServiceBuilder} with the specified {@code rootDir} in the current class
+     * Creates a new {@link FileServiceBuilder} with the specified {@code rootDir} in the current class
      * path.
+     *
+     * @deprecated Use {@link FileService#builder(ClassLoader, String)}.
      */
+    @Deprecated
     public static HttpFileServiceBuilder forClassPath(ClassLoader classLoader, String rootDir) {
-        return forVfs(HttpVfs.ofClassPath(classLoader, rootDir));
+        return forVfs(HttpVfs.of(classLoader, rootDir));
     }
 
     /**
-     * Creates a new {@link HttpFileServiceBuilder} with the specified {@link HttpVfs}.
+     * Creates a new {@link FileServiceBuilder} with the specified {@link HttpVfs}.
+     *
+     * @deprecated Use {@link FileService#builder(HttpVfs)}.
      */
+    @Deprecated
     public static HttpFileServiceBuilder forVfs(HttpVfs vfs) {
         return new HttpFileServiceBuilder(vfs);
     }
 
-    private final HttpVfs vfs;
-    private Clock clock = Clock.systemUTC();
-    private Optional<String> entryCacheSpec = DEFAULT_ENTRY_CACHE_SPEC;
-    private int maxCacheEntrySizeBytes = DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES;
-    private boolean serveCompressedFiles;
-    private boolean autoIndex;
-    private boolean canSetMaxCacheEntries = true;
-    private boolean canSetEntryCacheSpec = true;
-    @Nullable
-    private HttpHeadersBuilder headers;
-
-    private HttpFileServiceBuilder(HttpVfs vfs) {
-        this.vfs = requireNonNull(vfs, "vfs");
+    HttpFileServiceBuilder(HttpVfs vfs) {
+        super(vfs);
     }
 
-    /**
-     * Sets the {@link Clock} that provides the current date and time.
-     */
+    @Override
     public HttpFileServiceBuilder clock(Clock clock) {
-        this.clock = requireNonNull(clock, "clock");
-        return this;
+        return (HttpFileServiceBuilder) super.clock(clock);
     }
 
-    /**
-     * Sets the maximum allowed number of cached file entries. If not set, up to {@code 1024} entries
-     * are cached by default.
-     */
+    @Override
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
-        checkState(canSetMaxCacheEntries,
-                   "Cannot call maxCacheEntries() if called entryCacheSpec() already.");
-        validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries");
-        if (maxCacheEntries == 0) {
-            entryCacheSpec = Optional.empty();
-        } else {
-            entryCacheSpec = Optional.of(String.format("maximumSize=%d", maxCacheEntries));
-        }
-        canSetEntryCacheSpec = false;
-        return this;
+        return (HttpFileServiceBuilder) super.maxCacheEntries(maxCacheEntries);
     }
 
-    /**
-     * Sets the cache spec for caching file entries. If not set, {@code "maximumSize=1024"} is used by default.
-     */
+    @Override
     public HttpFileServiceBuilder entryCacheSpec(String entryCacheSpec) {
-        requireNonNull(entryCacheSpec, "entryCacheSpec");
-        checkState(canSetEntryCacheSpec,
-                   "Cannot call entryCacheSpec() if called maxCacheEntries() already.");
-        this.entryCacheSpec = validateEntryCacheSpec(Optional.of(entryCacheSpec));
-        canSetMaxCacheEntries = false;
-        return this;
+        return (HttpFileServiceBuilder) super.entryCacheSpec(entryCacheSpec);
     }
 
-    /**
-     * Sets whether pre-compressed files should be served. {@link HttpFileService} supports serving files
-     * compressed with gzip, with the extension {@code ".gz"}, and brotli, with the extension {@code ".br"}.
-     * The extension should be appended to the original file. For example, to serve {@code index.js} either
-     * raw, gzip-compressed, or brotli-compressed, there should be three files, {@code index.js},
-     * {@code index.js.gz}, and {@code index.js.br}. By default, this feature is disabled.
-     *
-     * <p>Some tools for precompressing resources during a build process include {@code gulp-zopfli} and
-     * {@code gulp-brotli}, which by default create files with the correct extension.
-     */
+    @Override
     public HttpFileServiceBuilder serveCompressedFiles(boolean serveCompressedFiles) {
-        this.serveCompressedFiles = serveCompressedFiles;
-        return this;
+        return (HttpFileServiceBuilder) super.serveCompressedFiles(serveCompressedFiles);
     }
 
-    /**
-     * Sets the maximum allowed size of a cached file entry. The file bigger than this value will not be
-     * cached. If not set, {@value #DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES} is used by default.
-     */
+    @Override
     public HttpFileServiceBuilder maxCacheEntrySizeBytes(int maxCacheEntrySizeBytes) {
-        this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
-        return this;
+        return (HttpFileServiceBuilder) super.maxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
     }
 
-    /**
-     * Sets whether {@link HttpFileService} auto-generates a directory listing for a directory without an
-     * {@code index.html} file. By default, this feature is disabled. Consider the security implications of
-     * when enabling this feature.
-     */
+    @Override
     public HttpFileServiceBuilder autoIndex(boolean autoIndex) {
-        this.autoIndex = autoIndex;
-        return this;
+        return (HttpFileServiceBuilder) super.autoIndex(autoIndex);
     }
 
-    /**
-     * Returns the immutable additional {@link HttpHeaders} which will be set when building an
-     * {@link HttpResponse}.
-     */
-    private HttpHeaders buildHeaders() {
-        return headers != null ? headers.build() : HttpHeaders.of();
-    }
-
-    private HttpHeadersBuilder headersBuilder() {
-        if (headers == null) {
-            headers = HttpHeaders.builder();
-        }
-        return headers;
-    }
-
-    /**
-     * Adds the specified HTTP header.
-     */
+    @Override
     public HttpFileServiceBuilder addHeader(CharSequence name, Object value) {
-        requireNonNull(name, "name");
-        requireNonNull(value, "value");
-        headersBuilder().addObject(HttpHeaderNames.of(name), value);
-        return this;
+        return (HttpFileServiceBuilder) super.addHeader(name, value);
     }
 
-    /**
-     * Adds the specified HTTP headers.
-     */
+    @Override
     public HttpFileServiceBuilder addHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        headersBuilder().addObject(headers);
-        return this;
+        return (HttpFileServiceBuilder) super.addHeaders(headers);
     }
 
-    /**
-     * Sets the specified HTTP header.
-     */
+    @Override
     public HttpFileServiceBuilder setHeader(CharSequence name, Object value) {
-        requireNonNull(name, "name");
-        requireNonNull(value, "value");
-        headersBuilder().setObject(HttpHeaderNames.of(name), value);
-        return this;
+        return (HttpFileServiceBuilder) super.setHeader(name, value);
     }
 
-    /**
-     * Sets the specified HTTP headers.
-     */
+    @Override
     public HttpFileServiceBuilder setHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        headersBuilder().setObject(headers);
-        return this;
+        return (HttpFileServiceBuilder) super.setHeaders(headers);
     }
 
-    /**
-     * Sets the {@code "cache-control"} header. This method is a shortcut for:
-     * <pre>{@code
-     * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
-     * }</pre>
-     */
+    @Override
     public HttpFileServiceBuilder cacheControl(CacheControl cacheControl) {
-        requireNonNull(cacheControl, "cacheControl");
-        return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+        return (HttpFileServiceBuilder) super.cacheControl(cacheControl);
     }
 
-    /**
-     * Sets the {@code "cache-control"} header. This method is a shortcut for:
-     * <pre>{@code
-     * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
-     * }</pre>
-     */
+    @Override
     public HttpFileServiceBuilder cacheControl(CharSequence cacheControl) {
-        requireNonNull(cacheControl, "cacheControl");
-        return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
+        return (HttpFileServiceBuilder) super.cacheControl(cacheControl);
     }
 
     /**
      * Returns a newly-created {@link HttpFileService} based on the properties of this builder.
      */
+    @Override
     public HttpFileService build() {
-        return new HttpFileService(new HttpFileServiceConfig(
+        return new HttpFileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
                 serveCompressedFiles, autoIndex, buildHeaders()));
-    }
-
-    @Override
-    public String toString() {
-        return HttpFileServiceConfig.toString(this, vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                                              serveCompressedFiles, autoIndex, headers);
     }
 }

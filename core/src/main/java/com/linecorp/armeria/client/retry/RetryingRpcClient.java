@@ -24,7 +24,6 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -32,7 +31,7 @@ import com.linecorp.armeria.common.RpcResponse;
 /**
  * An {@link RpcClient} decorator that handles failures of an invocation and retries RPC requests.
  */
-public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse>
+public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, RpcResponse>
         implements RpcClient {
 
     /**
@@ -125,7 +124,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
         }
 
         final RpcResponse res = executeWithFallback(delegate(), derivedCtx,
-                                                    (context, cause) -> new DefaultRpcResponse(cause));
+                                                    (context, cause) -> RpcResponse.ofFailure(cause));
 
         res.handle((unused1, unused2) -> {
             retryStrategyWithContent().shouldRetry(derivedCtx, res).handle((backoff, unused3) -> {

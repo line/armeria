@@ -4,8 +4,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
@@ -13,8 +14,6 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaClientConfigurator;
-
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
  * An example of a configuration which provides beans for customizing the server and client.
@@ -49,13 +48,12 @@ public class HelloConfiguration {
      * Returns a custom {@link ClientFactory} with TLS certificate validation disabled,
      * which means any certificate received from the server will be accepted without any verification.
      * It is used for an example which makes the client send an HTTPS request to the server running
-     * on localhost with a self-signed certificate. Do NOT use the {@link InsecureTrustManagerFactory}
-     * in production.
+     * on localhost with a self-signed certificate. Do NOT use the {@link ClientFactory#insecure()} or
+     * {@link ClientFactoryBuilder#tlsNoVerify()} in production.
      */
     @Bean
     public ClientFactory clientFactory() {
-        return ClientFactory.builder().sslContextCustomizer(
-                b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
+        return ClientFactory.insecure();
     }
 
     /**
@@ -67,8 +65,8 @@ public class HelloConfiguration {
         return builder -> {
             // Use a circuit breaker for each remote host.
             final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-            builder.decorator(CircuitBreakerHttpClient.builder(strategy)
-                                                      .newDecorator());
+            builder.decorator(CircuitBreakerClient.builder(strategy)
+                                                  .newDecorator());
 
             // Set a custom client factory.
             builder.factory(clientFactory);

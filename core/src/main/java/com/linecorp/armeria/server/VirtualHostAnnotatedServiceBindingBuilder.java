@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -23,12 +24,15 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceElement;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -67,6 +71,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
     private String pathPrefix = "/";
+    @Nullable
+    private Object service;
 
     VirtualHostAnnotatedServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
         this.virtualHostBuilder = virtualHostBuilder;
@@ -275,18 +281,35 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * @return {@link VirtualHostBuilder} to continue building {@link VirtualHost}
      */
     public VirtualHostBuilder build(Object service) {
-        final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service,
-                                                 exceptionHandlerFunctionBuilder.build(),
-                                                 requestConverterFunctionBuilder.build(),
-                                                 responseConverterFunctionBuilder.build());
-        elements.forEach(element -> {
+        requireNonNull(service, "service");
+        this.service = service;
+        virtualHostBuilder.addAnnotatedServiceBindingBuilder(this);
+        return virtualHostBuilder;
+    }
+
+    /**
+     * Builds the {@link ServiceConfigBuilder}s created with the configured
+     * {@link AnnotatedServiceExtensions} to the {@link VirtualHostBuilder}.
+     *
+     * @param extensions the {@link AnnotatedServiceExtensions} at the virtual host level.
+     */
+    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions) {
+        final List<RequestConverterFunction> requestConverterFunctions =
+                requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
+        final List<ResponseConverterFunction> responseConverterFunctions =
+                responseConverterFunctionBuilder.addAll(extensions.responseConverters()).build();
+        final List<ExceptionHandlerFunction> exceptionHandlerFunctions =
+                exceptionHandlerFunctionBuilder.addAll(extensions.exceptionHandlers()).build();
+
+        assert service != null;
+
+        final List<AnnotatedServiceElement> elements =
+                AnnotatedServiceFactory.find(pathPrefix, service, requestConverterFunctions,
+                                                 responseConverterFunctions, exceptionHandlerFunctions);
+        return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());
-            final ServiceConfigBuilder serviceConfigBuilder =
-                    defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
-            virtualHostBuilder.addServiceConfigBuilder(serviceConfigBuilder);
-        });
-        return virtualHostBuilder;
+            return defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
+        }).collect(toImmutableList());
     }
 }

@@ -36,7 +36,7 @@ import io.netty.util.AsciiString;
 
 /**
  * Extracts {@link OAuth2Token} from {@link RequestHeaders}, in order to be used by
- * {@link HttpAuthServiceBuilder}.
+ * {@link AuthServiceBuilder}.
  */
 final class OAuth2TokenExtractor implements Function<RequestHeaders, OAuth2Token> {
 

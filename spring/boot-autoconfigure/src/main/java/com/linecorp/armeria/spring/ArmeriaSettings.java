@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,11 +24,19 @@ import javax.annotation.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+import com.codahale.metrics.json.MetricsModule;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
+import com.linecorp.armeria.server.metric.PrometheusExpositionService;
+
+import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 
 /**
  * Settings for armeria servers, e.g.,
@@ -310,61 +319,121 @@ public class ArmeriaSettings {
     @Nullable
     private Compression compression;
 
+    /**
+     * Returns the {@link Port}s of the {@link Server}.
+     */
     public List<Port> getPorts() {
         return ports;
     }
 
+    /**
+     * Sets the {@link Port}s of the {@link Server}.
+     */
     public void setPorts(List<Port> ports) {
         this.ports = ports;
     }
 
+    /**
+     * Returns the path of the {@link HealthCheckService}.
+     */
     @Nullable
     public String getHealthCheckPath() {
         return healthCheckPath;
     }
 
+    /**
+     * Sets the path of the {@link HealthCheckService}.
+     */
     public void setHealthCheckPath(@Nullable String healthCheckPath) {
         this.healthCheckPath = healthCheckPath;
     }
 
+    /**
+     * Returns the path of the {@link DocService}.
+     */
     @Nullable
     public String getDocsPath() {
         return docsPath;
     }
 
+    /**
+     * Sets the path of the {@link DocService}.
+     */
     public void setDocsPath(@Nullable String docsPath) {
         this.docsPath = docsPath;
     }
 
+    /**
+     * Returns the path of the metrics exposition service. {@link PrometheusExpositionService} will be used if
+     * {@link PrometheusMeterRegistry} is available. Otherwise, Dropwizard's {@link MetricsModule} will be used
+     * if {@link DropwizardMeterRegistry} is available.
+     */
     @Nullable
     public String getMetricsPath() {
         return metricsPath;
     }
 
+    /**
+     * Sets the path of the metrics exposition service. {@link PrometheusExpositionService} will be used if
+     * {@link PrometheusMeterRegistry} is available. Otherwise, Dropwizard's {@link MetricsModule} will be used
+     * if {@link DropwizardMeterRegistry} is available.
+     */
     public void setMetricsPath(@Nullable String metricsPath) {
         this.metricsPath = metricsPath;
     }
 
+    /**
+     * Returns the number of milliseconds to wait for active requests to go end before shutting down.
+     *
+     * @see #getGracefulShutdownTimeoutMillis()
+     * @see ServerBuilder#gracefulShutdownTimeout(Duration, Duration)
+     */
     public long getGracefulShutdownQuietPeriodMillis() {
         return gracefulShutdownQuietPeriodMillis;
     }
 
+    /**
+     * Sets the number of milliseconds to wait for active requests to go end before shutting down.
+     *
+     * @see #setGracefulShutdownTimeoutMillis(long)
+     * @see ServerBuilder#gracefulShutdownTimeout(Duration, Duration)
+     */
     public void setGracefulShutdownQuietPeriodMillis(long gracefulShutdownQuietPeriodMillis) {
         this.gracefulShutdownQuietPeriodMillis = gracefulShutdownQuietPeriodMillis;
     }
 
+    /**
+     * Returns the number of milliseconds to wait before shutting down the server regardless of active requests.
+     *
+     * @see #getGracefulShutdownQuietPeriodMillis()
+     * @see ServerBuilder#gracefulShutdownTimeout(Duration, Duration)
+     */
     public long getGracefulShutdownTimeoutMillis() {
         return gracefulShutdownTimeoutMillis;
     }
 
+    /**
+     * Sets the number of milliseconds to wait before shutting down the server regardless of active requests.
+     *
+     * @see #setGracefulShutdownQuietPeriodMillis(long)
+     * @see ServerBuilder#gracefulShutdownTimeout(Duration, Duration)
+     */
     public void setGracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
     }
 
+    /**
+     * Returns whether to enable metrics exposition service at the path specified via
+     * {@link #setMetricsPath(String)}.
+     */
     public boolean isEnableMetrics() {
         return enableMetrics;
     }
 
+    /**
+     * Sets whether to enable metrics exposition service at the path specified via
+     * {@link #setMetricsPath(String)}.
+     */
     public void setEnableMetrics(boolean enableMetrics) {
         this.enableMetrics = enableMetrics;
     }

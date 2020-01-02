@@ -28,30 +28,36 @@ import com.linecorp.armeria.common.RequestContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeKey;
 
+/**
+ * Provides utility methods useful for storing and releasing the {@link ByteBuf} backing a {@link Message}.
+ */
 public final class GrpcUnsafeBufferUtil {
 
+    /**
+     * An {@link AttributeKey} for storing the {@link ByteBuf}s backing {@link Message}s.
+     */
     @VisibleForTesting
     public static final AttributeKey<IdentityHashMap<Object, ByteBuf>> BUFFERS = AttributeKey.valueOf(
             GrpcUnsafeBufferUtil.class, "BUFFERS");
 
     /**
-     * Stores the {@link ByteBuf} backing {@link Message} to be released later using
+     * Stores the {@link ByteBuf} backing the specified {@link Message} to be released later using
      * {@link #releaseBuffer(Object, RequestContext)}.
      */
     public static void storeBuffer(ByteBuf buf, Object message, RequestContext ctx) {
-        IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS).get();
+        IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS);
         if (buffers == null) {
             buffers = new IdentityHashMap<>();
-            ctx.attr(BUFFERS).set(buffers);
+            ctx.setAttr(BUFFERS, buffers);
         }
         buffers.put(message, buf);
     }
 
     /**
-     * Releases the {@link ByteBuf} backing the provided {@link Message}.
+     * Releases the {@link ByteBuf} backing the specified {@link Message}.
      */
     public static void releaseBuffer(Object message, RequestContext ctx) {
-        final IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS).get();
+        final IdentityHashMap<Object, ByteBuf> buffers = ctx.attr(BUFFERS);
         checkState(buffers != null,
                    "Releasing buffer even though storeBuffer has not been called.");
         final ByteBuf removed = buffers.remove(message);

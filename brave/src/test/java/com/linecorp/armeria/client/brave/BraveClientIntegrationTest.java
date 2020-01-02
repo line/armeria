@@ -18,9 +18,6 @@ package com.linecorp.armeria.client.brave;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
-import javax.net.ssl.SSLSession;
-
 import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,28 +28,19 @@ import org.junit.runners.Parameterized.Parameters;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.NonWrappingRequestContext;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Tracing.Builder;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
 import brave.test.http.ITHttpAsyncClient;
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
 import okhttp3.Protocol;
 
 @RunWith(Parameterized.class)
@@ -103,7 +91,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Override
     @Test
     public void makesChildOfCurrentSpan() throws Exception {
-        new DummyRequestContext().makeContextAware(() -> {
+        ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")).makeContextAware(() -> {
             super.makesChildOfCurrentSpan();
             return null;
         }).call();
@@ -112,7 +100,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Override
     @Test
     public void propagatesExtra_newTrace() throws Exception {
-        new DummyRequestContext().makeContextAware(() -> {
+        ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")).makeContextAware(() -> {
             super.propagatesExtra_newTrace();
             return null;
         }).call();
@@ -121,7 +109,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Override
     @Test
     public void propagatesExtra_unsampledTrace() throws Exception {
-        new DummyRequestContext().makeContextAware(() -> {
+        ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")).makeContextAware(() -> {
             super.propagatesExtra_unsampledTrace();
             return null;
         }).call();
@@ -130,7 +118,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Override
     @Test
     public void usesParentFromInvocationTime() throws Exception {
-        new DummyRequestContext().makeContextAware(() -> {
+        ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")).makeContextAware(() -> {
             super.usesParentFromInvocationTime();
             return null;
         }).call();
@@ -159,47 +147,5 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     @Override
     protected void getAsync(WebClient client, String pathIncludingQuery) throws Exception {
         client.get(pathIncludingQuery);
-    }
-
-    private static class DummyRequestContext extends NonWrappingRequestContext {
-        DummyRequestContext() {
-            super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  RequestId.random(), HttpMethod.GET, "/", null,
-                  HttpRequest.streaming(HttpMethod.GET, "/"), null);
-        }
-
-        @Override
-        public RequestContext newDerivedContext(RequestId id,
-                                                @Nullable HttpRequest req,
-                                                @Nullable RpcRequest rpcReq) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public EventLoop eventLoop() {
-            return ClientFactory.ofDefault().eventLoopGroup().next();
-        }
-
-        @Nullable
-        @Override
-        protected Channel channel() {
-            return null;
-        }
-
-        @Nullable
-        @Override
-        public SSLSession sslSession() {
-            return null;
-        }
-
-        @Override
-        public RequestLog log() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public RequestLogBuilder logBuilder() {
-            throw new UnsupportedOperationException();
-        }
     }
 }

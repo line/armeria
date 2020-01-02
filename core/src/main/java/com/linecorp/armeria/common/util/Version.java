@@ -34,10 +34,10 @@
  */
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.InputStream;
 import java.net.URL;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Enumeration;
@@ -46,8 +46,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
-
-import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -74,13 +72,13 @@ public final class Version {
     private static final String PROP_REPO_STATUS = ".repoStatus";
 
     /**
-     * Retrieves the version information of Armeria artifacts using the current
-     * {@linkplain Thread#getContextClassLoader() context class loader}.
+     * Retrieves the version information of Armeria artifacts.
+     * This method is a shortcut for {@code identify(Version.class.getClassLoader())}.
      *
      * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
      */
     public static Map<String, Version> identify() {
-        return identify(null);
+        return identify(Version.class.getClassLoader());
     }
 
     /**
@@ -88,10 +86,8 @@ public final class Version {
      *
      * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
      */
-    public static Map<String, Version> identify(@Nullable ClassLoader classLoader) {
-        if (classLoader == null) {
-            classLoader = getContextClassLoader();
-        }
+    public static Map<String, Version> identify(ClassLoader classLoader) {
+        requireNonNull(classLoader, "classLoader");
 
         // Collect all properties.
         final Properties props = new Properties();
@@ -150,15 +146,6 @@ public final class Version {
         return versions;
     }
 
-    private static ClassLoader getContextClassLoader() {
-        if (System.getSecurityManager() == null) {
-            return Thread.currentThread().getContextClassLoader();
-        } else {
-            return AccessController.doPrivileged(
-                    (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader());
-        }
-    }
-
     private static long parseIso8601(String value) {
         try {
             return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z").parse(value).getTime();
@@ -185,47 +172,80 @@ public final class Version {
         this.repositoryStatus = repositoryStatus;
     }
 
+    /**
+     * Returns the Maven artifact ID of the component, such as {@code "armeria-grpc"}.
+     */
     @JsonProperty
     public String artifactId() {
         return artifactId;
     }
 
+    /**
+     * Returns the Maven artifact version of the component, such as {@code "1.0.0"}.
+     */
     @JsonProperty
     public String artifactVersion() {
         return artifactVersion;
     }
 
+    /**
+     * Returns when the release commit was created.
+     */
     @JsonProperty
     public long commitTimeMillis() {
         return commitTimeMillis;
     }
 
+    /**
+     * Returns the short hash of the release commit.
+     */
     @JsonProperty
     public String shortCommitHash() {
         return shortCommitHash;
     }
 
+    /**
+     * Returns the long hash of the release commit.
+     */
     @JsonProperty
     public String longCommitHash() {
         return longCommitHash;
     }
 
+    /**
+     * Returns the status of the repository when performing the release process.
+     *
+     * @return {@code "clean"} if the repository was clean. {@code "dirty"} otherwise.
+     */
     @JsonProperty
     public String repositoryStatus() {
         return repositoryStatus;
     }
 
-    @Override
-    public String toString() {
-        return artifactId + '-' + artifactVersion + '.' + shortCommitHash +
-                (isClean() ? "" : "(repository: " + repositoryStatus + ')');
+    /**
+     * Returns whether the repository was clean when performing the release process.
+     * This method is a shortcut for {@code "clean".equals(repositoryStatus())}.
+     *
+     * @deprecated Use {@link #isRepositoryClean()}.
+     */
+    @JsonIgnore
+    @Deprecated
+    public boolean isClean() {
+        return isRepositoryClean();
     }
 
     /**
-     * Returns true if repository status is not dirty.
+     * Returns whether the repository was clean when performing the release process.
+     * This method is a shortcut for {@code "clean".equals(repositoryStatus())}.
      */
     @JsonIgnore
-    public boolean isClean() {
+    public boolean isRepositoryClean() {
         return "clean".equals(repositoryStatus);
+    }
+
+    @Override
+    public String toString() {
+        return artifactId + '-' + artifactVersion + '.' + shortCommitHash +
+                (isRepositoryClean() ? "" : "(repository: " + repositoryStatus + ')');
     }
 }

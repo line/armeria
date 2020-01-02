@@ -1,0 +1,2 @@
+com.linecorp.armeria.dropwizard.connector.ArmeriaHttpConnectorFactory
+com.linecorp.armeria.dropwizard.connector.ArmeriaHttpsConnectorFactory

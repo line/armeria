@@ -32,16 +32,44 @@ public final class SimpleCompositeService
         extends AbstractCompositeService<HttpService, HttpRequest, HttpResponse> implements HttpService {
 
     /**
-     * Creates a new instance that is composed of the specified entries.
+     * Returns a new {@link SimpleCompositeService} that is composed of the specified entries.
      */
     @SafeVarargs
+    public static SimpleCompositeService of(CompositeServiceEntry<HttpService>... services) {
+        return new SimpleCompositeService(services);
+    }
+
+    /**
+     * Returns a new {@link SimpleCompositeService} that is composed of the specified entries.
+     */
+    public static SimpleCompositeService of(Iterable<CompositeServiceEntry<HttpService>> services) {
+        return new SimpleCompositeService(services);
+    }
+
+    /**
+     * Returns a new {@link SimpleCompositeServiceBuilder}.
+     */
+    public static SimpleCompositeServiceBuilder builder() {
+        return new SimpleCompositeServiceBuilder();
+    }
+
+    /**
+     * Creates a new instance that is composed of the specified entries.
+     *
+     * @deprecated Use {@link #of(CompositeServiceEntry[])}.
+     */
+    @SafeVarargs
+    @Deprecated
     public SimpleCompositeService(CompositeServiceEntry<HttpService>... services) {
         super(services);
     }
 
     /**
      * Creates a new instance that is composed of the specified entries.
+     *
+     * @deprecated Use {@link #of(Iterable)}.
      */
+    @Deprecated
     public SimpleCompositeService(Iterable<CompositeServiceEntry<HttpService>> services) {
         super(services);
     }

@@ -35,7 +35,7 @@ import com.linecorp.armeria.server.ServerBuilder;
  * }</pre>
  * And then can be registered to {@link ServerBuilder} like this
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.annotatedService("/a", new MyService());
  * }</pre>
  *
