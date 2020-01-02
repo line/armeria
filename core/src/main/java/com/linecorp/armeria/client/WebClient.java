@@ -66,7 +66,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new {@link WebClient} client that connects to the specified {@link Endpoint} with
+     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using the default {@link ClientFactory} and the default
      * {@link ClientOptions}.
      *
@@ -94,7 +94,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@code uri} using the default
+     * Returns a new {@link WebClient} that connects to the specified {@code uri} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
@@ -110,7 +110,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@code uri} using an alternative
+     * Returns a new {@link WebClient} that connects to the specified {@code uri} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -128,7 +128,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@code uri} using an alternative
+     * Returns a new {@link WebClient} that connects to the specified {@code uri} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -146,7 +146,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@link URI} using the default
+     * Returns a new {@link WebClient} that connects to the specified {@link URI} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
@@ -162,7 +162,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@link URI} using the default
+     * Returns a new {@link WebClient} that connects to the specified {@link URI} using the default
      * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
@@ -178,7 +178,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@link URI} using an alternative
+     * Returns a new {@link WebClient} that connects to the specified {@link URI} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -196,7 +196,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@link URI} using an alternative
+     * Returns a new {@link WebClient} that connects to the specified {@link URI} using an alternative
      * {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -214,7 +214,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@link Endpoint} with
+     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using the default {@link ClientFactory}.
      *
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
@@ -230,7 +230,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@link Endpoint} with
+     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using the default {@link ClientFactory}.
      *
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
@@ -246,7 +246,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@link Endpoint} with
+     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
@@ -265,7 +265,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new web client that connects to the specified {@link Endpoint} with
+     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
      * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
