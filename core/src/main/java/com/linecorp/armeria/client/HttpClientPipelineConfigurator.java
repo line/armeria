@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.client.HttpSessionHandler.NESTED_THROWABLE;
+import static com.linecorp.armeria.client.HttpSessionHandler.PENDING_EXCEPTION;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -231,7 +231,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 if (handshakeFailed &&
                     cause instanceof DecoderException &&
                     cause.getCause() instanceof SSLException) {
-                    ctx.channel().attr(NESTED_THROWABLE).set(cause);
+                    ctx.channel().attr(PENDING_EXCEPTION).set(cause);
                     return;
                 }
 

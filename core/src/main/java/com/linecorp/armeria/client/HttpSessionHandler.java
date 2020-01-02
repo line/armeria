@@ -65,8 +65,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      */
     private static final int MAX_NUM_REQUESTS_SENT = 536870912;
 
-    static final AttributeKey<Throwable> NESTED_THROWABLE =
-            AttributeKey.valueOf(HttpSessionHandler.class, "NESTED_THROWABLE");
+    static final AttributeKey<Throwable> PENDING_EXCEPTION =
+            AttributeKey.valueOf(HttpSessionHandler.class, "PENDING_EXCEPTION");
 
     private final HttpChannelPool channelPool;
     private final Channel channel;
@@ -316,8 +316,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         } else {
             // Fail all pending responses.
             final Throwable throwable;
-            if (ctx.channel().hasAttr(NESTED_THROWABLE)) {
-                throwable = ClosedSessionException.get(ctx.channel().attr(NESTED_THROWABLE).get());
+            if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
+                throwable = ctx.channel().attr(PENDING_EXCEPTION).get();
             } else {
                 throwable = ClosedSessionException.get();
             }
