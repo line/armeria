@@ -444,7 +444,8 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not
-     * fully received within the specified amount of time since the {@link Response} started.
+     * fully received within the specified amount of time since the {@link Response} started
+     * or {@link Request} was fully sent.
      * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <p>For example:
@@ -467,7 +468,8 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not
-     * fully received within the specified amount of time since the {@link Response} started.
+     * fully received within the specified amount of time since the {@link Response} started
+     * or {@link Request} was fully sent.
      * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <p>For example:
@@ -488,7 +490,7 @@ public interface ClientRequestContext extends RequestContext {
     void setResponseTimeout(Duration responseTimeout);
 
     /**
-     * Extends the previously scheduled the response timeout by
+     * Extends the previously scheduled response timeout by
      * the specified amount of {@code adjustmentMillis}.
      * This method does nothing if no response timeout was scheduled previously.
      * Note that a negative {@code adjustmentMillis} reduces the current timeout.

@@ -79,17 +79,19 @@ public class DefaultTimeoutController implements TimeoutController {
      */
     @Override
     public void initTimeout(long timeoutMillis) {
-        if (timeoutFuture != null || timeoutMillis <= 0 || timeoutTask == null || !timeoutTask.isReady()) {
+        if (timeoutFuture != null || timeoutTask == null || !timeoutTask.isReady()) {
             // No need to schedule a response timeout if:
             // - the timeout has been scheduled already,
-            // - the timeout has been disabled or
+            // - the timeout task is not set yet or
             // - the status is not ready yet.
             return;
         }
+
         this.timeoutMillis = timeoutMillis;
         firstStartTimeNanos = lastStartTimeNanos = System.nanoTime();
-        timeoutFuture = eventLoop.schedule(timeoutTask, timeoutMillis,
-                                           TimeUnit.MILLISECONDS);
+        if (timeoutMillis > 0) {
+            timeoutFuture = eventLoop.schedule(timeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override

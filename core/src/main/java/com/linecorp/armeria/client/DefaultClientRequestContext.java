@@ -510,11 +510,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         if (responseTimeoutController != null) {
             passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - responseTimeoutController.startTimeNanos());
-            if (channel().eventLoop().inEventLoop()) {
+            if (eventLoop().inEventLoop()) {
                 responseTimeoutController.resetTimeout(responseTimeoutMillis);
             } else {
-                channel().eventLoop().execute(
-                        () -> responseTimeoutController.resetTimeout(responseTimeoutMillis));
+                eventLoop().execute(() -> responseTimeoutController.resetTimeout(responseTimeoutMillis));
             }
         }
 

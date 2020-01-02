@@ -109,6 +109,14 @@ class DefaultTimeoutControllerTest {
     }
 
     @Test
+    void resetTimeoutWithZeroInit() {
+        timeoutController.initTimeout(0);
+        timeoutController.resetTimeout(10);
+        assertThat(timeoutController.timeoutMillis()).isEqualTo(10);
+        assertThat((Object) timeoutController.timeoutFuture()).isNotNull();
+    }
+
+    @Test
     void resetTimout_multipleZero() {
         timeoutController.initTimeout(100);
         timeoutController.resetTimeout(0);

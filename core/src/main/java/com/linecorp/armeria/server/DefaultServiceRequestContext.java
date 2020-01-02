@@ -456,7 +456,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
         checkArgument(requestTimeoutAtMillis >= 0,
                       "requestTimeoutAtMillis: " + requestTimeoutAtMillis + " (expected: >= 0)");
-        final long requestTimeoutAfter = requestTimeoutAtMillis - Instant.now().toEpochMilli();
+        final long nowMillis = Instant.now().toEpochMilli();
+        final long requestTimeoutAfter = requestTimeoutAtMillis - nowMillis;
+        checkArgument(requestTimeoutAfter > 0,
+                      "requestTimeoutAtMillis: %s (expected: > 'now=%s')", requestTimeoutAtMillis, nowMillis);
+
         setRequestTimeoutAfterMillis(requestTimeoutAfter);
     }
 

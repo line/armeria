@@ -69,6 +69,20 @@ class HttpServerRequestTimeoutTest {
         }
     };
 
+    @RegisterExtension
+    static ServerExtension serverWithoutTimeout = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.requestTimeoutMillis(0)
+              .service("/extend-timeout-from-now", (ctx, req) -> {
+                  final Flux<Long> publisher =
+                          Flux.interval(Duration.ofMillis(100))
+                              .doOnNext(i -> ctx.setRequestTimeoutAfter(Duration.ofMillis(150)));
+                  return JsonTextSequences.fromPublisher(publisher.take(5));
+              });
+        }
+    };
+
     WebClient client;
 
     @BeforeEach
@@ -98,4 +112,12 @@ class HttpServerRequestTimeoutTest {
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ClosedSessionException.class);
     }
+
+    @Test
+    void extendRequestTimeout() {
+        final AggregatedHttpResponse response = client.get(
+                serverWithoutTimeout.uri("/") + "/extend-timeout-from-now").aggregate().join();
+        assertThat(response.status().code()).isEqualTo(200);
+    }
+
 }

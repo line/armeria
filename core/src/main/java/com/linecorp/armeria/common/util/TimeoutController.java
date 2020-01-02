@@ -29,7 +29,8 @@ public interface TimeoutController {
     void initTimeout(long timeoutMillis);
 
     /**
-     * Adjusts the current timeout by the specified {@code adjustmentMillis}.
+     * Extends the current timeout by the specified {@code adjustmentMillis}.
+     * Note that a negative {@code adjustmentMillis} reduces the current timeout.
      *
      * @param adjustmentMillis the adjustment of time amount value in milliseconds.
      */
