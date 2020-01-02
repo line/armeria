@@ -436,7 +436,9 @@ public abstract class TomcatService implements HttpService {
             try {
                 if (cause != null) {
                     logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                    res.close(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+                    if (res.tryWrite(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR))) {
+                        res.close();
+                    }
                     return null;
                 }
 

@@ -67,7 +67,7 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
         }
 
         if (!isOpen()) {
-            ReferenceCountUtil.safeRelease(obj);
+            ReferenceCountUtil.release(obj);
             return false;
         }
 
