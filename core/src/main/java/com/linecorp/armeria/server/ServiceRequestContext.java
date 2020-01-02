@@ -337,6 +337,7 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Clears the previously scheduled request timeout, if any.
+     * Note that calling this will prevent the request from ever being timed out.
      */
     void clearRequestTimeout();
 

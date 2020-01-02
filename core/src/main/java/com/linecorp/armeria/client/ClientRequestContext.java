@@ -438,6 +438,7 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Clears the previously scheduled response timeout, if any.
+     * Note that calling this will prevent the response from ever being timed out.
      */
     void clearResponseTimeout();
 
