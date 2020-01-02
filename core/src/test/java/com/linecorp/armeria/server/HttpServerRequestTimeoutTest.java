@@ -95,7 +95,7 @@ class HttpServerRequestTimeoutTest {
             "/extend-timeout-from-start, 200",
     })
     @ParameterizedTest
-    void extendRequestTimeout(String path, int status) {
+    void setRequestTimeoutAfter(String path, int status) {
         final AggregatedHttpResponse response = client.get(path).aggregate().join();
         assertThat(response.status().code()).isEqualTo(status);
     }
@@ -114,10 +114,9 @@ class HttpServerRequestTimeoutTest {
     }
 
     @Test
-    void extendRequestTimeout() {
+    void setRequestTimeoutAfterNoTimeout() {
         final AggregatedHttpResponse response = client.get(
                 serverWithoutTimeout.uri("/") + "/extend-timeout-from-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(200);
     }
-
 }
