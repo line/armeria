@@ -388,7 +388,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public void setRequestTimeoutMillis(long requestTimeoutMillis) {
         checkArgument(requestTimeoutMillis >= 0,
-                    "requestTimeoutMillis: " + requestTimeoutMillis + " (expected: >= 0)");
+                      "requestTimeoutMillis: " + requestTimeoutMillis + " (expected: >= 0)");
         if (requestTimeoutMillis == 0) {
             clearRequestTimeout();
         }
@@ -427,9 +427,9 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public void setRequestTimeoutAfterMillis(long responseTimeoutMillis) {
-        checkArgument(responseTimeoutMillis > 0,
-                      "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: > 0)");
+    public void setRequestTimeoutAfterMillis(long requestTimeoutMillis) {
+        checkArgument(requestTimeoutMillis > 0,
+                      "requestTimeoutMillis: " + requestTimeoutMillis + " (expected: > 0)");
 
         long passedTimeMillis = 0;
         final TimeoutController requestTimeoutController = this.requestTimeoutController;
@@ -437,23 +437,19 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - requestTimeoutController.startTimeNanos());
             if (ch.eventLoop().inEventLoop()) {
-                requestTimeoutController.resetTimeout(responseTimeoutMillis);
+                requestTimeoutController.resetTimeout(requestTimeoutMillis);
             } else {
                 ch.eventLoop().execute(() -> requestTimeoutController
-                        .resetTimeout(responseTimeoutMillis));
+                        .resetTimeout(requestTimeoutMillis));
             }
         }
 
-        if (responseTimeoutMillis == 0) {
-            requestTimeoutMillis = 0;
-        } else {
-            requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, responseTimeoutMillis);
-        }
+        this.requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, requestTimeoutMillis);
     }
 
     @Override
-    public void setRequestTimeoutAfter(Duration responseTimeout) {
-        setRequestTimeoutAfterMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    public void setRequestTimeoutAfter(Duration requestTimeout) {
+        setRequestTimeoutAfterMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }
 
     @Override
