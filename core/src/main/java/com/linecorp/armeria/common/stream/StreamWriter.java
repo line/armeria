@@ -143,7 +143,10 @@ public interface StreamWriter<T> {
      */
     @Deprecated
     default void close(T obj) {
-        write(obj);
-        close();
+        try {
+            write(obj);
+        } finally {
+            close();
+        }
     }
 }
