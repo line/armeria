@@ -280,9 +280,9 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final HelloService.AsyncIface client =
                     Clients.builder(uri(Handlers.HELLO, format, protocol))
-                    .factory(clientFactory)
-                    .options(clientOptions)
-                    .build(Handlers.HELLO.asyncIface());
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.HELLO.asyncIface());
 
             final int testCount = 10;
             final BlockingQueue<AbstractMap.SimpleEntry<Integer, ?>> resultQueue =
