@@ -463,6 +463,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     public void setResponseTimeoutMillis(long responseTimeoutMillis) {
         checkArgument(responseTimeoutMillis >= 0,
                       "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: >= 0)");
+        if (responseTimeoutMillis == 0) {
+            clearResponseTimeout();
+        }
+
         final long adjustmentMillis =
                 LongMath.saturatedSubtract(responseTimeoutMillis, this.responseTimeoutMillis);
         extendResponseTimeoutMillis(adjustmentMillis);
@@ -475,7 +479,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public void extendResponseTimeoutMillis(long adjustmentMillis) {
-        if (adjustmentMillis == 0) {
+        if (adjustmentMillis == 0 || responseTimeoutMillis == 0) {
             return;
         }
 

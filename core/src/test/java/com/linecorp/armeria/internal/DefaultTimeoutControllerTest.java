@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,7 +27,8 @@ import org.junit.jupiter.api.Test;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.util.DefaultTimeoutController.TimeoutTask;
+import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.internal.DefaultTimeoutController.TimeoutTask;
 
 class DefaultTimeoutControllerTest {
 

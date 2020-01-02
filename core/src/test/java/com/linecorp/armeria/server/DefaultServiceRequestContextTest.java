@@ -106,7 +106,7 @@ class DefaultServiceRequestContextTest {
     }
 
     @Test
-    void extendResponseTimeout() {
+    void extendRequestTimeout() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
         final TimeoutController timeoutController = mock(TimeoutController.class);
@@ -123,6 +123,23 @@ class DefaultServiceRequestContextTest {
         final long oldRequestTimeout3 = ctx.requestTimeoutMillis();
         ctx.extendRequestTimeoutMillis(0);
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(oldRequestTimeout3);
+    }
+
+    @Test
+    void extendRequestTimeoutFromZero() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
+        final TimeoutController timeoutController = mock(TimeoutController.class);
+        ctx.setRequestTimeoutController(timeoutController);
+
+        // This request now has an infinite timeout
+        ctx.clearRequestTimeout();
+
+        ctx.extendRequestTimeoutMillis(1000);
+        assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
+
+        ctx.extendRequestTimeoutMillis(-1000);
+        assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
 
     @Test
@@ -187,7 +204,7 @@ class DefaultServiceRequestContextTest {
         ctx.setRequestTimeoutController(timeoutController);
 
         ctx.clearRequestTimeout();
-        verify(timeoutController, timeout(Duration.ofSeconds(1)).times(1))
+        verify(timeoutController, timeout(Duration.ofSeconds(1)))
                 .cancelTimeout();
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
@@ -207,6 +224,19 @@ class DefaultServiceRequestContextTest {
         ctx.setRequestTimeout(Duration.ofSeconds(3));
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(3000);
         ctx.setRequestTimeoutMillis(0);
+        assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
+    }
+
+    @Test
+    void setRequestTimeoutZero() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
+
+        final TimeoutController timeoutController = mock(TimeoutController.class);
+        ctx.setRequestTimeoutController(timeoutController);
+
+        ctx.setRequestTimeoutMillis(0);
+        verify(timeoutController, timeout(Duration.ofSeconds(1))).cancelTimeout();
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
 

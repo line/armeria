@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.internal;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -26,13 +26,12 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.math.LongMath;
 
+import com.linecorp.armeria.common.util.TimeoutController;
+
 import io.netty.channel.EventLoop;
 
 /**
- * A controller that schedules the timeout task with the initial value or reschedule when the timeout
- * setting is changed.
- *
- * <p>Note: This interface is meant for internal use only.
+ * Default {@link TimeoutController} implementation.
  */
 public class DefaultTimeoutController implements TimeoutController {
 

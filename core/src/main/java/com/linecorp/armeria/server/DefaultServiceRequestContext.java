@@ -387,10 +387,12 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public void setRequestTimeoutMillis(long requestTimeoutMillis) {
-        if (requestTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
+        checkArgument(requestTimeoutMillis >= 0,
                     "requestTimeoutMillis: " + requestTimeoutMillis + " (expected: >= 0)");
+        if (requestTimeoutMillis == 0) {
+            clearRequestTimeout();
         }
+
         final long adjustmentMillis =
                 LongMath.saturatedSubtract(requestTimeoutMillis, this.requestTimeoutMillis);
         extendRequestTimeoutMillis(adjustmentMillis);
@@ -403,7 +405,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public void extendRequestTimeoutMillis(long adjustmentMillis) {
-        if (adjustmentMillis == 0) {
+        if (adjustmentMillis == 0 || requestTimeoutMillis == 0) {
             return;
         }
 

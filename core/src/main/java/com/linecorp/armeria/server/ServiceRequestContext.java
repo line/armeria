@@ -336,13 +336,13 @@ public interface ServiceRequestContext extends RequestContext {
     long requestTimeoutMillis();
 
     /**
-     * Clears the request timeout.
+     * Clears the previously scheduled request timeout, if any.
      */
     void clearRequestTimeout();
 
     /**
-     * Sets the amount of time allowed from the start time of the request until receiving
-     * the current {@link Request} and sending the corresponding {@link Response} completely.
+     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
+     * the corresponding {@link Response} is not sent completely since the {@link Request} started.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
@@ -350,22 +350,21 @@ public interface ServiceRequestContext extends RequestContext {
      * ServiceRequestContext ctx = ...;
      * ctx.setRequestTimeoutMillis(1000);
      * assert ctx.requestTimeoutMillis() == 1000;
-     * // Do something...
      * ctx.setRequestTimeoutMillis(2000);
      * assert ctx.requestTimeoutMillis() == 2000;
      * }</pre>
      *
      * @param requestTimeoutMillis the amount of time in milliseconds from the start time of the request
      *
-     * @deprecated Use {@link #extendRequestTimeoutMillis(long)})}, {@link #setRequestTimeoutAfterMillis(long)}
-     *             or {@link #setRequestTimeoutAtMillis(long)}
+     * @deprecated Use {@link #extendRequestTimeoutMillis(long)})}, {@link #setRequestTimeoutAfterMillis(long)},
+     *                 {@link #setRequestTimeoutAtMillis(long)} or {@link #clearRequestTimeout()}
      */
     @Deprecated
     void setRequestTimeoutMillis(long requestTimeoutMillis);
 
     /**
-     * Sets the amount of time allowed from the start time of the request until receiving
-     * the current {@link Request} and sending the corresponding {@link Response} completely.
+     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
+     * the corresponding {@link Response} is not sent completely since the {@link Request} started.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
@@ -373,23 +372,22 @@ public interface ServiceRequestContext extends RequestContext {
      * ServiceRequestContext ctx = ...;
      * ctx.setRequestTimeout(Duration.ofSeconds(1));
      * assert ctx.requestTimeoutMillis() == 1000;
-     * // Do something...
      * ctx.setRequestTimeout(Duration.ofSeconds(2));
      * assert ctx.requestTimeoutMillis() == 2000;
      * }</pre>
      *
-     * @deprecated Use {@link #extendRequestTimeout(Duration)}, {@link #setRequestTimeoutAfter(Duration)}
-     *             or {@link #setRequestTimeoutAt(Instant)}
-     *
      * @param requestTimeout the amount of time from the start time of the request
+     *
+     * @deprecated Use {@link #extendRequestTimeout(Duration)}, {@link #setRequestTimeoutAfter(Duration)},
+     *             {@link #setRequestTimeoutAt(Instant)} or {@link #clearRequestTimeout()}
      */
     @Deprecated
     void setRequestTimeout(Duration requestTimeout);
 
     /**
-     * Extends the existing timeout allowed by the specified {@code adjustmentMillis} until receiving
-     * the current {@link Request} and sending the corresponding {@link Response} completely.
-     * Note that the negative {@code adjustment} reduces the existing timeout.
+     * Extends the previously scheduled the request timeout by the specified amount of {@code adjustmentMillis}.
+     * This method does nothing if no request timeout was scheduled previously.
+     * Note that a negative {@code adjustment} reduces the current timeout.
      * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
@@ -402,14 +400,14 @@ public interface ServiceRequestContext extends RequestContext {
      * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
      * }</pre>
      *
-     * @param adjustmentMillis the amount of time in milliseconds to extend the existing timeout
+     * @param adjustmentMillis the amount of time in milliseconds to extend the current timeout by
      */
     void extendRequestTimeoutMillis(long adjustmentMillis);
 
     /**
-     * Extends the existing timeout allowed by the specified {@code adjustment} until receiving
-     * the current {@link Request} and sending the corresponding {@link Response} completely.
-     * Note that the negative {@code adjustment} reduces the existing timeout.
+     * Extends the previously scheduled request timeout by the specified amount of {@code adjustment}.
+     * This method does nothing if no response timeout was scheduled previously.
+     * Note that a negative {@code adjustment} reduces the current timeout.
      * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
@@ -422,21 +420,20 @@ public interface ServiceRequestContext extends RequestContext {
      * assert ctx.requestTimeoutMillis() == oldRequestTimeoutMillis + 500;
      * }</pre>
      *
-     * @param adjustment the amount of time to extend the existing timeout
+     * @param adjustment the amount of time to extend the current timeout by
      */
     void extendRequestTimeout(Duration adjustment);
 
     /**
-     * Sets the amount of time allowed that is after the specified {@code requestTimeoutMillis}
-     * from now until receiving the current {@link Request} and sending the corresponding
-     * {@link Response} completely.
+     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
+     * the corresponding {@link Response} is not sent completely within the specified amount of time from now.
      * Note that the specified {@code requestTimeoutMillis} must be positive.
      * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
-     * // Set the deadline to 'now' + 1000
+     * // Schedules timeout after 1 seconds from now.
      * ctx.setRequestTimeoutAfterMillis(1000);
      * }</pre>
      *
@@ -445,16 +442,15 @@ public interface ServiceRequestContext extends RequestContext {
     void setRequestTimeoutAfterMillis(long requestTimeoutMillis);
 
     /**
-     * Sets the amount of time allowed that is after the specified {@code requestTimeout}
-     * from now until receiving the current {@link Request} and sending the corresponding
-     * {@link Response} completely.
+     * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
+     * the corresponding {@link Response} is not sent completely within the specified amount time from now.
      * Note that the specified {@code requestTimeout} must be positive.
      * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
-     * // Set the deadline to 'now' + Duration.ofSeconds(1)
+     * // Schedules timeout after 1 seconds from now.
      * ctx.setRequestTimeoutAfter(Duration.ofSeconds(1));
      * }</pre>
      *
@@ -463,14 +459,14 @@ public interface ServiceRequestContext extends RequestContext {
     void setRequestTimeoutAfter(Duration requestTimeout);
 
     /**
-     * Sets the absolute request timeout allowed in milliseconds from the epoch of 1970-01-01T00:00:00Z
-     * until receiving the {@link Response} completely since the transfer of the {@link Response} started.
+     * Schedules the request timeout that is triggered at the specified time represented
+     * as the number since the epoch ({@code 1970-01-01T00:00:00Z}).
      * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
-     * // Do something...
+     * // Schedules timeout after 1 seconds from now.
      * long responseTimeoutAt = Instant.now().plus(1, ChronoUnit.SECONDS).toEpochMilli();
      * ctx.setRequestTimeoutAtMillis(responseTimeoutAt);
      * }</pre>
@@ -481,14 +477,14 @@ public interface ServiceRequestContext extends RequestContext {
     void setRequestTimeoutAtMillis(long requestTimeoutAtMillis);
 
     /**
-     * Sets the absolute request timeout allowed until receiving the {@link Response} completely
-     * since the transfer of the {@link Response} started.
+     * Schedules the request timeout that is triggered at the specified time represented
+     * as the number since the epoch ({@code 1970-01-01T00:00:00Z}).
      * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
-     * // Do something...
+     * // Schedules timeout after 1 seconds from now.
      * ctx.setRequestTimeoutAt(Instant.now().plus(1, ChronoUnit.SECONDS));
      * }</pre>
      *
