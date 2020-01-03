@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -55,9 +54,13 @@ import retrofit2.http.PUT;
  * client.
  * <ul>
  *     <li>{@code service(or serviceTagName} - Retrofit service interface name</li>
- *     <li>{@code path}   - Retrofit service interface method path taken from method annotation</li>
- *     <li>{@code method} - Retrofit service interface method</li>
- *     <li>{@code httpMethod} - HTTP method name from Retrofit service interface method annotation</li>
+ *     <li>{@code path}   - Retrofit service interface method path taken from method annotation
+ *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
+ *     <li>{@code method} - Retrofit service interface method
+ *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
+ *     <li>{@code httpMethod} - HTTP method name from Retrofit service interface method annotation
+ *                          or from {@link RequestLog#method()} if Retrofit service interface
+ *                          method not available</li>
  *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
  * </ul>
  */
@@ -65,6 +68,13 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
 
     private static final List<Class<?>> RETROFIT_ANNOTATIONS = ImmutableList.of(
             POST.class, PUT.class, PATCH.class, HEAD.class, GET.class, OPTIONS.class, HTTP.class, DELETE.class
+    );
+    private static final String METHOD_TAG_NAME = "method";
+    private static final String PATH_TAG_NAME = "path";
+    private static final String HTTP_METHOD_TAG_NAME = "httpMethod";
+    private static final List<Tag> DEFAULT_METHOD_TAGS = ImmutableList.of(
+            Tag.of(METHOD_TAG_NAME, "UNKNOWN"),
+            Tag.of(PATH_TAG_NAME, "UNKNOWN")
     );
 
     private final Map<String, List<Tag>> methodNameToTags;
@@ -126,12 +136,13 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
             }
         }
 
-        tagsBuilder.add(Tag.of("method", log.method().name()));
+        tagsBuilder.add(Tag.of(HTTP_METHOD_TAG_NAME, log.method().name()));
+        tagsBuilder.addAll(DEFAULT_METHOD_TAGS);
     }
 
     @VisibleForTesting
     static Map<String, List<Tag>> defineTagsForMethods(Class<?> serviceClass) {
-        final Builder<String, List<Tag>> methodNameToTags = ImmutableMap.builder();
+        final ImmutableMap.Builder<String, List<Tag>> methodNameToTags = ImmutableMap.builder();
 
         final Method[] declaredMethods = serviceClass.getDeclaredMethods();
         for (final Method clientServiceMethod : declaredMethods) {
@@ -142,7 +153,7 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
 
                 final ImmutableList.Builder<Tag> tags = ImmutableList.builder();
                 tags.addAll(tagsFromAnnotation(annotation));
-                tags.add(Tag.of("method", clientServiceMethod.getName()));
+                tags.add(Tag.of(METHOD_TAG_NAME, clientServiceMethod.getName()));
                 methodNameToTags.put(clientServiceMethod.getName(), tags.build());
             }
         }
@@ -171,8 +182,8 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
         }
 
         return ImmutableList.of(
-            Tag.of("httpMethod", httpMethod),
-            Tag.of("path", httpPath)
+                Tag.of(HTTP_METHOD_TAG_NAME, httpMethod),
+                Tag.of(PATH_TAG_NAME, httpPath)
         );
     }
 }
