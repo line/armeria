@@ -79,7 +79,7 @@ import io.netty.buffer.Unpooled;
  * abstraction in favor of using {@link ByteBuf} directly, and allowing the delivery of uncompressed frames as
  * a {@link ByteBuf} to optimize message parsing.
  */
-public final class ArmeriaMessageDeframer implements AutoCloseable {
+public class ArmeriaMessageDeframer implements AutoCloseable {
 
     private static final String DEBUG_STRING = ArmeriaMessageDeframer.class.getName();
 
