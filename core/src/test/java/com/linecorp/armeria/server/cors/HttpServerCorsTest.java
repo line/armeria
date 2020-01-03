@@ -270,7 +270,9 @@ public class HttpServerCorsTest {
     };
 
     static WebClient client() {
-        return WebClient.of(clientFactory, server.uri("/"));
+        return WebClient.builder(server.uri("/"))
+                        .factory(clientFactory)
+                        .build();
     }
 
     static AggregatedHttpResponse request(WebClient client, HttpMethod method, String path, String origin,

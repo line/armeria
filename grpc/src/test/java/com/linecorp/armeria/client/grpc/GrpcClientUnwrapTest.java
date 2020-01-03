@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -33,10 +32,11 @@ class GrpcClientUnwrapTest {
 
     @Test
     void test() {
-        final TestServiceBlockingStub client = new ClientBuilder("gproto+http://127.0.0.1:1/")
-                .decorator(LoggingClient.newDecorator())
-                .decorator(RetryingClient.newDecorator(RetryStrategy.never()))
-                .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client =
+                Clients.builder("gproto+http://127.0.0.1:1/")
+                       .decorator(LoggingClient.newDecorator())
+                       .decorator(RetryingClient.newDecorator(RetryStrategy.never()))
+                       .build(TestServiceBlockingStub.class);
 
         assertThat(Clients.unwrap(client, TestServiceBlockingStub.class)).containsSame(client);
 

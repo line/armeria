@@ -43,13 +43,91 @@ public final class Clients {
      *
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is invalid or
+     *                                  the specified {@code clientType} is unsupported for the scheme
+     */
+    public static <T> T newClient(String uri, Class<T> clientType) {
+        return builder(uri).build(clientType);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link URI} using the default
+     * {@link ClientFactory}.
+     *
+     * @param uri the {@link URI} of the server endpoint
+     * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@link URI} is invalid or
+     *                                  the specified {@code clientType} is unsupported for the scheme
+     */
+    public static <T> T newClient(URI uri, Class<T> clientType) {
+        return builder(uri).build(clientType);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@code scheme} using
+     * the default {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme} represented as a {@link String}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the specified {@code scheme} is invalid or
+     *                                  the specified {@code clientType} is unsupported for
+     *                                  the specified {@code scheme}.
+     */
+    public static <T> T newClient(String scheme, Endpoint endpoint, Class<T> clientType) {
+        return builder(scheme, endpoint).build(clientType);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
+     * the default {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the specified {@code clientType} is unsupported for
+     *                                  the specified {@link Scheme}.
+     */
+    public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType) {
+        return builder(scheme, endpoint).build(clientType);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link SessionProtocol}
+     * using the default {@link ClientFactory}.
+     *
+     * @param protocol the {@link SessionProtocol}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     *
+     * @throws IllegalArgumentException if the specified {@code clientType} is unsupported for
+     *                                  the specified {@link SessionProtocol} or
+     *                                  {@link SerializationFormat} is required.
+     */
+    public static <T> T newClient(SessionProtocol protocol, Endpoint endpoint, Class<T> clientType) {
+        return builder(protocol, endpoint).build(clientType);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@code uri} using the default
+     * {@link ClientFactory}.
+     *
+     * @param uri the URI of the server endpoint
+     * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
      *                                  the specified {@code clientType} is unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(String)} and {@link ClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
+        return builder(uri).options(options).build(clientType);
     }
 
     /**
@@ -62,9 +140,12 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
      *                                  the specified {@code clientType} is unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(String)} and {@link ClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptions options) {
-        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
+        return builder(uri).options(options).build(clientType);
     }
 
     /**
@@ -78,11 +159,15 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
      *                                  the specified {@code clientType} is unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(String)}, {@link ClientBuilder#factory(ClientFactory)}
+     *             and {@link ClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     public static <T> T newClient(ClientFactory factory, String uri,
                                   Class<T> clientType, ClientOptionValue<?>... options) {
 
-        return new ClientBuilder(uri).factory(factory).options(options).build(clientType);
+        return builder(uri).factory(factory).options(options).build(clientType);
     }
 
     /**
@@ -96,10 +181,14 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
      *                                  the specified {@code clientType} is unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(String)}, {@link ClientBuilder#factory(ClientFactory)}
+     *             and {@link ClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     public static <T> T newClient(ClientFactory factory, String uri,
                                   Class<T> clientType, ClientOptions options) {
-        return new ClientBuilder(uri).factory(factory).options(options).build(clientType);
+        return builder(uri).factory(factory).options(options).build(clientType);
     }
 
     /**
@@ -112,9 +201,12 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
      *                                  the specified {@code clientType} is unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(URI)} and {@link ClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
+        return builder(uri).options(options).build(clientType);
     }
 
     /**
@@ -127,9 +219,12 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
      *                                  the specified {@code clientType} is unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(URI)} and {@link ClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
+        return builder(uri).options(options).build(clientType);
     }
 
     /**
@@ -143,10 +238,14 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
      *                                  the specified {@code clientType} is unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(URI)}, {@link ClientBuilder#factory(ClientFactory)}
+     *             and {@link ClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
-        return new ClientBuilder(uri).factory(factory).options(options).build(clientType);
+        return builder(uri).factory(factory).options(options).build(clientType);
     }
 
     /**
@@ -160,9 +259,13 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
      *                                  the specified {@code clientType} is unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(URI)}, {@link ClientBuilder#factory(ClientFactory)}
+     *             and {@link ClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType, ClientOptions options) {
-        return new ClientBuilder(uri).factory(factory).options(options).build(clientType);
+        return builder(uri).factory(factory).options(options).build(clientType);
     }
 
     /**
@@ -178,10 +281,16 @@ public final class Clients {
      * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
      *                                  {@link SerializationFormat}, or the specified {@code clientType} is
      *                                  unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(Scheme, Endpoint)}
+     *             and {@link ClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
                                   Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.ofDefault(), protocol, format, endpoint, clientType, options);
+        final Scheme scheme = Scheme.of(requireNonNull(format, "format"),
+                                        requireNonNull(protocol, "protocol"));
+        return builder(scheme, endpoint).options(options).build(clientType);
     }
 
     /**
@@ -197,10 +306,15 @@ public final class Clients {
      * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
      *                                  {@link SerializationFormat}, or the specified {@code clientType} is
      *                                  unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(Scheme, Endpoint)} and {@link ClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
                                   Class<T> clientType, ClientOptions options) {
-        return newClient(ClientFactory.ofDefault(), protocol, format, endpoint, clientType, options);
+        final Scheme scheme = Scheme.of(requireNonNull(format, "format"),
+                                        requireNonNull(protocol, "protocol"));
+        return builder(scheme, endpoint).options(options).build(clientType);
     }
 
     /**
@@ -217,10 +331,16 @@ public final class Clients {
      * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
      *                                  {@link SerializationFormat}, or the specified {@code clientType} is
      *                                  unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(Scheme, Endpoint)}, {@link ClientBuilder#factory(ClientFactory)}
+     *             and {@link ClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     public static <T> T newClient(ClientFactory factory, SessionProtocol protocol, SerializationFormat format,
                                   Endpoint endpoint, Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(factory, Scheme.of(format, protocol), endpoint, clientType, options);
+        final Scheme scheme = Scheme.of(requireNonNull(format, "format"),
+                                        requireNonNull(protocol, "protocol"));
+        return builder(scheme, endpoint).factory(factory).options(options).build(clientType);
     }
 
     /**
@@ -237,10 +357,16 @@ public final class Clients {
      * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
      *                                  {@link SerializationFormat}, or the specified {@code clientType} is
      *                                  unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(Scheme, Endpoint)}, {@link ClientBuilder#factory(ClientFactory)}
+     *             and {@link ClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     public static <T> T newClient(ClientFactory factory, SessionProtocol protocol, SerializationFormat format,
                                   Endpoint endpoint, Class<T> clientType, ClientOptions options) {
-        return newClient(factory, Scheme.of(format, protocol), endpoint, clientType, options);
+        final Scheme scheme = Scheme.of(requireNonNull(format, "format"),
+                                        requireNonNull(protocol, "protocol"));
+        return builder(scheme, endpoint).factory(factory).options(options).build(clientType);
     }
 
     /**
@@ -254,10 +380,14 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
      *                                  unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(Scheme, Endpoint)}
+     *             and {@link ClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.ofDefault(), scheme, endpoint, clientType, options);
+        return builder(scheme, endpoint).options(options).build(clientType);
     }
 
     /**
@@ -271,10 +401,13 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
      *                                  unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(Scheme, Endpoint)} and {@link ClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptions options) {
-        return newClient(ClientFactory.ofDefault(), scheme, endpoint, clientType, options);
+        return builder(scheme, endpoint).options(options).build(clientType);
     }
 
     /**
@@ -289,10 +422,14 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
      *                                  unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(Scheme, Endpoint)}, {@link ClientBuilder#factory(ClientFactory)}
+     *             and {@link ClientBuilder#options(ClientOptionValue[])}.
      */
+    @Deprecated
     public static <T> T newClient(ClientFactory factory, Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
-        return new ClientBuilder(scheme, endpoint).factory(factory).options(options).build(clientType);
+        return builder(scheme, endpoint).factory(factory).options(options).build(clientType);
     }
 
     /**
@@ -307,10 +444,56 @@ public final class Clients {
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
      *                                  unsupported for the scheme
+     *
+     * @deprecated Use {@link #builder(Scheme, Endpoint)}, {@link ClientBuilder#factory(ClientFactory)}
+     *             and {@link ClientBuilder#options(ClientOptions)}.
      */
+    @Deprecated
     public static <T> T newClient(ClientFactory factory, Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptions options) {
-        return new ClientBuilder(scheme, endpoint).factory(factory).options(options).build(clientType);
+        return builder(scheme, endpoint).factory(factory).options(options).build(clientType);
+    }
+
+    /**
+     * Returns a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
+     */
+    public static ClientBuilder builder(String uri) {
+        return new ClientBuilder(URI.create(requireNonNull(uri, "uri")), null, null, null);
+    }
+
+    /**
+     * Returns a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
+     */
+    public static ClientBuilder builder(URI uri) {
+        return new ClientBuilder(requireNonNull(uri, "uri"), null, null, null);
+    }
+
+    /**
+     * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@code scheme}.
+     */
+    public static ClientBuilder builder(String scheme, Endpoint endpoint) {
+        return new ClientBuilder(null, Scheme.parse(requireNonNull(scheme, "scheme")),
+                                 null, requireNonNull(endpoint, "endpoint"));
+    }
+
+    /**
+     * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@link Scheme}.
+     */
+    public static ClientBuilder builder(Scheme scheme, Endpoint endpoint) {
+        return new ClientBuilder(null, requireNonNull(scheme, "scheme"),
+                                 null, requireNonNull(endpoint, "endpoint"));
+    }
+
+    /**
+     * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@link SessionProtocol}.
+     */
+    public static ClientBuilder builder(SessionProtocol protocol, Endpoint endpoint) {
+        return new ClientBuilder(null, null,
+                                 requireNonNull(protocol, "protocol"),
+                                 requireNonNull(endpoint, "endpoint"));
     }
 
     /**
@@ -367,7 +550,7 @@ public final class Clients {
     public static <T> T newDerivedClient(
             T client, Function<? super ClientOptions, ClientOptions> configurator) {
         final ClientBuilderParams params = builderParams(client);
-        final ClientBuilder builder = new ClientBuilder(params.uri());
+        final ClientBuilder builder = builder(params.uri());
         builder.factory(params.factory());
         builder.options(configurator.apply(params.options()));
 
@@ -380,7 +563,7 @@ public final class Clients {
     }
 
     private static ClientBuilder newDerivedBuilder(ClientBuilderParams params) {
-        final ClientBuilder builder = new ClientBuilder(params.uri());
+        final ClientBuilder builder = builder(params.uri());
         builder.factory(params.factory());
         builder.options(params.options());
         return builder;

@@ -33,8 +33,8 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.base.Stopwatch;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.SimpleDecoratingRpcClient;
 import com.linecorp.armeria.common.RpcRequest;
@@ -81,9 +81,11 @@ class ThriftDynamicTimeoutTest {
     @ParameterizedTest
     @ArgumentsSource(ClientDecoratorProvider.class)
     void testDynamicTimeout(Function<? super RpcClient, ? extends RpcClient> clientDecorator) throws Exception {
-        final SleepService.Iface client = new ClientBuilder(server.uri(BINARY, "/sleep"))
-                .rpcDecorator(clientDecorator)
-                .responseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
+        final SleepService.Iface client =
+                Clients.builder(server.uri(BINARY, "/sleep"))
+                       .rpcDecorator(clientDecorator)
+                       .responseTimeout(Duration.ofSeconds(1))
+                       .build(SleepService.Iface.class);
 
         final long delay = 1500;
         final Stopwatch sw = Stopwatch.createStarted();
@@ -96,9 +98,11 @@ class ThriftDynamicTimeoutTest {
     void testDisabledTimeout(Function<? super RpcClient, ? extends RpcClient> clientDecorator)
             throws Exception {
         withTimeout(() -> {
-            final SleepService.Iface client = new ClientBuilder(server.uri(BINARY, "/fakeSleep"))
-                    .rpcDecorator(clientDecorator)
-                    .responseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
+            final SleepService.Iface client =
+                    Clients.builder(server.uri(BINARY, "/fakeSleep"))
+                           .rpcDecorator(clientDecorator)
+                           .responseTimeout(Duration.ofSeconds(1))
+                           .build(SleepService.Iface.class);
 
             final long delay = 30000;
             final Stopwatch sw = Stopwatch.createStarted();

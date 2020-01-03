@@ -24,7 +24,6 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -73,15 +72,17 @@ class ThriftClientRequestContextInitFailureTest {
     private static void assertFailure(String uri, Consumer<Throwable> requirements) {
         final AtomicBoolean rpcDecoratorRan = new AtomicBoolean();
         final AtomicReference<ClientRequestContext> capturedCtx = new AtomicReference<>();
-        final HelloService.Iface client = new ClientBuilder("tbinary+http://" + uri)
-                .decorator((delegate, ctx, req) -> {
-                    capturedCtx.set(ctx);
-                    return delegate.execute(ctx, req);
-                })
-                .rpcDecorator((delegate, ctx, req) -> {
-                    rpcDecoratorRan.set(true);
-                    return delegate.execute(ctx, req);
-                }).build(HelloService.Iface.class);
+        final HelloService.Iface client =
+                Clients.builder("tbinary+http://" + uri)
+                       .decorator((delegate, ctx, req) -> {
+                           capturedCtx.set(ctx);
+                           return delegate.execute(ctx, req);
+                       })
+                       .rpcDecorator((delegate, ctx, req) -> {
+                           rpcDecoratorRan.set(true);
+                           return delegate.execute(ctx, req);
+                       })
+                       .build(HelloService.Iface.class);
 
         final Throwable actualCause = catchThrowable(() -> client.hello(""));
         assertThat(actualCause).isInstanceOf(UnprocessedRequestException.class);

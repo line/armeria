@@ -27,9 +27,6 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientOption;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -81,11 +78,9 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     @Override
     protected WebClient newClient(int port) {
-        return WebClient.of(sessionProtocol.uriText() + "://127.0.0.1:" + port,
-                            ClientOptions.of(ClientOption.DECORATION.newValue(
-                                    ClientDecoration.builder()
-                                                    .add(BraveClient.newDecorator(httpTracing))
-                                                    .build())));
+        return WebClient.builder(sessionProtocol.uriText() + "://127.0.0.1:" + port)
+                        .decorator(BraveClient.newDecorator(httpTracing))
+                        .build();
     }
 
     @Override

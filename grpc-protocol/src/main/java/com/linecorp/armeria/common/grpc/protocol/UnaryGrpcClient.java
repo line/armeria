@@ -59,7 +59,7 @@ public class UnaryGrpcClient {
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient}.
      */
     // TODO(anuraaga): We would ideally use our standard client building pattern, i.e.,
-    // new ClientBuilder(...).build(UnaryGrpcClient.class), but that requires mapping protocol schemes to media
+    // Clients.builder(...).build(UnaryGrpcClient.class), but that requires mapping protocol schemes to media
     // types, which cannot be duplicated. As this and normal gproto+ clients must use the same media type, we
     // cannot currently implement this without rethinking / refactoring core and punt for now since this is an
     // advanced API.
@@ -107,7 +107,7 @@ public class UnaryGrpcClient {
                         });
     }
 
-    private void checkGrpcStatus(@Nullable String grpcStatus, HttpHeaders headers) {
+    private static void checkGrpcStatus(@Nullable String grpcStatus, HttpHeaders headers) {
         if (grpcStatus != null && !"0".equals(grpcStatus)) {
             String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {

@@ -67,11 +67,15 @@ class ArmeriaReactiveWebServerFactoryTest {
     }
 
     private WebClient httpsClient(WebServer server) {
-        return WebClient.of(clientFactory, "https://example.com:" + server.getPort());
+        return WebClient.builder("https://example.com:" + server.getPort())
+                        .factory(clientFactory)
+                        .build();
     }
 
     private WebClient httpClient(WebServer server) {
-        return WebClient.of(clientFactory, "http://example.com:" + server.getPort());
+        return WebClient.builder("http://example.com:" + server.getPort())
+                        .factory(clientFactory)
+                        .build();
     }
 
     @Test

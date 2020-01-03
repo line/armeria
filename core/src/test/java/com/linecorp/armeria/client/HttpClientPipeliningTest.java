@@ -125,8 +125,9 @@ public class HttpClientPipeliningTest {
 
     @Test
     public void withoutPipelining() throws Exception {
-        final WebClient client = WebClient.of(
-                factoryWithoutPipelining, "h1c://127.0.0.1:" + server.httpPort());
+        final WebClient client = WebClient.builder("h1c://127.0.0.1:" + server.httpPort())
+                                          .factory(factoryWithoutPipelining)
+                                          .build();
 
         final HttpResponse res1 = client.get("/");
         final HttpResponse res2 = client.get("/");
@@ -146,8 +147,9 @@ public class HttpClientPipeliningTest {
 
     @Test
     public void withPipelining() throws Exception {
-        final WebClient client = WebClient.of(
-                factoryWithPipelining, "h1c://127.0.0.1:" + server.httpPort());
+        final WebClient client = WebClient.builder("h1c://127.0.0.1:" + server.httpPort())
+                                          .factory(factoryWithPipelining)
+                                          .build();
 
         final HttpResponse res1;
         lock.lock();

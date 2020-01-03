@@ -234,8 +234,11 @@ public final class ArmeriaRetrofitBuilder {
         checkState(baseUrl != null, "baseUrl not set");
         final URI uri = URI.create(baseUrl);
         final String fullUri = SessionProtocol.of(uri.getScheme()) + "://" + uri.getAuthority();
-        final WebClient baseHttpClient = WebClient.of(
-                clientFactory, fullUri, configurator.apply(fullUri, ClientOptions.builder()).build());
+        final WebClient baseHttpClient = WebClient.builder(fullUri)
+                                                  .factory(clientFactory)
+                                                  .options(configurator.apply(fullUri, ClientOptions.builder())
+                                                                       .build())
+                                                  .build();
         return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, uri.getPath(), GROUP_PREFIX))
                               .callFactory(new ArmeriaCallFactory(
                                       baseHttpClient, clientFactory, configurator,

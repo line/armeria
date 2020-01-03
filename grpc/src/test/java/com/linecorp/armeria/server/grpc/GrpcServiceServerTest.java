@@ -55,9 +55,9 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.StringValue;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
@@ -740,9 +740,9 @@ class GrpcServiceServerTest {
     void ignoreClientTimeout() {
         withTimeout(() -> {
             final UnitTestServiceBlockingStub client =
-                    new ClientBuilder(server.httpUri(GrpcSerializationFormats.PROTO, "/no-client-timeout/"))
-                    .build(UnitTestServiceBlockingStub.class)
-                    .withDeadlineAfter(10, TimeUnit.SECONDS);
+                    Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO, "/no-client-timeout/"))
+                           .build(UnitTestServiceBlockingStub.class)
+                           .withDeadlineAfter(10, TimeUnit.SECONDS);
             assertThatThrownBy(() -> client.timesOut(
                     SimpleRequest.getDefaultInstance())).isInstanceOfSatisfying(
                     StatusRuntimeException.class, t ->
@@ -804,9 +804,9 @@ class GrpcServiceServerTest {
     private static void clientSocketClosedBeforeHalfClose(String protocol) throws Exception {
         final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
-                new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + '/')
-                        .factory(factory)
-                        .build(UnitTestServiceStub.class);
+                Clients.builder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + '/')
+                       .factory(factory)
+                       .build(UnitTestServiceStub.class);
         final AtomicReference<SimpleResponse> response = new AtomicReference<>();
         final StreamObserver<SimpleRequest> stream = stub.streamClientCancels(
                 new StreamObserver<SimpleResponse>() {
@@ -859,9 +859,9 @@ class GrpcServiceServerTest {
 
         final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
-                new ClientBuilder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
-                        .factory(factory)
-                        .build(UnitTestServiceStub.class);
+                Clients.builder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
+                       .factory(factory)
+                       .build(UnitTestServiceStub.class);
         final AtomicReference<SimpleResponse> response = new AtomicReference<>();
         stub.streamClientCancelsBeforeResponseClosedCancels(
                 SimpleRequest.getDefaultInstance(),
@@ -1058,24 +1058,24 @@ class GrpcServiceServerTest {
             final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
             final AtomicReference<byte[]> payload = new AtomicReference<>();
             final UnitTestServiceBlockingStub jsonStub =
-                    new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
-                            .decorator(client -> new SimpleDecoratingHttpClient(client) {
-                                @Override
-                                public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
-                                        throws Exception {
-                                    requestHeaders.set(req.headers());
-                                    return new FilteredHttpResponse(delegate().execute(ctx, req)) {
-                                        @Override
-                                        protected HttpObject filter(HttpObject obj) {
-                                            if (obj instanceof HttpData) {
-                                                payload.set(((HttpData) obj).array());
-                                            }
-                                            return obj;
-                                        }
-                                    };
-                                }
-                            })
-                            .build(UnitTestServiceBlockingStub.class);
+                    Clients.builder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
+                           .decorator(client -> new SimpleDecoratingHttpClient(client) {
+                               @Override
+                               public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                       throws Exception {
+                                   requestHeaders.set(req.headers());
+                                   return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                                       @Override
+                                       protected HttpObject filter(HttpObject obj) {
+                                           if (obj instanceof HttpData) {
+                                               payload.set(((HttpData) obj).array());
+                                           }
+                                           return obj;
+                                       }
+                                   };
+                               }
+                           })
+                           .build(UnitTestServiceBlockingStub.class);
             final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
             assertThat(response).isEqualTo(RESPONSE_MESSAGE);
             assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
@@ -1098,26 +1098,26 @@ class GrpcServiceServerTest {
             final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
             final AtomicReference<byte[]> payload = new AtomicReference<>();
             final UnitTestServiceBlockingStub jsonStub =
-                    new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/json-preserving/"))
-                            .option(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER.newValue(
-                                    marshaller -> marshaller.preservingProtoFieldNames(true)))
-                            .decorator(client -> new SimpleDecoratingHttpClient(client) {
-                                @Override
-                                public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
-                                        throws Exception {
-                                    requestHeaders.set(req.headers());
-                                    return new FilteredHttpResponse(delegate().execute(ctx, req)) {
-                                        @Override
-                                        protected HttpObject filter(HttpObject obj) {
-                                            if (obj instanceof HttpData) {
-                                                payload.set(((HttpData) obj).array());
-                                            }
-                                            return obj;
-                                        }
-                                    };
-                                }
-                            })
-                            .build(UnitTestServiceBlockingStub.class);
+                    Clients.builder(server.httpUri(GrpcSerializationFormats.JSON, "/json-preserving/"))
+                           .option(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER.newValue(
+                                   marshaller -> marshaller.preservingProtoFieldNames(true)))
+                           .decorator(client -> new SimpleDecoratingHttpClient(client) {
+                               @Override
+                               public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                       throws Exception {
+                                   requestHeaders.set(req.headers());
+                                   return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                                       @Override
+                                       protected HttpObject filter(HttpObject obj) {
+                                           if (obj instanceof HttpData) {
+                                               payload.set(((HttpData) obj).array());
+                                           }
+                                           return obj;
+                                       }
+                                   };
+                               }
+                           })
+                           .build(UnitTestServiceBlockingStub.class);
             final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
             assertThat(response).isEqualTo(RESPONSE_MESSAGE);
             assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(

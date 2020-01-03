@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.thrift.TException;
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
@@ -62,7 +62,7 @@ class ThriftServiceContextAwareTest {
                       .build();
         server.start().join();
         final String uri = BINARY.uriText() + "+http://127.0.0.1:" + server.activeLocalPort() + "/hello";
-        final HelloService.Iface client = new ClientBuilder(uri).build(HelloService.Iface.class);
+        final HelloService.Iface client = Clients.newClient(uri, HelloService.Iface.class);
         final String res = client.hello("foo");
         assertThat(res).isEqualTo("hello, foo");
         // There's a chance that the response comes first before setting the context

@@ -63,7 +63,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
@@ -305,13 +304,13 @@ public class ThriftOverHttpClientTServletIntegrationTest {
     private static HelloService.Iface newSchemeCapturingClient(
             String uri, AtomicReference<SessionProtocol> sessionProtocol) {
 
-        return new ClientBuilder(uri)
-                .rpcDecorator((delegate, ctx, req) -> {
-                    ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
-                                          RequestLogAvailability.REQUEST_START);
-                    return delegate.execute(ctx, req);
-                })
-                .build(HelloService.Iface.class);
+        return Clients.builder(uri)
+                      .rpcDecorator((delegate, ctx, req) -> {
+                          ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
+                                                RequestLogAvailability.REQUEST_START);
+                          return delegate.execute(ctx, req);
+                      })
+                      .build(HelloService.Iface.class);
     }
 
     private static String http1uri(SessionProtocol protocol) {
