@@ -25,7 +25,8 @@ public class DropwizardArmeriaApplication extends Application<DropwizardArmeriaC
 
     @Override
     public void initialize(Bootstrap<DropwizardArmeriaConfiguration> bootstrap) {
-        final ArmeriaBundle bundle = new ArmeriaBundle() {
+        final ArmeriaBundle<DropwizardArmeriaConfiguration> bundle =
+                new ArmeriaBundle<DropwizardArmeriaConfiguration>() {
             @Override
             public void configure(ServerBuilder builder) {
                 builder.service("/", (ctx, res) -> HttpResponse.of(MediaType.HTML_UTF_8, "<h2>It works!</h2>"));

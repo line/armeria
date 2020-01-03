@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.dropwizard;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
@@ -40,27 +40,25 @@ class ManagedArmeriaServer<T extends Configuration> implements Managed {
 
     private static final Logger logger = LoggerFactory.getLogger(ManagedArmeriaServer.class);
 
-    private final @Valid T configuration;
     private final ArmeriaServerConfigurator serverConfigurator;
     @Nullable
     private Server server;
     private final @Valid ServerFactory serverFactory;
 
     /**
-    * Creates a new instance.
-    *
-    * @param configuration The Dropwizard configuration
-    * @param serverConfigurator A non-null implementation of {@link ArmeriaServerConfigurator}
-    */
-    ManagedArmeriaServer(T configuration,
-                                ArmeriaServerConfigurator serverConfigurator) {
-        this.configuration = Objects.requireNonNull(configuration, "configuration");
-        serverFactory = Objects.requireNonNull(configuration.getServerFactory(), "server");
+     * Creates a new instance.
+     *
+     * @param configuration The Dropwizard configuration
+     * @param serverConfigurator A non-null implementation of {@link ArmeriaServerConfigurator}
+     */
+    ManagedArmeriaServer(T configuration, ArmeriaServerConfigurator serverConfigurator) {
+        requireNonNull(configuration, "configuration");
+        serverFactory = requireNonNull(configuration.getServerFactory(), "server");
         if (!(serverFactory instanceof ArmeriaServerFactory)) {
             throw new RuntimeException("Cannot manage Armeria Server " +
                                        "unless Configuration server.type=" + ArmeriaServerFactory.TYPE);
         }
-        this.serverConfigurator = Objects.requireNonNull(serverConfigurator, "serverConfigurator");
+        this.serverConfigurator = requireNonNull(serverConfigurator, "serverConfigurator");
     }
 
     @Override

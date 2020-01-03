@@ -15,205 +15,59 @@
  */
 package com.linecorp.armeria.dropwizard;
 
-import java.security.cert.CertificateException;
-import java.time.Duration;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
-import javax.net.ssl.SSLException;
 import javax.validation.Valid;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.thread.ThreadPool;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
-import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.util.ThreadFactories;
-import com.linecorp.armeria.dropwizard.connector.ArmeriaHttpConnectorFactory;
-import com.linecorp.armeria.dropwizard.connector.ArmeriaServerDecorator;
-import com.linecorp.armeria.dropwizard.logging.AccessLogWriterFactory;
-import com.linecorp.armeria.dropwizard.logging.CommonAccessLogWriterFactory;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.jetty.JettyService;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.dropwizard.jersey.setup.JerseyEnvironment;
-import io.dropwizard.jetty.ConnectorFactory;
 import io.dropwizard.jetty.ContextRoutingHandler;
+import io.dropwizard.server.AbstractServerFactory;
 import io.dropwizard.server.ServerFactory;
-import io.dropwizard.server.SimpleServerFactory;
 import io.dropwizard.setup.Environment;
-import io.dropwizard.util.Size;
-import io.dropwizard.validation.MinSize;
-import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A Dropwizard {@link ServerFactory} implementation for Armeria that replaces
  * Dropwizard's default Jetty handler with one provided by Armeria.
  */
 @JsonTypeName(ArmeriaServerFactory.TYPE)
-class ArmeriaServerFactory extends SimpleServerFactory {
+class ArmeriaServerFactory extends AbstractServerFactory {
     // TODO: This class could be stripped down to the essential fields. Implement ServerFactory instead.
 
     public static final String TYPE = "armeria";
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerFactory.class);
 
-    @JsonProperty
-    private @Valid ConnectorFactory connector = ArmeriaHttpConnectorFactory.build();
-    @JsonProperty
-    private @Valid @NotNull AccessLogWriterFactory accessLogWriter = new CommonAccessLogWriterFactory();
-    @JsonProperty
-    private boolean jerseyEnabled = true;
-    @JsonProperty
-    private @MinSize(0) Size maxRequestLength = Size.bytes(Flags.defaultMaxRequestLength());
-    @JsonProperty
-    private @Min(0) int maxNumConnections = Flags.maxNumConnections();
-    @JsonProperty
-    private boolean dateHeaderEnabled = true;
-    @JsonProperty
-    private boolean serverHeaderEnabled;
-    @JsonProperty
-    private boolean verboseResponses;
-    @JsonProperty
-    @Nullable
-    private String defaultHostname;
-
+    @JsonProperty(TYPE)
+    private @Valid ArmeriaSettings armeriaSettings;
     @JsonIgnore
     @Nullable
     private transient ServerBuilder serverBuilder;
 
-    /**
-     * Sets up the Armeria ServerBuilder with values from the Dropwizard Configuration.
-     * Ref <a href="https://line.github.io/armeria/advanced-production-checklist.html">Production Checklist</a>
-     *
-     * @param serverBuilder A non-production ready {@link ServerBuilder}
-     * @return A production-ready {@link ServerBuilder}
-     */
-    @VisibleForTesting
-    ServerBuilder decorateServerBuilderFromConfig(ServerBuilder serverBuilder) {
-        Objects.requireNonNull(serverBuilder);
-        final ScheduledThreadPoolExecutor blockingTaskExecutor = new ScheduledThreadPoolExecutor(
-                getMaxThreads(),
-                ThreadFactories.newThreadFactory("armeria-dropwizard-blocking-tasks", true));
-        blockingTaskExecutor.setKeepAliveTime(60, TimeUnit.SECONDS);
-        blockingTaskExecutor.allowCoreThreadTimeOut(true);
-
-        serverBuilder.maxNumConnections(getMaxNumConnections())
-                     .blockingTaskExecutor(blockingTaskExecutor, true)
-                     .maxRequestLength(maxRequestLength.toBytes())
-                     .idleTimeoutMillis(getIdleThreadTimeout().toMilliseconds())
-                     .gracefulShutdownTimeout(
-                             Duration.ofMillis(getShutdownGracePeriod().toMilliseconds()),
-                             Duration.ofMillis(getShutdownGracePeriod().toMilliseconds()))
-                     .verboseResponses(hasVerboseResponses());
-        if (!isDateHeaderEnabled()) {
-            serverBuilder.disableDateHeader();
-        }
-        if (!isServerHeaderEnabled()) {
-            serverBuilder.disableServerHeader();
-        }
-        Optional.ofNullable(getDefaultHostname()).ifPresent(serverBuilder::defaultHostname);
-        // TODO: Add more items to server builder via Configuration
-        return serverBuilder;
-    }
-
-    @Nullable
-    private String getDefaultHostname() {
-        return defaultHostname;
-    }
-
-    public void setDefaultHostname(@Nullable String defaultHostname) {
-        this.defaultHostname = defaultHostname;
-    }
-
-    @JsonGetter("verboseResponses")
-    private boolean hasVerboseResponses() {
-        return verboseResponses;
-    }
-
-    public void setVerboseResponses(boolean verboseResponses) {
-        this.verboseResponses = verboseResponses;
-    }
-
-    public boolean isDateHeaderEnabled() {
-        return dateHeaderEnabled;
-    }
-
-    public void setDateHeaderEnabled(boolean dateHeaderEnabled) {
-        this.dateHeaderEnabled = dateHeaderEnabled;
-    }
-
-    public boolean isServerHeaderEnabled() {
-        return serverHeaderEnabled;
-    }
-
-    public void setServerHeaderEnabled(boolean serverHeaderEnabled) {
-        this.serverHeaderEnabled = serverHeaderEnabled;
-    }
-
-    @Override
-    public ConnectorFactory getConnector() {
-        return connector;
-    }
-
-    @Override
-    public void setConnector(ConnectorFactory factory) {
-        connector = Objects.requireNonNull(factory, "server.connector");
-    }
-
-    public boolean isJerseyEnabled() {
-        return jerseyEnabled;
-    }
-
-    public void setJerseyEnabled(boolean jerseyEnabled) {
-        this.jerseyEnabled = jerseyEnabled;
-    }
-
-    public AccessLogWriterFactory getAccessLogWriter() {
-        return accessLogWriter;
-    }
-
-    /**
-     * Sets an {@link AccessLogWriter} onto this ServerFactory.
-     *
-     * @param accessLogWriter An instance of an {#link AccessLogWriter}
-     */
-    public void setAccessLogWriter(@Valid AccessLogWriterFactory accessLogWriter) {
-        this.accessLogWriter = Objects.requireNonNull(
-                accessLogWriter, "server[type=\"" + TYPE + "\"].accessLogWriter");
-    }
-
-    public Size getMaxRequestLength() {
-        return maxRequestLength;
-    }
-
-    public void setMaxRequestLength(Size maxRequestLength) {
-        this.maxRequestLength = maxRequestLength;
-    }
-
-    public int getMaxNumConnections() {
-        return maxNumConnections;
-    }
-
-    public void setMaxNumConnections(int maxNumConnections) {
-        this.maxNumConnections = maxNumConnections;
-    }
+    @NotEmpty
+    private String applicationContextPath = "/application";
+    @NotEmpty
+    private String adminContextPath = "/admin";
+    @JsonProperty
+    private boolean jerseyEnabled = true;
 
     @JsonIgnore
     public ServerBuilder getServerBuilder() {
@@ -234,12 +88,20 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         }
 
         addDefaultHandlers(server, environment, metrics);
-        serverBuilder = getArmeriaServerBuilder(server, connector, metrics);
+        serverBuilder = buildServerBuilder(server, metrics);
         return server;
     }
 
-    private void addDefaultHandlers(Server server, Environment environment,
-                                    MetricRegistry metrics) {
+    @Override
+    public void configure(Environment environment) {
+        logger.info("Registering jersey handler with root path prefix: {}", applicationContextPath);
+        environment.getApplicationContext().setContextPath(applicationContextPath);
+
+        logger.info("Registering admin handler with root path prefix: {}", adminContextPath);
+        environment.getAdminContext().setContextPath(adminContextPath);
+    }
+
+    private void addDefaultHandlers(Server server, Environment environment, MetricRegistry metrics) {
         final JerseyEnvironment jersey = environment.jersey();
         final Handler applicationHandler = createAppServlet(
                 server,
@@ -249,85 +111,64 @@ class ArmeriaServerFactory extends SimpleServerFactory {
                 environment.getApplicationContext(),
                 environment.getJerseyServletContainer(),
                 metrics);
-        final Handler adminHandler = createAdminServlet(
-                server,
-                environment.getAdminContext(),
-                metrics,
-                environment.healthChecks());
-        final ContextRoutingHandler routingHandler = new ContextRoutingHandler(ImmutableMap.of(
-                getApplicationContextPath(), applicationHandler,
-                getAdminContextPath(), adminHandler));
+        final Handler adminHandler = createAdminServlet(server, environment.getAdminContext(),
+                                                        metrics, environment.healthChecks());
+        final ContextRoutingHandler routingHandler = new ContextRoutingHandler(
+                ImmutableMap.of(applicationContextPath, applicationHandler, adminContextPath, adminHandler));
         final Handler gzipHandler = buildGzipHandler(routingHandler);
         server.setHandler(addStatsHandler(addRequestLog(server, gzipHandler, environment.getName())));
     }
 
-    private ServerBuilder getArmeriaServerBuilder(Server server,
-                                                  ConnectorFactory connector,
-                                                  MetricRegistry metricRegistry) {
-        logger.debug("Building Armeria Server");
+    private ServerBuilder buildServerBuilder(Server server, MetricRegistry metricRegistry) {
         final ServerBuilder serverBuilder = com.linecorp.armeria.server.Server.builder();
-        try {
-            decorateServerBuilder(
-                    serverBuilder, connector, accessLogWriter,
-                    DropwizardMeterRegistries.newRegistry(metricRegistry));
-        } catch (SSLException | CertificateException e) {
-            logger.error("Unable to define TLS Server", e);
-            // TODO: Throw an exception?
+        if (armeriaSettings != null) {
+            ArmeriaConfigurationUtil.configureServer(serverBuilder, armeriaSettings, metricRegistry);
+        } else {
+            logger.warn("Armeria configuration was null. ServerBuilder is not customized from it.");
         }
 
-        final JettyService jettyService = getJettyService(server);
-        return decorateServerBuilderFromConfig(serverBuilder)
-                .serviceUnder("/", jettyService);
+        return serverBuilder.blockingTaskExecutor(newBlockingTaskExecutor(), true)
+                            .serviceUnder("/", JettyService.of(server));
     }
 
-    /**
-     * Wrap a {@link Server} in a {@link JettyService}.
-     *
-     * @param jettyServer An instance of a Jetty {@link Server}
-     * @return Armeria {@link JettyService} for the provided jettyServer
-     */
-    private static JettyService getJettyService(Server jettyServer) {
-        Objects.requireNonNull(jettyServer, "Armeria cannot build a service from a null server");
-        return JettyService.of(jettyServer);
+    private ScheduledThreadPoolExecutor newBlockingTaskExecutor() {
+        final ScheduledThreadPoolExecutor blockingTaskExecutor = new ScheduledThreadPoolExecutor(
+                getMaxThreads(),
+                ThreadFactories.newThreadFactory("armeria-dropwizard-blocking-tasks", true));
+        blockingTaskExecutor.setKeepAliveTime(60, TimeUnit.SECONDS);
+        blockingTaskExecutor.allowCoreThreadTimeOut(true);
+        return blockingTaskExecutor;
     }
 
-    /**
-     * Builds on a {@link ServerBuilder}.
-     *
-     * @param sb An instance of a {@link ServerBuilder}
-     * @param connectorFactory {@code null} or {@link ConnectorFactory}. If non-null must be an instance of
-     *                         an {@link ArmeriaServerDecorator}
-     * @param writerFactory {@code null} or {@link AccessLogWriterFactory}
-     * @param meterRegistry {@code null} or {@link MeterRegistry}
-     * @throws SSLException Thrown when configuring TLS
-     * @throws CertificateException Thrown when validating certificates
-     */
-    @VisibleForTesting
-    ServerBuilder decorateServerBuilder(ServerBuilder sb,
-                                                @Nullable ConnectorFactory connectorFactory,
-                                                @Nullable AccessLogWriterFactory writerFactory,
-                                                MeterRegistry meterRegistry)
-            throws SSLException, CertificateException {
-        Objects.requireNonNull(sb, "builder to decorate must not be null");
-        Objects.requireNonNull(meterRegistry, "meterRegistry");
-        if (connectorFactory != null) {
-            if (!(connectorFactory instanceof ArmeriaServerDecorator)) {
-                throw new ClassCastException("server.connector.type must be an instance of " +
-                                             ArmeriaServerDecorator.class.getName());
-            }
-            ((ArmeriaServerDecorator) connectorFactory).decorate(sb);
-        } else {
-            logger.warn("connectorFactory was null. ServerBuilder not decorated from it.");
-        }
-        sb.meterRegistry(meterRegistry);
-        if (writerFactory != null && !writerFactory.getWriter()
-                                                   .equals(AccessLogWriter.disabled())) {
-            logger.trace("Setting up Armeria AccessLogWriter");
-            sb.accessLogWriter(writerFactory.getWriter(), true);
-        } else {
-            logger.info("Armeria access logs will not be written");
-            sb.accessLogWriter(AccessLogWriter.disabled(), true);
-        }
-        return sb;
+    ArmeriaSettings getArmeriaSettings() {
+        return armeriaSettings;
+    }
+
+    void setArmeriaSettings(ArmeriaSettings armeriaSettings) {
+        this.armeriaSettings = armeriaSettings;
+    }
+
+    String getApplicationContextPath() {
+        return applicationContextPath;
+    }
+
+    void setApplicationContextPath(String applicationContextPath) {
+        this.applicationContextPath = applicationContextPath;
+    }
+
+    String getAdminContextPath() {
+        return adminContextPath;
+    }
+
+    void setAdminContextPath(String adminContextPath) {
+        this.adminContextPath = adminContextPath;
+    }
+
+    public boolean isJerseyEnabled() {
+        return jerseyEnabled;
+    }
+
+    public void setJerseyEnabled(boolean jerseyEnabled) {
+        this.jerseyEnabled = jerseyEnabled;
     }
 }

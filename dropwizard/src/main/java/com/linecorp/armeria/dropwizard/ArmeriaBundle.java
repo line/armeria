@@ -33,8 +33,7 @@ public abstract class ArmeriaBundle<C extends Configuration>
         implements ConfiguredBundle<C>, ArmeriaServerConfigurator {
 
     @Override
-    public void initialize(Bootstrap<?> bootstrap) {
-    }
+    public void initialize(Bootstrap<?> bootstrap) {}
 
     @Override
     public void run(C configuration, Environment environment) throws Exception {

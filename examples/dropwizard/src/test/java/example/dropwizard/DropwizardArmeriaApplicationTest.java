@@ -13,7 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheck.Result;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.HttpStatus;
 
@@ -31,14 +30,12 @@ public class DropwizardArmeriaApplicationTest {
     private static final DropwizardAppExtension<DropwizardArmeriaConfiguration> EXTENSION =
             new DropwizardAppExtension<>(DropwizardArmeriaApplication.class,
                                          resourceFilePath("test-server.yaml"));
-    private static ObjectMapper objectMapper;
     private static WebTarget client;
 
     private static String endpoint;
 
     @BeforeAll
     public static void setUp() {
-        objectMapper = EXTENSION.getObjectMapper();
         endpoint = "http://localhost:" + EXTENSION.getLocalPort();
         client = EXTENSION.client().target(endpoint);
     }
