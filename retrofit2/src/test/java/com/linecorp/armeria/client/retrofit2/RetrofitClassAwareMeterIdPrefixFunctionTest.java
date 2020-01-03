@@ -117,18 +117,16 @@ public class RetrofitClassAwareMeterIdPrefixFunctionTest {
 
     @Test
     void metrics() {
-        final RetrofitClassAwareMeterIdPrefixFunctionTest.Example example =
+        final Example example =
                 new ArmeriaRetrofitBuilder(clientFactory)
-                .baseUrl("h1c://127.0.0.1:" + server.httpPort())
-                .clientOptions(ClientOptions.builder()
-                                            .decorator(MetricCollectingClient.newDecorator(
-                                                    RetrofitClassAwareMeterIdPrefixFunction
-                                                            .of("foo",
-                                                                RetrofitClassAwareMeterIdPrefixFunctionTest
-                                                                        .Example.class)))
-                                            .build())
-                .build()
-                .create(RetrofitClassAwareMeterIdPrefixFunctionTest.Example.class);
+                        .baseUrl("h1c://127.0.0.1:" + server.httpPort())
+                        .clientOptions(ClientOptions.builder()
+                                                    .decorator(MetricCollectingClient.newDecorator(
+                                                            RetrofitClassAwareMeterIdPrefixFunction
+                                                                    .of("foo", Example.class)))
+                                                    .build())
+                        .build()
+                        .create(Example.class);
 
         example.getFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
@@ -154,19 +152,17 @@ public class RetrofitClassAwareMeterIdPrefixFunctionTest {
 
     @Test
     void metrics_withServiceTag() {
-        final RetrofitClassAwareMeterIdPrefixFunctionTest.Example example =
+        final Example example =
                 new ArmeriaRetrofitBuilder(clientFactory)
-                .baseUrl("h1c://127.0.0.1:" + server.httpPort())
-                .withClientOptions((s, clientOptionsBuilder) -> {
-                    return clientOptionsBuilder.decorator(
-                            MetricCollectingClient.newDecorator(
-                                    RetrofitClassAwareMeterIdPrefixFunction
-                                            .builder("foo",
-                                                RetrofitClassAwareMeterIdPrefixFunctionTest
-                                                        .Example.class)
-                                            .withServiceTag("tservice", "fallbackService")
-                                            .build()));
-                })
+                        .baseUrl("h1c://127.0.0.1:" + server.httpPort())
+                        .withClientOptions((s, clientOptionsBuilder) -> {
+                            return clientOptionsBuilder.decorator(
+                                    MetricCollectingClient.newDecorator(
+                                            RetrofitClassAwareMeterIdPrefixFunction
+                                                    .builder("foo", Example.class)
+                                                    .withServiceTag("tservice", "fallbackService")
+                                                    .build()));
+                        })
                 .build()
                 .create(RetrofitClassAwareMeterIdPrefixFunctionTest.Example.class);
 
@@ -205,8 +201,8 @@ public class RetrofitClassAwareMeterIdPrefixFunctionTest {
     @ParameterizedTest
     @MethodSource
     void canParseAllRetrofitAnnotations(String method, List<Tag> expectedTags) {
-        final Map<String, List<Tag>> methodToTags = RetrofitClassAwareMeterIdPrefixFunction
-                .defineTagsForMethods(RetrofitClassAwareMeterIdPrefixFunctionTest.Example.class);
+        final Map<String, List<Tag>> methodToTags =
+                RetrofitClassAwareMeterIdPrefixFunction.defineTagsForMethods(Example.class);
 
         assertThat(methodToTags).containsKey(method);
         assertThat(methodToTags.get(method)).containsExactlyInAnyOrderElementsOf(expectedTags);

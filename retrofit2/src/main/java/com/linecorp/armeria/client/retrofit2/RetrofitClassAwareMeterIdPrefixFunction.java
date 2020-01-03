@@ -24,6 +24,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -60,9 +62,11 @@ import retrofit2.http.PUT;
  * </ul>
  */
 public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFunction {
-    private static final List<Class> retrofitAnnotations = ImmutableList.of(
+
+    private static final List<Class<?>> RETROFIT_ANNOTATIONS = ImmutableList.of(
             POST.class, PUT.class, PATCH.class, HEAD.class, GET.class, OPTIONS.class, HTTP.class, DELETE.class
     );
+
     private final Map<String, List<Tag>> methodNameToTags;
     private final String name;
     private final String serviceName;
@@ -72,7 +76,7 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
      * Returns a newly created {@link RetrofitClassAwareMeterIdPrefixFunction} with the specified {@code name}
      * and {@code serviceClass}.
      */
-    public static MeterIdPrefixFunction of(String name, Class serviceClass) {
+    public static MeterIdPrefixFunction of(String name, Class<?> serviceClass) {
         return builder(name, serviceClass).build();
     }
 
@@ -80,14 +84,14 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
      * Returns a newly created {@link RetrofitMeterIdPrefixFunctionBuilder} with the specified {@code name}
      * and {@code serviceClass}.
      */
-    public static RetrofitMeterIdPrefixFunctionBuilder builder(String name, Class serviceClass) {
+    public static RetrofitMeterIdPrefixFunctionBuilder builder(String name, Class<?> serviceClass) {
         return new RetrofitMeterIdPrefixFunctionBuilder(requireNonNull(name, "name"))
                 .withServiceClass(serviceClass);
     }
 
     RetrofitClassAwareMeterIdPrefixFunction(String name,
-                                            Class serviceClass,
-                                            String serviceTagName) {
+                                            @Nullable String serviceTagName,
+                                            Class<?> serviceClass) {
         this.name = name;
         this.serviceTagName = firstNonNull(serviceTagName, "service");
         this.serviceName = serviceClass.getSimpleName();
@@ -126,18 +130,13 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
     }
 
     @VisibleForTesting
-    static Map<String, List<Tag>> defineTagsForMethods(Class serviceClass) {
+    static Map<String, List<Tag>> defineTagsForMethods(Class<?> serviceClass) {
         final Builder<String, List<Tag>> methodNameToTags = ImmutableMap.builder();
 
         final Method[] declaredMethods = serviceClass.getDeclaredMethods();
         for (final Method clientServiceMethod : declaredMethods) {
-            final Annotation[] declaredAnnotations = clientServiceMethod.getDeclaredAnnotations();
-            if (declaredAnnotations.length == 0) {
-                continue;
-            }
-
-            for (final Annotation annotation : declaredAnnotations) {
-                if (!retrofitAnnotations.contains(annotation.annotationType())) {
+            for (final Annotation annotation : clientServiceMethod.getDeclaredAnnotations()) {
+                if (!RETROFIT_ANNOTATIONS.contains(annotation.annotationType())) {
                     continue;
                 }
 
