@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.annotation.Nullable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.codahale.metrics.MetricRegistry;
 
@@ -33,24 +33,24 @@ import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 
-public class MoreNamingConventionsTest {
+class MoreNamingConventionsTest {
 
     @Test
-    public void configureDropwizard() {
+    void configureDropwizard() {
         final MeterRegistry r = newDropwizardRegistry();
         MoreNamingConventions.configure(r);
         assertThat(r.config().namingConvention()).isSameAs(MoreNamingConventions.dropwizard());
     }
 
     @Test
-    public void configurePrometheus() {
+    void configurePrometheus() {
         final MeterRegistry r = newPrometheusRegistry();
         MoreNamingConventions.configure(r);
-        assertThat(r.config().namingConvention()).isSameAs(MoreNamingConventions.prometheus());
+        assertThat(r.config().namingConvention()).hasSameClassAs(MoreNamingConventions.prometheus());
     }
 
     @Test
-    public void configureOthers() {
+    void configureOthers() {
         // Unsupported registry's convention should not be affected.
         final MeterRegistry r = NoopMeterRegistry.get();
         final NamingConvention oldConvention = (name, type, baseUnit) -> "foo";
@@ -60,7 +60,7 @@ public class MoreNamingConventionsTest {
     }
 
     @Test
-    public void configureComposite() {
+    void configureComposite() {
         final CompositeMeterRegistry r = new CompositeMeterRegistry();
         final NamingConvention oldConvention = (name, type, baseUnit) -> "bar";
         r.config().namingConvention(oldConvention);
@@ -73,7 +73,7 @@ public class MoreNamingConventionsTest {
         MoreNamingConventions.configure(r);
         assertThat(r.config().namingConvention()).isSameAs(oldConvention);
         assertThat(dr.config().namingConvention()).isSameAs(MoreNamingConventions.dropwizard());
-        assertThat(pr.config().namingConvention()).isSameAs(MoreNamingConventions.prometheus());
+        assertThat(pr.config().namingConvention()).hasSameClassAs(MoreNamingConventions.prometheus());
     }
 
     private static DropwizardMeterRegistry newDropwizardRegistry() {

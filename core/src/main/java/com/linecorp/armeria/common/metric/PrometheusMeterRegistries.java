@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.config.NamingConvention;
-import io.micrometer.core.instrument.distribution.pause.NoPauseDetector;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.prometheus.client.CollectorRegistry;
