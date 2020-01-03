@@ -36,10 +36,12 @@ import java.io.InputStream;
 
 /**
  * Represents a message decompressor.
- *
- * <p>Copied from {@linkplain io.grpc.Decompressor https://github.com/grpc/grpc-java/blob/80c3c992a66aa21ccf3e12e38000316e45f97e64/api/src/main/java/io/grpc/Decompressor.java}
  */
 public interface Decompressor {
+
+    // Copied from `io.grpc.Decompressor` at:
+    // https://github.com/grpc/grpc-java/blob/80c3c992a66aa21ccf3e12e38000316e45f97e64/api/src/main/java/io/grpc/Decompressor.java
+
     /**
      * Returns the message encoding that this compressor uses.
      *

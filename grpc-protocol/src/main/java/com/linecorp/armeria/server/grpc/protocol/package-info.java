@@ -14,14 +14,15 @@
  * under the License.
  */
 /**
- * Common classes for handling the gRPC wire protocol without support for gRPC generated code stubs.
- * This package is separated for advanced users that would like to use the gRPC wire protocol without
- * depending on gRPC itself. This package must not depend on any dependencies outside of {@code armeria-core}.
+ * {@link com.linecorp.armeria.server.HttpService} implementations for handling the gRPC wire protocol
+ * without support for gRPC generated code stubs. This package is separated for advanced users that would
+ * like to use the gRPC wire protocol without depending on gRPC itself. This package must not depend on
+ * any dependencies outside of {@code armeria-core}.
  *
  * <p>Don't use this package unless you know what you're doing, it is generally recommended to use
- * the {@code armeria-grpc} module instead of this package.
+ * {@code com.linecorp.armeria.server.grpc.GrpcService} provided by the {@code armeria-grpc} module.
  */
 @NonNullByDefault
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.server.grpc.protocol;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;
