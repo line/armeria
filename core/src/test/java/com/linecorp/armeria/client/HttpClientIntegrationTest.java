@@ -28,6 +28,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertPathBuilderException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.CompletionException;
@@ -351,6 +352,9 @@ class HttpClientIntegrationTest {
                 return HttpResponse.streaming();
             });
 
+            sb.http(0);
+            sb.https(0);
+            sb.tlsSelfSigned();
             sb.disableServerHeader();
             sb.disableDateHeader();
         }
@@ -769,11 +773,19 @@ class HttpClientIntegrationTest {
     }
 
     @Test
-    void httpsRequstToPlainTextEndpoint() throws Exception {
+    void httpsRequestToPlainTextEndpoint() throws Exception {
         final WebClient client = WebClient.builder(SessionProtocol.HTTPS, newEndpoint())
                                           .factory(ClientFactory.insecure()).build();
         assertThatThrownBy(() -> client.get("/hello/world").aggregate().get())
                 .hasRootCauseInstanceOf(SSLException.class);
+    }
+
+    @Test
+    void httpsRequestWithInvalidCertificate() throws Exception {
+        final WebClient client = WebClient.builder(SessionProtocol.HTTPS,
+                                                   newEndpoint(server.httpsUri("/"))).build();
+        assertThatThrownBy(() -> client.get("/hello/world").aggregate().get())
+                .hasRootCauseInstanceOf(CertPathBuilderException.class);
     }
 
     @Nested
@@ -830,7 +842,11 @@ class HttpClientIntegrationTest {
     }
 
     private static Endpoint newEndpoint() {
-        final URI uri = URI.create(server.httpUri("/"));
+        return newEndpoint(server.httpUri("/"));
+    }
+
+    private static Endpoint newEndpoint(String uriStr) {
+        final URI uri = URI.create(uriStr);
         return Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
     }
 }
