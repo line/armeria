@@ -19,7 +19,10 @@
  * This package must not depend on any dependencies outside of {@code armeria-core}.
  *
  * <p>Don't use this package unless you know what you're doing, it is generally recommended to use a normal
- * gRPC client provided by the {@code armeria-grpc} module.
+ * gRPC client provided by the {@code armeria-grpc} module.</p>
+ *
+ * <p>The classes in this package. unlike other packages, are not guaranteed to be backward compatible since
+ * it's an advanced API.</p>
  */
 @NonNullByDefault
 package com.linecorp.armeria.client.grpc.protocol;

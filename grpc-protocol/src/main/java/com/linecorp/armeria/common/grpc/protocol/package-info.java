@@ -19,7 +19,10 @@
  * depending on gRPC itself. This package must not depend on any dependencies outside of {@code armeria-core}.
  *
  * <p>Don't use this package unless you know what you're doing, it is generally recommended to use
- * the {@code armeria-grpc} module instead of this package.
+ * the {@code armeria-grpc} module instead of this package.</p>
+ *
+ * <p>The classes in this package. unlike other packages, are not guaranteed to be backward compatible since
+ * it's an advanced API.</p>
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.grpc.protocol;
