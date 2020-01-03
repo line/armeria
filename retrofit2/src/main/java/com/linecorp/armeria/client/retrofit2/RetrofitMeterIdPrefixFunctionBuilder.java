@@ -40,6 +40,11 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
         this.name = name;
     }
 
+    RetrofitMeterIdPrefixFunctionBuilder(String name, Class<?> serviceClass) {
+        this.name = name;
+        this.serviceClass = serviceClass;
+    }
+
     /**
      * Adds a tag that signifies the service name to the generated {@link MeterIdPrefix}es.
      *
@@ -50,17 +55,6 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
                                                                String defaultServiceName) {
         this.serviceTagName = requireNonNull(serviceTagName, "serviceTagName");
         this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
-        return this;
-    }
-
-    /**
-     * Adds a Retrofit interface service class that will allow to record actual path for each method in
-     * addition to method name.
-     *
-     * @param serviceClass the class defining client with Retrofit.
-     */
-    public RetrofitMeterIdPrefixFunctionBuilder withServiceClass(Class<?> serviceClass) {
-        this.serviceClass = requireNonNull(serviceClass, "serviceClass");
         return this;
     }
 

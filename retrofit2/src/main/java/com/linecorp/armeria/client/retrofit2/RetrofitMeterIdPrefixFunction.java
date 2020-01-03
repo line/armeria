@@ -48,7 +48,7 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
     /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the specified {@code name}.
      */
-    public static MeterIdPrefixFunction of(String name) {
+    public static RetrofitMeterIdPrefixFunction of(String name) {
         return builder(name).build();
     }
 

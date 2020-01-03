@@ -52,14 +52,14 @@ import retrofit2.http.PUT;
  * the {@link Tag}s derived from the {@link RequestLog} properties, {@link Invocation} and provided retrofit
  * client.
  * <ul>
- *     <li>{@code service(or serviceTagName} - Retrofit service interface name</li>
+ *     <li>{@code service} (or {code serviceTagName}) - Retrofit service interface name</li>
  *     <li>{@code path}   - Retrofit service interface method path taken from method annotation
  *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
  *     <li>{@code method} - Retrofit service interface method
  *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
  *     <li>{@code httpMethod} - HTTP method name from Retrofit service interface method annotation
- *                          or from {@link RequestLog#method()} if Retrofit service interface
- *                          method not available</li>
+ *                              or from {@link RequestLog#method()} if Retrofit service interface
+ *                              method not available</li>
  *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
  * </ul>
  */
@@ -94,8 +94,8 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
      * and {@code serviceClass}.
      */
     public static RetrofitMeterIdPrefixFunctionBuilder builder(String name, Class<?> serviceClass) {
-        return new RetrofitMeterIdPrefixFunctionBuilder(requireNonNull(name, "name"))
-                .withServiceClass(serviceClass);
+        return new RetrofitMeterIdPrefixFunctionBuilder(requireNonNull(name, "name"),
+                                                        requireNonNull(serviceClass, "serviceClass"));
     }
 
     RetrofitClassAwareMeterIdPrefixFunction(String name,
