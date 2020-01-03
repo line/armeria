@@ -57,6 +57,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
 import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.NamingConvention;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.epoll.Epoll;
@@ -911,14 +912,8 @@ public final class Flags {
     }
 
     /**
-     * Returns whether to use Armeria's own {@link Meter} names that is not compliant with Micrometer's default
-     * {@link NamingConvention}.
-     *
-     * <p>By enabling this flag, Armeria will:
-     * <ul>
-     *
-     * </ul>
-     * </p>
+     * Returns whether to switch back to Armeria's legacy {@link Meter} and {@link Tag} naming convention
+     * that is not compliant with Micrometer's default {@link NamingConvention}.
      *
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.useLegacyMeterNames=true}
      * JVM option to enable it.</p>
