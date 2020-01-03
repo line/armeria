@@ -62,55 +62,17 @@ public abstract class AbstractRequestContextAwareCompletableFuture<T> extends Co
         };
     }
 
-    protected <I, R> Function<I, R> makeContextAwareLoggingException(Function<I, R> function) {
-        requireNonNull(function, "function");
-        return t -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                return function.apply(t);
-            } catch (Throwable th) {
-                logger.warn("An error occurred when pushing a context", th);
-                throw th;
-            }
-        };
-    }
-
-    protected <I, U, V> BiFunction<I, U, V> makeContextAwareLoggingException(BiFunction<I, U, V> function) {
-        requireNonNull(function, "function");
-        return (t, u) -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                return function.apply(t, u);
-            } catch (Throwable th) {
-                logger.warn("An error occurred when pushing a context", th);
-                throw th;
-            }
-        };
-    }
-
     protected <I> Consumer<I> makeContextAwareLoggingException(Consumer<I> action) {
         requireNonNull(action, "action");
-        return t -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                action.accept(t);
-            } catch (Throwable th) {
-                logger.warn("An error occurred when pushing a context", th);
-                throw th;
-            }
-        };
+        return t -> makeContextAwareLoggingException(() -> action.accept(t));
     }
 
     protected <I, U> BiConsumer<I, U> makeContextAwareLoggingException(BiConsumer<I, U> action) {
         requireNonNull(action, "action");
-        return (t, u) -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                action.accept(t, u);
-            } catch (Throwable th) {
-                logger.warn("An error occurred when pushing a context", th);
-                throw th;
-            }
-        };
+        return (t, u) -> makeContextAwareLoggingException(() -> action.accept(t, u));
     }
 
-    protected Supplier<T> makeContextAwareLoggingException(Supplier<? extends T> action) {
+    protected <V> Supplier<V> makeContextAwareLoggingException(Supplier<? extends V> action) {
         requireNonNull(action, "action");
         return () -> {
             try (SafeCloseable ignored = ctx.push()) {
@@ -120,5 +82,15 @@ public abstract class AbstractRequestContextAwareCompletableFuture<T> extends Co
                 throw th;
             }
         };
+    }
+
+    protected <I, R> Function<I, R> makeContextAwareLoggingException(Function<I, R> function) {
+        requireNonNull(function, "function");
+        return t -> makeContextAwareLoggingException(() -> function.apply(t)).get();
+    }
+
+    protected <I, U, V> BiFunction<I, U, V> makeContextAwareLoggingException(BiFunction<I, U, V> function) {
+        requireNonNull(function, "function");
+        return (t, u) -> makeContextAwareLoggingException(() -> function.apply(t, u)).get();
     }
 }

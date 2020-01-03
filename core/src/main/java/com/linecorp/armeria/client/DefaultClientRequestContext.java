@@ -545,10 +545,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             return strVal;
         }
 
-        final StringBuilder buf = new StringBuilder(117);
-        buf.append('[')
-           .append(ClientRequestContext.class.getSimpleName())
-           .append(']');
+        final StringBuilder buf = new StringBuilder(107);
+        buf.append("[ClientCtx]");
 
         // Prepend the current channel information if available.
         final Channel ch = channel();
