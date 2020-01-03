@@ -22,7 +22,7 @@
  * <p>Don't use this package unless you know what you're doing, it is generally recommended to use
  * {@code com.linecorp.armeria.server.grpc.GrpcService} provided by the {@code armeria-grpc} module.</p>
  *
- * <p>The classes in this package. unlike other packages, are not guaranteed to be backward compatible since
+ * <p>The classes in this package, unlike other packages, are not guaranteed to be backward compatible since
  * it's an advanced API.</p>
  */
 @NonNullByDefault
