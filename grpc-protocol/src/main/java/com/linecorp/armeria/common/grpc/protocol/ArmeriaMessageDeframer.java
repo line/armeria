@@ -62,6 +62,7 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;

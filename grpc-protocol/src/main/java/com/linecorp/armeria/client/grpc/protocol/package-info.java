@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,17 +14,17 @@
  * under the License.
  */
 /**
- * Common classes for handling the gRPC wire protocol without support for gRPC generated code stubs.
- * This package is separated for advanced users that would like to use the gRPC wire protocol without
- * depending on gRPC itself. This package must not depend on any dependencies outside of {@code armeria-core}.
+ * Unary gRPC client without support for gRPC generated code stubs. This package is separated for advanced
+ * users that would like to use the gRPC wire protocol without depending on gRPC itself.
+ * This package must not depend on any dependencies outside of {@code armeria-core}.
  *
- * <p>Don't use this package unless you know what you're doing, it is generally recommended to use
- * the {@code armeria-grpc} module instead of this package.</p>
+ * <p>Don't use this package unless you know what you're doing, it is generally recommended to use a normal
+ * gRPC client provided by the {@code armeria-grpc} module.</p>
  *
  * <p>The classes in this package, unlike other packages, are not guaranteed to be backward compatible since
  * it's an advanced API.</p>
  */
 @NonNullByDefault
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.client.grpc.protocol;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

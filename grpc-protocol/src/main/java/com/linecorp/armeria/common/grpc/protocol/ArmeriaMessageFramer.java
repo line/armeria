@@ -55,6 +55,7 @@ import java.io.OutputStream;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;

@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
 /**
  * An {@link Exception} that contains enough information to convert it to a gRPC status.
  */
-public class ArmeriaStatusException extends RuntimeException {
+public final class ArmeriaStatusException extends RuntimeException {
 
     private static final long serialVersionUID = -8370257107063108923L;
 
