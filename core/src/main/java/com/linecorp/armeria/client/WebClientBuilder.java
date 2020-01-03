@@ -88,9 +88,11 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
             final String givenScheme = requireNonNull(uri, "uri").getScheme();
             final Scheme scheme = validateScheme(givenScheme);
             if (scheme.uriText().equals(givenScheme)) {
+                // No need to replace the user-specified scheme because it's already in its normalized form.
                 this.uri = uri;
             } else {
                 // Replace the user-specified scheme with the normalized one.
+                // e.g. http://foo.com/ -> none+http://foo.com/
                 this.uri = URI.create(scheme.uriText() +
                                       uri.toString().substring(givenScheme.length()));
             }
