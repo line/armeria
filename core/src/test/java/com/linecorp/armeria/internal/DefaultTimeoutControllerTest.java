@@ -45,12 +45,7 @@ class DefaultTimeoutControllerTest {
         isTimeout = false;
         final TimeoutTask timeoutTask = new TimeoutTask() {
             @Override
-            public boolean isReady() {
-                return true;
-            }
-
-            @Override
-            public boolean canReschedule() {
+            public boolean canSchedule() {
                 return true;
             }
 

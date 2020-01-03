@@ -511,7 +511,7 @@ public interface ClientRequestContext extends RequestContext {
     void extendResponseTimeoutMillis(long adjustmentMillis);
 
     /**
-     * Extends the previously scheduled the response timeout by the specified amount of {@code adjustment}.
+     * Extends the previously scheduled response timeout by the specified amount of {@code adjustment}.
      * This method does nothing if no response timeout was scheduled previously.
      * Note that a negative {@code adjustment} reduces the current timeout.
      * The initial timeout is set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
@@ -578,7 +578,7 @@ public interface ClientRequestContext extends RequestContext {
      * }</pre>
      *
      * @param responseTimeoutAtMillis the response timeout represented as the number of milliseconds
-     *                                since the epoch ({@code 1970-01-01T00:00:00Z}).
+     *                                since the epoch ({@code 1970-01-01T00:00:00Z})
      */
     void setResponseTimeoutAtMillis(long responseTimeoutAtMillis);
 
@@ -595,7 +595,7 @@ public interface ClientRequestContext extends RequestContext {
      * }</pre>
      *
      * @param responseTimeoutAt the response timeout represented as the number of milliseconds
-     *                          since the epoch ({@code 1970-01-01T00:00:00Z}).
+     *                          since the epoch ({@code 1970-01-01T00:00:00Z})
      */
     void setResponseTimeoutAt(Instant responseTimeoutAt);
 

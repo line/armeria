@@ -79,11 +79,11 @@ public class DefaultTimeoutController implements TimeoutController {
      */
     @Override
     public void initTimeout(long timeoutMillis) {
-        if (timeoutFuture != null || timeoutTask == null || !timeoutTask.isReady()) {
+        if (timeoutFuture != null || timeoutTask == null || !timeoutTask.canSchedule()) {
             // No need to schedule a response timeout if:
             // - the timeout has been scheduled already,
             // - the timeout task is not set yet or
-            // - the status is not ready yet.
+            // - the timeout task cannot schedule yet or
             return;
         }
 
@@ -104,7 +104,7 @@ public class DefaultTimeoutController implements TimeoutController {
         // Cancel the previously scheduled timeout, if exists.
         cancelTimeout();
 
-        if (timeoutTask.canReschedule()) {
+        if (timeoutTask.canSchedule()) {
             // Calculate the amount of time passed since the creation of this subscriber.
             final long currentNanoTime = System.nanoTime();
             final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
@@ -132,7 +132,7 @@ public class DefaultTimeoutController implements TimeoutController {
             return;
         }
 
-        if (timeoutTask.canReschedule()) {
+        if (timeoutTask.canSchedule()) {
             final long currentNanoTime = System.nanoTime();
             final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
             final long remainingTimeoutMillis = LongMath.saturatedSubtract(timeoutMillis, passedTimeMillis);
@@ -188,14 +188,9 @@ public class DefaultTimeoutController implements TimeoutController {
      */
     public interface TimeoutTask extends Runnable {
         /**
-         * Returns {@code true} if the timeout task is ready to start.
+         * Returns {@code true} if the timeout task can be scheduled.
          */
-        boolean isReady();
-
-        /**
-         * Returns {@code true} if the timeout task can be rescheduled.
-         */
-        boolean canReschedule();
+        boolean canSchedule();
 
         /**
          * Invoked when the deadline exceeded.

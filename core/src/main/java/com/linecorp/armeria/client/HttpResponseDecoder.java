@@ -330,13 +330,8 @@ abstract class HttpResponseDecoder {
         private TimeoutTask newTimeoutTask() {
             return new TimeoutTask() {
                 @Override
-                public boolean isReady() {
-                    return delegate.isOpen();
-                }
-
-                @Override
-                public boolean canReschedule() {
-                    return state != State.DONE;
+                public boolean canSchedule() {
+                    return delegate.isOpen() && state != State.DONE;
                 }
 
                 @Override

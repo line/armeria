@@ -476,12 +476,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     private TimeoutTask newTimeoutTask() {
         return new TimeoutTask() {
             @Override
-            public boolean isReady() {
-                return true;
-            }
-
-            @Override
-            public boolean canReschedule() {
+            public boolean canSchedule() {
                 return state != State.DONE;
             }
 

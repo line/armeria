@@ -386,7 +386,7 @@ public interface ServiceRequestContext extends RequestContext {
     void setRequestTimeout(Duration requestTimeout);
 
     /**
-     * Extends the previously scheduled the request timeout by the specified amount of {@code adjustmentMillis}.
+     * Extends the previously scheduled request timeout by the specified amount of {@code adjustmentMillis}.
      * This method does nothing if no request timeout was scheduled previously.
      * Note that a negative {@code adjustment} reduces the current timeout.
      * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
@@ -472,8 +472,8 @@ public interface ServiceRequestContext extends RequestContext {
      * ctx.setRequestTimeoutAtMillis(responseTimeoutAt);
      * }</pre>
      *
-     * @param requestTimeoutAtMillis the request timeout in milliseconds from
-     *                               the epoch of 1970-01-01T00:00:00Z
+     * @param requestTimeoutAtMillis the request timeout represented as the number of milliseconds
+     *                               since the epoch ({@code 1970-01-01T00:00:00Z})
      */
     void setRequestTimeoutAtMillis(long requestTimeoutAtMillis);
 
@@ -489,7 +489,8 @@ public interface ServiceRequestContext extends RequestContext {
      * ctx.setRequestTimeoutAt(Instant.now().plus(1, ChronoUnit.SECONDS));
      * }</pre>
      *
-     * @param requestTimeoutAt the request timeout epoch instant.
+     * @param requestTimeoutAt the request timeout represented as the number of milliseconds
+     *                         since the epoch ({@code 1970-01-01T00:00:00Z})
      */
     void setRequestTimeoutAt(Instant requestTimeoutAt);
 
