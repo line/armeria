@@ -19,20 +19,20 @@ package com.linecorp.armeria.internal.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
-public class MicrometerUtilTest {
+class MicrometerUtilTest {
 
     private static final MeterIdPrefix ID_PREFIX_A = new MeterIdPrefix("a");
     private static final MeterRegistry metrics = PrometheusMeterRegistries.newRegistry();
 
     @Test
-    public void getOrCreateGroup() {
+    void getOrCreateGroup() {
         final Integer a = MicrometerUtil.register(metrics, ID_PREFIX_A, Integer.class,
                                                   (parent, id) -> 42);
 

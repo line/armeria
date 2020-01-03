@@ -24,6 +24,8 @@ import javax.annotation.Nullable;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.Flags;
+
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
@@ -159,8 +161,8 @@ public final class DropwizardMeterRegistries {
                 return MeterFilterReply.NEUTRAL;
             }
         });
+
         meterRegistry.config().namingConvention(MoreNamingConventions.dropwizard());
-        meterRegistry.config().pauseDetector(new NoPauseDetector());
         return meterRegistry;
     }
 

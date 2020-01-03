@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
@@ -110,10 +111,16 @@ public abstract class AbstractCompositeService<T extends Service<I, O>, I extend
         router = Routers.ofCompositeService(services);
 
         final MeterRegistry registry = server.meterRegistry();
-        final MeterIdPrefix meterIdPrefix =
-                new MeterIdPrefix("armeria.server.router.compositeServiceCache",
-                                  "hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                                  "route", route.meterTag());
+        final MeterIdPrefix meterIdPrefix;
+        if (Flags.useLegacyMeterNames()) {
+            meterIdPrefix = new MeterIdPrefix("armeria.server.router.compositeServiceCache",
+                                              "hostnamePattern", cfg.virtualHost().hostnamePattern(),
+                                              "route", route.meterTag());
+        } else {
+            meterIdPrefix = new MeterIdPrefix("armeria.server.router.composite.service.cache",
+                                              "hostname.pattern", cfg.virtualHost().hostnamePattern(),
+                                              "route", route.meterTag());
+        }
 
         router.registerMetrics(registry, meterIdPrefix);
         for (CompositeServiceEntry<T> e : services()) {

@@ -36,6 +36,7 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.base.Splitter;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -157,12 +158,24 @@ public class FileService extends AbstractHttpService {
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         final MeterRegistry registry = cfg.server().meterRegistry();
         if (cache != null) {
+            final MeterIdPrefix meterIdPrefix;
+            if (Flags.useLegacyMeterNames()) {
+                meterIdPrefix = new MeterIdPrefix("armeria.server.file.vfsCache",
+                                                  "hostnamePattern",
+                                                  cfg.virtualHost().hostnamePattern(),
+                                                  "route", cfg.route().meterTag(),
+                                                  "vfs", config.vfs().meterTag());
+            } else {
+                meterIdPrefix = new MeterIdPrefix("armeria.server.file.vfs.cache",
+                                                  "hostname.pattern",
+                                                  cfg.virtualHost().hostnamePattern(),
+                                                  "route", cfg.route().meterTag(),
+                                                  "vfs", config.vfs().meterTag());
+            }
+
             CaffeineMetricSupport.setup(
                     registry,
-                    new MeterIdPrefix("armeria.server.file.vfsCache",
-                                      "hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                                      "route", cfg.route().meterTag(),
-                                      "vfs", config.vfs().meterTag()),
+                    meterIdPrefix,
                     cache);
         }
     }

@@ -80,7 +80,6 @@ public final class PrometheusMeterRegistries {
     public static <T extends PrometheusMeterRegistry> T configureRegistry(T meterRegistry) {
         requireNonNull(meterRegistry, "meterRegistry");
         meterRegistry.config().namingConvention(MoreNamingConventions.prometheus());
-        meterRegistry.config().pauseDetector(new NoPauseDetector());
         return meterRegistry;
     }
 

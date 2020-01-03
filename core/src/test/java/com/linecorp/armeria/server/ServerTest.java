@@ -166,8 +166,8 @@ public class ServerTest {
     public static void checkMetrics() {
         final MeterRegistry registry = server.server().meterRegistry();
         assertThat(MicrometerUtil.register(registry,
-                                           new MeterIdPrefix("armeria.server.router.virtualHostCache",
-                                                             "hostnamePattern", "*"),
+                                           new MeterIdPrefix("armeria.server.router.virtual.host.cache",
+                                                             "hostname.pattern", "*"),
                                            Object.class, (r, i) -> null)).isNotNull();
     }
 
@@ -504,7 +504,7 @@ public class ServerTest {
 
         final MeterRegistry meterRegistry = server.config().meterRegistry();
         final Gauge gauge = meterRegistry.find("armeria.build.info")
-                                         .tagKeys("version", "commit", "repoStatus")
+                                         .tagKeys("version", "commit", "repo.status")
                                          .gauge();
         assertThat(gauge).isNotNull();
         assertThat(gauge.value()).isOne();

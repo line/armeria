@@ -124,26 +124,26 @@ public class GrpcMetricsIntegrationTest {
 
         // Chance that get() returns NPE before the metric is first added, so ignore exceptions.
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                findServerMeter("UnaryCall", "requests", COUNT, "result", "success", "httpStatus", "200"))
+                findServerMeter("UnaryCall", "requests", COUNT, "result", "success", "http.status", "200"))
                 .contains(4.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                findServerMeter("UnaryCall", "requests", COUNT, "result", "failure", "httpStatus", "200"))
+                findServerMeter("UnaryCall", "requests", COUNT, "result", "failure", "http.status", "200"))
                 .contains(3.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
                 findClientMeter("UnaryCall", "requests", COUNT, "result", "success")).contains(4.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
                 findClientMeter("UnaryCall", "requests", COUNT, "result", "failure")).contains(3.0));
 
-        assertThat(findServerMeter("UnaryCall", "requestLength", COUNT, "httpStatus", "200")).contains(7.0);
-        assertThat(findServerMeter("UnaryCall", "requestLength", TOTAL, "httpStatus", "200"))
+        assertThat(findServerMeter("UnaryCall", "request.length", COUNT, "http.status", "200")).contains(7.0);
+        assertThat(findServerMeter("UnaryCall", "request.length", TOTAL, "http.status", "200"))
                 .contains(7.0 * 14);
-        assertThat(findClientMeter("UnaryCall", "requestLength", COUNT)).contains(7.0);
-        assertThat(findClientMeter("UnaryCall", "requestLength", TOTAL)).contains(7.0 * 14);
-        assertThat(findServerMeter("UnaryCall", "responseLength", COUNT, "httpStatus", "200")).contains(7.0);
-        assertThat(findServerMeter("UnaryCall", "responseLength", TOTAL, "httpStatus", "200"))
+        assertThat(findClientMeter("UnaryCall", "request.length", COUNT)).contains(7.0);
+        assertThat(findClientMeter("UnaryCall", "request.length", TOTAL)).contains(7.0 * 14);
+        assertThat(findServerMeter("UnaryCall", "response.length", COUNT, "http.status", "200")).contains(7.0);
+        assertThat(findServerMeter("UnaryCall", "response.length", TOTAL, "http.status", "200"))
                 .contains(4.0 * 5 /* + 3 * 0 */);
-        assertThat(findClientMeter("UnaryCall", "responseLength", COUNT)).contains(7.0);
-        assertThat(findClientMeter("UnaryCall", "responseLength", TOTAL)).contains(4.0 * 5 /* + 3 * 0 */);
+        assertThat(findClientMeter("UnaryCall", "response.length", COUNT)).contains(7.0);
+        assertThat(findClientMeter("UnaryCall", "response.length", TOTAL)).contains(4.0 * 5 /* + 3 * 0 */);
     }
 
     @Test
@@ -158,15 +158,15 @@ public class GrpcMetricsIntegrationTest {
 
         // Chance that get() returns NPE before the metric is first added, so ignore exceptions.
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                findServerMeter("UnaryCall2", "requests", COUNT, "result", "success", "httpStatus", "200"))
+                findServerMeter("UnaryCall2", "requests", COUNT, "result", "success", "http.status", "200"))
                 .contains(4.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                findServerMeter("UnaryCall2", "requests", COUNT, "result", "failure", "httpStatus", "500"))
+                findServerMeter("UnaryCall2", "requests", COUNT, "result", "failure", "http.status", "500"))
                 .contains(3.0));
-        assertThat(findServerMeter("UnaryCall2", "responseLength", COUNT, "httpStatus", "200")).contains(4.0);
-        assertThat(findServerMeter("UnaryCall2", "responseLength", COUNT, "httpStatus", "500")).contains(3.0);
-        assertThat(findServerMeter("UnaryCall2", "responseLength", TOTAL, "httpStatus", "200")).contains(0.0);
-        assertThat(findServerMeter("UnaryCall2", "responseLength", TOTAL, "httpStatus", "500")).contains(225.0);
+        assertThat(findServerMeter("UnaryCall2", "response.length", COUNT, "http.status", "200")).contains(4.0);
+        assertThat(findServerMeter("UnaryCall2", "response.length", COUNT, "http.status", "500")).contains(3.0);
+        assertThat(findServerMeter("UnaryCall2", "response.length", TOTAL, "http.status", "200")).contains(0.0);
+        assertThat(findServerMeter("UnaryCall2", "response.length", TOTAL, "http.status", "500")).contains(225.0);
     }
 
     private static Optional<Double> findServerMeter(
@@ -174,7 +174,7 @@ public class GrpcMetricsIntegrationTest {
         final MeterIdPrefix prefix = new MeterIdPrefix(
                 "server." + suffix + '#' + type.getTagValueRepresentation(),
                 "method", "armeria.grpc.testing.TestService/" + method,
-                "hostnamePattern", "*",
+                "hostname.pattern", "*",
                 "route", "exact:/armeria.grpc.testing.TestService/" + method);
         final String meterIdStr = prefix.withTags(keyValues).toString();
         return Optional.ofNullable(MoreMeters.measureAll(registry).get(meterIdStr));
@@ -185,7 +185,7 @@ public class GrpcMetricsIntegrationTest {
         final MeterIdPrefix prefix = new MeterIdPrefix(
                 "client." + suffix + '#' + type.getTagValueRepresentation(),
                 "method", "armeria.grpc.testing.TestService/" + method,
-                "httpStatus", "200");
+                "http.status", "200");
         final String meterIdStr = prefix.withTags(keyValues).toString();
         return Optional.ofNullable(MoreMeters.measureAll(registry).get(meterIdStr));
     }

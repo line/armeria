@@ -56,6 +56,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.codec.http2.Http2CodecUtil;
@@ -307,6 +309,8 @@ public final class Flags {
             getBoolean("reportBlockedEventLoop", true);
 
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
+
+    private static final boolean USE_LEGACY_METER_NAMES = getBoolean("useLegacyMeterNames", false);
 
     static {
         if (!isEpollAvailable()) {
@@ -900,11 +904,27 @@ public final class Flags {
      * more details on the security implications of this flag.
      *
      * <p>This flag is enabled by default.
-     * Specify the {@code -Dcom.linecorp.armeria.validateHeaders=false} JVM option
-     * to disable it.
+     * Specify the {@code -Dcom.linecorp.armeria.validateHeaders=false} JVM option to disable it.</p>
      */
     public static boolean validateHeaders() {
         return VALIDATE_HEADERS;
+    }
+
+    /**
+     * Returns whether to use Armeria's own {@link Meter} names that is not compliant with Micrometer's default
+     * {@link NamingConvention}.
+     *
+     * <p>By enabling this flag, Armeria will:
+     * <ul>
+     *
+     * </ul>
+     * </p>
+     *
+     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.useLegacyMeterNames=true}
+     * JVM option to enable it.</p>
+     */
+    public static boolean useLegacyMeterNames() {
+        return USE_LEGACY_METER_NAMES;
     }
 
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
