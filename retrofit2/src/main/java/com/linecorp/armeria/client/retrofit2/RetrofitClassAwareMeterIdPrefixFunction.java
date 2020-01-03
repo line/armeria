@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -64,7 +63,7 @@ import retrofit2.http.PUT;
  *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
  * </ul>
  */
-public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFunction {
+final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefixFunction {
 
     private static final List<Class<?>> RETROFIT_ANNOTATIONS = ImmutableList.of(
             POST.class, PUT.class, PATCH.class, HEAD.class, GET.class, OPTIONS.class, HTTP.class, DELETE.class
@@ -86,7 +85,7 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
      * Returns a newly created {@link RetrofitClassAwareMeterIdPrefixFunction} with the specified {@code name}
      * and {@code serviceClass}.
      */
-    public static MeterIdPrefixFunction of(String name, Class<?> serviceClass) {
+    public static RetrofitMeterIdPrefixFunction of(String name, Class<?> serviceClass) {
         return builder(name, serviceClass).build();
     }
 
@@ -102,6 +101,8 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
     RetrofitClassAwareMeterIdPrefixFunction(String name,
                                             @Nullable String serviceTagName,
                                             Class<?> serviceClass) {
+        super(name, null, null);
+
         this.name = name;
         this.serviceTagName = firstNonNull(serviceTagName, "service");
         this.serviceName = serviceClass.getSimpleName();
@@ -175,7 +176,7 @@ public class RetrofitClassAwareMeterIdPrefixFunction implements MeterIdPrefixFun
                 httpPath = (String) valueMethod.invoke(annotation);
             } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
                 // Should never happen on valid Retrofit client.
-                throw new IllegalStateException("Provided Retrofit client have unexpected annotation: " +
+                throw new IllegalStateException("Unexpected retrofit annotation: " +
                                                 annotation.annotationType(), e);
             }
             httpMethod = annotation.annotationType().getSimpleName();

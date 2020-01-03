@@ -43,7 +43,7 @@ import retrofit2.Invocation;
  *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
  * </ul>
  */
-public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
+public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
     /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the specified {@code name}.

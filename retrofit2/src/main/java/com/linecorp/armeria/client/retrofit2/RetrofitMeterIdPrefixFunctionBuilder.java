@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 /**
  * Builds a {@link RetrofitMeterIdPrefixFunction}.
@@ -55,7 +54,8 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
     }
 
     /**
-     * Adds a service that will allow to record actual path for each method in addition to method name.
+     * Adds a Retrofit interface service class that will allow to record actual path for each method in
+     * addition to method name.
      *
      * @param serviceClass the class defining client with Retrofit.
      */
@@ -67,7 +67,7 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
     /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the properties specified so far.
      */
-    public MeterIdPrefixFunction build() {
+    public RetrofitMeterIdPrefixFunction build() {
         if (serviceClass == null) {
             return new RetrofitMeterIdPrefixFunction(name, serviceTagName, defaultServiceName);
         }
