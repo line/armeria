@@ -107,7 +107,7 @@ public class UnaryGrpcClient {
                         });
     }
 
-    private void checkGrpcStatus(@Nullable String grpcStatus, HttpHeaders headers) {
+    private static void checkGrpcStatus(@Nullable String grpcStatus, HttpHeaders headers) {
         if (grpcStatus != null && !"0".equals(grpcStatus)) {
             String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
