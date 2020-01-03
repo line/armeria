@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
@@ -28,7 +29,6 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.CertPathBuilderException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.CompletionException;
@@ -96,6 +96,7 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.handler.codec.DecoderException;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
@@ -784,8 +785,12 @@ class HttpClientIntegrationTest {
     void httpsRequestWithInvalidCertificate() throws Exception {
         final WebClient client = WebClient.builder(SessionProtocol.HTTPS,
                                                    newEndpoint(server.httpsUri("/"))).build();
-        assertThatThrownBy(() -> client.get("/hello/world").aggregate().get())
-                .hasRootCauseInstanceOf(CertPathBuilderException.class);
+        final Throwable unprocessedException = catchThrowable(
+                () -> client.get("/hello/world").aggregate().get()).getCause();
+        assertThat(unprocessedException)
+                .isInstanceOf(UnprocessedRequestException.class)
+                .hasCauseInstanceOf(DecoderException.class);
+        assertThat(unprocessedException.getCause()).hasCauseInstanceOf(SSLException.class);
     }
 
     @Nested
