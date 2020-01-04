@@ -17,8 +17,6 @@ package com.linecorp.armeria.server.saml;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
-
 import javax.annotation.Nullable;
 
 import org.opensaml.saml.saml2.core.NameIDPolicy;
@@ -36,11 +34,14 @@ public final class SamlIdentityProviderConfig {
     private final Credential signingCredential;
     private final Credential encryptionCredential;
     private final SamlEndpoint ssoEndpoint;
-    private final Optional<SamlEndpoint> sloReqEndpoint;
-    private final Optional<SamlEndpoint> sloResEndpoint;
+    @Nullable
+    private final SamlEndpoint sloReqEndpoint;
+    @Nullable
+    private final SamlEndpoint sloResEndpoint;
 
     // SP(Service Provider) related:
-    private final Optional<SamlEndpoint> acsEndpoint;
+    @Nullable
+    private final SamlEndpoint acsEndpoint;
 
     // AuthnRequest related:
     private final SamlNameIdPolicy nameIdPolicy;
@@ -57,9 +58,9 @@ public final class SamlIdentityProviderConfig {
         this.signingCredential = requireNonNull(signingCredential, "signingCredential");
         this.encryptionCredential = requireNonNull(encryptionCredential, "encryptionCredential");
         this.ssoEndpoint = requireNonNull(ssoEndpoint, "ssoEndpoint");
-        this.sloReqEndpoint = Optional.ofNullable(sloReqEndpoint);
-        this.sloResEndpoint = Optional.ofNullable(sloResEndpoint);
-        this.acsEndpoint = Optional.ofNullable(acsEndpoint);
+        this.sloReqEndpoint = sloReqEndpoint;
+        this.sloResEndpoint = sloResEndpoint;
+        this.acsEndpoint = acsEndpoint;
         this.nameIdPolicy = requireNonNull(nameIdPolicy, "nameIdPolicy");
     }
 
@@ -94,14 +95,16 @@ public final class SamlIdentityProviderConfig {
     /**
      * Returns a {@link SamlEndpoint} of the identity provider for receiving a single logout request.
      */
-    public Optional<SamlEndpoint> sloReqEndpoint() {
+    @Nullable
+    public SamlEndpoint sloReqEndpoint() {
         return sloReqEndpoint;
     }
 
     /**
      * Returns a {@link SamlEndpoint} of the identity provider for receiving a single logout response.
      */
-    public Optional<SamlEndpoint> sloResEndpoint() {
+    @Nullable
+    public SamlEndpoint sloResEndpoint() {
         return sloResEndpoint;
     }
 
@@ -109,7 +112,8 @@ public final class SamlIdentityProviderConfig {
      * Returns a {@link SamlEndpoint} of the service provider that the assertion will be sent to in response
      * to the authentication request.
      */
-    public Optional<SamlEndpoint> acsEndpoint() {
+    @Nullable
+    public SamlEndpoint acsEndpoint() {
         return acsEndpoint;
     }
 

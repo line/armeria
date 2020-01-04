@@ -41,7 +41,7 @@ final class TextualContentPreviewerFactory implements ContentPreviewerFactory {
         if (contentType == null) {
             return ContentPreviewer.disabled();
         }
-        if (contentType.charset().isPresent() ||
+        if (contentType.charset() != null ||
             "text".equals(contentType.type()) ||
             subTypeEquals.contains(contentType.subtype()) ||
             subTypeEndsWith.stream().anyMatch(contentType.subtype()::endsWith) ||

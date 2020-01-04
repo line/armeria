@@ -30,7 +30,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -115,7 +114,9 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 
         for (ServiceConfig c : serviceConfigs) {
-            final THttpService service = c.service().as(THttpService.class).get();
+            final THttpService service = c.service().as(THttpService.class);
+            assert service != null;
+
             service.entries().forEach((serviceName, entry) -> {
                 for (Class<?> iface : entry.interfaces()) {
                     final Class<?> serviceClass = iface.getEnclosingClass();
@@ -268,11 +269,11 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
-        final Optional<Object> namedTypeDescriptor = typeSignature.namedTypeDescriptor();
-        if (!namedTypeDescriptor.isPresent()) {
+        final Class<?> type = (Class<?>) typeSignature.namedTypeDescriptor();
+        if (type == null) {
             throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
         }
-        final Class<?> type = (Class<?>) namedTypeDescriptor.get();
+
         if (type.isEnum()) {
             @SuppressWarnings("unchecked")
             final Class<? extends Enum<? extends TEnum>> enumType =
@@ -461,7 +462,11 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     @Override
     public Map<String, String> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         return serviceConfigs.stream()
-                             .flatMap(c -> c.service().as(THttpService.class).get().entries().values().stream())
+                             .flatMap(c -> {
+                                 final THttpService service = c.service().as(THttpService.class);
+                                 assert service != null;
+                                 return service.entries().values().stream();
+                             })
                              .flatMap(entry -> entry.interfaces().stream().map(Class::getClassLoader))
                              .flatMap(loader -> docstringExtractor.getAllDocStrings(loader)
                                                                   .entrySet().stream())
@@ -476,38 +481,38 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     @Override
-    public Optional<String> guessServiceName(Object exampleRequest) {
+    public String guessServiceName(Object exampleRequest) {
         final TBase<?, ?> exampleTBase = asTBase(exampleRequest);
         if (exampleTBase == null) {
-            return Optional.empty();
+            return null;
         }
 
-        return Optional.of(exampleTBase.getClass().getEnclosingClass().getName());
+        return exampleTBase.getClass().getEnclosingClass().getName();
     }
 
     @Override
-    public Optional<String> guessServiceMethodName(Object exampleRequest) {
+    public String guessServiceMethodName(Object exampleRequest) {
         final TBase<?, ?> exampleTBase = asTBase(exampleRequest);
         if (exampleTBase == null) {
-            return Optional.empty();
+            return null;
         }
 
         final String typeName = exampleTBase.getClass().getName();
-        return Optional.of(typeName.substring(typeName.lastIndexOf('$') + 1,
-                                              typeName.length() - REQUEST_STRUCT_SUFFIX.length()));
+        return typeName.substring(typeName.lastIndexOf('$') + 1,
+                                  typeName.length() - REQUEST_STRUCT_SUFFIX.length());
     }
 
     @Override
-    public Optional<String> serializeExampleRequest(String serviceName, String methodName,
-                                                    Object exampleRequest) {
+    public String serializeExampleRequest(String serviceName, String methodName,
+                                          Object exampleRequest) {
         if (!(exampleRequest instanceof TBase)) {
-            return Optional.empty();
+            return null;
         }
 
         final TBase<?, ?> exampleTBase = (TBase<?, ?>) exampleRequest;
         final TSerializer serializer = new TSerializer(ThriftProtocolFactories.TEXT);
         try {
-            return Optional.of(serializer.toString(exampleTBase, StandardCharsets.UTF_8.name()));
+            return serializer.toString(exampleTBase, StandardCharsets.UTF_8.name());
         } catch (TException e) {
             throw new Error("should never reach here", e);
         }

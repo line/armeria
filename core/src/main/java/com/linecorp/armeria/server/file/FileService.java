@@ -132,15 +132,16 @@ public class FileService extends AbstractHttpService {
 
     FileService(FileServiceConfig config) {
         this.config = requireNonNull(config, "config");
-        if (config.entryCacheSpec().isPresent()) {
-            cache = newCache(config);
+        final String cacheSpec = config.entryCacheSpec();
+        if (cacheSpec != null) {
+            cache = newCache(cacheSpec);
         } else {
             cache = null;
         }
     }
 
-    private static Cache<PathAndEncoding, AggregatedHttpFile> newCache(FileServiceConfig config) {
-        final Caffeine<Object, Object> b = Caffeine.from(config.entryCacheSpec().get());
+    private static Cache<PathAndEncoding, AggregatedHttpFile> newCache(String cacheSpec) {
+        final Caffeine<Object, Object> b = Caffeine.from(cacheSpec);
         b.recordStats()
          .removalListener((RemovalListener<PathAndEncoding, AggregatedHttpFile>) (key, value, cause) -> {
              if (value != null) {

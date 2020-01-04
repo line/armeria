@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.tomcat;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -92,8 +91,9 @@ final class TomcatServiceConfig {
     /**
      * Returns the hostname of an embedded Tomcat.
      */
-    Optional<String> hostname() {
-        return Optional.ofNullable(hostname);
+    @Nullable
+    String hostname() {
+        return hostname;
     }
 
     /**
@@ -106,10 +106,11 @@ final class TomcatServiceConfig {
     /**
      * Returns the path to the root directory of a web application inside a JAR/WAR.
      *
-     * @return {@link Optional#empty()} if {@link #docBase()} is not a JAR/WAR file
+     * @return {@code null} if {@link #docBase()} is not a JAR/WAR file
      */
-    Optional<String> jarRoot() {
-        return Optional.ofNullable(jarRoot);
+    @Nullable
+    String jarRoot() {
+        return jarRoot;
     }
 
     /**
@@ -122,8 +123,8 @@ final class TomcatServiceConfig {
 
     @Override
     public String toString() {
-        return toString(this, serviceName(), engineName(), baseDir(), realm(), hostname().orElse(null),
-                        docBase(), jarRoot().orElse(null));
+        return toString(this, serviceName(), engineName(), baseDir(), realm(), hostname(),
+                        docBase(), jarRoot());
     }
 
     static String toString(Object holder, String serviceName, @Nullable String engineName,

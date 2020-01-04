@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import java.util.Optional;
+import javax.annotation.Nullable;
 
 interface EventCounter {
 
@@ -28,16 +28,16 @@ interface EventCounter {
     /**
      * Counts success events.
      *
-     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated,
-     *         or else an empty {@link Optional}.
+     * @return the current {@link EventCount} if it has been updated, or else {@code null}.
      */
-    Optional<EventCount> onSuccess();
+    @Nullable
+    EventCount onSuccess();
 
     /**
      * Counts failure events.
      *
-     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated,
-     *         or else an empty {@link Optional}.
+     * @return the current {@link EventCount} if it has been updated, or else {@code null}.
      */
-    Optional<EventCount> onFailure();
+    @Nullable
+    EventCount onFailure();
 }

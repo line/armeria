@@ -15,8 +15,9 @@
  */
 package com.linecorp.armeria.server.saml;
 
-import java.util.Optional;
 import java.util.function.Predicate;
+
+import javax.annotation.Nullable;
 
 import org.opensaml.saml.saml2.core.NameID;
 import org.opensaml.saml.saml2.core.Response;
@@ -30,18 +31,20 @@ public final class SamlUtil {
      * Returns a {@link NameID} that its name format equals to the specified {@code expectedFormat},
      * from the {@link Response}.
      */
-    public static Optional<NameID> getNameId(Response response, SamlNameIdFormat expectedFormat) {
+    @Nullable
+    public static NameID getNameId(Response response, SamlNameIdFormat expectedFormat) {
         return getNameId(response, nameId -> nameId.getFormat().equals(expectedFormat.urn()));
     }
 
     /**
      * Returns a {@link NameID} which is matched to the specified {@code filter} from the {@link Response}.
      */
-    public static Optional<NameID> getNameId(Response response, Predicate<NameID> filter) {
+    @Nullable
+    public static NameID getNameId(Response response, Predicate<NameID> filter) {
         return response.getAssertions().stream()
                        .map(s -> s.getSubject().getNameID())
                        .filter(filter)
-                       .findFirst();
+                       .findFirst().orElse(null);
     }
 
     private SamlUtil() {}

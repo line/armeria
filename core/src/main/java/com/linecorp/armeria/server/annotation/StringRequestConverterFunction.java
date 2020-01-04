@@ -39,7 +39,7 @@ public class StringRequestConverterFunction implements RequestConverterFunction 
             final Charset charset;
             final MediaType contentType = request.contentType();
             if (contentType != null) {
-                charset = contentType.charset().orElse(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+                charset = contentType.charset(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
             } else {
                 charset = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET;
             }

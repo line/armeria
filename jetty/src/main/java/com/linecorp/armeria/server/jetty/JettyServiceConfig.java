@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -84,32 +83,39 @@ final class JettyServiceConfig {
         this.configurators = Collections.unmodifiableList(configurators);
     }
 
-    Optional<String> hostname() {
-        return Optional.ofNullable(hostname);
+    @Nullable
+    String hostname() {
+        return hostname;
     }
 
-    Optional<Boolean> dumpAfterStart() {
-        return Optional.ofNullable(dumpAfterStart);
+    @Nullable
+    Boolean dumpAfterStart() {
+        return dumpAfterStart;
     }
 
-    Optional<Boolean> dumpBeforeStop() {
-        return Optional.ofNullable(dumpBeforeStop);
+    @Nullable
+    Boolean dumpBeforeStop() {
+        return dumpBeforeStop;
     }
 
-    Optional<Long> stopTimeoutMillis() {
-        return Optional.ofNullable(stopTimeoutMillis);
+    @Nullable
+    Long stopTimeoutMillis() {
+        return stopTimeoutMillis;
     }
 
-    Optional<Handler> handler() {
-        return Optional.ofNullable(handler);
+    @Nullable
+    Handler handler() {
+        return handler;
     }
 
-    Optional<RequestLog> requestLog() {
-        return Optional.ofNullable(requestLog);
+    @Nullable
+    RequestLog requestLog() {
+        return requestLog;
     }
 
-    Optional<Function<? super Server, ? extends SessionIdManager>> sessionIdManagerFactory() {
-        return Optional.ofNullable(sessionIdManagerFactory);
+    @Nullable
+    Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory() {
+        return sessionIdManagerFactory;
     }
 
     Map<String, Object> attrs() {

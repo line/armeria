@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -239,9 +238,10 @@ public interface ClientFactory extends AutoCloseable {
      * Returns the {@link ClientBuilderParams} held in {@code client}. This is used when creating a new derived
      * {@link Client} which inherits {@link ClientBuilderParams} from {@code client}. If this
      * {@link ClientFactory} does not know how to handle the {@link ClientBuilderParams} for the provided
-     * {@code client}, it should return {@link Optional#empty()}.
+     * {@code client}, it should return {@code null}.
      */
-    default <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
+    @Nullable
+    default <T> ClientBuilderParams clientBuilderParams(T client) {
         return unwrap(client, ClientBuilderParams.class);
     }
 
@@ -254,26 +254,27 @@ public interface ClientFactory extends AutoCloseable {
      *                             .decorator(LoggingClient.newDecorator())
      *                             .build();
      *
-     * LoggingClient unwrapped = clientFactory.unwrap(client, LoggingClient.class).get();
+     * LoggingClient unwrapped = clientFactory.unwrap(client, LoggingClient.class);
      *
      * // If the client implements Unwrappable, you can just use the 'as()' method.
-     * LoggingClient unwrapped2 = client.as(LoggingClient.class).get();
+     * LoggingClient unwrapped2 = client.as(LoggingClient.class);
      * }</pre>
      *
      * @param client the client object
      * @param type the type of the object to return
-     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     * @return the object of the specified {@code type} if found. {@code null} if not found.
      *
      * @see Client#as(Class)
      * @see Clients#unwrap(Object, Class)
      * @see Unwrappable
      */
-    default <T> Optional<T> unwrap(Object client, Class<T> type) {
+    @Nullable
+    default <T> T unwrap(Object client, Class<T> type) {
         requireNonNull(client, "client");
         requireNonNull(type, "type");
 
         if (type.isInstance(client)) {
-            return Optional.of(type.cast(client));
+            return type.cast(client);
         }
 
         if (client instanceof Unwrappable) {
@@ -283,7 +284,7 @@ public interface ClientFactory extends AutoCloseable {
         if (Proxy.isProxyClass(client.getClass())) {
             final InvocationHandler handler = Proxy.getInvocationHandler(client);
             if (type.isInstance(handler)) {
-                return Optional.of(type.cast(handler));
+                return type.cast(handler);
             }
 
             if (handler instanceof Unwrappable) {
@@ -291,7 +292,7 @@ public interface ClientFactory extends AutoCloseable {
             }
         }
 
-        return Optional.empty();
+        return null;
     }
 
     /**

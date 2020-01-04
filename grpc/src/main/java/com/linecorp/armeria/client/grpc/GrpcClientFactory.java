@@ -23,7 +23,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -159,19 +158,19 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     }
 
     @Override
-    public <T> Optional<T> unwrap(Object client, Class<T> type) {
-        final Optional<T> unwrapped = super.unwrap(client, type);
-        if (unwrapped.isPresent()) {
+    public <T> T unwrap(Object client, Class<T> type) {
+        final T unwrapped = super.unwrap(client, type);
+        if (unwrapped != null) {
             return unwrapped;
         }
 
         if (!(client instanceof AbstractStub)) {
-            return Optional.empty();
+            return null;
         }
 
         final Channel ch = ((AbstractStub<?>) client).getChannel();
         if (!(ch instanceof Unwrappable)) {
-            return Optional.empty();
+            return null;
         }
 
         return ((Unwrappable) ch).as(type);

@@ -426,7 +426,7 @@ public final class CorsServiceBuilder {
      * Returns a newly-created {@link CorsService} based on the properties of this builder.
      */
     public CorsService build(HttpService delegate) {
-        if (delegate.as(CorsService.class).isPresent()) {
+        if (delegate.as(CorsService.class) != null) {
             throw new IllegalArgumentException(
                     "decorated with a " + CorsService.class.getSimpleName() + " already: " +
                     delegate);

@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -171,11 +170,12 @@ public final class Server implements AutoCloseable {
      * Returns the primary {@link ServerPort} that this {@link Server} is listening to. This method is useful
      * when a {@link Server} listens to only one {@link ServerPort}.
      *
-     * @return {@link Optional#empty()} if this {@link Server} did not start
+     * @return {@code null} if this {@link Server} did not start
      */
-    public Optional<ServerPort> activePort() {
+    @Nullable
+    public ServerPort activePort() {
         synchronized (activePorts) {
-            return Optional.ofNullable(Iterables.getFirst(activePorts.values(), null));
+            return Iterables.getFirst(activePorts.values(), null);
         }
     }
 

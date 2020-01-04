@@ -23,13 +23,13 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceFutureStub;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
 import com.linecorp.armeria.grpc.shared.SimpleBenchmarkBase;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
 @State(Scope.Benchmark)
@@ -43,10 +43,7 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     @Override
     protected int port() {
-        final ServerPort httpPort = server.activePorts().values().stream()
-                                          .filter(ServerPort::hasHttp).findAny()
-                                          .get();
-        return httpPort.localAddress().getPort();
+        return server.activeLocalPort(SessionProtocol.HTTP);
     }
 
     @Override

@@ -248,13 +248,13 @@ class GrpcDocServicePluginTest {
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
         assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
         assertThat(methodInfo.returnTypeSignature().namedTypeDescriptor())
-                .contains(SimpleResponse.getDescriptor());
+                .isEqualTo(SimpleResponse.getDescriptor());
         assertThat(methodInfo.parameters()).hasSize(1);
         assertThat(methodInfo.parameters().get(0).name()).isEqualTo("request");
         assertThat(methodInfo.parameters().get(0).typeSignature().name())
                 .isEqualTo("armeria.grpc.testing.SimpleRequest");
         assertThat(methodInfo.parameters().get(0).typeSignature().namedTypeDescriptor())
-                .contains(SimpleRequest.getDescriptor());
+                .isEqualTo(SimpleRequest.getDescriptor());
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
         assertThat(methodInfo.docString()).isNull();
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(

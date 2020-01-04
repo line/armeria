@@ -18,29 +18,29 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.common.MediaType.parse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assume.assumeTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
-public class SerializationFormatTest {
+class SerializationFormatTest {
     @Test
-    public void findByMediaType_exactMatch() {
+    void findByMediaType_exactMatch() {
         for (SerializationFormat format : SerializationFormat.values()) {
             if (format == SerializationFormat.UNKNOWN) {
                 continue;
             }
-            assertThat(SerializationFormat.find(format.mediaType()).get()).isSameAs(format);
+            assertThat(SerializationFormat.find(format.mediaType())).isSameAs(format);
         }
     }
 
     @Test
-    public void findByMediaType_notRecognized() {
-        assertThat(SerializationFormat.find(parse("foo/bar"))).isEmpty();
+    void findByMediaType_notRecognized() {
+        assertThat(SerializationFormat.find(parse("foo/bar"))).isNull();
     }
 
     @Test
     @SuppressWarnings("deprecation")
-    public void nullThriftSerializationFormats() {
+    void nullThriftSerializationFormats() {
         assumeNoThriftInClasspath();
         assertThat(SerializationFormat.THRIFT_BINARY).isNull();
         assertThat(SerializationFormat.THRIFT_COMPACT).isNull();
@@ -50,7 +50,7 @@ public class SerializationFormatTest {
 
     @Test
     @SuppressWarnings("deprecation")
-    public void failingOfThrift() {
+    void failingOfThrift() {
         assumeNoThriftInClasspath();
         assertThatThrownBy(SerializationFormat::ofThrift).isInstanceOf(IllegalStateException.class);
     }
@@ -64,6 +64,6 @@ public class SerializationFormatTest {
             meetsAssumption = true;
         }
 
-        assumeTrue("armeria-thrift in the classpath", meetsAssumption);
+        Assumptions.assumeTrue(meetsAssumption, "armeria-thrift in the classpath");
     }
 }

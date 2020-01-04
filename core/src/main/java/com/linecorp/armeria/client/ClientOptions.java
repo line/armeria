@@ -30,9 +30,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
+import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.Iterables;
 
@@ -208,12 +210,23 @@ public final class ClientOptions extends AbstractOptions {
     /**
      * Returns the value of the specified {@link ClientOption}.
      *
-     * @return the value of the {@link ClientOption}, or
-     *         {@link Optional#empty()} if the default value of the specified {@link ClientOption} is not
-     *         available
+     * @return the value of the specified {@link ClientOption}
+     *
+     * @throws NoSuchElementException if no value is set for the specified {@link ClientOption}.
      */
-    public <T> Optional<T> get(ClientOption<T> option) {
+    public <T> T get(ClientOption<T> option) {
         return get0(option);
+    }
+
+    /**
+     * Returns the value of the specified {@link ClientOption}.
+     *
+     * @return the value of the {@link ClientOption}, or
+     *         {@code null} if the specified {@link ClientOption} is not set.
+     */
+    @Nullable
+    public <T> T getOrNull(ClientOption<T> option) {
+        return getOrNull0(option);
     }
 
     /**
@@ -247,7 +260,7 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the timeout of a socket write.
      */
     public long writeTimeoutMillis() {
-        return get(WRITE_TIMEOUT_MILLIS).get();
+        return get(WRITE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -264,7 +277,7 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the timeout of a server reply to a client call.
      */
     public long responseTimeoutMillis() {
-        return get(RESPONSE_TIMEOUT_MILLIS).get();
+        return get(RESPONSE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -281,14 +294,14 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the maximum allowed length of a server response.
      */
     public long maxResponseLength() {
-        return get(MAX_RESPONSE_LENGTH).get();
+        return get(MAX_RESPONSE_LENGTH);
     }
 
     /**
      * Returns the {@link Function}s that decorate the components of a client.
      */
     public ClientDecoration decoration() {
-        return get(DECORATION).get();
+        return get(DECORATION);
     }
 
     /**
@@ -296,28 +309,28 @@ public final class ClientOptions extends AbstractOptions {
      * {@link SessionProtocol} is HTTP.
      */
     public HttpHeaders httpHeaders() {
-        return get(HTTP_HEADERS).get();
+        return get(HTTP_HEADERS);
     }
 
     /**
      * Returns the request {@link ContentPreviewerFactory}.
      */
     public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return get(REQ_CONTENT_PREVIEWER_FACTORY).get();
+        return get(REQ_CONTENT_PREVIEWER_FACTORY);
     }
 
     /**
      * Returns the response {@link ContentPreviewerFactory}.
      */
     public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return get(RES_CONTENT_PREVIEWER_FACTORY).get();
+        return get(RES_CONTENT_PREVIEWER_FACTORY);
     }
 
     /**
      * Returns the {@link Supplier} that generates a {@link RequestId}.
      */
     public Supplier<RequestId> requestIdGenerator() {
-        return get(REQUEST_ID_GENERATOR).get();
+        return get(REQUEST_ID_GENERATOR);
     }
 
     /**

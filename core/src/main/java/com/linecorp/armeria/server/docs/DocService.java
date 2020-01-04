@@ -340,7 +340,7 @@ public class DocService extends AbstractCompositeService<HttpService, HttpReques
 
     private static boolean isSupported(
             ServiceConfig serviceCfg, Set<Class<? extends Service<?, ?>>> supportedServiceTypes) {
-        return supportedServiceTypes.stream().anyMatch(type -> serviceCfg.service().as(type).isPresent());
+        return supportedServiceTypes.stream().anyMatch(type -> serviceCfg.service().as(type) != null);
     }
 
     static final class DocServiceVfs extends AbstractHttpVfs {

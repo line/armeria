@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Constructor;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -69,12 +68,12 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
      * }</pre>
      *
      * @param type the type of the object to return
-     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     * @return the object of the specified {@code type} if found. {@code null} if not found.
      *
      * @see Unwrappable
      */
     @Override
-    default <T> Optional<T> as(Class<T> type) {
+    default <T> T as(Class<T> type) {
         requireNonNull(type, "type");
         return Unwrappable.super.as(type);
     }

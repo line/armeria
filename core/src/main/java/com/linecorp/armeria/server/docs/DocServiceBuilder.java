@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.BiFunction;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -400,10 +399,9 @@ public final class DocServiceBuilder {
                 continue;
             }
 
-            final Optional<String> result = plugin.serializeExampleRequest(serviceName, methodName,
-                                                                           exampleRequest);
-            if (result.isPresent()) {
-                return result.get();
+            final String result = plugin.serializeExampleRequest(serviceName, methodName, exampleRequest);
+            if (result != null) {
+                return result;
             }
         }
 
@@ -425,20 +423,18 @@ public final class DocServiceBuilder {
                 continue;
             }
 
-            final Optional<String> serviceName = plugin.guessServiceName(exampleRequest);
-            final Optional<String> methodName = plugin.guessServiceMethodName(exampleRequest);
+            final String serviceName = plugin.guessServiceName(exampleRequest);
+            final String methodName = plugin.guessServiceMethodName(exampleRequest);
 
             // Skip if the plugin cannot guess the service and method name.
-            if (!serviceName.isPresent() || !methodName.isPresent()) {
+            if (serviceName == null || methodName == null) {
                 continue;
             }
 
             guessed = true;
-            final String s = serviceName.get();
-            final String f = methodName.get();
-            final Optional<String> serialized = plugin.serializeExampleRequest(s, f, exampleRequest);
-            if (serialized.isPresent()) {
-                return new String[] { s, f, serialized.get() };
+            final String serialized = plugin.serializeExampleRequest(serviceName, methodName, exampleRequest);
+            if (serialized != null) {
+                return new String[] { serviceName, methodName, serialized };
             }
         }
 
