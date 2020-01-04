@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -349,6 +351,9 @@ class HttpClientIntegrationTest {
                 return HttpResponse.streaming();
             });
 
+            sb.http(0);
+            sb.https(0);
+            sb.tlsSelfSigned();
             sb.disableServerHeader();
             sb.disableDateHeader();
         }
@@ -769,6 +774,26 @@ class HttpClientIntegrationTest {
                 .hasCause(badState);
     }
 
+    @Test
+    void httpsRequestToPlainTextEndpoint() throws Exception {
+        final WebClient client = WebClient.builder(SessionProtocol.HTTPS, newEndpoint())
+                                          .factory(ClientFactory.insecure()).build();
+        final Throwable throwable = catchThrowable(() -> client.get("/hello/world").aggregate().get());
+        assertThat(Exceptions.peel(throwable))
+                .isInstanceOf(UnprocessedRequestException.class)
+                .hasCauseInstanceOf(SSLException.class);
+    }
+
+    @Test
+    void httpsRequestWithInvalidCertificate() throws Exception {
+        final WebClient client = WebClient.builder(
+                SessionProtocol.HTTPS, newEndpoint(server.httpsUri("/"))).build();
+        final Throwable throwable = catchThrowable(() -> client.get("/hello/world").aggregate().get());
+        assertThat(Exceptions.peel(throwable))
+                .isInstanceOf(UnprocessedRequestException.class)
+                .hasCauseInstanceOf(SSLException.class);
+    }
+
     @Nested
     @TestInstance(Lifecycle.PER_CLASS)
     @SuppressWarnings({
@@ -823,7 +848,11 @@ class HttpClientIntegrationTest {
     }
 
     private static Endpoint newEndpoint() {
-        final URI uri = URI.create(server.httpUri("/"));
+        return newEndpoint(server.httpUri("/"));
+    }
+
+    private static Endpoint newEndpoint(String uriStr) {
+        final URI uri = URI.create(uriStr);
         return Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
     }
 }
