@@ -29,7 +29,6 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -300,7 +299,7 @@ class HttpClientIntegrationTest {
             sb.service("/pooled-unaware", new PooledContentService().decorate(PoolUnawareDecorator::new));
 
             sb.service("/stream-closed", (ctx, req) -> {
-                ctx.setRequestTimeout(Duration.ZERO);
+                ctx.clearRequestTimeout();
                 final HttpResponseWriter res = HttpResponse.streaming();
                 res.write(ResponseHeaders.of(HttpStatus.OK));
                 req.subscribe(new Subscriber<HttpObject>() {

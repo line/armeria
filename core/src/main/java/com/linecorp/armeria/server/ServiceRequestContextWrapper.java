@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
@@ -153,6 +154,11 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public void clearRequestTimeout() {
+        delegate().clearRequestTimeout();
+    }
+
+    @Override
     public void setRequestTimeoutMillis(long requestTimeoutMillis) {
         delegate().setRequestTimeoutMillis(requestTimeoutMillis);
     }
@@ -160,6 +166,36 @@ public class ServiceRequestContextWrapper
     @Override
     public void setRequestTimeout(Duration requestTimeout) {
         delegate().setRequestTimeout(requestTimeout);
+    }
+
+    @Override
+    public void extendRequestTimeoutMillis(long requestTimeoutMillis) {
+        delegate().extendRequestTimeoutMillis(requestTimeoutMillis);
+    }
+
+    @Override
+    public void extendRequestTimeout(Duration requestTimeout) {
+        delegate().extendRequestTimeout(requestTimeout);
+    }
+
+    @Override
+    public void setRequestTimeoutAfterMillis(long requestTimeoutMillis) {
+        delegate().setRequestTimeoutAfterMillis(requestTimeoutMillis);
+    }
+
+    @Override
+    public void setRequestTimeoutAfter(Duration requestTimeout) {
+        delegate().setRequestTimeoutAfter(requestTimeout);
+    }
+
+    @Override
+    public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
+        delegate().setRequestTimeoutAfterMillis(requestTimeoutAtMillis);
+    }
+
+    @Override
+    public void setRequestTimeoutAt(Instant requestTimeoutAt) {
+        delegate().setRequestTimeoutAt(requestTimeoutAt);
     }
 
     @Nullable

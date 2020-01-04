@@ -196,7 +196,11 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
             if (timeoutHeader != null) {
                 try {
                     final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
-                    ctx.setRequestTimeout(Duration.ofNanos(timeout));
+                    if (timeout == 0) {
+                        ctx.clearRequestTimeout();
+                    } else {
+                        ctx.setRequestTimeoutAfter(Duration.ofNanos(timeout));
+                    }
                 } catch (IllegalArgumentException e) {
                     return HttpResponse.of(
                             (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
