@@ -231,7 +231,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 if (handshakeFailed &&
                     cause instanceof DecoderException &&
                     cause.getCause() instanceof SSLException) {
-                    ctx.channel().attr(PENDING_EXCEPTION).set(cause);
+                    ctx.channel().attr(PENDING_EXCEPTION).set(cause.getCause());
                     return;
                 }
 

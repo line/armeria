@@ -96,7 +96,6 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.handler.codec.DecoderException;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
@@ -777,20 +776,20 @@ class HttpClientIntegrationTest {
     void httpsRequestToPlainTextEndpoint() throws Exception {
         final WebClient client = WebClient.builder(SessionProtocol.HTTPS, newEndpoint())
                                           .factory(ClientFactory.insecure()).build();
-        assertThatThrownBy(() -> client.get("/hello/world").aggregate().get())
-                .hasRootCauseInstanceOf(SSLException.class);
+        final Throwable throwable = catchThrowable(() -> client.get("/hello/world").aggregate().get());
+        assertThat(Exceptions.peel(throwable))
+                .isInstanceOf(UnprocessedRequestException.class)
+                .hasCauseInstanceOf(SSLException.class);
     }
 
     @Test
     void httpsRequestWithInvalidCertificate() throws Exception {
-        final WebClient client = WebClient.builder(SessionProtocol.HTTPS,
-                                                   newEndpoint(server.httpsUri("/"))).build();
-        final Throwable unprocessedException = catchThrowable(
-                () -> client.get("/hello/world").aggregate().get()).getCause();
-        assertThat(unprocessedException)
+        final WebClient client = WebClient.builder(
+                SessionProtocol.HTTPS, newEndpoint(server.httpsUri("/"))).build();
+        final Throwable throwable = catchThrowable(() -> client.get("/hello/world").aggregate().get());
+        assertThat(Exceptions.peel(throwable))
                 .isInstanceOf(UnprocessedRequestException.class)
-                .hasCauseInstanceOf(DecoderException.class);
-        assertThat(unprocessedException.getCause()).hasCauseInstanceOf(SSLException.class);
+                .hasCauseInstanceOf(SSLException.class);
     }
 
     @Nested
