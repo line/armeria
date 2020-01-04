@@ -53,44 +53,50 @@ public abstract class AbstractRequestContextAwareCompletableFuture<T> extends Co
     protected Runnable makeContextAwareLoggingException(Runnable runnable) {
         requireNonNull(runnable, "runnable");
         return () -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                runnable.run();
-            } catch (Throwable th) {
-                logger.warn("An error occurred when pushing a context", th);
-                throw th;
-            }
+            makeContextAwareLoggingException0(runnable);
         };
     }
 
     protected <I> Consumer<I> makeContextAwareLoggingException(Consumer<I> action) {
         requireNonNull(action, "action");
-        return t -> makeContextAwareLoggingException(() -> action.accept(t));
+        return t -> makeContextAwareLoggingException0(() -> action.accept(t));
     }
 
     protected <I, U> BiConsumer<I, U> makeContextAwareLoggingException(BiConsumer<I, U> action) {
         requireNonNull(action, "action");
-        return (t, u) -> makeContextAwareLoggingException(() -> action.accept(t, u));
+        return (t, u) -> makeContextAwareLoggingException0(() -> action.accept(t, u));
     }
 
     protected <V> Supplier<V> makeContextAwareLoggingException(Supplier<? extends V> action) {
         requireNonNull(action, "action");
-        return () -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                return action.get();
-            } catch (Throwable th) {
-                logger.warn("An error occurred when pushing a context", th);
-                throw th;
-            }
-        };
+        return () -> makeContextAwareLoggingException0(action);
     }
 
     protected <I, R> Function<I, R> makeContextAwareLoggingException(Function<I, R> function) {
         requireNonNull(function, "function");
-        return t -> makeContextAwareLoggingException(() -> function.apply(t)).get();
+        return t -> makeContextAwareLoggingException0(() -> function.apply(t));
     }
 
     protected <I, U, V> BiFunction<I, U, V> makeContextAwareLoggingException(BiFunction<I, U, V> function) {
         requireNonNull(function, "function");
-        return (t, u) -> makeContextAwareLoggingException(() -> function.apply(t, u)).get();
+        return (t, u) -> makeContextAwareLoggingException0(() -> function.apply(t, u));
+    }
+
+    private void makeContextAwareLoggingException0(Runnable runnable) {
+        try (SafeCloseable ignored = ctx.push()) {
+            runnable.run();
+        } catch (Throwable th) {
+            logger.warn("An error occurred when pushing a context", th);
+            throw th;
+        }
+    }
+
+    private <V> V makeContextAwareLoggingException0(Supplier<? extends V> action) {
+        try (SafeCloseable ignored = ctx.push()) {
+            return action.get();
+        } catch (Throwable th) {
+            logger.warn("An error occurred when pushing a context", th);
+            throw th;
+        }
     }
 }
