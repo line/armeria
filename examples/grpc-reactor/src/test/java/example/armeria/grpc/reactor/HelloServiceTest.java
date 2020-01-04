@@ -1,40 +1,37 @@
 package example.armeria.grpc.reactor;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.platform.commons.logging.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.server.Server;
 
 import example.armeria.grpc.reactor.Hello.HelloReply;
 import example.armeria.grpc.reactor.Hello.HelloRequest;
-import io.grpc.stub.StreamObserver;
+import reactor.core.publisher.Flux;
 
 class HelloServiceTest {
 
     private static Server server;
-    private static HelloServiceGrpc.HelloServiceStub helloService;
+    private static ReactorHelloServiceGrpc.ReactorHelloServiceStub helloService;
 
     @BeforeAll
     static void beforeClass() throws Exception {
         server = Main.newServer(0, 0);
         server.start().join();
-        helloService = Clients.newClient(uri(), HelloServiceGrpc.HelloServiceStub.class);
+        helloService = Clients.newClient(uri(), ReactorHelloServiceGrpc.ReactorHelloServiceStub.class);
     }
 
     @AfterAll
@@ -50,179 +47,70 @@ class HelloServiceTest {
 
     @Test
     void getReply() {
-        final HelloServiceGrpc.HelloServiceBlockingStub helloService =
-                Clients.newClient(uri(), HelloServiceGrpc.HelloServiceBlockingStub.class);
-        assertThat(helloService.hello(HelloRequest.newBuilder().setName("Armeria").build()).getMessage())
-                .isEqualTo("Hello, Armeria!");
+        final HelloReply reply = helloService.hello(HelloRequest.newBuilder()
+                                                                .setName("Armeria")
+                                                                .build()).block();
+        assertThat(reply).isNotNull();
+        assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
     }
 
     @Test
     void getReplyWithDelay() {
-        final HelloServiceGrpc.HelloServiceFutureStub helloService =
-                Clients.newClient(uri(), HelloServiceGrpc.HelloServiceFutureStub.class);
-        final ListenableFuture<HelloReply> future =
-                helloService.lazyHello(HelloRequest.newBuilder().setName("Armeria").build());
-        final AtomicBoolean completed = new AtomicBoolean();
-        Futures.addCallback(future, new FutureCallback<HelloReply>() {
-            @Override
-            public void onSuccess(HelloReply result) {
-                assertThat(result.getMessage()).isEqualTo("Hello, Armeria!");
-                completed.set(true);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                // Should never reach here.
-                throw new Error(t);
-            }
-        }, MoreExecutors.directExecutor());
-
-        await().untilTrue(completed);
+        final HelloReply reply = helloService.lazyHello(HelloRequest.newBuilder()
+                                                                    .setName("Armeria")
+                                                                    .build()).block();
+        assertThat(reply).isNotNull();
+        assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
     }
 
     @Test
     void getReplyFromServerSideBlockingCall() {
-        final HelloServiceGrpc.HelloServiceBlockingStub helloService =
-                Clients.newClient(uri(), HelloServiceGrpc.HelloServiceBlockingStub.class);
         final Stopwatch watch = Stopwatch.createStarted();
-        assertThat(helloService.blockingHello(HelloRequest.newBuilder().setName("Armeria").build())
-                               .getMessage()).isEqualTo("Hello, Armeria!");
+        final HelloReply reply = helloService.blockingHello(HelloRequest.newBuilder()
+                                                                        .setName("Armeria")
+                                                                        .build()).block();
+        assertThat(reply).isNotNull();
+        assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
         assertThat(watch.elapsed(TimeUnit.SECONDS)).isGreaterThanOrEqualTo(3);
     }
 
     @Test
     void getLotsOfReplies() {
-        final AtomicBoolean completed = new AtomicBoolean();
-        helloService.lotsOfReplies(
-                HelloRequest.newBuilder().setName("Armeria").build(),
-                new StreamObserver<HelloReply>() {
-                    private int sequence;
+        final List<HelloReply> replies =
+                helloService.lotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
+                            .toStream().collect(toImmutableList());
 
-                    @Override
-                    public void onNext(HelloReply value) {
-                        assertThat(value.getMessage())
-                                .isEqualTo("Hello, Armeria! (sequence: " + ++sequence + ')');
-                    }
+        assertThat(replies).hasSize(5);
 
-                    @Override
-                    public void onError(Throwable t) {
-                        // Should never reach here.
-                        throw new Error(t);
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        assertThat(sequence).isEqualTo(5);
-                        completed.set(true);
-                    }
-                });
-        await().untilTrue(completed);
-    }
-
-    @Test
-    void blockForLotsOfReplies() throws Exception {
-        final BlockingQueue<HelloReply> replies = new LinkedBlockingQueue<>();
-        final AtomicBoolean completed = new AtomicBoolean();
-        helloService.lotsOfReplies(
-                HelloRequest.newBuilder().setName("Armeria").build(),
-                new StreamObserver<HelloReply>() {
-
-                    @Override
-                    public void onNext(HelloReply value) {
-                        replies.offer(value);
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {
-                        // Should never reach here.
-                        throw new Error(t);
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        completed.set(true);
-                    }
-                });
-        int sequence = 0;
-        while (!completed.get() || !replies.isEmpty()) {
-            final HelloReply value = replies.poll(100, TimeUnit.MILLISECONDS);
-            if (value == null) {
-                // Timed out, try again.
-                continue;
-            }
-            assertThat(value.getMessage())
-                    .isEqualTo("Hello, Armeria! (sequence: " + ++sequence + ')');
+        for (int i = 0; i < replies.size(); i++) {
+            assertThat(replies.get(i).getMessage()).isEqualTo("Hello, Armeria! (sequence: " + (i + 1) + ')');
         }
-        assertThat(sequence).isEqualTo(5);
     }
 
     @Test
     void sendLotsOfGreetings() {
         final String[] names = { "Armeria", "Grpc", "Streaming" };
-        final AtomicBoolean completed = new AtomicBoolean();
-        final StreamObserver<HelloRequest> request =
-                helloService.lotsOfGreetings(new StreamObserver<HelloReply>() {
-                    private boolean received;
+        final Flux<HelloRequest> request = Flux.just(names).log()
+                                               .map(name -> HelloRequest.newBuilder().setName(name).build());
 
-                    @Override
-                    public void onNext(HelloReply value) {
-                        assertThat(received).isFalse();
-                        received = true;
-                        assertThat(value.getMessage())
-                                .isEqualTo(HelloServiceImpl.toMessage(String.join(", ", names)));
-                    }
+        final HelloReply reply = helloService.lotsOfGreetings(request).block();
 
-                    @Override
-                    public void onError(Throwable t) {
-                        // Should never reach here.
-                        throw new Error(t);
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        assertThat(received).isTrue();
-                        completed.set(true);
-                    }
-                });
-
-        for (String name : names) {
-            request.onNext(HelloRequest.newBuilder().setName(name).build());
-        }
-        request.onCompleted();
-        await().untilTrue(completed);
+        assertThat(reply).isNotNull();
+        assertThat(reply.getMessage()).isEqualTo(HelloServiceImpl.toMessage(String.join(", ", names)));
     }
 
     @Test
     void bidirectionalHello() {
         final String[] names = { "Armeria", "Grpc", "Streaming" };
-        final AtomicBoolean completed = new AtomicBoolean();
-        final StreamObserver<HelloRequest> request =
-                helloService.bidiHello(new StreamObserver<HelloReply>() {
-                    private int received;
+        final Flux<HelloRequest> request = Flux.just(names)
+                                               .map(name -> HelloRequest.newBuilder().setName(name).build());
+        final ImmutableList<HelloReply> replies =
+                helloService.bidiHello(request).toStream().collect(toImmutableList());
 
-                    @Override
-                    public void onNext(HelloReply value) {
-                        assertThat(value.getMessage())
-                                .isEqualTo(HelloServiceImpl.toMessage(names[received++]));
-                    }
+        assertThat(replies).hasSize(names.length);
 
-                    @Override
-                    public void onError(Throwable t) {
-                        // Should never reach here.
-                        throw new Error(t);
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        assertThat(received).isEqualTo(names.length);
-                        completed.set(true);
-                    }
-                });
-
-        for (String name : names) {
-            request.onNext(HelloRequest.newBuilder().setName(name).build());
+        for (int i = 0; i < names.length; i++) {
+            assertThat(replies.get(i).getMessage()).isEqualTo(HelloServiceImpl.toMessage(names[i]));
         }
-        request.onCompleted();
-        await().untilTrue(completed);
     }
 }
