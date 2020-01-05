@@ -8,6 +8,11 @@
   - Learn how to write a gRPC service with Armeria gRPC module.
   - See [Running a gRPC service](https://line.github.io/armeria/server-grpc.html) and
     [Calling a gRPC service](https://line.github.io/armeria/client-grpc.html).
+    
+- `grpc-kotlin`
+  - Learn how to write a gRPC service with Armeria gRPC module (Kotlin).
+  - See [Running a gRPC service](https://line.github.io/armeria/server-grpc.html) and
+    [Calling a gRPC service](https://line.github.io/armeria/client-grpc.html).
 
 - `grpc-service-reactor`
   - Learn how to write a gRPC service with Armeria gRPC module,
