@@ -18,7 +18,6 @@ import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import dagger.producers.Production;
-import example.armeria.contextpropagation.dagger.MainGraph.Component.Builder;
 
 public class Main {
 
@@ -32,7 +31,7 @@ public class Main {
 
         @Provides
         @Singleton
-        static Server server(Provider<Builder> graphBuilder) {
+        static Server server(Provider<MainGraph.Component.Builder> graphBuilder) {
             return Server.builder()
                          .http(8080)
                          .serviceUnder("/", ((ctx, req) ->
