@@ -18,30 +18,8 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.healthcheck.PartialHealthCheckStrategy.TargetCount;
 
 interface HealthCheckStrategy {
-
-    /**
-     * Creates a new AllHealthCheckStrategy.
-     */
-    static HealthCheckStrategy all() {
-        return new AllHealthCheckStrategy();
-    }
-
-    /**
-     * Creates a new max endpoint count PartialHealthCheckStrategy.
-     */
-    static HealthCheckStrategy partialMaxEndpointCount(int maxEndpointCount) {
-        return new PartialHealthCheckStrategy(TargetCount.ofCount(maxEndpointCount));
-    }
-
-    /**
-     * Creates a new max endpoint ratio PartialHealthCheckStrategy.
-     */
-    static HealthCheckStrategy partialMaxEndpointRatio(double maxEndpointRatio) {
-        return new PartialHealthCheckStrategy(TargetCount.ofRatio(maxEndpointRatio));
-    }
 
     /**
      * Updates the candidates.

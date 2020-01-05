@@ -48,23 +48,42 @@ public class HealthCheckedEndpointGroupBuilderTest {
 
     @Test
     void partialHealthCheckStrategyMutuallyExclusive() {
-        final HealthCheckedEndpointGroupBuilder maxCntBuilder = new HealthCheckedEndpointGroupBuilder(delegate,
-                                                                                                      PATH)
-                .maxEndpointCount(10);
-        assertThatThrownBy(() -> maxCntBuilder.maxEndpointRatio(0.5)).isInstanceOf(
-                IllegalArgumentException.class)
-                                                                 .hasMessage(
-                                                                     "Maximum endpoint count is already set.");
+        // max count
+        final HealthCheckedEndpointGroupBuilder maxCntBuilder =
+                new HealthCheckedEndpointGroupBuilder(delegate, PATH).maxEndpointCount(10);
+
+        assertThatThrownBy(() -> maxCntBuilder.maxEndpointRatio(0.5))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Maximum endpoint count is already set.");
 
         assertThat(maxCntBuilder.build().healthCheckStrategy).isInstanceOf(PartialHealthCheckStrategy.class);
 
-        final HealthCheckedEndpointGroupBuilder maxRatioBuilder = new HealthCheckedEndpointGroupBuilder(
-                delegate, PATH).maxEndpointRatio(0.5);
-        assertThatThrownBy(() -> maxRatioBuilder.maxEndpointCount(10)).isInstanceOf(
-                IllegalArgumentException.class)
-                                                                  .hasMessage(
-                                                                      "Maximum endpoint ratio is already set.");
+        // max ratio
+        final HealthCheckedEndpointGroupBuilder maxRatioBuilder =
+                new HealthCheckedEndpointGroupBuilder(delegate, PATH).maxEndpointRatio(0.5);
+
+        assertThatThrownBy(() -> maxRatioBuilder.maxEndpointCount(10))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Maximum endpoint ratio is already set.");
 
         assertThat(maxRatioBuilder.build().healthCheckStrategy).isInstanceOf(PartialHealthCheckStrategy.class);
+
+        // all health check by ratio 1.0
+        final HealthCheckedEndpointGroupBuilder allHealthCheckBuilder1 =
+                new HealthCheckedEndpointGroupBuilder(delegate, PATH).maxEndpointRatio(1.0);
+
+        assertThatThrownBy(() -> allHealthCheckBuilder1.maxEndpointCount(10))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Maximum endpoint ratio is already set.");
+
+        assertThat(allHealthCheckBuilder1.build().healthCheckStrategy)
+                .isInstanceOf(AllHealthCheckStrategy.class);
+
+        // all health check by default
+        final HealthCheckedEndpointGroupBuilder allHealthCheckBuilder2 =
+                new HealthCheckedEndpointGroupBuilder(delegate, PATH);
+
+        assertThat(allHealthCheckBuilder2.build().healthCheckStrategy)
+                .isInstanceOf(AllHealthCheckStrategy.class);
     }
 }

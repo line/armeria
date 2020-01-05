@@ -19,7 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.endpoint.healthcheck.PartialHealthCheckStrategy.TargetCount;
+import com.linecorp.armeria.client.endpoint.healthcheck.PartialHealthCheckStrategy.EndpointLimitingFunction;
 
 /**
  * A builder for creating a new {@link PartialHealthCheckStrategy}.
@@ -70,19 +70,19 @@ class PartialHealthCheckStrategyBuilder {
      * Returns a newly created {@link PartialHealthCheckStrategy} based on the properties set so far.
      */
     public PartialHealthCheckStrategy build() {
-        final TargetCount targetCount;
+        final EndpointLimitingFunction endpointLimitingFunction;
         if (maxEndpointCount != null) {
-            targetCount = TargetCount.ofCount(maxEndpointCount);
+            endpointLimitingFunction = EndpointLimitingFunction.ofCount(maxEndpointCount);
         } else if (maxEndpointRatio != null) {
-            targetCount = TargetCount.ofRatio(maxEndpointRatio);
+            endpointLimitingFunction = EndpointLimitingFunction.ofRatio(maxEndpointRatio);
         } else {
-            targetCount = null;
+            endpointLimitingFunction = null;
         }
 
-        if (targetCount == null) {
+        if (endpointLimitingFunction == null) {
             throw new IllegalStateException("The maximum must be set.");
         }
 
-        return new PartialHealthCheckStrategy(targetCount);
+        return new PartialHealthCheckStrategy(endpointLimitingFunction);
     }
 }

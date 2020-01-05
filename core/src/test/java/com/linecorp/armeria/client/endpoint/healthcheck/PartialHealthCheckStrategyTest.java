@@ -15,18 +15,19 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.Endpoint;
 
@@ -46,14 +47,14 @@ public class PartialHealthCheckStrategyTest {
 
         return IntStream.range(0, size)
                         .mapToObj(i -> Endpoint.of("dummy" + random.nextInt()))
-                        .collect(Collectors.toList());
+                        .collect(toImmutableList());
     }
 
-    private static void assertCandidates(List<Endpoint> act, List<Endpoint> exp) {
-        assertThat(act).hasSize(exp.size());
+    private static void assertCandidates(List<Endpoint> actualCandidates, List<Endpoint> expectedCandidates) {
+        assertThat(actualCandidates).hasSize(expectedCandidates.size());
 
-        for (Endpoint expCandidate : exp) {
-            assertThat(act.contains(expCandidate)).isTrue();
+        for (Endpoint expectedCandidate : expectedCandidates) {
+            assertThat(actualCandidates).contains(expectedCandidate);
         }
     }
 
@@ -269,23 +270,18 @@ public class PartialHealthCheckStrategyTest {
 
     @Test
     void updateCandidates() {
-        List<Endpoint> newCandidates = createCandidates(5);
+        final List<Endpoint> newCandidates = createCandidates(5);
         maxCountStrategy.updateCandidates(newCandidates);
+        assertCandidates(maxCountStrategy.getCandidates(), newCandidates);
 
-        List<Endpoint> selectedCandidates = maxCountStrategy.getCandidates();
-        assertCandidates(selectedCandidates, newCandidates);
+        final List<Endpoint> someOfOldCandidates = candidatesForMaxCount.subList(0, 3);
+        maxCountStrategy.updateCandidates(someOfOldCandidates);
+        assertCandidates(maxCountStrategy.getCandidates(), someOfOldCandidates);
 
-        newCandidates = candidatesForMaxCount.subList(0, 3);
-        maxCountStrategy.updateCandidates(newCandidates);
-        selectedCandidates = maxCountStrategy.getCandidates();
-
-        assertCandidates(selectedCandidates, newCandidates);
-
-        newCandidates.add(Endpoint.of("new1"));
-        newCandidates.add(Endpoint.of("new2"));
-        maxCountStrategy.updateCandidates(newCandidates);
-        selectedCandidates = maxCountStrategy.getCandidates();
-
-        assertCandidates(selectedCandidates, newCandidates);
+        final List<Endpoint> mixedCandidates = Streams.concat(createCandidates(2).stream(),
+                                                              someOfOldCandidates.stream())
+                                                      .collect(toImmutableList());
+        maxCountStrategy.updateCandidates(mixedCandidates);
+        assertCandidates(maxCountStrategy.getCandidates(), mixedCandidates);
     }
 }

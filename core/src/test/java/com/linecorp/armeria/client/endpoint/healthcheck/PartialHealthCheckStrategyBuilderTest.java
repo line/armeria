@@ -15,11 +15,11 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +34,7 @@ public class PartialHealthCheckStrategyBuilderTest {
     private static List<Endpoint> createCandidates(int size) {
         return IntStream.range(0, size)
                         .mapToObj(i -> Endpoint.of("dummy" + i))
-                        .collect(Collectors.toList());
+                        .collect(toImmutableList());
     }
 
     @BeforeEach

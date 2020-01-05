@@ -29,6 +29,7 @@ import org.jctools.maps.NonBlockingHashSet;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.Endpoint;
 
@@ -44,18 +45,18 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
         return new PartialHealthCheckStrategyBuilder();
     }
 
-    private final Set<Endpoint> selectedCandidates;
-    private final Set<Endpoint> unhealthyCandidates;
-    private final TargetCount max;
+    private final Set<Endpoint> selectedEndpoints;
+    private final Set<Endpoint> unhealthyEndpoints;
+    private final EndpointLimitingFunction max;
     private Set<Endpoint> candidates;
 
     /**
      * Creates a new instance.
      */
-    PartialHealthCheckStrategy(TargetCount max) {
+    PartialHealthCheckStrategy(EndpointLimitingFunction max) {
         this.max = requireNonNull(max, "max");
-        selectedCandidates = new HashSet<>();
-        unhealthyCandidates = new NonBlockingHashSet<>();
+        selectedEndpoints = new HashSet<>();
+        unhealthyEndpoints = new NonBlockingHashSet<>();
         candidates = ImmutableSet.of();
     }
 
@@ -63,26 +64,17 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
     public void updateCandidates(List<Endpoint> candidates) {
         requireNonNull(candidates, "candidates");
 
-        synchronized (selectedCandidates) {
+        synchronized (selectedEndpoints) {
             this.candidates = ImmutableSet.copyOf(candidates);
-
-            final Set<Endpoint> removedCandidates = new HashSet<>();
-            for (Endpoint selectedCandidate : selectedCandidates) {
-                if (this.candidates.contains(selectedCandidate)) {
-                    continue;
-                }
-
-                removedCandidates.add(selectedCandidate);
-            }
-
-            removeAndSelectNewCandidates(removedCandidates);
+            final Set<Endpoint> removedEndpoints = Sets.difference(selectedEndpoints, this.candidates);
+            removeAndSelectNewEndpoints(removedEndpoints);
         }
     }
 
     @Override
     public List<Endpoint> getCandidates() {
-        synchronized (selectedCandidates) {
-            return ImmutableList.copyOf(selectedCandidates);
+        synchronized (selectedEndpoints) {
+            return ImmutableList.copyOf(selectedEndpoints);
         }
     }
 
@@ -93,55 +85,55 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
         requireNonNull(endpoint, "endpoint");
 
         if (!candidates.contains(endpoint)) {
-            unhealthyCandidates.remove(endpoint);
+            unhealthyEndpoints.remove(endpoint);
             return true;
         }
 
         if (health > unhealthyScore) {
-            unhealthyCandidates.remove(endpoint);
+            unhealthyEndpoints.remove(endpoint);
             return false;
         }
 
-        unhealthyCandidates.add(endpoint);
-        synchronized (selectedCandidates) {
-            return removeAndSelectNewCandidates(ImmutableSet.of(endpoint));
+        unhealthyEndpoints.add(endpoint);
+        synchronized (selectedEndpoints) {
+            return removeAndSelectNewEndpoints(ImmutableSet.of(endpoint));
         }
     }
 
     /**
-     This method must be called with synchronized selectedCandidates.
+     * This method must be called with synchronized selectedEndpoints.
      */
-    private boolean removeAndSelectNewCandidates(final Set<Endpoint> removedEndpoints) {
-        final Set<Endpoint> oldSelectedCandidates = ImmutableSet.copyOf(selectedCandidates);
-        final int targetSelectedCandidatesSize = max.calculate(candidates.size());
+    private boolean removeAndSelectNewEndpoints(Set<Endpoint> removedEndpoints) {
+        final Set<Endpoint> oldSelectedEndpoints = ImmutableSet.copyOf(selectedEndpoints);
+        final int targetSelectedEndpointsSize = max.calculate(candidates.size());
 
-        selectedCandidates.removeAll(removedEndpoints);
+        selectedEndpoints.removeAll(removedEndpoints);
 
-        int availableCandidateCount = calculateAvailableCandidateCount(targetSelectedCandidatesSize);
-        if (availableCandidateCount <= 0) {
+        int availableEndpointsCount = calculateAvailableEndpointsCount(targetSelectedEndpointsSize);
+        if (availableEndpointsCount <= 0) {
             return true;
         }
 
-        final int newSelectedCandidatesCount = addRandomlySelectedCandidates(selectedCandidates, candidates,
-                                                                             availableCandidateCount,
-                                                                             selectedCandidates,
-                                                                             unhealthyCandidates);
+        final int newSelectedEndpointsCount = addRandomlySelectedEndpoints(selectedEndpoints, candidates,
+                                                                           availableEndpointsCount,
+                                                                           selectedEndpoints,
+                                                                           unhealthyEndpoints);
 
-        availableCandidateCount -= newSelectedCandidatesCount;
-        if (availableCandidateCount <= 0) {
+        availableEndpointsCount -= newSelectedEndpointsCount;
+        if (availableEndpointsCount <= 0) {
             return true;
         }
 
-        addRandomlySelectedCandidates(selectedCandidates, unhealthyCandidates, availableCandidateCount,
-                                      selectedCandidates);
+        addRandomlySelectedEndpoints(selectedEndpoints, unhealthyEndpoints, availableEndpointsCount,
+                                     selectedEndpoints);
 
-        return !oldSelectedCandidates.equals(selectedCandidates);
+        return !oldSelectedEndpoints.equals(selectedEndpoints);
     }
 
     @SafeVarargs
-    private static int addRandomlySelectedCandidates(Set<Endpoint> selectedCandidates,
-                                                     Set<Endpoint> candidates, int count,
-                                                     Set<Endpoint>... exclusions) {
+    private static int addRandomlySelectedEndpoints(Set<Endpoint> selectedEndpoints,
+                                                    Set<Endpoint> candidates, int count,
+                                                    Set<Endpoint>... exclusions) {
         final List<Endpoint> availableCandidates = new ArrayList<>(candidates.size());
         loop:
         for (Endpoint candidate : candidates) {
@@ -154,48 +146,48 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
             availableCandidates.add(candidate);
         }
 
-        int newSelectedCandidateCount = 0;
+        int newSelectedEndpointsCount = 0;
         final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < count && !availableCandidates.isEmpty(); i++) {
-            newSelectedCandidateCount++;
-            selectedCandidates.add(availableCandidates.remove(random.nextInt(availableCandidates.size())));
+            newSelectedEndpointsCount++;
+            selectedEndpoints.add(availableCandidates.remove(random.nextInt(availableCandidates.size())));
         }
 
-        return newSelectedCandidateCount;
+        return newSelectedEndpointsCount;
     }
 
-    private int calculateAvailableCandidateCount(int targetSelectedCandidatesSize) {
-        return Math.min(candidates.size() - selectedCandidates.size(),
-                        targetSelectedCandidatesSize - selectedCandidates.size());
+    private int calculateAvailableEndpointsCount(int targetSelectedEndpointsSize) {
+        return Math.min(candidates.size() - selectedEndpoints.size(),
+                        targetSelectedEndpointsSize - selectedEndpoints.size());
     }
 
-    static final class TargetCount {
+    static final class EndpointLimitingFunction {
 
         private final int count;
         private final double ratio;
         private final boolean ratioMode;
 
-        private TargetCount(int count, double ratio, boolean ratioMode) {
+        private EndpointLimitingFunction(int count, double ratio, boolean ratioMode) {
             this.count = count;
             this.ratio = ratio;
             this.ratioMode = ratioMode;
         }
 
-        static TargetCount ofCount(int count) {
+        static EndpointLimitingFunction ofCount(int count) {
             checkArgument(count > 0, "count: %s (expected: 0 < count <= MAX_INT)", count);
-            return new TargetCount(count, 0, false);
+            return new EndpointLimitingFunction(count, 0, false);
         }
 
-        static TargetCount ofRatio(double ratio) {
+        static EndpointLimitingFunction ofRatio(double ratio) {
             checkArgument(0 < ratio && ratio <= 1, "ratio: %s (expected: 0 < ratio <= 1)",
                           ratio);
 
-            return new TargetCount(0, ratio, true);
+            return new EndpointLimitingFunction(0, ratio, true);
         }
 
-        int calculate(int candidates) {
+        int calculate(int numCandidates) {
             if (ratioMode) {
-                return Math.max(1, (int) (candidates * ratio));
+                return Math.max(1, (int) (numCandidates * ratio));
             } else {
                 return count;
             }

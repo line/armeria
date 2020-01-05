@@ -17,11 +17,10 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -34,7 +33,7 @@ final class AllHealthCheckStrategy implements HealthCheckStrategy {
     private Set<Endpoint> candidates;
 
     AllHealthCheckStrategy() {
-        candidates = new HashSet<>();
+        candidates = ImmutableSet.of();
     }
 
     @Override
@@ -45,7 +44,7 @@ final class AllHealthCheckStrategy implements HealthCheckStrategy {
 
     @Override
     public List<Endpoint> getCandidates() {
-        return new ArrayList<>(candidates);
+        return ImmutableList.copyOf(candidates);
     }
 
     @Override
