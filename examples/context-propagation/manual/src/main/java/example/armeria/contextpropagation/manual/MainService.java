@@ -93,15 +93,15 @@ public class MainService implements HttpService {
                                 .thenApplyAsync(
                                         (backendResponse) -> {
                                             // The context is mounted in a thread-local, meaning it is
-                                            //available to all logic such as tracing.
+                                            // available to all logic such as tracing.
                                             checkState(ServiceRequestContext.current() == ctx);
                                             return HttpResponse.of(backendResponse.stream()
                                                                    .map(AggregatedHttpResponse::contentUtf8)
                                                                    .collect(Collectors.joining("\n")));
                                         },
                                         // Unless you know what you're doing, always use then*Async type
-                                        //methods with the context executor to have the context mounted and
-                                        //stay on a single thread to reduce concurrency issues.
+                                        // methods with the context executor to have the context mounted and
+                                        // stay on a single thread to reduce concurrency issues.
                                         ctxExecutor);
 
         return HttpResponse.from(response);
