@@ -31,16 +31,13 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.Endpoint;
 
-public class PartialHealthCheckStrategyTest {
+class PartialHealthCheckStrategyTest {
+
     private static final double HEALTHY = 1;
     private static final double UNHEALTHY = 0;
 
     private static final double MAX_RATIO = 0.9;
     private static final int MAX_COUNT = 5;
-    private PartialHealthCheckStrategy maxRatioStrategy;
-    private PartialHealthCheckStrategy maxCountStrategy;
-    private List<Endpoint> candidatesForMaxRatio;
-    private List<Endpoint> candidatesForMaxCount;
 
     private static List<Endpoint> createCandidates(int size) {
         final Random random = new Random();
@@ -65,6 +62,11 @@ public class PartialHealthCheckStrategyTest {
 
         assertThat(candidates).hasSameSizeAs(ImmutableSet.copyOf(candidates));
     }
+
+    private PartialHealthCheckStrategy maxRatioStrategy;
+    private PartialHealthCheckStrategy maxCountStrategy;
+    private List<Endpoint> candidatesForMaxRatio;
+    private List<Endpoint> candidatesForMaxCount;
 
     @BeforeEach
     void beforeEach() {
