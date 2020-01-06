@@ -78,9 +78,8 @@ public interface ServiceRequestContext extends RequestContext {
         }
 
         throw new IllegalStateException(
-                "The current context is a " + ClientRequestContext.class.getSimpleName() +
-                " and does not have a root which means that the context is not invoked by a " +
-                "server request. ctx: " + ctx);
+                "The current context is not a server-side context and does not have a root " +
+                "which means that the context is not invoked by a server request. ctx: " + ctx);
     }
 
     /**
@@ -107,9 +106,8 @@ public interface ServiceRequestContext extends RequestContext {
         }
 
         throw new IllegalStateException(
-                "The current context is a " + ClientRequestContext.class.getSimpleName() +
-                " and does not have a root which means that the context is not invoked by a " +
-                "server request. ctx: " + ctx);
+                "The current context is not a server-side context and does not have a root " +
+                "which means that the context is not invoked by a server request. ctx: " + ctx);
     }
 
     /**
