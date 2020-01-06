@@ -29,11 +29,11 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.util.Timestamps;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.grpc.BinaryProxyGrpc.BinaryProxyImplBase;
 import com.linecorp.armeria.grpc.BinaryProxyGrpc.BinaryProxyStub;
 import com.linecorp.armeria.grpc.BinaryProxyOuterClass.BinaryPayload;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
@@ -103,10 +103,8 @@ public class LargePayloadBenchmark {
                                                 .build())
                        .build();
         server.start().join();
-        final ServerPort httpPort = server.activePorts().values().stream()
-                                          .filter(ServerPort::hasHttp).findAny()
-                                          .get();
-        final String url = "gproto+http://127.0.0.1:" + httpPort.localAddress().getPort() + '/';
+
+        final String url = "gproto+http://127.0.0.1:" + server.activeLocalPort(SessionProtocol.HTTP) + '/';
         binaryProxyClient = Clients.newClient(url, BinaryProxyStub.class);
     }
 

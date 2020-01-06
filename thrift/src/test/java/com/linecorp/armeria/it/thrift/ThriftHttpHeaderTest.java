@@ -29,7 +29,6 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -142,20 +141,22 @@ public class ThriftHttpHeaderTest {
 
     @Test
     public void httpResponseHeaderContainsFoo() throws TException {
-        final Iface client = new ClientBuilder(server.uri(BINARY, "/hello"))
-                .decorator((delegate, ctx, req) -> {
-                    final HttpResponse res = delegate.execute(ctx, req);
-                    return new FilteredHttpResponse(res) {
-                        @Override
-                        protected HttpObject filter(HttpObject obj) {
-                            if (obj instanceof HttpHeaders) {
-                                assertThat(((HttpHeaders) obj).get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
-                            }
-                            return obj;
-                        }
-                    };
-                })
-                .build(Iface.class);
+        final Iface client =
+                Clients.builder(server.uri(BINARY, "/hello"))
+                       .decorator((delegate, ctx, req) -> {
+                           final HttpResponse res = delegate.execute(ctx, req);
+                           return new FilteredHttpResponse(res) {
+                               @Override
+                               protected HttpObject filter(HttpObject obj) {
+                                   if (obj instanceof HttpHeaders) {
+                                       final HttpHeaders headers = (HttpHeaders) obj;
+                                       assertThat(headers.get("foo")).isEqualTo("bar");
+                                   }
+                                   return obj;
+                               }
+                           };
+                       })
+                       .build(Iface.class);
         try (SafeCloseable ignored = Clients.withHttpHeader(AUTHORIZATION, SECRET)) {
             assertThat(client.hello("trustin")).isEqualTo("Hello, trustin!");
         }

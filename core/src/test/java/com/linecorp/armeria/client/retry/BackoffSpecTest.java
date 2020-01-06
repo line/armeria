@@ -19,14 +19,14 @@ package com.linecorp.armeria.client.retry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.Flags;
 
-public class BackoffSpecTest {
+class BackoffSpecTest {
 
     @Test
-    public void defaultBackoffSpec() {
+    void defaultBackoffSpec() {
         final BackoffSpec backoffSpec = BackoffSpec.parse(Flags.defaultBackoffSpec());
         assertThat(backoffSpec.initialDelayMillis).isEqualTo(200);
         assertThat(backoffSpec.maxDelayMillis).isEqualTo(10000);
@@ -36,7 +36,7 @@ public class BackoffSpecTest {
     }
 
     @Test
-    public void backoffSpecWithString() {
+    void backoffSpecWithString() {
         final String specExp = "exponential=1000:60000:1.2,jitter=-0.4:0.3,maxAttempts=100";
         final BackoffSpec backoffSpecExp = BackoffSpec.parse(specExp);
         //set by the spec
@@ -47,7 +47,7 @@ public class BackoffSpecTest {
         assertThat(backoffSpecExp.maxJitterRate).isEqualTo(0.3);
         assertThat(backoffSpecExp.maxAttempts).isEqualTo(100);
 
-        assertThat(Backoff.of(specExp).as(ExponentialBackoff.class).isPresent()).isTrue();
+        assertThat(Backoff.of(specExp).as(ExponentialBackoff.class)).isNotNull();
 
         final String specFib = "fibonacci=1000:60000,jitter=-0.3:0.2,maxAttempts=100";
         final BackoffSpec backoffSpecFib = BackoffSpec.parse(specFib);
@@ -58,11 +58,11 @@ public class BackoffSpecTest {
         assertThat(backoffSpecFib.maxJitterRate).isEqualTo(0.2);
         assertThat(backoffSpecFib.maxAttempts).isEqualTo(100);
 
-        assertThat(Backoff.of(specFib).as(FibonacciBackoff.class).isPresent()).isTrue();
+        assertThat(Backoff.of(specFib).as(FibonacciBackoff.class)).isNotNull();
     }
 
     @Test
-    public void backoffSpecWithoutBaseOption() {
+    void backoffSpecWithoutBaseOption() {
         final String spec = "jitter=-0.4:0.2,maxAttempts=100";
         final BackoffSpec backoffSpec = BackoffSpec.parse(spec);
         // Set by default values
@@ -77,11 +77,11 @@ public class BackoffSpecTest {
 
         final Backoff backoff = backoffSpec.build();
         // default base backoff is ExponentialBackoff
-        assertThat(backoff.as(ExponentialBackoff.class).isPresent()).isTrue();
+        assertThat(backoff.as(ExponentialBackoff.class)).isNotNull();
     }
 
     @Test
-    public void backoffSpecWithOnlyBaseOption() {
+    void backoffSpecWithOnlyBaseOption() {
         final String spec1 = "random=0:1000";
         final BackoffSpec backoffSpec1 = BackoffSpec.parse(spec1);
         // Set by the spec
@@ -93,7 +93,7 @@ public class BackoffSpecTest {
         assertThat(backoffSpec1.minJitterRate).isEqualTo(-0.2);
         assertThat(backoffSpec1.maxJitterRate).isEqualTo(0.2);
 
-        assertThat(Backoff.of(spec1).as(RandomBackoff.class).isPresent()).isTrue();
+        assertThat(Backoff.of(spec1).as(RandomBackoff.class)).isNotNull();
 
         final String spec2 = "fixed=1000";
         final BackoffSpec backoffSpec2 = BackoffSpec.parse(spec2);
@@ -105,11 +105,11 @@ public class BackoffSpecTest {
         assertThat(backoffSpec2.minJitterRate).isEqualTo(-0.2);
         assertThat(backoffSpec2.maxJitterRate).isEqualTo(0.2);
 
-        assertThat(Backoff.of(spec2).as(FixedBackoff.class).isPresent()).isTrue();
+        assertThat(Backoff.of(spec2).as(FixedBackoff.class)).isNotNull();
     }
 
     @Test
-    public void backoffWithWrongArguments() {
+    void backoffWithWrongArguments() {
         // wrong negative value
         final String spec1 = "exponential=-1000:60000:2.0";
         assertThatThrownBy(() -> BackoffSpec.parse(spec1)).isInstanceOf(IllegalArgumentException.class);
@@ -132,7 +132,7 @@ public class BackoffSpecTest {
     }
 
     @Test
-    public void backOffSpecWithOneValue() {
+    void backOffSpecWithOneValue() {
         final String spec = "exponential=100:1000,jitter=-0.4:0.3,maxAttempts=100";
         final BackoffSpec backoffSpec = BackoffSpec.parse(spec);
         //set by the spec

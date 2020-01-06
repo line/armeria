@@ -259,9 +259,10 @@ class ThriftOverHttpClientTest {
             ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         withTimeout(() -> {
-            final HelloService.Iface client = Clients.newClient(clientFactory,
-                                                                uri(Handlers.HELLO, format, protocol),
-                                                                Handlers.HELLO.iface(), clientOptions);
+            final HelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
+                                                     .factory(clientFactory)
+                                                     .options(clientOptions)
+                                                     .build(Handlers.HELLO.iface());
             assertThat(client.hello("kukuman")).isEqualTo("Hello, kukuman!");
             assertThat(client.hello(null)).isEqualTo("Hello, null!");
 
@@ -278,9 +279,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final HelloService.AsyncIface client =
-                    Clients.newClient(clientFactory, uri(Handlers.HELLO, format, protocol),
-                                      Handlers.HELLO.asyncIface(),
-                                      clientOptions);
+                    Clients.builder(uri(Handlers.HELLO, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.HELLO.asyncIface());
 
             final int testCount = 10;
             final BlockingQueue<AbstractMap.SimpleEntry<Integer, ?>> resultQueue =
@@ -312,9 +314,10 @@ class ThriftOverHttpClientTest {
             ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         withTimeout(() -> {
-            final HelloService.Iface client = Clients.newClient(clientFactory,
-                                                                uri(Handlers.HELLO, format, protocol),
-                                                                Handlers.HELLO.iface(), clientOptions);
+            final HelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
+                                                     .factory(clientFactory)
+                                                     .options(clientOptions)
+                                                     .build(Handlers.HELLO.iface());
             try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
                 client.hello("kukuman");
                 final ClientRequestContext ctx = ctxCaptor.get();
@@ -333,9 +336,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final HelloService.AsyncIface client =
-                    Clients.newClient(clientFactory, uri(Handlers.HELLO, format, protocol),
-                                      Handlers.HELLO.asyncIface(),
-                                      clientOptions);
+                    Clients.builder(uri(Handlers.HELLO, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.HELLO.asyncIface());
 
             try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
                 client.hello("kukuman", new ThriftCompletableFuture<>());
@@ -355,8 +359,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final OnewayHelloService.Iface client =
-                    Clients.newClient(clientFactory, uri(Handlers.ONEWAYHELLO, format, protocol),
-                                      Handlers.ONEWAYHELLO.iface(), clientOptions);
+                    Clients.builder(uri(Handlers.ONEWAYHELLO, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.ONEWAYHELLO.iface());
             client.hello("kukuman");
             client.hello("kukuman2");
             assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
@@ -371,8 +377,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final OnewayHelloService.AsyncIface client =
-                    Clients.newClient(clientFactory, uri(Handlers.ONEWAYHELLO, format, protocol),
-                                      Handlers.ONEWAYHELLO.asyncIface(), clientOptions);
+                    Clients.builder(uri(Handlers.ONEWAYHELLO, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.ONEWAYHELLO.asyncIface());
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
             final String[] names = { "kukuman", "kukuman2" };
@@ -397,8 +405,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final OnewayHelloService.Iface client =
-                    Clients.newClient(clientFactory, uri(Handlers.EXCEPTION_ONEWAY, format, protocol),
-                                      Handlers.EXCEPTION_ONEWAY.iface(), clientOptions);
+                    Clients.builder(uri(Handlers.EXCEPTION_ONEWAY, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.EXCEPTION_ONEWAY.iface());
             client.hello("kukuman");
             client.hello("kukuman2");
             assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
@@ -413,8 +423,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final OnewayHelloService.AsyncIface client =
-                    Clients.newClient(clientFactory, uri(Handlers.EXCEPTION_ONEWAY, format, protocol),
-                                      Handlers.EXCEPTION_ONEWAY.asyncIface(), clientOptions);
+                    Clients.builder(uri(Handlers.EXCEPTION_ONEWAY, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.EXCEPTION_ONEWAY.asyncIface());
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
             final String[] names = { "kukuman", "kukuman2" };
@@ -439,9 +451,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final DevNullService.Iface client =
-                    Clients.newClient(clientFactory, uri(Handlers.DEVNULL, format, protocol),
-                                      Handlers.DEVNULL.iface(),
-                                      clientOptions);
+                    Clients.builder(uri(Handlers.DEVNULL, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.DEVNULL.iface());
             client.consume("kukuman");
             client.consume("kukuman2");
             assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
@@ -456,8 +469,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final DevNullService.AsyncIface client =
-                    Clients.newClient(clientFactory, uri(Handlers.DEVNULL, format, protocol),
-                                      Handlers.DEVNULL.asyncIface(), clientOptions);
+                    Clients.builder(uri(Handlers.DEVNULL, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.DEVNULL.asyncIface());
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
             final String[] names = { "kukuman", "kukuman2" };
@@ -481,10 +496,10 @@ class ThriftOverHttpClientTest {
             ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         withTimeout(() -> {
-            final BinaryService.Iface client = Clients.newClient(clientFactory,
-                                                                 uri(Handlers.BINARY, format, protocol),
-                                                                 Handlers.BINARY.iface(),
-                                                                 clientOptions);
+            final BinaryService.Iface client = Clients.builder(uri(Handlers.BINARY, format, protocol))
+                                                      .factory(clientFactory)
+                                                      .options(clientOptions)
+                                                      .build(Handlers.BINARY.iface());
 
             final ByteBuffer result = client.process(ByteBuffer.wrap(new byte[] { 1, 2 }));
             final List<Byte> out = new ArrayList<>();
@@ -502,9 +517,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final TimeService.Iface client =
-                    Clients.newClient(clientFactory, uri(Handlers.TIME, format, protocol),
-                                      Handlers.TIME.iface(),
-                                      clientOptions);
+                    Clients.builder(uri(Handlers.TIME, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.TIME.iface());
 
             final long serverTime = client.getServerTime();
             assertThat(serverTime).isLessThanOrEqualTo(System.currentTimeMillis());
@@ -518,9 +534,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final TimeService.AsyncIface client =
-                    Clients.newClient(clientFactory, uri(Handlers.TIME, format, protocol),
-                                      Handlers.TIME.asyncIface(),
-                                      clientOptions);
+                    Clients.builder(uri(Handlers.TIME, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.TIME.asyncIface());
 
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
             client.getServerTime(new RequestQueuingCallback(resQueue));
@@ -538,9 +555,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final FileService.Iface client =
-                    Clients.newClient(clientFactory, uri(Handlers.FILE, format, protocol),
-                                      Handlers.FILE.iface(),
-                                      clientOptions);
+                    Clients.builder(uri(Handlers.FILE, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.FILE.iface());
 
             assertThatThrownBy(() -> client.create("test")).isInstanceOf(FileServiceException.class);
         });
@@ -553,9 +571,10 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final FileService.AsyncIface client =
-                    Clients.newClient(clientFactory, uri(Handlers.FILE, format, protocol),
-                                      Handlers.FILE.asyncIface(),
-                                      clientOptions);
+                    Clients.builder(uri(Handlers.FILE, format, protocol))
+                           .factory(clientFactory)
+                           .options(clientOptions)
+                           .build(Handlers.FILE.asyncIface());
 
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
             client.create("test", new RequestQueuingCallback(resQueue));
@@ -575,9 +594,10 @@ class ThriftOverHttpClientTest {
             final String TOKEN_A = "token 1234";
             final String TOKEN_B = "token 5678";
 
-            final HeaderService.Iface client = Clients.newClient(clientFactory, uri(Handlers.HEADER, format,
-                                                                                    protocol),
-                                                                 Handlers.HEADER.iface(), clientOptions);
+            final HeaderService.Iface client = Clients.builder(uri(Handlers.HEADER, format, protocol))
+                                                      .factory(clientFactory)
+                                                      .options(clientOptions)
+                                                      .build(Handlers.HEADER.iface());
 
             assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
 
@@ -603,9 +623,10 @@ class ThriftOverHttpClientTest {
             ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         withTimeout(() -> {
-            final HelloService.Iface client = Clients.newClient(clientFactory,
-                                                                uri(Handlers.HELLO, format, protocol),
-                                                                Handlers.HELLO.iface(), clientOptions);
+            final HelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
+                                                     .factory(clientFactory)
+                                                     .options(clientOptions)
+                                                     .build(Handlers.HELLO.iface());
             recordMessageLogs = true;
             client.hello("trustin");
 
@@ -648,10 +669,10 @@ class ThriftOverHttpClientTest {
             ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         withTimeout(() -> {
-            final OnewayHelloService.Iface client = Clients.newClient(clientFactory, uri(Handlers.HELLO, format,
-                                                                                         protocol),
-                                                                      Handlers.ONEWAYHELLO.iface(),
-                                                                      clientOptions);
+            final OnewayHelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
+                                                           .factory(clientFactory)
+                                                           .options(clientOptions)
+                                                           .build(Handlers.ONEWAYHELLO.iface());
             recordMessageLogs = true;
             client.hello("trustin");
 
@@ -687,9 +708,10 @@ class ThriftOverHttpClientTest {
             ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         withTimeout(() -> {
-            final HelloService.Iface client = Clients.newClient(clientFactory, uri(Handlers.EXCEPTION, format,
-                                                                                   protocol),
-                                                                Handlers.EXCEPTION.iface(), clientOptions);
+            final HelloService.Iface client = Clients.builder(uri(Handlers.EXCEPTION, format, protocol))
+                                                     .factory(clientFactory)
+                                                     .options(clientOptions)
+                                                     .build(Handlers.EXCEPTION.iface());
             recordMessageLogs = true;
 
             assertThatThrownBy(() -> client.hello("trustin")).isInstanceOf(TApplicationException.class);
@@ -731,9 +753,10 @@ class ThriftOverHttpClientTest {
             ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         withTimeout(() -> {
-            final HelloService.Iface client = Clients.newClient(clientFactory,
-                                                                server.uri(protocol, format, "/500"),
-                                                                Handlers.HELLO.iface(), clientOptions);
+            final HelloService.Iface client = Clients.builder(server.uri(protocol, format, "/500"))
+                                                     .factory(clientFactory)
+                                                     .options(clientOptions)
+                                                     .build(Handlers.HELLO.iface());
             assertThatThrownBy(() -> client.hello(""))
                     .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                         assertThat(cause.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);

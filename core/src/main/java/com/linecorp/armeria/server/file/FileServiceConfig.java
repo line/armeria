@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
 import java.util.Map.Entry;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -38,13 +37,14 @@ public final class FileServiceConfig {
 
     private final HttpVfs vfs;
     private final Clock clock;
-    private final Optional<String> entryCacheSpec;
+    @Nullable
+    private final String entryCacheSpec;
     private final int maxCacheEntrySizeBytes;
     private final boolean serveCompressedFiles;
     private final boolean autoIndex;
     private final HttpHeaders headers;
 
-    FileServiceConfig(HttpVfs vfs, Clock clock, Optional<String> entryCacheSpec, int maxCacheEntrySizeBytes,
+    FileServiceConfig(HttpVfs vfs, Clock clock, @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
                       boolean serveCompressedFiles, boolean autoIndex, HttpHeaders headers) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
@@ -55,12 +55,13 @@ public final class FileServiceConfig {
         this.headers = requireNonNull(headers, "headers");
     }
 
-    static Optional<String> validateEntryCacheSpec(Optional<String> entryCacheSpec) {
-        if (!entryCacheSpec.isPresent() || "off".equals(entryCacheSpec.get())) {
-            return Optional.empty();
+    @Nullable
+    static String validateEntryCacheSpec(@Nullable String entryCacheSpec) {
+        if (entryCacheSpec == null || "off".equals(entryCacheSpec)) {
+            return null;
         }
         try {
-            CaffeineSpec.parse(entryCacheSpec.get());
+            CaffeineSpec.parse(entryCacheSpec);
         } catch (Exception e) {
             throw new IllegalArgumentException("invalid cache spec: " + entryCacheSpec, e);
         }
@@ -95,7 +96,8 @@ public final class FileServiceConfig {
     /**
      * Returns the cache spec of the file entry cache, as defined in {@link CaffeineSpec}.
      */
-    public Optional<String> entryCacheSpec() {
+    @Nullable
+    public String entryCacheSpec() {
         return entryCacheSpec;
     }
 
@@ -136,7 +138,7 @@ public final class FileServiceConfig {
     }
 
     static String toString(Object holder, HttpVfs vfs, Clock clock,
-                           Optional<String> entryCacheSpec, int maxCacheEntrySizeBytes,
+                           @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
                            boolean serveCompressedFiles, boolean autoIndex,
                            @Nullable Iterable<Entry<AsciiString, String>> headers) {
 

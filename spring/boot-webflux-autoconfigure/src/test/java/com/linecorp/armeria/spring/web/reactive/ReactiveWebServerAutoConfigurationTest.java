@@ -97,7 +97,7 @@ class ReactiveWebServerAutoConfigurationTest {
                 assertThat(ServiceRequestContext.current()).isNotNull();
                 assertThat(request.remoteAddress()).isNotEmpty();
                 return ServerResponse.ok().contentType(MediaType.TEXT_PLAIN)
-                                     .body(BodyInserters.fromObject("route"));
+                                     .body(BodyInserters.fromValue("route"));
             }
 
             Mono<ServerResponse> route2(ServerRequest request) {
@@ -106,7 +106,7 @@ class ReactiveWebServerAutoConfigurationTest {
                 return Mono.from(request.bodyToMono(Map.class))
                            .map(map -> assertThat(map.get("a")).isEqualTo(1))
                            .then(ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-                                               .body(BodyInserters.fromObject("[\"route\"]")));
+                                               .body(BodyInserters.fromValue("[\"route\"]")));
             }
         }
     }
@@ -124,7 +124,9 @@ class ReactiveWebServerAutoConfigurationTest {
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetHelloFromRestController(String scheme) throws Exception {
         withTimeout(() -> {
-            final WebClient client = WebClient.of(clientFactory, scheme + "://example.com:" + port);
+            final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
+                                              .factory(clientFactory)
+                                              .build();
             final AggregatedHttpResponse response = client.get("/hello").aggregate().join();
             assertThat(response.contentUtf8()).isEqualTo("hello");
         });
@@ -134,7 +136,9 @@ class ReactiveWebServerAutoConfigurationTest {
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetHelloFromRouter(String scheme) throws Exception {
         withTimeout(() -> {
-            final WebClient client = WebClient.of(clientFactory, scheme + "://example.com:" + port);
+            final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
+                                              .factory(clientFactory)
+                                              .build();
 
             final AggregatedHttpResponse res = client.get("/route").aggregate().join();
             assertThat(res.contentUtf8()).isEqualTo("route");
@@ -153,7 +157,9 @@ class ReactiveWebServerAutoConfigurationTest {
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetNotFound(String scheme) {
         withTimeout(() -> {
-            final WebClient client = WebClient.of(clientFactory, scheme + "://example.com:" + port);
+            final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
+                                              .factory(clientFactory)
+                                              .build();
             assertThat(client.get("/route2").aggregate().join().status()).isEqualTo(HttpStatus.NOT_FOUND);
 
             assertThat(client.execute(

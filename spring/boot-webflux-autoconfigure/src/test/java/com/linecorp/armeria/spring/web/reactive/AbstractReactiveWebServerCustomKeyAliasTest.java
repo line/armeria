@@ -65,7 +65,9 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
                                   .build()) {
 
             // Send a request to make the TrustManager record the certificate.
-            final WebClient client = WebClient.of(clientFactory, "h2://127.0.0.1:" + port);
+            final WebClient client = WebClient.builder("h2://127.0.0.1:" + port)
+                                              .factory(clientFactory)
+                                              .build();
             client.get("/").drainAll().join();
 
             assertThat(actualKeyName).hasValue(expectedKeyName);

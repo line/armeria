@@ -29,7 +29,7 @@ They enable you to write a decorating client with a single lambda expression:
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
 
-    ClientBuilder cb = new ClientBuilder(...);
+    ClientBuilder cb = Clients.builder(...);
     ...
     cb.decorator((delegate, ctx, req) -> {
         auditRequest(req);
@@ -62,7 +62,7 @@ If your decorator is expected to be reusable, it is recommended to define a new 
         }
     }
 
-    ClientBuilder cb = new ClientBuilder(...);
+    ClientBuilder cb = Clients.builder(...);
     ...
     // Using a lambda expression:
     cb.decorator(delegate -> new AuditClient(delegate));

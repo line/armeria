@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -33,24 +32,24 @@ class GrpcClientUnwrapTest {
 
     @Test
     void test() {
-        final TestServiceBlockingStub client = new ClientBuilder("gproto+http://127.0.0.1:1/")
-                .decorator(LoggingClient.newDecorator())
-                .decorator(RetryingClient.newDecorator(RetryStrategy.never()))
-                .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client =
+                Clients.builder("gproto+http://127.0.0.1:1/")
+                       .decorator(LoggingClient.newDecorator())
+                       .decorator(RetryingClient.newDecorator(RetryStrategy.never()))
+                       .build(TestServiceBlockingStub.class);
 
-        assertThat(Clients.unwrap(client, TestServiceBlockingStub.class)).containsSame(client);
+        assertThat(Clients.unwrap(client, TestServiceBlockingStub.class)).isSameAs(client);
 
-        assertThat(Clients.unwrap(client, RetryingClient.class))
-                .containsInstanceOf(RetryingClient.class);
-        assertThat(Clients.unwrap(client, LoggingClient.class)).containsInstanceOf(LoggingClient.class);
+        assertThat(Clients.unwrap(client, RetryingClient.class)).isInstanceOf(RetryingClient.class);
+        assertThat(Clients.unwrap(client, LoggingClient.class)).isInstanceOf(LoggingClient.class);
 
         // The outermost decorator of the client must be returned,
         // because the search begins from outside to inside.
         // In the current setup, the outermost `Unwrappable` and `Client` are
         // `ArmeriaChannel` and `RetryingClient` respectively.
-        assertThat(Clients.unwrap(client, Unwrappable.class)).containsInstanceOf(ArmeriaChannel.class);
-        assertThat(Clients.unwrap(client, Client.class)).containsInstanceOf(RetryingClient.class);
+        assertThat(Clients.unwrap(client, Unwrappable.class)).isInstanceOf(ArmeriaChannel.class);
+        assertThat(Clients.unwrap(client, Client.class)).isInstanceOf(RetryingClient.class);
 
-        assertThat(Clients.unwrap(client, DecodingClient.class)).isEmpty();
+        assertThat(Clients.unwrap(client, DecodingClient.class)).isNull();
     }
 }

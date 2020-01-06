@@ -41,7 +41,7 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
     /**
      * Adds a tag that signifies the service name to the generated {@link MeterIdPrefix}es.
      *
-     * @param serviceTagName the name of the tag to be added, e.g. {@code "serviceName"}
+     * @param serviceTagName the name of the tag to be added, e.g. {@code "service.name"}
      * @param defaultServiceName the default value of the tag, e.g. {@code "myService"}
      */
     public RetrofitMeterIdPrefixFunctionBuilder withServiceTag(String serviceTagName,

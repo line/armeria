@@ -21,9 +21,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.Optional;
+import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.Streams;
 
@@ -134,13 +136,29 @@ public abstract class AbstractOptions {
      *
      * @param <O> the type of the option
      * @param <V> the type of the value
+     *
+     * @throws NoSuchElementException if the specified {@code option} does not have a value.
      */
-    @SuppressWarnings("unchecked")
-    protected final <O extends AbstractOption<V>, V> Optional<V> get0(AbstractOption<V> option) {
-        @SuppressWarnings("rawtypes")
-        final AbstractOptionValue<O, V> optionValue =
-                (AbstractOptionValue<O, V>) valueMap.get(option);
-        return optionValue == null ? Optional.empty() : Optional.of(optionValue.value());
+    protected final <O extends AbstractOption<V>, V> V get0(AbstractOption<V> option) {
+        @SuppressWarnings("unchecked")
+        final AbstractOptionValue<O, V> optionValue = (AbstractOptionValue<O, V>) valueMap.get(option);
+        if (optionValue == null) {
+            throw new NoSuchElementException();
+        }
+        return optionValue.value();
+    }
+
+    /**
+     * Returns the value of the specified {@code option}.
+     *
+     * @param <O> the type of the option
+     * @param <V> the type of the value
+     */
+    @Nullable
+    protected final <O extends AbstractOption<V>, V> V getOrNull0(AbstractOption<V> option) {
+        @SuppressWarnings("unchecked")
+        final AbstractOptionValue<O, V> optionValue = (AbstractOptionValue<O, V>) valueMap.get(option);
+        return optionValue != null ? optionValue.value() : null;
     }
 
     /**
@@ -151,11 +169,12 @@ public abstract class AbstractOptions {
      * @return the value of the specified {@code option}. {@code defaultValue} if there's no such option.
      */
     protected final <O extends AbstractOption<V>, V> V getOrElse0(O option, V defaultValue) {
-        final Optional<V> opt = get0(option);
-        if (opt.isPresent()) {
-            return opt.get();
+        requireNonNull(defaultValue, "defaultValue");
+        final V value = getOrNull0(option);
+        if (value != null) {
+            return value;
         } else {
-            return requireNonNull(defaultValue, "defaultValue");
+            return defaultValue;
         }
     }
 

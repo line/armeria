@@ -29,27 +29,27 @@
  * limitations under the License.
  */
 
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.internal.grpc.protocol;
 
 /** gRPC status codes that we use. */
-final class StatusCodes {
+public final class StatusCodes {
     /**
      * The operation completed successfully.
      */
-    static final int OK = 0;
+    public static final int OK = 0;
 
     /**
      * Some resource has been exhausted, perhaps a per-user quota, or
      * perhaps the entire file system is out of space.
      */
-    static final int RESOURCE_EXHAUSTED = 8;
+    public static final int RESOURCE_EXHAUSTED = 8;
 
     /**
      * Internal errors. Means some invariants expected by underlying
      * system has been broken. If you see one of these errors,
      * something is very broken.
      */
-    static final int INTERNAL = 13;
+    public static final int INTERNAL = 13;
 
     private StatusCodes() {}
 }

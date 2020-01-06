@@ -258,7 +258,7 @@ when the time of whole retry session has passed the time previously configured u
 
     ClientBuilder.responseTimeoutMillis(millis);
     // or..
-    ClientRequestContext.setResponseTimeoutMillis(millis);
+    ClientRequestContext.setResponseTimeoutAfterMillis(millis);
 
 You cannot retry on this :api:`ResponseTimeoutException`.
 Second, it occurs when the time of individual attempt in retry has passed the time which is per-attempt timeout.

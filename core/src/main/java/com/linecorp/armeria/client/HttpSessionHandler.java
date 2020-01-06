@@ -52,6 +52,7 @@ import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWritte
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
@@ -63,6 +64,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      * 2^29 - We could have used 2^30 but this should be large enough.
      */
     private static final int MAX_NUM_REQUESTS_SENT = 536870912;
+
+    static final AttributeKey<Throwable> PENDING_EXCEPTION =
+            AttributeKey.valueOf(HttpSessionHandler.class, "PENDING_EXCEPTION");
 
     private final HttpChannelPool channelPool;
     private final Channel channel;
@@ -158,12 +162,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         final int numRequestsSent = ++this.numRequestsSent;
         final HttpResponseWrapper wrappedRes =
                 responseDecoder.addResponse(numRequestsSent, res, ctx,
-                                            responseTimeoutMillis, maxContentLength);
-        req.subscribe(
-                new HttpRequestSubscriber(channel, remoteAddress, requestEncoder,
-                                          numRequestsSent, req, wrappedRes, ctx,
-                                          writeTimeoutMillis),
-                channel.eventLoop(), WITH_POOLED_OBJECTS);
+                                            channel.eventLoop(), responseTimeoutMillis, maxContentLength);
+        if (ctx instanceof DefaultClientRequestContext) {
+            ((DefaultClientRequestContext) ctx).setResponseTimeoutController(wrappedRes);
+        }
+
+        final HttpRequestSubscriber reqSubscriber =
+                new HttpRequestSubscriber(channel, remoteAddress, requestEncoder, numRequestsSent,
+                                          req, wrappedRes, ctx, writeTimeoutMillis);
+        req.subscribe(reqSubscriber, channel.eventLoop(), WITH_POOLED_OBJECTS);
 
         if (numRequestsSent >= MAX_NUM_REQUESTS_SENT) {
             responseDecoder.disconnectWhenFinished();
@@ -311,12 +318,17 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             channelPool.connect(channel.remoteAddress(), H1C, sessionPromise);
         } else {
             // Fail all pending responses.
-            failUnfinishedResponses(ClosedSessionException.get());
-
+            final Throwable throwable;
+            if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
+                throwable = ctx.channel().attr(PENDING_EXCEPTION).get();
+            } else {
+                throwable = ClosedSessionException.get();
+            }
+            failUnfinishedResponses(throwable);
             // Cancel the timeout and reject the sessionPromise just in case the connection has been closed
             // even before the session protocol negotiation is done.
             sessionTimeoutFuture.cancel(false);
-            sessionPromise.tryFailure(ClosedSessionException.get());
+            sessionPromise.tryFailure(throwable);
         }
     }
 

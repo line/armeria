@@ -20,8 +20,6 @@ import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Optional;
-
 import javax.annotation.Nullable;
 
 import org.junit.After;
@@ -100,10 +98,6 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     @Override
     protected String url(String path) {
         assertThat(server).isNotNull();
-        final int port = server.activePorts().values().stream()
-                               .filter(p1 -> p1.hasProtocol(SessionProtocol.HTTP)).findAny()
-                               .flatMap(p -> Optional.of(p.localAddress().getPort()))
-                               .orElseThrow(() -> new IllegalStateException("Port not open"));
-        return "http://127.0.0.1:" + port + path;
+        return "http://127.0.0.1:" + server.activeLocalPort(SessionProtocol.HTTP) + path;
     }
 }

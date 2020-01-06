@@ -35,31 +35,31 @@ class HttpClientUnwrapTest {
                          .decorator(RetryingClient.newDecorator(RetryStrategy.never()))
                          .build();
 
-        assertThat(client.as(WebClient.class)).containsSame(client);
+        assertThat(client.as(WebClient.class)).isSameAs(client);
 
-        assertThat(client.as(RetryingClient.class)).containsInstanceOf(RetryingClient.class);
-        assertThat(client.as(LoggingClient.class)).containsInstanceOf(LoggingClient.class);
+        assertThat(client.as(RetryingClient.class)).isInstanceOf(RetryingClient.class);
+        assertThat(client.as(LoggingClient.class)).isInstanceOf(LoggingClient.class);
 
         // The outermost decorator of the client must be returned,
         // because the search begins from outside to inside.
         // In the current setup, the outermost `Unwrappable` and `Client` are
         // `client` and `RetryingClient` respectively.
-        assertThat(client.as(Unwrappable.class)).containsSame(client);
-        assertThat(client.as(Client.class)).containsInstanceOf(RetryingClient.class);
+        assertThat(client.as(Unwrappable.class)).isSameAs(client);
+        assertThat(client.as(Client.class)).isInstanceOf(RetryingClient.class);
 
-        assertThat(client.as(String.class)).isEmpty();
+        assertThat(client.as(String.class)).isNull();
 
         final ClientFactory factory = client.factory();
 
-        assertThat(factory.unwrap(client, WebClient.class)).containsSame(client);
+        assertThat(factory.unwrap(client, WebClient.class)).isSameAs(client);
 
         assertThat(factory.unwrap(client, RetryingClient.class))
-                .containsInstanceOf(RetryingClient.class);
-        assertThat(factory.unwrap(client, LoggingClient.class)).containsInstanceOf(LoggingClient.class);
+                .isInstanceOf(RetryingClient.class);
+        assertThat(factory.unwrap(client, LoggingClient.class)).isInstanceOf(LoggingClient.class);
 
-        assertThat(factory.unwrap(client, Unwrappable.class)).containsSame(client);
-        assertThat(factory.unwrap(client, Client.class)).containsInstanceOf(RetryingClient.class);
+        assertThat(factory.unwrap(client, Unwrappable.class)).isSameAs(client);
+        assertThat(factory.unwrap(client, Client.class)).isInstanceOf(RetryingClient.class);
 
-        assertThat(factory.unwrap(client, DecodingClient.class)).isEmpty();
+        assertThat(factory.unwrap(client, DecodingClient.class)).isNull();
     }
 }

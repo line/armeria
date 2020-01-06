@@ -17,7 +17,6 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
@@ -48,16 +47,15 @@ class ClientFactoryBuilderTest {
         final ClientFactoryBuilder builder1 = ClientFactory.builder();
         builder1.maxNumEventLoopsPerEndpoint(2);
 
-        assertThrows(IllegalStateException.class,
-                     () -> builder1.eventLoopSchedulerFactory(
-                             eventLoopGroup -> mock(EventLoopScheduler.class)));
+        assertThatThrownBy(() -> builder1.eventLoopSchedulerFactory(
+                eventLoopGroup -> mock(EventLoopScheduler.class))).isInstanceOf(IllegalStateException.class);
 
         final ClientFactoryBuilder builder2 = ClientFactory.builder();
         builder2.eventLoopSchedulerFactory(eventLoopGroup -> mock(EventLoopScheduler.class));
 
-        final IllegalStateException cause = assertThrows(IllegalStateException.class,
-                                                         () -> builder2.maxNumEventLoopsPerEndpoint(2));
-        assertThat(cause).hasMessageContaining("mutually exclusive");
+        assertThatThrownBy(() -> builder2.maxNumEventLoopsPerEndpoint(2))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("mutually exclusive");
     }
 
     @SuppressWarnings("unchecked")

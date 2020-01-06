@@ -45,7 +45,7 @@ You may want to consider the following options before putting your Armeria appli
       sb.requestTimeout(Duration.ofSeconds(7)); // (default: 10 seconds)
 
       // Client-side
-      ClientBuilder cb = new ClientBuilder(...); // or WebClientBuilder
+      ClientBuilder cb = Clients.builder(...); // or WebClient.builder(...)
       cb.maxResponseLength(1048576); // bytes (default: 10 MiB)
       cb.responseTimeout(Duration.ofSeconds(10)); // (default: 15 seconds)
 
@@ -93,5 +93,5 @@ You may want to consider the following options before putting your Armeria appli
       cfb.channelOption(ChannelOption.SO_SNDBUF, ...);
       cfb.channelOption(ChannelOption.SO_RCVBUF, ...);
       ClientFactory cf = cfb.build();
-      ClientBuilder cb = new ClientBuilder(...);
+      ClientBuilder cb = Clients.builder(...);
       cb.factory(cf);

@@ -61,9 +61,9 @@ public class ServiceTest {
     private static void assertDecoration(FooService inner, HttpService outer) throws Exception {
 
         // Test if Service.as() works as expected.
-        assertThat(outer.as(serviceType(inner))).containsSame(inner);
-        assertThat(outer.as(serviceType(outer))).containsSame(outer);
-        assertThat(outer.as(String.class)).isNotPresent();
+        assertThat(outer.as(serviceType(inner))).isSameAs(inner);
+        assertThat(outer.as(serviceType(outer))).isSameAs(outer);
+        assertThat(outer.as(String.class)).isNull();
 
         // Test if FooService.serviceAdded() is invoked.
         final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, 1, 1, true,

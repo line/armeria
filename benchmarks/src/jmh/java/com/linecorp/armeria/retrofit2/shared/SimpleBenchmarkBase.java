@@ -23,8 +23,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerPort;
 
 /**
  * The {@link SimpleBenchmarkBase} contains the shared logic for benchmarking retrofit2.
@@ -54,10 +54,7 @@ public abstract class SimpleBenchmarkBase {
     protected abstract SimpleBenchmarkClient newClient() throws Exception;
 
     protected String baseUrl() {
-        final ServerPort httpPort = server.activePorts().values().stream()
-                                          .filter(ServerPort::hasHttps).findAny()
-                                          .get();
-        return "https://127.0.0.1:" + httpPort.localAddress().getPort();
+        return "https://127.0.0.1:" + server.activeLocalPort(SessionProtocol.HTTP);
     }
 
     @Benchmark

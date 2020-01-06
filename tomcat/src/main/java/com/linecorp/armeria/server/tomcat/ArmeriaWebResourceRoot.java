@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.tomcat;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 
 import org.apache.catalina.Context;
 import org.apache.catalina.WebResourceSet;
@@ -50,9 +49,8 @@ final class ArmeriaWebResourceRoot extends StandardRoot {
             return new DirResourceSet(this, "/", docBaseStr, "/");
         }
 
-        final Optional<String> jarRootOpt = config.jarRoot();
-        if (jarRootOpt.isPresent()) { // If docBase is a JAR file
-            final String jarRoot = jarRootOpt.get();
+        final String jarRoot = config.jarRoot();
+        if (jarRoot != null) { // If docBase is a JAR file
             if ("/".equals(jarRoot)) {
                 return new JarResourceSet(this, "/", docBaseStr, "/");
             } else {

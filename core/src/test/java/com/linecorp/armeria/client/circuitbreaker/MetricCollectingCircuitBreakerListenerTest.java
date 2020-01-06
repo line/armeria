@@ -18,17 +18,17 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
-public class MetricCollectingCircuitBreakerListenerTest {
+class MetricCollectingCircuitBreakerListenerTest {
 
     @Test
-    public void test() throws Exception {
+    void test() throws Exception {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final CircuitBreakerListener l = new MetricCollectingCircuitBreakerListener(registry, "foo");
 
@@ -44,7 +44,7 @@ public class MetricCollectingCircuitBreakerListenerTest {
                 .containsEntry("foo.transitions#count{name=bar,state=CLOSED}", 0.0)
                 .containsEntry("foo.transitions#count{name=bar,state=OPEN}", 0.0)
                 .containsEntry("foo.transitions#count{name=bar,state=HALF_OPEN}", 0.0)
-                .containsEntry("foo.rejectedRequests#count{name=bar}", 0.0);
+                .containsEntry("foo.rejected.requests#count{name=bar}", 0.0);
 
         // Transit to CLOSED.
         l.onStateChanged(cb.name(), CircuitState.CLOSED);
@@ -64,6 +64,6 @@ public class MetricCollectingCircuitBreakerListenerTest {
         // Reject a request.
         l.onRequestRejected(cb.name());
         assertThat(MoreMeters.measureAll(registry))
-                .containsEntry("foo.rejectedRequests#count{name=bar}", 1.0);
+                .containsEntry("foo.rejected.requests#count{name=bar}", 1.0);
     }
 }

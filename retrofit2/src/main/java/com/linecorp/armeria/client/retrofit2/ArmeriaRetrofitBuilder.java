@@ -116,7 +116,7 @@ public final class ArmeriaRetrofitBuilder {
      */
     public ArmeriaRetrofitBuilder baseUrl(URI baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
-        checkArgument(SessionProtocol.find(baseUrl.getScheme()).isPresent(),
+        checkArgument(SessionProtocol.find(baseUrl.getScheme()) != null,
                       "baseUrl must have an HTTP scheme: %s", baseUrl);
         final String path = baseUrl.getPath();
         if (!path.isEmpty() && !SLASH.equals(path.substring(path.length() - 1))) {
@@ -234,8 +234,11 @@ public final class ArmeriaRetrofitBuilder {
         checkState(baseUrl != null, "baseUrl not set");
         final URI uri = URI.create(baseUrl);
         final String fullUri = SessionProtocol.of(uri.getScheme()) + "://" + uri.getAuthority();
-        final WebClient baseHttpClient = WebClient.of(
-                clientFactory, fullUri, configurator.apply(fullUri, ClientOptions.builder()).build());
+        final WebClient baseHttpClient = WebClient.builder(fullUri)
+                                                  .factory(clientFactory)
+                                                  .options(configurator.apply(fullUri, ClientOptions.builder())
+                                                                       .build())
+                                                  .build();
         return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, uri.getPath(), GROUP_PREFIX))
                               .callFactory(new ArmeriaCallFactory(
                                       baseHttpClient, clientFactory, configurator,
@@ -247,9 +250,9 @@ public final class ArmeriaRetrofitBuilder {
     private static HttpUrl convertToOkHttpUrl(WebClient baseHttpClient, String basePath,
                                               String groupPrefix) {
         final URI uri = baseHttpClient.uri();
-        final SessionProtocol sessionProtocol = Scheme.tryParse(uri.getScheme())
-                                                      .map(Scheme::sessionProtocol)
-                                                      .orElseGet(() -> SessionProtocol.of(uri.getScheme()));
+        final Scheme scheme = Scheme.tryParse(uri.getScheme());
+        final SessionProtocol sessionProtocol = scheme != null ? scheme.sessionProtocol()
+                                                               : SessionProtocol.of(uri.getScheme());
         final String authority = uri.getAuthority();
         final String protocol = sessionProtocol.isTls() ? "https" : "http";
         final HttpUrl parsed;

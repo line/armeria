@@ -118,7 +118,9 @@ public class HttpClientMaxConcurrentStreamTest {
 
     @Test
     public void shouldCreateConnectionWhenExceedsMaxConcurrentStreams() throws Exception {
-        final WebClient client = WebClient.of(clientFactory, server.uri(SessionProtocol.H2C, "/"));
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+                                          .factory(clientFactory)
+                                          .build();
         final AtomicInteger opens = new AtomicInteger();
         final AtomicInteger closes = new AtomicInteger();
         connectionPoolListener = new ConnectionPoolListener() {

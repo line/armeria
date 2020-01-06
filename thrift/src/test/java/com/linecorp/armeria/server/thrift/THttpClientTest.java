@@ -56,7 +56,7 @@ class THttpClientTest {
         assertThat(serviceConfig).isNotNull();
         assertThat(serviceConfig.service()).isInstanceOf(THttpService.class);
 
-        final ThriftCallService thriftCallService = tHttpService.as(ThriftCallService.class).get();
+        final ThriftCallService thriftCallService = tHttpService.as(ThriftCallService.class);
         assertThat(thriftCallService).isNotNull();
     }
 }

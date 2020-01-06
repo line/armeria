@@ -19,10 +19,8 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -56,14 +54,13 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
@@ -79,7 +76,7 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService.Processor;
  * Test to verify interaction between armeria client and official thrift
  * library's {@link TServlet}.
  */
-public class ThriftOverHttpClientTServletIntegrationTest {
+class ThriftOverHttpClientTServletIntegrationTest {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ThriftOverHttpClientTServletIntegrationTest.class);
@@ -107,8 +104,8 @@ public class ThriftOverHttpClientTServletIntegrationTest {
     private static Server http1server;
     private static Server http2server;
 
-    @BeforeClass
-    public static void createServer() throws Exception {
+    @BeforeAll
+    static void createServer() throws Exception {
         http1server = startHttp1();
         http2server = startHttp2();
     }
@@ -172,8 +169,8 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         return server;
     }
 
-    @AfterClass
-    public static void destroyServer() throws Exception {
+    @AfterAll
+    static void destroyServer() throws Exception {
         CompletableFuture.runAsync(() -> {
             if (http1server != null) {
                 try {
@@ -192,20 +189,20 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         });
     }
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         SessionProtocolNegotiationCache.clear();
         sendConnectionClose.set(false);
     }
 
     @Test
-    public void sendHelloViaHttp1() throws Exception {
+    void sendHelloViaHttp1() throws Exception {
         final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
         final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), sessionProtocol);
 
         for (int i = 0; i <= MAX_RETRIES; i++) {
             try {
-                assertEquals("Hello, old world!", client.hello("old world"));
+                assertThat(client.hello("old world")).isEqualTo("Hello, old world!");
                 assertThat(sessionProtocol.get()).isEqualTo(H1C);
                 if (i != 0) {
                     logger.warn("Succeeded after {} retries.", i);
@@ -226,7 +223,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
      * attempt silently with explicit H1C.
      */
     @Test
-    public void sendHelloViaHttp1WithConnectionClose() throws Exception {
+    void sendHelloViaHttp1WithConnectionClose() throws Exception {
         sendConnectionClose.set(true);
 
         final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
@@ -234,7 +231,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
         for (int i = 0; i <= MAX_RETRIES; i++) {
             try {
-                assertEquals("Hello, ancient world!", client.hello("ancient world"));
+                assertThat(client.hello("ancient world")).isEqualTo("Hello, ancient world!");
                 assertThat(sessionProtocol.get()).isEqualTo(H1C);
                 if (i != 0) {
                     logger.warn("Succeeded after {} retries.", i);
@@ -251,11 +248,11 @@ public class ThriftOverHttpClientTServletIntegrationTest {
     }
 
     @Test
-    public void sendHelloViaHttp2() throws Exception {
+    void sendHelloViaHttp2() throws Exception {
         final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
         final HelloService.Iface client = newSchemeCapturingClient(http2uri(HTTP), sessionProtocol);
 
-        assertEquals("Hello, new world!", client.hello("new world"));
+        assertThat(client.hello("new world")).isEqualTo("Hello, new world!");
         assertThat(sessionProtocol.get()).isEqualTo(H2C);
     }
 
@@ -264,54 +261,50 @@ public class ThriftOverHttpClientTServletIntegrationTest {
      * client failed to upgrade.
      */
     @Test
-    public void testRejectedUpgrade() throws Exception {
+    void testRejectedUpgrade() throws Exception {
         final InetSocketAddress remoteAddress = new InetSocketAddress("127.0.0.1", http1Port());
 
-        assertFalse(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C));
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C)).isFalse();
 
         final HelloService.Iface client =
                 Clients.newClient(http1uri(H2C), HelloService.Iface.class);
 
-        try {
-            client.hello("unused");
-            fail();
-        } catch (UnprocessedRequestException e) {
-            assertThat(e).hasCauseInstanceOf(SessionProtocolNegotiationException.class);
-            final SessionProtocolNegotiationException cause =
-                    (SessionProtocolNegotiationException) e.getCause();
+        assertThatThrownBy(() -> client.hello("unused"))
+                .isInstanceOfSatisfying(UnprocessedRequestException.class, e -> {
+                    assertThat(e).hasCauseInstanceOf(SessionProtocolNegotiationException.class);
+                    final SessionProtocolNegotiationException cause =
+                            (SessionProtocolNegotiationException) e.getCause();
 
-            // Test if a failed upgrade attempt triggers an exception with
-            // both 'expected' and 'actual' protocols.
-            assertThat(cause.expected()).isEqualTo(H2C);
-            assertThat(cause.actual()).contains(H1C);
-            // .. and if the negotiation cache is updated.
-            assertTrue(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C));
-        }
+                    // Test if a failed upgrade attempt triggers an exception with
+                    // both 'expected' and 'actual' protocols.
+                    assertThat(cause.expected()).isEqualTo(H2C);
+                    assertThat(cause.actual()).isEqualTo(H1C);
+                    // .. and if the negotiation cache is updated.
+                    assertThat(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C)).isTrue();
+                });
 
-        try {
-            client.hello("unused");
-            fail();
-        } catch (UnprocessedRequestException e) {
-            assertThat(e).hasCauseInstanceOf(SessionProtocolNegotiationException.class);
-            final SessionProtocolNegotiationException cause =
-                    (SessionProtocolNegotiationException) e.getCause();
-            // Test if no upgrade attempt is made thanks to the cache.
-            assertThat(cause.expected()).isEqualTo(H2C);
-            // It has no idea about the actual protocol, because it did not create any connection.
-            assertThat(cause.actual().isPresent()).isFalse();
-        }
+        assertThatThrownBy(() -> client.hello("unused"))
+                .isInstanceOfSatisfying(UnprocessedRequestException.class, e -> {
+                    assertThat(e).hasCauseInstanceOf(SessionProtocolNegotiationException.class);
+                    final SessionProtocolNegotiationException cause =
+                            (SessionProtocolNegotiationException) e.getCause();
+                    // Test if no upgrade attempt is made thanks to the cache.
+                    assertThat(cause.expected()).isEqualTo(H2C);
+                    // It has no idea about the actual protocol, because it did not create any connection.
+                    assertThat(cause.actual()).isNull();
+                });
     }
 
     private static HelloService.Iface newSchemeCapturingClient(
             String uri, AtomicReference<SessionProtocol> sessionProtocol) {
 
-        return new ClientBuilder(uri)
-                .rpcDecorator((delegate, ctx, req) -> {
-                    ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
-                                          RequestLogAvailability.REQUEST_START);
-                    return delegate.execute(ctx, req);
-                })
-                .build(HelloService.Iface.class);
+        return Clients.builder(uri)
+                      .rpcDecorator((delegate, ctx, req) -> {
+                          ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
+                                                RequestLogAvailability.REQUEST_START);
+                          return delegate.execute(ctx, req);
+                      })
+                      .build(HelloService.Iface.class);
     }
 
     private static String http1uri(SessionProtocol protocol) {

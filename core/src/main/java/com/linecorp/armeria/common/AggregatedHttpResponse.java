@@ -70,7 +70,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(status, mediaType,
-                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
+                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -84,7 +84,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(status, mediaType,
-                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
+                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -104,7 +104,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
         return of(status,
                   mediaType,
                   String.format(Locale.ENGLISH, format, args).getBytes(
-                          mediaType.charset().orElse(StandardCharsets.UTF_8)));
+                          mediaType.charset(StandardCharsets.UTF_8)));
     }
 
     /**
@@ -162,7 +162,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      */
     static AggregatedHttpResponse of(ResponseHeaders headers) {
         requireNonNull(headers, "headers");
-        return of(headers, HttpData.EMPTY_DATA, HttpHeaders.of());
+        return of(headers, HttpData.empty(), HttpHeaders.of());
     }
 
     /**

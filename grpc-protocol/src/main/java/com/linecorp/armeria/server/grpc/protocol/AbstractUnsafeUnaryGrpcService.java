@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.server.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -25,8 +25,14 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcTrailersUtil;
+import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -89,7 +95,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
         return HttpResponse.from(responseFuture);
     }
 
-    private CompletableFuture<ByteBuf> deframeMessage(HttpData framed, ByteBufAllocator alloc) {
+    private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed, ByteBufAllocator alloc) {
         final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
         try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 new Listener() {

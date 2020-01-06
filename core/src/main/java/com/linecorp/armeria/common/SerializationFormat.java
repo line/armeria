@@ -22,7 +22,6 @@ import static com.linecorp.armeria.common.MediaType.create;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 
@@ -217,46 +216,29 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     /**
      * Finds the {@link SerializationFormat} with the specified {@link #uriText()}.
      */
-    public static Optional<SerializationFormat> find(String uriText) {
+    @Nullable
+    public static SerializationFormat find(String uriText) {
         uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
-        return Optional.ofNullable(uriTextToFormats.get(uriText));
+        return uriTextToFormats.get(uriText);
     }
 
     /**
      * Finds the {@link SerializationFormat} which is accepted by any of the specified media ranges.
      */
-    public static Optional<SerializationFormat> find(MediaType... ranges) {
+    @Nullable
+    public static SerializationFormat find(MediaType... ranges) {
         requireNonNull(ranges, "ranges");
         if (ranges.length == 0) {
-            return Optional.empty();
+            return null;
         }
 
         for (SerializationFormat f : values()) {
             if (f.isAccepted(Arrays.asList(ranges))) {
-                return Optional.of(f);
+                return f;
             }
         }
 
-        return Optional.empty();
-    }
-
-    /**
-     * Finds the {@link SerializationFormat} which is accepted by the specified media range.
-     *
-     * @deprecated Use {@link #find(MediaType...)}.
-     */
-    @Deprecated
-    public static Optional<SerializationFormat> fromMediaType(@Nullable String mediaType) {
-        if (mediaType == null) {
-            return Optional.empty();
-        }
-
-        try {
-            return find(MediaType.parse(mediaType));
-        } catch (IllegalArgumentException e) {
-            // Malformed media type
-            return Optional.empty();
-        }
+        return null;
     }
 
     private final String uriText;
@@ -296,7 +278,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      */
     public boolean isAccepted(MediaType range) {
         requireNonNull(range, "range");
-        return mediaTypes.match(range).isPresent();
+        return mediaTypes.match(range) != null;
     }
 
     /**
@@ -315,7 +297,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      */
     public boolean isAccepted(Iterable<MediaType> ranges) {
         requireNonNull(ranges, "ranges");
-        return mediaTypes.match(ranges).isPresent();
+        return mediaTypes.match(ranges) != null;
     }
 
     @Override

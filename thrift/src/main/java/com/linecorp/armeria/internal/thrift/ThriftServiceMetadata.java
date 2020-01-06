@@ -221,7 +221,7 @@ public final class ThriftServiceMetadata {
     /**
      * Returns the {@link ThriftFunction} that provides the metadata of the specified Thrift function.
      *
-     * @return the {@link ThriftFunction}. {@code null} if there's no such function.
+     * @return the {@link ThriftFunction}, or {@code null} if there's no such function.
      */
     @Nullable
     public ThriftFunction function(String method) {

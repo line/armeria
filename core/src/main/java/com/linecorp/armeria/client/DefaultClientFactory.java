@@ -23,7 +23,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -158,20 +157,20 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> Optional<T> unwrap(Object client, Class<T> type) {
-        final Optional<T> params = super.unwrap(client, type);
-        if (params.isPresent()) {
+    public <T> T unwrap(Object client, Class<T> type) {
+        final T params = super.unwrap(client, type);
+        if (params != null) {
             return params;
         }
 
         for (ClientFactory factory : clientFactories.values()) {
-            final Optional<T> p = factory.unwrap(client, type);
-            if (p.isPresent()) {
+            final T p = factory.unwrap(client, type);
+            if (p != null) {
                 return p;
             }
         }
 
-        return Optional.empty();
+        return null;
     }
 
     @Override
@@ -195,7 +194,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
         return httpClientFactory.addressResolverGroup();
     }
 
-    private URI normalizeUri(URI uri, Scheme scheme) {
+    private static URI normalizeUri(URI uri, Scheme scheme) {
         if (isUndefinedUri(uri)) {
             // We use a special singleton marker URI for clients that do not explicitly define a
             // host or scheme at construction time.

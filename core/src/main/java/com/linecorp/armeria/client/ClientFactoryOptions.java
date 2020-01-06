@@ -21,9 +21,12 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -46,7 +49,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 /**
  * A set of {@link ClientFactoryOption}s and their respective values.
  */
-@SuppressWarnings("OptionalGetWithoutIsPresent")
 public final class ClientFactoryOptions extends AbstractOptions {
     private static final EventLoopGroup DEFAULT_WORKER_GROUP = CommonPools.workerGroup();
 
@@ -221,6 +223,38 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     /**
+     * Returns the value of the specified {@link ClientFactoryOption}.
+     *
+     * @return the value of the specified {@link ClientFactoryOption}
+     *
+     * @throws NoSuchElementException if no value is set for the specified {@link ClientFactoryOption}.
+     */
+    public <T> T get(ClientFactoryOption<T> option) {
+        return get0(option);
+    }
+
+    /**
+     * Returns the value of the specified {@link ClientFactoryOption}.
+     *
+     * @return the value of the {@link ClientFactoryOption}, or
+     *         {@code null} if the specified {@link ClientFactoryOption} is not set.
+     */
+    @Nullable
+    public <T> T getOrNull(ClientFactoryOption<T> option) {
+        return getOrNull0(option);
+    }
+
+    /**
+     * Returns the value of the specified {@link ClientFactoryOption}.
+     *
+     * @return the value of the {@link ClientFactoryOption}, or
+     *         {@code defaultValue} if the specified {@link ClientFactoryOption} is not set.
+     */
+    public <T> T getOrElse(ClientFactoryOption<T> option, T defaultValue) {
+        return getOrElse0(option, defaultValue);
+    }
+
+    /**
      * Converts this {@link ClientFactoryOptions} to a {@link Map}.
      */
     public Map<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>> asMap() {
@@ -231,7 +265,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * Returns the worker {@link EventLoopGroup}.
      */
     public EventLoopGroup workerGroup() {
-        return get0(ClientFactoryOption.WORKER_GROUP).get();
+        return get0(ClientFactoryOption.WORKER_GROUP);
     }
 
     /**
@@ -239,7 +273,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * when the {@link ClientFactory} is closed.
      */
     public boolean shutdownWorkerGroupOnClose() {
-        return get0(ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE).get();
+        return get0(ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE);
     }
 
     /**
@@ -247,14 +281,14 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * {@link EventLoop} to handle a connection to the specified {@link Endpoint}.
      */
     public Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory() {
-        return get0(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY).get();
+        return get0(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY);
     }
 
     /**
      * Returns the {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
      */
     public Map<ChannelOption<?>, Object> channelOptions() {
-        return get0(ClientFactoryOption.CHANNEL_OPTIONS).get();
+        return get0(ClientFactoryOption.CHANNEL_OPTIONS);
     }
 
     /**
@@ -273,7 +307,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * applied to the SSL session.
      */
     public Consumer<? super SslContextBuilder> tlsCustomizer() {
-        return get0(ClientFactoryOption.TLS_CUSTOMIZER).get();
+        return get0(ClientFactoryOption.TLS_CUSTOMIZER);
     }
 
     /**
@@ -283,7 +317,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
     public Function<? super EventLoopGroup,
             ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
 
-        return get0(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY).get();
+        return get0(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY);
     }
 
     /**
@@ -291,7 +325,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * flow-control window size</a>.
      */
     public int http2InitialConnectionWindowSize() {
-        return get0(ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE).get();
+        return get0(ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE);
     }
 
     /**
@@ -299,7 +333,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * for HTTP/2 stream-level flow control.
      */
     public int http2InitialStreamWindowSize() {
-        return get0(ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE).get();
+        return get0(ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE);
     }
 
     /**
@@ -307,7 +341,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public int http2MaxFrameSize() {
-        return get0(ClientFactoryOption.HTTP2_MAX_FRAME_SIZE).get();
+        return get0(ClientFactoryOption.HTTP2_MAX_FRAME_SIZE);
     }
 
     /**
@@ -316,35 +350,35 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * that the client is prepared to accept, in octets.
      */
     public long http2MaxHeaderListSize() {
-        return get0(ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE).get();
+        return get0(ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE);
     }
 
     /**
      * Returns the maximum length of an HTTP/1 response initial line.
      */
     public int http1MaxInitialLineLength() {
-        return get0(ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH).get();
+        return get0(ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH);
     }
 
     /**
      * Returns the maximum length of all headers in an HTTP/1 response.
      */
     public int http1MaxHeaderSize() {
-        return get0(ClientFactoryOption.HTTP1_MAX_HEADER_SIZE).get();
+        return get0(ClientFactoryOption.HTTP1_MAX_HEADER_SIZE);
     }
 
     /**
      * Returns the maximum length of each chunk in an HTTP/1 response content.
      */
     public int http1MaxChunkSize() {
-        return get0(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE).get();
+        return get0(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE);
     }
 
     /**
      * Returns the idle timeout of a socket connection in milliseconds.
      */
     public long idleTimeoutMillis() {
-        return get0(ClientFactoryOption.IDLE_TIMEOUT_MILLIS).get();
+        return get0(ClientFactoryOption.IDLE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -352,7 +386,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * the protocol version of a cleartext HTTP connection.
      */
     public boolean useHttp2Preface() {
-        return get0(ClientFactoryOption.USE_HTTP2_PREFACE).get();
+        return get0(ClientFactoryOption.USE_HTTP2_PREFACE);
     }
 
     /**
@@ -360,20 +394,20 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * HTTP/1 connections.
      */
     public boolean useHttp1Pipelining() {
-        return get0(ClientFactoryOption.USE_HTTP1_PIPELINING).get();
+        return get0(ClientFactoryOption.USE_HTTP1_PIPELINING);
     }
 
     /**
      * Returns the listener which is notified on a connection pool event.
      */
     public ConnectionPoolListener connectionPoolListener() {
-        return get0(ClientFactoryOption.CONNECTION_POOL_LISTENER).get();
+        return get0(ClientFactoryOption.CONNECTION_POOL_LISTENER);
     }
 
     /**
      * Returns the {@link MeterRegistry} which collects various stats.
      */
     public MeterRegistry meterRegistry() {
-        return get0(ClientFactoryOption.METER_REGISTRY).get();
+        return get0(ClientFactoryOption.METER_REGISTRY);
     }
 }

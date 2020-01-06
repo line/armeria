@@ -72,10 +72,11 @@ You can also use the builder pattern for client construction:
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
 
-    HelloService.Iface helloService = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
-            .responseTimeoutMillis(10000)
-            .rpcDecorator(LoggingClient.newDecorator())
-            .build(HelloService.Iface.class); // or AsyncIface.class
+    HelloService.Iface helloService =
+        Clients.builder("tbinary+http://127.0.0.1:8080/hello")
+               .responseTimeoutMillis(10000)
+               .rpcDecorator(LoggingClient.newDecorator())
+               .build(HelloService.Iface.class); // or AsyncIface.class
 
     String greeting = helloService.hello("Armerian World");
     assert greeting.equals("Hello, Armerian World!");

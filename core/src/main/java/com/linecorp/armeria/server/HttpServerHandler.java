@@ -380,7 +380,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             // Keep track of the number of unfinished requests and
             // clean up the request stream when response stream ends.
-            final boolean isTransient = service.as(TransientService.class).isPresent();
+            final boolean isTransient = service.as(TransientService.class) != null;
             if (!isTransient) {
                 gracefulShutdownSupport.inc();
             }
@@ -430,7 +430,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             final HttpResponseSubscriber resSubscriber =
                     new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req,
                                                config.isServerHeaderEnabled(), config.isDateHeaderEnabled());
-            reqCtx.setRequestTimeoutChangeListener(resSubscriber);
+            reqCtx.setRequestTimeoutController(resSubscriber);
             res.subscribe(resSubscriber, eventLoop, WITH_POOLED_OBJECTS);
         }
     }

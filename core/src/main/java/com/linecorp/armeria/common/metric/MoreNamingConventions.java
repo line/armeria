@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Splitter;
 
+import com.linecorp.armeria.common.Flags;
+
 import io.micrometer.core.instrument.Meter.Type;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -36,28 +38,41 @@ import io.micrometer.prometheus.PrometheusNamingConvention;
 
 /**
  * Provides commonly-used {@link NamingConvention}s.
+ *
+ * @deprecated Use Micrometer's default {@link NamingConvention}.
  */
+@Deprecated
 public final class MoreNamingConventions {
 
     /**
      * Returns the {@link NamingConvention} that uses the user-provided names and tags as they are.
+     *
+     * @deprecated Use {@link NamingConvention#identity}.
      */
+    @Deprecated
     public static NamingConvention identity() {
-        return (name, type, baseUnit) -> name;
+        return NamingConvention.identity;
     }
 
     /**
      * Returns the {@link NamingConvention} of <a href="http://metrics.dropwizard.io/">Dropwizard Metrics</a>.
+     *
+     * @deprecated Use Micrometer's default {@link NamingConvention}.
      */
+    @Deprecated
     public static NamingConvention dropwizard() {
-        return identity();
+        return Flags.useLegacyMeterNames() ? NamingConvention.identity : NamingConvention.camelCase;
     }
 
     /**
      * Returns the {@link NamingConvention} of <a href="https://prometheus.io/">Prometheus</a>.
+     *
+     * @deprecated Use Micrometer's default {@link NamingConvention}.
      */
+    @Deprecated
     public static NamingConvention prometheus() {
-        return BetterPrometheusNamingConvention.INSTANCE;
+        return Flags.useLegacyMeterNames() ? BetterPrometheusNamingConvention.INSTANCE
+                                           : DefaultPrometheusNamingConventionLoader.INSTANCE;
     }
 
     /**
@@ -69,7 +84,10 @@ public final class MoreNamingConventions {
      * <pre>{@code
      * configure(Metrics.globalRegistry);
      * }</pre>
+     *
+     * @deprecated Use Micrometer's default {@link NamingConvention}.
      */
+    @Deprecated
     public static void configure() {
         configure(Metrics.globalRegistry);
     }
@@ -79,9 +97,17 @@ public final class MoreNamingConventions {
      * class. {@link DropwizardMeterRegistry} and {@link PrometheusMeterRegistry} will be configured to use
      * {@link #dropwizard()} and {@link #prometheus()} respectively. A {@link CompositeMeterRegistry} will be
      * configured recursively.
+     *
+     * @deprecated Use Micrometer's default {@link NamingConvention}.
      */
+    @Deprecated
     public static void configure(MeterRegistry registry) {
         requireNonNull(registry, "registry");
+
+        if (!Flags.useLegacyMeterNames()) {
+            return;
+        }
+
         if (registry instanceof CompositeMeterRegistry) {
             ((CompositeMeterRegistry) registry).getRegistries().forEach(MoreNamingConventions::configure);
         }
@@ -107,6 +133,11 @@ public final class MoreNamingConventions {
     }
 
     private MoreNamingConventions() {}
+
+    // Lazy-load to leave Prometheus optional.
+    private static final class DefaultPrometheusNamingConventionLoader {
+        private static final NamingConvention INSTANCE = new PrometheusNamingConvention();
+    }
 
     /**
      * An alternative {@link NamingConvention} of {@link PrometheusNamingConvention}.

@@ -36,13 +36,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.linecorp.armeria.client.ClientBuilder;
-import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -73,30 +70,30 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void findByMediaType() {
         // The 'protocol' parameter has to be case-insensitive.
-        assertThat(find(parse("application/x-thrift; protocol=tbinary"))).containsSame(BINARY);
-        assertThat(find(parse("application/x-thrift;protocol=TCompact"))).containsSame(COMPACT);
-        assertThat(find(parse("application/x-thrift ; protocol=\"TjSoN\""))).containsSame(JSON);
+        assertThat(find(parse("application/x-thrift; protocol=tbinary"))).isSameAs(BINARY);
+        assertThat(find(parse("application/x-thrift;protocol=TCompact"))).isSameAs(COMPACT);
+        assertThat(find(parse("application/x-thrift ; protocol=\"TjSoN\""))).isSameAs(JSON);
 
         // An unknown parameter ('version' in this case) should not be accepted.
-        assertThat(find(parse("application/x-thrift ; version=3;protocol=ttext"))).isEmpty();
+        assertThat(find(parse("application/x-thrift ; version=3;protocol=ttext"))).isNull();
 
         // 'charset=utf-8' parameter should be accepted for TJSON and TTEXT.
-        assertThat(find(parse("application/x-thrift; protocol=tjson; charset=utf-8"))).containsSame(JSON);
-        assertThat(find(parse("application/vnd.apache.thrift.json; charset=utf-8"))).containsSame(JSON);
-        assertThat(find(parse("application/x-thrift; protocol=ttext; charset=utf-8"))).containsSame(TEXT);
-        assertThat(find(parse("application/vnd.apache.thrift.text; charset=utf-8"))).containsSame(TEXT);
+        assertThat(find(parse("application/x-thrift; protocol=tjson; charset=utf-8"))).isSameAs(JSON);
+        assertThat(find(parse("application/vnd.apache.thrift.json; charset=utf-8"))).isSameAs(JSON);
+        assertThat(find(parse("application/x-thrift; protocol=ttext; charset=utf-8"))).isSameAs(TEXT);
+        assertThat(find(parse("application/vnd.apache.thrift.text; charset=utf-8"))).isSameAs(TEXT);
 
         // .. but neither non-UTF-8 charsets:
-        assertThat(find(parse("application/x-thrift; protocol=tjson; charset=us-ascii"))).isEmpty();
-        assertThat(find(parse("application/vnd.apache.thrift.json; charset=us-ascii"))).isEmpty();
-        assertThat(find(parse("application/x-thrift; protocol=ttext; charset=us-ascii"))).isEmpty();
-        assertThat(find(parse("application/vnd.apache.thrift.text; charset=us-ascii"))).isEmpty();
+        assertThat(find(parse("application/x-thrift; protocol=tjson; charset=us-ascii"))).isNull();
+        assertThat(find(parse("application/vnd.apache.thrift.json; charset=us-ascii"))).isNull();
+        assertThat(find(parse("application/x-thrift; protocol=ttext; charset=us-ascii"))).isNull();
+        assertThat(find(parse("application/vnd.apache.thrift.text; charset=us-ascii"))).isNull();
 
         // .. nor binary/compact formats:
-        assertThat(find(parse("application/x-thrift; protocol=tbinary; charset=utf-8"))).isEmpty();
-        assertThat(find(parse("application/vnd.apache.thrift.binary; charset=utf-8"))).isEmpty();
-        assertThat(find(parse("application/x-thrift; protocol=tcompact; charset=utf-8"))).isEmpty();
-        assertThat(find(parse("application/vnd.apache.thrift.compact; charset=utf-8"))).isEmpty();
+        assertThat(find(parse("application/x-thrift; protocol=tbinary; charset=utf-8"))).isNull();
+        assertThat(find(parse("application/vnd.apache.thrift.binary; charset=utf-8"))).isNull();
+        assertThat(find(parse("application/x-thrift; protocol=tcompact; charset=utf-8"))).isNull();
+        assertThat(find(parse("application/vnd.apache.thrift.compact; charset=utf-8"))).isNull();
     }
 
     @Test
@@ -135,23 +132,19 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void contentTypeNotThrift() throws Exception {
         // Browser clients often send a non-Thrift content type.
-        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE,
-                                                   "text/plain; charset=utf-8");
         final HelloService.Iface client =
-                Clients.newClient(server.uri(BINARY, "/hello"),
-                                  HelloService.Iface.class,
-                                  ClientOption.HTTP_HEADERS.newValue(headers));
+                Clients.builder(server.uri(BINARY, "/hello"))
+                       .setHttpHeader(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
+                       .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
     public void acceptNotSameAsContentType() throws Exception {
-        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.ACCEPT,
-                                                   "application/x-thrift; protocol=TBINARY");
         final HelloService.Iface client =
-                Clients.newClient(server.uri(TEXT, "/hello"),
-                                  HelloService.Iface.class,
-                                  ClientOption.HTTP_HEADERS.newValue(headers));
+                Clients.builder(server.uri(TEXT, "/hello"))
+                       .setHttpHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
+                       .build(HelloService.Iface.class);
         thrown.expect(InvalidResponseHeadersException.class);
         thrown.expectMessage(":status=406");
         client.hello("Trustin");
@@ -179,14 +172,14 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void givenClients_whenBinary_thenBuildClient() throws Exception {
         HelloService.Iface client =
-                new ClientBuilder(Scheme.of(BINARY, SessionProtocol.HTTP), newEndpoint(BINARY))
-                        .path("/hello")
-                        .build(HelloService.Iface.class);
+                Clients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), newEndpoint(BINARY))
+                       .path("/hello")
+                       .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
 
-        client = new ClientBuilder(Scheme.of(TEXT, SessionProtocol.HTTP), newEndpoint(TEXT))
-                .path("/hello")
-                .build(HelloService.Iface.class);
+        client = Clients.builder(Scheme.of(TEXT, SessionProtocol.HTTP), newEndpoint(TEXT))
+                        .path("/hello")
+                        .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 

@@ -40,6 +40,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Ticker;
 
@@ -105,9 +106,13 @@ public final class CaffeineMetricSupport {
                                   func(MISS_COUNT, ref -> ref.cacheStats.missCount()));
             parent.more().counter(idPrefix.name("evictions"), idPrefix.tags(), this,
                                   func(EVICTION_COUNT, ref -> ref.cacheStats.evictionCount()));
-            parent.more().counter(idPrefix.name("evictionWeight"), idPrefix.tags(), this,
+            parent.more().counter(idPrefix.name(Flags.useLegacyMeterNames() ? "evictionWeight"
+                                                                            : "eviction.weight"),
+                                  idPrefix.tags(), this,
                                   func(EVICTION_WEIGHT, ref -> ref.cacheStats.evictionWeight()));
-            parent.gauge(idPrefix.name("estimatedSize"), idPrefix.tags(), this,
+            parent.gauge(idPrefix.name(Flags.useLegacyMeterNames() ? "estimatedSize"
+                                                                   : "estimated.size"),
+                         idPrefix.tags(), this,
                          func(null, ref -> ref.estimatedSize));
         }
 
@@ -131,7 +136,9 @@ public final class CaffeineMetricSupport {
                                       func(LOAD_SUCCESS_COUNT, ref -> ref.cacheStats.loadSuccessCount()));
                 parent.more().counter(loads, idPrefix.tags("result", "failure"), this,
                                       func(LOAD_FAILURE_COUNT, ref -> ref.cacheStats.loadFailureCount()));
-                parent.more().counter(idPrefix.name("loadDuration"), idPrefix.tags(), this,
+                parent.more().counter(idPrefix.name(Flags.useLegacyMeterNames() ? "loadDuration"
+                                                                                : "load.duration"),
+                                      idPrefix.tags(), this,
                                       func(TOTAL_LOAD_TIME, ref -> ref.cacheStats.totalLoadTime()));
             }
         }

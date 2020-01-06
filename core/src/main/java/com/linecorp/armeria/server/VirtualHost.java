@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -215,8 +216,11 @@ public final class VirtualHost {
         this.serverConfig = requireNonNull(serverConfig, "serverConfig");
 
         final MeterRegistry registry = serverConfig.meterRegistry();
-        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.router.virtualHostCache",
-                                                         "hostnamePattern", hostnamePattern);
+        final MeterIdPrefix idPrefix =
+                Flags.useLegacyMeterNames() ? new MeterIdPrefix("armeria.server.router.virtualHostCache",
+                                                                "hostnamePattern", hostnamePattern)
+                                            : new MeterIdPrefix("armeria.server.router.virtual.host.cache",
+                                                                "hostname.pattern", hostnamePattern);
         router.registerMetrics(registry, idPrefix);
     }
 

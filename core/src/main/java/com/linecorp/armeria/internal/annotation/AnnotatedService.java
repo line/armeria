@@ -301,7 +301,7 @@ public class AnnotatedService implements HttpService {
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
             newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
-            result = httpResult.content().orElse(null);
+            result = httpResult.content();
             newTrailers = httpResult.trailers();
         } else {
             newHeaders = setHttpStatus(
@@ -477,7 +477,7 @@ public class AnnotatedService implements HttpService {
             // If you want to force to send '204 No Content' for this case, add
             // 'NullToNoContentResponseConverterFunction' to the list of response converters.
             if (result == null) {
-                return HttpResponse.of(headers, HttpData.EMPTY_DATA, trailers);
+                return HttpResponse.of(headers, HttpData.empty(), trailers);
             }
             throw new IllegalStateException(
                     "No response converter exists for a result: " + result.getClass().getName());

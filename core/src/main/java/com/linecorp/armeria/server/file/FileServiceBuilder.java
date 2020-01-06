@@ -24,7 +24,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
 import java.util.Map.Entry;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -41,12 +40,14 @@ import com.linecorp.armeria.common.HttpResponse;
  */
 public class FileServiceBuilder {
 
-    private static final Optional<String> DEFAULT_ENTRY_CACHE_SPEC = Flags.fileServiceCacheSpec();
+    @Nullable
+    private static final String DEFAULT_ENTRY_CACHE_SPEC = Flags.fileServiceCacheSpec();
     private static final int DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES = 65536;
 
     final HttpVfs vfs;
     Clock clock = Clock.systemUTC();
-    Optional<String> entryCacheSpec = DEFAULT_ENTRY_CACHE_SPEC;
+    @Nullable
+    String entryCacheSpec = DEFAULT_ENTRY_CACHE_SPEC;
     int maxCacheEntrySizeBytes = DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES;
     boolean serveCompressedFiles;
     boolean autoIndex;
@@ -76,9 +77,9 @@ public class FileServiceBuilder {
                    "Cannot call maxCacheEntries() if called entryCacheSpec() already.");
         validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries");
         if (maxCacheEntries == 0) {
-            entryCacheSpec = Optional.empty();
+            entryCacheSpec = null;
         } else {
-            entryCacheSpec = Optional.of(String.format("maximumSize=%d", maxCacheEntries));
+            entryCacheSpec = String.format("maximumSize=%d", maxCacheEntries);
         }
         canSetEntryCacheSpec = false;
         return this;
@@ -91,7 +92,7 @@ public class FileServiceBuilder {
         requireNonNull(entryCacheSpec, "entryCacheSpec");
         checkState(canSetEntryCacheSpec,
                    "Cannot call entryCacheSpec() if called maxCacheEntries() already.");
-        this.entryCacheSpec = validateEntryCacheSpec(Optional.of(entryCacheSpec));
+        this.entryCacheSpec = validateEntryCacheSpec(entryCacheSpec);
         canSetMaxCacheEntries = false;
         return this;
     }

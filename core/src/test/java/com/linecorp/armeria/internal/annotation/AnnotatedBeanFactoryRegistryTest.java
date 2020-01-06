@@ -91,10 +91,10 @@ public class AnnotatedBeanFactoryRegistryTest {
         BeanFactoryId id;
 
         id = register(InnerClass.class, vars, resolvers);
-        assertThat(find(id).isPresent()).isFalse();
+        assertThat(find(id)).isNull();
 
         id = register(NotARequestBeanBecauseOfInnerClass.class, vars, resolvers);
-        assertThat(find(id).isPresent()).isFalse();
+        assertThat(find(id)).isNull();
     }
 
     // error test case: more than 1 annotated constructors

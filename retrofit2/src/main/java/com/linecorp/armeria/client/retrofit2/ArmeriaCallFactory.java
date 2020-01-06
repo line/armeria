@@ -89,7 +89,7 @@ final class ArmeriaCallFactory implements Factory {
         return authority.startsWith(GROUP_PREFIX);
     }
 
-    private WebClient getHttpClient(String authority, String sessionProtocol) {
+    WebClient getHttpClient(String authority, String sessionProtocol) {
         if (baseAuthority.equals(authority)) {
             return baseHttpClient;
         }
@@ -97,8 +97,10 @@ final class ArmeriaCallFactory implements Factory {
             final String finalAuthority = isGroup(key) ?
                                           GROUP_PREFIX_MATCHER.matcher(key).replaceFirst("group:") : key;
             final String uriText = sessionProtocol + "://" + finalAuthority;
-            return WebClient.of(
-                    clientFactory, uriText, configurator.apply(uriText, ClientOptions.builder()).build());
+            return WebClient.builder(uriText)
+                            .factory(clientFactory)
+                            .options(configurator.apply(uriText, ClientOptions.builder()).build())
+                            .build();
         });
     }
 

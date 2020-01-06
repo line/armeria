@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.client.grpc.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,14 +22,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletionException;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -41,7 +42,7 @@ import io.grpc.StatusException;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 
-public class UnaryGrpcClientTest {
+class UnaryGrpcClientTest {
 
     private static class TestService extends TestServiceImplBase {
 
@@ -69,28 +70,28 @@ public class UnaryGrpcClientTest {
 
     private static Server server;
 
-    @BeforeClass
-    public static void setupServer() throws Exception {
+    @BeforeAll
+    static void setupServer() throws Exception {
         server = NettyServerBuilder.forPort(0)
                                    .addService(new TestService())
                                    .build()
                                    .start();
     }
 
-    @AfterClass
-    public static void stopServer() {
+    @AfterAll
+    static void stopServer() {
         server.shutdownNow();
     }
 
     private UnaryGrpcClient client;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         client = new UnaryGrpcClient(WebClient.of("http://127.0.0.1:" + server.getPort()));
     }
 
     @Test
-    public void normal() throws Exception {
+    void normal() throws Exception {
         final SimpleRequest request = SimpleRequest.newBuilder()
                                                    .setPayload(Payload.newBuilder()
                                                                       .setBody(ByteString.copyFromUtf8("hello"))
@@ -105,7 +106,7 @@ public class UnaryGrpcClientTest {
 
     /** This shows we can handle status that happens in headers. */
     @Test
-    public void statusException() {
+    void statusException() {
         final SimpleRequest request = SimpleRequest.newBuilder()
                                                    .setPayload(Payload.newBuilder()
                                                                       .setBody(ByteString
@@ -123,7 +124,7 @@ public class UnaryGrpcClientTest {
 
     /** This shows we can handle status that happens in trailers. */
     @Test
-    public void lateStatusException() {
+    void lateStatusException() {
         final SimpleRequest request = SimpleRequest.newBuilder()
                                                    .setPayload(Payload.newBuilder()
                                                                       .setBody(ByteString.copyFromUtf8(
@@ -140,7 +141,7 @@ public class UnaryGrpcClientTest {
     }
 
     @Test
-    public void invalidPayload() {
+    void invalidPayload() {
         assertThatThrownBy(
                 () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
                                      "foobarbreak".getBytes(StandardCharsets.UTF_8)).join())

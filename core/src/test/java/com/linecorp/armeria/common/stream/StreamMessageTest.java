@@ -19,8 +19,8 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.util.ArrayList;
@@ -252,18 +252,18 @@ class StreamMessageTest {
 
             @Override
             public void onNext(Object o) {
-                fail();
+                fail("onNext() invoked unexpectedly");
             }
 
             @Override
             public void onError(Throwable throwable) {
                 // This is not called because we didn't specify NOTIFY_CANCELLATION when subscribe.
-                fail();
+                fail("onError() invoked unexpectedly");
             }
 
             @Override
             public void onComplete() {
-                fail();
+                fail("onComplete() invoked unexpectedly");
             }
         }, WITH_POOLED_OBJECTS);
 
@@ -288,18 +288,18 @@ class StreamMessageTest {
 
             @Override
             public void onNext(Object o) {
-                fail();
+                fail("onNext() invoked unexpectedly");
             }
 
             @Override
             public void onError(Throwable throwable) {
                 // This is not called because we didn't specify NOTIFY_CANCELLATION when subscribe.
-                fail();
+                fail("onError() invoked unexpectedly");
             }
 
             @Override
             public void onComplete() {
-                fail();
+                fail("onComplete() invoked unexpectedly");
             }
         }, WITH_POOLED_OBJECTS);
 

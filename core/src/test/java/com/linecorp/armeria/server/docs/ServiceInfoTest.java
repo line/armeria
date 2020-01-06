@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.docs;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Set;
@@ -66,7 +65,7 @@ class ServiceInfoTest {
         final List<MethodInfo> collectMethods =
                 ImmutableList.copyOf(ServiceInfo.mergeEndpoints(inputMethodInfos));
 
-        assertEquals(4, collectMethods.size());
+        assertThat(collectMethods).hasSize(4);
 
         final Function<MethodInfo, Set<String>> getPaths = methodInfo ->
                 methodInfo.endpoints().stream().map(EndpointInfo::pathMapping).collect(Collectors.toSet());
