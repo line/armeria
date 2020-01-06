@@ -23,8 +23,10 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,17 +98,23 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
     private static Map<String, String> parseFile(FileDescriptorProto descriptor) {
         return descriptor.getSourceCodeInfo().getLocationList().stream()
                          .filter(l -> !l.getLeadingComments().isEmpty())
-                         .map(l -> getFullName(descriptor, l.getPathList())
-                                 .map(fullName -> new SimpleImmutableEntry<>(fullName, l.getLeadingComments())))
-                         .filter(Optional::isPresent)
-                         .map(Optional::get)
+                         .map(l -> {
+                             final String fullName = getFullName(descriptor, l.getPathList());
+                             if (fullName != null) {
+                                 return new SimpleImmutableEntry<>(fullName, l.getLeadingComments());
+                             } else {
+                                 return null;
+                             }
+                         })
+                         .filter(Objects::nonNull)
                          .collect(toImmutableMap(Entry::getKey, Entry::getValue));
     }
 
     // A path is field number and indices within a list of types, going through a tree of protobuf
     // descriptors. For example, the 2nd field of the 3rd nested message in the 1st message in a file
     // would have path [MESSAGE_TYPE_FIELD_NUMBER, 0, NESTED_TYPE_FIELD_NUMBER, 2, FIELD_FIELD_NUMBER, 1]
-    private static Optional<String> getFullName(FileDescriptorProto descriptor, List<Integer> path) {
+    @Nullable
+    private static String getFullName(FileDescriptorProto descriptor, List<Integer> path) {
         String fullNameSoFar = descriptor.getPackage();
         switch (path.get(0)) {
             case FileDescriptorProto.MESSAGE_TYPE_FIELD_NUMBER:
@@ -114,7 +122,7 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                 return appendMessageToFullName(message, path, fullNameSoFar);
             case FileDescriptorProto.ENUM_TYPE_FIELD_NUMBER:
                 final EnumDescriptorProto enumDescriptor = descriptor.getEnumType(path.get(1));
-                return Optional.of(appendEnumToFullName(enumDescriptor, path, fullNameSoFar));
+                return appendEnumToFullName(enumDescriptor, path, fullNameSoFar);
             case FileDescriptorProto.SERVICE_FIELD_NUMBER:
                 final ServiceDescriptorProto serviceDescriptor = descriptor.getService(path.get(1));
                 fullNameSoFar = appendNameComponent(fullNameSoFar, serviceDescriptor.getName());
@@ -122,13 +130,14 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                     fullNameSoFar = appendFieldComponent(
                             fullNameSoFar, serviceDescriptor.getMethod(path.get(3)).getName());
                 }
-                return Optional.of(fullNameSoFar);
+                return fullNameSoFar;
             default:
-                return Optional.empty();
+                return null;
         }
     }
 
-    private static Optional<String> appendToFullName(
+    @Nullable
+    private static String appendToFullName(
             DescriptorProto messageDescriptor, List<Integer> path, String fullNameSoFar) {
         switch (path.get(0)) {
             case DescriptorProto.NESTED_TYPE_FIELD_NUMBER:
@@ -136,21 +145,21 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                 return appendMessageToFullName(nestedMessage, path, fullNameSoFar);
             case DescriptorProto.ENUM_TYPE_FIELD_NUMBER:
                 final EnumDescriptorProto enumDescriptor = messageDescriptor.getEnumType(path.get(1));
-                return Optional.of(appendEnumToFullName(enumDescriptor, path, fullNameSoFar));
+                return appendEnumToFullName(enumDescriptor, path, fullNameSoFar);
             case DescriptorProto.FIELD_FIELD_NUMBER:
                 final FieldDescriptorProto fieldDescriptor = messageDescriptor.getField(path.get(1));
-                return Optional.of(appendFieldComponent(fullNameSoFar, fieldDescriptor.getName()));
+                return appendFieldComponent(fullNameSoFar, fieldDescriptor.getName());
             default:
-                return Optional.empty();
+                return null;
         }
     }
 
-    private static Optional<String> appendMessageToFullName(
+    @Nullable
+    private static String appendMessageToFullName(
             DescriptorProto message, List<Integer> path, String fullNameSoFar) {
         fullNameSoFar = appendNameComponent(fullNameSoFar, message.getName());
-        return path.size() > 2 ?
-               appendToFullName(message, path.subList(2, path.size()), fullNameSoFar)
-                               : Optional.of(fullNameSoFar);
+        return path.size() > 2 ? appendToFullName(message, path.subList(2, path.size()), fullNameSoFar)
+                               : fullNameSoFar;
     }
 
     private static String appendEnumToFullName(

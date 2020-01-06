@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Optional;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
@@ -129,12 +128,12 @@ public final class MoreMeters {
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
 
+        final Long maxExpectedValueNanos = distStatCfg.getMaximumExpectedValue();
+        final Long minExpectedValueNanos = distStatCfg.getMinimumExpectedValue();
         final Duration maxExpectedValue =
-                Optional.ofNullable(distStatCfg.getMaximumExpectedValue())
-                        .map(Duration::ofNanos).orElse(null);
+                maxExpectedValueNanos != null ? Duration.ofNanos(maxExpectedValueNanos) : null;
         final Duration minExpectedValue =
-                Optional.ofNullable(distStatCfg.getMinimumExpectedValue())
-                        .map(Duration::ofNanos).orElse(null);
+                minExpectedValueNanos != null ? Duration.ofNanos(minExpectedValueNanos) : null;
 
         return Timer.builder(name)
                     .tags(tags)

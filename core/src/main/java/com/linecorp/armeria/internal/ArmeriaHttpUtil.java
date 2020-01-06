@@ -237,7 +237,7 @@ public final class ArmeriaHttpUtil {
 
     @Nullable
     private static final LoadingCache<AsciiString, String> HEADER_VALUE_CACHE =
-            Flags.headerValueCacheSpec().map(ArmeriaHttpUtil::buildCache).orElse(null);
+            Flags.headerValueCacheSpec() != null ? buildCache(Flags.headerValueCacheSpec()) : null;
     private static final Set<AsciiString> CACHED_HEADERS = Flags.cachedHeaders().stream().map(AsciiString::of)
                                                                 .collect(toImmutableSet());
 

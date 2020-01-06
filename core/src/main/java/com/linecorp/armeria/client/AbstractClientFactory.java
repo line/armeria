@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Optional;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -104,12 +103,11 @@ public abstract class AbstractClientFactory implements ClientFactory {
         if (scheme == null) {
             throw new IllegalArgumentException("URI with missing scheme: " + uri);
         }
-        final Optional<Scheme> parsedSchemeOpt = Scheme.tryParse(scheme);
-        if (!parsedSchemeOpt.isPresent()) {
+        final Scheme parsedScheme = Scheme.tryParse(scheme);
+        if (parsedScheme == null) {
             throw new IllegalArgumentException("URI with undefined scheme: " + uri);
         }
 
-        final Scheme parsedScheme = parsedSchemeOpt.get();
         final Set<Scheme> supportedSchemes = supportedSchemes();
         if (!supportedSchemes.contains(parsedScheme)) {
             throw new IllegalArgumentException(

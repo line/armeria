@@ -18,7 +18,6 @@ package com.linecorp.armeria.dropwizard;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -128,7 +127,9 @@ class ArmeriaServerFactory extends SimpleServerFactory {
         if (!isServerHeaderEnabled()) {
             serverBuilder.disableServerHeader();
         }
-        Optional.ofNullable(getDefaultHostname()).ifPresent(serverBuilder::defaultHostname);
+        if (getDefaultHostname() != null) {
+            serverBuilder.defaultHostname(getDefaultHostname());
+        }
         // TODO: Add more items to server builder via Configuration
         return serverBuilder;
     }

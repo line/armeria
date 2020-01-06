@@ -17,8 +17,6 @@ package com.linecorp.armeria.server.annotation;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -53,8 +51,8 @@ final class DefaultHttpResult<T> implements HttpResult<T> {
     }
 
     @Override
-    public Optional<T> content() {
-        return Optional.ofNullable(content);
+    public T content() {
+        return content;
     }
 
     @Override

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal;
 
-import java.util.Optional;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.server.annotation.Default;
@@ -51,8 +49,9 @@ public final class DefaultValues {
     /**
      * Returns the specified value if it is specified by a user.
      */
-    public static Optional<String> getSpecifiedValue(@Nullable String value) {
-        return isSpecified(value) ? Optional.ofNullable(value) : Optional.empty();
+    @Nullable
+    public static String getSpecifiedValue(@Nullable String value) {
+        return isSpecified(value) ? value : null;
     }
 
     private DefaultValues() {}

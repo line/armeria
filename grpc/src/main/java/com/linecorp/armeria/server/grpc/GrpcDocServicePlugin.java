@@ -27,7 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -129,12 +128,15 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
         final Map<String, ServiceEntryBuilder> map = new LinkedHashMap<>();
         for (ServiceConfig serviceConfig : serviceConfigs) {
-            final GrpcService grpcService = serviceConfig.service().as(GrpcService.class).get();
+            final GrpcService grpcService = serviceConfig.service().as(GrpcService.class);
+            assert grpcService != null;
+
             final ImmutableSet.Builder<MediaType> supportedMediaTypesBuilder = ImmutableSet.builder();
             supportedMediaTypesBuilder.addAll(grpcService.supportedSerializationFormats()
                                                          .stream()
                                                          .map(SerializationFormat::mediaType)::iterator);
-            if (serviceConfig.service().as(UnframedGrpcService.class).isPresent()) {
+
+            if (serviceConfig.service().as(UnframedGrpcService.class) != null) {
                 if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.PROTO)) {
                     // Normal clients of a GrpcService are not required to set a protocol when using unframed
                     // requests but we set it here for clarity in DocService, where there may be multiple
@@ -194,7 +196,11 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     @Override
     public Map<String, String> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         return serviceConfigs.stream()
-                             .flatMap(c -> c.service().as(GrpcService.class).get().services().stream())
+                             .flatMap(c -> {
+                                 final GrpcService grpcService = c.service().as(GrpcService.class);
+                                 assert grpcService != null;
+                                 return grpcService.services().stream();
+                             })
                              .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
                                                              .entrySet().stream())
                              .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
@@ -206,10 +212,10 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @Override
-    public Optional<String> serializeExampleRequest(String serviceName, String methodName,
-                                                    Object exampleRequest) {
+    public String serializeExampleRequest(String serviceName, String methodName,
+                                          Object exampleRequest) {
         try {
-            return Optional.of(JsonFormat.printer().print((MessageOrBuilder) exampleRequest));
+            return JsonFormat.printer().print((MessageOrBuilder) exampleRequest);
         } catch (InvalidProtocolBufferException e) {
             throw new UncheckedIOException(
                     "Invalid example request protobuf. Is it missing required fields?", e);
@@ -227,7 +233,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     private NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
-        final Object descriptor = typeSignature.namedTypeDescriptor().get();
+        final Object descriptor = typeSignature.namedTypeDescriptor();
         if (descriptor instanceof Descriptor) {
             return newStructInfo((Descriptor) descriptor);
         }
@@ -238,7 +244,6 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @Nullable
     ServiceInfo newServiceInfo(ServiceEntry entry, DocServiceFilter filter) {
-        entry.name();
         final List<MethodInfo> methodInfos =
                 entry.methods().stream()
                      .filter(m -> filter.test(name(), entry.name(), m.getName()))

@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -154,10 +153,7 @@ public abstract class ServerRuleDelegate {
      *                               specified protocol.
      */
     public int port(SessionProtocol protocol) {
-        return server().activePorts().values().stream()
-                       .filter(p1 -> p1.hasProtocol(protocol)).findAny()
-                       .flatMap(p -> Optional.of(p.localAddress().getPort()))
-                       .orElseThrow(() -> new IllegalStateException(protocol + " port not open"));
+        return server().activeLocalPort(protocol);
     }
 
     /**

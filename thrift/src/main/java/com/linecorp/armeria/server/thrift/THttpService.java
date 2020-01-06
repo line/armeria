@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
@@ -410,9 +411,10 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
-        return delegate.as(ThriftCallService.class).orElseThrow(
-                () -> new IllegalStateException("service being decorated is not a ThriftCallService: " +
-                                                delegate));
+        final ThriftCallService thriftService = delegate.as(ThriftCallService.class);
+        checkState(thriftService != null,
+                   "service being decorated is not a ThriftCallService: %s", delegate);
+        return thriftService;
     }
 
     /**
@@ -509,11 +511,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         // If accept header is present, make sure it is sane. Currently, we do not support accept
         // headers with a different format than the content type header.
         final List<String> acceptHeaders = req.headers().getAll(HttpHeaderNames.ACCEPT);
-        if (!acceptHeaders.isEmpty() &&
-            !serializationFormat.mediaTypes().matchHeaders(acceptHeaders).isPresent()) {
-            return false;
-        }
-        return true;
+        return acceptHeaders.isEmpty() ||
+               serializationFormat.mediaTypes().matchHeaders(acceptHeaders) != null;
     }
 
     @Nullable
@@ -721,7 +720,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
             SerializationFormat serializationFormat) {
         ctx.logBuilder().responseContent(rpcRes, null);
-        respond(serializationFormat, HttpData.EMPTY_DATA, httpRes);
+        respond(serializationFormat, HttpData.empty(), httpRes);
     }
 
     private static void handleException(

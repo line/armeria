@@ -32,10 +32,10 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -148,15 +148,11 @@ public class PooledResponseBufferBenchmark {
         server = sb.build();
         server.start().join();
 
-        final ServerPort httpPort = server.activePorts().values().stream()
-                                          .filter(ServerPort::hasHttp).findAny()
-                                          .get();
-        pooledClient = Clients.newClient(
-                "tbinary+http://127.0.0.1:" + httpPort.localAddress().getPort() + "/a",
-                HelloService.Iface.class);
-        unpooledClient = Clients.newClient(
-                "tbinary+http://127.0.0.1:" + httpPort.localAddress().getPort() + "/b",
-                HelloService.Iface.class);
+        final int httpPort = server.activeLocalPort(SessionProtocol.HTTP);
+        pooledClient = Clients.newClient("tbinary+http://127.0.0.1:" + httpPort + "/a",
+                                         HelloService.Iface.class);
+        unpooledClient = Clients.newClient("tbinary+http://127.0.0.1:" + httpPort + "/b",
+                                           HelloService.Iface.class);
     }
 
     @TearDown

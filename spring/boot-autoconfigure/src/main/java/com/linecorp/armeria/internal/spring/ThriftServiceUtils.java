@@ -72,14 +72,15 @@ final class ThriftServiceUtils {
         if (thriftServiceClass == null || entriesMethod == null || interfacesMethod == null) {
             return ImmutableSet.of();
         }
-        return service.as(thriftServiceClass)
-                      .map(s -> {
-                          @SuppressWarnings("unchecked")
-                          final Map<String, ?> entries = (Map<String, ?>) invokeMethod(entriesMethod, s);
-                          assert entries != null;
-                          return toServiceName(entries.values());
-                      })
-                      .orElse(ImmutableSet.of());
+        final Object thriftService = service.as(thriftServiceClass);
+        if (thriftService == null) {
+            return ImmutableSet.of();
+        }
+
+        @SuppressWarnings("unchecked")
+        final Map<String, ?> entries = (Map<String, ?>) invokeMethod(entriesMethod, thriftService);
+        assert entries != null;
+        return toServiceName(entries.values());
     }
 
     private static Set<String> toServiceName(Collection<?> entries) {

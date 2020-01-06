@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.saml;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -23,6 +22,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
+import com.linecorp.armeria.server.ServerPort;
 
 /**
  * Fill unspecified scheme and port in the {@link SamlPortConfigBuilder}. They will be resolved by
@@ -49,10 +49,11 @@ final class SamlPortConfigAutoFiller extends ServerListenerAdapter {
     }
 
     /**
-     * Returns a {@link SamlPortConfig} wrapped by an {@link Optional}.
+     * Returns a {@link SamlPortConfig}.
      */
-    Optional<SamlPortConfig> config() {
-        return Optional.ofNullable(config);
+    @Nullable
+    SamlPortConfig config() {
+        return config;
     }
 
     /**
@@ -66,7 +67,9 @@ final class SamlPortConfigAutoFiller extends ServerListenerAdapter {
     public void serverStarted(Server server) throws Exception {
         // Ensure that the following work will be done once.
         if (completed.compareAndSet(false, true)) {
-            builder.setSchemeAndPortIfAbsent(server.activePort().get());
+            final ServerPort activePort = server.activePort();
+            assert activePort != null;
+            builder.setSchemeAndPortIfAbsent(activePort);
             assert builder.scheme() != null;
             config = new SamlPortConfig(builder.scheme(), builder.port());
             future.complete(config);

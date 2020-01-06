@@ -47,6 +47,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -97,15 +98,18 @@ import io.netty.handler.codec.http.HttpConstants;
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
 
-    private static final List<RequestObjectResolver> defaultRequestConverters =
-            ImmutableList.of((resolverContext, expectedResultType, beanFactoryId) ->
-                                     AnnotatedBeanFactoryRegistry.find(beanFactoryId)
-                                                                 .orElseThrow(
-                                                                         RequestConverterFunction::fallthrough)
-                                                                 .create(resolverContext),
-                             RequestObjectResolver.of(new JacksonRequestConverterFunction()),
-                             RequestObjectResolver.of(new StringRequestConverterFunction()),
-                             RequestObjectResolver.of(new ByteArrayRequestConverterFunction()));
+    private static final List<RequestObjectResolver> defaultRequestConverters = ImmutableList.of(
+            (resolverContext, expectedResultType, beanFactoryId) -> {
+                final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
+                if (factory == null) {
+                    return RequestConverterFunction.fallthrough();
+                } else {
+                    return factory.create(resolverContext);
+                }
+            },
+            RequestObjectResolver.of(new JacksonRequestConverterFunction()),
+            RequestObjectResolver.of(new StringRequestConverterFunction()),
+            RequestObjectResolver.of(new ByteArrayRequestConverterFunction()));
 
     private static final Object[] emptyArguments = new Object[0];
 
@@ -158,8 +162,9 @@ final class AnnotatedValueResolver {
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
      * {@link Field}, {@code pathParams} and {@code objectResolvers}.
      */
-    static Optional<AnnotatedValueResolver> ofBeanField(Field field, Set<String> pathParams,
-                                                        List<RequestObjectResolver> objectResolvers) {
+    @Nullable
+    static AnnotatedValueResolver ofBeanField(Field field, Set<String> pathParams,
+                                              List<RequestObjectResolver> objectResolvers) {
         // 'Field' is only used for converting a bean.
         // So we always need to pass 'implicitRequestObjectAnnotation' as false.
         return of(field, field, field.getType(), pathParams, objectResolvers, false);
@@ -190,7 +195,7 @@ final class AnnotatedValueResolver {
         // In this case, we need to retrieve the value of @Param annotation from 'name' parameter,
         // not the constructor or method. Also 'String' type is used for the parameter.
         //
-        final Optional<AnnotatedValueResolver> resolver;
+        final AnnotatedValueResolver resolver;
         if (isAnnotationPresent(constructorOrMethod)) {
             //
             // Only allow a single parameter on an annotated method. The followings cause an error:
@@ -251,7 +256,7 @@ final class AnnotatedValueResolver {
                         constructorOrMethod.toGenericString());
             }
 
-            resolver = Optional.empty();
+            resolver = null;
         }
         //
         // If there is no annotation on the constructor or method, try to check whether it has
@@ -260,17 +265,21 @@ final class AnnotatedValueResolver {
         // void setter1(@Param String name) { ... }
         // void setter2(@Param String name, @Header List<String> xForwardedFor) { ... }
         //
-        final List<AnnotatedValueResolver> list =
-                resolver.<List<AnnotatedValueResolver>>map(ImmutableList::of).orElseGet(
-                        () -> Arrays.stream(parameters)
-                                    .map(p -> of(p, pathParams, objectResolvers,
-                                                 implicitRequestObjectAnnotation))
-                                    .filter(Optional::isPresent)
-                                    .map(Optional::get)
-                                    .collect(toImmutableList()));
+        final List<AnnotatedValueResolver> list;
+        if (resolver != null) {
+            list = ImmutableList.of(resolver);
+        } else {
+            list = Arrays.stream(parameters)
+                         .map(p -> of(p, pathParams, objectResolvers,
+                                      implicitRequestObjectAnnotation))
+                         .filter(Objects::nonNull)
+                         .collect(toImmutableList());
+        }
+
         if (list.isEmpty()) {
             throw new NoAnnotatedParameterException(constructorOrMethod.toGenericString());
         }
+
         if (list.size() != parameters.length) {
             // There are parameters which cannot be resolved, so we cannot accept this constructor or method
             // as an annotated bean or method. We handle this case in two ways as follows.
@@ -316,9 +325,10 @@ final class AnnotatedValueResolver {
      * {@link Parameter}, {@code pathParams}, {@code objectResolvers} and
      * {@code implicitRequestObjectAnnotation}.
      */
-    static Optional<AnnotatedValueResolver> of(Parameter parameter, Set<String> pathParams,
-                                               List<RequestObjectResolver> objectResolvers,
-                                               boolean implicitRequestObjectAnnotation) {
+    @Nullable
+    static AnnotatedValueResolver of(Parameter parameter, Set<String> pathParams,
+                                     List<RequestObjectResolver> objectResolvers,
+                                     boolean implicitRequestObjectAnnotation) {
         return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers,
                   implicitRequestObjectAnnotation);
     }
@@ -340,11 +350,12 @@ final class AnnotatedValueResolver {
      *                                        {@code false} if an element has to be annotated with
      *                                        {@link RequestObject} explicitly to get converted.
      */
-    private static Optional<AnnotatedValueResolver> of(AnnotatedElement annotatedElement,
-                                                       AnnotatedElement typeElement, Class<?> type,
-                                                       Set<String> pathParams,
-                                                       List<RequestObjectResolver> objectResolvers,
-                                                       boolean implicitRequestObjectAnnotation) {
+    @Nullable
+    private static AnnotatedValueResolver of(AnnotatedElement annotatedElement,
+                                             AnnotatedElement typeElement, Class<?> type,
+                                             Set<String> pathParams,
+                                             List<RequestObjectResolver> objectResolvers,
+                                             boolean implicitRequestObjectAnnotation) {
         requireNonNull(annotatedElement, "annotatedElement");
         requireNonNull(typeElement, "typeElement");
         requireNonNull(type, "type");
@@ -356,28 +367,25 @@ final class AnnotatedValueResolver {
         if (param != null) {
             final String name = findName(param, typeElement);
             if (pathParams.contains(name)) {
-                return Optional.of(ofPathVariable(name, annotatedElement, typeElement,
-                                                  type, description));
+                return ofPathVariable(name, annotatedElement, typeElement, type, description);
             } else {
-                return Optional.of(ofQueryParam(name, annotatedElement,
-                                                typeElement, type, description));
+                return ofQueryParam(name, annotatedElement, typeElement, type, description);
             }
         }
 
         final Header header = annotatedElement.getAnnotation(Header.class);
         if (header != null) {
             final String name = findName(header, typeElement);
-            return Optional.of(ofHeader(name, annotatedElement, typeElement,
-                                        type, description));
+            return ofHeader(name, annotatedElement, typeElement, type, description);
         }
 
         final RequestObject requestObject = annotatedElement.getAnnotation(RequestObject.class);
         if (requestObject != null) {
             // Find more request converters from a field or parameter.
             final List<RequestConverter> converters = findDeclared(typeElement, RequestConverter.class);
-            return Optional.of(ofRequestObject(annotatedElement, type, pathParams,
-                                               addToFirstIfExists(objectResolvers, converters),
-                                               description));
+            return ofRequestObject(annotatedElement, type, pathParams,
+                                   addToFirstIfExists(objectResolvers, converters),
+                                   description);
         }
 
         // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
@@ -389,22 +397,22 @@ final class AnnotatedValueResolver {
         //
         final AnnotatedValueResolver resolver = ofInjectableTypes(typeElement, type);
         if (resolver != null) {
-            return Optional.of(resolver);
+            return resolver;
         }
 
         final List<RequestConverter> converters = findDeclared(typeElement, RequestConverter.class);
         if (!converters.isEmpty()) {
             // Apply @RequestObject implicitly when a @RequestConverter is specified.
-            return Optional.of(ofRequestObject(annotatedElement, type, pathParams,
-                                               addToFirstIfExists(objectResolvers, converters), description));
+            return ofRequestObject(annotatedElement, type, pathParams,
+                                   addToFirstIfExists(objectResolvers, converters), description);
         }
 
         if (implicitRequestObjectAnnotation) {
-            return Optional.of(ofRequestObject(annotatedElement, type, pathParams, objectResolvers,
-                                               description));
+            return ofRequestObject(annotatedElement, type, pathParams, objectResolvers,
+                                   description);
         }
 
-        return Optional.empty();
+        return null;
     }
 
     static List<RequestObjectResolver> addToFirstIfExists(List<RequestObjectResolver> resolvers,
@@ -1032,7 +1040,7 @@ final class AnnotatedValueResolver {
                     }
 
                     shouldExist = false;
-                    defaultValue = getSpecifiedValue(aDefault.value()).orElse(null);
+                    defaultValue = getSpecifiedValue(aDefault.value());
                 } else {
                     // Warn if @Default exists in an unsupported place.
                     final StringBuilder msg = new StringBuilder();
@@ -1217,8 +1225,7 @@ final class AnnotatedValueResolver {
                 QueryParams params2 = null;
                 if (message != null && isFormData(contentType)) {
                     // Respect 'charset' attribute of the 'content-type' header if it exists.
-                    final String body = message.content(
-                            contentType.charset().orElse(StandardCharsets.US_ASCII));
+                    final String body = message.content(contentType.charset(StandardCharsets.US_ASCII));
                     if (!body.isEmpty()) {
                         params2 = QueryParams.fromQueryString(body);
                     }

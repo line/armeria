@@ -18,8 +18,8 @@ package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -115,17 +115,17 @@ class PublisherBasedStreamMessageTest {
 
             @Override
             public void onNext(Integer integer) {
-                fail();
+                fail("onNext() invoked unexpectedly");
             }
 
             @Override
             public void onError(Throwable t) {
-                fail();
+                fail("onError() invoked unexpectedly");
             }
 
             @Override
             public void onComplete() {
-                fail();
+                fail("onComplete() invoked unexpectedly");
             }
         });
 

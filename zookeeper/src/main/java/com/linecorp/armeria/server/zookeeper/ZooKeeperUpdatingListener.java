@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
+import com.linecorp.armeria.server.ServerPort;
 
 /**
  * A ZooKeeper Server Listener. When you add this listener, server will be automatically registered
@@ -129,10 +130,10 @@ public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     @Override
     public void serverStarted(Server server) throws Exception {
         if (endpoint == null) {
-            assert server.activePort().isPresent();
+            final ServerPort activePort = server.activePort();
+            assert activePort != null;
             endpoint = Endpoint.of(server.defaultHostname(),
-                                   server.activePort().get()
-                                         .localAddress().getPort());
+                                   activePort.localAddress().getPort());
         }
         client.start();
         final String key = endpoint.host() + '_' + endpoint.port();

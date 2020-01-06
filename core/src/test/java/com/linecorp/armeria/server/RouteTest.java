@@ -21,7 +21,7 @@ import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -126,11 +126,8 @@ class RouteTest {
 
     @Test
     void invalidRoutePath() {
-        assertThrows(IllegalArgumentException.class,
-                     () -> Route.builder().path("foo"));
-
-        assertThrows(IllegalArgumentException.class,
-                     () -> Route.builder().path("foo:/bar"));
+        assertThatThrownBy(() -> Route.builder().path("foo")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("foo:/bar")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

@@ -170,18 +170,9 @@ class ClientOptionsBuilderTest {
         final FooClient inner = new FooClient();
         final FooDecorator outer = new FooDecorator(inner);
 
-        assertThat(outer.as(inner.getClass())).isPresent();
-        assertThat(outer.as(outer.getClass())).isPresent();
-
-        if (outer.as(inner.getClass()).isPresent()) {
-            assertThat(outer.as(inner.getClass()).get() == inner);
-        }
-
-        if (outer.as(outer.getClass()).isPresent()) {
-            assertThat(outer.as(outer.getClass()).get() == outer);
-        }
-
-        assertThat(outer.as(LoggingClient.class).isPresent()).isFalse();
+        assertThat(outer.as(inner.getClass())).isSameAs(inner);
+        assertThat(outer.as(outer.getClass())).isSameAs(outer);
+        assertThat(outer.as(LoggingClient.class)).isNull();
     }
 
     private static final class FooClient implements HttpClient {

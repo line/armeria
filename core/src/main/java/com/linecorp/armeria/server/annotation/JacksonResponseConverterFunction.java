@@ -76,7 +76,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
             // @Produces("application/json") or @ProducesJson is specified.
             // Any MIME type which ends with '+json' such as 'application/json-patch+json' can be also accepted.
             if (mediaType.is(MediaType.JSON) || mediaType.subtype().endsWith("+json")) {
-                final Charset charset = mediaType.charset().orElse(StandardCharsets.UTF_8);
+                final Charset charset = mediaType.charset(StandardCharsets.UTF_8);
                 // Convert the object only if the charset supports UTF-8,
                 // because ObjectMapper always writes JSON document as UTF-8.
                 if (charset.contains(StandardCharsets.UTF_8)) {

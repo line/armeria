@@ -22,7 +22,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+
+import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -50,7 +51,8 @@ public final class CircuitBreakerBuilder {
         private static final Ticker TICKER = Ticker.systemTicker();
     }
 
-    private final Optional<String> name;
+    @Nullable
+    private final String name;
 
     private double failureRateThreshold = Defaults.FAILURE_RATE_THRESHOLD;
 
@@ -81,7 +83,7 @@ public final class CircuitBreakerBuilder {
         if (name.isEmpty()) {
             throw new IllegalArgumentException("name: <empty> (expected: a non-empty string)");
         }
-        this.name = Optional.of(name);
+        this.name = name;
     }
 
     /**
@@ -91,7 +93,7 @@ public final class CircuitBreakerBuilder {
      */
     @Deprecated
     public CircuitBreakerBuilder() {
-        name = Optional.empty();
+        name = null;
     }
 
     /**

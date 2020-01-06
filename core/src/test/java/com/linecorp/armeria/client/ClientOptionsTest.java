@@ -55,10 +55,10 @@ class ClientOptionsTest {
         final HttpHeaders httpHeader = HttpHeaders.of(HttpHeaderNames.of("x-user-defined"), "HEADER_VALUE");
 
         final ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
-        assertThat(options.get(ClientOption.HTTP_HEADERS)).contains(httpHeader);
+        assertThat(options.get(ClientOption.HTTP_HEADERS)).isEqualTo(httpHeader);
 
         final ClientOptions options2 = ClientOptions.of();
-        assertThat(options2.get(ClientOption.HTTP_HEADERS)).contains(HttpHeaders.of());
+        assertThat(options2.get(ClientOption.HTTP_HEADERS)).isEqualTo(HttpHeaders.of());
     }
 
     @Test

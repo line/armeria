@@ -49,7 +49,7 @@ final class StringContentPreviewer extends BinaryContentPreviewer {
     public void onHeaders(HttpHeaders headers) {
         super.onHeaders(headers);
         if (headers.contentType() != null) {
-            charset = headers.contentType().charset().orElse(defaultCharset);
+            charset = headers.contentType().charset(defaultCharset);
         } else {
             charset = defaultCharset;
         }

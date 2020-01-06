@@ -17,7 +17,6 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -99,11 +98,7 @@ public class ArmeriaSslConfigurationTest {
 
     private String newUrl(SessionProtocol protocol) {
         assert server != null;
-        final int port = server.activePorts().values().stream()
-                               .filter(p1 -> p1.hasProtocol(protocol)).findAny()
-                               .flatMap(p -> Optional.of(p.localAddress().getPort()))
-                               .orElseThrow(() -> new IllegalStateException(protocol + " port not open"));
-        return protocol.uriText() + "://127.0.0.1:" + port;
+        return protocol.uriText() + "://127.0.0.1:" + server.activeLocalPort(protocol);
     }
 
     private void verify(SessionProtocol protocol) {

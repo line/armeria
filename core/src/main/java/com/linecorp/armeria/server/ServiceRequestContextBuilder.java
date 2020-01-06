@@ -185,7 +185,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 continue;
             }
 
-            if (cfg.service().as(service.getClass()).isPresent()) {
+            if (cfg.service().as(service.getClass()) != null) {
                 return cfg;
             }
         }

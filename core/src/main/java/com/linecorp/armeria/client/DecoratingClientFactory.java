@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -101,12 +100,12 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
+    public <T> ClientBuilderParams clientBuilderParams(T client) {
         return delegate().clientBuilderParams(client);
     }
 
     @Override
-    public <T> Optional<T> unwrap(Object client, Class<T> type) {
+    public <T> T unwrap(Object client, Class<T> type) {
         return delegate().unwrap(client, type);
     }
 

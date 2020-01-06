@@ -26,7 +26,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -277,8 +277,8 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
                     cfg.server().config().virtualHosts().stream()
                        .flatMap(host -> host.serviceConfigs().stream())
                        .map(serviceConfig -> serviceConfig.service().as(GrpcService.class))
-                       .filter(Optional::isPresent)
-                       .flatMap(service -> service.get().services().stream())
+                       .filter(Objects::nonNull)
+                       .flatMap(service -> service.services().stream())
                        // Armeria allows the same service to be registered multiple times at different
                        // paths, but proto reflection service only supports a single instance of each
                        // service so we dedupe here.
