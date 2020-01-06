@@ -28,7 +28,7 @@ interface EventCounter {
     /**
      * Counts success events.
      *
-     * @return the current {@link EventCount} if it has been updated, or else {@code null}.
+     * @return the current {@link EventCount} if it has been updated, or {@code null} otherwise.
      */
     @Nullable
     EventCount onSuccess();
@@ -36,7 +36,7 @@ interface EventCounter {
     /**
      * Counts failure events.
      *
-     * @return the current {@link EventCount} if it has been updated, or else {@code null}.
+     * @return the current {@link EventCount} if it has been updated, or {@code null} otherwise.
      */
     @Nullable
     EventCount onFailure();

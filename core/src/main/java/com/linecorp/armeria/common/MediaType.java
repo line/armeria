@@ -674,7 +674,7 @@ public final class MediaType {
      * @throws IllegalStateException if multiple charset values have been set for this media type
      * @throws IllegalCharsetNameException if a charset value is present, but illegal
      * @throws UnsupportedCharsetException if a charset value is present, but no support is available
-     *     in this instance of the Java virtual machine
+     *                                     in this instance of the Java virtual machine
      */
     @Nullable
     public Charset charset() {
@@ -705,7 +705,7 @@ public final class MediaType {
      * @throws IllegalStateException if multiple charset values have been set for this media type
      * @throws IllegalCharsetNameException if a charset value is present, but illegal
      * @throws UnsupportedCharsetException if a charset value is present, but no support is available
-     *     in this instance of the Java virtual machine
+     *                                     in this instance of the Java virtual machine
      */
     public Charset charset(Charset defaultCharset) {
         requireNonNull(defaultCharset, "defaultCharset");
