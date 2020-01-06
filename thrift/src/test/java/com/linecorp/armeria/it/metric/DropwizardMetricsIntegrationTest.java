@@ -34,6 +34,7 @@ import org.junit.rules.Timeout;
 import com.codahale.metrics.Counting;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Sampling;
+import com.google.common.base.CaseFormat;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
@@ -64,7 +65,7 @@ public class DropwizardMetricsIntegrationTest {
                 }
                 throw new IllegalArgumentException("bad argument");
             }).decorate(MetricCollectingService.newDecorator(
-                    MeterIdPrefixFunction.ofDefault("armeria.server.HelloService"))));
+                    MeterIdPrefixFunction.ofDefault("armeria.server.hello.service"))));
         }
     };
 
@@ -131,7 +132,9 @@ public class DropwizardMetricsIntegrationTest {
     }
 
     private static String serverMetricName(String property, int status, String result) {
-        return MetricRegistry.name("armeria", "server", "HelloService", property,
+        final String name = "armeriaServerHelloService" +
+                            CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, property);
+        return MetricRegistry.name(name,
                                    "hostnamePattern:*", "httpStatus:" + status,
                                    "method:hello", result, "route:exact:/helloservice");
     }
@@ -145,8 +148,9 @@ public class DropwizardMetricsIntegrationTest {
     }
 
     private static String clientMetricName(String property, int status, String result) {
-        return MetricRegistry.name("armeria", "client", "HelloService", property,
-                                   "httpStatus:" + status, "method:hello", result);
+        final String name = "armeriaClientHelloService" +
+                            CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, property);
+        return MetricRegistry.name(name, "httpStatus:" + status, "method:hello", result);
     }
 
     private static String clientMetricNameWithStatus(String prop, int status) {
@@ -161,7 +165,7 @@ public class DropwizardMetricsIntegrationTest {
         final Iface client = Clients.builder(server.uri(BINARY, "/helloservice"))
                                     .factory(clientFactory)
                                     .rpcDecorator(MetricCollectingRpcClient.newDecorator(
-                                            MeterIdPrefixFunction.ofDefault("armeria.client.HelloService")))
+                                            MeterIdPrefixFunction.ofDefault("armeria.client.hello.service")))
                                     .build(Iface.class);
         try {
             client.hello(name);

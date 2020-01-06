@@ -174,7 +174,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(status, mediaType,
-                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
+                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -187,7 +187,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(status, mediaType,
-                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
+                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -246,7 +246,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse of(HttpStatus status, MediaType mediaType, String format, Object... args) {
         requireNonNull(mediaType, "mediaType");
         return of(status, mediaType,
-                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), format, args));
+                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
     }
 
     /**
@@ -294,7 +294,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Creates a new HTTP response of the specified headers.
      */
     static HttpResponse of(ResponseHeaders headers) {
-        return of(headers, HttpData.EMPTY_DATA);
+        return of(headers, HttpData.empty());
     }
 
     /**

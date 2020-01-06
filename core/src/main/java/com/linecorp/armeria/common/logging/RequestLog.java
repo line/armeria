@@ -261,7 +261,7 @@ public interface RequestLog {
     /**
      * Returns the cause of request processing failure.
      *
-     * @return the cause. {@code null} if the request was processed completely.
+     * @return the cause, or {@code null} if the request was processed completely.
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     @Nullable
@@ -322,7 +322,7 @@ public interface RequestLog {
     /**
      * Returns the cause of response processing failure.
      *
-     * @return the cause. {@code null} if the response was processed completely.
+     * @return the cause, or {@code null} if the response was processed completely.
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     @Nullable
@@ -341,7 +341,7 @@ public interface RequestLog {
     /**
      * Returns the Netty {@link Channel} which handled the {@link Request}.
      *
-     * @return the Netty {@link Channel}. {@code null} if the {@link Request} has failed even before
+     * @return the Netty {@link Channel}, or {@code null} if the {@link Request} has failed even before
      *         a connection is established.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
@@ -385,7 +385,7 @@ public interface RequestLog {
      * @deprecated Do not use this method. Get the remote or local address from {@link #context()} or get
      *             the authority from {@link #authority()}.
      *
-     * @return the host name. {@code null} if the {@link Request} has failed even before a connection is
+     * @return the host name, or {@code null} if the {@link Request} has failed even before a connection is
      *         established.
      * @throws RequestLogAvailabilityException if this property is not available yet
      */

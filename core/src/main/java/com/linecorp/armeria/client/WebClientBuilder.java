@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -116,9 +115,8 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     }
 
     private static Scheme validateScheme(String scheme) {
-        final Optional<Scheme> schemeOpt = Scheme.tryParse(scheme);
-        if (schemeOpt.isPresent()) {
-            final Scheme parsedScheme = schemeOpt.get();
+        final Scheme parsedScheme = Scheme.tryParse(scheme);
+        if (parsedScheme != null) {
             if (parsedScheme.serializationFormat() == SerializationFormat.NONE &&
                 SUPPORTED_PROTOCOLS.contains(parsedScheme.sessionProtocol())) {
                 return parsedScheme;

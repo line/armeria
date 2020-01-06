@@ -89,7 +89,7 @@ public final class ServiceConfig {
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
 
-        handlesCorsPreflight = service.as(CorsService.class).isPresent();
+        handlesCorsPreflight = service.as(CorsService.class) != null;
     }
 
     static long validateRequestTimeoutMillis(long requestTimeoutMillis) {

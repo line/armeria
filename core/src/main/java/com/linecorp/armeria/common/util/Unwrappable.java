@@ -17,7 +17,7 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
+import javax.annotation.Nullable;
 
 /**
  * Provides a way to unwrap an object in decorator pattern, similar to down-casting in an inheritance pattern.
@@ -42,15 +42,16 @@ public interface Unwrappable {
      * }
      *
      * Qux qux = new Qux(new Bar(new Foo()));
-     * Foo foo = qux.as(Foo.class).get();
-     * Bar bar = qux.as(Bar.class).get();
+     * Foo foo = qux.as(Foo.class);
+     * Bar bar = qux.as(Bar.class);
      * }</pre>
      *
      * @param type the type of the object to return
-     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     * @return the object of the specified {@code type} if found, or {@code null} if not found.
      */
-    default <T> Optional<T> as(Class<T> type) {
+    @Nullable
+    default <T> T as(Class<T> type) {
         requireNonNull(type, "type");
-        return type.isInstance(this) ? Optional.of(type.cast(this)) : Optional.empty();
+        return type.isInstance(this) ? type.cast(this) : null;
     }
 }

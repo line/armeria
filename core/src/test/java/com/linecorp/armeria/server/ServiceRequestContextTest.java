@@ -45,10 +45,18 @@ class ServiceRequestContextTest {
         assertThatThrownBy(ServiceRequestContext::current).isInstanceOf(IllegalStateException.class)
                                                           .hasMessageContaining("unavailable");
 
-        final ServiceRequestContext ctx = serviceRequestContext();
-        try (SafeCloseable unused = ctx.push()) {
+        final ServiceRequestContext sctx = serviceRequestContext();
+        try (SafeCloseable unused = sctx.push()) {
             assertThat(onEnterExitStack).hasSize(1);
-            assertThat(ServiceRequestContext.current()).isSameAs(ctx);
+            assertThat(ServiceRequestContext.current()).isSameAs(sctx);
+            final ClientRequestContext cctx = clientRequestContext();
+            try (SafeCloseable unused1 = cctx.push()) {
+                assertThat(onEnterExitStack).hasSize(2);
+                assertThat(ServiceRequestContext.current()).isSameAs(sctx);
+                assertThat(ClientRequestContext.current()).isSameAs(cctx);
+                assertThat((ClientRequestContext) RequestContext.current()).isSameAs(cctx);
+            }
+            assertThat(onEnterExitStack).hasSize(1);
         }
         assertThat(onEnterExitStack).isEmpty();
 
@@ -63,10 +71,18 @@ class ServiceRequestContextTest {
     void currentOrNull() {
         assertThat(ServiceRequestContext.currentOrNull()).isNull();
 
-        final ServiceRequestContext ctx = serviceRequestContext();
-        try (SafeCloseable unused = ctx.push()) {
+        final ServiceRequestContext sctx = serviceRequestContext();
+        try (SafeCloseable unused = sctx.push()) {
             assertThat(onEnterExitStack).hasSize(1);
-            assertThat(ServiceRequestContext.currentOrNull()).isSameAs(ctx);
+            assertThat(ServiceRequestContext.currentOrNull()).isSameAs(sctx);
+            final ClientRequestContext cctx = clientRequestContext();
+            try (SafeCloseable unused1 = cctx.push()) {
+                assertThat(onEnterExitStack).hasSize(2);
+                assertThat(ServiceRequestContext.currentOrNull()).isSameAs(sctx);
+                assertThat(ClientRequestContext.current()).isSameAs(cctx);
+                assertThat((ClientRequestContext) RequestContext.current()).isSameAs(cctx);
+            }
+            assertThat(onEnterExitStack).hasSize(1);
         }
         assertThat(onEnterExitStack).isEmpty();
 
@@ -79,14 +95,31 @@ class ServiceRequestContextTest {
 
     @Test
     void mapCurrent() {
-        assertThat(ServiceRequestContext.mapCurrent(ctx -> "foo", () -> "bar")).isEqualTo("bar");
+        assertThat(ServiceRequestContext.mapCurrent(ctx -> "foo", () -> "defaultValue"))
+                .isEqualTo("defaultValue");
         assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isNull();
 
-        final ServiceRequestContext ctx = serviceRequestContext();
-        try (SafeCloseable unused = ctx.push()) {
+        final ServiceRequestContext sctx = serviceRequestContext();
+        try (SafeCloseable unused = sctx.push()) {
             assertThat(onEnterExitStack).hasSize(1);
-            assertThat(ServiceRequestContext.mapCurrent(c -> "foo", () -> "bar")).isEqualTo("foo");
-            assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isSameAs(ctx);
+            assertThat(ServiceRequestContext.mapCurrent(c -> c == sctx ? "foo" : "bar",
+                                                        () -> "defaultValue"))
+                    .isEqualTo("foo");
+            assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isSameAs(sctx);
+            final ClientRequestContext cctx = clientRequestContext();
+            try (SafeCloseable unused1 = cctx.push()) {
+                assertThat(onEnterExitStack).hasSize(2);
+                assertThat(ServiceRequestContext.mapCurrent(c -> c == sctx ? "foo" : "bar",
+                                                            () -> "defaultValue"))
+                        .isEqualTo("foo");
+                assertThat(ClientRequestContext.mapCurrent(c -> c == cctx ? "baz" : "qux",
+                                                           () -> "defaultValue"))
+                        .isEqualTo("baz");
+                assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isSameAs(sctx);
+                assertThat(ClientRequestContext.mapCurrent(Function.identity(), null)).isSameAs(cctx);
+                assertThat(RequestContext.mapCurrent(Function.identity(), null)).isSameAs(cctx);
+            }
+            assertThat(onEnterExitStack).hasSize(1);
         }
         assertThat(onEnterExitStack).isEmpty();
 

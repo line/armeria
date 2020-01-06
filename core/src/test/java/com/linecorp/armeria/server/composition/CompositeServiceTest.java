@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.composition;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.fail;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -25,7 +26,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -73,8 +73,8 @@ class CompositeServiceTest {
     static void checkMetrics() {
         final MeterRegistry registry = server.server().meterRegistry();
         assertThat(MicrometerUtil.register(registry,
-                                           new MeterIdPrefix("armeria.server.router.compositeServiceCache",
-                                                             "hostnamePattern", "*",
+                                           new MeterIdPrefix("armeria.server.router.composite.service.cache",
+                                                             "hostname.pattern", "*",
                                                              "route", "prefix:/qux/"),
                                            Object.class, (r, i) -> null)).isNotNull();
     }
@@ -136,10 +136,9 @@ class CompositeServiceTest {
 
     @Test
     void failWhenThePathIsNotPrefix() {
-        Assertions.assertThrows(IllegalStateException.class,
-                                () -> Server.builder()
-                                            .service("/exact", new TestCompositeService())
-                                            .build());
+        assertThatThrownBy(() -> Server.builder()
+                                       .service("/exact", new TestCompositeService())
+                                       .build()).isInstanceOf(IllegalStateException.class);
     }
 
     private static final class TestCompositeService

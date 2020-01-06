@@ -77,7 +77,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         respond(status,
-                mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
+                mediaType, content.getBytes(mediaType.charset(StandardCharsets.UTF_8)));
     }
 
     /**
@@ -100,7 +100,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         respond(status,
                 mediaType,
                 String.format(Locale.ENGLISH, format, args).getBytes(
-                        mediaType.charset().orElse(StandardCharsets.UTF_8)));
+                        mediaType.charset(StandardCharsets.UTF_8)));
     }
 
     /**

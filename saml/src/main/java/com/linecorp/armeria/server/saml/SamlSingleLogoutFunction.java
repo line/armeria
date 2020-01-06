@@ -103,7 +103,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
                 validateSignature(idp.signingCredential(), logoutRequest);
             }
 
-            final SamlEndpoint sloResEndpoint = idp.sloResEndpoint().orElse(null);
+            final SamlEndpoint sloResEndpoint = idp.sloResEndpoint();
             if (sloResEndpoint == null) {
                 // No response URL. Just return 200 OK.
                 return HttpResponse.from(sloHandler.logoutSucceeded(ctx, req, messageContext)

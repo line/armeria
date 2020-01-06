@@ -48,7 +48,7 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
             // @Produces("text/plain") or @ProducesText is specified.
             if (mediaType.is(MediaType.ANY_TEXT_TYPE)) {
                 // Use 'utf-8' charset by default.
-                final Charset charset = mediaType.charset().orElse(StandardCharsets.UTF_8);
+                final Charset charset = mediaType.charset(StandardCharsets.UTF_8);
 
                 // To avoid sending an unfinished text to the client, always aggregate the published strings.
                 if (result instanceof Publisher) {

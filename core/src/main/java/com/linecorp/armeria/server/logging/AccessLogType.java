@@ -21,7 +21,8 @@ import static com.linecorp.armeria.server.logging.AccessLogType.VariableRequirem
 import static com.linecorp.armeria.server.logging.AccessLogType.VariableRequirement.YES;
 
 import java.util.Map;
-import java.util.Optional;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -122,8 +123,9 @@ enum AccessLogType {
         tokenToEnum = builder.build();
     }
 
-    static Optional<AccessLogType> find(char token) {
-        return Optional.ofNullable(tokenToEnum.get(token));
+    @Nullable
+    static AccessLogType find(char token) {
+        return tokenToEnum.get(token);
     }
 
     enum VariableRequirement {

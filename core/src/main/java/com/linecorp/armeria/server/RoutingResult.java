@@ -134,7 +134,7 @@ public final class RoutingResult {
     /**
      * Returns the query mapped by the {@link Route}.
      *
-     * @return the query string. {@code null} If there is no query part.
+     * @return the query string, or {@code null} if there is no query part.
      * @throws IllegalStateException if there's no match
      */
     @Nullable

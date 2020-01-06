@@ -118,7 +118,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
             if (state == State.DONE) {
                 // Successfully sent the request; schedule the response timeout.
-                response.scheduleTimeout(ch.eventLoop());
+                response.initTimeout();
             }
 
             // Request more messages regardless whether the state is DONE. It makes the producer have

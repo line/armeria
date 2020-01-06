@@ -22,8 +22,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
-import com.google.common.math.LongMath;
-
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -168,10 +166,7 @@ final class HttpHealthChecker implements AsyncCloseable {
             if (maxLongPollingSeconds > 0) {
                 final long responseTimeoutMillis = ctx.responseTimeoutMillis();
                 if (responseTimeoutMillis > 0) {
-                    final long newResponseTimeoutMillis = LongMath.saturatedAdd(
-                            responseTimeoutMillis,
-                            TimeUnit.SECONDS.toMillis(maxLongPollingSeconds));
-                    ctx.setResponseTimeoutMillis(newResponseTimeoutMillis);
+                    ctx.extendResponseTimeoutMillis(TimeUnit.SECONDS.toMillis(maxLongPollingSeconds));
                 }
             }
             return delegate().execute(ctx, req);

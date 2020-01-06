@@ -144,14 +144,14 @@ class AnnotatedValueResolverTest {
         final FieldBean bean = new FieldBean();
 
         getAllFields(FieldBean.class).forEach(field -> {
-            final Optional<AnnotatedValueResolver> resolver =
+            final AnnotatedValueResolver resolver =
                     AnnotatedValueResolver.ofBeanField(field, pathParams, objectResolvers);
 
-            if (resolver.isPresent()) {
-                testResolver(resolver.get());
+            if (resolver != null) {
+                testResolver(resolver);
                 try {
                     field.setAccessible(true);
-                    field.set(bean, resolver.get().resolve(resolverContext));
+                    field.set(bean, resolver.resolve(resolverContext));
                 } catch (IllegalAccessException e) {
                     throw new Error("should not reach here", e);
                 }

@@ -126,17 +126,7 @@ public abstract class AbstractRequestContextBuilder {
 
         requireNonNull(uri, "uri");
         authority = firstNonNull(uri.getRawAuthority(), FALLBACK_AUTHORITY);
-
-        final String schemeStr = uri.getScheme();
-        if (schemeStr != null && schemeStr.indexOf('+') < 0) {
-            sessionProtocol = SessionProtocol.find(schemeStr).orElseThrow(
-                    () -> new IllegalArgumentException("uri.scheme is not valid: " + uri));
-        } else {
-            sessionProtocol =
-                    Scheme.tryParse(schemeStr)
-                          .orElseThrow(() -> new IllegalArgumentException("uri.scheme is not valid: " + uri))
-                          .sessionProtocol();
-        }
+        sessionProtocol = getSessionProtocol(uri);
 
         final PathAndQuery pathAndQuery;
         if (uri.getRawQuery() != null) {
@@ -147,6 +137,27 @@ public abstract class AbstractRequestContextBuilder {
         checkArgument(pathAndQuery != null, "uri.path or uri.query is not valid: %s", uri);
         path = pathAndQuery.path();
         query = pathAndQuery.query();
+    }
+
+    private static SessionProtocol getSessionProtocol(URI uri) {
+        final String schemeStr = uri.getScheme();
+        if (schemeStr != null && schemeStr.indexOf('+') < 0) {
+            final SessionProtocol parsed = SessionProtocol.find(schemeStr);
+            if (parsed == null) {
+                throw newInvalidSchemeException(uri);
+            }
+            return parsed;
+        } else {
+            final Scheme parsed = Scheme.tryParse(schemeStr);
+            if (parsed == null) {
+                throw newInvalidSchemeException(uri);
+            }
+            return parsed.sessionProtocol();
+        }
+    }
+
+    private static IllegalArgumentException newInvalidSchemeException(URI uri) {
+        return new IllegalArgumentException("uri.scheme is not valid: " + uri);
     }
 
     /**

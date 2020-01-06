@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -247,8 +246,9 @@ public final class TypeSignature {
      * For reflection-based {@link DocServicePlugin}s, this will probably be a {@link Class}, but
      * other plugins may use an actual instance with descriptor information.
      */
-    public Optional<Object> namedTypeDescriptor() {
-        return Optional.ofNullable(namedTypeDescriptor);
+    @Nullable
+    public Object namedTypeDescriptor() {
+        return namedTypeDescriptor;
     }
 
     /**

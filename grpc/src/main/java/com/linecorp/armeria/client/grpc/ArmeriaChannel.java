@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.grpc;
 
 import java.net.URI;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -150,9 +149,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     }
 
     @Override
-    public <T> Optional<T> as(Class<T> type) {
-        final Optional<T> unwrapped = Unwrappable.super.as(type);
-        if (unwrapped.isPresent()) {
+    public <T> T as(Class<T> type) {
+        final T unwrapped = Unwrappable.super.as(type);
+        if (unwrapped != null) {
             return unwrapped;
         }
 

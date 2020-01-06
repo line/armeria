@@ -64,7 +64,7 @@ public class ArmeriaConfigurationUtilTest {
                                        MeterIdPrefixFunctionFactory.DEFAULT, null);
         final Server s1 = sb1.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(service(s1).as(MetricCollectingService.class)).isPresent();
+        assertThat(service(s1).as(MetricCollectingService.class)).isNotNull();
 
         reset(decorator);
 
@@ -91,7 +91,7 @@ public class ArmeriaConfigurationUtilTest {
         configureAnnotatedServices(sb, dsb, ImmutableList.of(bean), null, null);
         final Server s = sb.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(service(s).as(SimpleDecorator.class)).isPresent();
+        assertThat(service(s).as(SimpleDecorator.class)).isNotNull();
     }
 
     private static HttpService service(Server server) {

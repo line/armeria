@@ -95,7 +95,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
         return of(method, path, mediaType,
-                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
+                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -110,7 +110,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
         return of(method, path, mediaType,
-                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
+                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -128,7 +128,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
         return of(method, path, mediaType,
-                  HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), format, args));
+                  HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, args));
     }
 
     /**
@@ -181,7 +181,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Creates a new {@link HttpRequest} with empty content and closes the stream.
      */
     static HttpRequest of(RequestHeaders headers) {
-        return of(headers, HttpData.EMPTY_DATA);
+        return of(headers, HttpData.empty());
     }
 
     /**
@@ -347,7 +347,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Returns the value of the {@code 'content-type'} header.
-     * @return the valid header value if present. {@code null} otherwise.
+     * @return the valid header value if present, or {@code null} otherwise.
      */
     @Nullable
     default MediaType contentType() {
