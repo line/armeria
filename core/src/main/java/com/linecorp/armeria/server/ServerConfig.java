@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -335,13 +334,12 @@ public final class ServerConfig {
         for (VirtualHost h : virtualHosts) {
             for (ServiceConfig c : h.serviceConfigs()) {
                 // Consider the case where the specified service is decorated before being added.
-                final HttpService s = c.service();
-                final Optional<? extends HttpService> sOpt = s.as(serviceType);
-                if (!sOpt.isPresent()) {
+                final HttpService unwrapped = c.service().as(serviceType);
+                if (unwrapped == null) {
                     continue;
                 }
 
-                if (sOpt.get() == service) {
+                if (unwrapped == service) {
                     res.add(c.virtualHost());
                     break;
                 }

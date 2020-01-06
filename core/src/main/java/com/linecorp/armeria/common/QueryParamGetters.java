@@ -41,7 +41,7 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      * the specified {@code name}, the first value in insertion order is returned.
      *
      * @param name the parameter name
-     * @return the first parameter value if found. {@code null} if there is no such parameter
+     * @return the first parameter value if found, or {@code null} if there is no such parameter
      */
     @Override
     @Nullable
@@ -53,7 +53,7 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      *
      * @param name the parameter name
      * @param defaultValue the default value
-     * @return the first parameter value or {@code defaultValue} if there is no such parameter
+     * @return the first parameter value, or {@code defaultValue} if there is no such parameter
      */
     @Override
     String get(String name, String defaultValue);

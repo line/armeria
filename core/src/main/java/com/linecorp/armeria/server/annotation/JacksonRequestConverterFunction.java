@@ -70,7 +70,7 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
                                     contentType.subtype().endsWith("+json"))) {
             final ObjectReader reader = readers.computeIfAbsent(expectedResultType, mapper::readerFor);
             if (reader != null) {
-                final String content = request.content(contentType.charset().orElse(StandardCharsets.UTF_8));
+                final String content = request.content(contentType.charset(StandardCharsets.UTF_8));
                 try {
                     return reader.readValue(content);
                 } catch (JsonProcessingException e) {

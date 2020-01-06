@@ -18,7 +18,8 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
@@ -27,7 +28,8 @@ import com.google.common.base.MoreObjects;
  */
 class CircuitBreakerConfig {
 
-    private final Optional<String> name;
+    @Nullable
+    private final String name;
 
     private final double failureRateThreshold;
 
@@ -43,7 +45,7 @@ class CircuitBreakerConfig {
 
     private final List<CircuitBreakerListener> listeners;
 
-    CircuitBreakerConfig(Optional<String> name,
+    CircuitBreakerConfig(@Nullable String name,
                          double failureRateThreshold, long minimumRequestThreshold,
                          Duration circuitOpenWindow, Duration trialRequestInterval,
                          Duration counterSlidingWindow, Duration counterUpdateInterval,
@@ -58,7 +60,8 @@ class CircuitBreakerConfig {
         this.listeners = listeners;
     }
 
-    Optional<String> name() {
+    @Nullable
+    String name() {
         return name;
     }
 

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.client.HttpSessionHandler.PENDING_EXCEPTION;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -192,7 +193,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 final SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
                 if (!handshakeEvent.isSuccess()) {
                     // The connection will be closed automatically by SslHandler.
-                    logger.warn("{} TLS handshake failed:", ctx.channel(), handshakeEvent.cause());
                     handshakeFailed = true;
                     return;
                 }
@@ -231,7 +231,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 if (handshakeFailed &&
                     cause instanceof DecoderException &&
                     cause.getCause() instanceof SSLException) {
-                    // Swallow an SSLException raised after handshake failure.
+                    ctx.channel().attr(PENDING_EXCEPTION).set(cause.getCause());
                     return;
                 }
 
@@ -447,7 +447,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }, ctx.channel().eventLoop());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, null, 0, UPGRADE_RESPONSE_MAX_LENGTH);
+            responseDecoder.addResponse(0, res, null, ctx.channel().eventLoop(), /* response timeout */ 0,
+                                        UPGRADE_RESPONSE_MAX_LENGTH);
             ctx.fireChannelActive();
         }
 

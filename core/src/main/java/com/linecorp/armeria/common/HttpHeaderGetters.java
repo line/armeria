@@ -44,7 +44,7 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     /**
      * Returns the parsed {@code "content-type"} header.
      *
-     * @return the parsed {@link MediaType} if present and valid. {@code null} otherwise.
+     * @return the parsed {@link MediaType} if present and valid, or {@code null} otherwise.
      */
     @Nullable
     MediaType contentType();
@@ -54,7 +54,7 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      * the specified {@code name}, the first value in insertion order is returned.
      *
      * @param name the name of the header to retrieve
-     * @return the first header value if the header is found. {@code null} if there's no such header
+     * @return the first header value if the header is found, or {@code null} if there's no such header
      */
     @Override
     @Nullable

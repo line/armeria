@@ -47,23 +47,19 @@ final class RouteCache {
 
     @Nullable
     private static final Cache<RoutingContext, ServiceConfig> FIND_CACHE =
-            Flags.routeCacheSpec().map(RouteCache::<ServiceConfig>buildCache)
-                 .orElse(null);
+            Flags.routeCacheSpec() != null ? buildCache(Flags.routeCacheSpec()) : null;
 
     @Nullable
     private static final Cache<RoutingContext, List<ServiceConfig>> FIND_ALL_CACHE =
-            Flags.routeCacheSpec().map(RouteCache::<List<ServiceConfig>>buildCache)
-                 .orElse(null);
+            Flags.routeCacheSpec() != null ? buildCache(Flags.routeCacheSpec()) : null;
 
     @Nullable
     private static final Cache<RoutingContext, RouteDecoratingService> DECORATOR_FIND_CACHE =
-            Flags.routeDecoratorCacheSpec().map(RouteCache::<RouteDecoratingService>buildCache)
-                 .orElse(null);
+            Flags.routeDecoratorCacheSpec() != null ? buildCache(Flags.routeDecoratorCacheSpec()) : null;
 
     @Nullable
     private static final Cache<RoutingContext, List<RouteDecoratingService>> DECORATOR_FIND_ALL_CACHE =
-            Flags.routeDecoratorCacheSpec().map(RouteCache::<List<RouteDecoratingService>>buildCache)
-                 .orElse(null);
+            Flags.routeDecoratorCacheSpec() != null ? buildCache(Flags.routeDecoratorCacheSpec()) : null;
 
     /**
      * Returns a {@link Router} which is wrapped with a {@link Cache} layer in order to improve the
@@ -82,16 +78,15 @@ final class RouteCache {
      */
     static <T extends Service<?, ?>> Router<CompositeServiceEntry<T>> wrapCompositeServiceRouter(
             Router<CompositeServiceEntry<T>> delegate, Set<Route> ambiguousRoutes) {
-        final Cache<RoutingContext, CompositeServiceEntry<T>> cache =
-                Flags.compositeServiceCacheSpec().map(RouteCache::<CompositeServiceEntry<T>>buildCache)
-                     .orElse(null);
-        if (cache == null) {
+        if (Flags.compositeServiceCacheSpec() == null) {
             return delegate;
         }
 
+        final Cache<RoutingContext, CompositeServiceEntry<T>> cache =
+                buildCache(Flags.compositeServiceCacheSpec());
+
         final Cache<RoutingContext, List<CompositeServiceEntry<T>>> listCache =
-                Flags.compositeServiceCacheSpec().map(RouteCache::<List<CompositeServiceEntry<T>>>buildCache)
-                     .orElse(null);
+                buildCache(Flags.compositeServiceCacheSpec());
 
         return new CachingRouter<>(delegate, CompositeServiceEntry::route, cache, listCache, ambiguousRoutes);
     }

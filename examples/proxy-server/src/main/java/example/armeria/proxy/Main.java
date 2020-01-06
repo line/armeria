@@ -1,7 +1,5 @@
 package example.armeria.proxy;
 
-import java.net.InetSocketAddress;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,11 +41,8 @@ public final class Main {
 
         proxyServer.start().join();
 
-        final InetSocketAddress localAddress = proxyServer.activePort().get().localAddress();
-        final boolean isLocalAddress = localAddress.getAddress().isAnyLocalAddress() ||
-                                       localAddress.getAddress().isLoopbackAddress();
-        logger.info("The proxy server has been started. Connect at http://{}:{}/",
-                    isLocalAddress ? "127.0.0.1" : localAddress.getHostString(), localAddress.getPort());
+        logger.info("The proxy server has been started. Connect at http://127.0.0.1:{}/",
+                    proxyServer.activeLocalPort());
     }
 
     static Server newBackendServer(int port, int frameIntervalMillis) throws Exception {

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.tomcat;
 
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -139,8 +138,8 @@ final class ManagedTomcatService extends TomcatService {
     }
 
     @Override
-    public Optional<Connector> connector() {
-        return Optional.ofNullable(connector);
+    public Connector connector() {
+        return connector;
     }
 
     @Override

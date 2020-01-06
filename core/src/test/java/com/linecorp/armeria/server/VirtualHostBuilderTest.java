@@ -18,7 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -187,49 +187,47 @@ class VirtualHostBuilderTest {
     @Test
     void hostnamePatternCannotBeSetForDefaultBuilder() {
         final ServerBuilder sb = Server.builder();
-        assertThrows(UnsupportedOperationException.class,
-                     () -> sb.defaultVirtualHost().hostnamePattern("CannotSet"));
+        assertThatThrownBy(() -> sb.defaultVirtualHost().hostnamePattern("CannotSet"))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
     void hostnamePatternCannotBeSetForDefaultBuilder2() {
         final ServerBuilder sb = Server.builder();
-        assertThrows(UnsupportedOperationException.class,
-                     () -> sb.withDefaultVirtualHost(builder -> builder.hostnamePattern("CannotSet")));
+        assertThatThrownBy(() -> sb.withDefaultVirtualHost(builder -> builder.hostnamePattern("CannotSet")))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
     void virtualHostWithNull2() {
         final ServerBuilder sb = Server.builder();
-        assertThrows(NullPointerException.class,
-                     () -> sb.virtualHost(null, "foo.com"));
+        assertThatThrownBy(() -> sb.virtualHost(null, "foo.com")).isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void virtualHostWithNull3() {
         final ServerBuilder sb = Server.builder();
-        assertThrows(NullPointerException.class,
-                     () -> sb.virtualHost(null, null));
+        assertThatThrownBy(() -> sb.virtualHost(null, null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void virtualHostWithMismatch() {
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThatThrownBy(() -> {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("foo.com")
                     .build(template);
-        });
+        }).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void virtualHostWithMismatch2() {
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThatThrownBy(() -> {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("*.foo.com")
                     .build(template);
-        });
+        }).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

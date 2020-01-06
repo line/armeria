@@ -160,7 +160,7 @@ final class SamlService implements HttpServiceWithRoutes {
                                        DATA_AGGREGATION_FAILURE);
             }
 
-            final SamlPortConfig portConfig = portConfigHolder.config().get();
+            final SamlPortConfig portConfig = portConfigHolder.config();
             final boolean isTls = ctx.sessionProtocol().isTls();
             if (portConfig.scheme().isTls() != isTls) {
                 if (isTls) {
@@ -195,7 +195,7 @@ final class SamlService implements HttpServiceWithRoutes {
             final MediaType contentType = req.contentType();
 
             if (contentType != null && contentType.belongsTo(MediaType.FORM_DATA)) {
-                final String query = req.content(contentType.charset().orElse(StandardCharsets.UTF_8));
+                final String query = req.content(contentType.charset(StandardCharsets.UTF_8));
                 params = QueryParams.fromQueryString(query);
             } else {
                 final String path = req.path();

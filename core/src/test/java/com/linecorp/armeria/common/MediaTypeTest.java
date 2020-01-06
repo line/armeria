@@ -59,7 +59,6 @@ import java.nio.charset.UnsupportedCharsetException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
 import org.junit.Test;
 
@@ -101,11 +100,11 @@ public class MediaTypeTest {
     @Test // reflection
     public void testConstants_charset() throws Exception {
         for (Field field : getConstantFields()) {
-            final Optional<Charset> charset = ((MediaType) field.get(null)).charset();
+            final Charset charset = ((MediaType) field.get(null)).charset();
             if (field.getName().endsWith("_UTF_8")) {
-                assertThat(charset).hasValue(UTF_8);
+                assertThat(charset).isEqualTo(UTF_8);
             } else {
-                assertThat(charset).isEmpty();
+                assertThat(charset).isNull();
             }
         }
     }
@@ -462,13 +461,13 @@ public class MediaTypeTest {
 
     @Test
     public void testGetCharset() {
-        assertThat(MediaType.parse("text/plain").charset()).isEmpty();
-        assertThat(MediaType.parse("text/plain; charset=utf-8").charset()).hasValue(UTF_8);
+        assertThat(MediaType.parse("text/plain").charset()).isNull();
+        assertThat(MediaType.parse("text/plain; charset=utf-8").charset()).isEqualTo(UTF_8);
     }
 
     @Test // Non-UTF-8 Charset
     public void testGetCharset_utf16() {
-        assertThat(MediaType.parse("text/plain; charset=utf-16").charset()).hasValue(UTF_16);
+        assertThat(MediaType.parse("text/plain; charset=utf-16").charset()).isEqualTo(UTF_16);
     }
 
     @Test

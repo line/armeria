@@ -23,6 +23,7 @@ import java.util.function.BiFunction;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
@@ -104,7 +105,9 @@ public interface MeterIdPrefixFunction {
 
                 if (ctx instanceof ServiceRequestContext) {
                     final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                    tagListBuilder.add(Tag.of("hostnamePattern", sCtx.virtualHost().hostnamePattern()));
+                    tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "hostnamePattern"
+                                                                          : "hostname.pattern",
+                                              sCtx.virtualHost().hostnamePattern()));
                 }
 
                 if (addStatus) {

@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -59,22 +57,22 @@ public interface Client<I extends Request, O extends Response> extends Unwrappab
      *                             .decorator(LoggingClient.newDecorator())
      *                             .build();
      *
-     * LoggingClient unwrapped = client.as(LoggingClient.class).get();
+     * LoggingClient unwrapped = client.as(LoggingClient.class);
      *
      * // You can also use Clients.unwrap(), which is useful especially for
      * // Thrift and gRPC where the client object does not implement the 'as()' method.
-     * LoggingClient unwrapped2 = Clients.unwrap(client, LoggingClient.class).get();
+     * LoggingClient unwrapped2 = Clients.unwrap(client, LoggingClient.class);
      * }</pre>
      *
      * @param type the type of the object to return
-     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     * @return the object of the specified {@code type} if found, or {@code null} if not found.
      *
      * @see Clients#unwrap(Object, Class)
      * @see ClientFactory#unwrap(Object, Class)
      * @see Unwrappable
      */
     @Override
-    default <T> Optional<T> as(Class<T> type) {
+    default <T> T as(Class<T> type) {
         requireNonNull(type, "type");
         return Unwrappable.super.as(type);
     }

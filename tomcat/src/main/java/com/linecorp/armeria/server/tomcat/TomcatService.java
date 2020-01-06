@@ -29,7 +29,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Queue;
 
 import javax.annotation.Nullable;
@@ -416,17 +415,25 @@ public abstract class TomcatService implements HttpService {
 
     /**
      * Returns Tomcat {@link Connector}.
+     *
+     * @return the Tomcat {@link Connector}, or {@code null} if the {@link Connector} is not available yet.
      */
-    public abstract Optional<Connector> connector();
+    @Nullable
+    public abstract Connector connector();
 
     @Nullable
     abstract String hostName();
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Optional<Adapter> coyoteAdapter = connector().map(c -> c.getProtocolHandler().getAdapter());
+        final Connector connector = connector();
+        if (connector == null) {
+            // Tomcat is not configured / stopped.
+            throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
+        }
 
-        if (!coyoteAdapter.isPresent()) {
+        final Adapter coyoteAdapter = connector.getProtocolHandler().getAdapter();
+        if (coyoteAdapter == null) {
             // Tomcat is not configured / stopped.
             throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
@@ -464,7 +471,7 @@ public abstract class TomcatService implements HttpService {
                     }
 
                     try {
-                        coyoteAdapter.get().service(coyoteReq, coyoteRes);
+                        coyoteAdapter.service(coyoteReq, coyoteRes);
                         final HttpHeaders headers = convertResponse(coyoteRes);
                         if (res.tryWrite(headers)) {
                             for (;;) {

@@ -416,7 +416,11 @@ class HttpServerTest {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                             pendingRequestLogs.incrementAndGet();
-                            ctx.setRequestTimeoutMillis(serverRequestTimeoutMillis);
+                            if (serverRequestTimeoutMillis == 0) {
+                                ctx.clearRequestTimeout();
+                            } else {
+                                ctx.setRequestTimeoutAfterMillis(serverRequestTimeoutMillis);
+                            }
                             ctx.setMaxRequestLength(serverMaxRequestLength);
                             ctx.log().addListener(log -> {
                                 pendingRequestLogs.decrementAndGet();
@@ -985,7 +989,11 @@ class HttpServerTest {
                              builder.decorator(
                                      (delegate, ctx, req) -> {
                                          ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
-                                         ctx.setResponseTimeoutMillis(clientResponseTimeoutMillis);
+                                         if (clientResponseTimeoutMillis == 0) {
+                                            ctx.clearResponseTimeout();
+                                         } else {
+                                             ctx.setResponseTimeoutAfterMillis(clientResponseTimeoutMillis);
+                                         }
                                          ctx.setMaxResponseLength(clientMaxResponseLength);
                                          return delegate.execute(ctx, req);
                                      });

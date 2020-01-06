@@ -39,8 +39,8 @@ import org.eclipse.jetty.util.component.LifeCycle;
 import com.linecorp.armeria.server.jetty.JettyServiceConfig.Bean;
 
 /**
- * Builds a {@link JettyService}. Use {@link JettyService#forServer(String, Server)} if you have a configured
- * Jetty {@link Server} instance.
+ * Builds a {@link JettyService}. Use {@link JettyService#of(Server)} if you have a configured Jetty
+ * {@link Server} instance.
  */
 public final class JettyServiceBuilder {
 
@@ -234,14 +234,25 @@ public final class JettyServiceBuilder {
         final Function<ScheduledExecutorService, Server> serverFactory = blockingTaskExecutor -> {
             final Server server = new Server(new ArmeriaThreadPool(blockingTaskExecutor));
 
-            config.dumpAfterStart().ifPresent(server::setDumpAfterStart);
-            config.dumpBeforeStop().ifPresent(server::setDumpBeforeStop);
-            config.stopTimeoutMillis().ifPresent(server::setStopTimeout);
+            if (config.dumpAfterStart() != null) {
+                server.setDumpAfterStart(config.dumpAfterStart());
+            }
+            if (config.dumpBeforeStop() != null) {
+                server.setDumpBeforeStop(config.dumpBeforeStop());
+            }
+            if (config.stopTimeoutMillis() != null) {
+                server.setStopTimeout(config.stopTimeoutMillis());
+            }
 
-            config.handler().ifPresent(server::setHandler);
-            config.requestLog().ifPresent(server::setRequestLog);
-            config.sessionIdManagerFactory().ifPresent(
-                    factory -> server.setSessionIdManager(factory.apply(server)));
+            if (config.handler() != null) {
+                server.setHandler(config.handler());
+            }
+            if (config.requestLog() != null) {
+                server.setRequestLog(requestLog);
+            }
+            if (config.sessionIdManagerFactory() != null) {
+                server.setSessionIdManager(config.sessionIdManagerFactory().apply(server));
+            }
 
             config.handlerWrappers().forEach(server::insertHandler);
             config.attrs().forEach(server::setAttribute);
@@ -271,7 +282,7 @@ public final class JettyServiceBuilder {
             }
         };
 
-        return new JettyService(config.hostname().orElse(null), serverFactory, postStopTask);
+        return new JettyService(config.hostname(), serverFactory, postStopTask);
     }
 
     @Override

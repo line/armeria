@@ -24,8 +24,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -40,16 +41,16 @@ import com.google.common.collect.Lists;
  * <pre>{@code
  * MediaTypeSet set = new MediaTypeSet(MediaType.HTML_UTF_8, MediaType.PLAIN_TEXT_UTF_8);
  *
- * Optional<MediaType> negotiated1 = set.matchHeaders("text/html; q=0.5, text/plain");
- * assert negotiated1.isPresent();
- * assert negotiated1.get().equals(MediaType.PLAIN_TEXT_UTF_8);
+ * MediaType negotiated1 = set.matchHeaders("text/html; q=0.5, text/plain");
+ * assert negotiated1 != null;
+ * assert negotiated1.equals(MediaType.PLAIN_TEXT_UTF_8);
  *
- * Optional<MediaType> negotiated2 = set.matchHeaders("audio/*, text/*");
- * assert negotiated2.isPresent();
- * assert negotiated2.get().equals(MediaType.HTML_UTF_8);
+ * MediaType negotiated2 = set.matchHeaders("audio/*, text/*");
+ * assert negotiated2 != null;
+ * assert negotiated2.equals(MediaType.HTML_UTF_8);
  *
- * Optional<MediaType> negotiated3 = set.matchHeaders("video/webm");
- * assert !negotiated3.isPresent();
+ * MediaType negotiated3 = set.matchHeaders("video/webm");
+ * assert negotiated3 == null;
  * }</pre>
  */
 public final class MediaTypeSet extends AbstractSet<MediaType> {
@@ -117,10 +118,10 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
      * @param acceptHeaders the values of the {@code "accept"} header, as defined in
      *        <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html">the section 14.1, RFC2616</a>
      * @return the most preferred {@link MediaType} that matches one of the specified media ranges.
-     *         {@link Optional#empty()} if there are no matches or {@code acceptHeaders} does not contain
-     *         any valid ranges.
+     *         {@code null} if there are no matches or {@code acceptHeaders} does not contain any valid ranges.
      */
-    public Optional<MediaType> matchHeaders(Iterable<? extends CharSequence> acceptHeaders) {
+    @Nullable
+    public MediaType matchHeaders(Iterable<? extends CharSequence> acceptHeaders) {
         requireNonNull(acceptHeaders, "acceptHeaders");
 
         final List<MediaType> ranges = new ArrayList<>(4);
@@ -137,10 +138,10 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
      * @param acceptHeaders the values of the {@code "accept"} header, as defined in
      *        <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html">the section 14.1, RFC2616</a>
      * @return the most preferred {@link MediaType} that matches one of the specified media ranges.
-     *         {@link Optional#empty()} if there are no matches or {@code acceptHeaders} does not contain
-     *         any valid ranges.
+     *         {@code null} if there are no matches or {@code acceptHeaders} does not contain any valid ranges.
      */
-    public Optional<MediaType> matchHeaders(CharSequence... acceptHeaders) {
+    @Nullable
+    public MediaType matchHeaders(CharSequence... acceptHeaders) {
         requireNonNull(acceptHeaders, "acceptHeaders");
 
         final List<MediaType> ranges = new ArrayList<>(4);
@@ -154,28 +155,29 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
      * Finds the {@link MediaType} in this {@link List} that matches the specified media range.
      *
      * @return the {@link MediaType} that matches the specified media range.
-     *         {@link Optional#empty()} if there are no matches
+     *         {@code null} if there are no matches
      */
-    public Optional<MediaType> match(MediaType range) {
+    @Nullable
+    public MediaType match(MediaType range) {
         requireNonNull(range, "range");
         for (MediaType candidate : mediaTypes) {
             if (candidate.belongsTo(range)) {
                 // With only one specified range, there is no way for candidates to have priority over each
                 // other, we just return the first match.
-                return Optional.of(candidate);
+                return candidate;
             }
         }
-        return Optional.empty();
+        return null;
     }
 
     /**
      * Finds the {@link MediaType} in this {@link List} that matches one of the specified media ranges.
      *
      * @return the most preferred {@link MediaType} that matches one of the specified media ranges.
-     *         {@link Optional#empty()} if there are no matches or the specified ranges do not contain
-     *         any valid ranges.
+     *         {@code null} if there are no matches or the specified ranges do not contain any valid ranges.
      */
-    public Optional<MediaType> match(MediaType first, MediaType... rest) {
+    @Nullable
+    public MediaType match(MediaType first, MediaType... rest) {
         requireNonNull(first, "first");
         requireNonNull(rest, "rest");
         return match(Lists.asList(first, rest));
@@ -185,10 +187,10 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
      * Finds the {@link MediaType} in this {@link List} that matches one of the specified media ranges.
      *
      * @return the most preferred {@link MediaType} that matches one of the specified media ranges.
-     *         {@link Optional#empty()} if there are no matches or {@code ranges} does not contain
-     *         any valid ranges.
+     *         {@code null} if there are no matches or {@code ranges} does not contain any valid ranges.
      */
-    public Optional<MediaType> match(Iterable<MediaType> ranges) {
+    @Nullable
+    public MediaType match(Iterable<MediaType> ranges) {
         requireNonNull(ranges, "ranges");
 
         MediaType match = null;
@@ -241,7 +243,7 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
             }
         }
 
-        return Optional.ofNullable(match);
+        return match;
     }
 
     private static final int ST_SKIP_LEADING_WHITESPACES = 0;

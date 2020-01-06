@@ -17,9 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-
-import java.util.Optional;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,35 +28,33 @@ class SchemeTest {
 
     @Test
     public void tryParse_null() {
-        assertThat(Scheme.tryParse(null)).isEmpty();
+        assertThat(Scheme.tryParse(null)).isNull();
     }
 
     @Test
     void tryParse_add_none() {
-        final Optional<Scheme> got = Scheme.tryParse("http");
-        assertThat(got).hasValueSatisfying(scheme -> {
-            assertThat(scheme.sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
-            assertThat(scheme.serializationFormat()).isEqualTo(SerializationFormat.NONE);
-        });
+        final Scheme scheme = Scheme.tryParse("http");
+        assertThat(scheme).isNotNull();
+        assertThat(scheme.sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
+        assertThat(scheme.serializationFormat()).isEqualTo(SerializationFormat.NONE);
     }
 
     @Test
     void tryParse_with_none() {
-        final Optional<Scheme> got = Scheme.tryParse("http+none");
-        assertThat(got).hasValueSatisfying(scheme -> {
-            assertThat(scheme.sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
-            assertThat(scheme.serializationFormat()).isEqualTo(SerializationFormat.NONE);
-        });
+        final Scheme scheme = Scheme.tryParse("http+none");
+        assertThat(scheme).isNotNull();
+        assertThat(scheme.sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
+        assertThat(scheme.serializationFormat()).isEqualTo(SerializationFormat.NONE);
     }
 
     @Test
     void parse_null() {
-        assertThatCode(() -> Scheme.parse(null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> Scheme.parse(null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void parse_exception() {
-        assertThatCode(() -> Scheme.parse("http+blah")).isInstanceOf(IllegalArgumentException.class)
-                                                       .hasMessageContaining("scheme: http+blah");
+        assertThatThrownBy(() -> Scheme.parse("http+blah")).isInstanceOf(IllegalArgumentException.class)
+                                                           .hasMessageContaining("scheme: http+blah");
     }
 }

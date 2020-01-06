@@ -13,14 +13,12 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
-
 package com.linecorp.armeria.common;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
@@ -56,6 +54,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.codec.http2.Http2CodecUtil;
@@ -267,27 +268,33 @@ public final class Flags {
                    value -> value > 0);
 
     private static final String DEFAULT_ROUTE_CACHE_SPEC = "maximumSize=4096";
-    private static final Optional<String> ROUTE_CACHE_SPEC =
+    @Nullable
+    private static final String ROUTE_CACHE_SPEC =
             caffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
 
     private static final String DEFAULT_ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
-    private static final Optional<String> ROUTE_DECORATOR_CACHE_SPEC =
+    @Nullable
+    private static final String ROUTE_DECORATOR_CACHE_SPEC =
             caffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
 
     private static final String DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC = "maximumSize=256";
-    private static final Optional<String> COMPOSITE_SERVICE_CACHE_SPEC =
+    @Nullable
+    private static final String COMPOSITE_SERVICE_CACHE_SPEC =
             caffeineSpec("compositeServiceCache", DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC);
 
     private static final String DEFAULT_PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
-    private static final Optional<String> PARSED_PATH_CACHE_SPEC =
+    @Nullable
+    private static final String PARSED_PATH_CACHE_SPEC =
             caffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
 
     private static final String DEFAULT_HEADER_VALUE_CACHE_SPEC = "maximumSize=4096";
-    private static final Optional<String> HEADER_VALUE_CACHE_SPEC =
+    @Nullable
+    private static final String HEADER_VALUE_CACHE_SPEC =
             caffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
 
     private static final String DEFAULT_FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
-    private static final Optional<String> FILE_SERVICE_CACHE_SPEC =
+    @Nullable
+    private static final String FILE_SERVICE_CACHE_SPEC =
             caffeineSpec("fileServiceCache", DEFAULT_FILE_SERVICE_CACHE_SPEC);
 
     private static final String DEFAULT_CACHED_HEADERS =
@@ -307,6 +314,8 @@ public final class Flags {
             getBoolean("reportBlockedEventLoop", true);
 
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
+
+    private static final boolean USE_LEGACY_METER_NAMES = getBoolean("useLegacyMeterNames", false);
 
     static {
         if (!isEpollAvailable()) {
@@ -748,7 +757,8 @@ public final class Flags {
      * For example, {@code -Dcom.linecorp.armeria.routeCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.routeCache=off} JVM option to disable it.
      */
-    public static Optional<String> routeCacheSpec() {
+    @Nullable
+    public static String routeCacheSpec() {
         return ROUTE_CACHE_SPEC;
     }
 
@@ -763,7 +773,8 @@ public final class Flags {
      * For example, {@code -Dcom.linecorp.armeria.routeDecoratorCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.routeDecoratorCache=off} JVM option to disable it.
      */
-    public static Optional<String> routeDecoratorCacheSpec() {
+    @Nullable
+    public static String routeDecoratorCacheSpec() {
         return ROUTE_DECORATOR_CACHE_SPEC;
     }
 
@@ -777,7 +788,8 @@ public final class Flags {
      * For example, {@code -Dcom.linecorp.armeria.parsedPathCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.parsedPathCache=off} JVM option to disable it.
      */
-    public static Optional<String> parsedPathCacheSpec() {
+    @Nullable
+    public static String parsedPathCacheSpec() {
         return PARSED_PATH_CACHE_SPEC;
     }
 
@@ -791,7 +803,8 @@ public final class Flags {
      * For example, {@code -Dcom.linecorp.armeria.headerValueCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.headerValueCache=off} JVM option to disable it.
      */
-    public static Optional<String> headerValueCacheSpec() {
+    @Nullable
+    public static String headerValueCacheSpec() {
         return HEADER_VALUE_CACHE_SPEC;
     }
 
@@ -804,7 +817,8 @@ public final class Flags {
      * For example, {@code -Dcom.linecorp.armeria.fileServiceCache=maximumSize=1024,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.fileServiceCache=off} JVM option to disable it.
      */
-    public static Optional<String> fileServiceCacheSpec() {
+    @Nullable
+    public static String fileServiceCacheSpec() {
         return FILE_SERVICE_CACHE_SPEC;
     }
 
@@ -830,7 +844,8 @@ public final class Flags {
      * For example, {@code -Dcom.linecorp.armeria.compositeServiceCache=maximumSize=256,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.compositeServiceCache=off} JVM option to disable it.
      */
-    public static Optional<String> compositeServiceCacheSpec() {
+    @Nullable
+    public static String compositeServiceCacheSpec() {
         return COMPOSITE_SERVICE_CACHE_SPEC;
     }
 
@@ -900,14 +915,25 @@ public final class Flags {
      * more details on the security implications of this flag.
      *
      * <p>This flag is enabled by default.
-     * Specify the {@code -Dcom.linecorp.armeria.validateHeaders=false} JVM option
-     * to disable it.
+     * Specify the {@code -Dcom.linecorp.armeria.validateHeaders=false} JVM option to disable it.</p>
      */
     public static boolean validateHeaders() {
         return VALIDATE_HEADERS;
     }
 
-    private static Optional<String> caffeineSpec(String name, String defaultValue) {
+    /**
+     * Returns whether to switch back to Armeria's legacy {@link Meter} and {@link Tag} naming convention
+     * that is not compliant with Micrometer's default {@link NamingConvention}.
+     *
+     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.useLegacyMeterNames=true}
+     * JVM option to enable it.</p>
+     */
+    public static boolean useLegacyMeterNames() {
+        return USE_LEGACY_METER_NAMES;
+    }
+
+    @Nullable
+    private static String caffeineSpec(String name, String defaultValue) {
         final String spec = get(name, defaultValue, value -> {
             try {
                 if (!"off".equals(value)) {
@@ -918,8 +944,7 @@ public final class Flags {
                 return false;
             }
         });
-        return "off".equals(spec) ? Optional.empty()
-                                  : Optional.of(spec);
+        return "off".equals(spec) ? null : spec;
     }
 
     private static ExceptionVerbosity exceptionLoggingMode(String name, String defaultValue) {

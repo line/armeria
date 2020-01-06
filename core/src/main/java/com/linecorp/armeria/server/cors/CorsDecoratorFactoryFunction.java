@@ -36,7 +36,7 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
 
         final Function<? super HttpService, CorsService> decorator = cb.newDecorator();
         return service -> {
-            if (service.as(CorsService.class).isPresent()) {
+            if (service.as(CorsService.class) != null) {
                 return service;
             } else {
                 return decorator.apply(service);

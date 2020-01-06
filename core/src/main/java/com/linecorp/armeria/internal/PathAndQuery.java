@@ -78,7 +78,7 @@ public final class PathAndQuery {
 
     @Nullable
     private static final Cache<String, PathAndQuery> CACHE =
-            Flags.parsedPathCacheSpec().map(PathAndQuery::buildCache).orElse(null);
+            Flags.parsedPathCacheSpec() != null ? buildCache(Flags.parsedPathCacheSpec()) : null;
 
     private static Cache<String, PathAndQuery> buildCache(String spec) {
         return Caffeine.from(spec).build();

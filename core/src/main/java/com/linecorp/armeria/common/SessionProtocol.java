@@ -20,8 +20,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
@@ -90,9 +91,10 @@ public enum SessionProtocol {
     /**
      * Finds the {@link SessionProtocol} with the specified {@link #uriText()}.
      */
-    public static Optional<SessionProtocol> find(String uriText) {
+    @Nullable
+    public static SessionProtocol find(String uriText) {
         uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
-        return Optional.ofNullable(uriTextToProtocols.get(uriText));
+        return uriTextToProtocols.get(uriText);
     }
 
     /**

@@ -17,8 +17,9 @@
 package com.linecorp.armeria.server.docs;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -91,9 +92,12 @@ public interface DocServicePlugin {
      *
      * @param exampleRequest the example request object which is an instance of one of the {@link Class}es
      *                       returned by {@link #supportedExampleRequestTypes()}
+     *
+     * @return the service name, or {@code null} if failed to guess.
      */
-    default Optional<String> guessServiceName(Object exampleRequest) {
-        return Optional.empty();
+    @Nullable
+    default String guessServiceName(Object exampleRequest) {
+        return null;
     }
 
     /**
@@ -101,9 +105,12 @@ public interface DocServicePlugin {
      *
      * @param exampleRequest the example request object which is an instance of one of the {@link Class}es
      *                       returned by {@link #supportedExampleRequestTypes()}
+     *
+     * @return the service method name, or {@code null} if failed to guess.
      */
-    default Optional<String> guessServiceMethodName(Object exampleRequest) {
-        return Optional.empty();
+    @Nullable
+    default String guessServiceMethodName(Object exampleRequest) {
+        return null;
     }
 
     /**
@@ -112,9 +119,12 @@ public interface DocServicePlugin {
      * @param serviceName the name of the service
      * @param methodName the name of the method
      * @param exampleRequest the example request
+     *
+     * @return the serialized example, or {@code null} if not able to serialize.
      */
-    default Optional<String> serializeExampleRequest(
+    @Nullable
+    default String serializeExampleRequest(
             String serviceName, String methodName, Object exampleRequest) {
-        return Optional.empty();
+        return null;
     }
 }

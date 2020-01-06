@@ -18,9 +18,10 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
@@ -571,12 +572,12 @@ public final class Clients {
 
     private static ClientBuilderParams builderParams(Object client) {
         requireNonNull(client, "client");
-        final Optional<ClientBuilderParams> params = ClientFactory.ofDefault().clientBuilderParams(client);
-        if (params.isPresent()) {
-            return params.get();
+        final ClientBuilderParams params = ClientFactory.ofDefault().clientBuilderParams(client);
+        if (params == null) {
+            throw new IllegalArgumentException("derivation not supported by: " + client.getClass().getName());
         }
 
-        throw new IllegalArgumentException("derivation not supported by: " + client.getClass().getName());
+        return params;
     }
 
     /**
@@ -587,26 +588,27 @@ public final class Clients {
      *                             .decorator(LoggingClient.newDecorator())
      *                             .build();
      *
-     * LoggingClient unwrapped = Clients.unwrap(client, LoggingClient.class).get();
+     * LoggingClient unwrapped = Clients.unwrap(client, LoggingClient.class);
      *
      * // If the client implements Unwrappable, you can just use the 'as()' method.
-     * LoggingClient unwrapped2 = client.as(LoggingClient.class).get();
+     * LoggingClient unwrapped2 = client.as(LoggingClient.class);
      * }</pre>
      *
      * @param type the type of the object to return
-     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     * @return the object of the specified {@code type} if found, or {@code null} if not found.
      *
      * @see Client#as(Class)
      * @see ClientFactory#unwrap(Object, Class)
      * @see Unwrappable
      */
-    public static <T> Optional<T> unwrap(Object client, Class<T> type) {
-        final Optional<ClientBuilderParams> params = ClientFactory.ofDefault().clientBuilderParams(client);
-        if (!params.isPresent()) {
-            return Optional.empty();
+    @Nullable
+    public static <T> T unwrap(Object client, Class<T> type) {
+        final ClientBuilderParams params = ClientFactory.ofDefault().clientBuilderParams(client);
+        if (params == null) {
+            return null;
         }
 
-        return params.get().factory().unwrap(client, type);
+        return params.factory().unwrap(client, type);
     }
 
     /**

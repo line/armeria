@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.tomcat;
 
-import java.util.Optional;
+import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
@@ -27,28 +27,31 @@ class UnmanagedTomcatService extends TomcatService {
 
     @Nullable
     private final String hostName;
-    private final Optional<Tomcat> tomcat;
-    private final Optional<Connector> connector;
+    @Nullable
+    private final Tomcat tomcat;
+    @Nullable
+    private final Connector connector;
 
     UnmanagedTomcatService(Tomcat tomcat) {
         hostName = null;
-        this.tomcat = Optional.of(tomcat);
-        connector = Optional.empty();
+        this.tomcat = requireNonNull(tomcat, "tomcat");
+        connector = null;
     }
 
     UnmanagedTomcatService(Connector connector, @Nullable String hostName) {
         this.hostName = hostName;
-        tomcat = Optional.empty();
-        this.connector = Optional.of(connector);
+        tomcat = null;
+        this.connector = requireNonNull(connector, "connector");
     }
 
     @Override
-    public Optional<Connector> connector() {
-        if (connector.isPresent()) {
+    public Connector connector() {
+        if (connector != null) {
             return connector;
         }
 
-        return tomcat.map(Tomcat::getConnector);
+        assert tomcat != null;
+        return tomcat.getConnector();
     }
 
     @Override
@@ -58,7 +61,10 @@ class UnmanagedTomcatService extends TomcatService {
         }
 
         // If connector w/o hostName
-        return tomcat.map(t -> t.getEngine().getDefaultHost())
-                     .orElse(null);
+        if (tomcat != null) {
+            return tomcat.getEngine().getDefaultHost();
+        } else {
+            return null;
+        }
     }
 }

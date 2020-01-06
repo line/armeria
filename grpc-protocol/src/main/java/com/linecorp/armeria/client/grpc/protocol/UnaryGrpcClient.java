@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.client.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -35,8 +35,14 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -153,11 +159,7 @@ public class UnaryGrpcClient {
                                    }
                                })
                        .thenCompose(msg -> {
-                           final HttpStatus status = msg.status();
-                           // Response always has status.
-                           assert status != null;
-
-                           if (!status.equals(HttpStatus.OK) || msg.content().isEmpty()) {
+                           if (!msg.status().equals(HttpStatus.OK) || msg.content().isEmpty()) {
                                // Nothing to deframe.
                                return CompletableFuture.completedFuture(msg.toHttpResponse());
                            }
@@ -180,7 +182,7 @@ public class UnaryGrpcClient {
                                public void endOfStream() {
                                    if (!responseFuture.isDone()) {
                                        responseFuture.complete(HttpResponse.of(msg.headers(),
-                                                                               HttpData.EMPTY_DATA,
+                                                                               HttpData.empty(),
                                                                                msg.trailers()));
                                    }
                                }

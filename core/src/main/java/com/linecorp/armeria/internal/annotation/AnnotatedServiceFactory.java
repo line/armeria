@@ -48,7 +48,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -181,14 +180,19 @@ public final class AnnotatedServiceFactory {
                       .collect(toImmutableList());
     }
 
-    private static HttpStatus defaultResponseStatus(Optional<HttpStatus> defaultResponseStatus,
-                                                    Method method) {
-        return defaultResponseStatus.orElseGet(() -> {
+    private static HttpStatus defaultResponseStatus(Method method) {
+        final StatusCode statusCodeAnnotation = findFirst(method, StatusCode.class);
+        if (statusCodeAnnotation == null) {
             // Set a default HTTP status code for a response depending on the return type of the method.
             final Class<?> returnType = method.getReturnType();
             return returnType == Void.class ||
                    returnType == void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
-        });
+        }
+
+        final int statusCode = statusCodeAnnotation.value();
+        checkArgument(statusCode >= 0,
+                      "invalid HTTP status code: %s (expected: >= 0)", statusCode);
+        return HttpStatus.valueOf(statusCode);
     }
 
     private static <T extends Annotation> void setAdditionalHeader(HttpHeadersBuilder headers,
@@ -270,15 +274,7 @@ public final class AnnotatedServiceFactory {
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
                         .addAll(baseExceptionHandlers).add(defaultExceptionHandler).build();
 
-        final Optional<HttpStatus> defaultResponseStatus = findFirst(method, StatusCode.class)
-                .map(code -> {
-                    final int statusCode = code.value();
-                    checkArgument(statusCode >= 0,
-                                  "invalid HTTP status code: %s (expected: >= 0)", statusCode);
-                    return HttpStatus.valueOf(statusCode);
-                });
-        final ResponseHeadersBuilder defaultHeaders =
-                ResponseHeaders.builder(defaultResponseStatus(defaultResponseStatus, method));
+        final ResponseHeadersBuilder defaultHeaders = ResponseHeaders.builder(defaultResponseStatus(method));
 
         final HttpHeadersBuilder defaultTrailers = HttpHeaders.builder();
         final String classAlias = clazz.getName();
@@ -301,7 +297,7 @@ public final class AnnotatedServiceFactory {
         final ResponseHeaders responseHeaders = defaultHeaders.build();
         final HttpHeaders responseTrailers = defaultTrailers.build();
 
-        final boolean useBlockingTaskExecutor = findFirst(method, Blocking.class).isPresent();
+        final boolean useBlockingTaskExecutor = findFirst(method, Blocking.class) != null;
 
         return routes.stream().map(route -> {
             final List<AnnotatedValueResolver> resolvers = getAnnotatedValueResolvers(req, route, method,
@@ -376,7 +372,7 @@ public final class AnnotatedServiceFactory {
      * annotation. 0 would be returned if there is no specified {@link Order} annotation.
      */
     private static int order(Method method) {
-        final Order order = findFirst(method, Order.class).orElse(null);
+        final Order order = findFirst(method, Order.class);
         return order != null ? order.value() : 0;
     }
 
@@ -627,8 +623,7 @@ public final class AnnotatedServiceFactory {
     @Nullable
     private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
         // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
-        final DecoratorFactory d =
-                findFirstDeclared(annotation.annotationType(), DecoratorFactory.class).orElse(null);
+        final DecoratorFactory d = findFirstDeclared(annotation.annotationType(), DecoratorFactory.class);
         if (d == null) {
             return null;
         }
@@ -746,9 +741,9 @@ public final class AnnotatedServiceFactory {
     @Nullable
     static String findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
-        final Optional<Description> description = findFirst(annotatedElement, Description.class);
-        if (description.isPresent()) {
-            final String value = description.get().value();
+        final Description description = findFirst(annotatedElement, Description.class);
+        if (description != null) {
+            final String value = description.value();
             if (DefaultValues.isSpecified(value)) {
                 checkArgument(!value.isEmpty(), "value is empty");
                 return value;
@@ -764,11 +759,11 @@ public final class AnnotatedServiceFactory {
      */
     private static String computePathPrefix(Class<?> clazz, String pathPrefix) {
         ensureAbsolutePath(pathPrefix, "pathPrefix");
-        final Optional<PathPrefix> pathPrefixAnnotation = findFirst(clazz, PathPrefix.class);
-        if (!pathPrefixAnnotation.isPresent()) {
+        final PathPrefix pathPrefixAnnotation = findFirst(clazz, PathPrefix.class);
+        if (pathPrefixAnnotation == null) {
             return pathPrefix;
         }
-        final String pathPrefixFromAnnotation = pathPrefixAnnotation.get().value();
+        final String pathPrefixFromAnnotation = pathPrefixAnnotation.value();
         ensureAbsolutePath(pathPrefixFromAnnotation, "pathPrefixFromAnnotation");
         return concatPaths(pathPrefix, pathPrefixFromAnnotation);
     }
