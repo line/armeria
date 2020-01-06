@@ -58,7 +58,6 @@ class ArmeriaConfigurationUtilTest {
         assertThat(server.config().isDateHeaderEnabled()).isFalse();
         assertThat(server.config().isServerHeaderEnabled()).isTrue();
         assertThat(server.config().defaultVirtualHost().maxRequestLength()).isEqualTo(10485761);
-        assertThat(server.config().defaultVirtualHost().verboseResponses()).isFalse();
 
         assertThat(server.config().ports()).hasSize(3);
         assertThat(server.config().ports()).containsExactly(
