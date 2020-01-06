@@ -216,7 +216,7 @@ class HealthCheckedEndpointGroupTest {
         }
 
         @Override
-        public List<Endpoint> getCandidates() {
+        public List<Endpoint> getSelectedEndpoints() {
             return selectedCandidates;
         }
 

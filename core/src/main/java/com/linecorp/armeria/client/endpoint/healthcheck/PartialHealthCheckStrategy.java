@@ -16,9 +16,9 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -47,14 +47,14 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
 
     private final Set<Endpoint> selectedEndpoints;
     private final Set<Endpoint> unhealthyEndpoints;
-    private final EndpointLimitingFunction max;
+    private final EndpointLimitingFunction endpointLimitingFunction;
     private Set<Endpoint> candidates;
 
     /**
      * Creates a new instance.
      */
-    PartialHealthCheckStrategy(EndpointLimitingFunction max) {
-        this.max = requireNonNull(max, "max");
+    PartialHealthCheckStrategy(EndpointLimitingFunction endpointLimitingFunction) {
+        this.endpointLimitingFunction = requireNonNull(endpointLimitingFunction, "endpointLimitingFunction");
         selectedEndpoints = new HashSet<>();
         unhealthyEndpoints = new NonBlockingHashSet<>();
         candidates = ImmutableSet.of();
@@ -72,7 +72,7 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
     }
 
     @Override
-    public List<Endpoint> getCandidates() {
+    public List<Endpoint> getSelectedEndpoints() {
         synchronized (selectedEndpoints) {
             return ImmutableList.copyOf(selectedEndpoints);
         }
@@ -105,7 +105,7 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
      */
     private boolean removeAndSelectNewEndpoints(Set<Endpoint> removedEndpoints) {
         final Set<Endpoint> oldSelectedEndpoints = ImmutableSet.copyOf(selectedEndpoints);
-        final int targetSelectedEndpointsSize = max.calculate(candidates.size());
+        final int targetSelectedEndpointsSize = endpointLimitingFunction.calculate(candidates.size());
 
         selectedEndpoints.removeAll(removedEndpoints);
 
@@ -114,10 +114,9 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
             return true;
         }
 
-        final int newSelectedEndpointsCount = addRandomlySelectedEndpoints(selectedEndpoints, candidates,
-                                                                           availableEndpointsCount,
-                                                                           selectedEndpoints,
-                                                                           unhealthyEndpoints);
+        final int newSelectedEndpointsCount =
+                addRandomlySelectedEndpoints(selectedEndpoints, candidates, availableEndpointsCount,
+                                             Sets.union(selectedEndpoints, unhealthyEndpoints));
 
         availableEndpointsCount -= newSelectedEndpointsCount;
         if (availableEndpointsCount <= 0) {
@@ -130,21 +129,13 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
         return !oldSelectedEndpoints.equals(selectedEndpoints);
     }
 
-    @SafeVarargs
     private static int addRandomlySelectedEndpoints(Set<Endpoint> selectedEndpoints,
                                                     Set<Endpoint> candidates, int count,
-                                                    Set<Endpoint>... exclusions) {
-        final List<Endpoint> availableCandidates = new ArrayList<>(candidates.size());
-        loop:
-        for (Endpoint candidate : candidates) {
-            for (Set<Endpoint> exclusion : exclusions) {
-                if (exclusion.contains(candidate)) {
-                    continue loop;
-                }
-            }
-
-            availableCandidates.add(candidate);
-        }
+                                                    Set<Endpoint> exclusions) {
+        final List<Endpoint> availableCandidates = candidates
+                .stream()
+                .filter(endpoint -> !exclusions.contains(endpoint))
+                .collect(toImmutableList());
 
         int newSelectedEndpointsCount = 0;
         final Random random = ThreadLocalRandom.current();

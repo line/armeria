@@ -152,14 +152,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 return;
             }
 
-            final List<Endpoint> selectedCandidates = healthCheckStrategy.getCandidates();
+            final List<Endpoint> newSelectedEndpoints = healthCheckStrategy.getSelectedEndpoints();
 
             // Stop the health checkers whose endpoints disappeared and destroy their contexts.
             for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i = contexts.entrySet()
                                                                                               .iterator();
                  i.hasNext();) {
                 final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
-                if (selectedCandidates.contains(e.getKey())) {
+                if (newSelectedEndpoints.contains(e.getKey())) {
                     // Not a removed endpoint.
                     continue;
                 }
@@ -171,7 +171,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             // Start the health checkers with new contexts for newly appeared endpoints.
             isRefreshingContexts.set(Boolean.TRUE);
             try {
-                for (Endpoint e : selectedCandidates) {
+                for (Endpoint e : newSelectedEndpoints) {
                     if (contexts.containsKey(e)) {
                         // Not a new endpoint.
                         continue;
