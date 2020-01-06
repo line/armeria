@@ -2,16 +2,11 @@ package example.armeria.contextpropagation.rxjava;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.rxjava.RequestContextAssembly;
 import com.linecorp.armeria.server.Server;
 
 public class Main {
 
     public static void main(String[] args) {
-        // Call once in the beginning of your program to make sure RxJava operations all propagate context
-        // automatically.
-        RequestContextAssembly.enable();
-
         final Server backend = Server.builder()
                                      .service("/square/{num}", ((ctx, req) -> {
                                          final long num = Long.parseLong(ctx.pathParam("num"));

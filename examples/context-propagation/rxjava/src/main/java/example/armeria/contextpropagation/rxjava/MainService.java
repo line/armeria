@@ -22,6 +22,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.reactivex.Observable;
+import io.reactivex.Scheduler;
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
 
@@ -37,6 +38,8 @@ public class MainService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+        final Scheduler contextAwareScheduler = Schedulers.from(ctx.contextAwareExecutor());
+
         // This logic mimics using a blocking method, which would usually be something like a MySQL
         // database query using JDBC.
         final Observable<Long> fetchFromFakeDb =
@@ -45,6 +48,7 @@ public class MainService implements HttpService {
                             // The context is mounted in a thread-local, meaning it is available to all
                             // logic such as tracing.
                             checkState(ServiceRequestContext.current() == ctx);
+                            checkState(!ctx.eventLoop().inEventLoop());
 
                             Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
                             return ImmutableList.of(23L, -23L);
@@ -53,14 +57,20 @@ public class MainService implements HttpService {
                       // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
                       // inside the logic (e.g., your DB call will be traced!).
                       .subscribeOn(Schedulers.from(ctx.blockingTaskExecutor()))
+                      // Make sure callbacks still stay on the context executor using observeOn.
+                      .observeOn(contextAwareScheduler)
                       .flattenAsObservable(l -> l);
 
         final Single<HttpResponse> response = FutureConverter
                 .toSingle(req.aggregate())
+                // Unless you know what you're doing, always use subscribeOn with the context executor to have
+                // the context mounted and stay on a single thread to reduce concurrency issues.
+                .subscribeOn(contextAwareScheduler)
                 .flatMapObservable(request -> {
                     // The context is mounted in a thread-local, meaning it is available to all logic
                     // such as tracing.
                     checkState(ServiceRequestContext.current() == ctx);
+                    checkState(ctx.eventLoop().inEventLoop());
 
                     final List<Long> nums = new ArrayList<>();
                     for (String token : Iterables.concat(
@@ -76,6 +86,7 @@ public class MainService implements HttpService {
                     // The context is mounted in a thread-local, meaning it is available to all logic
                     // such as tracing.
                     checkState(ServiceRequestContext.current() == ctx);
+                    checkState(ctx.eventLoop().inEventLoop());
 
                     return FutureConverter.toSingle(backendClient.get("/square/" + num).aggregate());
                 })
