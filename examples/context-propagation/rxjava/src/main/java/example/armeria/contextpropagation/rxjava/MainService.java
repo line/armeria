@@ -40,20 +40,19 @@ public class MainService implements HttpService {
         // This logic mimics using a blocking method, which would usually be something like a MySQL
         // database query using JDBC.
         final Observable<Long> fetchFromFakeDb =
-                Single.fromFuture(
-                        // Always run blocking logic on the blocking task executor. By using
-                        // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
-                        // inside the logic (e.g., your DB call will be traced!).
-                        ctx.blockingTaskExecutor().submit(
-                                () -> {
-                                    // The context is mounted in a thread-local, meaning it is available to all
-                                    // logic such as tracing.
-                                    checkState(ServiceRequestContext.current() == ctx);
+                Single.fromCallable(
+                        () -> {
+                            // The context is mounted in a thread-local, meaning it is available to all
+                            // logic such as tracing.
+                            checkState(ServiceRequestContext.current() == ctx);
 
-                                    Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
-                                    return ImmutableList.of(23L, -23L);
-                                }),
-                        Schedulers.io())
+                            Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
+                            return ImmutableList.of(23L, -23L);
+                        })
+                      // Always run blocking logic on the blocking task executor. By using
+                      // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
+                      // inside the logic (e.g., your DB call will be traced!).
+                      .subscribeOn(Schedulers.from(ctx.blockingTaskExecutor()))
                       .flattenAsObservable(l -> l);
 
         final Single<HttpResponse> response = FutureConverter
