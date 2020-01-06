@@ -43,7 +43,7 @@ final class AllHealthCheckStrategy implements HealthCheckStrategy {
     }
 
     @Override
-    public List<Endpoint> getCandidates() {
+    public List<Endpoint> getSelectedEndpoints() {
         return ImmutableList.copyOf(candidates);
     }
 

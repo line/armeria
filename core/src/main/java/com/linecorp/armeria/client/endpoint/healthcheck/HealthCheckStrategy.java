@@ -28,10 +28,9 @@ interface HealthCheckStrategy {
     void updateCandidates(List<Endpoint> candidates);
 
     /**
-     * Gets the candidates.
-     * @return the selected {@link Endpoint} by based on implementation.
+     * Returns {@link Endpoint}s selected by this health check strategy.
      */
-    List<Endpoint> getCandidates();
+    List<Endpoint> getSelectedEndpoints();
 
     /**
      * Updates the health of the {@link Endpoint}.

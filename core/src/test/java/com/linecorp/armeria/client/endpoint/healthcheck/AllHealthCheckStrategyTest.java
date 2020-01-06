@@ -49,20 +49,20 @@ public class AllHealthCheckStrategyTest {
 
     @Test
     void getCandidatesWhenBeforeFirstUpdateCandidates() {
-        assertThat(strategy.getCandidates()).isEmpty();
+        assertThat(strategy.getSelectedEndpoints()).isEmpty();
     }
 
     @Test
     void updateAndGetCandidates() {
         strategy.updateCandidates(candidates);
-        List<Endpoint> actCandidates = strategy.getCandidates();
+        List<Endpoint> actCandidates = strategy.getSelectedEndpoints();
         assertCandidates(actCandidates, candidates);
 
         final List<Endpoint> anotherCandidates = createCandidates(15);
         anotherCandidates.addAll(candidates);
 
         strategy.updateCandidates(anotherCandidates);
-        actCandidates = strategy.getCandidates();
+        actCandidates = strategy.getSelectedEndpoints();
         assertCandidates(actCandidates, anotherCandidates);
     }
 
@@ -72,13 +72,13 @@ public class AllHealthCheckStrategyTest {
 
         final Endpoint candidate = candidates.get(0);
         boolean actUpdateRes = strategy.updateHealth(candidate, 0);
-        List<Endpoint> actCandidates = strategy.getCandidates();
+        List<Endpoint> actCandidates = strategy.getSelectedEndpoints();
 
         assertThat(actUpdateRes).isFalse();
         assertCandidates(actCandidates, candidates);
 
         actUpdateRes = strategy.updateHealth(candidate, 1);
-        actCandidates = strategy.getCandidates();
+        actCandidates = strategy.getSelectedEndpoints();
 
         assertThat(actUpdateRes).isFalse();
         assertCandidates(actCandidates, candidates);
@@ -91,11 +91,11 @@ public class AllHealthCheckStrategyTest {
 
         boolean actUpdateRes = strategy.updateHealth(disappearedCandidate, 0);
         assertThat(actUpdateRes).isTrue();
-        assertCandidates(strategy.getCandidates(), candidates);
+        assertCandidates(strategy.getSelectedEndpoints(), candidates);
 
         actUpdateRes = strategy.updateHealth(disappearedCandidate, 1);
         assertThat(actUpdateRes).isTrue();
-        assertCandidates(strategy.getCandidates(), candidates);
+        assertCandidates(strategy.getSelectedEndpoints(), candidates);
     }
 
     private static void assertCandidates(List<Endpoint> act, List<Endpoint> exp) {

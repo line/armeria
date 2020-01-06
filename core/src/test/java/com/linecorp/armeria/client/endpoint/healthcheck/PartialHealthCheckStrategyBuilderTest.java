@@ -77,9 +77,9 @@ class PartialHealthCheckStrategyBuilderTest {
 
         final PartialHealthCheckStrategy actualStrategy = builder.build();
         actualStrategy.updateCandidates(createCandidates(10));
-        assertThat(actualStrategy.getCandidates()).hasSize(7);
+        assertThat(actualStrategy.getSelectedEndpoints()).hasSize(7);
 
         actualStrategy.updateCandidates(createCandidates(20));
-        assertThat(actualStrategy.getCandidates()).hasSize(14);
+        assertThat(actualStrategy.getSelectedEndpoints()).hasSize(14);
     }
 }
