@@ -144,19 +144,19 @@ public abstract class AbstractRequestContextBuilder {
         if (schemeStr != null && schemeStr.indexOf('+') < 0) {
             final SessionProtocol parsed = SessionProtocol.find(schemeStr);
             if (parsed == null) {
-                return reportInvalidScheme(uri);
+                throw newInvalidSchemeException(uri);
             }
             return parsed;
         } else {
             final Scheme parsed = Scheme.tryParse(schemeStr);
             if (parsed == null) {
-                return reportInvalidScheme(uri);
+                throw newInvalidSchemeException(uri);
             }
             return parsed.sessionProtocol();
         }
     }
 
-    private static SessionProtocol reportInvalidScheme(URI uri) {
+    private static IllegalArgumentException newInvalidSchemeException(URI uri) {
         throw new IllegalArgumentException("uri.scheme is not valid: " + uri);
     }
 

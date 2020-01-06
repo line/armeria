@@ -390,7 +390,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Returns the remote {@link Endpoint} of the current {@link Request}.
      *
-     * @return the remote {@link Endpoint}. {@code null} if the {@link Request} has failed
+     * @return the remote {@link Endpoint}, or {@code null} if the {@link Request} has failed
      *         because its remote {@link Endpoint} couldn't be determined.
      */
     @Nullable

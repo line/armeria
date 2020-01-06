@@ -74,7 +74,7 @@ final class SamlInitializer {
     /**
      * Returns the cause of unavailability of the OpenSAML library.
      *
-     * @return the cause if unavailable. {@code null} if available.
+     * @return the cause if unavailable, or {@code null} if available.
      */
     @Nullable
     static Throwable unavailabilityCause() {

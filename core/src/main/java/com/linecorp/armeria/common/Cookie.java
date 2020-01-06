@@ -196,7 +196,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Decodes the specified {@code "Set-Cookie"} header value into a {@link Cookie}.
      *
      * @param setCookieHeader the {@code "Set-Cookie"} header value.
-     * @return the decoded {@link Cookie} if decoded successfully. {@code null} otherwise.
+     * @return the decoded {@link Cookie} if decoded successfully, or {@code null} otherwise.
      */
     @Nullable
     static Cookie fromSetCookieHeader(String setCookieHeader) {
@@ -208,7 +208,7 @@ public interface Cookie extends Comparable<Cookie> {
      *
      * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC 6265.
      * @param setCookieHeader the {@code "Set-Cookie"} header value.
-     * @return the decoded {@link Cookie} if decoded successfully. {@code null} otherwise.
+     * @return the decoded {@link Cookie} if decoded successfully, or {@code null} otherwise.
      */
     @Nullable
     static Cookie fromSetCookieHeader(boolean strict, String setCookieHeader) {

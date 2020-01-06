@@ -127,7 +127,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         /**
          * Returns the {@link ByteBuf}.
          *
-         * @return the {@link ByteBuf}. {@code null} if not created with
+         * @return the {@link ByteBuf}, or {@code null} if not created with
          *         {@link #DeframedMessage(ByteBuf, int)}.
          */
         @Nullable
@@ -138,7 +138,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         /**
          * Returns the {@link InputStream}.
          *
-         * @return the {@link InputStream}. {@code null} if not created with
+         * @return the {@link InputStream}, or {@code null} if not created with
          *         {@link #DeframedMessage(InputStream, int)}.
          */
         @Nullable

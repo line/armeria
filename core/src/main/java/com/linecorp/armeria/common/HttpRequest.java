@@ -347,7 +347,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Returns the value of the {@code 'content-type'} header.
-     * @return the valid header value if present. {@code null} otherwise.
+     * @return the valid header value if present, or {@code null} otherwise.
      */
     @Nullable
     default MediaType contentType() {

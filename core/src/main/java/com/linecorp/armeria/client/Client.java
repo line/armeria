@@ -65,7 +65,7 @@ public interface Client<I extends Request, O extends Response> extends Unwrappab
      * }</pre>
      *
      * @param type the type of the object to return
-     * @return the object of the specified {@code type} if found. {@code null} if not found.
+     * @return the object of the specified {@code type} if found, or {@code null} if not found.
      *
      * @see Clients#unwrap(Object, Class)
      * @see ClientFactory#unwrap(Object, Class)

@@ -262,7 +262,7 @@ public interface ClientFactory extends AutoCloseable {
      *
      * @param client the client object
      * @param type the type of the object to return
-     * @return the object of the specified {@code type} if found. {@code null} if not found.
+     * @return the object of the specified {@code type} if found, or {@code null} if not found.
      *
      * @see Client#as(Class)
      * @see Clients#unwrap(Object, Class)

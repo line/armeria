@@ -104,9 +104,8 @@ final class TomcatServiceConfig {
     }
 
     /**
-     * Returns the path to the root directory of a web application inside a JAR/WAR.
-     *
-     * @return {@code null} if {@link #docBase()} is not a JAR/WAR file
+     * Returns the path to the root directory of a web application inside a JAR/WAR. {@code null} will be
+     * returned if {@link #docBase()} does not refer to a JAR/WAR file.
      */
     @Nullable
     String jarRoot() {

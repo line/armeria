@@ -170,7 +170,7 @@ public final class Server implements AutoCloseable {
      * Returns the primary {@link ServerPort} that this {@link Server} is listening to. This method is useful
      * when a {@link Server} listens to only one {@link ServerPort}.
      *
-     * @return {@code null} if this {@link Server} did not start
+     * @return the primary {@link ServerPort}, or {@code null} if this {@link Server} did not start.
      */
     @Nullable
     public ServerPort activePort() {
