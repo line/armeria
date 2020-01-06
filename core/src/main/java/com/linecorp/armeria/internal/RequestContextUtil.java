@@ -95,7 +95,7 @@ public final class RequestContextUtil {
             RequestContext newCtx, RequestContext oldCtx) {
         requireNonNull(newCtx, "newCtx");
         requireNonNull(oldCtx, "oldCtx");
-        throw new IllegalStateException(
+        return new IllegalStateException(
                 "Trying to call object wrapped with context " + newCtx + ", but context is currently " +
                 "set to " + oldCtx + ". This means the callback was called from " +
                 "unexpected thread or forgetting to close previous context.");
