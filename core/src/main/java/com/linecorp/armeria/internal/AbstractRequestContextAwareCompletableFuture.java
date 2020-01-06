@@ -50,10 +50,10 @@ public abstract class AbstractRequestContextAwareCompletableFuture<T> extends Co
         return ctx;
     }
 
-    protected Runnable makeContextAwareLoggingException(Runnable runnable) {
-        requireNonNull(runnable, "runnable");
+    protected Runnable makeContextAwareLoggingException(Runnable action) {
+        requireNonNull(action, "action");
         return () -> {
-            makeContextAwareLoggingException0(runnable);
+            makeContextAwareLoggingException0(action);
         };
     }
 
@@ -67,35 +67,35 @@ public abstract class AbstractRequestContextAwareCompletableFuture<T> extends Co
         return (t, u) -> makeContextAwareLoggingException0(() -> action.accept(t, u));
     }
 
-    protected <V> Supplier<V> makeContextAwareLoggingException(Supplier<? extends V> action) {
-        requireNonNull(action, "action");
-        return () -> makeContextAwareLoggingException0(action);
+    protected <V> Supplier<V> makeContextAwareLoggingException(Supplier<? extends V> supplier) {
+        requireNonNull(supplier, "supplier");
+        return () -> makeContextAwareLoggingException0(supplier);
     }
 
-    protected <I, R> Function<I, R> makeContextAwareLoggingException(Function<I, R> function) {
-        requireNonNull(function, "function");
-        return t -> makeContextAwareLoggingException0(() -> function.apply(t));
+    protected <I, R> Function<I, R> makeContextAwareLoggingException(Function<I, R> fn) {
+        requireNonNull(fn, "fn");
+        return t -> makeContextAwareLoggingException0(() -> fn.apply(t));
     }
 
-    protected <I, U, V> BiFunction<I, U, V> makeContextAwareLoggingException(BiFunction<I, U, V> function) {
-        requireNonNull(function, "function");
-        return (t, u) -> makeContextAwareLoggingException0(() -> function.apply(t, u));
+    protected <I, U, V> BiFunction<I, U, V> makeContextAwareLoggingException(BiFunction<I, U, V> fn) {
+        requireNonNull(fn, "fn");
+        return (t, u) -> makeContextAwareLoggingException0(() -> fn.apply(t, u));
     }
 
-    private void makeContextAwareLoggingException0(Runnable runnable) {
+    private void makeContextAwareLoggingException0(Runnable action) {
         try (SafeCloseable ignored = ctx.push()) {
-            runnable.run();
+            action.run();
         } catch (Throwable th) {
-            logger.warn("An error occurred when pushing a context", th);
+            logger.warn("An error occurred when pushing a context and executing the action", th);
             throw th;
         }
     }
 
-    private <V> V makeContextAwareLoggingException0(Supplier<? extends V> action) {
+    private <V> V makeContextAwareLoggingException0(Supplier<? extends V> fn) {
         try (SafeCloseable ignored = ctx.push()) {
-            return action.get();
+            return fn.get();
         } catch (Throwable th) {
-            logger.warn("An error occurred when pushing a context", th);
+            logger.warn("An error occurred when pushing a context and executing the fn", th);
             throw th;
         }
     }
