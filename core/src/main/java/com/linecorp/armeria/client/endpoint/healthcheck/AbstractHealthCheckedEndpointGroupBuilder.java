@@ -187,7 +187,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
             throw new IllegalArgumentException("Maximum endpoint ratio is already set.");
         }
 
-        checkArgument(maxEndpointCount > 0, "maxEndpointCount: %s (expected: > 0)");
+        checkArgument(maxEndpointCount > 0, "maxEndpointCount: %s (expected: > 0)", maxEndpointCount);
 
         this.maxEndpointCount = maxEndpointCount;
         return this;
