@@ -49,6 +49,11 @@ class ServiceRequestContextTest {
         try (SafeCloseable unused = ctx.push()) {
             assertThat(onEnterExitStack).hasSize(1);
             assertThat(ServiceRequestContext.current()).isSameAs(ctx);
+            try (SafeCloseable unused1 = clientRequestContext().push()) {
+                assertThat(onEnterExitStack).hasSize(2);
+                assertThat(ServiceRequestContext.current()).isSameAs(ctx);
+            }
+            assertThat(onEnterExitStack).hasSize(1);
         }
         assertThat(onEnterExitStack).isEmpty();
 
@@ -67,6 +72,11 @@ class ServiceRequestContextTest {
         try (SafeCloseable unused = ctx.push()) {
             assertThat(onEnterExitStack).hasSize(1);
             assertThat(ServiceRequestContext.currentOrNull()).isSameAs(ctx);
+            try (SafeCloseable unused1 = clientRequestContext().push()) {
+                assertThat(onEnterExitStack).hasSize(2);
+                assertThat(ServiceRequestContext.currentOrNull()).isSameAs(ctx);
+            }
+            assertThat(onEnterExitStack).hasSize(1);
         }
         assertThat(onEnterExitStack).isEmpty();
 
@@ -87,6 +97,12 @@ class ServiceRequestContextTest {
             assertThat(onEnterExitStack).hasSize(1);
             assertThat(ServiceRequestContext.mapCurrent(c -> "foo", () -> "bar")).isEqualTo("foo");
             assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isSameAs(ctx);
+            try (SafeCloseable unused1 = clientRequestContext().push()) {
+                assertThat(onEnterExitStack).hasSize(2);
+                assertThat(ServiceRequestContext.mapCurrent(c -> "foo", () -> "bar")).isEqualTo("foo");
+                assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isSameAs(ctx);
+            }
+            assertThat(onEnterExitStack).hasSize(1);
         }
         assertThat(onEnterExitStack).isEmpty();
 

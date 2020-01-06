@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
 
@@ -61,23 +60,34 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the server-side context of the {@link Request} that is being handled in the current thread.
+     * If the context is a {@link ClientRequestContext}, {@link ClientRequestContext#root()} is returned.
      *
      * @throws IllegalStateException if the context is unavailable in the current thread or
-     *                               the current context is not a {@link ServiceRequestContext}.
+     *                               the current context is a {@link ClientRequestContext} and
+     *                               {@link ClientRequestContext#root()} is {@code null}
      */
     static ServiceRequestContext current() {
         final RequestContext ctx = RequestContext.current();
-        checkState(ctx instanceof ServiceRequestContext,
-                   "The current context is not a server-side context: %s", ctx);
-        return (ServiceRequestContext) ctx;
+        if (ctx instanceof ServiceRequestContext) {
+            return (ServiceRequestContext) ctx;
+        }
+
+        final ServiceRequestContext root = ((ClientRequestContext) ctx).root();
+        if (root != null) {
+            return root;
+        }
+
+        throw new IllegalStateException(
+                "The current context is not a server-side context and does not have a root " +
+                "which means that the context is not invoked by a server request. ctx:" + ctx);
     }
 
     /**
      * Returns the server-side context of the {@link Request} that is being handled in the current thread.
+     * If the context is a {@link ClientRequestContext}, {@link ClientRequestContext#root()} is returned.
      *
      * @return the {@link ServiceRequestContext} available in the current thread,
      *         or {@code null} if unavailable.
-     * @throws IllegalStateException if the current context is not a {@link ServiceRequestContext}.
      */
     @Nullable
     static ServiceRequestContext currentOrNull() {
@@ -85,9 +95,19 @@ public interface ServiceRequestContext extends RequestContext {
         if (ctx == null) {
             return null;
         }
-        checkState(ctx instanceof ServiceRequestContext,
-                   "The current context is not a server-side context: %s", ctx);
-        return (ServiceRequestContext) ctx;
+
+        if (ctx instanceof ServiceRequestContext) {
+            return (ServiceRequestContext) ctx;
+        }
+
+        final ServiceRequestContext root = ((ClientRequestContext) ctx).root();
+        if (root != null) {
+            return root;
+        }
+
+        throw new IllegalStateException(
+                "The current context is not a server-side context and does not have a root " +
+                "which means that the context is not invoked by a server request. ctx:" + ctx);
     }
 
     /**
