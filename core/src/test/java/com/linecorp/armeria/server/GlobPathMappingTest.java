@@ -142,8 +142,7 @@ class GlobPathMappingTest {
         final Route route = glob(glob);
         for (String p : paths) {
             if (!route.apply(create(p)).isPresent()) {
-                fail('\'' + p + "' does not match '" + glob + "' or '" +
-                                route.paths().get(0) + "'.");
+                fail('\'' + p + "' does not match '" + glob + "' or '" + route.paths().get(0) + "'.");
             }
         }
     }
