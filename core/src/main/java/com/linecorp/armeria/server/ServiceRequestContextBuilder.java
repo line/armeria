@@ -44,6 +44,9 @@ import io.netty.channel.EventLoop;
  */
 public final class ServiceRequestContextBuilder extends AbstractRequestContextBuilder {
 
+    static {
+
+    }
     /**
      * A placeholder service to make {@link ServerBuilder} happy.
      */

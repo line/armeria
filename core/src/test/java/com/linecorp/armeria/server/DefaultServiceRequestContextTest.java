@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -142,7 +143,8 @@ class DefaultServiceRequestContextTest {
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
 
-    @Test
+    // TODO(ikhoon): Revert to @Test after CI pass
+    @RepeatedTest(1000)
     void setRequestTimeoutAfter() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
@@ -152,14 +154,17 @@ class DefaultServiceRequestContextTest {
         when(timeoutController.startTimeNanos()).thenReturn(System.nanoTime());
         ctx.setRequestTimeoutController(timeoutController);
 
+        final long passedTimeMillis1 = TimeUnit.NANOSECONDS.toMillis(
+                System.nanoTime() - timeoutController.startTimeNanos());
         ctx.setRequestTimeoutAfterMillis(1000);
-        assertThat(ctx.requestTimeoutMillis()).isBetween(1000 - tolerance, 1000 + tolerance);
+        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis1 + 1000 - tolerance,
+                                                         passedTimeMillis1 + 1000 + tolerance);
         Thread.sleep(1000);
-        final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
+        final long passedTimeMillis2 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
         ctx.setRequestTimeoutAfter(Duration.ofSeconds(2));
-        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis + 2000 - tolerance,
-                                                         passedTimeMillis + 2000 + tolerance);
+        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis2 + 2000 - tolerance,
+                                                         passedTimeMillis2 + 2000 + tolerance);
     }
 
     @Test
@@ -175,7 +180,8 @@ class DefaultServiceRequestContextTest {
                 .hasMessageContaining("(expected: > 0)");
     }
 
-    @Test
+    // TODO(ikhoon): Revert to @Test after CI pass
+    @RepeatedTest(1000)
     void setRequestTimeoutAt() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
@@ -185,15 +191,18 @@ class DefaultServiceRequestContextTest {
         when(timeoutController.startTimeNanos()).thenReturn(System.nanoTime());
         ctx.setRequestTimeoutController(timeoutController);
 
+        final long passedTimeMillis1 = TimeUnit.NANOSECONDS.toMillis(
+                System.nanoTime() - timeoutController.startTimeNanos());
         ctx.setRequestTimeoutAt(Instant.now().plusSeconds(1));
-        assertThat(ctx.requestTimeoutMillis()).isBetween(1000 - tolerance, 1000 + tolerance);
+        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis1 + 1000 - tolerance,
+                                                         passedTimeMillis1 + 1000 + tolerance);
 
         Thread.sleep(1000);
-        final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
+        final long passedTimeMillis2 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
         ctx.setRequestTimeoutAtMillis(Instant.now().plusMillis(1500).toEpochMilli());
-        assertThat(ctx.requestTimeoutMillis()).isBetween(1500 + passedTimeMillis - tolerance,
-                                                         1500 + passedTimeMillis + tolerance);
+        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis2 + 1500 - tolerance,
+                                                         passedTimeMillis2 + 1500 + tolerance);
     }
 
     @Test
