@@ -6,7 +6,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import net.javacrumbs.futureconverter.java8rx2.FutureConverter;
 
@@ -24,6 +23,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 
 public class MainService implements HttpService {
 
@@ -39,19 +39,22 @@ public class MainService implements HttpService {
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
         // This logic mimics using a blocking method, which would usually be something like a MySQL
         // database query using JDBC.
-        final CompletableFuture<List<Long>> fetchFromFakeDb = CompletableFuture.supplyAsync(
-                () -> {
-                    // The context is mounted in a thread-local, meaning it is available to all logic such
-                    // as tracing.
-                    checkState(ServiceRequestContext.current() == ctx);
+        final Observable<Long> fetchFromFakeDb =
+                Single.fromFuture(
+                        // Always run blocking logic on the blocking task executor. By using
+                        // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
+                        // inside the logic (e.g., your DB call will be traced!).
+                        ctx.blockingTaskExecutor().submit(
+                                () -> {
+                                    // The context is mounted in a thread-local, meaning it is available to all
+                                    // logic such as tracing.
+                                    checkState(ServiceRequestContext.current() == ctx);
 
-                    Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
-                    return ImmutableList.of(23L, -23L);
-                },
-                // Always run blocking logic on the blocking task executor. By using
-                // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted inside the
-                // logic (e.g., your DB call will be traced!).
-                ctx.blockingTaskExecutor());
+                                    Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
+                                    return ImmutableList.of(23L, -23L);
+                                }),
+                        Schedulers.io())
+                      .flattenAsObservable(l -> l);
 
         final Single<HttpResponse> response = FutureConverter
                 .toSingle(req.aggregate())
@@ -69,8 +72,7 @@ public class MainService implements HttpService {
 
                     return Observable.fromIterable(nums);
                 })
-                .mergeWith(FutureConverter.toSingle(fetchFromFakeDb)
-                                          .flatMapObservable(Observable::fromIterable))
+                .mergeWith(fetchFromFakeDb)
                 .flatMapSingle(num -> {
                     // The context is mounted in a thread-local, meaning it is available to all logic
                     // such as tracing.
