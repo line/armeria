@@ -103,7 +103,6 @@ public final class ArmeriaConfigurationUtil {
 
     /**
      * The pattern for data size text.
-     * TODO(ikhoon): a-z seems rather broad, assuming just (kMGTP)?(Bb)
      */
     private static final Pattern DATA_SIZE_PATTERN = Pattern.compile("^([+]?\\d+)([a-zA-Z]{0,2})$");
 
