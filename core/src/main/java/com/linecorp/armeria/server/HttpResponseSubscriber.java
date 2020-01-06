@@ -20,8 +20,6 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Set;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -47,6 +45,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Version;
+import com.linecorp.armeria.internal.DefaultTimeoutController;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.HttpTimestampSupplier;
@@ -57,7 +56,7 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutChangeListener {
+final class HttpResponseSubscriber extends DefaultTimeoutController implements Subscriber<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
@@ -85,12 +84,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final DefaultServiceRequestContext reqCtx;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-    private final long startTimeNanos;
 
     @Nullable
     private Subscription subscription;
-    @Nullable
-    private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_HEADERS;
     private boolean isComplete;
 
@@ -99,13 +95,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
                            boolean enableServerHeader, boolean enableDateHeader) {
+        super(ctx.channel().eventLoop());
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
-        startTimeNanos = System.nanoTime();
+        setTimeoutTask(newTimeoutTask());
     }
 
     private HttpService service() {
@@ -117,45 +114,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     }
 
     @Override
-    public void onRequestTimeoutChange(long newRequestTimeoutMillis) {
-        // Cancel the previously scheduled timeout, if exists.
-        cancelTimeout();
-
-        if (newRequestTimeoutMillis > 0 && state != State.DONE) {
-            // Calculate the amount of time passed since the creation of this subscriber.
-            final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-
-            if (passedTimeMillis < newRequestTimeoutMillis) {
-                timeoutFuture = ctx.channel().eventLoop().schedule(
-                        this::onTimeout,
-                        newRequestTimeoutMillis - passedTimeMillis, TimeUnit.MILLISECONDS);
-            } else {
-                // We went past the dead line set by the new timeout already.
-                onTimeout();
-            }
-        }
-    }
-
-    private void onTimeout() {
-        if (state != State.DONE) {
-            reqCtx.setTimedOut();
-            final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
-            if (requestTimeoutHandler != null) {
-                requestTimeoutHandler.run();
-            } else {
-                failAndRespond(RequestTimeoutException.get(),
-                               SERVICE_UNAVAILABLE_MESSAGE, Http2Error.INTERNAL_ERROR);
-            }
-        }
-    }
-
-    @Override
     public void onSubscribe(Subscription subscription) {
         assert this.subscription == null;
         this.subscription = subscription;
 
         // Schedule the initial request timeout.
-        onRequestTimeoutChange(reqCtx.requestTimeoutMillis());
+        initTimeout(reqCtx.requestTimeoutMillis());
 
         // Start consuming.
         subscription.request(1);
@@ -503,19 +467,32 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         return builder;
     }
 
-    private boolean cancelTimeout() {
-        final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
-        if (timeoutFuture == null) {
-            return true;
-        }
-
-        this.timeoutFuture = null;
-        return timeoutFuture.cancel(false);
-    }
-
     private IllegalStateException newIllegalStateException(String msg) {
         final IllegalStateException cause = new IllegalStateException(msg);
         failAndRespond(cause, INTERNAL_SERVER_ERROR_MESSAGE, Http2Error.INTERNAL_ERROR);
         return cause;
+    }
+
+    private TimeoutTask newTimeoutTask() {
+        return new TimeoutTask() {
+            @Override
+            public boolean canSchedule() {
+                return state != State.DONE;
+            }
+
+            @Override
+            public void run() {
+                if (state != State.DONE) {
+                    reqCtx.setTimedOut();
+                    final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
+                    if (requestTimeoutHandler != null) {
+                        requestTimeoutHandler.run();
+                    } else {
+                        failAndRespond(RequestTimeoutException.get(),
+                                       SERVICE_UNAVAILABLE_MESSAGE, Http2Error.INTERNAL_ERROR);
+                    }
+                }
+            }
+        };
     }
 }

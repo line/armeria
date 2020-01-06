@@ -430,7 +430,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             final HttpResponseSubscriber resSubscriber =
                     new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req,
                                                config.isServerHeaderEnabled(), config.isDateHeaderEnabled());
-            reqCtx.setRequestTimeoutChangeListener(resSubscriber);
+            reqCtx.setRequestTimeoutController(resSubscriber);
             res.subscribe(resSubscriber, eventLoop, WITH_POOLED_OBJECTS);
         }
     }

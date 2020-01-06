@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 
@@ -56,7 +57,8 @@ import io.micrometer.core.instrument.MeterRegistry;
  */
 public final class MetricCollectingCircuitBreakerListener implements CircuitBreakerListener {
 
-    private static final String DEFAULT_METER_NAME = "armeria.client.circuitBreaker";
+    private static final String DEFAULT_METER_NAME = "armeria.client.circuit.breaker";
+    private static final String LEGACY_METER_NAME = "armeria.client.circuitBreaker";
 
     private final MeterRegistry registry;
     private final String name;
@@ -65,7 +67,7 @@ public final class MetricCollectingCircuitBreakerListener implements CircuitBrea
      * Creates a new instance with the default name {@value #DEFAULT_METER_NAME}.
      */
     public MetricCollectingCircuitBreakerListener(MeterRegistry registry) {
-        this(registry, DEFAULT_METER_NAME);
+        this(registry, Flags.useLegacyMeterNames() ? LEGACY_METER_NAME : DEFAULT_METER_NAME);
     }
 
     /**

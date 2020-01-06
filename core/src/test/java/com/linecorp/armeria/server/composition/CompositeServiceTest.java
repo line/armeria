@@ -73,8 +73,8 @@ class CompositeServiceTest {
     static void checkMetrics() {
         final MeterRegistry registry = server.server().meterRegistry();
         assertThat(MicrometerUtil.register(registry,
-                                           new MeterIdPrefix("armeria.server.router.compositeServiceCache",
-                                                             "hostnamePattern", "*",
+                                           new MeterIdPrefix("armeria.server.router.composite.service.cache",
+                                                             "hostname.pattern", "*",
                                                              "route", "prefix:/qux/"),
                                            Object.class, (r, i) -> null)).isNotNull();
     }

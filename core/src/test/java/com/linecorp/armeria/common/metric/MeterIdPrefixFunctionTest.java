@@ -89,8 +89,8 @@ class MeterIdPrefixFunctionTest {
         ctx = newContext(HttpMethod.GET, "/", null);
         res = f.apply(registry, ctx.log());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
-                                               Tag.of("httpStatus", "0"),
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
+                                               Tag.of("http.status", "0"),
                                                Tag.of("method", "GET"),
                                                Tag.of("route", "exact:/"));
 
@@ -98,8 +98,8 @@ class MeterIdPrefixFunctionTest {
         ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(Object.class, "doFoo"));
         res = f.apply(registry, ctx.log());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
-                                               Tag.of("httpStatus", "0"),
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
+                                               Tag.of("http.status", "0"),
                                                Tag.of("method", "doFoo"),
                                                Tag.of("route", "exact:/post"));
 
@@ -109,8 +109,8 @@ class MeterIdPrefixFunctionTest {
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         res = f.apply(registry, ctx.log());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
-                                               Tag.of("httpStatus", "200"),
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
+                                               Tag.of("http.status", "200"),
                                                Tag.of("method", "GET"),
                                                Tag.of("route", "exact:/get"));
     }
@@ -127,7 +127,7 @@ class MeterIdPrefixFunctionTest {
         ctx = newContext(HttpMethod.GET, "/", null);
         res = f.activeRequestPrefix(registry, ctx.log());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("method", "GET"),
                                                Tag.of("route", "exact:/"));
 
@@ -135,7 +135,7 @@ class MeterIdPrefixFunctionTest {
         ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(Object.class, "doFoo"));
         res = f.activeRequestPrefix(registry, ctx.log());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("method", "doFoo"),
                                                Tag.of("route", "exact:/post"));
 
@@ -145,7 +145,7 @@ class MeterIdPrefixFunctionTest {
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         res = f.activeRequestPrefix(registry, ctx.log());
         assertThat(res.name()).isEqualTo("foo");
-        assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
+        assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("method", "GET"),
                                                Tag.of("route", "exact:/get"));
     }

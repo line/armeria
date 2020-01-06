@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
@@ -108,6 +109,11 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public void clearResponseTimeout() {
+        delegate().clearResponseTimeout();
+    }
+
+    @Override
     public void setResponseTimeoutMillis(long responseTimeoutMillis) {
         delegate().setResponseTimeoutMillis(responseTimeoutMillis);
     }
@@ -115,6 +121,36 @@ public class ClientRequestContextWrapper
     @Override
     public void setResponseTimeout(Duration responseTimeout) {
         delegate().setResponseTimeout(responseTimeout);
+    }
+
+    @Override
+    public void extendResponseTimeoutMillis(long adjustmentMillis) {
+        delegate().extendResponseTimeoutMillis(adjustmentMillis);
+    }
+
+    @Override
+    public void extendResponseTimeout(Duration adjustment) {
+        delegate().extendResponseTimeout(adjustment);
+    }
+
+    @Override
+    public void setResponseTimeoutAfterMillis(long responseTimeoutMillis) {
+        delegate().setResponseTimeoutAfterMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    public void setResponseTimeoutAfter(Duration responseTimeout) {
+        delegate().setResponseTimeoutAfter(responseTimeout);
+    }
+
+    @Override
+    public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
+        delegate().setResponseTimeoutAtMillis(responseTimeoutAtMillis);
+    }
+
+    @Override
+    public void setResponseTimeoutAt(Instant responseTimeoutAt) {
+        delegate().setResponseTimeoutAt(responseTimeoutAt);
     }
 
     @Override
