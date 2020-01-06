@@ -602,7 +602,6 @@ public final class ArmeriaConfigurationUtil {
                     unit = 1024L * 1024L * 1024L;
                     break;
                 case "tb":
-                    // TODO(ikhoon): Simplify with Math.pow?
                     unit = 1024L * 1024L * 1024L * 1024L;
                     break;
                 default:
