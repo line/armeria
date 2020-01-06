@@ -50,8 +50,7 @@ public final class DnsTextEndpointGroupBuilder
      * Returns a newly created {@link DnsTextEndpointGroup}.
      */
     public DnsTextEndpointGroup build() {
-        return new DnsTextEndpointGroup(eventLoop(), minTtl(), maxTtl(),
-                                        serverAddressStreamProvider(),
-                                        backoff(), hostname(), mapping);
+        return new DnsTextEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
+                                        serverAddressStreamProvider(), backoff(), hostname(), mapping);
     }
 }

@@ -32,10 +32,9 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
-import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -94,49 +93,43 @@ class RetryingClientLoadBalancingTest {
                                                                   .map(port -> Endpoint.of("127.0.0.1", port))
                                                                   .collect(toImmutableList()));
 
-        final String groupName = "loadBalancedRetry";
-        EndpointGroupRegistry.register(groupName, group, EndpointSelectionStrategy.ROUND_ROBIN);
-        try {
-            final RetryStrategy retryStrategy = (ctx, cause) -> {
-                // Get the response status.
-                final HttpStatus status;
-                if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-                    status = ctx.log().responseHeaders().status();
-                } else {
-                    status = null;
-                }
-
-                // Retry only once on failure.
-                if (!HttpStatus.OK.equals(status) && AbstractRetryingClient.getTotalAttempts(ctx) <= 1) {
-                    return CompletableFuture.completedFuture(Backoff.withoutDelay());
-                } else {
-                    return CompletableFuture.completedFuture(null);
-                }
-            };
-            final WebClient c = WebClient.builder("h2c://group:" + groupName)
-                                         .decorator(RetryingClient.builder(retryStrategy)
-                                                                  .newDecorator())
-                                         .build();
-
-            for (int i = 0; i < NUM_PORTS; i++) {
-                c.get(mode.path).aggregate().join();
+        final RetryStrategy retryStrategy = (ctx, cause) -> {
+            // Get the response status.
+            final HttpStatus status;
+            if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+                status = ctx.log().responseHeaders().status();
+            } else {
+                status = null;
             }
 
-            switch (mode) {
-                case SUCCESS:
-                    assertThat(accessedPorts).isEqualTo(expectedPorts);
-                    break;
-                case FAILURE:
-                    final List<Integer> expectedPortsWhenRetried =
-                            ImmutableList.<Integer>builder()
-                                    .addAll(expectedPorts)
-                                    .addAll(expectedPorts)
-                                    .build();
-                    assertThat(accessedPorts).isEqualTo(expectedPortsWhenRetried);
-                    break;
+            // Retry only once on failure.
+            if (!HttpStatus.OK.equals(status) && AbstractRetryingClient.getTotalAttempts(ctx) <= 1) {
+                return CompletableFuture.completedFuture(Backoff.withoutDelay());
+            } else {
+                return CompletableFuture.completedFuture(null);
             }
-        } finally {
-            EndpointGroupRegistry.unregister(groupName);
+        };
+        final WebClient c = WebClient.builder(SessionProtocol.H2C, group)
+                                     .decorator(RetryingClient.builder(retryStrategy)
+                                                              .newDecorator())
+                                     .build();
+
+        for (int i = 0; i < NUM_PORTS; i++) {
+            c.get(mode.path).aggregate().join();
+        }
+
+        switch (mode) {
+            case SUCCESS:
+                assertThat(accessedPorts).isEqualTo(expectedPorts);
+                break;
+            case FAILURE:
+                final List<Integer> expectedPortsWhenRetried =
+                        ImmutableList.<Integer>builder()
+                                .addAll(expectedPorts)
+                                .addAll(expectedPorts)
+                                .build();
+                assertThat(accessedPorts).isEqualTo(expectedPortsWhenRetried);
+                break;
         }
     }
 }

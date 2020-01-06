@@ -39,6 +39,7 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -88,14 +89,15 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                           ClientOptions options) {
-        final URI uri = endpoint.toUri(scheme, path);
+    public <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
+                           Class<T> clientType, ClientOptions options) {
+        // FIXME(trustin): URI is useless if endpointGroup is not an Endpoint.
+        final URI uri = URI.create(scheme.uriText() + "://endpoint-group" + (path != null ? path : "/"));
 
-        return newClient(uri, scheme, endpoint, clientType, options);
+        return newClient(uri, scheme, endpointGroup, clientType, options);
     }
 
-    private <T> T newClient(URI uri, Scheme scheme, Endpoint endpoint, Class<T> clientType,
+    private <T> T newClient(URI uri, Scheme scheme, EndpointGroup endpointGroup, Class<T> clientType,
                             ClientOptions options) {
         final SerializationFormat serializationFormat = scheme.serializationFormat();
         final Class<?> stubClass = clientType.getEnclosingClass();
@@ -143,7 +145,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 httpClient,
                 meterRegistry(),
                 scheme.sessionProtocol(),
-                endpoint,
+                endpointGroup,
                 serializationFormat,
                 jsonMarshaller);
 

@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map.Entry;
@@ -88,7 +87,6 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
      */
     default RequestHeadersBuilder authority(Endpoint endpoint) {
         requireNonNull(endpoint, "endpoint");
-        checkArgument(!endpoint.isGroup(), "endpoint: %s (expected: a host endpoint)", endpoint);
         return authority(endpoint.authority());
     }
 

@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
@@ -189,49 +190,50 @@ public interface ClientFactory extends AutoCloseable {
     <T> T newClient(URI uri, Class<T> clientType, ClientOptions options);
 
     /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}.
+     * Creates a new client that connects to the specified {@link EndpointGroup} with the {@link Scheme}.
      *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
+     * @param scheme the {@link Scheme} for the {@code endpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
      */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptionValue<?>... options);
+    <T> T newClient(Scheme scheme, EndpointGroup endpointGroup,
+                    Class<T> clientType, ClientOptionValue<?>... options);
 
     /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}.
+     * Creates a new client that connects to the specified {@link EndpointGroup} with the {@link Scheme}.
      *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
+     * @param scheme the {@link Scheme} for the {@code endpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
      * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
      */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options);
+    <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, Class<T> clientType, ClientOptions options);
 
     /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}
+     * Creates a new client that connects to the specified {@link EndpointGroup} with the {@link Scheme}
      * and {@code path}.
      *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
+     * @param scheme the {@link Scheme} for the {@code endpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
      * @param path the service {@code path}
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
      */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                    ClientOptionValue<?>... options);
+    <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
+                    Class<T> clientType, ClientOptionValue<?>... options);
 
     /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}
+     * Creates a new client that connects to the specified {@link EndpointGroup} with the {@link Scheme}
      * and {@code path}.
      *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
+     * @param scheme the {@link Scheme} for the {@code endpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
      * @param path the service {@code path}
      * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
      */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
+    <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path, Class<T> clientType,
                     ClientOptions options);
 
     /**

@@ -24,7 +24,7 @@ import java.util.function.BiFunction;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
@@ -36,16 +36,18 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 public final class ClientUtil {
 
     public static <I extends Request, O extends Response, U extends Client<I, O>>
-    O initContextAndExecuteWithFallback(U delegate, DefaultClientRequestContext ctx, Endpoint endpoint,
+    O initContextAndExecuteWithFallback(U delegate,
+                                        DefaultClientRequestContext ctx,
+                                        EndpointGroup endpointGroup,
                                         BiFunction<ClientRequestContext, Throwable, O> fallback) {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
-        requireNonNull(endpoint, "endpoint");
+        requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(fallback, "fallback");
 
         try {
-            if (ctx.init(endpoint)) {
+            if (ctx.init(endpointGroup)) {
                 return pushAndExecute(delegate, ctx);
             } else {
                 // Context initialization has failed, but we call the decorator chain anyway

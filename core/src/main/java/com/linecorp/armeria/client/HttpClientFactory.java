@@ -35,6 +35,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -236,13 +237,14 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                           ClientOptions options) {
-        final URI uri = endpoint.toUri(scheme, path);
-        return newClient(uri, scheme, endpoint, clientType, options);
+    public <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
+                           Class<T> clientType, ClientOptions options) {
+        // FIXME(trustin): URI is useless if endpointGroup is not an Endpoint.
+        final URI uri = URI.create(scheme.uriText() + "://endpoint-group" + (path != null ? path : "/"));
+        return newClient(uri, scheme, endpointGroup, clientType, options);
     }
 
-    private <T> T newClient(URI uri, Scheme scheme, Endpoint endpoint, Class<T> clientType,
+    private <T> T newClient(URI uri, Scheme scheme, EndpointGroup endpointGroup, Class<T> clientType,
                             ClientOptions options) {
         validateClientType(clientType);
 
@@ -255,7 +257,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         }
 
         if (clientType == WebClient.class) {
-            final WebClient client = newWebClient(uri, scheme, endpoint, options, delegate);
+            final WebClient client = newWebClient(uri, scheme, endpointGroup, options, delegate);
 
             @SuppressWarnings("unchecked")
             final T castClient = (T) client;
@@ -265,11 +267,11 @@ final class HttpClientFactory extends AbstractClientFactory {
         }
     }
 
-    private DefaultWebClient newWebClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
-                                          HttpClient delegate) {
+    private DefaultWebClient newWebClient(URI uri, Scheme scheme, EndpointGroup endpointGroup,
+                                          ClientOptions options, HttpClient delegate) {
         return new DefaultWebClient(
                 ClientBuilderParams.of(this, uri, WebClient.class, options),
-                delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
+                delegate, meterRegistry, scheme.sessionProtocol(), endpointGroup);
     }
 
     private static void validateClientType(Class<?> clientType) {

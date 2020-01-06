@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
@@ -114,7 +113,6 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
     @Override
     public ReleasableHolder<EventLoop> acquire(Endpoint endpoint, SessionProtocol sessionProtocol) {
         requireNonNull(endpoint, "endpoint");
-        checkArgument(!endpoint.isGroup(), "endpoint must be a host: %s", endpoint);
         requireNonNull(sessionProtocol, "sessionProtocol");
         final AbstractEventLoopState state = state(endpoint, sessionProtocol);
         final AbstractEventLoopEntry acquired = state.acquire();

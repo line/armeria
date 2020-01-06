@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.internal.TransportType;
 import com.linecorp.armeria.internal.dns.DefaultDnsNameResolver;
@@ -71,10 +72,13 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     int attemptsSoFar;
 
-    DnsEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
+    DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy,
+                     EventLoop eventLoop, int minTtl, int maxTtl,
                      DnsServerAddressStreamProvider serverAddressStreamProvider,
                      Backoff backoff, Iterable<DnsQuestion> questions,
                      Consumer<DnsNameResolverBuilder> resolverConfigurator) {
+
+        super(selectionStrategy);
 
         this.eventLoop = eventLoop;
         this.minTtl = minTtl;

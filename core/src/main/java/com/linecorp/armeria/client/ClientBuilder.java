@@ -21,6 +21,7 @@ import java.net.URI;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -58,7 +59,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     @Nullable
     private final URI uri;
     @Nullable
-    private final Endpoint endpoint;
+    private final EndpointGroup endpointGroup;
     @Nullable
     private final Scheme scheme;
     @Nullable
@@ -94,41 +95,41 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link Endpoint} with the {@code scheme}.
      *
-     * @deprecated Use {@link Clients#builder(String, Endpoint)}.
+     * @deprecated Use {@link Clients#builder(String, EndpointGroup)}.
      */
     @Deprecated
-    public ClientBuilder(String scheme, Endpoint endpoint) {
-        this(Scheme.parse(requireNonNull(scheme, "scheme")), requireNonNull(endpoint, "endpoint"));
+    public ClientBuilder(String scheme, Endpoint endpointGroup) {
+        this(Scheme.parse(requireNonNull(scheme, "scheme")), requireNonNull(endpointGroup, "endpoint"));
     }
 
     /**
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link Endpoint} with the {@link Scheme}.
      *
-     * @deprecated Use {@link Clients#builder(Scheme, Endpoint)}.
+     * @deprecated Use {@link Clients#builder(Scheme, EndpointGroup)}.
      */
     @Deprecated
-    public ClientBuilder(Scheme scheme, Endpoint endpoint) {
-        this(null, requireNonNull(scheme, "scheme"), null, requireNonNull(endpoint, "endpoint"));
+    public ClientBuilder(Scheme scheme, Endpoint endpointGroup) {
+        this(null, requireNonNull(scheme, "scheme"), null, requireNonNull(endpointGroup, "endpoint"));
     }
 
     /**
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link Endpoint} with the {@link SessionProtocol}.
      *
-     * @deprecated Use {@link Clients#builder(SessionProtocol, Endpoint)}.
+     * @deprecated Use {@link Clients#builder(SessionProtocol, EndpointGroup)}.
      */
     @Deprecated
-    public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
-        this(null, null, requireNonNull(protocol, "protocol"), requireNonNull(endpoint, "endpoint"));
+    public ClientBuilder(SessionProtocol protocol, Endpoint endpointGroup) {
+        this(null, null, requireNonNull(protocol, "protocol"), requireNonNull(endpointGroup, "endpoint"));
     }
 
     ClientBuilder(@Nullable URI uri, @Nullable Scheme scheme, @Nullable SessionProtocol protocol,
-                  @Nullable Endpoint endpoint) {
+                  @Nullable EndpointGroup endpointGroup) {
         this.uri = uri;
         this.scheme = scheme;
         this.protocol = protocol;
-        this.endpoint = endpoint;
+        this.endpointGroup = endpointGroup;
     }
 
     /**
@@ -176,9 +177,9 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
         if (uri != null) {
             return factory.newClient(uri, clientType, buildOptions());
         } else if (path != null) {
-            return factory.newClient(scheme(), endpoint, path, clientType, buildOptions());
+            return factory.newClient(scheme(), endpointGroup, path, clientType, buildOptions());
         } else {
-            return factory.newClient(scheme(), endpoint, clientType, buildOptions());
+            return factory.newClient(scheme(), endpointGroup, clientType, buildOptions());
         }
     }
 
@@ -187,7 +188,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     private void ensureEndpoint() {
-        if (endpoint == null) {
+        if (endpointGroup == null) {
             throw new IllegalStateException(
                     getClass().getSimpleName() + " must be created with an " + Endpoint.class.getSimpleName() +
                     " to call this method.");

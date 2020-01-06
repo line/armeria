@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -79,15 +80,16 @@ final class THttpClientFactory extends DecoratingClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                           ClientOptions options) {
-        final URI uri = endpoint.toUri(scheme, path);
+    public <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
+                           Class<T> clientType, ClientOptions options) {
+        // FIXME(trustin): URI is useless if endpointGroup is not an Endpoint.
+        final URI uri = URI.create(scheme.uriText() + "://endpoint-group" + (path != null ? path : "/"));
 
-        return newClient(uri, scheme, endpoint, clientType, options);
+        return newClient(uri, scheme, endpointGroup, clientType, options);
     }
 
-    private <T> T newClient(URI uri, Scheme scheme, Endpoint endpoint, Class<T> clientType,
-                            ClientOptions options) {
+    private <T> T newClient(URI uri, Scheme scheme, EndpointGroup endpointGroup,
+                            Class<T> clientType, ClientOptions options) {
         final SerializationFormat serializationFormat = scheme.serializationFormat();
 
         final RpcClient delegate = options.decoration().rpcDecorate(
@@ -99,13 +101,13 @@ final class THttpClientFactory extends DecoratingClientFactory {
             @SuppressWarnings("unchecked")
             final T client = (T) new DefaultTHttpClient(
                     ClientBuilderParams.of(this, uri, THttpClient.class, options),
-                    delegate, meterRegistry(), scheme.sessionProtocol(), endpoint);
+                    delegate, meterRegistry(), scheme.sessionProtocol(), endpointGroup);
             return client;
         } else {
             // Create a THttpClient without path.
             final THttpClient thriftClient = new DefaultTHttpClient(
                     ClientBuilderParams.of(this, pathlessUri(uri), THttpClient.class, options),
-                    delegate, meterRegistry(), scheme.sessionProtocol(), endpoint);
+                    delegate, meterRegistry(), scheme.sessionProtocol(), endpointGroup);
 
             @SuppressWarnings("unchecked")
             final T client = (T) Proxy.newProxyInstance(
@@ -122,11 +124,10 @@ final class THttpClientFactory extends DecoratingClientFactory {
 
     private HttpClient newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
         try {
-            final HttpClient client = delegate().newClient(
+            return delegate().newClient(
                     new URI(Scheme.of(SerializationFormat.NONE, scheme.sessionProtocol()).uriText(),
                             uri.getRawAuthority(), null, null, null),
                     HttpClient.class, options);
-            return client;
         } catch (URISyntaxException e) {
             throw new Error(e); // Should never happen.
         }

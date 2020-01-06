@@ -16,17 +16,20 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
@@ -40,14 +43,52 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
     private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
             new ArrayList<>());
 
+    private final EndpointSelectionStrategy selectionStrategy;
+    private final AtomicReference<EndpointSelector> selector = new AtomicReference<>();
     private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
     private final Lock endpointsLock = new ReentrantLock();
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture =
             new EventLoopCheckingCompletableFuture<>();
 
+    public DynamicEndpointGroup() {
+        this(EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN);
+    }
+
+    public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
+        this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+    }
+
     @Override
     public final List<Endpoint> endpoints() {
         return endpoints;
+    }
+
+    @Override
+    public EndpointSelectionStrategy selectionStrategy() {
+        return selectionStrategy;
+    }
+
+    @Override
+    public final Endpoint select(ClientRequestContext ctx) {
+        return maybeCreateSelector().select(ctx);
+    }
+
+    /**
+     * Creates an {@link EndpointSelector} lazily, so that the {@link EndpointSelector} is created after
+     * the subclasses' constructor finishes its job.
+     */
+    private EndpointSelector maybeCreateSelector() {
+        final EndpointSelector selector = this.selector.get();
+        if (selector != null) {
+            return selector;
+        }
+
+        final EndpointSelector newSelector = selectionStrategy.newSelector(this);
+        if (this.selector.compareAndSet(null, newSelector)) {
+            return newSelector;
+        }
+
+        return this.selector.get();
     }
 
     /**

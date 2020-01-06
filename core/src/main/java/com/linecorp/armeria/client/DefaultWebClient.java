@@ -25,6 +25,7 @@ import java.net.URI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -40,9 +41,9 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     static final WebClient DEFAULT = new WebClientBuilder().build();
 
-    DefaultWebClient(ClientBuilderParams params, HttpClient delegate,
-                     MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
-        super(params, delegate, meterRegistry, sessionProtocol, endpoint);
+    DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry,
+                     SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
+        super(params, delegate, meterRegistry, sessionProtocol, endpointGroup);
     }
 
     @Override
@@ -84,17 +85,17 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         } else {
             newReq = req;
         }
-        return execute(endpoint(), newReq);
+        return execute(endpointGroup(), newReq);
     }
 
-    private HttpResponse execute(Endpoint endpoint, HttpRequest req) {
+    private HttpResponse execute(EndpointGroup endpointGroup, HttpRequest req) {
         final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             req.abort(cause);
             return HttpResponse.ofFailure(cause);
         }
-        return execute(endpoint, req.method(),
+        return execute(endpointGroup, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req,
                        (ctx, cause) -> {
                            if (ctx != null && !ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {

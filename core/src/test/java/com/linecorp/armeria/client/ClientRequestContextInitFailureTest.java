@@ -23,33 +23,18 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroupException;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
-import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 class ClientRequestContextInitFailureTest {
     @Test
-    void missingEndpointGroup() {
-        assertFailure("group:none", actualCause -> {
-            assertThat(actualCause).isInstanceOf(EndpointGroupException.class)
-                                   .hasMessageContaining("non-existent");
-        });
-    }
-
-    @Test
     void endpointSelectionFailure() {
-        EndpointGroupRegistry.register("foo", EndpointGroup.empty(), EndpointSelectionStrategy.ROUND_ROBIN);
-        try {
-            assertFailure("group:foo", actualCause -> {
-                assertThat(actualCause).isInstanceOf(EndpointGroupException.class)
-                                       .hasMessageContaining("empty");
-            });
-        } finally {
-            EndpointGroupRegistry.unregister("foo");
-        }
+        assertFailure(EndpointGroup.empty(), actualCause -> {
+            assertThat(actualCause).isInstanceOf(EmptyEndpointGroupException.class);
+        });
     }
 
     @Test
@@ -58,7 +43,7 @@ class ClientRequestContextInitFailureTest {
         try (SafeCloseable ignored = Clients.withContextCustomizer(ctx -> {
             throw cause;
         })) {
-            assertFailure("127.0.0.1:1", actualCause -> {
+            assertFailure(Endpoint.of("127.0.0.1", 1), actualCause -> {
                 assertThat(actualCause).isSameAs(cause);
             });
         }
@@ -67,9 +52,9 @@ class ClientRequestContextInitFailureTest {
         assertThat(ClientThreadLocalState.get()).isNull();
     }
 
-    private static void assertFailure(String authority, Consumer<Throwable> requirements) {
+    private static void assertFailure(EndpointGroup endpointGroup, Consumer<Throwable> requirements) {
         final AtomicReference<ClientRequestContext> capturedCtx = new AtomicReference<>();
-        final WebClient client = WebClient.builder("http://" + authority)
+        final WebClient client = WebClient.builder(SessionProtocol.HTTP, endpointGroup)
                                           .decorator((delegate, ctx, req) -> {
                                               capturedCtx.set(ctx);
                                               return delegate.execute(ctx, req);

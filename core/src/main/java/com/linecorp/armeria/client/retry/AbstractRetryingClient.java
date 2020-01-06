@@ -32,7 +32,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.client.endpoint.EndpointSelector;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
@@ -262,16 +262,16 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
     /**
      * Creates a new derived {@link ClientRequestContext}, replacing the requests.
-     * If {@link ClientRequestContext#endpointSelector()} exists, a new {@link Endpoint} will be selected.
+     * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
      */
     protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
                                                             @Nullable HttpRequest req,
                                                             @Nullable RpcRequest rpcReq,
                                                             boolean initialAttempt) {
         final RequestId id = ctx.options().requestIdGenerator().get();
-        final EndpointSelector endpointSelector = ctx.endpointSelector();
-        if (endpointSelector != null && !initialAttempt) {
-            return ctx.newDerivedContext(id, req, rpcReq, endpointSelector.select(ctx));
+        final EndpointGroup endpointGroup = ctx.endpointGroup();
+        if (endpointGroup != null && !initialAttempt) {
+            return ctx.newDerivedContext(id, req, rpcReq, endpointGroup.select(ctx));
         } else {
             return ctx.newDerivedContext(id, req, rpcReq);
         }

@@ -26,6 +26,8 @@ import javax.annotation.Nullable;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.internal.TransportType;
@@ -45,6 +47,7 @@ abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
     private DnsServerAddressStreamProvider serverAddressStreamProvider =
             DnsServerAddressStreamProviders.platformDefault();
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
+    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
 
     DnsEndpointGroupBuilder(String hostname) {
         this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
@@ -139,5 +142,17 @@ abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
     public final B backoff(Backoff backoff) {
         this.backoff = requireNonNull(backoff, "backoff");
         return self();
+    }
+
+    /**
+     * Sets the {@link EndpointSelectionStrategy} that deteremines the enumeration order of {@link Endpoint}s.
+     */
+    public final B selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+        this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+        return self();
+    }
+
+    final EndpointSelectionStrategy selectionStrategy() {
+        return selectionStrategy;
     }
 }

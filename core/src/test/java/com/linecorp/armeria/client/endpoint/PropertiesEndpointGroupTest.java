@@ -79,8 +79,12 @@ public class PropertiesEndpointGroupTest {
 
     @Test
     public void propertiesWithDefaultPort() {
-        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(PROPS, "serverA.hosts", 80);
-        final PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(PROPS, "serverB.hosts", 8080);
+        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.builder(PROPS, "serverA.hosts")
+                                                                              .defaultPort(80)
+                                                                              .build();
+        final PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.builder(PROPS, "serverB.hosts")
+                                                                              .defaultPort(8080)
+                                                                              .build();
 
         assertThat(endpointGroupA.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                          Endpoint.parse("127.0.0.1:8081"),
@@ -101,10 +105,20 @@ public class PropertiesEndpointGroupTest {
 
     @Test
     public void resourceWithDefaultPort() {
-        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 80);
-        final PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list.properties", "serverB.hosts", 8080);
+        final PropertiesEndpointGroup endpointGroupA =
+                PropertiesEndpointGroup.builder(getClass().getClassLoader(),
+                                                "server-list.properties",
+                                                "serverA.hosts")
+                                       .defaultPort(80)
+                                       .build();
+
+        final PropertiesEndpointGroup endpointGroupB =
+                PropertiesEndpointGroup.builder(getClass().getClassLoader(),
+                                                "server-list.properties",
+                                                "serverB.hosts")
+                                       .defaultPort(8080)
+                                       .build();
+
         assertThat(endpointGroupA.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                          Endpoint.parse("127.0.0.1:8081"),
                                                                          Endpoint.parse("127.0.0.1:80"));
@@ -117,8 +131,8 @@ public class PropertiesEndpointGroupTest {
         final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
         assert resourceUrl != null;
         final Path resourcePath = new File(resourceUrl.getFile()).toPath();
-        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                resourcePath, "serverA.hosts", 80);
+        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.builder(
+                resourcePath, "serverA.hosts").defaultPort(80).build();
         assertThat(endpointGroupA.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                          Endpoint.parse("127.0.0.1:8081"),
                                                                          Endpoint.parse("127.0.0.1:80"));
@@ -150,16 +164,18 @@ public class PropertiesEndpointGroupTest {
 
     @Test
     public void containsNoHosts() {
-        assertThat(PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list.properties", "serverC.hosts",
-                8080).endpoints()
-        ).isEmpty();
+        assertThat(PropertiesEndpointGroup.builder(getClass().getClassLoader(),
+                                                   "server-list.properties", "serverC.hosts")
+                                          .defaultPort(8080)
+                                          .build()
+                                          .endpoints()).isEmpty();
     }
 
     @Test
     public void illegalDefaultPort() {
-        assertThatThrownBy(() -> PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 0))
+        assertThatThrownBy(() -> PropertiesEndpointGroup.builder(getClass().getClassLoader(),
+                                                                 "server-list.properties", "serverA.hosts")
+                                                        .defaultPort(0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("defaultPort");
     }

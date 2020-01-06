@@ -35,9 +35,6 @@ import javax.net.ssl.SSLSession;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroupException;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
-import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -82,7 +79,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private EventLoop eventLoop;
     private final ClientOptions options;
     @Nullable
-    private EndpointSelector endpointSelector;
+    private EndpointGroup endpointGroup;
     @Nullable
     private Endpoint endpoint;
     @Nullable
@@ -112,7 +109,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private volatile List<Consumer<? super ClientRequestContext>> customizers;
 
     /**
-     * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
+     * Creates a new instance. Note that {@link #init(EndpointGroup)} method must be invoked to finish
      * the construction of this context.
      *
      * @param eventLoop the {@link EventLoop} associated with this context
@@ -131,7 +128,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     /**
-     * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
+     * Creates a new instance. Note that {@link #init(EndpointGroup)} method must be invoked to finish
      * the construction of this context.
      *
      * @param factory the {@link ClientFactory} which is used to acquire an {@link EventLoop}
@@ -203,31 +200,23 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
      *         completed with the cause of the failure.
      */
-    public boolean init(Endpoint endpoint) {
+    public boolean init(EndpointGroup endpoint) {
         assert this.endpoint == null : this.endpoint;
         assert !initialized;
         initialized = true;
 
         try {
-            if (endpoint.isGroup()) {
-                final String groupName = endpoint.groupName();
-                final EndpointSelector endpointSelector =
-                        EndpointGroupRegistry.getNodeSelector(groupName);
-                if (endpointSelector == null) {
-                    throw new EndpointGroupException(
-                            "non-existent " + EndpointGroup.class.getSimpleName() + ": " + groupName);
-                }
-
-                this.endpointSelector = endpointSelector;
+            if (endpoint instanceof Endpoint) {
+                endpointGroup = null;
+                updateEndpoint((Endpoint) endpoint);
+                runThreadLocalContextCustomizers();
+            } else {
+                endpointGroup = endpoint;
                 // Note: thread-local customizer must be run before EndpointSelector.select()
                 //       so that the customizer can inject the attributes which may be required
                 //       by the EndpointSelector.
                 runThreadLocalContextCustomizers();
-                updateEndpoint(endpointSelector.select(this));
-            } else {
-                endpointSelector = null;
-                updateEndpoint(endpoint);
-                runThreadLocalContextCustomizers();
+                updateEndpoint(endpointGroup.select(this));
             }
 
             if (eventLoop == null) {
@@ -314,7 +303,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
         eventLoop = ctx.eventLoop();
         options = ctx.options();
-        endpointSelector = ctx.endpointSelector();
+        endpointGroup = ctx.endpointGroup();
         updateEndpoint(requireNonNull(endpoint, "endpoint"));
         fragment = ctx.fragment();
         root = ctx.root();
@@ -405,8 +394,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public EndpointSelector endpointSelector() {
-        return endpointSelector;
+    public EndpointGroup endpointGroup() {
+        return endpointGroup;
     }
 
     @Override

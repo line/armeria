@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -58,7 +59,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     @Nullable
     private final URI uri;
     @Nullable
-    private final Endpoint endpoint;
+    private final EndpointGroup endpointGroup;
     @Nullable
     private final Scheme scheme;
     @Nullable
@@ -71,7 +72,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     WebClientBuilder() {
         uri = UNDEFINED_URI;
         scheme = null;
-        endpoint = null;
+        endpointGroup = null;
     }
 
     /**
@@ -97,7 +98,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
             }
         }
         scheme = null;
-        endpoint = null;
+        endpointGroup = null;
     }
 
     /**
@@ -106,12 +107,12 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    WebClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+    WebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
         validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
 
         uri = null;
         scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
-        this.endpoint = requireNonNull(endpoint, "endpoint");
+        this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
     }
 
     private static Scheme validateScheme(String scheme) {
@@ -154,9 +155,9 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
         if (uri != null) {
             return factory.newClient(uri, WebClient.class, buildOptions());
         } else if (path != null) {
-            return factory.newClient(scheme, endpoint, path, WebClient.class, buildOptions());
+            return factory.newClient(scheme, endpointGroup, path, WebClient.class, buildOptions());
         } else {
-            return factory.newClient(scheme, endpoint, WebClient.class, buildOptions());
+            return factory.newClient(scheme, endpointGroup, WebClient.class, buildOptions());
         }
     }
 

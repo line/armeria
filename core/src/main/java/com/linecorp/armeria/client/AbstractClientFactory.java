@@ -23,6 +23,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 
 /**
@@ -55,32 +56,33 @@ public abstract class AbstractClientFactory implements ClientFactory {
     }
 
     @Override
-    public final <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
+    public final <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, Class<T> clientType,
                                  ClientOptionValue<?>... options) {
         requireNonNull(scheme, "scheme");
-        requireNonNull(endpoint, "endpoint");
+        requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
-        return newClient(scheme, endpoint, clientType, ClientOptions.of(options));
+        return newClient(scheme, endpointGroup, clientType, ClientOptions.of(options));
     }
 
     @Override
-    public final <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options) {
+    public final <T> T newClient(Scheme scheme, EndpointGroup endpointGroup,
+                                 Class<T> clientType, ClientOptions options) {
         requireNonNull(scheme, "scheme");
-        requireNonNull(endpoint, "endpoint");
+        requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
-        return newClient(scheme, endpoint, null, clientType, options);
+        return newClient(scheme, endpointGroup, null, clientType, options);
     }
 
     @Override
-    public final <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                                 ClientOptionValue<?>... options) {
+    public final <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
+                                 Class<T> clientType, ClientOptionValue<?>... options) {
         requireNonNull(scheme, "scheme");
-        requireNonNull(endpoint, "endpoint");
+        requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
-        return newClient(scheme, endpoint, path, clientType, ClientOptions.of(options));
+        return newClient(scheme, endpointGroup, path, clientType, ClientOptions.of(options));
     }
 
     /**

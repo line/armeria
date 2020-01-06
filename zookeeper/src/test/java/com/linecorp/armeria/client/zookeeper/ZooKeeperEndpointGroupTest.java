@@ -46,8 +46,11 @@ public class ZooKeeperEndpointGroupTest extends ZooKeeperTestBase {
     public void connectZk() throws Throwable {
         // Create the endpoint group and initialize the ZooKeeper nodes.
         setNodeChild(sampleEndpoints);
-        endpointGroup = new ZooKeeperEndpointGroup(
-                instance().connectString().get(), zNode, sessionTimeoutMillis);
+        endpointGroup = ZooKeeperEndpointGroup.builder(instance().connectString().get(), zNode)
+                                              .customizer(builder -> {
+                                                  builder.sessionTimeoutMs(sessionTimeoutMillis);
+                                              })
+                                              .build();
     }
 
     @After

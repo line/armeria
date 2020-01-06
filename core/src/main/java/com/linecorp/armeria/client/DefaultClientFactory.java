@@ -37,6 +37,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -149,11 +150,11 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                           ClientOptions options) {
+    public <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
+                           Class<T> clientType, ClientOptions options) {
         final Scheme validatedScheme = validateScheme(scheme);
         return clientFactories.get(validatedScheme)
-                              .newClient(validatedScheme, endpoint, path, clientType, options);
+                              .newClient(validatedScheme, endpointGroup, path, clientType, options);
     }
 
     @Override

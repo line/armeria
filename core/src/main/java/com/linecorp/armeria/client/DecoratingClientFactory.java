@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
@@ -94,9 +95,9 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                           ClientOptions options) {
-        return delegate().newClient(scheme, endpoint, path, clientType, options);
+    public <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
+                           Class<T> clientType, ClientOptions options) {
+        return delegate().newClient(scheme, endpointGroup, path, clientType, options);
     }
 
     @Override

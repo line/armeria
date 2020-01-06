@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +28,8 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
@@ -41,77 +40,44 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
 
+    public static ZooKeeperEndpointGroup of(String zkConnectionStr, String zNodePath) {
+        return builder(zkConnectionStr, zNodePath).build();
+    }
+
+    public static ZooKeeperEndpointGroup of(CuratorFramework client, String zNodePath) {
+        return builder(client, zNodePath).build();
+    }
+
+    public static ZooKeeperEndpointGroupBuilder builder(String zkConnectionStr, String zNodePath) {
+        requireNonNull(zkConnectionStr, "zkConnectionStr");
+        checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr is empty.");
+        validateZNodePath(zNodePath);
+        return new ZooKeeperEndpointGroupBuilder(zkConnectionStr, zNodePath);
+    }
+
+    public static ZooKeeperEndpointGroupBuilder builder(CuratorFramework client, String zNodePath) {
+        requireNonNull(client, "client");
+        validateZNodePath(zNodePath);
+        return new ZooKeeperEndpointGroupBuilder(client, zNodePath);
+    }
+
+    private static void validateZNodePath(String zNodePath) {
+        requireNonNull(zNodePath, "zNodePath");
+        checkArgument(!zNodePath.isEmpty(), "zNodePath is empty.");
+    }
+
     private final NodeValueCodec nodeValueCodec;
     private final boolean internalClient;
     private final CuratorFramework client;
     private final PathChildrenCache pathChildrenCache;
 
-    /**
-     * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
-     * node value using {@link NodeValueCodec}.
-     *
-     * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
-     *                        each corresponding to a ZooKeeper server
-     * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
-     * @param sessionTimeout  ZooKeeper session timeout in milliseconds
-     */
-    public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.ofDefault());
-    }
+    ZooKeeperEndpointGroup(EndpointSelectionStrategy selectionStrategy,
+                           CuratorFramework client, String zNodePath,
+                           NodeValueCodec nodeValueCodec, boolean internalClient) {
+        super(selectionStrategy);
 
-    /**
-     * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
-     * node value using {@link NodeValueCodec}.
-     *
-     * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
-     *                        each corresponding to a ZooKeeper server
-     * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
-     * @param sessionTimeout  ZooKeeper session timeout in milliseconds
-     * @param nodeValueCodec  the {@link NodeValueCodec}
-     */
-    public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                  NodeValueCodec nodeValueCodec) {
-        requireNonNull(zkConnectionStr, "zkConnectionStr");
-        checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty");
-        requireNonNull(zNodePath, "zNodePath");
-        checkArgument(!zNodePath.isEmpty(), "zNodePath can't be empty");
-        checkArgument(sessionTimeout > 0, "sessionTimeoutMillis: %s (expected: > 0)",
-                      sessionTimeout);
-        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        internalClient = true;
-        client = CuratorFrameworkFactory.builder()
-                                        .connectString(zkConnectionStr)
-                                        .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
-                                        .sessionTimeoutMs(sessionTimeout)
-                                        .build();
-        client.start();
-        boolean success = false;
-        try {
-            pathChildrenCache = pathChildrenCache(zNodePath);
-            pathChildrenCache.start();
-            success = true;
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        } finally {
-            if (!success) {
-                client.close();
-            }
-        }
-    }
-
-    /**
-     * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
-     * node value using {@link NodeValueCodec}.
-     *
-     * @param client          the {@link CuratorFramework} instance
-     * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
-     * @param nodeValueCodec  the {@link NodeValueCodec}
-     */
-    public ZooKeeperEndpointGroup(CuratorFramework client, String zNodePath, NodeValueCodec nodeValueCodec) {
-        requireNonNull(zNodePath, "zNodePath");
-        checkArgument(!zNodePath.isEmpty(), "zNodePath can't be empty");
-        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        internalClient = false;
+        this.nodeValueCodec = nodeValueCodec;
+        this.internalClient = internalClient;
         this.client = requireNonNull(client, "client");
         client.start();
         try {

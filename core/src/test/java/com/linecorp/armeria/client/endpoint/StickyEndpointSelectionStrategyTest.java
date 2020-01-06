@@ -24,6 +24,8 @@ import java.util.function.ToLongFunction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -43,7 +45,8 @@ class StickyEndpointSelectionStrategyTest {
 
     final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);
 
-    private static final EndpointGroup STATIC_ENDPOINT_GROUP = EndpointGroup.of(
+    private final EndpointGroup staticGroup = EndpointGroup.of(
+            strategy,
             Endpoint.parse("localhost:1234"),
             Endpoint.parse("localhost:2345"),
             Endpoint.parse("localhost:3333"),
@@ -53,47 +56,37 @@ class StickyEndpointSelectionStrategyTest {
             Endpoint.parse("localhost:1111")
     );
 
-    private static final DynamicEndpointGroup DYNAMIC_ENDPOINT_GROUP = new DynamicEndpointGroup();
+    private final DynamicEndpointGroup dynamicGroup = new DynamicEndpointGroup(strategy);
 
     @BeforeEach
     void setUp() {
-        EndpointGroupRegistry.register("static", STATIC_ENDPOINT_GROUP, strategy);
-        EndpointGroupRegistry.register("dynamic", DYNAMIC_ENDPOINT_GROUP, strategy);
+        dynamicGroup.setEndpoints(ImmutableList.of());
     }
 
     @Test
     void select() {
-        assertThat(strategy.newSelector(STATIC_ENDPOINT_GROUP)).isNotNull();
+        assertThat(strategy.newSelector(staticGroup)).isNotNull();
         final int selectTime = 5;
 
-        final Endpoint ep1 = EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "static");
-        final Endpoint ep2 = EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria2"), "static");
-        final Endpoint ep3 = EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria3"), "static");
+        final Endpoint ep1 = staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1"));
+        final Endpoint ep2 = staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria2"));
+        final Endpoint ep3 = staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria3"));
 
         // select few times to confirm that same header will be routed to same endpoint
         for (int i = 0; i < selectTime; i++) {
-            assertThat(EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "static")).isEqualTo(ep1);
-            assertThat(EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria2"), "static")).isEqualTo(ep2);
-            assertThat(EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria3"), "static")).isEqualTo(ep3);
+            assertThat(staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isEqualTo(ep1);
+            assertThat(staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria2"))).isEqualTo(ep2);
+            assertThat(staticGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria3"))).isEqualTo(ep3);
         }
 
         //confirm rebuild tree of dynamic
         final Endpoint ep4 = Endpoint.parse("localhost:9494");
-        DYNAMIC_ENDPOINT_GROUP.addEndpoint(ep4);
-        assertThat(EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "dynamic")).isEqualTo(ep4);
+        dynamicGroup.addEndpoint(ep4);
+        assertThat(dynamicGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1"))).isEqualTo(ep4);
 
-        DYNAMIC_ENDPOINT_GROUP.removeEndpoint(ep4);
-        assertThatThrownBy(
-                () -> EndpointGroupRegistry.selectNode(
-                        contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "dynamic")
-        ).isInstanceOf(EndpointGroupException.class);
+        dynamicGroup.removeEndpoint(ep4);
+        assertThatThrownBy(() -> dynamicGroup.select(contextWithHeader(STICKY_HEADER_NAME, "armeria1")))
+                .isInstanceOf(EmptyEndpointGroupException.class);
     }
 
     private static ClientRequestContext contextWithHeader(String k, String v) {

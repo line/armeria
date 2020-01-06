@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
@@ -57,7 +58,7 @@ public abstract class UserClient<I extends Request, O extends Response>
     private final ClientBuilderParams params;
     private final MeterRegistry meterRegistry;
     private final SessionProtocol sessionProtocol;
-    private final Endpoint endpoint;
+    private final EndpointGroup endpointGroup;
 
     /**
      * Creates a new instance.
@@ -66,15 +67,15 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param delegate the {@link Client} that will process {@link Request}s
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the {@link Client}
-     * @param endpoint the {@link Endpoint} of the {@link Client}
+     * @param endpointGroup the {@link EndpointGroup} of the {@link Client}
      */
     protected UserClient(ClientBuilderParams params, Client<I, O> delegate, MeterRegistry meterRegistry,
-                         SessionProtocol sessionProtocol, Endpoint endpoint) {
+                         SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
         super(delegate);
         this.params = params;
         this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
-        this.endpoint = endpoint;
+        this.endpointGroup = endpointGroup;
     }
 
     @Override
@@ -105,10 +106,10 @@ public abstract class UserClient<I extends Request, O extends Response>
     }
 
     /**
-     * Returns the {@link Endpoint} of the {@link #delegate()}.
+     * Returns the {@link EndpointGroup} of the {@link #delegate()}.
      */
-    protected final Endpoint endpoint() {
-        return endpoint;
+    protected final EndpointGroup endpointGroup() {
+        return endpointGroup;
     }
 
     /**
@@ -125,12 +126,12 @@ public abstract class UserClient<I extends Request, O extends Response>
      */
     protected final O execute(HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
-        return execute(endpoint, method, path, query, fragment, req, fallback);
+        return execute(endpointGroup, method, path, query, fragment, req, fallback);
     }
 
     /**
      * Executes the specified {@link Request} via {@link #delegate()}.
-     * @param endpoint the {@link Endpoint} of the {@link Request}
+     * @param endpointGroup the {@link EndpointGroup} of the {@link Request}
      * @param method the method of the {@link Request}
      * @param path the path part of the {@link Request} URI
      * @param query the query part of the {@link Request} URI
@@ -139,7 +140,7 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param fallback the fallback response {@link BiFunction} to use when
      *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
      */
-    protected final O execute(Endpoint endpoint,
+    protected final O execute(EndpointGroup endpointGroup,
                               HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
 
@@ -160,7 +161,7 @@ public abstract class UserClient<I extends Request, O extends Response>
                                                 id, method, path, query, fragment, options(),
                                                 httpReq, rpcReq);
 
-        return initContextAndExecuteWithFallback(delegate(), ctx, endpoint, fallback);
+        return initContextAndExecuteWithFallback(delegate(), ctx, endpointGroup, fallback);
     }
 
     private RequestId nextRequestId() {

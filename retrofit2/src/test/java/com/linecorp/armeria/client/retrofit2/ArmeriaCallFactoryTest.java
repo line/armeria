@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
-import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.ROUND_ROBIN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -44,7 +43,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -434,9 +433,8 @@ class ArmeriaCallFactoryTest {
 
     @Test
     void respectsHttpClientUri_endpointGroup() throws Exception {
-        EndpointGroupRegistry.register("foo",
-                                       Endpoint.of("127.0.0.1", server.httpPort()),
-                                       ROUND_ROBIN);
+        final EndpointGroup group = newEndpointGroup();
+        // FIXME(trustin): Allow specifying a group.
         final Service service = new ArmeriaRetrofitBuilder()
                 .baseUrl("http://group:foo/")
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
@@ -453,9 +451,8 @@ class ArmeriaCallFactoryTest {
 
     @Test
     void urlAnnotation() throws Exception {
-        EndpointGroupRegistry.register("bar",
-                                       Endpoint.of("127.0.0.1", server.httpPort()),
-                                       ROUND_ROBIN);
+        final EndpointGroup group = newEndpointGroup();
+        // FIXME(trustin): Allow specifying a group.
         final Service service = new ArmeriaRetrofitBuilder()
                 .baseUrl("http://group:foo/")
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
@@ -468,9 +465,8 @@ class ArmeriaCallFactoryTest {
     @ParameterizedTest
     @ArgumentsSource(ServiceProvider.class)
     void urlAnnotation_uriWithoutScheme(Service service) throws Exception {
-        EndpointGroupRegistry.register("bar",
-                                       Endpoint.of("127.0.0.1", server.httpPort()),
-                                       ROUND_ROBIN);
+        final EndpointGroup group = newEndpointGroup();
+        // FIXME(trustin): Allow specifying a group.
         assertThat(service.fullUrl("//localhost:" + server.httpPort() + "/nest/pojo").get()).isEqualTo(
                 new Pojo("Leonard", 21));
         assertThat(service.fullUrl("//group_bar/nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
@@ -557,6 +553,14 @@ class ArmeriaCallFactoryTest {
     void nullContentType(Service service) throws Exception {
         final Response<Void> response = service.postCustomContentType(null).get();
         assertThat(response.code()).isEqualTo(200);
+    }
+
+    private static EndpointGroup newEndpointGroup() {
+        // Create a group with 2 endpoints so that EndpointGroup.of() does not return an Endpoint.
+        final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", server.httpPort()),
+                                                     Endpoint.of("127.0.0.1", server.httpPort()));
+        assertThat(group).isNotInstanceOf(Endpoint.class);
+        return group;
     }
 
     private static class ServiceProvider implements ArgumentsProvider {
