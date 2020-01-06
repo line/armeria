@@ -48,6 +48,7 @@ public class MainService implements HttpService {
                     // The context is mounted in a thread-local, meaning it is available to all logic such
                     // as tracing.
                     checkState(ServiceRequestContext.current() == ctx);
+                    checkState(!ctx.eventLoop().inEventLoop());
 
                     Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
                     return ImmutableList.of(23L, -23L);
@@ -64,6 +65,7 @@ public class MainService implements HttpService {
                             // The context is mounted in a thread-local, meaning it is available to all logic
                             // such as tracing.
                             checkState(ServiceRequestContext.current() == ctx);
+                            checkState(ctx.eventLoop().inEventLoop());
 
                             final AggregatedHttpRequest request = aggregated.join();
 
@@ -95,6 +97,7 @@ public class MainService implements HttpService {
                                             // The context is mounted in a thread-local, meaning it is
                                             // available to all logic such as tracing.
                                             checkState(ServiceRequestContext.current() == ctx);
+                                            checkState(ctx.eventLoop().inEventLoop());
                                             return HttpResponse.of(
                                                     backendResponse.stream()
                                                                    .map(AggregatedHttpResponse::contentUtf8)

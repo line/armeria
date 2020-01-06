@@ -63,6 +63,7 @@ public abstract class MainGraph {
             HttpRequest request, ServiceRequestContext context) {
         // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
         checkState(ServiceRequestContext.current() == context);
+        checkState(context.eventLoop().inEventLoop());
         return toListenableFuture(request.aggregate());
     }
 
@@ -71,6 +72,7 @@ public abstract class MainGraph {
                                                         ListeningScheduledExecutorService blockingExecutor) {
         // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
         checkState(ServiceRequestContext.current() == context);
+        checkState(context.eventLoop().inEventLoop());
         // This logic mimics using a blocking method, which would usually be something like a MySQL database
         // query using JDBC.
         // Always run blocking logic on the blocking task executor. By using
@@ -80,6 +82,7 @@ public abstract class MainGraph {
         return blockingExecutor.submit(() -> {
             // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
             checkState(ServiceRequestContext.current() == context);
+            checkState(!context.eventLoop().inEventLoop());
 
             Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(50));
             return ImmutableList.of(23L, -23L);
@@ -92,6 +95,7 @@ public abstract class MainGraph {
             ServiceRequestContext context) {
         // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
         checkState(ServiceRequestContext.current() == context);
+        checkState(context.eventLoop().inEventLoop());
 
         final Stream.Builder<Long> nums = Stream.builder();
         for (String token : Iterables.concat(
@@ -112,6 +116,7 @@ public abstract class MainGraph {
                                       ServiceRequestContext context) {
         // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
         checkState(ServiceRequestContext.current() == context);
+        checkState(context.eventLoop().inEventLoop());
         return HttpResponse.of(backendResponse.stream()
                                               .map(AggregatedHttpResponse::contentUtf8)
                                               .collect(Collectors.joining("\n")));
