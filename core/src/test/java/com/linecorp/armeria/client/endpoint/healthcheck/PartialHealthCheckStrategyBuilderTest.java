@@ -27,15 +27,17 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 
-public class PartialHealthCheckStrategyBuilderTest {
+class PartialHealthCheckStrategyBuilderTest {
+
     private static final double MAX_RATIO = 0.7;
-    private PartialHealthCheckStrategyBuilder builder;
 
     private static List<Endpoint> createCandidates(int size) {
         return IntStream.range(0, size)
                         .mapToObj(i -> Endpoint.of("dummy" + i))
                         .collect(toImmutableList());
     }
+
+    private PartialHealthCheckStrategyBuilder builder;
 
     @BeforeEach
     void beforeEach() {
