@@ -132,10 +132,9 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
     private static int addRandomlySelectedEndpoints(Set<Endpoint> selectedEndpoints,
                                                     Set<Endpoint> candidates, int count,
                                                     Set<Endpoint> exclusions) {
-        final List<Endpoint> availableCandidates = candidates
-                .stream()
-                .filter(endpoint -> !exclusions.contains(endpoint))
-                .collect(toImmutableList());
+        final List<Endpoint> availableCandidates = candidates.stream()
+                                                             .filter(endpoint -> !exclusions.contains(endpoint))
+                                                             .collect(toImmutableList());
 
         int newSelectedEndpointsCount = 0;
         final Random random = ThreadLocalRandom.current();
