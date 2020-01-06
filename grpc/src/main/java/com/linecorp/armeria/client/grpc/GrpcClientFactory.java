@@ -102,7 +102,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         final SerializationFormat serializationFormat = scheme.serializationFormat();
         final Class<?> stubClass = clientType.getEnclosingClass();
         if (stubClass == null) {
-            return reject(clientType);
+            throw newUnknownClientTypeException(clientType);
         }
 
         final Method stubFactoryMethod = findStubFactoryMethod(clientType, stubClass);
@@ -165,13 +165,13 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         }
 
         if (newStubMethod == null) {
-            return reject(clientType);
+            throw newUnknownClientTypeException(clientType);
         }
         return newStubMethod;
     }
 
-    private static <T> T reject(Class<?> clientType) {
-        throw new IllegalArgumentException(
+    private static IllegalArgumentException newUnknownClientTypeException(Class<?> clientType) {
+        return new IllegalArgumentException(
                 "Unknown client type: " + clientType.getName() +
                 " (expected: a gRPC client stub class, e.g. MyServiceGrpc.MyServiceStub)");
     }
