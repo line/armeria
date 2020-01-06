@@ -19,11 +19,11 @@ package com.linecorp.armeria.client;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.client.DefaultEventLoopSchedulerTest.acquireEntry;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.util.List;
 import java.util.function.ToIntFunction;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -301,7 +301,7 @@ class MaxNumEventLoopsPerEndpointTest {
         }
 
         // Should never reach here.
-        Assertions.fail("Could not find the eventLoop.");
+        fail("Could not find the eventLoop.");
         return -1;
     }
 

@@ -19,7 +19,7 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
