@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.HashSet;
@@ -24,6 +23,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import org.jctools.maps.NonBlockingHashSet;
 
@@ -134,7 +134,7 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
                                                     Set<Endpoint> exclusions) {
         final List<Endpoint> availableCandidates = candidates.stream()
                                                              .filter(endpoint -> !exclusions.contains(endpoint))
-                                                             .collect(toImmutableList());
+                                                             .collect(Collectors.toList());
 
         int newSelectedEndpointsCount = 0;
         final Random random = ThreadLocalRandom.current();
