@@ -14,7 +14,7 @@
   - See [Running a gRPC service](https://line.github.io/armeria/server-grpc.html) and
     [Calling a gRPC service](https://line.github.io/armeria/client-grpc.html).
 
-- `grpc-service-reactor`
+- `grpc-reactor`
   - Learn how to write a gRPC service with Armeria gRPC module,
     [`reactive-grpc`](https://github.com/salesforce/reactive-grpc) and
     [Project Reactor](https://projectreactor.io/) libraries for asynchronous processing
