@@ -157,7 +157,7 @@ public abstract class AbstractRequestContextBuilder {
     }
 
     private static IllegalArgumentException newInvalidSchemeException(URI uri) {
-        throw new IllegalArgumentException("uri.scheme is not valid: " + uri);
+        return new IllegalArgumentException("uri.scheme is not valid: " + uri);
     }
 
     /**
