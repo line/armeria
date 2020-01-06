@@ -33,6 +33,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -51,13 +52,13 @@ import io.dropwizard.setup.Environment;
  */
 @JsonTypeName(ArmeriaServerFactory.TYPE)
 class ArmeriaServerFactory extends AbstractServerFactory {
-    // TODO: This class could be stripped down to the essential fields. Implement ServerFactory instead.
 
     public static final String TYPE = "armeria";
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerFactory.class);
 
-    @JsonProperty(TYPE)
+    @JsonUnwrapped
     private @Valid ArmeriaSettings armeriaSettings;
+
     @JsonIgnore
     @Nullable
     private transient ServerBuilder serverBuilder;
