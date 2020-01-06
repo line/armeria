@@ -601,8 +601,11 @@ public interface RequestContext {
      * should be restored by this callback.
      *
      * @param callback a {@link Consumer} whose argument is this context
+     *
+     * @deprecated Do not use this method.
      */
-    void onEnter(Consumer<? super RequestContext> callback);
+    @Deprecated
+    void onEnter(Consumer<? super RequestContext> callback, String doNotUseThisMethod);
 
     /**
      * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
@@ -622,8 +625,11 @@ public interface RequestContext {
      * should be reset by this callback.
      *
      * @param callback a {@link Consumer} whose argument is this context
+     *
+     * @deprecated Do not use this method.
      */
-    void onExit(Consumer<? super RequestContext> callback);
+    @Deprecated
+    void onExit(Consumer<? super RequestContext> callback, String doNotUseThisMethod);
 
     /**
      * Registers {@code callback} to be run when re-exiting this {@link RequestContext}, usually when using
