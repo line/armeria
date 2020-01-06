@@ -1,19 +1,15 @@
 package example.armeria.grpc.reactor;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.platform.commons.logging.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.server.Server;
@@ -47,70 +43,74 @@ class HelloServiceTest {
 
     @Test
     void getReply() {
-        final HelloReply reply = helloService.hello(HelloRequest.newBuilder()
-                                                                .setName("Armeria")
-                                                                .build()).block();
-        assertThat(reply).isNotNull();
-        assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
+        final String message = helloService.hello(HelloRequest.newBuilder()
+                                                              .setName("Armeria")
+                                                              .build())
+                                           .map(HelloReply::getMessage)
+                                           .block();
+        assertThat(message).isEqualTo("Hello, Armeria!");
     }
 
     @Test
     void getReplyWithDelay() {
-        final HelloReply reply = helloService.lazyHello(HelloRequest.newBuilder()
-                                                                    .setName("Armeria")
-                                                                    .build()).block();
-        assertThat(reply).isNotNull();
-        assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
+        final String message = helloService.lazyHello(HelloRequest.newBuilder()
+                                                                  .setName("Armeria")
+                                                                  .build())
+                                           .map(HelloReply::getMessage)
+                                           .block();
+        assertThat(message).isEqualTo("Hello, Armeria!");
     }
 
     @Test
     void getReplyFromServerSideBlockingCall() {
         final Stopwatch watch = Stopwatch.createStarted();
-        final HelloReply reply = helloService.blockingHello(HelloRequest.newBuilder()
-                                                                        .setName("Armeria")
-                                                                        .build()).block();
-        assertThat(reply).isNotNull();
-        assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
+        final String message = helloService.blockingHello(HelloRequest.newBuilder()
+                                                                      .setName("Armeria")
+                                                                      .build())
+                                           .map(HelloReply::getMessage)
+                                           .block();
+        assertThat(message).isEqualTo("Hello, Armeria!");
         assertThat(watch.elapsed(TimeUnit.SECONDS)).isGreaterThanOrEqualTo(3);
     }
 
     @Test
     void getLotsOfReplies() {
-        final List<HelloReply> replies =
+        final List<String> messages =
                 helloService.lotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
-                            .toStream().collect(toImmutableList());
+                            .map(HelloReply::getMessage)
+                            .collectList()
+                            .block();
 
-        assertThat(replies).hasSize(5);
+        assertThat(messages).hasSize(5);
 
-        for (int i = 0; i < replies.size(); i++) {
-            assertThat(replies.get(i).getMessage()).isEqualTo("Hello, Armeria! (sequence: " + (i + 1) + ')');
+        for (int i = 0; i < messages.size(); i++) {
+            assertThat(messages.get(i)).isEqualTo("Hello, Armeria! (sequence: " + (i + 1) + ')');
         }
     }
 
     @Test
     void sendLotsOfGreetings() {
-        final String[] names = { "Armeria", "Grpc", "Streaming" };
-        final Flux<HelloRequest> request = Flux.just(names).log()
-                                               .map(name -> HelloRequest.newBuilder().setName(name).build());
-
-        final HelloReply reply = helloService.lotsOfGreetings(request).block();
-
-        assertThat(reply).isNotNull();
-        assertThat(reply.getMessage()).isEqualTo(HelloServiceImpl.toMessage(String.join(", ", names)));
+        final String message = Flux.just("Armeria", "Grpc", "Streaming").log()
+                                   .map(name -> HelloRequest.newBuilder().setName(name).build())
+                                   .as(helloService::lotsOfGreetings)
+                                   .map(HelloReply::getMessage)
+                                   .block();
+        assertThat(message).isEqualTo("Hello, Armeria, Grpc, Streaming!");
     }
 
     @Test
     void bidirectionalHello() {
         final String[] names = { "Armeria", "Grpc", "Streaming" };
-        final Flux<HelloRequest> request = Flux.just(names)
-                                               .map(name -> HelloRequest.newBuilder().setName(name).build());
-        final ImmutableList<HelloReply> replies =
-                helloService.bidiHello(request).toStream().collect(toImmutableList());
-
-        assertThat(replies).hasSize(names.length);
+        final List<String> messages = Flux.just(names)
+                                          .map(name -> HelloRequest.newBuilder().setName(name).build())
+                                          .as(helloService::bidiHello)
+                                          .map(HelloReply::getMessage)
+                                          .collectList()
+                                          .block();
+        assertThat(messages).hasSize(names.length);
 
         for (int i = 0; i < names.length; i++) {
-            assertThat(replies.get(i).getMessage()).isEqualTo(HelloServiceImpl.toMessage(names[i]));
+            assertThat(messages.get(i)).isEqualTo("Hello, " + names[i] + '!');
         }
     }
 }
