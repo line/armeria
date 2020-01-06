@@ -48,59 +48,58 @@ import io.netty.handler.ssl.SslProvider;
 /**
  * Settings for armeria servers, e.g.,
  * <pre>{@code
- * armeria:
- *   metricsPath: "/internal/metrics"
- *   gracefulShutdownQuietPeriodMillis: 5000
- *   gracefulShutdownTimeoutMillis: 40000
- *   maxRequestLength: 10485760
- *   maxNumConnections: 5000
- *   dateHeaderEnabled: false
- *   serverHeaderEnabled: true
- *   verboseResponses: false
- *   defaultHostname: "host.name.com"
- *   ports:
- *     - port: 8080
- *       protocol: HTTP
- *     - ip: 127.0.0.1
- *       port: 8081
- *       protocol: HTTP
- *     - port: 8443
- *       protocols:
- *         - HTTPS
- *         - PROXY
- *   ssl:
- *     keyAlias: "host.name.com"
- *     keyStore: "keystore.jks"
- *     keyStorePassword: "changeme"
- *     trustStore: "truststore.jks"
- *     trustStorePassword: "changeme"
- *   compression:
- *     enabled: true
- *     mimeTypes:
- *       - text/*
- *       - application/json
- *     excludedUserAgents:
- *       - some-user-agent
- *       - another-user-agent
- *     minResponseSize: 1KB
- *   proxy:
- *     maxTlvSize: 65319
- *   http1:
- *     maxChunkSize: 4096
- *     maxInitialLineLength: 4096
- *   http2:
- *     initialConnectionWindowSize: 1MB
- *     initialStreamWindowSize: 1MB
- *     maxFrameSize: 16384
- *     maxHeaderListSize: 8192
- *   accessLog:
- *     type: custom
- *     format: "Your own log format"
- *   ...
+ * metricsPath: "/internal/metrics"
+ * gracefulShutdownQuietPeriodMillis: 5000
+ * gracefulShutdownTimeoutMillis: 40000
+ * maxRequestLength: 10485760
+ * maxNumConnections: 5000
+ * dateHeaderEnabled: false
+ * serverHeaderEnabled: true
+ * verboseResponses: false
+ * defaultHostname: "host.name.com"
+ * ports:
+ *   - port: 8080
+ *     protocol: HTTP
+ *   - ip: 127.0.0.1
+ *     port: 8081
+ *     protocol: HTTP
+ *   - port: 8443
+ *     protocols:
+ *       - HTTPS
+ *       - PROXY
+ * ssl:
+ *   keyAlias: "host.name.com"
+ *   keyStore: "keystore.jks"
+ *   keyStorePassword: "changeme"
+ *   trustStore: "truststore.jks"
+ *   trustStorePassword: "changeme"
+ * compression:
+ *   enabled: true
+ *   mimeTypes:
+ *     - text/*
+ *     - application/json
+ *   excludedUserAgents:
+ *     - some-user-agent
+ *     - another-user-agent
+ *   minResponseSize: 1KB
+ * proxy:
+ *   maxTlvSize: 65319
+ * http1:
+ *   maxChunkSize: 4096
+ *   maxInitialLineLength: 4096
+ * http2:
+ *   initialConnectionWindowSize: 1MB
+ *   initialStreamWindowSize: 1MB
+ *   maxFrameSize: 16384
+ *   maxHeaderListSize: 8192
+ * accessLog:
+ *   type: custom
+ *   format: "Your own log format"
+ * ...
  *
  * }</pre>
  * TODO(ikhoon): Merge this DroppWizard ArmeriaSettings with c.l.a.spring.ArmeriaSettings
- *               to provide common API to configure Server from JSON or YAML.
+ *               to provide common API to configure Server from JSON and YAML.
  */
 class ArmeriaSettings {
 
