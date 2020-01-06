@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootAndOldCtx;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootCtx;
@@ -46,7 +47,6 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.RequestContextThreadLocal;
-import com.linecorp.armeria.internal.RequestContextUtil.IllegalContextPushingException;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -352,7 +352,7 @@ public interface ClientRequestContext extends RequestContext {
 
         // Put the oldCtx back before throwing an exception.
         RequestContextThreadLocal.set(oldCtx);
-        throw new IllegalContextPushingException(this, oldCtx);
+        throw newIllegalContextPushingException(this, oldCtx);
     }
 
     /**

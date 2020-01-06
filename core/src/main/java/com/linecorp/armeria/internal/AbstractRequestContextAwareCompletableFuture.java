@@ -83,20 +83,34 @@ public abstract class AbstractRequestContextAwareCompletableFuture<T> extends Co
     }
 
     private void makeContextAwareLoggingException0(Runnable action) {
-        try (SafeCloseable ignored = ctx.push()) {
-            action.run();
+        final SafeCloseable handle;
+        try {
+            handle = ctx.push();
         } catch (Throwable th) {
-            logger.warn("An error occurred when pushing a context and executing the action", th);
+            logger.warn("An error occurred when pushing a context", th);
             throw th;
+        }
+
+        try {
+            action.run();
+        } finally {
+            handle.close();
         }
     }
 
     private <V> V makeContextAwareLoggingException0(Supplier<? extends V> fn) {
-        try (SafeCloseable ignored = ctx.push()) {
-            return fn.get();
+        final SafeCloseable handle;
+        try {
+            handle = ctx.push();
         } catch (Throwable th) {
-            logger.warn("An error occurred when pushing a context and executing the fn", th);
+            logger.warn("An error occurred when pushing a context", th);
             throw th;
+        }
+
+        try {
+            return fn.get();
+        } finally {
+            handle.close();
         }
     }
 }
