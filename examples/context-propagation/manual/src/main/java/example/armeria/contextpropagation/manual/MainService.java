@@ -95,7 +95,8 @@ public class MainService implements HttpService {
                                             // The context is mounted in a thread-local, meaning it is
                                             // available to all logic such as tracing.
                                             checkState(ServiceRequestContext.current() == ctx);
-                                            return HttpResponse.of(backendResponse.stream()
+                                            return HttpResponse.of(
+                                                    backendResponse.stream()
                                                                    .map(AggregatedHttpResponse::contentUtf8)
                                                                    .collect(Collectors.joining("\n")));
                                         },
