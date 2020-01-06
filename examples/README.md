@@ -8,7 +8,7 @@
   - Learn how to propagate Armeria's `RequestContext` for use in scenarios like tracing.
   - [`dagger`](https://dagger.dev) provides an example using the Dagger asynchronous framework for
   automatic propagation.
-  - `manual` provides an example manually propagating the context with Java's standard `CompletableFuture`
+  - `manual` provides an example manually propagating the context with Java's standard `CompletableFuture`.
 
 - `grpc`
   - Learn how to write a gRPC service with Armeria gRPC module.
