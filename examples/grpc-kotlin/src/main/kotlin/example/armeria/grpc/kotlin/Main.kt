@@ -21,10 +21,13 @@ class Main {
         }))
 
         server.start().join()
-        val localAddress = server.activePort().get().localAddress()
-        val isLocalAddress = localAddress.address.isAnyLocalAddress || localAddress.address.isLoopbackAddress
-        logger.info("Server has been started. Serving DocService at http://{}:{}/docs",
-                    if (isLocalAddress) "127.0.0.1" else localAddress.hostString, localAddress.port)
+        server.activePort()?.let {
+            val localAddress = it.localAddress()
+            val isLocalAddress = localAddress.address.isAnyLocalAddress ||
+                                    localAddress.address.isLoopbackAddress
+            logger.info("Server has been started. Serving DocService at http://{}:{}/docs",
+                        if (isLocalAddress) "127.0.0.1" else localAddress.hostString, localAddress.port)
+        }
     }
 
     companion object {
@@ -52,11 +55,11 @@ class Main {
                     .serviceUnder("/docs",
                             DocService.builder()
                                     .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,
-                                                "Hello", exampleRequest)
+                                            "Hello", exampleRequest)
                                     .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,
-                                                "LazyHello", exampleRequest)
+                                            "LazyHello", exampleRequest)
                                     .exampleRequestForMethod(HelloServiceGrpc.SERVICE_NAME,
-                                                "BlockingHello", exampleRequest)
+                                            "BlockingHello", exampleRequest)
                                     .exclude(DocServiceFilter.ofServiceName(
                                             ServerReflectionGrpc.SERVICE_NAME))
                                     .build())
