@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
