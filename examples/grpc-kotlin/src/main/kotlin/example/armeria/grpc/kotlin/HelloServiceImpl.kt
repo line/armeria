@@ -15,14 +15,14 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
      * Sends a [HelloReply] immediately when receiving a request.
      */
     override fun hello(request: HelloRequest, responseObserver: StreamObserver<HelloReply>) {
-        responseObserver.onNext(request.name.hello().buildHelloReply())
+        responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${request.name}!"))
         responseObserver.onCompleted()
     }
 
     override fun lazyHello(request: HelloRequest, responseObserver: StreamObserver<HelloReply>) {
         // You can use the event loop for scheduling a task.
         ServiceRequestContext.current().contextAwareEventLoop().schedule({
-            responseObserver.onNext(request.name.hello().buildHelloReply())
+            responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${request.name}!"))
             responseObserver.onCompleted()
         }, 3, TimeUnit.SECONDS)
     }
@@ -47,7 +47,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
                 Thread.sleep(3000)
             } catch (ignored: Exception) { // Do nothing.
             }
-            responseObserver.onNext(request.name.hello().buildHelloReply())
+            responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${request.name}!"))
             responseObserver.onCompleted()
         }
     }
@@ -61,13 +61,13 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
         // You can also write this code without Reactor like 'lazyHello' example.
         Flux.interval(Duration.ofSeconds(1))
                 .take(5)
-                .map { "${request.name.hello()} (sequence: ${it + 1})" }
+                .map { "Hello, ${request.name}! (sequence: ${it + 1})" }
                 // You can make your Flux/Mono publish the signals in the RequestContext-aware executor.
                 .publishOn(Schedulers.fromExecutor(ServiceRequestContext.current().contextAwareExecutor()))
                 .subscribe({
                     // Confirm this callback is being executed on the RequestContext-aware executor.
                     ServiceRequestContext.current()
-                    responseObserver.onNext(it.buildHelloReply())
+                    responseObserver.onNext(HelloMessageFactory.newHelloReply(it))
                 },
                 {
                     // Confirm this callback is being executed on the RequestContext-aware executor.
@@ -97,7 +97,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
             }
 
             override fun onCompleted() {
-                responseObserver.onNext(names.joinToString().hello().buildHelloReply())
+                responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${names.joinToString()}!"))
                 responseObserver.onCompleted()
             }
         }
@@ -110,7 +110,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
     override fun bidiHello(responseObserver: StreamObserver<HelloReply>): StreamObserver<HelloRequest> {
         return object : StreamObserver<HelloRequest> {
             override fun onNext(value: HelloRequest) { // Respond to every request received.
-                responseObserver.onNext(value.name.hello().buildHelloReply())
+                responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${value.name}!"))
             }
 
             override fun onError(t: Throwable) {

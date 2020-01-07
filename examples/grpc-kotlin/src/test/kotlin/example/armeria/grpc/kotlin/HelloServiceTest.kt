@@ -25,14 +25,14 @@ class HelloServiceTest {
     @Test
     fun reply() {
         val helloService = Clients.newClient(uri(), HelloServiceBlockingStub::class.java)
-        assertThat(helloService.hello("Armeria".buildHelloRequest()).message).isEqualTo("Hello, Armeria!")
+        assertThat(helloService.hello(HelloMessageFactory.newHelloRequest("Armeria")).message).isEqualTo("Hello, Armeria!")
     }
 
     // Should never reach here.
     @Test
     fun replyWithDelay() {
         val helloService = Clients.newClient(uri(), HelloServiceFutureStub::class.java)
-        val future = helloService.lazyHello("Armeria".buildHelloRequest())
+        val future = helloService.lazyHello(HelloMessageFactory.newHelloRequest("Armeria"))
         val completed = AtomicBoolean()
         Futures.addCallback(future, object : FutureCallback<HelloReply> {
             override fun onSuccess(result: HelloReply?) {
@@ -52,7 +52,7 @@ class HelloServiceTest {
     fun replyFromServerSideBlockingCall() {
         val helloService = Clients.newClient(uri(), HelloServiceBlockingStub::class.java)
         val watch = Stopwatch.createStarted()
-        assertThat(helloService.blockingHello("Armeria".buildHelloRequest()).message)
+        assertThat(helloService.blockingHello(HelloMessageFactory.newHelloRequest("Armeria")).message)
                 .isEqualTo("Hello, Armeria!")
         assertThat(watch.elapsed(TimeUnit.SECONDS)).isGreaterThanOrEqualTo(3)
     }
@@ -62,7 +62,7 @@ class HelloServiceTest {
     fun lotsOfReplies() {
         val completed = AtomicBoolean()
         helloService.lotsOfReplies(
-                "Armeria".buildHelloRequest(),
+                HelloMessageFactory.newHelloRequest("Armeria"),
                 object : StreamObserver<HelloReply> {
                     private var sequence = 0
                     override fun onNext(value: HelloReply) {
@@ -86,7 +86,7 @@ class HelloServiceTest {
         val replies = LinkedBlockingQueue<HelloReply>()
         val completed = AtomicBoolean()
         helloService.lotsOfReplies(
-                "Armeria".buildHelloRequest(),
+                HelloMessageFactory.newHelloRequest("Armeria"),
                 object : StreamObserver<HelloReply> {
                     override fun onNext(value: HelloReply) {
                         replies.offer(value)
@@ -117,7 +117,7 @@ class HelloServiceTest {
             override fun onNext(value: HelloReply) {
                 assertThat(received).isFalse()
                 received = true
-                assertThat(value.message).isEqualTo(names.joinToString().hello())
+                assertThat(value.message).isEqualTo("Hello, ${names.joinToString()}!")
             }
 
             override fun onError(t: Throwable) { // Should never reach here.
@@ -130,7 +130,7 @@ class HelloServiceTest {
             }
         })
         for (name in names) {
-            request.onNext(name.buildHelloRequest())
+            request.onNext(HelloMessageFactory.newHelloRequest(name))
         }
         request.onCompleted()
         await().untilTrue(completed)
@@ -143,7 +143,7 @@ class HelloServiceTest {
         val request = helloService.bidiHello(object : StreamObserver<HelloReply> {
             private var received = 0
             override fun onNext(value: HelloReply) {
-                assertThat(value.message).isEqualTo(names[received++].hello())
+                assertThat(value.message).isEqualTo("Hello, ${names[received++]}!")
             }
 
             override fun onError(t: Throwable) { // Should never reach here.
@@ -156,7 +156,7 @@ class HelloServiceTest {
             }
         })
         for (name in names) {
-            request.onNext(name.buildHelloRequest())
+            request.onNext(HelloMessageFactory.newHelloRequest(name))
         }
         request.onCompleted()
         await().untilTrue(completed)

@@ -35,7 +35,7 @@ class Main {
         private val logger = LoggerFactory.getLogger(Main::class.java)
 
         fun newServer(httpPort: Int, httpsPort: Int): Server {
-            val exampleRequest: HelloRequest = "Armeria".buildHelloRequest()
+            val exampleRequest: HelloRequest = HelloMessageFactory.newHelloRequest("Armeria")
             val grpcService = GrpcService.builder()
                     .addService(HelloServiceImpl())
                     // See https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md
