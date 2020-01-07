@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -145,8 +146,9 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      */
     public ClientBuilder path(String path) {
         ensureEndpoint();
-
-        this.path = requireNonNull(path, "path");
+        requireNonNull(path, "path");
+        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path)", path);
+        this.path = path;
         return this;
     }
 
@@ -174,13 +176,18 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     public <T> T build(Class<T> clientType) {
         requireNonNull(clientType, "clientType");
 
+        final Object client;
         if (uri != null) {
-            return factory.newClient(uri, clientType, buildOptions());
-        } else if (path != null) {
-            return factory.newClient(scheme(), endpointGroup, path, clientType, buildOptions());
+            client = factory.newClient(ClientBuilderParams.of(factory, uri, clientType, buildOptions()));
         } else {
-            return factory.newClient(scheme(), endpointGroup, clientType, buildOptions());
+            assert endpointGroup != null;
+            client = factory.newClient(ClientBuilderParams.of(factory, scheme(), endpointGroup,
+                                                              path, clientType, buildOptions()));
         }
+
+        @SuppressWarnings("unchecked")
+        final T cast = (T) client;
+        return cast;
     }
 
     private Scheme scheme() {

@@ -569,7 +569,8 @@ public final class Clients {
     }
 
     private static ClientBuilder newDerivedBuilder(ClientBuilderParams params) {
-        final ClientBuilder builder = builder(params.uri());
+        final ClientBuilder builder = builder(params.scheme(), params.endpointGroup());
+        builder.path(params.absolutePathRef());
         builder.factory(params.factory());
         builder.options(params.options());
         return builder;

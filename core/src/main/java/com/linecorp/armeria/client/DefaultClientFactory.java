@@ -16,18 +16,13 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.WebClientBuilder.isUndefinedUri;
-
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,9 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -57,7 +50,7 @@ import io.netty.resolver.AddressResolverGroup;
  * using Java SPI (Service Provider Interface). The {@link ClientFactoryProvider} implementations will create
  * the {@link ClientFactory} implementations.
  */
-final class DefaultClientFactory extends AbstractClientFactory {
+final class DefaultClientFactory implements ClientFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultClientFactory.class);
 
@@ -143,23 +136,18 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        final Scheme scheme = validateScheme(uri);
-        uri = normalizeUri(uri, scheme);
-        return clientFactories.get(scheme).newClient(uri, clientType, options);
-    }
-
-    @Override
-    public <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
-                           Class<T> clientType, ClientOptions options) {
-        final Scheme validatedScheme = validateScheme(scheme);
-        return clientFactories.get(validatedScheme)
-                              .newClient(validatedScheme, endpointGroup, path, clientType, options);
+    public Object newClient(ClientBuilderParams params) {
+        validateParams(params);
+        final Scheme scheme = params.scheme();
+        // `factory` must be non-null because we validates params.scheme() with validateParams().
+        final ClientFactory factory = clientFactories.get(scheme);
+        assert factory != null;
+        return factory.newClient(params);
     }
 
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
-        final T params = super.unwrap(client, type);
+        final T params = ClientFactory.super.unwrap(client, type);
         if (params != null) {
             return params;
         }
@@ -193,21 +181,5 @@ final class DefaultClientFactory extends AbstractClientFactory {
     @VisibleForTesting
     AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
         return httpClientFactory.addressResolverGroup();
-    }
-
-    private static URI normalizeUri(URI uri, Scheme scheme) {
-        if (isUndefinedUri(uri)) {
-            // We use a special singleton marker URI for clients that do not explicitly define a
-            // host or scheme at construction time.
-            // As this isn't created by users, we don't need to normalize it.
-            return uri;
-        }
-
-        if (scheme.serializationFormat() != SerializationFormat.NONE) {
-            return uri;
-        }
-
-        return URI.create(scheme.sessionProtocol().uriText() +
-                          uri.toString().substring(uri.getScheme().length()));
     }
 }

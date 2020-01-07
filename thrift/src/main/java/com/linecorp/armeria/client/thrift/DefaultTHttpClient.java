@@ -24,20 +24,17 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.UserClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
 final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> implements THttpClient {
 
-    DefaultTHttpClient(ClientBuilderParams params, RpcClient delegate, MeterRegistry meterRegistry,
-                       SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
-        super(params, delegate, meterRegistry, sessionProtocol, endpointGroup);
+    DefaultTHttpClient(ClientBuilderParams params, RpcClient delegate, MeterRegistry meterRegistry) {
+        super(params, delegate, meterRegistry);
     }
 
     @Override

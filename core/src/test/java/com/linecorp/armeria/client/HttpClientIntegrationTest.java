@@ -599,7 +599,7 @@ class HttpClientIntegrationTest {
     @Test
     void testCloseClientFactory() throws Exception {
         final ClientFactory factory = ClientFactory.builder().build();
-        final WebClient client = factory.newClient("none+" + server.uri("/"), WebClient.class);
+        final WebClient client = WebClient.builder(server.uri("/")).factory(factory).build();
         final HttpRequestWriter req = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET,
                                                                               "/stream-closed"));
         final HttpResponse res = client.execute(req);

@@ -16,14 +16,8 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
-
 import java.lang.reflect.Proxy;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Set;
-
-import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -31,10 +25,7 @@ import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -72,72 +63,37 @@ final class THttpClientFactory extends DecoratingClientFactory {
     }
 
     @Override
-    public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        final Scheme scheme = validateScheme(uri);
-        final Endpoint endpoint = newEndpoint(uri);
+    public Object newClient(ClientBuilderParams params) {
+        validateParams(params);
 
-        return newClient(uri, scheme, endpoint, clientType, options);
-    }
-
-    @Override
-    public <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
-                           Class<T> clientType, ClientOptions options) {
-        // FIXME(trustin): URI is useless if endpointGroup is not an Endpoint.
-        final URI uri = URI.create(scheme.uriText() + "://endpoint-group" + (path != null ? path : "/"));
-
-        return newClient(uri, scheme, endpointGroup, clientType, options);
-    }
-
-    private <T> T newClient(URI uri, Scheme scheme, EndpointGroup endpointGroup,
-                            Class<T> clientType, ClientOptions options) {
-        final SerializationFormat serializationFormat = scheme.serializationFormat();
-
+        final Class<?> clientType = params.clientType();
+        final ClientOptions options = params.options();
         final RpcClient delegate = options.decoration().rpcDecorate(
-                new THttpClientDelegate(newHttpClient(uri, scheme, options),
-                                        serializationFormat));
+                new THttpClientDelegate(newHttpClientDelegate(params),
+                                        params.scheme().serializationFormat()));
 
         if (clientType == THttpClient.class) {
             // Create a THttpClient with path.
-            @SuppressWarnings("unchecked")
-            final T client = (T) new DefaultTHttpClient(
-                    ClientBuilderParams.of(this, uri, THttpClient.class, options),
-                    delegate, meterRegistry(), scheme.sessionProtocol(), endpointGroup);
-            return client;
+            return new DefaultTHttpClient(params, delegate, meterRegistry());
         } else {
             // Create a THttpClient without path.
-            final THttpClient thriftClient = new DefaultTHttpClient(
-                    ClientBuilderParams.of(this, pathlessUri(uri), THttpClient.class, options),
-                    delegate, meterRegistry(), scheme.sessionProtocol(), endpointGroup);
+            final ClientBuilderParams delegateParams;
+            if ("/".equals(params.uri().getRawPath())) {
+                delegateParams = params;
+            } else {
+                delegateParams = ClientBuilderParams.of(params.factory(),
+                                                        params.scheme(),
+                                                        params.endpointGroup(),
+                                                        "/", THttpClient.class,
+                                                        options);
+            }
 
-            @SuppressWarnings("unchecked")
-            final T client = (T) Proxy.newProxyInstance(
+            final THttpClient thriftClient = new DefaultTHttpClient(delegateParams, delegate, meterRegistry());
+
+            return Proxy.newProxyInstance(
                     clientType.getClassLoader(),
                     new Class<?>[] { clientType },
-                    new THttpClientInvocationHandler(
-                            ClientBuilderParams.of(this, uri, clientType, options),
-                            thriftClient,
-                            firstNonNull(uri.getRawPath(), "/"),
-                            uri.getFragment()));
-            return client;
-        }
-    }
-
-    private HttpClient newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
-        try {
-            return delegate().newClient(
-                    new URI(Scheme.of(SerializationFormat.NONE, scheme.sessionProtocol()).uriText(),
-                            uri.getRawAuthority(), null, null, null),
-                    HttpClient.class, options);
-        } catch (URISyntaxException e) {
-            throw new Error(e); // Should never happen.
-        }
-    }
-
-    private static URI pathlessUri(URI uri) {
-        try {
-            return new URI(uri.getScheme(), uri.getRawAuthority(), null, null, null);
-        } catch (URISyntaxException e) {
-            throw new Error(e); // Should never happen.
+                    new THttpClientInvocationHandler(params, thriftClient));
         }
     }
 }

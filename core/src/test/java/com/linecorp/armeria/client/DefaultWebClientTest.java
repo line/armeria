@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 class DefaultWebClientTest {
@@ -43,8 +42,8 @@ class DefaultWebClientTest {
         final String requestPath = "world/test?q1=foo";
 
         final HttpClient mockClientDelegate = mock(HttpClient.class);
-        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate,
-                "127.0.0.1");
+        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate
+        );
 
         defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
 
@@ -59,8 +58,8 @@ class DefaultWebClientTest {
     void testRequestParamsUndefinedEndPoint() throws Exception {
         final String clientUriPath = "http://127.0.0.1/helloWorld/test?q1=foo";
         final HttpClient mockClientDelegate = mock(HttpClient.class);
-        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate,
-                "undefined");
+        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate
+        );
 
         defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, clientUriPath)));
 
@@ -75,8 +74,8 @@ class DefaultWebClientTest {
     void testWithoutRequestParamsUndefinedEndPoint() throws Exception {
         final String clientUriPath = "http://127.0.0.1/helloWorld/test";
         final HttpClient mockClientDelegate = mock(HttpClient.class);
-        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate,
-                "undefined");
+        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate
+        );
 
         defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, clientUriPath)));
 
@@ -87,13 +86,12 @@ class DefaultWebClientTest {
         assertThat(concatPath).isEqualTo("/helloWorld/test");
     }
 
-    private static DefaultWebClient createDefaultWebClient(String clientUriPath, HttpClient mockClientDelegate,
-                                                           String endpoint) throws URISyntaxException {
+    private static DefaultWebClient createDefaultWebClient(
+            String clientUriPath, HttpClient mockClientDelegate) throws URISyntaxException {
         final ClientBuilderParams clientBuilderParams = ClientBuilderParams.of(
                 ClientFactory.ofDefault(), new URI(clientUriPath), WebClient.class, ClientOptions.of());
         return new DefaultWebClient(
-                clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
-                SessionProtocol.of("http"), Endpoint.of(endpoint));
+                clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get());
     }
 
     @Test

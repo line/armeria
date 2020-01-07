@@ -153,11 +153,11 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      */
     public WebClient build() {
         if (uri != null) {
-            return factory.newClient(uri, WebClient.class, buildOptions());
-        } else if (path != null) {
-            return factory.newClient(scheme, endpointGroup, path, WebClient.class, buildOptions());
+            return (WebClient) factory.newClient(ClientBuilderParams.of(
+                    factory, uri, WebClient.class, buildOptions()));
         } else {
-            return factory.newClient(scheme, endpointGroup, WebClient.class, buildOptions());
+            return (WebClient) factory.newClient(ClientBuilderParams.of(
+                    factory, scheme, endpointGroup, path, WebClient.class, buildOptions()));
         }
     }
 

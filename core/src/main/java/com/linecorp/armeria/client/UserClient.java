@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -57,8 +57,6 @@ public abstract class UserClient<I extends Request, O extends Response>
 
     private final ClientBuilderParams params;
     private final MeterRegistry meterRegistry;
-    private final SessionProtocol sessionProtocol;
-    private final EndpointGroup endpointGroup;
 
     /**
      * Creates a new instance.
@@ -66,21 +64,31 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param params the parameters used for constructing the client
      * @param delegate the {@link Client} that will process {@link Request}s
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
-     * @param sessionProtocol the {@link SessionProtocol} of the {@link Client}
-     * @param endpointGroup the {@link EndpointGroup} of the {@link Client}
      */
-    protected UserClient(ClientBuilderParams params, Client<I, O> delegate, MeterRegistry meterRegistry,
-                         SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
+    protected UserClient(ClientBuilderParams params, Client<I, O> delegate, MeterRegistry meterRegistry) {
         super(delegate);
         this.params = params;
         this.meterRegistry = meterRegistry;
-        this.sessionProtocol = sessionProtocol;
-        this.endpointGroup = endpointGroup;
     }
 
     @Override
     public ClientFactory factory() {
         return params.factory();
+    }
+
+    @Override
+    public final Scheme scheme() {
+        return params.scheme();
+    }
+
+    @Override
+    public final EndpointGroup endpointGroup() {
+        return params.endpointGroup();
+    }
+
+    @Override
+    public String absolutePathRef() {
+        return params.absolutePathRef();
     }
 
     @Override
@@ -99,20 +107,6 @@ public abstract class UserClient<I extends Request, O extends Response>
     }
 
     /**
-     * Returns the {@link SessionProtocol} of the {@link #delegate()}.
-     */
-    protected final SessionProtocol sessionProtocol() {
-        return sessionProtocol;
-    }
-
-    /**
-     * Returns the {@link EndpointGroup} of the {@link #delegate()}.
-     */
-    protected final EndpointGroup endpointGroup() {
-        return endpointGroup;
-    }
-
-    /**
      * Executes the specified {@link Request} via {@link #delegate()}.
      *
      * @param method the method of the {@link Request}
@@ -126,7 +120,7 @@ public abstract class UserClient<I extends Request, O extends Response>
      */
     protected final O execute(HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
-        return execute(endpointGroup, method, path, query, fragment, req, fallback);
+        return execute(endpointGroup(), method, path, query, fragment, req, fallback);
     }
 
     /**
@@ -157,7 +151,7 @@ public abstract class UserClient<I extends Request, O extends Response>
         }
 
         final DefaultClientRequestContext ctx =
-                new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
+                new DefaultClientRequestContext(factory(), meterRegistry, scheme().sessionProtocol(),
                                                 id, method, path, query, fragment, options(),
                                                 httpReq, rpcReq);
 

@@ -19,27 +19,20 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -81,24 +74,14 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     }
 
     @Override
-    public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        final Scheme scheme = validateScheme(uri);
-        final Endpoint endpoint = newEndpoint(uri);
+    public Object newClient(ClientBuilderParams params) {
+        validateParams(params);
 
-        return newClient(uri, scheme, endpoint, clientType, options);
-    }
+        final Scheme scheme = params.scheme();
+        final Class<?> clientType = params.clientType();
+        final ClientOptions options = params.options();
 
-    @Override
-    public <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
-                           Class<T> clientType, ClientOptions options) {
-        // FIXME(trustin): URI is useless if endpointGroup is not an Endpoint.
-        final URI uri = URI.create(scheme.uriText() + "://endpoint-group" + (path != null ? path : "/"));
 
-        return newClient(uri, scheme, endpointGroup, clientType, options);
-    }
-
-    private <T> T newClient(URI uri, Scheme scheme, EndpointGroup endpointGroup, Class<T> clientType,
-                            ClientOptions options) {
         final SerializationFormat serializationFormat = scheme.serializationFormat();
         final Class<?> stubClass = clientType.getEnclosingClass();
         if (stubClass == null) {
@@ -131,7 +114,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                                                clientType);
         }
 
-        final HttpClient httpClient = newHttpClient(uri, scheme, options);
+        final HttpClient httpClient = newHttpClientDelegate(params);
 
         final MessageMarshaller jsonMarshaller =
                 GrpcSerializationFormats.isJson(serializationFormat) ?
@@ -139,21 +122,16 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                         stubMethods(stubClass),
                         options.getOrElse(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER, NO_OP)) : null;
         final ArmeriaChannel channel = new ArmeriaChannel(
-                ClientBuilderParams.of(this,
-                                       Strings.isNullOrEmpty(uri.getPath()) ? rootPathUri(uri) : uri,
-                                       clientType, options),
+                params,
                 httpClient,
                 meterRegistry(),
                 scheme.sessionProtocol(),
-                endpointGroup,
                 serializationFormat,
                 jsonMarshaller);
 
         try {
             // Verified createClientMethod.getReturnType == clientType
-            @SuppressWarnings("unchecked")
-            final T stub = (T) createClientMethod.invoke(null, channel);
-            return stub;
+            return createClientMethod.invoke(null, channel);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new IllegalStateException("Could not create stub through reflection.", e);
         }
@@ -192,25 +170,5 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             throw new IllegalStateException("Could not invoke getServiceDescriptor on a gRPC client stub.");
         }
         return ImmutableList.copyOf(descriptor.getMethods());
-    }
-
-    private HttpClient newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
-        try {
-            return delegate().newClient(
-                    new URI(Scheme.of(SerializationFormat.NONE, scheme.sessionProtocol()).uriText(),
-                            uri.getAuthority(), null, null, null),
-                    HttpClient.class, options);
-        } catch (URISyntaxException e) {
-            throw new Error(e); // Should never happen.
-        }
-    }
-
-    private static URI rootPathUri(URI uri) {
-        try {
-            return new URI(uri.getScheme(), uri.getRawAuthority(), "/", uri.getRawQuery(),
-                           uri.getRawFragment());
-        } catch (URISyntaxException e) {
-            throw new Error(e); // Should never happen.
-        }
     }
 }

@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -89,7 +90,8 @@ class RetryingClientLoadBalancingTest {
                                                   .map(InetSocketAddress::getPort)
                                                   .collect(toImmutableList());
 
-        final EndpointGroup group = EndpointGroup.of(expectedPorts.stream()
+        final EndpointGroup group = EndpointGroup.of(EndpointSelectionStrategy.unweightedRoundRobin(),
+                                                     expectedPorts.stream()
                                                                   .map(port -> Endpoint.of("127.0.0.1", port))
                                                                   .collect(toImmutableList()));
 

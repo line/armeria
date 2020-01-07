@@ -29,7 +29,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.PathAndQuery;
 
@@ -41,9 +40,8 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     static final WebClient DEFAULT = new WebClientBuilder().build();
 
-    DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry,
-                     SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
-        super(params, delegate, meterRegistry, sessionProtocol, endpointGroup);
+    DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
+        super(params, delegate, meterRegistry);
     }
 
     @Override
