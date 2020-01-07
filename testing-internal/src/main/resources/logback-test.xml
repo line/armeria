@@ -33,7 +33,8 @@
   <logger name="com.linecorp.armeria.logging.traffic.client" level="OFF" />
   <logger name="com.linecorp.armeria.internal.Http2GoAwayHandler" level="INFO" />
   <logger name="io.netty.resolver.dns.TraceDnsQueryLifeCycleObserverFactory" level="DEBUG" />
-  <logger name="armeria" level="DEBUG" />
+  <logger name="reactor" level="INFO" />
+  <logger name="example.armeria" level="DEBUG" />
   <logger name="loggerTest" level="ALL" additivity="false">
     <appender-ref ref="NOP" />
   </logger>
