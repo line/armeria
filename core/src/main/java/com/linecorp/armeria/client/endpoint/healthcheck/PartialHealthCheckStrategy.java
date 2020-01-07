@@ -139,7 +139,7 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
         int newSelectedEndpointsCount = 0;
         final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < count && !availableCandidates.isEmpty(); i++) {
-            if (count - i <= availableCandidates.size()) {
+            if (count - i >= availableCandidates.size()) {
                 selectedEndpoints.addAll(availableCandidates);
                 newSelectedEndpointsCount += availableCandidates.size();
                 break;
