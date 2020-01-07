@@ -143,8 +143,7 @@ class DefaultServiceRequestContextTest {
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
 
-    // TODO(ikhoon): Revert to @Test after CI pass
-    @RepeatedTest(1000)
+    @Test
     void setRequestTimeoutAfter() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
@@ -180,8 +179,7 @@ class DefaultServiceRequestContextTest {
                 .hasMessageContaining("(expected: > 0)");
     }
 
-    // TODO(ikhoon): Revert to @Test after CI pass
-    @RepeatedTest(1000)
+    @Test
     void setRequestTimeoutAt() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);

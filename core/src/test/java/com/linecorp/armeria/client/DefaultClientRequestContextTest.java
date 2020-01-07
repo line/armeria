@@ -30,7 +30,6 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -249,8 +248,7 @@ class DefaultClientRequestContextTest {
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }
 
-    // TODO(ikhoon): Revert to @Test after CI pass
-    @RepeatedTest(1000)
+    @Test
     void setResponseTimeoutAfter() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
@@ -286,8 +284,7 @@ class DefaultClientRequestContextTest {
                 .hasMessageContaining("(expected: > 0)");
     }
 
-    // TODO(ikhoon): Revert to @Test after CI pass
-    @RepeatedTest(1000)
+    @Test
     void setResponseTimeoutAt() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
