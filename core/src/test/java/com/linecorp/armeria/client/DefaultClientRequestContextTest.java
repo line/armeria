@@ -252,7 +252,7 @@ class DefaultClientRequestContextTest {
     void setResponseTimeoutAfter() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
-        final long tolerance = 20;
+        final long tolerance = 30;
 
         final TimeoutController timeoutController = mock(TimeoutController.class);
         when(timeoutController.startTimeNanos()).thenReturn(System.nanoTime());
@@ -288,7 +288,7 @@ class DefaultClientRequestContextTest {
     void setResponseTimeoutAt() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
-        final long tolerance = 20;
+        final long tolerance = 30;
 
         final TimeoutController timeoutController = mock(TimeoutController.class);
         when(timeoutController.startTimeNanos()).thenReturn(System.nanoTime());
