@@ -127,8 +127,8 @@ Server Properties
       type: armeria
       gracefulShutdownQuietPeriodMillis: 5000
       gracefulShutdownTimeoutMillis: 40000
-      maxRequestLength: 10000000
-      maxNumConnections: 5000
+      maxRequestLength: 10485760
+      maxNumConnections: 2147483647
       dateHeaderEnabled: false
       serverHeaderEnabled: true
       verboseResponses: false
@@ -183,6 +183,9 @@ passed to the :api:`ArmeriaBundle`.
 |                        |                                       | Dropwizard (default ``true``)                   |
 +------------------------+---------------------------------------+-------------------------------------------------+
 | ``server``             | ``accesslogwriter``                   | The access log writer  (default ``disabled``)   |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``maxRequestLength``                  | the default server-side maximum length of       |
+|                        |                                       | a request.                                      |
 +------------------------+---------------------------------------+-------------------------------------------------+
 | ``server``             | ``maxNumConnections``                 | The maximum allowed number of open connections  |
 +------------------------+---------------------------------------+-------------------------------------------------+
@@ -239,9 +242,6 @@ passed to the :api:`ArmeriaBundle`.
 |                        +---------------------------------------+-------------------------------------------------+
 |                        | ``maxInitialLineLength``              | The maximum length of an HTTP/1 response        |
 |                        |                                       | initial line                                    |
-|                        +---------------------------------------+-------------------------------------------------+
-|                        | ``maxHeaderSize``                     | The maximum length of all headers in an HTTP/1  |
-|                        |                                       | response                                        |
 +------------------------+---------------------------------------+-------------------------------------------------+
 | ``server.http2``       | ``initialConnectionWindowSize``       | The initial connection-level HTTP/2 flow control|
 |                        |                                       | window size                                     |

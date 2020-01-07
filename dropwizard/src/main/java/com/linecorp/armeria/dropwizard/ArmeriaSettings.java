@@ -856,19 +856,19 @@ class ArmeriaSettings {
      */
     static class Http2 {
         /**
-         * The initial stream-level HTTP/2 flow control window size.
+         * The initial connection-level HTTP/2 flow control window size.
          */
         @Nullable
         private String initialConnectionWindowSize;
 
         /**
-         * Sets the initial stream-level HTTP/2 flow control window size.
+         * The initial stream-level HTTP/2 flow control window size.
          */
         @Nullable
         private String initialStreamWindowSize;
 
         /**
-         * Sets the maximum size of HTTP/2 frame that can be received.
+         * The maximum size of HTTP/2 frame that can be received.
          */
         @Nullable
         private String maxFrameSize;
@@ -929,7 +929,7 @@ class ArmeriaSettings {
         private String type;
 
         /**
-         * the access log format string.
+         * The access log format string.
          */
         @Nullable
         private String format;

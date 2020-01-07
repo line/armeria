@@ -75,7 +75,7 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.NetUtil;
 
 /**
- * A utility class which is used to configure a {@link ServerBuilder} with the {@link ArmeriaSettings}.
+ * A utility class which is used to configure a {@link ServerBuilder} with the {@code ArmeriaSettings}.
  */
 final class ArmeriaConfigurationUtil {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaConfigurationUtil.class);
