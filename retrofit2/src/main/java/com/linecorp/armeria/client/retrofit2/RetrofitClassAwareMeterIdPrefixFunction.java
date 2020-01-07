@@ -93,14 +93,14 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
 
     @Override
     public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
-        final ImmutableList.Builder<Tag> tagsListBuilder = ImmutableList.builder();
+        final ImmutableList.Builder<Tag> tagsListBuilder = ImmutableList.builderWithExpectedSize(4);
         buildTags(tagsListBuilder, log);
         return new MeterIdPrefix(name, tagsListBuilder.build());
     }
 
     @Override
     public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
-        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builder();
+        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(5);
         buildTags(tagListBuilder, log);
         RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
         return new MeterIdPrefix(name, tagListBuilder.build());
