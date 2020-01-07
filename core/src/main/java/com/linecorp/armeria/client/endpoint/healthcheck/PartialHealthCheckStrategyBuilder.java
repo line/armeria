@@ -37,7 +37,7 @@ class PartialHealthCheckStrategyBuilder {
      * The maximum endpoint count must greater than 0.
      * You can use only one of the maximum endpoint count or maximum endpoint ratio.
      */
-    public PartialHealthCheckStrategyBuilder maxEndpointCount(int maxEndpointCount) {
+    PartialHealthCheckStrategyBuilder maxEndpointCount(int maxEndpointCount) {
         if (maxEndpointRatio != null) {
             throw new IllegalArgumentException("Maximum endpoint ratio is already set.");
         }
@@ -54,7 +54,7 @@ class PartialHealthCheckStrategyBuilder {
      * The maximum endpoint ratio must greater than 0 and less or equal to 1.
      * You can use only one of the maximum endpoint count or maximum endpoint ratio.
      */
-    public PartialHealthCheckStrategyBuilder maxEndpointRatio(double maxEndpointRatio) {
+    PartialHealthCheckStrategyBuilder maxEndpointRatio(double maxEndpointRatio) {
         if (maxEndpointCount != null) {
             throw new IllegalArgumentException("Maximum endpoint count is already set.");
         }
@@ -69,18 +69,14 @@ class PartialHealthCheckStrategyBuilder {
     /**
      * Returns a newly created {@link PartialHealthCheckStrategy} based on the properties set so far.
      */
-    public PartialHealthCheckStrategy build() {
+    PartialHealthCheckStrategy build() {
         final EndpointLimitingFunction endpointLimitingFunction;
         if (maxEndpointCount != null) {
             endpointLimitingFunction = EndpointLimitingFunction.ofCount(maxEndpointCount);
         } else if (maxEndpointRatio != null) {
             endpointLimitingFunction = EndpointLimitingFunction.ofRatio(maxEndpointRatio);
         } else {
-            endpointLimitingFunction = null;
-        }
-
-        if (endpointLimitingFunction == null) {
-            throw new IllegalStateException("The maximum must be set.");
+            throw new IllegalStateException("The maximum endpoint count or ratio must be set.");
         }
 
         return new PartialHealthCheckStrategy(endpointLimitingFunction);
