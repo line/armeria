@@ -146,20 +146,23 @@ class DefaultServiceRequestContextTest {
     void setRequestTimeoutAfter() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
-        final long tolerance = 20;
+        final long tolerance = 30;
 
         final TimeoutController timeoutController = mock(TimeoutController.class);
         when(timeoutController.startTimeNanos()).thenReturn(System.nanoTime());
         ctx.setRequestTimeoutController(timeoutController);
 
+        final long passedTimeMillis1 = TimeUnit.NANOSECONDS.toMillis(
+                System.nanoTime() - timeoutController.startTimeNanos());
         ctx.setRequestTimeoutAfterMillis(1000);
-        assertThat(ctx.requestTimeoutMillis()).isBetween(1000 - tolerance, 1000 + tolerance);
+        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis1 + 1000 - tolerance,
+                                                         passedTimeMillis1 + 1000 + tolerance);
         Thread.sleep(1000);
-        final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
+        final long passedTimeMillis2 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
         ctx.setRequestTimeoutAfter(Duration.ofSeconds(2));
-        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis + 2000 - tolerance,
-                                                         passedTimeMillis + 2000 + tolerance);
+        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis2 + 2000 - tolerance,
+                                                         passedTimeMillis2 + 2000 + tolerance);
     }
 
     @Test
@@ -179,21 +182,24 @@ class DefaultServiceRequestContextTest {
     void setRequestTimeoutAt() throws InterruptedException {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
-        final long tolerance = 20;
+        final long tolerance = 30;
 
         final TimeoutController timeoutController = mock(TimeoutController.class);
         when(timeoutController.startTimeNanos()).thenReturn(System.nanoTime());
         ctx.setRequestTimeoutController(timeoutController);
 
+        final long passedTimeMillis1 = TimeUnit.NANOSECONDS.toMillis(
+                System.nanoTime() - timeoutController.startTimeNanos());
         ctx.setRequestTimeoutAt(Instant.now().plusSeconds(1));
-        assertThat(ctx.requestTimeoutMillis()).isBetween(1000 - tolerance, 1000 + tolerance);
+        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis1 + 1000 - tolerance,
+                                                         passedTimeMillis1 + 1000 + tolerance);
 
         Thread.sleep(1000);
-        final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
+        final long passedTimeMillis2 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
         ctx.setRequestTimeoutAtMillis(Instant.now().plusMillis(1500).toEpochMilli());
-        assertThat(ctx.requestTimeoutMillis()).isBetween(1500 + passedTimeMillis - tolerance,
-                                                         1500 + passedTimeMillis + tolerance);
+        assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis2 + 1500 - tolerance,
+                                                         passedTimeMillis2 + 1500 + tolerance);
     }
 
     @Test

@@ -377,10 +377,10 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         final TimeoutController requestTimeoutController = this.requestTimeoutController;
         requestTimeoutMillis = 0;
         if (requestTimeoutController != null) {
-            if (ch.eventLoop().inEventLoop()) {
+            if (eventLoop().inEventLoop()) {
                 requestTimeoutController.cancelTimeout();
             } else {
-                ch.eventLoop().execute(requestTimeoutController::cancelTimeout);
+                eventLoop().execute(requestTimeoutController::cancelTimeout);
             }
         }
     }
@@ -413,10 +413,10 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         requestTimeoutMillis = LongMath.saturatedAdd(oldRequestTimeoutMillis, adjustmentMillis);
         final TimeoutController requestTimeoutController = this.requestTimeoutController;
         if (requestTimeoutController != null) {
-            if (ch.eventLoop().inEventLoop()) {
+            if (eventLoop().inEventLoop()) {
                 requestTimeoutController.extendTimeout(adjustmentMillis);
             } else {
-                ch.eventLoop().execute(() -> requestTimeoutController.extendTimeout(adjustmentMillis));
+                eventLoop().execute(() -> requestTimeoutController.extendTimeout(adjustmentMillis));
             }
         }
     }
@@ -436,10 +436,10 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         if (requestTimeoutController != null) {
             passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
                     System.nanoTime() - requestTimeoutController.startTimeNanos());
-            if (ch.eventLoop().inEventLoop()) {
+            if (eventLoop().inEventLoop()) {
                 requestTimeoutController.resetTimeout(requestTimeoutMillis);
             } else {
-                ch.eventLoop().execute(() -> requestTimeoutController
+                eventLoop().execute(() -> requestTimeoutController
                         .resetTimeout(requestTimeoutMillis));
             }
         }
