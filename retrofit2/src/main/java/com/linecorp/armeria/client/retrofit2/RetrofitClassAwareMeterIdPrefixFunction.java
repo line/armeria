@@ -105,7 +105,7 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
 
         this.name = name;
         this.serviceTagName = firstNonNull(serviceTagName, "service");
-        this.serviceName = serviceClass.getSimpleName();
+        serviceName = serviceClass.getSimpleName();
         this.methodNameToTags = defineTagsForMethods(serviceClass);
     }
 

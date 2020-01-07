@@ -42,9 +42,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -59,14 +57,14 @@ import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 
-public class RetrofitClassAwareMeterIdPrefixFunctionTest {
+class RetrofitClassAwareMeterIdPrefixFunctionTest {
 
     private static final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private static final ClientFactory clientFactory = ClientFactory.builder()
                                                                     .meterRegistry(meterRegistry)
                                                                     .build();
 
-    interface Example {
+    private interface Example {
         @DELETE("/foo")
         CompletableFuture<Void> deleteFoo();
 
@@ -95,23 +93,8 @@ public class RetrofitClassAwareMeterIdPrefixFunctionTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/foo", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-
-                @Override
-                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-
-                @Override
-                protected HttpResponse doTrace(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-            });
+        protected void configure(ServerBuilder sb) {
+            sb.service("/foo", ((ctx, req) -> HttpResponse.of(HttpStatus.OK)));
         }
     };
 
