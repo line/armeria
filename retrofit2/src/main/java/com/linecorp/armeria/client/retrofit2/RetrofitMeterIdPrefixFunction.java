@@ -53,10 +53,27 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
     }
 
     /**
+     * Returns a newly created {@link RetrofitClassAwareMeterIdPrefixFunction} with the specified {@code name}
+     * and {@code serviceClass}.
+     */
+    public static RetrofitMeterIdPrefixFunction of(String name, Class<?> serviceClass) {
+        return builder(name, serviceClass).build();
+    }
+
+    /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunctionBuilder} with the specified {@code name}.
      */
     public static RetrofitMeterIdPrefixFunctionBuilder builder(String name) {
         return new RetrofitMeterIdPrefixFunctionBuilder(requireNonNull(name, "name"));
+    }
+
+    /**
+     * Returns a newly created {@link RetrofitMeterIdPrefixFunctionBuilder} with the specified {@code name}
+     * and {@code serviceClass}.
+     */
+    public static RetrofitMeterIdPrefixFunctionBuilder builder(String name, Class<?> serviceClass) {
+        return new RetrofitMeterIdPrefixFunctionBuilder(requireNonNull(name, "name"),
+                                                        requireNonNull(serviceClass, "serviceClass"));
     }
 
     private final String name;

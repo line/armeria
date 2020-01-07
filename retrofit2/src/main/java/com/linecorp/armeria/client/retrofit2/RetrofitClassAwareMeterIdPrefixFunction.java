@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client.retrofit2;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -80,23 +79,6 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
     private final String name;
     private final String serviceName;
     private final String serviceTagName;
-
-    /**
-     * Returns a newly created {@link RetrofitClassAwareMeterIdPrefixFunction} with the specified {@code name}
-     * and {@code serviceClass}.
-     */
-    public static RetrofitMeterIdPrefixFunction of(String name, Class<?> serviceClass) {
-        return builder(name, serviceClass).build();
-    }
-
-    /**
-     * Returns a newly created {@link RetrofitMeterIdPrefixFunctionBuilder} with the specified {@code name}
-     * and {@code serviceClass}.
-     */
-    public static RetrofitMeterIdPrefixFunctionBuilder builder(String name, Class<?> serviceClass) {
-        return new RetrofitMeterIdPrefixFunctionBuilder(requireNonNull(name, "name"),
-                                                        requireNonNull(serviceClass, "serviceClass"));
-    }
 
     RetrofitClassAwareMeterIdPrefixFunction(String name,
                                             @Nullable String serviceTagName,
