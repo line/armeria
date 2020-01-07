@@ -26,13 +26,37 @@ public interface EndpointSelectionStrategy {
 
     /**
      * Simple round-robin strategy.
+     *
+     * @deprecated Use {@link #unweightedRoundRobin()}.
      */
+    @Deprecated
     EndpointSelectionStrategy ROUND_ROBIN = new RoundRobinStrategy();
 
     /**
      * Weighted round-robin strategy.
+     *
+     * @deprecated Use {@link #weightedRoundRobin()}.
      */
+    @Deprecated
     EndpointSelectionStrategy WEIGHTED_ROUND_ROBIN = new WeightedRoundRobinStrategy();
+
+    /**
+     * Returns a weighted round-robin strategy.
+     *
+     * @see #unweightedRoundRobin()
+     */
+    static EndpointSelectionStrategy weightedRoundRobin() {
+        return WEIGHTED_ROUND_ROBIN;
+    }
+
+    /**
+     * Returns an unweighted round-robin strategy, which ignores {@link Endpoint#weight()}.
+     *
+     * @see #weightedRoundRobin()
+     */
+    static EndpointSelectionStrategy unweightedRoundRobin() {
+        return ROUND_ROBIN;
+    }
 
     /**
      * Creates a new {@link EndpointSelector} that selects an {@link Endpoint} from the specified

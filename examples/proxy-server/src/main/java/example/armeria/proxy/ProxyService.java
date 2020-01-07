@@ -34,9 +34,9 @@ public final class ProxyService extends AbstractHttpService {
      * with ZooKeeper</a> and <a href="https://line.github.io/centraldogma/">centraldogma</a>.
      */
     private static final EndpointGroup animationGroup = EndpointGroup.of(
-            // You can use EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN or even
+            // You can use EndpointSelectionStrategy.weightedRoundRobin() or even
             // implement your own strategy to balance requests.
-            EndpointSelectionStrategy.ROUND_ROBIN,
+            EndpointSelectionStrategy.unweightedRoundRobin(),
             Endpoint.of("127.0.0.1", 8081),
             Endpoint.of("127.0.0.1", 8082),
             Endpoint.of("127.0.0.1", 8083));

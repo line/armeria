@@ -46,7 +46,7 @@ public final class PropertiesEndpointGroupBuilder {
     private final Path path;
     private final String endpointKeyPrefix;
     private int defaultPort;
-    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
     PropertiesEndpointGroupBuilder(ClassLoader classLoader, String resourceName,
                                    String endpointKeyPrefix) {

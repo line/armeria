@@ -66,7 +66,7 @@ public class WeightedRoundRobinStrategyBenchmark {
     }
 
     private static EndpointGroup getEndpointGroup(List<Endpoint> endpoints) {
-        return EndpointGroup.of(EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN, endpoints);
+        return EndpointGroup.of(EndpointSelectionStrategy.weightedRoundRobin(), endpoints);
     }
 
     @Setup

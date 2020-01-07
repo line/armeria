@@ -51,7 +51,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
             new EventLoopCheckingCompletableFuture<>();
 
     public DynamicEndpointGroup() {
-        this(EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN);
+        this(EndpointSelectionStrategy.weightedRoundRobin());
     }
 
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {

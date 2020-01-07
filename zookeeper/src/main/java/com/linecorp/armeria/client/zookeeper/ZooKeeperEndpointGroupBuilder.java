@@ -43,7 +43,7 @@ public class ZooKeeperEndpointGroupBuilder {
     private final List<Consumer<? super CuratorFrameworkFactory.Builder>> customizers;
     private final String zNodePath;
 
-    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
     private NodeValueCodec nodeValueCodec = NodeValueCodec.ofDefault();
 
     ZooKeeperEndpointGroupBuilder(String zkConnectionStr, String zNodePath) {

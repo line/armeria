@@ -47,7 +47,7 @@ abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
     private DnsServerAddressStreamProvider serverAddressStreamProvider =
             DnsServerAddressStreamProviders.platformDefault();
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
-    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
     DnsEndpointGroupBuilder(String hostname) {
         this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),

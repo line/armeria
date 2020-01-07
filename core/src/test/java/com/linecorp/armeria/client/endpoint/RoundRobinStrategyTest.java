@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.unweightedRoundRobin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -28,7 +29,7 @@ import com.linecorp.armeria.common.HttpRequest;
 
 class RoundRobinStrategyTest {
     private static final EndpointGroup group =
-            EndpointGroup.of(EndpointSelectionStrategy.ROUND_ROBIN,
+            EndpointGroup.of(unweightedRoundRobin(),
                              Endpoint.parse("localhost:1234"),
                              Endpoint.parse("localhost:2345"));
 

@@ -178,7 +178,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public EndpointSelectionStrategy selectionStrategy() {
-        return EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+        return EndpointSelectionStrategy.weightedRoundRobin();
     }
 
     @Override

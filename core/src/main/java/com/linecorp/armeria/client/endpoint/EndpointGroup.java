@@ -52,10 +52,10 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
      * {@code endpointGroups} can be instances of {@link Endpoint} as well, any {@link EndpointGroup}s and
      * {@link Endpoint} will all be combined into a single {@link EndpointGroup} that contains the total set.
      * The {@link EndpointGroup} returned by this method will use
-     * {@link EndpointSelectionStrategy#WEIGHTED_ROUND_ROBIN} for selecting an {@link Endpoint}.
+     * {@link EndpointSelectionStrategy#weightedRoundRobin()} for selecting an {@link Endpoint}.
      */
     static EndpointGroup of(EndpointGroup... endpointGroups) {
-        return of(EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN, endpointGroups);
+        return of(EndpointSelectionStrategy.weightedRoundRobin(), endpointGroups);
     }
 
     /**
@@ -73,10 +73,10 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
      * {@code endpointGroups} can be instances of {@link Endpoint} as well, any {@link EndpointGroup}s and
      * {@link Endpoint} will all be combined into a single {@link EndpointGroup} that contains the total set.
      * The {@link EndpointGroup} returned by this method will use
-     * {@link EndpointSelectionStrategy#WEIGHTED_ROUND_ROBIN} for selecting an {@link Endpoint}.
+     * {@link EndpointSelectionStrategy#weightedRoundRobin()} for selecting an {@link Endpoint}.
      */
     static EndpointGroup of(Iterable<? extends EndpointGroup> endpointGroups) {
-        return of(EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN, endpointGroups);
+        return of(EndpointSelectionStrategy.weightedRoundRobin(), endpointGroups);
     }
 
     /**

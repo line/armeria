@@ -31,17 +31,14 @@ Create a :api:`ZooKeeperEndpointGroup` to retrieve this information:
             /* zNodePath       */ "/myProductionEndpoints",
             /* sessionTimeout  */ 10000);
 
-And then register it to the :api:`EndpointGroupRegistry`, and specify it in a client URI:
+And then specify it when you build a client:
 
 .. code-block:: java
 
-    import static com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
-    import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
-
-    EndpointGroupRegistry.register("myProductionGroup", myEndpointGroup, WEIGHTED_ROUND_ROBIN);
-    // Specify 'group:<groupName>' in the authority part of a client URI.
-    HelloService.Iface helloClient = Clients.newClient(
-            "tbinary+http://group:myProductionGroup/hello", HelloService.Iface.class);
+    HelloService.Iface helloClient =
+            Clients.builder("tbinary+http", myEndpointGroup)
+                   .path("/hello")
+                   .build(HelloService.Iface.class);
 
 For more information, please refer to the API documentation of the
 :api:`com.linecorp.armeria.client.zookeeper` package.

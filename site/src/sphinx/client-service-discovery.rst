@@ -7,37 +7,11 @@ You can configure an Armeria client to distribute its requests to more than one 
 traditional server-side load balancing where the requests go through a dedicated load balancer such as
 `L4 and L7 switches <https://en.wikipedia.org/wiki/Multilayer_switch#Layer_4%E2%80%937_switch,_web_switch,_or_content_switch>`_.
 
-There are 4 elements involved in client-side load balancing in Armeria:
+There are 3 elements involved in client-side load balancing in Armeria:
 
 - :api:`Endpoint` represents an individual host (with an optional port number) and its weight.
 - :api:`EndpointGroup` represents a set of :apiplural:`Endpoint`.
-- :api:`EndpointGroupRegistry` is a global registry of :apiplural:`EndpointGroup` where each
-  :api:`EndpointGroup` is identified by its unique name.
-- A user specifies the target group name in the authority part of a URI,
-  e.g. ``http://group:my_group/`` where ``my_group`` is the group name, prefixed with ``group:``.
-
-.. uml::
-
-    @startuml
-    hide empty members
-
-    class EndpointGroupRegistry <<singleton>> {
-        groups : Map<String, EndpointGroup>
-    }
-
-    class EndpointGroup {
-        endpoints : Set<Endpoint>
-    }
-
-    class Endpoint {
-        host : String
-        port : int
-        weight : int
-    }
-
-    EndpointGroupRegistry o-right- "*" EndpointGroup
-    EndpointGroup o-right- "*" Endpoint
-    @enduml
+- A user specifies an :api:`EndpointGroup` when building a client.
 
 .. _creating-endpoint-group:
 
@@ -61,28 +35,34 @@ at construction time:
     assert endpoints.contains(Endpoint.of("duckduckgo.com", 443));
 
 
-Registering an ``EndointGroup``
--------------------------------
-An :api:`EndpointGroup` becomes visible by a client such as :api:`WebClient` only after it's registered in
-:api:`EndpointGroupRegistry`. You need to specify 2 more elements to register an :api:`EndpointGroup`:
+Choosing an ``EndpointSelectionStrategy``
+-----------------------------------------
+An :api:`EndpointGroup` is created with ``EndpointSelectionStrategy.weightedRoundRobin()`` by default,
+unless specified otherwise. Armeria currently provides the following :api:`EndpointSelectionStrategy`
+implementations out-of-the-box:
 
-- The name of the :api:`EndpointGroup`
-- An :api:`EndpointSelectionStrategy` that determines which :api:`Endpoint` is used for each request
+- ``EndpointSelectionStrategy.weightedRoundRobin`` for weighted round robin.
+- ``EndpointSelectionStrategy.unweightedRoundRobin`` for unweighted round robin.
+- :api:`StickyEndpointSelectionStrategy` for pinning requests based on a criteria
+  such as a request parameter value.
+- You can also implement your own :api:`EndpointSelectionStrategy`.
 
-  - Use ``EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN`` for weighted round robin.
-  - Use ``EndpointSelectionStrategy.ROUND_ROBIN`` for unweighted round robin.
-  - Use :api:`StickyEndpointSelectionStrategy` if you want to pin the requests based on a criteria
-    such as a request parameter value.
-  - You can implement your own :api:`EndpointSelectionStrategy`.
-
-The following example registers the ``searchEngineGroup`` we created at :ref:`creating-endpoint-group`:
+An :api:`EndpointSelectionStrategy` can usually be specified as an input parameter or via a builder method
+when you build an :api:`EndpointGroup`:
 
 .. code-block:: java
 
-    EndpointGroupRegistry.register("search_engines", searchEngineGroup,
-                                   EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN);
+    EndpointSelectionStrategy strategy = EndpointSelectionStrategy.unweightedRoundRobin();
 
-    assert EndpointGroupRegistry.get("search_engines") == searchEngineGroup;
+    EndpointGroup group1 = EndpointGroup.of(
+            strategy,
+            Endpoint.of("127.0.0.1", 8080),
+            Endpoint.of("127.0.0.1", 8081));
+
+    EndpointGroup group2 =
+            DnsAddressEndpointGroup.builder("example.com")
+                                   .selectionStrategy(strategy)
+                                   .build();
 
 .. note::
 
@@ -100,12 +80,12 @@ The following example registers the ``searchEngineGroup`` we created at :ref:`cr
 Connecting to an ``EndpointGroup``
 ----------------------------------
 
-Once an :api:`EndpointGroup` is registered, you can use its name in the authority part of a URI:
+Once an :api:`EndpointGroup` is created, you can specify it when creating a new client:
 
 .. code-block:: java
 
-    // Create an HTTP client that sends requests to the 'search_engines' group.
-    WebClient client = WebClient.of("https://group:search_engines/");
+    // Create an HTTP client that sends requests to the searchEngineGroup.
+    WebClient client = WebClient.of(SessionProtocol.HTTPS, searchEngineGroup);
 
     // Send a GET request to each search engine.
     List<CompletableFuture<?>> futures = new ArrayList<>();
@@ -132,8 +112,6 @@ method once you are done using it, usually when your application terminates:
 
 .. code-block:: java
 
-    // Unregister the group from the registry.
-    EndpointGroupRegistry.unregister("search_engines");
     // Release all resources claimed by the group.
     searchEngines.close();
 
@@ -172,9 +150,6 @@ be removed from the list.
 
     // Wait until the initial health check is finished.
     healthCheckedGroup.awaitInitialEndpoints();
-
-    // Register the health-checked group.
-    EndpointGroupRegistry.register("my-group", healthCheckedGroup);
 
 .. note::
 

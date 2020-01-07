@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.ROUND_ROBIN;
-import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.unweightedRoundRobin;
+import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.weightedRoundRobin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -51,12 +51,12 @@ class WeightedRoundRobinStrategyTest {
     @Test
     void testRoundRobinSelect() {
         final EndpointGroup group = EndpointGroup.of(
-                ROUND_ROBIN,
+                unweightedRoundRobin(),
                 Endpoint.of("127.0.0.1", 1234),
                 Endpoint.of("127.0.0.1", 2345),
                 Endpoint.of("127.0.0.1", 3456));
 
-        assertThat(group.selectionStrategy()).isSameAs(ROUND_ROBIN);
+        assertThat(group.selectionStrategy()).isSameAs(unweightedRoundRobin());
 
         assertThat(group.select(ctx).authority()).isEqualTo("127.0.0.1:1234");
         assertThat(group.select(ctx).authority()).isEqualTo("127.0.0.1:2345");
@@ -74,7 +74,7 @@ class WeightedRoundRobinStrategyTest {
                 Endpoint.of("127.0.0.1", 2345).withWeight(2),
                 Endpoint.of("127.0.0.1", 3456).withWeight(3));
 
-        assertThat(group.selectionStrategy()).isSameAs(WEIGHTED_ROUND_ROBIN);
+        assertThat(group.selectionStrategy()).isSameAs(weightedRoundRobin());
 
         assertThat(group.select(ctx).authority()).isEqualTo("127.0.0.1:1234");
         assertThat(group.select(ctx).authority()).isEqualTo("127.0.0.1:2345");
@@ -96,7 +96,7 @@ class WeightedRoundRobinStrategyTest {
                 Endpoint.of("127.0.0.1", 2345).withWeight(2),
                 Endpoint.of("127.0.0.1", 3456).withWeight(2));
 
-        assertThat(group2.selectionStrategy()).isSameAs(WEIGHTED_ROUND_ROBIN);
+        assertThat(group2.selectionStrategy()).isSameAs(weightedRoundRobin());
 
         assertThat(group2.select(ctx).authority()).isEqualTo("127.0.0.1:2345");
         assertThat(group2.select(ctx).authority()).isEqualTo("127.0.0.1:3456");
@@ -120,7 +120,7 @@ class WeightedRoundRobinStrategyTest {
                 Endpoint.of("127.0.0.1", 2345).withWeight(4),
                 Endpoint.of("127.0.0.1", 3456).withWeight(4));
 
-        assertThat(group3.selectionStrategy()).isSameAs(WEIGHTED_ROUND_ROBIN);
+        assertThat(group3.selectionStrategy()).isSameAs(weightedRoundRobin());
 
         assertThat(group3.select(ctx).authority()).isEqualTo("127.0.0.1:1234");
         assertThat(group3.select(ctx).authority()).isEqualTo("127.0.0.1:2345");
@@ -135,7 +135,7 @@ class WeightedRoundRobinStrategyTest {
                 Endpoint.of("127.0.0.1", 2345).withWeight(4),
                 Endpoint.of("127.0.0.1", 3456).withWeight(6));
 
-        assertThat(group4.selectionStrategy()).isSameAs(WEIGHTED_ROUND_ROBIN);
+        assertThat(group4.selectionStrategy()).isSameAs(weightedRoundRobin());
 
         assertThat(group4.select(ctx).authority()).isEqualTo("127.0.0.1:1234");
         assertThat(group4.select(ctx).authority()).isEqualTo("127.0.0.1:2345");
@@ -169,7 +169,7 @@ class WeightedRoundRobinStrategyTest {
                 Endpoint.of("127.0.0.1", 3456).withWeight(6),
                 Endpoint.of("127.0.0.1", 1234).withWeight(2));
 
-        assertThat(group5.selectionStrategy()).isSameAs(WEIGHTED_ROUND_ROBIN);
+        assertThat(group5.selectionStrategy()).isSameAs(weightedRoundRobin());
 
         assertThat(group5.select(ctx).authority()).isEqualTo("127.0.0.1:1234");
         assertThat(group5.select(ctx).authority()).isEqualTo("127.0.0.1:2345");
