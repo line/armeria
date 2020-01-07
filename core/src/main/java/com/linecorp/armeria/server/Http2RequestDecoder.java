@@ -75,6 +75,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
+    private final PingHandler pingHandler = new DefaultPingHandler();
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme) {
         this.cfg = cfg;
@@ -316,5 +317,22 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
         goAwayHandler.onGoAwayReceived(channel, lastStreamId, errorCode, debugData);
+    }
+
+    /**
+     * Received response for previously sent {@code PING} request.
+     */
+    @SuppressWarnings("checkstyle:RegexpMultiline")
+    @Override
+    public void onPingAckRead(final ChannelHandlerContext ctx, final long data) throws Http2Exception {
+        pingHandler.onPingAckRead(ctx, data);
+    }
+
+    /**
+     * Handles {@code PING} request from a client. Responds with {@code PING} with {@code ACK} flag set.
+     */
+    @Override
+    public void onPingRead(final ChannelHandlerContext ctx, final long data) throws Http2Exception {
+        pingHandler.onPingRead(ctx, data);
     }
 }
