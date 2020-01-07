@@ -17,31 +17,73 @@
 package com.linecorp.armeria.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.Mock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
 
 class RequestContextAwareCompletableFutureTest {
 
-    @Test
-    void makeContextAwareCompletableFutureWithDifferentContext() {
-        final RequestContext context1 =
-                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
-        final CompletableFuture<Void> originalFuture = CompletableFuture.completedFuture(null);
-        final CompletableFuture<Void> future1 = context1.makeContextAware(originalFuture);
+    // TODO(minwoox) Make an extesion which a user can easily check the logs.
+    @Mock
+    private Appender<ILoggingEvent> appender;
+    @Captor
+    private ArgumentCaptor<ILoggingEvent> eventCaptor;
 
-        final RequestContext context2 =
-                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
-        final CompletableFuture<Void> future2 = context2.makeContextAware(future1);
+    @BeforeEach
+    void setupLogger() {
+        ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME))
+                .addAppender(appender);
+    }
 
-        assertThat(future2).isCompletedExceptionally();
-        assertThatThrownBy(future2::join).hasCauseInstanceOf(IllegalStateException.class);
+    @AfterEach
+    void cleanupLogger() {
+        ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME))
+                .detachAppender(appender);
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(ContextFutureCallbackArgumentsProvider.class)
+    void makeContextAwareCompletableFutureWithDifferentContext(
+            BiConsumer<CompletableFuture<?>, AtomicBoolean> callback) {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext ctx1 = ServiceRequestContext.builder(req).build();
+        final ServiceRequestContext ctx2 = ServiceRequestContext.builder(req).build();
+        try (SafeCloseable ignored = ctx1.push()) {
+            final CompletableFuture<Object> future = new CompletableFuture<>();
+            final CompletableFuture<Object> contextAwareFuture = ctx2.makeContextAware(future);
+            final AtomicBoolean callbackCalled = new AtomicBoolean();
+            callback.accept(contextAwareFuture, callbackCalled);
+
+            future.complete(null);
+
+            assertThat(callbackCalled.get()).isFalse();
+            verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
+            assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                assertThat(event.getMessage()).startsWith("An error occurred when pushing");
+            });
+        }
     }
 }

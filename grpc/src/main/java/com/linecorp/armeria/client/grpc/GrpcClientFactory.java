@@ -19,6 +19,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -85,42 +86,18 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         final SerializationFormat serializationFormat = scheme.serializationFormat();
         final Class<?> stubClass = clientType.getEnclosingClass();
         if (stubClass == null) {
-            throw new IllegalArgumentException("Client type not a gRPC client stub class, " +
-                                               "should be something like ServiceNameGrpc.ServiceNameXXStub: " +
-                                               clientType);
-        }
-        final Method newStubMethod;
-        final Method newBlockingStubMethod;
-        final Method newFutureStubMethod;
-        try {
-            newStubMethod = stubClass.getDeclaredMethod("newStub", Channel.class);
-            newBlockingStubMethod = stubClass.getDeclaredMethod("newBlockingStub", Channel.class);
-            newFutureStubMethod = stubClass.getDeclaredMethod("newFutureStub", Channel.class);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("Client type not a gRPC client stub class, " +
-                                               "should be something like ServiceNameGrpc.ServiceNameXXStub: " +
-                                               clientType, e);
-        }
-        final Method createClientMethod;
-        if (newStubMethod.getReturnType() == clientType) {
-            createClientMethod = newStubMethod;
-        } else if (newBlockingStubMethod.getReturnType() == clientType) {
-            createClientMethod = newBlockingStubMethod;
-        } else if (newFutureStubMethod.getReturnType() == clientType) {
-            createClientMethod = newFutureStubMethod;
-        } else {
-            throw new IllegalArgumentException("Client type not a gRPC client stub class, " +
-                                               "should be something like ServiceNameGrpc.ServiceNameXXStub: " +
-                                               clientType);
+            throw newUnknownClientTypeException(clientType);
         }
 
         final HttpClient httpClient = newHttpClientDelegate(params);
+        final Method stubFactoryMethod = findStubFactoryMethod(clientType, stubClass);
 
         final MessageMarshaller jsonMarshaller =
                 GrpcSerializationFormats.isJson(serializationFormat) ?
                 GrpcJsonUtil.jsonMarshaller(
                         stubMethods(stubClass),
                         options.getOrElse(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER, NO_OP)) : null;
+
         final ArmeriaChannel channel = new ArmeriaChannel(
                 params,
                 httpClient,
@@ -130,11 +107,53 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 jsonMarshaller);
 
         try {
-            // Verified createClientMethod.getReturnType == clientType
-            return createClientMethod.invoke(null, channel);
+            // Verified stubFactoryMethod.getReturnType() == clientType in findStubFactoryMethod().
+            return stubFactoryMethod.invoke(null, channel);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException("Could not create stub through reflection.", e);
+            throw new IllegalStateException("Could not create a gRPC stub through reflection.", e);
         }
+    }
+
+    private static <T> Method findStubFactoryMethod(Class<T> clientType, Class<?> stubClass) {
+        Method newStubMethod = null;
+        for (Method method : stubClass.getDeclaredMethods()) {
+            final int methodModifiers = method.getModifiers();
+            if (!(Modifier.isPublic(methodModifiers) && Modifier.isStatic(methodModifiers))) {
+                // Must be public and static.
+                continue;
+            }
+
+            final String methodName = method.getName();
+            if (!(methodName.startsWith("new") && methodName.endsWith("Stub"))) {
+                // Must be named as `new*Stub()`.
+                continue;
+            }
+
+            final Class<?>[] methodParameterTypes = method.getParameterTypes();
+            if (!(methodParameterTypes.length == 1 && methodParameterTypes[0] == Channel.class)) {
+                // Must have a single `Channel` parameter.
+                continue;
+            }
+
+            if (!clientType.isAssignableFrom(method.getReturnType())) {
+                // Must return a stub compatible with `clientType`.
+                continue;
+            }
+
+            newStubMethod = method;
+            break;
+        }
+
+        if (newStubMethod == null) {
+            throw newUnknownClientTypeException(clientType);
+        }
+        return newStubMethod;
+    }
+
+    private static IllegalArgumentException newUnknownClientTypeException(Class<?> clientType) {
+        return new IllegalArgumentException(
+                "Unknown client type: " + clientType.getName() +
+                " (expected: a gRPC client stub class, e.g. MyServiceGrpc.MyServiceStub)");
     }
 
     @Override

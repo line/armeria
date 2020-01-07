@@ -212,6 +212,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         res.subscribe(responseReader, ctx.eventLoop(), WITH_POOLED_OBJECTS);
         res.completionFuture().handleAsync(responseReader, ctx.eventLoop());
+        responseListener.onReady();
     }
 
     @Override
