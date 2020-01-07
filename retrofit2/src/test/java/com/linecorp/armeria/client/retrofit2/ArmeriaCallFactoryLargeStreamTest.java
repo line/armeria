@@ -92,13 +92,14 @@ public class ArmeriaCallFactoryLargeStreamTest {
 
     @Test(timeout = 30 * 1000L)
     public void largeStream() throws Exception {
-        final WebClient baseWebClient = WebClient.builder()
-                                                 .maxResponseLength(Long.MAX_VALUE)
-                                                 .responseTimeout(Duration.ofSeconds(30))
-                                                 .build();
         final Service downloadService =
                 ArmeriaRetrofit.builder(server.uri("/"))
-                               .webClient((url, endpointGroup) -> baseWebClient)
+                               .webClient((protocol, endpointGroup) -> {
+                                   return WebClient.builder(protocol, endpointGroup)
+                                                   .maxResponseLength(Long.MAX_VALUE)
+                                                   .responseTimeout(Duration.ofSeconds(30))
+                                                   .build();
+                               })
                                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                                .build()
                                .create(Service.class);
