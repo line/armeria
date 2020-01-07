@@ -26,6 +26,10 @@ import com.linecorp.armeria.client.Endpoint;
 
 final class RoundRobinStrategy implements EndpointSelectionStrategy {
 
+    static final RoundRobinStrategy INSTANCE = new RoundRobinStrategy();
+
+    private RoundRobinStrategy() {}
+
     @Override
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
         return new RoundRobinSelector(endpointGroup);

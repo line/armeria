@@ -30,7 +30,7 @@ public interface EndpointSelectionStrategy {
      * @deprecated Use {@link #unweightedRoundRobin()}.
      */
     @Deprecated
-    EndpointSelectionStrategy ROUND_ROBIN = new RoundRobinStrategy();
+    EndpointSelectionStrategy ROUND_ROBIN = RoundRobinStrategy.INSTANCE;
 
     /**
      * Weighted round-robin strategy.
@@ -38,7 +38,7 @@ public interface EndpointSelectionStrategy {
      * @deprecated Use {@link #weightedRoundRobin()}.
      */
     @Deprecated
-    EndpointSelectionStrategy WEIGHTED_ROUND_ROBIN = new WeightedRoundRobinStrategy();
+    EndpointSelectionStrategy WEIGHTED_ROUND_ROBIN = WeightedRoundRobinStrategy.INSTANCE;
 
     /**
      * Returns a weighted round-robin strategy.
@@ -46,7 +46,7 @@ public interface EndpointSelectionStrategy {
      * @see #unweightedRoundRobin()
      */
     static EndpointSelectionStrategy weightedRoundRobin() {
-        return WEIGHTED_ROUND_ROBIN;
+        return WeightedRoundRobinStrategy.INSTANCE;
     }
 
     /**
@@ -55,7 +55,7 @@ public interface EndpointSelectionStrategy {
      * @see #weightedRoundRobin()
      */
     static EndpointSelectionStrategy unweightedRoundRobin() {
-        return ROUND_ROBIN;
+        return RoundRobinStrategy.INSTANCE;
     }
 
     /**

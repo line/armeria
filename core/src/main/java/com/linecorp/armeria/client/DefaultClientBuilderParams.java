@@ -97,7 +97,7 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
             // Create a valid URI which will never succeed.
             uri = URI.create(schemeStr + "://group-" +
                              Integer.toHexString(System.identityHashCode(endpointGroup)) +
-                             ":0" + normalizedAbsolutePathRef);
+                             ":1" + normalizedAbsolutePathRef);
         }
 
         this.uri = factory.validateUri(uri);

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.client.WebClientBuilder.isUndefinedUri;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.InvocationHandler;
@@ -236,7 +235,7 @@ public interface ClientFactory extends AutoCloseable {
     default URI validateUri(URI uri) {
         requireNonNull(uri, "uri");
 
-        if (isUndefinedUri(uri)) {
+        if (Clients.isUndefinedUri(uri)) {
             // We use a special singleton marker URI for clients that do not explicitly define a
             // host or scheme at construction time.
             // As this isn't created by users, we don't need to normalize it.

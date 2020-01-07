@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.WebClientBuilder.isUndefinedUri;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isAbsoluteUri;
 
@@ -68,7 +67,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             return execute(endpoint, newReq);
         }
 
-        if (isUndefinedUri(uri())) {
+        if (Clients.isUndefinedUri(uri())) {
             final IllegalArgumentException cause = new IllegalArgumentException("no authority: " + req.path());
             req.abort(cause);
             return HttpResponse.ofFailure(cause);

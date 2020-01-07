@@ -24,15 +24,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
-import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofitBuilder;
+import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit;
 import com.linecorp.armeria.client.retrofit2.RetrofitMeterIdPrefixFunction;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
@@ -81,12 +82,13 @@ class RetrofitMeterIdPrefixFunctionTest {
 
     @Test
     void metrics() {
-        final Example example = new ArmeriaRetrofitBuilder(clientFactory)
-                .baseUrl("h1c://127.0.0.1:" + server.httpPort())
-                .clientOptions(ClientOptions.builder()
-                                            .decorator(MetricCollectingClient.newDecorator(
-                                                    RetrofitMeterIdPrefixFunction.of("foo")))
-                                            .build())
+        final Example example = ArmeriaRetrofit
+                .builder(server.httpUri("/"))
+                .webClient((url, endpointGroup) -> WebClient.builder(SessionProtocol.H1C, endpointGroup)
+                                                            .factory(clientFactory)
+                                                            .decorator(MetricCollectingClient.newDecorator(
+                                                                    RetrofitMeterIdPrefixFunction.of("foo")))
+                                                            .build())
                 .build()
                 .create(Example.class);
 
@@ -103,15 +105,18 @@ class RetrofitMeterIdPrefixFunctionTest {
 
     @Test
     void metrics_withServiceTag() {
-        final Example example = new ArmeriaRetrofitBuilder(clientFactory)
-                .baseUrl("h1c://127.0.0.1:" + server.httpPort())
-                .withClientOptions((s, clientOptionsBuilder) -> {
-                    return clientOptionsBuilder.decorator(
-                            MetricCollectingClient.newDecorator(
-                                    RetrofitMeterIdPrefixFunction.builder("foo")
-                                                                 .withServiceTag("service", "fallbackService")
-                                                                 .build()));
-                })
+        final RetrofitMeterIdPrefixFunction meterIdPrefixFunction =
+                RetrofitMeterIdPrefixFunction.builder("foo")
+                                             .withServiceTag("service", "fallbackService")
+                                             .build();
+
+        final Example example = ArmeriaRetrofit
+                .builder(server.httpUri("/"))
+                .webClient((url, endpointGroup) -> WebClient.builder(SessionProtocol.H1C, endpointGroup)
+                                                            .factory(clientFactory)
+                                                            .decorator(MetricCollectingClient.newDecorator(
+                                                                    meterIdPrefixFunction))
+                                                            .build())
                 .build()
                 .create(Example.class);
 

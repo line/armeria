@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.WebClientBuilder.isUndefinedUri;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -61,7 +60,7 @@ public class DecoratingClientFactory implements ClientFactory {
      */
     protected final HttpClient newHttpClientDelegate(ClientBuilderParams params) {
         final URI uri = params.uri();
-        if (isUndefinedUri(uri)) {
+        if (Clients.isUndefinedUri(uri)) {
             return (HttpClient) delegate().newClient(
                     ClientBuilderParams.of(delegate(), uri, HttpClient.class, params.options()));
         }

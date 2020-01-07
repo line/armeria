@@ -30,6 +30,10 @@ import com.linecorp.armeria.client.Endpoint;
 
 final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
+    static final WeightedRoundRobinStrategy INSTANCE = new WeightedRoundRobinStrategy();
+
+    private WeightedRoundRobinStrategy() {}
+
     @Override
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
         return new WeightedRoundRobinSelector(endpointGroup);

@@ -18,21 +18,16 @@ package com.linecorp.armeria.client.retrofit2;
 import static com.linecorp.armeria.client.Clients.withContextCustomizer;
 
 import java.io.IOException;
-import java.net.URI;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
-import java.util.regex.Pattern;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -59,25 +54,16 @@ import retrofit2.Invocation;
  */
 final class ArmeriaCallFactory implements Factory {
 
-    static final String GROUP_PREFIX = "group_";
-    private static final Pattern GROUP_PREFIX_MATCHER = Pattern.compile(GROUP_PREFIX);
-    private final Map<String, WebClient> httpClients = new ConcurrentHashMap<>();
-    private final WebClient baseHttpClient;
-    private final ClientFactory clientFactory;
-    private final BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator;
-    private final String baseAuthority;
+    private final Function<? super HttpUrl, ? extends EndpointGroup> endpointGroupMapping;
+    private final BiFunction<? super EndpointGroup, ? super HttpUrl, ? extends WebClient> webClientMapping;
     private final SubscriberFactory subscriberFactory;
 
-    ArmeriaCallFactory(WebClient baseHttpClient,
-                       ClientFactory clientFactory,
-                       BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator,
+    ArmeriaCallFactory(Function<? super HttpUrl, ? extends EndpointGroup> endpointGroupMapping,
+                       BiFunction<? super EndpointGroup, ? super HttpUrl, ? extends WebClient> webClientMapping,
                        SubscriberFactory subscriberFactory) {
-        this.baseHttpClient = baseHttpClient;
-        this.clientFactory = clientFactory;
-        this.configurator = configurator;
+        this.endpointGroupMapping = endpointGroupMapping;
+        this.webClientMapping = webClientMapping;
         this.subscriberFactory = subscriberFactory;
-        baseAuthority = baseHttpClient.uri().getAuthority();
-        httpClients.put(baseAuthority, baseHttpClient);
     }
 
     @Override
@@ -85,23 +71,9 @@ final class ArmeriaCallFactory implements Factory {
         return new ArmeriaCall(this, request);
     }
 
-    private static boolean isGroup(String authority) {
-        return authority.startsWith(GROUP_PREFIX);
-    }
-
-    WebClient getHttpClient(String authority, String sessionProtocol) {
-        if (baseAuthority.equals(authority)) {
-            return baseHttpClient;
-        }
-        return httpClients.computeIfAbsent(authority, key -> {
-            final String finalAuthority = isGroup(key) ?
-                                          GROUP_PREFIX_MATCHER.matcher(key).replaceFirst("group:") : key;
-            final String uriText = sessionProtocol + "://" + finalAuthority;
-            return WebClient.builder(uriText)
-                            .factory(clientFactory)
-                            .options(configurator.apply(uriText, ClientOptions.builder()).build())
-                            .build();
-        });
+    WebClient getWebClient(HttpUrl url) {
+        final EndpointGroup endpointGroup = endpointGroupMapping.apply(url);
+        return webClientMapping.apply(endpointGroup, url);
     }
 
     static class ArmeriaCall implements Call {
@@ -131,16 +103,16 @@ final class ArmeriaCallFactory implements Factory {
 
         private static HttpResponse doCall(ArmeriaCallFactory callFactory, Request request) {
             final HttpUrl httpUrl = request.url();
-            final URI uri = httpUrl.uri();
-            final WebClient webClient = callFactory.getHttpClient(uri.getAuthority(), uri.getScheme());
-            final String uriString;
-            if (uri.getQuery() == null) {
-                uriString = httpUrl.encodedPath();
+            final WebClient webClient = callFactory.getWebClient(httpUrl);
+            final String absolutePathRef;
+            if (httpUrl.encodedQuery() == null) {
+                absolutePathRef = httpUrl.encodedPath();
             } else {
-                uriString = httpUrl.encodedPath() + '?' + httpUrl.encodedQuery();
+                absolutePathRef = httpUrl.encodedPath() + '?' + httpUrl.encodedQuery();
             }
+
             final RequestHeadersBuilder headers = RequestHeaders.builder(HttpMethod.valueOf(request.method()),
-                                                                         uriString);
+                                                                         absolutePathRef);
             final Headers requestHeaders = request.headers();
             final int numHeaders = requestHeaders.size();
             for (int i = 0; i < numHeaders; i++) {

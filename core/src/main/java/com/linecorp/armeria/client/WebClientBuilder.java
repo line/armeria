@@ -42,19 +42,12 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     /**
      * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
      */
-    private static final URI UNDEFINED_URI = URI.create("http://undefined");
+    static final URI UNDEFINED_URI = URI.create("http://undefined");
 
     private static final Set<SessionProtocol> SUPPORTED_PROTOCOLS =
             Sets.immutableEnumSet(
                     ImmutableList.<SessionProtocol>builder().addAll(SessionProtocol.httpValues())
                                                             .addAll(SessionProtocol.httpsValues()).build());
-
-    /**
-     * Returns {@code true} if the specified {@code uri} is an undefined {@link URI}.
-     */
-    static boolean isUndefinedUri(URI uri) {
-        return UNDEFINED_URI == uri;
-    }
 
     @Nullable
     private final URI uri;
@@ -82,7 +75,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      *                                  in {@link SessionProtocol}
      */
     WebClientBuilder(URI uri) {
-        if (isUndefinedUri(uri)) {
+        if (Clients.isUndefinedUri(uri)) {
             this.uri = uri;
         } else {
             final String givenScheme = requireNonNull(uri, "uri").getScheme();

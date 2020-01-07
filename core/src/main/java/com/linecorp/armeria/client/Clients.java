@@ -819,5 +819,13 @@ public final class Clients {
         return ClientThreadLocalState.maybeCreate().newContextCaptor();
     }
 
+    /**
+     * Returns {@code true} if the specified {@code uri} is an undefined {@link URI}.
+     */
+    public static boolean isUndefinedUri(URI uri) {
+        return uri == WebClientBuilder.UNDEFINED_URI;
+    }
+
+
     private Clients() {}
 }

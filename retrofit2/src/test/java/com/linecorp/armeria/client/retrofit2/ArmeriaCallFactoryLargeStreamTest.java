@@ -28,6 +28,7 @@ import org.reactivestreams.Subscription;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -91,16 +92,16 @@ public class ArmeriaCallFactoryLargeStreamTest {
 
     @Test(timeout = 30 * 1000L)
     public void largeStream() throws Exception {
-        final Service downloadService = new ArmeriaRetrofitBuilder()
-                .baseUrl(server.uri("/"))
-                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                .withClientOptions((s, clientOptionsBuilder) -> {
-                    clientOptionsBuilder.maxResponseLength(Long.MAX_VALUE);
-                    clientOptionsBuilder.responseTimeout(Duration.of(30, ChronoUnit.SECONDS));
-                    return clientOptionsBuilder;
-                })
-                .build()
-                .create(Service.class);
+        final WebClient baseWebClient = WebClient.builder()
+                                                 .maxResponseLength(Long.MAX_VALUE)
+                                                 .responseTimeout(Duration.ofSeconds(30))
+                                                 .build();
+        final Service downloadService =
+                ArmeriaRetrofit.builder(server.uri("/"))
+                               .webClient((url, endpointGroup) -> baseWebClient)
+                               .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                               .build()
+                               .create(Service.class);
 
         final ResponseBody responseBody = downloadService.largeStream().get();
         try (BufferedInputStream bufferedInputStream = new BufferedInputStream(responseBody.byteStream())) {

@@ -15,33 +15,40 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.client.retrofit2.ArmeriaCallFactory.GROUP_PREFIX;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptions;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import okhttp3.HttpUrl;
+import okhttp3.Request;
 import retrofit2.Call;
 import retrofit2.CallAdapter;
 import retrofit2.Callback;
 import retrofit2.Converter;
 import retrofit2.Retrofit;
-import retrofit2.Retrofit.Builder;
 import retrofit2.http.Streaming;
 
 /**
@@ -77,91 +84,47 @@ public final class ArmeriaRetrofitBuilder {
     private static final String SLASH = "/";
 
     private final Retrofit.Builder retrofitBuilder;
-    private final ClientFactory clientFactory;
-    @Nullable
-    private String baseUrl;
+    private final ImmutableMap.Builder<String, EndpointGroup> endpointGroups = ImmutableMap.builder();
+
     private boolean streaming;
     private Executor callbackExecutor = CommonPools.blockingTaskExecutor();
-    private BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator =
-            DEFAULT_CONFIGURATOR;
 
-    /**
-     * Creates a {@link ArmeriaRetrofitBuilder} with the default {@link ClientFactory}.
-     */
-    public ArmeriaRetrofitBuilder() {
-        this(ClientFactory.ofDefault());
+    private Function<? super HttpUrl, ? extends EndpointGroup> endpointGroupMapping =
+            url -> Endpoint.of(url.host(), url.port());
+
+    // FIXME(trustin): Do some caching.
+    private BiFunction<? super EndpointGroup, ? super HttpUrl, ? extends WebClient> webClientMapping =
+            (endpointGroup, url) -> WebClient.of(url.isHttps() ? SessionProtocol.HTTPS : SessionProtocol.HTTP,
+                                                 endpointGroup);
+
+    ArmeriaRetrofitBuilder(HttpUrl baseUrl) {
+        retrofitBuilder = new Retrofit.Builder().baseUrl(baseUrl);
     }
 
-    /**
-     * Creates a {@link ArmeriaRetrofitBuilder} with the specified {@link ClientFactory}.
-     */
-    public ArmeriaRetrofitBuilder(ClientFactory clientFactory) {
-        this.clientFactory = requireNonNull(clientFactory, "clientFactory");
-        retrofitBuilder = new Retrofit.Builder();
-    }
-
-    /**
-     * Sets the API base URL.
-     *
-     * @see Builder#baseUrl(String)
-     */
-    public ArmeriaRetrofitBuilder baseUrl(String baseUrl) {
-        return baseUrl(URI.create(requireNonNull(baseUrl, "baseUrl")));
-    }
-
-    /**
-     * Sets the API base URL.
-     *
-     * @see Builder#baseUrl(String)
-     */
-    public ArmeriaRetrofitBuilder baseUrl(URI baseUrl) {
-        requireNonNull(baseUrl, "baseUrl");
-        checkArgument(SessionProtocol.find(baseUrl.getScheme()) != null,
-                      "baseUrl must have an HTTP scheme: %s", baseUrl);
-        final String path = baseUrl.getPath();
-        if (!path.isEmpty() && !SLASH.equals(path.substring(path.length() - 1))) {
-            throw new IllegalArgumentException("baseUrl must end with /: " + baseUrl);
-        }
-        this.baseUrl = baseUrl.toString();
+    public ArmeriaRetrofitBuilder endpointGroup(
+            Function<? super HttpUrl, ? extends EndpointGroup> endpointGroupMapping) {
+        this.endpointGroupMapping = requireNonNull(endpointGroupMapping, "endpointGroupMapping");
         return this;
     }
 
-    /**
-     * Sets the {@link ClientOptions} that customizes the underlying {@link WebClient}.
-     * This method can be useful if you already have an Armeria client and want to reuse its configuration,
-     * such as using the same decorators.
-     * <pre>{@code
-     * WebClient myClient = ...;
-     * // Use the same settings and decorators with `myClient` when sending requests.
-     * builder.clientOptions(myClient.options());
-     * }</pre>
-     */
-    public ArmeriaRetrofitBuilder clientOptions(ClientOptions clientOptions) {
-        requireNonNull(clientOptions, "clientOptions");
-        return withClientOptions((uri, b) -> b.options(clientOptions));
+    public ArmeriaRetrofitBuilder webClient(
+            BiFunction<SessionProtocol, ? super EndpointGroup, ? extends WebClient> webClientFactory) {
+        requireNonNull(webClientFactory, "webClientFactory");
+        return webClient((endpointGroup, url) -> {
+                             final SessionProtocol protocol = url.isHttps() ? SessionProtocol.HTTPS
+                                                                            : SessionProtocol.HTTP;
+                             return new Key(protocol, url.host(), url.port());
+                         },
+                         (endpointGroup, key) -> webClientFactory.apply(key.protocol, endpointGroup));
     }
 
-    /**
-     * Sets the {@link BiFunction} that customizes the underlying {@link WebClient}.
-     * <pre>{@code
-     * builder.withClientOptions((uri, b) -> {
-     *     if (uri.startsWith("https://foo.com/")) {
-     *         return b.setHttpHeader(HttpHeaders.AUTHORIZATION,
-     *                                "bearer my-access-token")
-     *                 .responseTimeout(Duration.ofSeconds(3));
-     *     } else {
-     *         return b;
-     *     }
-     * });
-     * }</pre>
-     *
-     * @param configurator a {@link BiFunction} whose first argument is the the URI of the server endpoint and
-     *                     whose second argument is the {@link ClientOptionsBuilder} with default options of
-     *                     the new derived client
-     */
-    public ArmeriaRetrofitBuilder withClientOptions(
-            BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
-        this.configurator = requireNonNull(configurator, "configurator");
+    public <T> ArmeriaRetrofitBuilder webClient(
+            BiFunction<? super EndpointGroup, ? super HttpUrl, T> keyFunction,
+            BiFunction<? super EndpointGroup, T, ? extends WebClient> webClientFactory) {
+        requireNonNull(keyFunction, "keyFunction");
+        requireNonNull(webClientFactory, "webClientFactory");
+
+        webClientMapping = new CachedWebClientMapping(keyFunction, webClientFactory);
         return this;
     }
 
@@ -231,37 +194,101 @@ public final class ArmeriaRetrofitBuilder {
      * Returns a newly-created {@link Retrofit} based on the properties of this builder.
      */
     public Retrofit build() {
-        checkState(baseUrl != null, "baseUrl not set");
-        final URI uri = URI.create(baseUrl);
-        final String fullUri = SessionProtocol.of(uri.getScheme()) + "://" + uri.getAuthority();
-        final WebClient baseHttpClient = WebClient.builder(fullUri)
-                                                  .factory(clientFactory)
-                                                  .options(configurator.apply(fullUri, ClientOptions.builder())
-                                                                       .build())
-                                                  .build();
-        return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, uri.getPath(), GROUP_PREFIX))
-                              .callFactory(new ArmeriaCallFactory(
-                                      baseHttpClient, clientFactory, configurator,
+        return retrofitBuilder.callFactory(new ArmeriaCallFactory(
+                                      endpointGroupMapping, webClientMapping,
                                       streaming ? SubscriberFactory.streaming(callbackExecutor)
                                                 : SubscriberFactory.blocking()))
                               .build();
     }
 
-    private static HttpUrl convertToOkHttpUrl(WebClient baseHttpClient, String basePath,
-                                              String groupPrefix) {
-        final URI uri = baseHttpClient.uri();
-        final Scheme scheme = Scheme.tryParse(uri.getScheme());
-        final SessionProtocol sessionProtocol = scheme != null ? scheme.sessionProtocol()
-                                                               : SessionProtocol.of(uri.getScheme());
-        final String authority = uri.getAuthority();
-        final String protocol = sessionProtocol.isTls() ? "https" : "http";
+    private static HttpUrl convertToOkHttpUrl(WebClient baseWebClient) {
+        assert baseWebClient.scheme().serializationFormat() == SerializationFormat.NONE;
+        final SessionProtocol protocol = baseWebClient.scheme().sessionProtocol();
+        final URI uri = baseWebClient.uri();
+
         final HttpUrl parsed;
-        if (authority.startsWith("group:")) {
-            parsed = HttpUrl.parse(protocol + "://" + authority.replace("group:", groupPrefix) + basePath);
+        if (protocol == SessionProtocol.HTTP || protocol == SessionProtocol.HTTPS) {
+            parsed = HttpUrl.get(uri.toString());
         } else {
-            parsed = HttpUrl.parse(protocol + "://" + authority + basePath);
+            parsed = HttpUrl.get((protocol.isTls() ? "https" : "http") +
+                                 uri.toString().substring(protocol.uriText().length()));
         }
-        assert parsed != null;
+
         return parsed;
+    }
+
+    private static final class Key {
+        final SessionProtocol protocol;
+        final String host;
+        final int port;
+        final int hashCode;
+
+        Key(SessionProtocol protocol, String host, int port) {
+            this.protocol = protocol;
+            this.host = host;
+            this.port = port;
+            hashCode = (protocol.hashCode() * 31 + host.hashCode()) * 31 + port;
+        }
+
+        @Override
+        public int hashCode() {
+            return hashCode;
+        }
+
+        @Override
+        public boolean equals(@Nullable Object obj) {
+            if (obj == null || obj.getClass() != Key.class) {
+                return false;
+            }
+
+            final Key that = (Key) obj;
+            return protocol == that.protocol && port == that.port && host.equals(that.host);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("protocol", protocol)
+                              .add("host", host)
+                              .add("port", port)
+                              .toString();
+        }
+    }
+
+    private static class CachedWebClientMapping implements BiFunction<EndpointGroup, HttpUrl, WebClient> {
+
+        private final BiFunction<EndpointGroup, HttpUrl, Object> keyFunction;
+        private final BiFunction<EndpointGroup, Object, WebClient> webClientFactory;
+        private final Cache<Object, WebClient> cache;
+
+        @SuppressWarnings("unchecked")
+        <T> CachedWebClientMapping(
+                BiFunction<? super EndpointGroup, ? super HttpUrl, T> keyFunction,
+                BiFunction<? super EndpointGroup, T, ? extends WebClient> webClientFactory) {
+            this.keyFunction = (BiFunction<EndpointGroup, HttpUrl, Object>) keyFunction;
+            this.webClientFactory = (BiFunction<EndpointGroup, Object, WebClient>) webClientFactory;
+
+            cache = Caffeine.newBuilder()
+                            .maximumSize(8192) // TODO(trustin): Add a flag if there's demand for it.
+                            .build();
+        }
+
+        @Override
+        public WebClient apply(EndpointGroup endpointGroup, HttpUrl httpUrl) {
+            final Object key = keyFunction.apply(endpointGroup, httpUrl);
+            checkState(key != null, "keyFunction returned null.");
+            final WebClient webClient = cache.get(key, key2 -> webClientFactory.apply(endpointGroup, key2));
+            checkState(webClient != null, "webClientFactory returned null.");
+            return webClient;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("keyFunction", keyFunction)
+                              .add("webClientFactory", webClientFactory)
+                              .add("cache", cache)
+                              .toString();
+        }
     }
 }
