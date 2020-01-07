@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
 
@@ -233,10 +233,7 @@ public interface ServiceRequestContext extends RequestContext {
 
         // Put the oldCtx back before throwing an exception.
         RequestContextThreadLocal.set(oldCtx);
-        throw new IllegalStateException(
-                "Trying to call object wrapped with context " + this + ", but context is currently " +
-                "set to " + oldCtx + ". This means the callback was called from " +
-                "unexpected thread or forgetting to close previous context.");
+        throw newIllegalContextPushingException(this, oldCtx);
     }
 
     /**

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootAndOldCtx;
 import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootCtx;
@@ -352,10 +353,7 @@ public interface ClientRequestContext extends RequestContext {
 
         // Put the oldCtx back before throwing an exception.
         RequestContextThreadLocal.set(oldCtx);
-        throw new IllegalStateException(
-                "Trying to call object wrapped with context " + this + ", but context is currently " +
-                "set to " + oldCtx + ". This means the callback was called from " +
-                "unexpected thread or forgetting to close previous context.");
+        throw newIllegalContextPushingException(this, oldCtx);
     }
 
     /**

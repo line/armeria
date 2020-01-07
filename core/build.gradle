@@ -81,6 +81,8 @@ dependencies {
     mrJarVersions.each { version->
         // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
         "java${version}Implementation" files(sourceSets.main.output.classesDirs) { builtBy compileJava }
+
+        "java${version}TestImplementation" files(sourceSets.test.output.classesDirs) { builtBy compileTestJava }
     }
 
     // cglib

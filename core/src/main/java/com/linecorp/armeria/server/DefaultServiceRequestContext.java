@@ -667,7 +667,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             return strVal;
         }
 
-        final StringBuilder buf = new StringBuilder(96);
+        final StringBuilder buf = new StringBuilder(108);
+        buf.append("[S]");
 
         // Prepend the current channel information if available.
         final Channel ch = channel();
