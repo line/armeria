@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -48,7 +49,8 @@ class ArmeriaConfigurationUtilTest {
         final File yml = new File(resourceFilePath("armeria-settings.yaml"));
         final ArmeriaSettings armeriaSettings = configFactory.build(yml);
         armeriaSettings.setSsl(null);
-        final ServerBuilder serverBuilder = Server.builder();
+        final ServerBuilder serverBuilder = Server.builder()
+                .service("/foo", (ctx, req) -> HttpResponse.of(200));
         serverBuilder.tlsSelfSigned();
         ArmeriaConfigurationUtil.configureServer(serverBuilder, armeriaSettings);
         final Server server = serverBuilder.build();
