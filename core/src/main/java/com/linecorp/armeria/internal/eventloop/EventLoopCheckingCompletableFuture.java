@@ -16,30 +16,17 @@
 
 package com.linecorp.armeria.internal.eventloop;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.WeakHashMap;
+import static com.linecorp.armeria.internal.eventloop.EventLoopCheckingUtil.maybeLogIfOnEventLoop;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.common.Flags;
-
-import reactor.core.scheduler.NonBlocking;
-
 /**
  * A {@link CompletableFuture} that warns the user if they call a method that blocks the event loop.
  */
 public final class EventLoopCheckingCompletableFuture<T> extends CompletableFuture<T> {
-
-    private static final Logger logger = LoggerFactory.getLogger(EventLoopCheckingCompletableFuture.class);
-
-    private static final Set<Thread> REPORTED_THREADS = Collections.synchronizedSet(
-            Collections.newSetFromMap(new WeakHashMap<>()));
 
     @Override
     public T get() throws InterruptedException, ExecutionException {
@@ -58,23 +45,5 @@ public final class EventLoopCheckingCompletableFuture<T> extends CompletableFutu
     public T join() {
         maybeLogIfOnEventLoop();
         return super.join();
-    }
-
-    private static void maybeLogIfOnEventLoop() {
-        if (!Flags.reportBlockedEventLoop()) {
-            return;
-        }
-        final Thread thread = Thread.currentThread();
-        if (thread instanceof NonBlocking && REPORTED_THREADS.add(thread)) {
-            logger.warn("Calling a blocking method on CompletableFuture from an event loop or non-blocking " +
-                        "thread. You should never do this as this will usually result in significantly " +
-                        "reduced performance of the server, generally crippling its ability to handle high " +
-                        "load, or even result in deadlock which cannot be recovered from. Use " +
-                        "ServiceRequestContext.blockingExecutor to run this logic instead or switch to using " +
-                        "asynchronous methods like thenApply. If you really believe it is fine to block the " +
-                        "event loop like this, you can disable this log message by specifying the " +
-                        "-Dcom.linecorp.armeria.reportBlockedEventLoop=false system property",
-                        new IllegalStateException("Blocking event loop, don't do this."));
-        }
     }
 }
