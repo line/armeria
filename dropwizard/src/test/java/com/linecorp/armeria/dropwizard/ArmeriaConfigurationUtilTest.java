@@ -25,7 +25,6 @@ import javax.validation.Validator;
 
 import org.junit.jupiter.api.Test;
 
-import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.SessionProtocol;
@@ -51,7 +50,7 @@ class ArmeriaConfigurationUtilTest {
         armeriaSettings.setSsl(null);
         final ServerBuilder serverBuilder = Server.builder();
         serverBuilder.tlsSelfSigned();
-        ArmeriaConfigurationUtil.configureServer(serverBuilder, armeriaSettings, new MetricRegistry());
+        ArmeriaConfigurationUtil.configureServer(serverBuilder, armeriaSettings);
         final Server server = serverBuilder.build();
         assertThat(server.defaultHostname()).isEqualTo("host.name.com");
         assertThat(server.config().maxNumConnections()).isEqualTo(5000);

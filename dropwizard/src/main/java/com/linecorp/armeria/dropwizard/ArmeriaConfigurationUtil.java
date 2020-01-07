@@ -35,7 +35,6 @@ import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -49,10 +48,6 @@ import javax.net.ssl.TrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.json.MetricsModule;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -60,11 +55,8 @@ import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.dropwizard.ArmeriaSettings.AccessLog;
 import com.linecorp.armeria.dropwizard.ArmeriaSettings.Compression;
 import com.linecorp.armeria.dropwizard.ArmeriaSettings.Http1;
@@ -77,7 +69,6 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
@@ -100,14 +91,11 @@ final class ArmeriaConfigurationUtil {
     private static final Pattern DATA_SIZE_PATTERN = Pattern.compile("^([+]?\\d+)([a-zA-Z]{0,2})$");
 
     /**
-     * Sets graceful shutdown timeout, health check services and for the specified
-     * {@link ServerBuilder}.
+     * Configures the {@link ServerBuilder} with the specified {@code settings}.
      */
-    public static void configureServer(ServerBuilder serverBuilder, ArmeriaSettings settings,
-                                       MetricRegistry meterRegistry) {
+    public static void configureServer(ServerBuilder serverBuilder, ArmeriaSettings settings) {
         requireNonNull(serverBuilder, "serverBuilder");
         requireNonNull(settings, "settings");
-        requireNonNull(meterRegistry, "meterRegistry");
 
         if (settings.getGracefulShutdownQuietPeriodMillis() >= 0 &&
             settings.getGracefulShutdownTimeoutMillis() >= 0) {
@@ -140,13 +128,6 @@ final class ArmeriaConfigurationUtil {
             serverBuilder.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocols()));
         } else {
             configurePorts(serverBuilder, settings.getPorts());
-        }
-
-        final DropwizardMeterRegistry dropwizardMeterRegistry =
-                DropwizardMeterRegistries.newRegistry(meterRegistry);
-        serverBuilder.meterRegistry(dropwizardMeterRegistry);
-        if (settings.getMetricsPath() != null) {
-            addExposition(serverBuilder, settings.getMetricsPath(), dropwizardMeterRegistry);
         }
 
         if (settings.getSsl() != null) {
@@ -444,20 +425,6 @@ final class ArmeriaConfigurationUtil {
                                                 "] is neither a URL not a well-formed file path");
             }
         }
-    }
-
-    private static void addExposition(ServerBuilder server, String metricsPath,
-                                      DropwizardMeterRegistry meterRegistry) {
-        final MetricRegistry dropwizardRegistry =
-                meterRegistry.getDropwizardRegistry();
-        final ObjectMapper objectMapper = new ObjectMapper()
-                .enable(SerializationFeature.INDENT_OUTPUT)
-                .registerModule(new MetricsModule(TimeUnit.SECONDS, TimeUnit.MILLISECONDS, true));
-
-        server.route()
-              .get(metricsPath)
-              .build((ctx, req) -> HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                                   objectMapper.writeValueAsBytes(dropwizardRegistry)));
     }
 
     private static void configureCompression(ServerBuilder serverBuilder, Compression compression) {

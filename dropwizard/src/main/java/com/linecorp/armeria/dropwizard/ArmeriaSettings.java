@@ -48,7 +48,6 @@ import io.netty.handler.ssl.SslProvider;
 /**
  * Settings for armeria servers, e.g.,
  * <pre>{@code
- * metricsPath: "/internal/metrics"
  * gracefulShutdownQuietPeriodMillis: 5000
  * gracefulShutdownTimeoutMillis: 40000
  * maxRequestLength: 10485760
@@ -108,13 +107,6 @@ class ArmeriaSettings {
      * port 8080 for HTTP (not SSL).
      */
     private List<Port> ports = new ArrayList<>();
-
-    /**
-     * The path to serve a json dump of instantaneous metrics. Should not be
-     * exposed to the external network. If not set, metrics will not be exported
-     * on an http path (any registered reporters will still function).
-     */
-    private String metricsPath = "/internal/metrics";
 
     /**
      * The number of milliseconds to wait after the last processed request to
@@ -214,15 +206,6 @@ class ArmeriaSettings {
      */
     void setPorts(List<Port> ports) {
         this.ports = ports;
-    }
-
-    @Nullable
-    String getMetricsPath() {
-        return metricsPath;
-    }
-
-    void setMetricsPath(@Nullable String metricsPath) {
-        this.metricsPath = metricsPath;
     }
 
     long getGracefulShutdownQuietPeriodMillis() {

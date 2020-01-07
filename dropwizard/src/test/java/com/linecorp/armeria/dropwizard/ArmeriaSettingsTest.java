@@ -46,7 +46,6 @@ class ArmeriaSettingsTest {
         final File yml = new File(resourceFilePath("armeria-settings.yaml"));
         final ArmeriaSettings armeriaSettings = configFactory.build(yml);
 
-        assertThat(armeriaSettings.getMetricsPath()).isEqualTo("/internal/metrics");
         assertThat(armeriaSettings.getGracefulShutdownQuietPeriodMillis()).isEqualTo(5000);
         assertThat(armeriaSettings.getGracefulShutdownTimeoutMillis()).isEqualTo(40000);
 

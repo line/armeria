@@ -125,7 +125,6 @@ Server Properties
 
     server:
       type: armeria
-      metricsPath: "/internal/metrics"
       gracefulShutdownQuietPeriodMillis: 5000
       gracefulShutdownTimeoutMillis: 40000
       maxRequestLength: 10000000
@@ -195,9 +194,6 @@ passed to the :api:`ArmeriaBundle`.
 +------------------------+---------------------------------------+-------------------------------------------------+
 | ``server``             | ``defaultHostname``                   | The default hostname of the default             |
 |                        |                                       | :api:`VirtualHostBuilder`                       |
-+------------------------+---------------------------------------+-------------------------------------------------+
-| ``server``             | ``metricsPath``                       | The path to serve a json dump of instantaneous  |
-|                        |                                       | metrics.                                        |
 +------------------------+---------------------------------------+-------------------------------------------------+
 | ``server``             | ``gracefulShutdownQuietPeriodMillis`` | The number of milliseconds to wait after the    |
 |                        |                                       | last processed request to be considered safe    |

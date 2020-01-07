@@ -1,6 +1,5 @@
 server:
   type: armeria
-  metricsPath: "/internal/metrics"
   gracefulShutdownQuietPeriodMillis: 5000
   gracefulShutdownTimeoutMillis: 40000
   maxRequestLength: 10000000

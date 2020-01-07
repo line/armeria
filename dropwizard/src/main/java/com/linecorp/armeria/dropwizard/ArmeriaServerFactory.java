@@ -36,6 +36,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.jetty.JettyService;
@@ -122,8 +123,10 @@ class ArmeriaServerFactory extends AbstractServerFactory {
 
     private ServerBuilder buildServerBuilder(Server server, MetricRegistry metricRegistry) {
         final ServerBuilder serverBuilder = com.linecorp.armeria.server.Server.builder();
+        serverBuilder.meterRegistry(DropwizardMeterRegistries.newRegistry(metricRegistry));
+
         if (armeriaSettings != null) {
-            ArmeriaConfigurationUtil.configureServer(serverBuilder, armeriaSettings, metricRegistry);
+            ArmeriaConfigurationUtil.configureServer(serverBuilder, armeriaSettings);
         } else {
             logger.warn("Armeria configuration was null. ServerBuilder is not customized from it.");
         }
