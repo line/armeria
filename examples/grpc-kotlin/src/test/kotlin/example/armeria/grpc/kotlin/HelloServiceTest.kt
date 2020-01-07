@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.server.Server
 import example.armeria.grpc.kotlin.Hello.HelloReply
+import example.armeria.grpc.kotlin.Hello.HelloRequest
 import example.armeria.grpc.kotlin.HelloServiceGrpc.HelloServiceBlockingStub
 import example.armeria.grpc.kotlin.HelloServiceGrpc.HelloServiceFutureStub
 import example.armeria.grpc.kotlin.HelloServiceGrpc.HelloServiceStub
@@ -25,14 +26,15 @@ class HelloServiceTest {
     @Test
     fun reply() {
         val helloService = Clients.newClient(uri(), HelloServiceBlockingStub::class.java)
-        assertThat(helloService.hello(HelloMessageFactory.newHelloRequest("Armeria")).message).isEqualTo("Hello, Armeria!")
+        assertThat(helloService.hello(HelloRequest.newBuilder().setName("Armeria").build()).message)
+                .isEqualTo("Hello, Armeria!")
     }
 
     // Should never reach here.
     @Test
     fun replyWithDelay() {
         val helloService = Clients.newClient(uri(), HelloServiceFutureStub::class.java)
-        val future = helloService.lazyHello(HelloMessageFactory.newHelloRequest("Armeria"))
+        val future = helloService.lazyHello(HelloRequest.newBuilder().setName("Armeria").build())
         val completed = AtomicBoolean()
         Futures.addCallback(future, object : FutureCallback<HelloReply> {
             override fun onSuccess(result: HelloReply?) {
@@ -52,7 +54,7 @@ class HelloServiceTest {
     fun replyFromServerSideBlockingCall() {
         val helloService = Clients.newClient(uri(), HelloServiceBlockingStub::class.java)
         val watch = Stopwatch.createStarted()
-        assertThat(helloService.blockingHello(HelloMessageFactory.newHelloRequest("Armeria")).message)
+        assertThat(helloService.blockingHello(HelloRequest.newBuilder().setName("Armeria").build()).message)
                 .isEqualTo("Hello, Armeria!")
         assertThat(watch.elapsed(TimeUnit.SECONDS)).isGreaterThanOrEqualTo(3)
     }
@@ -62,7 +64,7 @@ class HelloServiceTest {
     fun lotsOfReplies() {
         val completed = AtomicBoolean()
         helloService.lotsOfReplies(
-                HelloMessageFactory.newHelloRequest("Armeria"),
+                HelloRequest.newBuilder().setName("Armeria").build(),
                 object : StreamObserver<HelloReply> {
                     private var sequence = 0
                     override fun onNext(value: HelloReply) {
@@ -86,7 +88,7 @@ class HelloServiceTest {
         val replies = LinkedBlockingQueue<HelloReply>()
         val completed = AtomicBoolean()
         helloService.lotsOfReplies(
-                HelloMessageFactory.newHelloRequest("Armeria"),
+                HelloRequest.newBuilder().setName("Armeria").build(),
                 object : StreamObserver<HelloReply> {
                     override fun onNext(value: HelloReply) {
                         replies.offer(value)
@@ -130,7 +132,7 @@ class HelloServiceTest {
             }
         })
         for (name in names) {
-            request.onNext(HelloMessageFactory.newHelloRequest(name))
+            request.onNext(HelloRequest.newBuilder().setName(name).build())
         }
         request.onCompleted()
         await().untilTrue(completed)
@@ -156,7 +158,7 @@ class HelloServiceTest {
             }
         })
         for (name in names) {
-            request.onNext(HelloMessageFactory.newHelloRequest(name))
+            request.onNext(HelloRequest.newBuilder().setName(name).build())
         }
         request.onCompleted()
         await().untilTrue(completed)

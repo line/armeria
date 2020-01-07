@@ -15,14 +15,14 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
      * Sends a [HelloReply] immediately when receiving a request.
      */
     override fun hello(request: HelloRequest, responseObserver: StreamObserver<HelloReply>) {
-        responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${request.name}!"))
+        responseObserver.onNext(buildReply(toMessage(request.name)))
         responseObserver.onCompleted()
     }
 
     override fun lazyHello(request: HelloRequest, responseObserver: StreamObserver<HelloReply>) {
         // You can use the event loop for scheduling a task.
         ServiceRequestContext.current().contextAwareEventLoop().schedule({
-            responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${request.name}!"))
+            responseObserver.onNext(buildReply(toMessage(request.name)))
             responseObserver.onCompleted()
         }, 3, TimeUnit.SECONDS)
     }
@@ -47,7 +47,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
                 Thread.sleep(3000)
             } catch (ignored: Exception) { // Do nothing.
             }
-            responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${request.name}!"))
+            responseObserver.onNext(buildReply(toMessage(request.name)))
             responseObserver.onCompleted()
         }
     }
@@ -67,7 +67,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
                 .subscribe({
                     // Confirm this callback is being executed on the RequestContext-aware executor.
                     ServiceRequestContext.current()
-                    responseObserver.onNext(HelloMessageFactory.newHelloReply(it))
+                    responseObserver.onNext(buildReply(it))
                 },
                 {
                     // Confirm this callback is being executed on the RequestContext-aware executor.
@@ -97,7 +97,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
             }
 
             override fun onCompleted() {
-                responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${names.joinToString()}!"))
+                responseObserver.onNext(buildReply(toMessage(names.joinToString())))
                 responseObserver.onCompleted()
             }
         }
@@ -110,7 +110,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
     override fun bidiHello(responseObserver: StreamObserver<HelloReply>): StreamObserver<HelloRequest> {
         return object : StreamObserver<HelloRequest> {
             override fun onNext(value: HelloRequest) { // Respond to every request received.
-                responseObserver.onNext(HelloMessageFactory.newHelloReply("Hello, ${value.name}!"))
+                responseObserver.onNext(buildReply(toMessage(value.name)))
             }
 
             override fun onError(t: Throwable) {
@@ -121,5 +121,12 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
                 responseObserver.onCompleted()
             }
         }
+    }
+
+    companion object {
+
+        private fun buildReply(message: String): HelloReply = HelloReply.newBuilder().setMessage(message).build()
+
+        private fun toMessage(message: String): String = "Hello, $message!"
     }
 }
