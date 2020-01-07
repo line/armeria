@@ -41,7 +41,7 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
     /**
      * Creates a new builder.
      */
-    public static PartialHealthCheckStrategyBuilder builder() {
+    static PartialHealthCheckStrategyBuilder builder() {
         return new PartialHealthCheckStrategyBuilder();
     }
 
@@ -139,6 +139,12 @@ final class PartialHealthCheckStrategy implements HealthCheckStrategy {
         int newSelectedEndpointsCount = 0;
         final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < count && !availableCandidates.isEmpty(); i++) {
+            if (count - i <= availableCandidates.size()) {
+                selectedEndpoints.addAll(availableCandidates);
+                newSelectedEndpointsCount += availableCandidates.size();
+                break;
+            }
+
             newSelectedEndpointsCount++;
             selectedEndpoints.add(availableCandidates.remove(random.nextInt(availableCandidates.size())));
         }
