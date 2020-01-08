@@ -106,6 +106,16 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
         return new HttpHealthCheckerFactory(path, useGet);
     }
 
+    @Override
+    public HealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
+        return (HealthCheckedEndpointGroupBuilder) super.maxEndpointRatio(maxEndpointRatio);
+    }
+
+    @Override
+    public HealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
+        return (HealthCheckedEndpointGroupBuilder) super.maxEndpointCount(maxEndpointCount);
+    }
+
     private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {
 
         private final String path;

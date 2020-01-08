@@ -28,7 +28,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.RequestContext;
 
-class RequestContextAwareCompletableFuture<T> extends AbstractRequestContextAwareCompletableFuture<T> {
+final class RequestContextAwareCompletableFuture<T> extends AbstractRequestContextAwareCompletableFuture<T> {
 
     RequestContextAwareCompletableFuture(RequestContext requestContext) {
         super(requestContext);

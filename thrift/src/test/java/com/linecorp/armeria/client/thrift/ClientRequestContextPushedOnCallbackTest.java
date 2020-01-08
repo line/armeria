@@ -27,9 +27,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
@@ -44,57 +44,59 @@ class ClientRequestContextPushedOnCallbackTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/hello", THttpService.of((HelloService.AsyncIface) (name, resultHandler)
                     -> resultHandler.onComplete("Hello, " + name + '!')));
+            sb.service("/exception", THttpService.of((HelloService.AsyncIface) (name, resultHandler)
+                    -> resultHandler.onError(new Exception())));
         }
     };
 
     @Test
     void pushedContextOnAsyncMethodCallback() throws Exception {
         final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
-        final AsyncIface client =
-                Clients.builder(server.uri(BINARY, "/hello"))
-                       .rpcDecorator((delegate, ctx, req) -> {
-                           ctxHolder.set(ctx);
-                           return delegate.execute(ctx, req);
-                       })
-                       .build(AsyncIface.class);
+        final AsyncIface client = Clients.builder(server.uri(BINARY, "/hello")).build(AsyncIface.class);
 
-        final AtomicReference<ClientRequestContext> ctxHolder2 = new AtomicReference<>();
+        final ClientRequestContext ctx;
         final CountDownLatch latch = new CountDownLatch(1);
-        client.hello("foo", new AsyncMethodCallback<String>() {
-            @Override
-            public void onComplete(String response) {
-                assertThat(response).isEqualTo("Hello, foo!");
-                ctxHolder2.set(RequestContext.currentOrNull());
-                latch.countDown();
-            }
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.hello("foo", new AsyncMethodCallback<String>() {
+                @Override
+                public void onComplete(String response) {
+                    assertThat(response).isEqualTo("Hello, foo!");
+                    ctxHolder.set(RequestContext.currentOrNull());
+                    latch.countDown();
+                }
 
-            @Override
-            public void onError(Exception exception) {}
-        });
+                @Override
+                public void onError(Exception exception) {}
+            });
+            ctx = captor.get();
+        }
 
         latch.await();
-        assertThat(ctxHolder.get()).isEqualTo(ctxHolder2.get());
+        assertThat(ctx).isSameAs(ctxHolder.get());
     }
 
     @Test
-    void pushedContextOnRpcResponseCallback() throws Exception {
+    void pushedContextOnAsyncMethodCallback_onError() throws Exception {
         final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
-        final THttpClient client =
-                Clients.builder(server.uri(BINARY, "/"))
-                       .rpcDecorator((delegate, ctx, req) -> {
-                           ctxHolder.set(ctx);
-                           return delegate.execute(ctx, req);
-                       })
-                       .build(THttpClient.class);
+        final AsyncIface client = Clients.builder(server.uri(BINARY, "/exception")).build(AsyncIface.class);
 
-        final AtomicReference<ClientRequestContext> ctxHolder2 = new AtomicReference<>();
-        final RpcResponse rpcRes = client.execute("/hello", AsyncIface.class, "hello", "foo");
-        rpcRes.join();
-        rpcRes.handle((res, cause) -> {
-            assertThat(res).isEqualTo("Hello, foo!");
-            ctxHolder2.set(RequestContext.current());
-            return null;
-        }).toCompletableFuture().join();
-        assertThat(ctxHolder.get()).isEqualTo(ctxHolder2.get());
+        final ClientRequestContext ctx;
+        final CountDownLatch latch = new CountDownLatch(1);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.hello("foo", new AsyncMethodCallback<String>() {
+                @Override
+                public void onComplete(String response) {}
+
+                @Override
+                public void onError(Exception exception) {
+                    ctxHolder.set(RequestContext.currentOrNull());
+                    latch.countDown();
+                }
+            });
+            ctx = captor.get();
+        }
+
+        latch.await();
+        assertThat(ctx).isSameAs(ctxHolder.get());
     }
 }

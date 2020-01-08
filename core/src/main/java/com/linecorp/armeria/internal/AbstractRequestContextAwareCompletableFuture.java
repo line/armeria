@@ -16,9 +16,13 @@
 
 package com.linecorp.armeria.internal;
 
+import static com.linecorp.armeria.internal.eventloop.EventLoopCheckingUtil.maybeLogIfOnEventLoop;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -48,6 +52,25 @@ public abstract class AbstractRequestContextAwareCompletableFuture<T> extends Co
 
     protected RequestContext ctx() {
         return ctx;
+    }
+
+    @Override
+    public T get() throws InterruptedException, ExecutionException {
+        maybeLogIfOnEventLoop();
+        return super.get();
+    }
+
+    @Override
+    public T get(long timeout, TimeUnit unit)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        maybeLogIfOnEventLoop();
+        return super.get(timeout, unit);
+    }
+
+    @Override
+    public T join() {
+        maybeLogIfOnEventLoop();
+        return super.join();
     }
 
     protected Runnable makeContextAwareLoggingException(Runnable action) {

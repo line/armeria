@@ -69,6 +69,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
+    private static final ThreadLocal<Boolean> isRefreshingContexts = new ThreadLocal<>();
 
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
@@ -99,6 +100,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final Backoff retryBackoff;
     private final Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator;
     private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory;
+    @VisibleForTesting
+    final HealthCheckStrategy healthCheckStrategy;
 
     private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
     @VisibleForTesting
@@ -112,7 +115,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             EndpointGroup delegate, ClientFactory clientFactory,
             SessionProtocol protocol, int port, Backoff retryBackoff,
             Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator,
-            Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory) {
+            Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
+            HealthCheckStrategy healthCheckStrategy) {
 
         super(requireNonNull(delegate, "delegate").selectionStrategy());
 
@@ -123,6 +127,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
         this.clientConfigurator = requireNonNull(clientConfigurator, "clientConfigurator");
         this.checkerFactory = requireNonNull(checkerFactory, "checkerFactory");
+        this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
 
         delegate.addListener(this::updateCandidates);
         updateCandidates(delegate.initialEndpointsFuture().join());
@@ -141,17 +146,24 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void updateCandidates(List<Endpoint> candidates) {
+        healthCheckStrategy.updateCandidates(candidates);
+        refreshContexts();
+    }
+
+    private void refreshContexts() {
         synchronized (contexts) {
             if (closed) {
                 return;
             }
+
+            final List<Endpoint> newSelectedEndpoints = healthCheckStrategy.getSelectedEndpoints();
 
             // Stop the health checkers whose endpoints disappeared and destroy their contexts.
             for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i = contexts.entrySet()
                                                                                               .iterator();
                  i.hasNext();) {
                 final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
-                if (candidates.contains(e.getKey())) {
+                if (newSelectedEndpoints.contains(e.getKey())) {
                     // Not a removed endpoint.
                     continue;
                 }
@@ -161,14 +173,19 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             }
 
             // Start the health checkers with new contexts for newly appeared endpoints.
-            for (Endpoint e : candidates) {
-                if (contexts.containsKey(e)) {
-                    // Not a new endpoint.
-                    continue;
+            isRefreshingContexts.set(Boolean.TRUE);
+            try {
+                for (Endpoint e : newSelectedEndpoints) {
+                    if (contexts.containsKey(e)) {
+                        // Not a new endpoint.
+                        continue;
+                    }
+                    final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
+                    ctx.init(checkerFactory.apply(ctx));
+                    contexts.put(e, ctx);
                 }
-                final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
-                ctx.init(checkerFactory.apply(ctx));
-                contexts.put(e, ctx);
+            } finally {
+                isRefreshingContexts.remove();
             }
         }
     }
@@ -353,6 +370,11 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
             if (updated) {
                 refreshEndpoints();
+            }
+
+            if (healthCheckStrategy.updateHealth(originalEndpoint, health) &&
+                isRefreshingContexts.get() == null) {
+                refreshContexts();
             }
 
             initialCheckFuture.complete(null);
