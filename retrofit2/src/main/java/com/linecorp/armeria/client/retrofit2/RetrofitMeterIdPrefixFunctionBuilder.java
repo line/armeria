@@ -64,10 +64,10 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
 
     /**
      * Renames a tag in generated metrics that indicate service name. Default name for the tag {@code service}.
+     * Unless service name set with {@link #withServiceName} in place of service name
+     * would be used name of the retrofit client service class. In case retrofit client service class
+     * cannot be defined {@code UNKNOWN} would be used.
      *
-     * @implNote Unless service name set with {@link #withServiceName} in place of service name
-     *           would be used name of the retrofit client service class. In case retrofit client service class
-     *           cannot be defined {@code UNKNOWN} would be used.
      * @param serviceTagName the name of the tag to be added, e.g.: {@code "serviceName"}
      */
     public RetrofitMeterIdPrefixFunctionBuilder withServiceTag(String serviceTagName) {
