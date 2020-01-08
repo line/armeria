@@ -99,8 +99,8 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * @deprecated Use {@link Clients#builder(String, EndpointGroup)}.
      */
     @Deprecated
-    public ClientBuilder(String scheme, Endpoint endpointGroup) {
-        this(Scheme.parse(requireNonNull(scheme, "scheme")), requireNonNull(endpointGroup, "endpoint"));
+    public ClientBuilder(String scheme, Endpoint endpoint) {
+        this(Scheme.parse(requireNonNull(scheme, "scheme")), requireNonNull(endpoint, "endpoint"));
     }
 
     /**
@@ -110,8 +110,8 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * @deprecated Use {@link Clients#builder(Scheme, EndpointGroup)}.
      */
     @Deprecated
-    public ClientBuilder(Scheme scheme, Endpoint endpointGroup) {
-        this(null, requireNonNull(scheme, "scheme"), null, requireNonNull(endpointGroup, "endpoint"));
+    public ClientBuilder(Scheme scheme, Endpoint endpoint) {
+        this(null, requireNonNull(scheme, "scheme"), null, requireNonNull(endpoint, "endpoint"));
     }
 
     /**
@@ -121,8 +121,8 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * @deprecated Use {@link Clients#builder(SessionProtocol, EndpointGroup)}.
      */
     @Deprecated
-    public ClientBuilder(SessionProtocol protocol, Endpoint endpointGroup) {
-        this(null, null, requireNonNull(protocol, "protocol"), requireNonNull(endpointGroup, "endpoint"));
+    public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
+        this(null, null, requireNonNull(protocol, "protocol"), requireNonNull(endpoint, "endpoint"));
     }
 
     ClientBuilder(@Nullable URI uri, @Nullable Scheme scheme, @Nullable SessionProtocol protocol,
