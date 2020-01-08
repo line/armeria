@@ -15,10 +15,12 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -32,14 +34,18 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 import io.netty.channel.EventLoopGroup;
 
 class HealthCheckedEndpointGroupTest {
+    private static final double UNHEALTHY = 0;
+    private static final double HEALTHY = 1;
 
     @Test
     void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
@@ -145,9 +151,78 @@ class HealthCheckedEndpointGroupTest {
         }
     }
 
+    @Test
+    void updatesSelectedCandidatesNoStackOverflowEvenUpdatesOnEqualThread() {
+        final AtomicReference<HealthCheckerContext> firstSelectedCandidates = new AtomicReference<>();
+        final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
+            if (firstSelectedCandidates.get() == null) {
+                firstSelectedCandidates.set(ctx);
+            }
+
+            ctx.updateHealth(HEALTHY);
+            return () -> CompletableFuture.completedFuture(null);
+        };
+
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+        final Endpoint candidate2 = Endpoint.of("candidate2");
+
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(candidate1, candidate2);
+
+        try (HealthCheckedEndpointGroup group = new HealthCheckedEndpointGroup(delegate,
+                                                                   ClientFactory.ofDefault(),
+                                                                   SessionProtocol.HTTP,
+                                                                   80,
+                                                                   DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                                                   Function.identity(),
+                                                                   checkFactory,
+                                                                   new InfinityUpdateHealthCheckStrategy())) {
+
+            /*
+            Because of InfinityUpdateHealthCheckStrategy always returns all of candidates,
+            group.healthyEndpoints contains all of candidates.
+             */
+            assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
+
+            /*
+            Because of InfinityUpdateHealthCheckStrategy always returns update signal,
+            if call healthCheckEndpointGroup.refreshContexts() even equal thread,
+            updateHealth() makes stack overflow by infinity healthCheckEndpointGroup.refreshContexts() call.
+             */
+            firstSelectedCandidates.get().updateHealth(UNHEALTHY);
+            assertThat(group.healthyEndpoints).containsOnly(candidate2);
+        }
+    }
+
     private static final class MockEndpointGroup extends DynamicEndpointGroup {
         void set(Endpoint... endpoints) {
             setEndpoints(ImmutableList.copyOf(endpoints));
+        }
+    }
+
+    private static final class InfinityUpdateHealthCheckStrategy implements HealthCheckStrategy {
+        private List<Endpoint> candidates;
+        private List<Endpoint> selectedCandidates;
+
+        InfinityUpdateHealthCheckStrategy() {
+            candidates = new ArrayList<>();
+            selectedCandidates = ImmutableList.copyOf(candidates);
+        }
+
+        @Override
+        public void updateCandidates(List<Endpoint> candidates) {
+            this.candidates = candidates;
+            selectedCandidates = ImmutableList.copyOf(candidates);
+        }
+
+        @Override
+        public List<Endpoint> getSelectedEndpoints() {
+            return selectedCandidates;
+        }
+
+        @Override
+        public boolean updateHealth(Endpoint endpoint, double health) {
+            return true;
         }
     }
 }

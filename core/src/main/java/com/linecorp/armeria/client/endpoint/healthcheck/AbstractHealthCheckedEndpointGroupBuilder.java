@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
@@ -45,6 +47,10 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     private ClientFactory clientFactory = ClientFactory.ofDefault();
     private Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator = Function.identity();
     private int port;
+    @Nullable
+    private Double maxEndpointRatio;
+    @Nullable
+    private Integer maxEndpointCount;
 
     /**
      * Creates a new {@link AbstractHealthCheckedEndpointGroupBuilder}.
@@ -156,11 +162,59 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     }
 
     /**
+     * Sets the maximum endpoint ratio of target selected candidates.
+     * @see PartialHealthCheckStrategyBuilder#maxEndpointRatio(double)
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
+        if (maxEndpointCount != null) {
+            throw new IllegalArgumentException("Maximum endpoint count is already set.");
+        }
+
+        checkArgument(maxEndpointRatio > 0 && maxEndpointRatio <= 1.0,
+                      "maxEndpointRatio: %s (expected: 0.0 < maxEndpointRatio <= 1.0)",
+                      maxEndpointRatio);
+
+        this.maxEndpointRatio = maxEndpointRatio;
+        return this;
+    }
+
+    /**
+     * Sets the maximum endpoint count of target selected candidates.
+     * @see PartialHealthCheckStrategyBuilder#maxEndpointCount(int)
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
+        if (maxEndpointRatio != null) {
+            throw new IllegalArgumentException("Maximum endpoint ratio is already set.");
+        }
+
+        checkArgument(maxEndpointCount > 0, "maxEndpointCount: %s (expected: > 0)", maxEndpointCount);
+
+        this.maxEndpointCount = maxEndpointCount;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
     public HealthCheckedEndpointGroup build() {
+        final HealthCheckStrategy healthCheckStrategy;
+        if (maxEndpointCount != null) {
+            healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
+                                            .maxEndpointCount(maxEndpointCount)
+                                            .build();
+        } else {
+            if (maxEndpointRatio == null || maxEndpointRatio == 1.0) {
+                healthCheckStrategy = new AllHealthCheckStrategy();
+            } else {
+                healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
+                                                .maxEndpointRatio(maxEndpointRatio)
+                                                .build();
+            }
+        }
+
         return new HealthCheckedEndpointGroup(delegate, clientFactory, protocol, port,
-                                              retryBackoff, configurator, newCheckerFactory());
+                                              retryBackoff, configurator, newCheckerFactory(),
+                                              healthCheckStrategy);
     }
 
     /**
