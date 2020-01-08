@@ -75,7 +75,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
-    private final PingHandler pingHandler = new DefaultPingHandler();
+    private final PingHandler pingHandler;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme) {
         this.cfg = cfg;
@@ -85,6 +85,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
         goAwayHandler = new Http2GoAwayHandler();
+        pingHandler = new DefaultPingHandler(writer);
     }
 
     Http2GoAwayHandler goAwayHandler() {

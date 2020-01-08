@@ -21,7 +21,7 @@ import io.netty.handler.codec.http2.Http2Exception;
 
 interface PingHandler {
 
-    void schedulePingWrite(ChannelHandlerContext ctx);
+    void start(ChannelHandlerContext ctx);
 
     /**
      * Handles when a {@code PING} is received with {@code ACK} flag set.
