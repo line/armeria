@@ -21,7 +21,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.reactivex.Observable;
+import io.reactivex.Flowable;
 import io.reactivex.Scheduler;
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
@@ -42,7 +42,7 @@ public class MainService implements HttpService {
 
         // This logic mimics using a blocking method, which would usually be something like a MySQL
         // database query using JDBC.
-        final Observable<Long> fetchFromFakeDb =
+        final Flowable<Long> fetchNumsFromFakeDb =
                 Single.fromCallable(
                         () -> {
                             // The context is mounted in a thread-local, meaning it is available to all
@@ -57,43 +57,50 @@ public class MainService implements HttpService {
                       // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
                       // inside the logic (e.g., your DB call will be traced!).
                       .subscribeOn(Schedulers.from(ctx.blockingTaskExecutor()))
-                      // Make sure callbacks still stay on the context executor using observeOn.
+                      // Because we used subscribeOn without the context aware scheduler, we need to make sure
+                      // callbacks run on the context executor using observeOn.
                       .observeOn(contextAwareScheduler)
-                      .flattenAsObservable(l -> l);
+                      .flattenAsFlowable(l -> l);
 
-        final Single<HttpResponse> response = FutureConverter
-                .toSingle(req.aggregate())
-                // Unless you know what you're doing, always use subscribeOn with the context executor to have
-                // the context mounted and stay on a single thread to reduce concurrency issues.
-                .subscribeOn(contextAwareScheduler)
-                .flatMapObservable(request -> {
-                    // The context is mounted in a thread-local, meaning it is available to all logic
-                    // such as tracing.
-                    checkState(ServiceRequestContext.current() == ctx);
-                    checkState(ctx.eventLoop().inEventLoop());
+        final Flowable<Long> extractNumsFromRequest =
+                FutureConverter.toSingle(req.aggregate())
+                               // Unless you know what you're doing, always use subscribeOn with the context
+                               // executor to have the context mounted and stay on a single thread to reduce
+                               // concurrency issues.
+                               .subscribeOn(contextAwareScheduler)
+                               .flatMapPublisher(request -> {
+                                   // The context is mounted in a thread-local, meaning it is available to all
+                                   // logic such as tracing.
+                                   checkState(ServiceRequestContext.current() == ctx);
+                                   checkState(ctx.eventLoop().inEventLoop());
 
-                    final List<Long> nums = new ArrayList<>();
-                    for (String token : Iterables.concat(
-                            NUM_SPLITTER.split(request.path().substring(1)),
-                            NUM_SPLITTER.split(request.contentUtf8()))) {
-                        nums.add(Long.parseLong(token));
-                    }
+                                   final List<Long> nums = new ArrayList<>();
+                                   for (String token : Iterables.concat(
+                                           NUM_SPLITTER.split(request.path().substring(1)),
+                                           NUM_SPLITTER.split(request.contentUtf8()))) {
+                                       nums.add(Long.parseLong(token));
+                                   }
 
-                    return Observable.fromIterable(nums);
-                })
-                .mergeWith(fetchFromFakeDb)
-                .flatMapSingle(num -> {
-                    // The context is mounted in a thread-local, meaning it is available to all logic
-                    // such as tracing.
-                    checkState(ServiceRequestContext.current() == ctx);
-                    checkState(ctx.eventLoop().inEventLoop());
+                                   return Flowable.fromIterable(nums);
+                               });
 
-                    return FutureConverter.toSingle(backendClient.get("/square/" + num).aggregate());
-                })
-                .map(AggregatedHttpResponse::contentUtf8)
-                .collectInto(new StringBuilder(), (current, item) -> current.append(item).append('\n'))
-                .map(content -> HttpResponse.of(content.toString()))
-                .onErrorReturn(HttpResponse::ofFailure);
+        final Single<HttpResponse> response =
+                Flowable.concatArrayEager(extractNumsFromRequest, fetchNumsFromFakeDb)
+                        // Unless you know what you're doing, always use subscribeOn with the context executor
+                        // to have the context mounted and stay on a single thread to reduce concurrency issues.
+                        .subscribeOn(contextAwareScheduler)
+                        .flatMapSingle(num -> {
+                            // The context is mounted in a thread-local, meaning it is available to all logic
+                            // such as tracing.
+                            checkState(ServiceRequestContext.current() == ctx);
+                            checkState(ctx.eventLoop().inEventLoop());
+
+                            return FutureConverter.toSingle(backendClient.get("/square/" + num).aggregate());
+                        })
+                        .map(AggregatedHttpResponse::contentUtf8)
+                        .collectInto(new StringBuilder(), (current, item) -> current.append(item).append('\n'))
+                        .map(content -> HttpResponse.of(content.toString()))
+                        .onErrorReturn(HttpResponse::ofFailure);
 
         return HttpResponse.from(FutureConverter.toCompletableFuture(response));
     }
