@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class THttpClientInvocationHandler
         extends AbstractUnwrappable<THttpClient> implements InvocationHandler, ClientBuilderParams {
@@ -136,8 +137,8 @@ final class THttpClientInvocationHandler
 
                 final ClientRequestContext ctx = captor.get();
                 if (callback != null) {
-                    reply.handle(ctx.makeContextAware((res, cause) -> {
-                        try {
+                    reply.handle((res, cause) -> {
+                        try (SafeCloseable ignored = ctx.push()) {
                             if (cause != null) {
                                 invokeOnError(callback, cause);
                             } else {
@@ -147,7 +148,7 @@ final class THttpClientInvocationHandler
                             CompletionActions.log(e);
                         }
                         return null;
-                    }));
+                    });
 
                     return null;
                 } else {
@@ -161,10 +162,19 @@ final class THttpClientInvocationHandler
                 if (callback != null) {
                     final ClientRequestContext ctx = captor.getOrNull();
                     if (ctx != null) {
-                        ctx.makeContextAware(() -> invokeOnError(callback, cause)).run();
+                        try (SafeCloseable ignored = ctx.push()) {
+                            invokeOnError(callback, cause);
+                        } catch (Exception e) {
+                            CompletionActions.log(e);
+                        }
                         return null;
                     }
-                    invokeOnError(callback, cause);
+
+                    try {
+                        invokeOnError(callback, cause);
+                    } catch (Exception e) {
+                        CompletionActions.log(e);
+                    }
                     return null;
                 } else {
                     throw cause;

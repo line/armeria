@@ -123,7 +123,7 @@ final class ClientThreadLocalState {
         final List<ClientRequestContext> captured = new ArrayList<>();
 
         @Nullable
-        private final DefaultClientRequestContextCaptor oldCaptor;
+        private DefaultClientRequestContextCaptor oldCaptor;
 
         DefaultClientRequestContextCaptor(@Nullable DefaultClientRequestContextCaptor oldCaptor) {
             this.oldCaptor = oldCaptor;
@@ -166,6 +166,7 @@ final class ClientThreadLocalState {
         @Override
         public void close() {
             pendingContextCaptor = oldCaptor;
+            oldCaptor = null;
             maybeRemoveThreadLocal();
         }
     }
