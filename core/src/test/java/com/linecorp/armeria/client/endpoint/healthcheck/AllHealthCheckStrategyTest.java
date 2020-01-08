@@ -36,7 +36,7 @@ public class AllHealthCheckStrategyTest {
         final Random random = new Random();
 
         return IntStream.range(0, size)
-                        .mapToObj(i -> Endpoint.ofGroup("dummy" + random.nextInt()))
+                        .mapToObj(i -> Endpoint.of("dummy" + random.nextInt()))
                         .collect(Collectors.toList());
     }
 
@@ -87,7 +87,7 @@ public class AllHealthCheckStrategyTest {
     @Test
     void updateHealthByDisappearedCandidate() {
         strategy.updateCandidates(candidates);
-        final Endpoint disappearedCandidate = Endpoint.ofGroup("dummy");
+        final Endpoint disappearedCandidate = Endpoint.of("dummy");
 
         boolean actUpdateRes = strategy.updateHealth(disappearedCandidate, 0);
         assertThat(actUpdateRes).isTrue();

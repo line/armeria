@@ -117,8 +117,8 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
             }
         }
 
-        throw new IllegalArgumentException("scheme : " + scheme + " (expected: one of " +
-                                           ImmutableList.copyOf(SessionProtocol.values()) + ')');
+        throw new IllegalArgumentException("scheme : " + scheme +
+                                           " (expected: one of " + SUPPORTED_PROTOCOLS + ')');
     }
 
     /**

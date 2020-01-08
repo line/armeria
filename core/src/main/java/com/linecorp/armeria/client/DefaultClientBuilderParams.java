@@ -95,7 +95,7 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
                              normalizedAbsolutePathRef);
         } else {
             // Create a valid URI which will never succeed.
-            uri = URI.create(schemeStr + "://group-" +
+            uri = URI.create(schemeStr + "://armeria-group-" +
                              Integer.toHexString(System.identityHashCode(endpointGroup)) +
                              ":1" + normalizedAbsolutePathRef);
         }

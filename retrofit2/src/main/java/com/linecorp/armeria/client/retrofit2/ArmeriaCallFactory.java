@@ -22,17 +22,16 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -54,16 +53,26 @@ import retrofit2.Invocation;
  */
 final class ArmeriaCallFactory implements Factory {
 
-    private final Function<? super HttpUrl, ? extends EndpointGroup> endpointGroupMapping;
-    private final BiFunction<? super EndpointGroup, ? super HttpUrl, ? extends WebClient> webClientMapping;
+    private final String baseWebClientHost;
+    private final int baseWebClientPort;
+    private final WebClient baseWebClient;
     private final SubscriberFactory subscriberFactory;
+    private final BiFunction<SessionProtocol, HttpUrl, WebClient> nonBaseWebClientFactory;
 
-    ArmeriaCallFactory(Function<? super HttpUrl, ? extends EndpointGroup> endpointGroupMapping,
-                       BiFunction<? super EndpointGroup, ? super HttpUrl, ? extends WebClient> webClientMapping,
-                       SubscriberFactory subscriberFactory) {
-        this.endpointGroupMapping = endpointGroupMapping;
-        this.webClientMapping = webClientMapping;
+    ArmeriaCallFactory(
+            String baseWebClientHost, int baseWebClientPort, WebClient baseWebClient,
+            SubscriberFactory subscriberFactory,
+            BiFunction<? super SessionProtocol, ? super HttpUrl, ? extends WebClient> nonBaseWebClientFactory) {
+
+        this.baseWebClientHost = baseWebClientHost;
+        this.baseWebClientPort = baseWebClientPort;
+        this.baseWebClient = baseWebClient;
         this.subscriberFactory = subscriberFactory;
+
+        @SuppressWarnings("unchecked")
+        final BiFunction<SessionProtocol, HttpUrl, WebClient> castNonBaseWebClientFactory =
+                (BiFunction<SessionProtocol, HttpUrl, WebClient>) nonBaseWebClientFactory;
+        this.nonBaseWebClientFactory = castNonBaseWebClientFactory;
     }
 
     @Override
@@ -72,8 +81,15 @@ final class ArmeriaCallFactory implements Factory {
     }
 
     WebClient getWebClient(HttpUrl url) {
-        final EndpointGroup endpointGroup = endpointGroupMapping.apply(url);
-        return webClientMapping.apply(endpointGroup, url);
+        if (baseWebClient.scheme().sessionProtocol().isTls() == url.isHttps() &&
+            baseWebClientHost.equals(url.host()) &&
+            baseWebClientPort == url.port()) {
+
+            return baseWebClient;
+        }
+
+        final SessionProtocol protocol = url.isHttps() ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
+        return nonBaseWebClientFactory.apply(protocol, url);
     }
 
     static class ArmeriaCall implements Call {

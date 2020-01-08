@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
@@ -83,13 +82,11 @@ class RetrofitMeterIdPrefixFunctionTest {
     @Test
     void metrics() {
         final Example example = ArmeriaRetrofit
-                .builder(server.httpUri("/"))
-                .webClient((url, endpointGroup) -> WebClient.builder(SessionProtocol.H1C, endpointGroup)
-                                                            .factory(clientFactory)
-                                                            .decorator(MetricCollectingClient.newDecorator(
-                                                                    RetrofitMeterIdPrefixFunction.of("foo")))
-                                                            .build())
-                .build()
+                .of(WebClient.builder(server.httpUri("/"))
+                             .factory(clientFactory)
+                             .decorator(MetricCollectingClient.newDecorator(
+                                     RetrofitMeterIdPrefixFunction.of("foo")))
+                             .build())
                 .create(Example.class);
 
         example.getFoo().join();
@@ -111,13 +108,11 @@ class RetrofitMeterIdPrefixFunctionTest {
                                              .build();
 
         final Example example = ArmeriaRetrofit
-                .builder(server.httpUri("/"))
-                .webClient((url, endpointGroup) -> WebClient.builder(SessionProtocol.H1C, endpointGroup)
-                                                            .factory(clientFactory)
-                                                            .decorator(MetricCollectingClient.newDecorator(
-                                                                    meterIdPrefixFunction))
-                                                            .build())
-                .build()
+                .of(WebClient.builder(server.httpUri("/"))
+                             .factory(clientFactory)
+                             .decorator(MetricCollectingClient.newDecorator(
+                                     meterIdPrefixFunction))
+                             .build())
                 .create(Example.class);
 
         example.getFoo().join();

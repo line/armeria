@@ -20,6 +20,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.SessionProtocol;
+
 import retrofit2.Retrofit;
 
 class ArmeriaRetrofitBuilderTest {
@@ -38,8 +42,8 @@ class ArmeriaRetrofitBuilderTest {
 
     @Test
     void build_withNonRootPath() throws Exception {
-        final Retrofit retrofit = ArmeriaRetrofit.of("http://example.com:8080/a/b/c/");
-        assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/a/b/c/");
+        assertThat(ArmeriaRetrofit.of("http://example.com:8080/a/b/c/").baseUrl().toString())
+                .isEqualTo("http://example.com:8080/a/b/c/");
     }
 
     @Test
@@ -47,5 +51,31 @@ class ArmeriaRetrofitBuilderTest {
         assertThatThrownBy(() -> ArmeriaRetrofit.of("http://example.com:8080/a/b/c"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("baseUrl must end in /: http://example.com:8080/a/b/c");
+    }
+
+    @Test
+    void build_moreSessionProtocol() throws Exception {
+        assertThat(ArmeriaRetrofit.of("h1c://example.com:8080/").baseUrl().toString())
+                .isEqualTo("http://example.com:8080/");
+        assertThat(ArmeriaRetrofit.of("h2c://example.com:8080/").baseUrl().toString())
+                .isEqualTo("http://example.com:8080/");
+        assertThat(ArmeriaRetrofit.of("h1://example.com:8080/").baseUrl().toString())
+                .isEqualTo("https://example.com:8080/");
+        assertThat(ArmeriaRetrofit.of("h2://example.com:8080/").baseUrl().toString())
+                .isEqualTo("https://example.com:8080/");
+        assertThat(ArmeriaRetrofit.of("https://example.com:8080/").baseUrl().toString())
+                .isEqualTo("https://example.com:8080/");
+    }
+
+    @Test
+    void build_armeriaGroupAuthority() throws Exception {
+        final Endpoint endpoint = Endpoint.of("127.0.0.1", 8080);
+        final EndpointGroup group = EndpointGroup.of(endpoint, endpoint);
+
+        assertThat(ArmeriaRetrofit.of(SessionProtocol.H2C, endpoint).baseUrl().toString())
+                .isEqualTo("http://127.0.0.1:8080/");
+
+        assertThat(ArmeriaRetrofit.of(SessionProtocol.H2, group).baseUrl().toString())
+                .startsWith("https://armeria-group-");
     }
 }
