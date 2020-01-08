@@ -18,8 +18,8 @@ There are 3 elements involved in client-side load balancing in Armeria:
 Creating an ``EndpointGroup``
 -----------------------------
 There are various :api:`EndpointGroup` implementations provided out of the box, but let's start simple with
-:api:`StaticEndpointGroup` which always yields a pre-defined set of :apiplural:`Endpoint` specified
-at construction time:
+:api:`EndpointGroup` which always yields a pre-defined set of :apiplural:`Endpoint` specified at construction
+time:
 
 .. code-block:: java
 
