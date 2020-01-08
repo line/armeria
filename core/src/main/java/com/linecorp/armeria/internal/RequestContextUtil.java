@@ -87,5 +87,19 @@ public final class RequestContextUtil {
         }
     }
 
+    /**
+     * Returns an {@link IllegalStateException} which is raised when pushing a context from
+     * the unexpected thread or forgetting to close the previous context.
+     */
+    public static IllegalStateException newIllegalContextPushingException(
+            RequestContext newCtx, RequestContext oldCtx) {
+        requireNonNull(newCtx, "newCtx");
+        requireNonNull(oldCtx, "oldCtx");
+        return new IllegalStateException(
+                "Trying to call object wrapped with context " + newCtx + ", but context is currently " +
+                "set to " + oldCtx + ". This means the callback was called from " +
+                "unexpected thread or forgetting to close previous context.");
+    }
+
     private RequestContextUtil() {}
 }

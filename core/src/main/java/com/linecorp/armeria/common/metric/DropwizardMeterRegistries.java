@@ -30,7 +30,6 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.micrometer.core.instrument.config.MeterFilterReply;
 import io.micrometer.core.instrument.config.NamingConvention;
-import io.micrometer.core.instrument.distribution.pause.NoPauseDetector;
 import io.micrometer.core.instrument.dropwizard.DropwizardConfig;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
@@ -159,8 +158,8 @@ public final class DropwizardMeterRegistries {
                 return MeterFilterReply.NEUTRAL;
             }
         });
+
         meterRegistry.config().namingConvention(MoreNamingConventions.dropwizard());
-        meterRegistry.config().pauseDetector(new NoPauseDetector());
         return meterRegistry;
     }
 

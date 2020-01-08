@@ -237,8 +237,9 @@ class ServerBuilderTest {
         assertThat(res2.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res2.headers().contains("virtualhost_decorator")).isEqualTo(false);
 
-        final WebClient vhostClient = WebClient.of(clientFactory,
-                                                   "http://test.example.com:" + server.httpPort());
+        final WebClient vhostClient = WebClient.builder("http://test.example.com:" + server.httpPort())
+                                               .factory(clientFactory)
+                                               .build();
         final AggregatedHttpResponse res3 = vhostClient.get("/").aggregate().get();
         assertThat(res3.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res3.headers().get("virtualhost_decorator")).isEqualTo("true");
@@ -255,10 +256,12 @@ class ServerBuilderTest {
                                     .and().build();
         server.start().join();
 
-        final WebClient client = WebClient.of(clientFactory,
-                                              "http://127.0.0.1:" + server.activeLocalPort());
-        final WebClient fooClient = WebClient.of(clientFactory,
-                                                 "http://foo.com:" + server.activeLocalPort());
+        final WebClient client = WebClient.builder("http://127.0.0.1:" + server.activeLocalPort())
+                                          .factory(clientFactory)
+                                          .build();
+        final WebClient fooClient = WebClient.builder("http://foo.com:" + server.activeLocalPort())
+                                             .factory(clientFactory)
+                                             .build();
 
         assertThat(client.get("/").aggregate().join().contentUtf8()).isEqualTo("default");
         assertThat(client.get("/abc").aggregate().join().contentUtf8()).isEqualTo("default_abc");
@@ -298,10 +301,12 @@ class ServerBuilderTest {
         server.start().join();
 
         try {
-            final WebClient client = WebClient.of(clientFactory,
-                                                  "http://127.0.0.1:" + server.activeLocalPort());
-            final WebClient fooClient = WebClient.of(clientFactory,
-                                                     "http://foo.com:" + server.activeLocalPort());
+            final WebClient client = WebClient.builder("http://127.0.0.1:" + server.activeLocalPort())
+                                              .factory(clientFactory)
+                                              .build();
+            final WebClient fooClient = WebClient.builder("http://foo.com:" + server.activeLocalPort())
+                                                 .factory(clientFactory)
+                                                 .build();
 
             assertThat(client.get("/default_virtual_host").aggregate().join().status())
                     .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);

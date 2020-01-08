@@ -32,18 +32,21 @@ package com.linecorp.armeria.common;
 import static com.google.common.base.CharMatcher.ascii;
 import static com.google.common.base.CharMatcher.javaIsoControl;
 import static com.google.common.base.Charsets.UTF_8;
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -55,7 +58,6 @@ import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Joiner.MapJoiner;
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMultiset;
@@ -128,13 +130,13 @@ public final class MediaType {
     private static MediaType createConstant(String type, String subtype) {
         MediaType mediaType =
                 addKnownType(new MediaType(type, subtype, ImmutableListMultimap.of()));
-        mediaType.parsedCharset = Optional.empty();
+        mediaType.parsedCharset = null;
         return mediaType;
     }
 
     private static MediaType createConstantUtf8(String type, String subtype) {
         MediaType mediaType = addKnownType(new MediaType(type, subtype, UTF_8_CONSTANT_PARAMETERS));
-        mediaType.parsedCharset = Optional.of(UTF_8);
+        mediaType.parsedCharset = UTF_8;
         return mediaType;
     }
 
@@ -603,6 +605,23 @@ public final class MediaType {
 
     public static final MediaType ZIP = createConstant(APPLICATION_TYPE, "zip");
 
+    private static final Charset NO_CHARSET = new Charset("NO_CHARSET", null) {
+        @Override
+        public boolean contains(Charset cs) {
+            return false;
+        }
+
+        @Override
+        public CharsetDecoder newDecoder() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public CharsetEncoder newEncoder() {
+            throw new UnsupportedOperationException();
+        }
+    };
+
     private final String type;
     private final String subtype;
     private final ImmutableListMultimap<String, String> parameters;
@@ -613,7 +632,7 @@ public final class MediaType {
     private int hashCode;
 
     @Nullable
-    private Optional<Charset> parsedCharset;
+    private Charset parsedCharset;
 
     private MediaType(String type, String subtype, ImmutableListMultimap<String, String> parameters) {
         this.type = type;
@@ -648,23 +667,26 @@ public final class MediaType {
     }
 
     /**
-     * Returns an optional charset for the value of the charset parameter if it is specified.
+     * Returns a {@link Charset} for the value of the charset parameter if it is specified.
+     *
+     * @return the {@link Charset}, or {@code null} if the charset parameter is not specified.
      *
      * @throws IllegalStateException if multiple charset values have been set for this media type
      * @throws IllegalCharsetNameException if a charset value is present, but illegal
      * @throws UnsupportedCharsetException if a charset value is present, but no support is available
-     *     in this instance of the Java virtual machine
+     *                                     in this instance of the Java virtual machine
      */
-    public Optional<Charset> charset() {
+    @Nullable
+    public Charset charset() {
         // racy single-check idiom, this is safe because Optional is immutable.
-        Optional<Charset> local = parsedCharset;
+        Charset local = parsedCharset;
         if (local == null) {
             String value = null;
-            local = Optional.empty();
+            local = NO_CHARSET;
             for (String currentValue : parameters.get(CHARSET_ATTRIBUTE)) {
                 if (value == null) {
                     value = currentValue;
-                    local = Optional.of(Charset.forName(value));
+                    local = Charset.forName(value);
                 } else if (!value.equals(currentValue)) {
                     throw new IllegalStateException(
                             "Multiple charset values defined: " + value + ", " + currentValue);
@@ -672,7 +694,22 @@ public final class MediaType {
             }
             parsedCharset = local;
         }
-        return local;
+        return local != NO_CHARSET ? local : null;
+    }
+
+    /**
+     * Returns a {@link Charset} for the value of the charset parameter if it is specified.
+     *
+     * @return the {@link Charset}, or {@code defaultCharset} if the charset parameter is not specified.
+     *
+     * @throws IllegalStateException if multiple charset values have been set for this media type
+     * @throws IllegalCharsetNameException if a charset value is present, but illegal
+     * @throws UnsupportedCharsetException if a charset value is present, but no support is available
+     *                                     in this instance of the Java virtual machine
+     */
+    public Charset charset(Charset defaultCharset) {
+        requireNonNull(defaultCharset, "defaultCharset");
+        return firstNonNull(charset(), defaultCharset);
     }
 
     /**
@@ -726,7 +763,7 @@ public final class MediaType {
             mediaType.parsedCharset = parsedCharset;
         }
         // Return one of the constants if the media type is a known type.
-        return MoreObjects.firstNonNull(KNOWN_TYPES.get(mediaType), mediaType);
+        return firstNonNull(KNOWN_TYPES.get(mediaType), mediaType);
     }
 
     /**
@@ -754,7 +791,7 @@ public final class MediaType {
         checkNotNull(charset);
         MediaType withCharset = withParameter(CHARSET_ATTRIBUTE, charset.name());
         // precache the charset so we don't need to parse it
-        withCharset.parsedCharset = Optional.of(charset);
+        withCharset.parsedCharset = charset;
         return withCharset;
     }
 
@@ -869,7 +906,7 @@ public final class MediaType {
      */
     public static MediaType create(String type, String subtype) {
         MediaType mediaType = create(type, subtype, ImmutableListMultimap.of());
-        mediaType.parsedCharset = Optional.empty();
+        mediaType.parsedCharset = null;
         return mediaType;
     }
 
@@ -890,7 +927,7 @@ public final class MediaType {
         }
         MediaType mediaType = new MediaType(normalizedType, normalizedSubtype, builder.build());
         // Return one of the constants if the media type is a known type.
-        return MoreObjects.firstNonNull(KNOWN_TYPES.get(mediaType), mediaType);
+        return firstNonNull(KNOWN_TYPES.get(mediaType), mediaType);
     }
 
     /**

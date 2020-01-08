@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.eventloop.EventLoopCheckingUtil.maybeLogIfOnEventLoop;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
@@ -91,6 +95,25 @@ public class DefaultRpcResponse extends CompletableFuture<Object> implements Rpc
     public boolean cancel(boolean mayInterruptIfRunning) {
         final boolean updated = !isDone() && completeExceptionally(new CancellationException());
         return updated || isCancelled();
+    }
+
+    @Override
+    public Object get() throws InterruptedException, ExecutionException {
+        maybeLogIfOnEventLoop();
+        return super.get();
+    }
+
+    @Override
+    public Object get(long timeout, TimeUnit unit)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        maybeLogIfOnEventLoop();
+        return super.get(timeout, unit);
+    }
+
+    @Override
+    public Object join() {
+        maybeLogIfOnEventLoop();
+        return super.join();
     }
 
     @Override

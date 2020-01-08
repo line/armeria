@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -57,7 +56,8 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     NonBlockingCircuitBreaker(Ticker ticker, CircuitBreakerConfig config) {
         this.ticker = requireNonNull(ticker, "ticker");
         this.config = requireNonNull(config, "config");
-        name = config.name().orElseGet(() -> "circuit-breaker-" + seqNo.getAndIncrement());
+        final String name = config.name();
+        this.name = name != null ? name : "circuit-breaker-" + seqNo.getAndIncrement();
         state = new AtomicReference<>(newClosedState());
         logStateTransition(CircuitState.CLOSED, null);
         notifyStateChanged(CircuitState.CLOSED);
@@ -73,9 +73,11 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         final State currentState = state.get();
         if (currentState.isClosed()) {
             // fires success event
-            final Optional<EventCount> updatedCount = currentState.counter().onSuccess();
+            final EventCount updatedCount = currentState.counter().onSuccess();
             // notifies the count if it has been updated
-            updatedCount.ifPresent(this::notifyCountUpdated);
+            if (updatedCount != null) {
+                notifyCountUpdated(updatedCount);
+            }
         } else if (currentState.isHalfOpen()) {
             // changes to CLOSED if at least one request succeeds during HALF_OPEN
             if (state.compareAndSet(currentState, newClosedState())) {
@@ -90,18 +92,18 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         final State currentState = state.get();
         if (currentState.isClosed()) {
             // fires failure event
-            final Optional<EventCount> updatedCount = currentState.counter().onFailure();
+            final EventCount updatedCount = currentState.counter().onFailure();
             // checks the count if it has been updated
-            updatedCount.ifPresent(count -> {
+            if (updatedCount != null) {
                 // changes to OPEN if failure rate exceeds the threshold
-                if (checkIfExceedingFailureThreshold(count) &&
+                if (checkIfExceedingFailureThreshold(updatedCount) &&
                     state.compareAndSet(currentState, newOpenState())) {
-                    logStateTransition(CircuitState.OPEN, count);
+                    logStateTransition(CircuitState.OPEN, updatedCount);
                     notifyStateChanged(CircuitState.OPEN);
                 } else {
-                    notifyCountUpdated(count);
+                    notifyCountUpdated(updatedCount);
                 }
-            });
+            }
         } else if (currentState.isHalfOpen()) {
             // returns to OPEN if a request fails during HALF_OPEN
             if (state.compareAndSet(currentState, newOpenState())) {
@@ -277,13 +279,13 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         }
 
         @Override
-        public Optional<EventCount> onSuccess() {
-            return Optional.empty();
+        public EventCount onSuccess() {
+            return null;
         }
 
         @Override
-        public Optional<EventCount> onFailure() {
-            return Optional.empty();
+        public EventCount onFailure() {
+            return null;
         }
     }
 

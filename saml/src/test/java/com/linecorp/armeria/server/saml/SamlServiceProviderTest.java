@@ -88,7 +88,6 @@ import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -301,7 +300,7 @@ public class SamlServiceProviderTest {
         }
     }
 
-    final WebClient client = WebClient.of(rule.uri("/"), ClientOptions.of());
+    final WebClient client = WebClient.of(rule.uri("/"));
 
     @Test
     public void shouldRespondAuthnRequest_HttpRedirect() throws Exception {

@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -127,17 +126,16 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, String> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
-            final Optional<AnnotatedService> service = sc.service().as(AnnotatedService.class);
-            service.ifPresent(
-                    httpService -> {
-                        final String className = httpService.object().getClass().getName();
-                        final String methodName = httpService.method().getName();
-                        if (!filter.test(name(), className, methodName)) {
-                            return;
-                        }
-                        addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), httpService);
-                        addServiceDescription(serviceDescription, httpService);
-                    });
+            final AnnotatedService service = sc.service().as(AnnotatedService.class);
+            if (service != null) {
+                final String className = service.object().getClass().getName();
+                final String methodName = service.method().getName();
+                if (!filter.test(name(), className, methodName)) {
+                    return;
+                }
+                addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), service);
+                addServiceDescription(serviceDescription, service);
+            }
         });
 
         return generate(serviceDescription, methodInfos);
@@ -244,10 +242,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Class<? extends Annotation> annotationType = resolver.annotationType();
         if (annotationType == RequestObject.class) {
             final BeanFactoryId beanFactoryId = resolver.beanFactoryId();
-            final Optional<AnnotatedBeanFactory<?>> optional =
-                    AnnotatedBeanFactoryRegistry.find(beanFactoryId);
-            if (optional.isPresent()) {
-                final AnnotatedBeanFactory<?> factory = optional.get();
+            final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
+            if (factory != null) {
                 final Builder<AnnotatedValueResolver> builder = ImmutableList.builder();
                 factory.constructor().getValue().forEach(builder::add);
                 factory.methods().values().forEach(resolvers -> resolvers.forEach(builder::add));
@@ -256,7 +252,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 if (!resolvers.isEmpty()) {
                     // Just use the simple name of the bean class as the field name.
                     return FieldInfo.builder(beanFactoryId.type().getSimpleName(), BEAN,
-                                                fieldInfos(resolvers)).build();
+                                             fieldInfos(resolvers)).build();
                 }
             }
             return null;
@@ -303,23 +299,32 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
         if (type == Void.class || type == void.class) {
             return VOID;
-        } else if (type == Boolean.class || type == boolean.class) {
+        }
+        if (type == Boolean.class || type == boolean.class) {
             return BOOLEAN;
-        } else if (type == Byte.class || type == byte.class) {
+        }
+        if (type == Byte.class || type == byte.class) {
             return BYTE;
-        } else if (type == Short.class || type == short.class) {
+        }
+        if (type == Short.class || type == short.class) {
             return SHORT;
-        } else if (type == Integer.class || type == int.class) {
+        }
+        if (type == Integer.class || type == int.class) {
             return INT;
-        } else if (type == Long.class || type == long.class) {
+        }
+        if (type == Long.class || type == long.class) {
             return LONG;
-        } else if (type == Float.class || type == float.class) {
+        }
+        if (type == Float.class || type == float.class) {
             return FLOAT;
-        } else if (type == Double.class || type == double.class) {
+        }
+        if (type == Double.class || type == double.class) {
             return DOUBLE;
-        } else if (type == String.class) {
+        }
+        if (type == String.class) {
             return STRING;
-        } else if (type == byte[].class || type == Byte[].class) {
+        }
+        if (type == byte[].class || type == Byte[].class) {
             return BINARY;
         }
         // End of data types defined by the OpenAPI Specification.
@@ -399,11 +404,11 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
-        final Class<?> type = (Class<?>)
-                typeSignature.namedTypeDescriptor()
-                             .orElseThrow(
-                                     () -> new IllegalArgumentException("cannot create a named type from: " +
-                                                                        typeSignature));
+        final Class<?> type = (Class<?>) typeSignature.namedTypeDescriptor();
+        if (type == null) {
+            throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
+        }
+
         if (type.isEnum()) {
             @SuppressWarnings("unchecked")
             final Class<? extends Enum<?>> enumType = (Class<? extends Enum<?>>) type;
@@ -430,13 +435,14 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     @Override
-    public Optional<String> serializeExampleRequest(String serviceName, String methodName,
-                                                    Object exampleRequest) {
+    @Nullable
+    public String serializeExampleRequest(String serviceName, String methodName,
+                                          Object exampleRequest) {
         try {
-            return Optional.of(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(exampleRequest));
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(exampleRequest);
         } catch (JsonProcessingException e) {
             // Ignore the exception and just return Optional.empty().
         }
-        return Optional.empty();
+        return null;
     }
 }

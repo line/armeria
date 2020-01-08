@@ -277,7 +277,7 @@ public class RequestContextTest {
 
     @Test
     public void makeContextAwareCompletableFutureWithAsyncChaining() throws Exception {
-        final ExecutorService executor = Executors.newFixedThreadPool(2);
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             final RequestContext context = createContext();
             final Thread testMainThread = Thread.currentThread();

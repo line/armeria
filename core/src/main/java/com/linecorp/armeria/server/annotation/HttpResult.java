@@ -17,7 +17,7 @@ package com.linecorp.armeria.server.annotation;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
@@ -113,9 +113,12 @@ public interface HttpResult<T> {
 
     /**
      * Returns an object which would be converted into response body.
+     *
+     * @return the response object, or {@code null} if the response object is not available.
      */
-    default Optional<T> content() {
-        return Optional.empty();
+    @Nullable
+    default T content() {
+        return null;
     }
 
     /**

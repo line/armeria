@@ -126,9 +126,9 @@ Instead, you need to 'unwrap' the decorator using the ``Service.as()`` method:
     MyDecoratedService decoratedService = service.decorate(...);
 
     assert !(decoratedService instanceof MyService);
-    assert decoratedService.as(MyService.class).get() == service;
-    assert decoratedService.as(MyDecoratedService.class).get() == decoratedService;
-    assert !decoratedService.as(SomeOtherService.class).isPresent();
+    assert decoratedService.as(MyService.class) == service;
+    assert decoratedService.as(MyDecoratedService.class) == decoratedService;
+    assert decoratedService.as(SomeOtherService.class) == null;
 
 ``as()`` is especially useful when you are looking for the service instances that implements
 a certain type from a server:
@@ -142,7 +142,7 @@ a certain type from a server:
     ServerConfig serverConfig = server.config();
     List<ServiceConfig> serviceConfigs = serverConfig.serviceConfigs();
     for (ServiceConfig sc : serviceConfigs) {
-        if (sc.service().as(SomeType.class).isPresent()) {
+        if (sc.service().as(SomeType.class) != null) {
             // Handle the service who implements or extends SomeType.
         }
     }

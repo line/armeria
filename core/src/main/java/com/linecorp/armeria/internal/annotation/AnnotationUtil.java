@@ -33,7 +33,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -97,19 +96,20 @@ final class AnnotationUtil {
      *     <li>the meta-annotations of the annotations specified on the {@code element}
      *     or its super classes</li>
      * </ul>
-     * Otherwise, {@link Optional#empty()} will be returned.
+     * Otherwise, {@code null} will be returned.
      *
      * @param element the {@link AnnotatedElement} to find the first annotation
      * @param annotationType the type of the annotation to find
      */
-    static <T extends Annotation> Optional<T> findFirst(AnnotatedElement element, Class<T> annotationType) {
-        final List<T> founds = findAll(element, annotationType);
-        return founds.isEmpty() ? Optional.empty() : Optional.of(founds.get(0));
+    @Nullable
+    static <T extends Annotation> T findFirst(AnnotatedElement element, Class<T> annotationType) {
+        final List<T> found = findAll(element, annotationType);
+        return found.isEmpty() ? null : found.get(0);
     }
 
     /**
      * Returns an annotation of the {@code annotationType} if it is found from the specified {@code element}.
-     * Otherwise, the {@link Optional#empty()} will be returned.
+     * Otherwise, the {@code null} will be returned.
      *
      * <p>Note that this method will <em>not</em> find annotations from both the super classes of
      * the {@code element} and the meta-annotations.
@@ -117,10 +117,11 @@ final class AnnotationUtil {
      * @param element the {@link AnnotatedElement} to find the first annotation
      * @param annotationType the type of the annotation to find
      */
-    static <T extends Annotation> Optional<T> findFirstDeclared(AnnotatedElement element,
+    @Nullable
+    static <T extends Annotation> T findFirstDeclared(AnnotatedElement element,
                                                                 Class<T> annotationType) {
-        final List<T> founds = findDeclared(element, annotationType);
-        return founds.isEmpty() ? Optional.empty() : Optional.of(founds.get(0));
+        final List<T> found = findDeclared(element, annotationType);
+        return found.isEmpty() ? null : found.get(0);
     }
 
     /**

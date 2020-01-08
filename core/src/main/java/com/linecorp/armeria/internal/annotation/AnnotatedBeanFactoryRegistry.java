@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
@@ -96,13 +95,13 @@ final class AnnotatedBeanFactoryRegistry {
     /**
      * Returns a factory of the specified {@link BeanFactoryId}.
      */
-    static Optional<AnnotatedBeanFactory<?>> find(@Nullable BeanFactoryId beanFactoryId) {
+    @Nullable
+    static AnnotatedBeanFactory<?> find(@Nullable BeanFactoryId beanFactoryId) {
         if (beanFactoryId == null) {
-            return Optional.empty();
+            return null;
         }
         final AnnotatedBeanFactory<?> factory = factories.get(beanFactoryId);
-        return factory != null && factory != unsupportedBeanFactory ? Optional.of(factory)
-                                                                    : Optional.empty();
+        return factory != null && factory != unsupportedBeanFactory ? factory : null;
     }
 
     static Set<AnnotatedValueResolver> uniqueResolverSet() {
@@ -268,15 +267,16 @@ final class AnnotatedBeanFactoryRegistry {
         final Set<Field> fields = getAllFields(beanFactoryId.type);
         for (final Field field : fields) {
             final List<RequestConverter> converters = findDeclared(field, RequestConverter.class);
-            AnnotatedValueResolver.ofBeanField(field, beanFactoryId.pathParams,
-                                               addToFirstIfExists(objectResolvers, converters))
-                                  .ifPresent(resolver -> {
-                                      if (!uniques.add(resolver)) {
-                                          warnRedundantUse(resolver, field.toGenericString());
-                                          return;
-                                      }
-                                      builder.put(field, resolver);
-                                  });
+            final AnnotatedValueResolver resolver =
+                    AnnotatedValueResolver.ofBeanField(field, beanFactoryId.pathParams,
+                                                       addToFirstIfExists(objectResolvers, converters));
+            if (resolver != null) {
+                if (uniques.add(resolver)) {
+                    builder.put(field, resolver);
+                } else {
+                    warnRedundantUse(resolver, field.toGenericString());
+                }
+            }
         }
         return builder.build();
     }

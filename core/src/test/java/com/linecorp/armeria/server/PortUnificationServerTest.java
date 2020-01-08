@@ -64,7 +64,9 @@ class PortUnificationServerTest {
     @ParameterizedTest
     @ArgumentsSource(UniqueProtocolsProvider.class)
     void test(SessionProtocol protocol) throws Exception {
-        final WebClient client = WebClient.of(ClientFactory.insecure(), server.uri(protocol, "/"));
+        final WebClient client = WebClient.builder(server.uri(protocol, "/"))
+                                          .factory(ClientFactory.insecure())
+                                          .build();
         final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))
                                                       .aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo(protocol.name());

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.server.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
 

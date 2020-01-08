@@ -15,19 +15,24 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
+
+import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
@@ -51,6 +56,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -90,6 +96,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private long responseTimeoutMillis;
     @Nullable
     private Runnable responseTimeoutHandler;
+    @Nullable
+    private TimeoutController responseTimeoutController;
     private long maxResponseLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
@@ -419,10 +427,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public void setWriteTimeoutMillis(long writeTimeoutMillis) {
-        if (writeTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "writeTimeoutMillis: " + writeTimeoutMillis + " (expected: >= 0)");
-        }
+        checkArgument(writeTimeoutMillis >= 0,
+                      "writeTimeoutMillis: " + writeTimeoutMillis + " (expected: >= 0)");
         this.writeTimeoutMillis = writeTimeoutMillis;
     }
 
@@ -437,17 +443,103 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public void setResponseTimeoutMillis(long responseTimeoutMillis) {
-        if (responseTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: >= 0)");
+    public void clearResponseTimeout() {
+        if (responseTimeoutMillis == 0) {
+            return;
         }
-        this.responseTimeoutMillis = responseTimeoutMillis;
+
+        final TimeoutController responseTimeoutController = this.responseTimeoutController;
+        responseTimeoutMillis = 0;
+        if (responseTimeoutController != null) {
+            if (eventLoop().inEventLoop()) {
+                responseTimeoutController.cancelTimeout();
+            } else {
+                eventLoop().execute(responseTimeoutController::cancelTimeout);
+            }
+        }
+    }
+
+    @Override
+    public void setResponseTimeoutMillis(long responseTimeoutMillis) {
+        checkArgument(responseTimeoutMillis >= 0,
+                      "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: >= 0)");
+        if (responseTimeoutMillis == 0) {
+            clearResponseTimeout();
+        }
+
+        final long adjustmentMillis =
+                LongMath.saturatedSubtract(responseTimeoutMillis, this.responseTimeoutMillis);
+        extendResponseTimeoutMillis(adjustmentMillis);
     }
 
     @Override
     public void setResponseTimeout(Duration responseTimeout) {
         setResponseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
+
+    @Override
+    public void extendResponseTimeoutMillis(long adjustmentMillis) {
+        if (adjustmentMillis == 0 || responseTimeoutMillis == 0) {
+            return;
+        }
+
+        final long oldResponseTimeoutMillis = responseTimeoutMillis;
+        responseTimeoutMillis = LongMath.saturatedAdd(oldResponseTimeoutMillis, adjustmentMillis);
+        final TimeoutController responseTimeoutController = this.responseTimeoutController;
+        if (responseTimeoutController != null) {
+            if (eventLoop().inEventLoop()) {
+                responseTimeoutController.extendTimeout(adjustmentMillis);
+            } else {
+                eventLoop().execute(() -> responseTimeoutController.extendTimeout(adjustmentMillis));
+            }
+        }
+    }
+
+    @Override
+    public void extendResponseTimeout(Duration adjustment) {
+        extendResponseTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
+    }
+
+    @Override
+    public void setResponseTimeoutAfterMillis(long responseTimeoutMillis) {
+        checkArgument(responseTimeoutMillis > 0,
+                      "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: > 0)");
+
+        long passedTimeMillis = 0;
+        final TimeoutController responseTimeoutController = this.responseTimeoutController;
+        if (responseTimeoutController != null) {
+            passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
+                    System.nanoTime() - responseTimeoutController.startTimeNanos());
+            if (eventLoop().inEventLoop()) {
+                responseTimeoutController.resetTimeout(responseTimeoutMillis);
+            } else {
+                eventLoop().execute(() -> responseTimeoutController.resetTimeout(responseTimeoutMillis));
+            }
+        }
+
+        this.responseTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, responseTimeoutMillis);
+    }
+
+    @Override
+    public void setResponseTimeoutAfter(Duration responseTimeout) {
+        setResponseTimeoutAfterMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
+
+    @Override
+    public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
+        checkArgument(responseTimeoutAtMillis >= 0,
+                      "responseTimeoutAtMillis: " + responseTimeoutAtMillis + " (expected: >= 0)");
+        final long nowMillis = Instant.now().toEpochMilli();
+        final long responseTimeoutAfter = responseTimeoutAtMillis - nowMillis;
+        checkArgument(responseTimeoutAfter > 0,
+                      "responseTimeoutAtMillis: %s (expected: > 'now=%s')", responseTimeoutAtMillis, nowMillis);
+
+        setResponseTimeoutAfterMillis(responseTimeoutAfter);
+    }
+
+    @Override
+    public void setResponseTimeoutAt(Instant responseTimeoutAt) {
+        setResponseTimeoutAtMillis(requireNonNull(responseTimeoutAt, "responseTimeoutAt").toEpochMilli());
     }
 
     @Override
@@ -459,6 +551,21 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
         this.responseTimeoutHandler = requireNonNull(responseTimeoutHandler, "responseTimeoutHandler");
+    }
+
+    /**
+     * Sets the {@code responseTimeoutController} that is set to a new timeout when
+     * the {@linkplain #responseTimeoutMillis()} response timeout} setting is changed.
+     *
+     * <p>Note: This method is meant for internal use by client-side protocol implementation to reschedule
+     * a timeout task when a user updates the response timeout configuration.
+     */
+    public void setResponseTimeoutController(TimeoutController responseTimeoutController) {
+        requireNonNull(responseTimeoutController, "responseTimeoutController");
+        if (this.responseTimeoutController != null) {
+            throw new IllegalStateException("responseTimeoutController is set already.");
+        }
+        this.responseTimeoutController = responseTimeoutController;
     }
 
     @Override
@@ -545,7 +652,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             return strVal;
         }
 
-        final StringBuilder buf = new StringBuilder(96);
+        final StringBuilder buf = new StringBuilder(107);
+        buf.append("[C]");
 
         // Prepend the current channel information if available.
         final Channel ch = channel();

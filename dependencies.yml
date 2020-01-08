@@ -225,6 +225,9 @@ io.projectreactor:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
 
+io.projectreactor.kotlin:
+  reactor-kotlin-extensions: { version: '1.0.1.RELEASE' }
+
 io.prometheus:
   simpleclient_common:
     version: '0.8.0'

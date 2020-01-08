@@ -109,7 +109,8 @@ class HealthCheckServiceTest {
     @AfterEach
     void ensureNoPendingResponses() {
         server.server().serviceConfigs().forEach(cfg -> {
-            cfg.service().as(HealthCheckService.class).ifPresent(service -> {
+            final HealthCheckService service = cfg.service().as(HealthCheckService.class);
+            if (service != null) {
                 await().untilAsserted(() -> {
                     if (service.pendingHealthyResponses != null) {
                         assertThat(service.pendingHealthyResponses).isEmpty();
@@ -118,7 +119,7 @@ class HealthCheckServiceTest {
                         assertThat(service.pendingUnhealthyResponses).isEmpty();
                     }
                 });
-            });
+            }
         });
     }
 

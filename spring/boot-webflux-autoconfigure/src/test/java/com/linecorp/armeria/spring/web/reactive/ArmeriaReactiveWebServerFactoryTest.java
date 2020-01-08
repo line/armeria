@@ -16,8 +16,8 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.util.function.Consumer;
 
@@ -67,11 +67,15 @@ class ArmeriaReactiveWebServerFactoryTest {
     }
 
     private WebClient httpsClient(WebServer server) {
-        return WebClient.of(clientFactory, "https://example.com:" + server.getPort());
+        return WebClient.builder("https://example.com:" + server.getPort())
+                        .factory(clientFactory)
+                        .build();
     }
 
     private WebClient httpClient(WebServer server) {
-        return WebClient.of(clientFactory, "http://example.com:" + server.getPort());
+        return WebClient.builder("http://example.com:" + server.getPort())
+                        .factory(clientFactory)
+                        .build();
     }
 
     @Test
@@ -236,7 +240,8 @@ class ArmeriaReactiveWebServerFactoryTest {
         rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
         beanFactory.registerBeanDefinition("meterRegistry2", rbd);
 
-        assertThrows(IllegalStateException.class, () -> runEchoServer(factory, server -> fail()));
+        assertThatThrownBy(() -> runEchoServer(factory, server -> fail("Should never reach here")))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

@@ -19,11 +19,13 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.Set;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -40,6 +42,11 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
      */
     private static final URI UNDEFINED_URI = URI.create("http://undefined");
+
+    private static final Set<SessionProtocol> SUPPORTED_PROTOCOLS =
+            Sets.immutableEnumSet(
+                    ImmutableList.<SessionProtocol>builder().addAll(SessionProtocol.httpValues())
+                                                            .addAll(SessionProtocol.httpsValues()).build());
 
     /**
      * Returns {@code true} if the specified {@code uri} is an undefined {@link URI}.
@@ -77,8 +84,17 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
         if (isUndefinedUri(uri)) {
             this.uri = uri;
         } else {
-            validateScheme(requireNonNull(uri, "uri").getScheme());
-            this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
+            final String givenScheme = requireNonNull(uri, "uri").getScheme();
+            final Scheme scheme = validateScheme(givenScheme);
+            if (scheme.uriText().equals(givenScheme)) {
+                // No need to replace the user-specified scheme because it's already in its normalized form.
+                this.uri = uri;
+            } else {
+                // Replace the user-specified scheme with the normalized one.
+                // e.g. http://foo.com/ -> none+http://foo.com/
+                this.uri = URI.create(scheme.uriText() +
+                                      uri.toString().substring(givenScheme.length()));
+            }
         }
         scheme = null;
         endpoint = null;
@@ -98,12 +114,15 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
         this.endpoint = requireNonNull(endpoint, "endpoint");
     }
 
-    private static void validateScheme(String scheme) {
-        for (SessionProtocol p : SessionProtocol.values()) {
-            if (scheme.equalsIgnoreCase(p.uriText())) {
-                return;
+    private static Scheme validateScheme(String scheme) {
+        final Scheme parsedScheme = Scheme.tryParse(scheme);
+        if (parsedScheme != null) {
+            if (parsedScheme.serializationFormat() == SerializationFormat.NONE &&
+                SUPPORTED_PROTOCOLS.contains(parsedScheme.sessionProtocol())) {
+                return parsedScheme;
             }
         }
+
         throw new IllegalArgumentException("scheme : " + scheme + " (expected: one of " +
                                            ImmutableList.copyOf(SessionProtocol.values()) + ')');
     }

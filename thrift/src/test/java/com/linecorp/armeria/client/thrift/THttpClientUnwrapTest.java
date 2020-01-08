@@ -22,7 +22,6 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -34,25 +33,25 @@ class THttpClientUnwrapTest {
 
     @Test
     void test() {
-        final HelloService.Iface client = new ClientBuilder("tbinary+http://127.0.0.1:1/")
-                .decorator(LoggingClient.newDecorator())
-                .rpcDecorator(RetryingRpcClient.newDecorator(
-                        (ctx, response) -> CompletableFuture.completedFuture(null)))
-                .build(HelloService.Iface.class);
+        final HelloService.Iface client =
+                Clients.builder("tbinary+http://127.0.0.1:1/")
+                       .decorator(LoggingClient.newDecorator())
+                       .rpcDecorator(RetryingRpcClient.newDecorator(
+                               (ctx, response) -> CompletableFuture.completedFuture(null)))
+                       .build(HelloService.Iface.class);
 
-        assertThat(Clients.unwrap(client, HelloService.Iface.class)).containsSame(client);
+        assertThat(Clients.unwrap(client, HelloService.Iface.class)).isSameAs(client);
 
-        assertThat(Clients.unwrap(client, RetryingRpcClient.class)).containsInstanceOf(RetryingRpcClient.class);
-        assertThat(Clients.unwrap(client, LoggingClient.class)).containsInstanceOf(LoggingClient.class);
+        assertThat(Clients.unwrap(client, RetryingRpcClient.class)).isInstanceOf(RetryingRpcClient.class);
+        assertThat(Clients.unwrap(client, LoggingClient.class)).isInstanceOf(LoggingClient.class);
 
         // The outermost decorator of the client must be returned,
         // because the search begins from outside to inside.
         // In the current setup, the outermost `Unwrappable` and `Client` are
         // `THttpClientInvocationHandler` and `RetryingRpcClient` respectively.
-        assertThat(Clients.unwrap(client, Unwrappable.class))
-                .containsInstanceOf(THttpClientInvocationHandler.class);
-        assertThat(Clients.unwrap(client, Client.class)).containsInstanceOf(RetryingRpcClient.class);
+        assertThat(Clients.unwrap(client, Unwrappable.class)).isInstanceOf(THttpClientInvocationHandler.class);
+        assertThat(Clients.unwrap(client, Client.class)).isInstanceOf(RetryingRpcClient.class);
 
-        assertThat(Clients.unwrap(client, CircuitBreakerRpcClient.class)).isEmpty();
+        assertThat(Clients.unwrap(client, CircuitBreakerRpcClient.class)).isNull();
     }
 }

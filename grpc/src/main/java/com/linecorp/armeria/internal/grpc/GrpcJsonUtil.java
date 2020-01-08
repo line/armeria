@@ -17,8 +17,9 @@
 package com.linecorp.armeria.internal.grpc;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
@@ -44,8 +45,14 @@ public final class GrpcJsonUtil {
                                                                    .omittingInsignificantWhitespace(true)
                                                                    .ignoringUnknownFields(true);
         for (MethodDescriptor<?, ?> method : methods) {
-            marshallerPrototype(method.getRequestMarshaller()).ifPresent(builder::register);
-            marshallerPrototype(method.getResponseMarshaller()).ifPresent(builder::register);
+            final Message reqPrototype = marshallerPrototype(method.getRequestMarshaller());
+            final Message resPrototype = marshallerPrototype(method.getResponseMarshaller());
+            if (reqPrototype != null) {
+                builder.register(reqPrototype);
+            }
+            if (resPrototype != null) {
+                builder.register(resPrototype);
+            }
         }
 
         jsonMarshallerCustomizer.accept(builder);
@@ -53,14 +60,15 @@ public final class GrpcJsonUtil {
         return builder.build();
     }
 
-    private static Optional<Message> marshallerPrototype(Marshaller<?> marshaller) {
+    @Nullable
+    private static Message marshallerPrototype(Marshaller<?> marshaller) {
         if (marshaller instanceof PrototypeMarshaller) {
             final Object prototype = ((PrototypeMarshaller<?>) marshaller).getMessagePrototype();
             if (prototype instanceof Message) {
-                return Optional.of((Message) prototype);
+                return (Message) prototype;
             }
         }
-        return Optional.empty();
+        return null;
     }
 
     private GrpcJsonUtil() {}

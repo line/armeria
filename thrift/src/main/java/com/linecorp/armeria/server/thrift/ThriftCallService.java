@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -37,10 +36,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.internal.JavaVersionSpecific;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -124,13 +123,13 @@ public final class ThriftCallService implements RpcService {
 
         // Ensure that such a service exists.
         final ThriftServiceEntry e = entries.get(serviceName);
-        final RpcResponse reply = JavaVersionSpecific.get().newRequestContextAwareRpcResponse(ctx);
         if (e != null) {
             // Ensure that such a method exists.
             final ThriftFunction f = e.metadata.function(method);
             if (f != null) {
                 if (f.implementation() != null) {
-                    invoke(ctx, f.implementation(), f, call.params(), reply.toCompletableFuture());
+                    final DefaultRpcResponse reply = new DefaultRpcResponse();
+                    invoke(ctx, f.implementation(), f, call.params(), reply);
                     return reply;
                 }
                 // Should never reach here because of the way ThriftServiceEntry is created
@@ -144,7 +143,7 @@ public final class ThriftCallService implements RpcService {
 
     private static void invoke(
             ServiceRequestContext ctx,
-            Object impl, ThriftFunction func, List<Object> args, CompletableFuture<Object> reply) {
+            Object impl, ThriftFunction func, List<Object> args, DefaultRpcResponse reply) {
 
         try {
             final TBase<?, ?> tArgs = func.newArgs(args);
@@ -159,7 +158,7 @@ public final class ThriftCallService implements RpcService {
     }
 
     private static void invokeAsynchronously(Object impl, ThriftFunction func, TBase<?, ?> args,
-                                             CompletableFuture<Object> reply) throws TException {
+                                             DefaultRpcResponse reply) throws TException {
 
         final AsyncProcessFunction<Object, TBase<?, ?>, Object> f = func.asyncFunc();
         if (func.isOneWay()) {
@@ -182,7 +181,7 @@ public final class ThriftCallService implements RpcService {
 
     private static void invokeSynchronously(
             ServiceRequestContext ctx, Object impl,
-            ThriftFunction func, TBase<?, ?> args, CompletableFuture<Object> reply) {
+            ThriftFunction func, TBase<?, ?> args, DefaultRpcResponse reply) {
 
         final ProcessFunction<Object, TBase<?, ?>> f = func.syncFunc();
         ctx.blockingTaskExecutor().execute(() -> {

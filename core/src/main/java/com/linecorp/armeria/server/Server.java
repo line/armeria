@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -56,6 +55,7 @@ import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Iterables;
 import com.spotify.futures.CompletableFutures;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -122,7 +122,9 @@ public final class Server implements AutoCloseable {
         config.setServer(this);
 
         // Server-wide cache metrics.
-        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsedPathCache");
+        final MeterIdPrefix idPrefix =
+                new MeterIdPrefix(Flags.useLegacyMeterNames() ? "armeria.server.parsedPathCache"
+                                                              : "armeria.server.parsed.path.cache");
         PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
 
         setupVersionMetrics();
@@ -171,11 +173,12 @@ public final class Server implements AutoCloseable {
      * Returns the primary {@link ServerPort} that this {@link Server} is listening to. This method is useful
      * when a {@link Server} listens to only one {@link ServerPort}.
      *
-     * @return {@link Optional#empty()} if this {@link Server} did not start
+     * @return the primary {@link ServerPort}, or {@code null} if this {@link Server} did not start.
      */
-    public Optional<ServerPort> activePort() {
+    @Nullable
+    public ServerPort activePort() {
         synchronized (activePorts) {
-            return Optional.ofNullable(Iterables.getFirst(activePorts.values(), null));
+            return Iterables.getFirst(activePorts.values(), null);
         }
     }
 
@@ -321,7 +324,9 @@ public final class Server implements AutoCloseable {
         final String repositoryStatus = versionInfo.repositoryStatus();
         final List<Tag> tags = ImmutableList.of(Tag.of("version", version),
                                                 Tag.of("commit", commit),
-                                                Tag.of("repoStatus", repositoryStatus));
+                                                Tag.of(Flags.useLegacyMeterNames() ? "repoStatus"
+                                                                                   : "repo.status",
+                                                       repositoryStatus));
         Gauge.builder("armeria.build.info", () -> 1)
              .tags(tags)
              .description("A metric with a constant '1' value labeled by version and commit hash" +

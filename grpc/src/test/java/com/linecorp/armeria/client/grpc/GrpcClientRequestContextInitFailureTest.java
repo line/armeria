@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -75,12 +74,13 @@ class GrpcClientRequestContextInitFailureTest {
 
     private static void assertFailure(String authority, Consumer<Throwable> requirements) {
         final AtomicReference<ClientRequestContext> capturedCtx = new AtomicReference<>();
-        final TestServiceBlockingStub client = new ClientBuilder("gproto+http://" + authority)
-                .decorator((delegate, ctx, req) -> {
-                    capturedCtx.set(ctx);
-                    return delegate.execute(ctx, req);
-                })
-                .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client =
+                Clients.builder("gproto+http://" + authority)
+                       .decorator((delegate, ctx, req) -> {
+                           capturedCtx.set(ctx);
+                           return delegate.execute(ctx, req);
+                       })
+                       .build(TestServiceBlockingStub.class);
 
         final Throwable grpcCause = catchThrowable(() -> client.emptyCall(Empty.getDefaultInstance()));
         assertThat(grpcCause).isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {

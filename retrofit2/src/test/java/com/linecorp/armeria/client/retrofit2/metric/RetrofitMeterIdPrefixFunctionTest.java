@@ -92,13 +92,13 @@ class RetrofitMeterIdPrefixFunctionTest {
 
         example.getFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
-                .containsKeys("foo.activeRequests#value{method=getFoo}",
-                              "foo.requestDuration#count{httpStatus=200,method=getFoo}"));
+                .containsKeys("foo.active.requests#value{method=getFoo}",
+                              "foo.request.duration#count{http.status=200,method=getFoo}"));
 
         example.postFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
-                .containsKeys("foo.activeRequests#value{method=postFoo}",
-                              "foo.requestDuration#count{httpStatus=200,method=postFoo}"));
+                .containsKeys("foo.active.requests#value{method=postFoo}",
+                              "foo.request.duration#count{http.status=200,method=postFoo}"));
     }
 
     @Test
@@ -117,13 +117,13 @@ class RetrofitMeterIdPrefixFunctionTest {
 
         example.getFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
-                .containsKeys("foo.activeRequests#value{method=getFoo,service=Example}",
-                              "foo.requestDuration#count{httpStatus=200,method=getFoo,service=Example}"));
+                .containsKeys("foo.active.requests#value{method=getFoo,service=Example}",
+                              "foo.request.duration#count{http.status=200,method=getFoo,service=Example}"));
 
         example.postFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
-                .containsKeys("foo.activeRequests#value{method=postFoo,service=Example}",
-                              "foo.requestDuration#count{httpStatus=200,method=postFoo,service=Example}"));
+                .containsKeys("foo.active.requests#value{method=postFoo,service=Example}",
+                              "foo.request.duration#count{http.status=200,method=postFoo,service=Example}"));
     }
 
     @Test

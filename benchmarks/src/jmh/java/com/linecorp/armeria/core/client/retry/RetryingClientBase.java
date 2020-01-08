@@ -24,8 +24,8 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerPort;
 
 /**
  * The base for {@link WithDuplicator} and {@link WithoutDuplicator} microbenchmarks.
@@ -54,10 +54,7 @@ public abstract class RetryingClientBase {
     protected abstract WebClient newClient();
 
     protected String baseUrl() {
-        final ServerPort httpPort = server.activePorts().values().stream()
-                                          .filter(ServerPort::hasHttp).findAny()
-                                          .get();
-        return "h2c://127.0.0.1:" + httpPort.localAddress().getPort();
+        return "h2c://127.0.0.1:" + server.activeLocalPort(SessionProtocol.HTTP);
     }
 
     @Benchmark

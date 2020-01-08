@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import java.util.Map;
@@ -85,10 +86,9 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements H
      */
     UnframedGrpcService(HttpService delegate) {
         super(delegate);
-        delegateGrpcService =
-                delegate.as(GrpcService.class)
-                        .orElseThrow(
-                                () -> new IllegalArgumentException("Decorated service must be a GrpcService."));
+        final GrpcService delegateGrpcService = delegate.as(GrpcService.class);
+        checkArgument(delegateGrpcService != null, "Decorated service must be a GrpcService.");
+        this.delegateGrpcService = delegateGrpcService;
         methodsByName = delegateGrpcService.services()
                                            .stream()
                                            .flatMap(service -> service.getMethods().stream())

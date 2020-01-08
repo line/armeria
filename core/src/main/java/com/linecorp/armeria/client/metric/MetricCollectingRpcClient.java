@@ -31,11 +31,11 @@ import io.micrometer.core.instrument.MeterRegistry;
  *
  * <p>Example:
  * <pre>{@code
- * MyService.Iface client = new ClientBuilder(uri)
- *         .decorator(MetricCollectingRpcClient.newDecorator(MeterIdPrefixFunction.ofDefault("myClient")))
- *         .build(MyService.Iface.class);
- * }
- * </pre>
+ * MyService.Iface client =
+ *     Clients.builder(uri)
+ *            .decorator(MetricCollectingRpcClient.newDecorator(MeterIdPrefixFunction.ofDefault("myClient")))
+ *            .build(MyService.Iface.class);
+ * }</pre>
  *
  * <p>It is generally recommended not to use a class or package name as a metric name, because otherwise
  * seemingly harmless refactoring such as rename may break metric collection.

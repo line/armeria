@@ -35,6 +35,7 @@ import io.micrometer.core.instrument.Meter.Id;
 import io.micrometer.core.instrument.Meter.Type;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.micrometer.core.instrument.distribution.pause.PauseDetector;
 import io.micrometer.core.instrument.noop.NoopCounter;
@@ -62,7 +63,7 @@ public final class NoopMeterRegistry extends MeterRegistry {
 
     private NoopMeterRegistry() {
         super(Clock.SYSTEM);
-        config().namingConvention(MoreNamingConventions.identity());
+        config().namingConvention(NamingConvention.identity);
     }
 
     @Override

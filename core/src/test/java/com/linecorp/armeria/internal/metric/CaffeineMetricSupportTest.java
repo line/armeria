@@ -77,10 +77,10 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("foo.requests#count{result=miss}", 2.0)
                 .containsEntry("foo.loads#count{result=success}", 3.0)
                 .containsEntry("foo.loads#count{result=failure}", 4.0)
-                .containsEntry("foo.loadDuration#count", 5.0)
+                .containsEntry("foo.load.duration#count", 5.0)
                 .containsEntry("foo.evictions#count", 6.0)
-                .containsEntry("foo.evictionWeight#count", 7.0)
-                .containsEntry("foo.estimatedSize#value", 8.0);
+                .containsEntry("foo.eviction.weight#count", 7.0)
+                .containsEntry("foo.estimated.size#value", 8.0);
 
         // Make sure Cache.stats() and estimatedSize() are not called since the initial update.
         assertThat(cache.statsCalls()).isOne();
@@ -95,10 +95,10 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("foo.requests#count{result=miss}", 10.0)
                 .containsEntry("foo.loads#count{result=success}", 11.0)
                 .containsEntry("foo.loads#count{result=failure}", 12.0)
-                .containsEntry("foo.loadDuration#count", 13.0)
+                .containsEntry("foo.load.duration#count", 13.0)
                 .containsEntry("foo.evictions#count", 14.0)
-                .containsEntry("foo.evictionWeight#count", 15.0)
-                .containsEntry("foo.estimatedSize#value", 16.0);
+                .containsEntry("foo.eviction.weight#count", 15.0)
+                .containsEntry("foo.estimated.size#value", 16.0);
 
         // Make sure Cache.stats() and estimatedSize() were called once more since the initial update.
         assertThat(cache.statsCalls()).isEqualTo(2);
@@ -119,14 +119,14 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("bar.requests#count{result=hit}", 1.0)
                 .containsEntry("bar.requests#count{result=miss}", 2.0)
                 .containsEntry("bar.evictions#count", 3.0)
-                .containsEntry("bar.evictionWeight#count", 4.0)
-                .containsEntry("bar.estimatedSize#value", 5.0);
+                .containsEntry("bar.eviction.weight#count", 4.0)
+                .containsEntry("bar.estimated.size#value", 5.0);
 
         // Make sure the meters related with loading are not registered.
         assertThat(MoreMeters.measureAll(registry)).doesNotContainKeys(
                 "bar.loads#count{result=success}",
                 "bar.loads#count{result=failure}",
-                "bar.loadDuration#count");
+                "bar.load.duration#count");
     }
 
     @Test
@@ -146,10 +146,10 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("baz.requests#count{result=miss}", 12.0)
                 .containsEntry("baz.loads#count{result=success}", 14.0)
                 .containsEntry("baz.loads#count{result=failure}", 16.0)
-                .containsEntry("baz.loadDuration#count", 18.0)
+                .containsEntry("baz.load.duration#count", 18.0)
                 .containsEntry("baz.evictions#count", 20.0)
-                .containsEntry("baz.evictionWeight#count", 22.0)
-                .containsEntry("baz.estimatedSize#value", 24.0);
+                .containsEntry("baz.eviction.weight#count", 22.0)
+                .containsEntry("baz.estimated.size#value", 24.0);
     }
 
     @Test
@@ -169,10 +169,10 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("baz.requests#count{result=miss}", 9.0)
                 .containsEntry("baz.loads#count{result=success}", 8.0)
                 .containsEntry("baz.loads#count{result=failure}", 9.0)
-                .containsEntry("baz.loadDuration#count", 10.0)
+                .containsEntry("baz.load.duration#count", 10.0)
                 .containsEntry("baz.evictions#count", 14.0)
-                .containsEntry("baz.evictionWeight#count", 16.0)
-                .containsEntry("baz.estimatedSize#value", 18.0);
+                .containsEntry("baz.eviction.weight#count", 16.0)
+                .containsEntry("baz.estimated.size#value", 18.0);
 
         ticker.addAndGet(UPDATE_INTERVAL_NANOS);
 
@@ -188,10 +188,10 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("baz.requests#count{result=miss}", 9.0)
                 .containsEntry("baz.loads#count{result=success}", 8.0)
                 .containsEntry("baz.loads#count{result=failure}", 9.0)
-                .containsEntry("baz.loadDuration#count", 10.0)
+                .containsEntry("baz.load.duration#count", 10.0)
                 .containsEntry("baz.evictions#count", 14.0)
-                .containsEntry("baz.evictionWeight#count", 16.0)
-                .containsEntry("baz.estimatedSize#value", 5.0); // .. except 'estimatedSize' which is a gauge
+                .containsEntry("baz.eviction.weight#count", 16.0)
+                .containsEntry("baz.estimated.size#value", 5.0); // .. except 'estimatedSize' which is a gauge
     }
 
     @Test
@@ -209,8 +209,8 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("baz.requests#count{result=hit}", 1.0)
                 .containsEntry("baz.requests#count{result=miss}", 2.0)
                 .containsEntry("baz.evictions#count", 3.0)
-                .containsEntry("baz.evictionWeight#count", 4.0)
-                .containsEntry("baz.estimatedSize#value", 5.0);
+                .containsEntry("baz.eviction.weight#count", 4.0)
+                .containsEntry("baz.estimated.size#value", 5.0);
     }
 
     @Test

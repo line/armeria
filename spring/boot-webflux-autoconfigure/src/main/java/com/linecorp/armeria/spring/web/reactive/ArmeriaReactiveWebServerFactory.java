@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
@@ -34,7 +35,6 @@ import java.net.InetSocketAddress;
 import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -95,7 +95,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         this.beanFactory = requireNonNull(beanFactory, "beanFactory");
     }
 
-    private com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
+    private static com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
         if (!ssl.isEnabled()) {
             return new com.linecorp.armeria.spring.Ssl();
         }
@@ -192,11 +192,15 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                   compression.getMinResponseSize().toBytes()));
         }
 
-        findBean(ArmeriaSettings.class).ifPresent(settings -> configureArmeriaService(sb, settings));
+        final ArmeriaSettings settings = findBean(ArmeriaSettings.class);
+        if (settings != null) {
+            configureArmeriaService(sb, settings);
+        }
         findBeans(ArmeriaServerConfigurator.class).forEach(configurator -> configurator.configure(sb));
 
         final DataBufferFactoryWrapper<?> factoryWrapper =
-                findBean(DataBufferFactoryWrapper.class).orElse(DataBufferFactoryWrapper.DEFAULT);
+                firstNonNull(findBean(DataBufferFactoryWrapper.class), DataBufferFactoryWrapper.DEFAULT);
+
         final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
         return new ArmeriaWebServer(server, protocol, address, port);
     }
@@ -225,7 +229,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     private void configureArmeriaService(ServerBuilder sb, ArmeriaSettings settings) {
         final MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory =
-                settings.isEnableMetrics() ? findBean(MeterIdPrefixFunctionFactory.class).orElse(DEFAULT)
+                settings.isEnableMetrics() ? firstNonNull(findBean(MeterIdPrefixFunctionFactory.class), DEFAULT)
                                            : null;
 
         configurePorts(sb, settings.getPorts());
@@ -249,7 +253,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                    meterIdPrefixFunctionFactory,
                                    settings.getDocsPath());
         configureServerWithArmeriaSettings(sb, settings,
-                                           findBean(MeterRegistry.class).orElse(Metrics.globalRegistry),
+                                           firstNonNull(findBean(MeterRegistry.class), Metrics.globalRegistry),
                                            findBeans(HealthChecker.class));
         if (settings.getSsl() != null) {
             configureTls(sb, settings.getSsl());
@@ -267,13 +271,14 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
     }
 
-    private <T> Optional<T> findBean(Class<T> clazz) {
+    @Nullable
+    private <T> T findBean(Class<T> clazz) {
         try {
-            return Optional.of(beanFactory.getBean(clazz));
+            return beanFactory.getBean(clazz);
         } catch (NoUniqueBeanDefinitionException e) {
             throw new IllegalStateException("Too many " + clazz.getSimpleName() + " beans: (expected: 1)", e);
         } catch (NoSuchBeanDefinitionException e) {
-            return Optional.empty();
+            return null;
         }
     }
 

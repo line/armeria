@@ -38,6 +38,8 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultWebClient.class);
 
+    static final WebClient DEFAULT = new WebClientBuilder().build();
+
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate,
                      MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
         super(params, delegate, meterRegistry, sessionProtocol, endpoint);

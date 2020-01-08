@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.Futures.allAsList;
 import static com.google.common.util.concurrent.Futures.transformAsync;
-import static com.linecorp.armeria.common.HttpStatus.OK;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,7 +50,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Uninterruptibles;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
@@ -182,7 +180,9 @@ class BraveIntegrationTest {
                                            )).collect(toImmutableList())),
                                    RequestContext.current().contextAwareExecutor())
                             .addListener(() -> {
-                                responseFuture.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "Lee"));
+                                responseFuture.complete(HttpResponse.of(HttpStatus.OK,
+                                                                        MediaType.PLAIN_TEXT_UTF_8,
+                                                                        "Lee"));
                             }, RequestContext.current().contextAwareExecutor());
                     return res;
                 }
@@ -193,33 +193,35 @@ class BraveIntegrationTest {
                     (AsyncIface) (name, resultHandler) -> {
                     })));
 
-            sb.service("/http", (req, ctx) -> HttpResponse.of(OK));
+            sb.service("/http", (req, ctx) -> HttpResponse.of(HttpStatus.OK));
         }
     };
 
     @BeforeEach
     void setupClients() {
-        fooClient = new ClientBuilder(server.uri(BINARY, "/foo"))
-                .decorator(BraveClient.newDecorator(newTracing("client/foo")))
-                .build(HelloService.Iface.class);
-        zipClient = new ClientBuilder(server.uri(BINARY, "/zip"))
-                .decorator(BraveClient.newDecorator(newTracing("client/zip")))
-                .build(HelloService.Iface.class);
+        fooClient = Clients.builder(server.uri(BINARY, "/foo"))
+                           .decorator(BraveClient.newDecorator(newTracing("client/foo")))
+                           .build(HelloService.Iface.class);
+        zipClient = Clients.builder(server.uri(BINARY, "/zip"))
+                           .decorator(BraveClient.newDecorator(newTracing("client/zip")))
+                           .build(HelloService.Iface.class);
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
         poolWebClient = WebClient.of(server.uri("/"));
-        timeoutClient = new ClientBuilder(server.uri(BINARY, "/timeout"))
-                .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                .build(HelloService.Iface.class);
-        timeoutClientClientTimesOut = new ClientBuilder(server.uri(BINARY, "/timeout"))
-                .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                .responseTimeout(Duration.ofMillis(10))
-                .build(HelloService.Iface.class);
-        http1TimeoutClientClientTimesOut = new ClientBuilder(server.uri(H1C, BINARY, "/timeout"))
-                .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                .responseTimeout(Duration.ofMillis(10))
-                .build(HelloService.Iface.class);
+        timeoutClient = Clients.builder(server.uri(BINARY, "/timeout"))
+                               .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
+                               .build(HelloService.Iface.class);
+        timeoutClientClientTimesOut =
+                Clients.builder(server.uri(BINARY, "/timeout"))
+                       .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
+                       .responseTimeout(Duration.ofMillis(10))
+                       .build(HelloService.Iface.class);
+        http1TimeoutClientClientTimesOut =
+                Clients.builder(server.uri(H1C, BINARY, "/timeout"))
+                       .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
+                       .responseTimeout(Duration.ofMillis(10))
+                       .build(HelloService.Iface.class);
     }
 
     @AfterEach
@@ -236,10 +238,10 @@ class BraveIntegrationTest {
         return BraveService.newDecorator(newTracing(name)).apply(service);
     }
 
-    private HelloService.AsyncIface newClient(String path) {
-        return new ClientBuilder(server.uri(BINARY, path))
-                .decorator(BraveClient.newDecorator(newTracing("client" + path)))
-                .build(HelloService.AsyncIface.class);
+    private static HelloService.AsyncIface newClient(String path) {
+        return Clients.builder(server.uri(BINARY, path))
+                      .decorator(BraveClient.newDecorator(newTracing("client" + path)))
+                      .build(HelloService.AsyncIface.class);
     }
 
     private static Tracing newTracing(String name) {

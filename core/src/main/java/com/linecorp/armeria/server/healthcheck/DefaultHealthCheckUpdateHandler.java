@@ -48,15 +48,15 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
         switch (req.method()) {
             case PUT:
             case POST:
-                return req.aggregate().thenApply(this::handlePut);
+                return req.aggregate().thenApply(DefaultHealthCheckUpdateHandler::handlePut);
             case PATCH:
-                return req.aggregate().thenApply(this::handlePatch);
+                return req.aggregate().thenApply(DefaultHealthCheckUpdateHandler::handlePatch);
             default:
                 throw HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
 
-    private HealthCheckUpdateResult handlePut(AggregatedHttpRequest req) {
+    private static HealthCheckUpdateResult handlePut(AggregatedHttpRequest req) {
         final JsonNode json = toJsonNode(req);
         if (json.getNodeType() != JsonNodeType.OBJECT) {
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
@@ -74,7 +74,7 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
                                       : HealthCheckUpdateResult.UNHEALTHY;
     }
 
-    private HealthCheckUpdateResult handlePatch(AggregatedHttpRequest req) {
+    private static HealthCheckUpdateResult handlePatch(AggregatedHttpRequest req) {
         final JsonNode json = toJsonNode(req);
         if (json.getNodeType() != JsonNodeType.ARRAY ||
             json.size() != 1) {
@@ -96,14 +96,14 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
                                     : HealthCheckUpdateResult.UNHEALTHY;
     }
 
-    private JsonNode toJsonNode(AggregatedHttpRequest req) {
+    private static JsonNode toJsonNode(AggregatedHttpRequest req) {
         final MediaType contentType = req.contentType();
         if (contentType != null && !contentType.is(MediaType.JSON)) {
             throw HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
 
         final Charset charset = contentType == null ? StandardCharsets.UTF_8
-                                                    : contentType.charset().orElse(StandardCharsets.UTF_8);
+                                                    : contentType.charset(StandardCharsets.UTF_8);
         try {
             return StandardCharsets.UTF_8.equals(charset) ? mapper.readTree(req.content().array())
                                                           : mapper.readTree(req.content(charset));
