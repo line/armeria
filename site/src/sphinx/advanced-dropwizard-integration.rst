@@ -129,8 +129,8 @@ Server Properties
       gracefulShutdownTimeoutMillis: 40000
       maxRequestLength: 10485760
       maxNumConnections: 2147483647
-      dateHeaderEnabled: false
-      serverHeaderEnabled: true
+      dateHeaderEnabled: true
+      serverHeaderEnabled: false
       verboseResponses: false
       defaultHostname: "host.name.com"
       ports:
@@ -180,20 +180,21 @@ passed to the :api:`ArmeriaBundle`.
 | Path                   | Property                              | Description                                     |
 +========================+=======================================+=================================================+
 | ``server``             | ``jerseyEnabled``                     | Whether to enable JAX-RS resources defined by   |
-|                        |                                       | Dropwizard (default ``true``)                   |
+|                        |                                       | Dropwizard (default: ``true``)                  |
 +------------------------+---------------------------------------+-------------------------------------------------+
-| ``server``             | ``accesslogwriter``                   | The access log writer  (default ``disabled``)   |
-+------------------------+---------------------------------------+-------------------------------------------------+
-| ``server``             | ``maxRequestLength``                  | the default server-side maximum length of       |
-|                        |                                       | a request.                                      |
+| ``server``             | ``maxRequestLength``                  | The default server-side maximum length of       |
+|                        |                                       | a request                                       |
 +------------------------+---------------------------------------+-------------------------------------------------+
 | ``server``             | ``maxNumConnections``                 | The maximum allowed number of open connections  |
 +------------------------+---------------------------------------+-------------------------------------------------+
-| ``server``             | ``dateHeaderEnabled``                 | The response header to include default          |
-|                        |                                       | ``"Date"`` header                               |
+| ``server``             | ``dateHeaderEnabled``                 | Whether to include default ``"Data"`` header    |
+|                        |                                       | in the response header (default: ``true``)      |
 +------------------------+---------------------------------------+-------------------------------------------------+
-| ``server``             | ``verboseResponses``                  | The response header not to include default      |
-|                        |                                       | ``"Server"`` header                             |
+| ``server``             | ``serverHeaderEnabled``               | Whether to include default ``"Server"`` header  |
+|                        |                                       | in the response header (default: ``false``)     |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``verboseResponses``                  | Whether the verbose response mode is enabled    |
+|                        |                                       | (default: ``false``)                            |
 +------------------------+---------------------------------------+-------------------------------------------------+
 | ``server``             | ``defaultHostname``                   | The default hostname of the default             |
 |                        |                                       | :api:`VirtualHostBuilder`                       |
@@ -206,24 +207,24 @@ passed to the :api:`ArmeriaBundle`.
 |                        |                                       | unhealthy before forcing the server to shutdown |
 |                        |                                       | regardless of if it is still processing requests|
 +------------------------+---------------------------------------+-------------------------------------------------+
-| ``server.ports``       | ``port``                              | The port to run the server on  (default: 8080)  |
+| ``server.ports``       | ``port``                              | The port to run the server on (default: 8080)   |
 +                        +---------------------------------------+-------------------------------------------------+
-|                        | ``ip``                                | The IP address to bind to.                      |
+|                        | ``ip``                                | The IP address to bind to                       |
 +                        +---------------------------------------+-------------------------------------------------+
-|                        | ``iface``                             | The network interface to bind to.               |
+|                        | ``iface``                             | The network interface to bind to                |
 +------------------------+---------------------------------------+-------------------------------------------------+
 | ``server.compression`` | ``enabled``                           | Whether to enable the HTTP content encoding     |
 |                        +---------------------------------------+-------------------------------------------------+
 |                        | ``mimeTypes``                         | The MIME Types of an HTTP response which are    |
-|                        |                                       | applicable for the HTTP content encoding.       |
+|                        |                                       | applicable for the HTTP content encoding        |
 |                        +---------------------------------------+-------------------------------------------------+
 |                        | ``excludedUserAgents``                | The ``"User-Agent"`` header values which are not|
-|                        |                                       | applicable for the HTTP content encoding.       |
+|                        |                                       | applicable for the HTTP content encoding        |
 |                        +---------------------------------------+-------------------------------------------------+
 |                        | ``minResponseSize``                   | The minimum bytes for encoding the content of   |
 |                        |                                       | an HTTP response                                |
 +------------------------+---------------------------------------+-------------------------------------------------+
-| ``server.ssl``         | ``enabled``                           | Whether to enable SSL support.                  |
+| ``server.ssl``         | ``enabled``                           | Whether to enable SSL support                   |
 |                        +---------------------------------------+-------------------------------------------------+
 |                        | ``keyAlias``                          | The alias that identifies the key in            |
 |                        |                                       | the key store                                   |
@@ -235,7 +236,7 @@ passed to the :api:`ArmeriaBundle`.
 |                        +---------------------------------------+-------------------------------------------------+
 |                        | ``trustStore``                        | The trust store that holds SSL certificates     |
 |                        +---------------------------------------+-------------------------------------------------+
-|                        | ``trustStorePassword``                | the password used to access the trust store     |
+|                        | ``trustStorePassword``                | The password used to access the trust store     |
 +------------------------+---------------------------------------+-------------------------------------------------+
 | ``server.http1``       | ``maxChunkSize``                      | The maximum length of each chunk in an HTTP/1   |
 |                        |                                       | response content                                |

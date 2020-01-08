@@ -93,7 +93,7 @@ final class ArmeriaConfigurationUtil {
     /**
      * Configures the {@link ServerBuilder} with the specified {@code settings}.
      */
-    public static void configureServer(ServerBuilder serverBuilder, ArmeriaSettings settings) {
+    static void configureServer(ServerBuilder serverBuilder, ArmeriaSettings settings) {
         requireNonNull(serverBuilder, "serverBuilder");
         requireNonNull(settings, "settings");
 
@@ -422,7 +422,7 @@ final class ArmeriaConfigurationUtil {
                 return new File(resourceLocation).toURI().toURL();
             } catch (MalformedURLException ex2) {
                 throw new FileNotFoundException("Resource location [" + resourceLocation +
-                                                "] is neither a URL not a well-formed file path");
+                                                "] is neither a URL nor a well-formed file path");
             }
         }
     }
