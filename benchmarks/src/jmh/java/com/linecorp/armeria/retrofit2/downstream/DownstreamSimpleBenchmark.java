@@ -35,8 +35,7 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
         final WebClient webClient = WebClient.builder(baseUrl())
                                              .factory(ClientFactory.insecure())
                                              .build();
-        return ArmeriaRetrofit.builder(baseUrl())
-                              .nonBaseClientFactory((url, endpointGroup) -> webClient)
+        return ArmeriaRetrofit.builder(webClient)
                               .addConverterFactory(JacksonConverterFactory.create())
                               .build()
                               .create(SimpleBenchmarkClient.class);
