@@ -146,8 +146,8 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
                                                     .withServiceTag("tservice", "fallbackService")
                                                     .build()));
                         })
-                .build()
-                .create(RetrofitClassAwareMeterIdPrefixFunctionTest.Example.class);
+                        .build()
+                        .create(Example.class);
 
         example.getFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))

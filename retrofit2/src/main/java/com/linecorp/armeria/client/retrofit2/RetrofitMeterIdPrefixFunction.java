@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
@@ -78,25 +79,32 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
     private final String name;
     @Nullable
+    private final String serviceName;
+    @Nullable
     private final String serviceTagName;
     @Nullable
     private final String defaultServiceName;
 
-    RetrofitMeterIdPrefixFunction(String name, @Nullable String serviceTagName,
+    RetrofitMeterIdPrefixFunction(String name,
+                                  @Nullable String serviceTagName,
+                                  @Nullable String serviceName,
                                   @Nullable String defaultServiceName) {
         this.name = name;
-        if (serviceTagName != null && defaultServiceName != null) {
-            this.serviceTagName = serviceTagName;
-            this.defaultServiceName = defaultServiceName;
+        if (serviceName != null || defaultServiceName != null) {
+            this.serviceTagName = firstNonNull(serviceTagName, "service");
+        } else if (serviceTagName != null) {
+            throw new IllegalStateException("If you specify serviceTagName you need " +
+                                            "to specify one of defaultServiceName or serviceName");
         } else {
             this.serviceTagName = null;
-            this.defaultServiceName = null;
         }
+        this.serviceName = serviceName;
+        this.defaultServiceName = defaultServiceName;
     }
 
     @Override
     public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
-        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
+        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(2);
         buildTags(tagListBuilder, log);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
@@ -113,14 +121,14 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
         final Invocation invocation = InvocationUtil.getInvocation(log);
         if (invocation != null) {
             if (serviceTagName != null) {
-                tagListBuilder.add(Tag.of(serviceTagName,
-                                          invocation.method().getDeclaringClass().getSimpleName()));
+                final String service = firstNonNull(serviceName,
+                                                    invocation.method().getDeclaringClass().getSimpleName());
+                tagListBuilder.add(Tag.of(serviceTagName, service));
             }
             tagListBuilder.add(Tag.of("method", invocation.method().getName()));
         } else {
             if (serviceTagName != null) {
-                assert defaultServiceName != null;
-                tagListBuilder.add(Tag.of(serviceTagName, defaultServiceName));
+                tagListBuilder.add(Tag.of(serviceTagName, firstNonNull(serviceName, defaultServiceName)));
             }
             tagListBuilder.add(Tag.of("method", log.method().name()));
         }

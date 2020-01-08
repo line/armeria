@@ -51,7 +51,8 @@ import retrofit2.http.PUT;
  * the {@link Tag}s derived from the {@link RequestLog} properties, {@link Invocation} and provided retrofit
  * client.
  * <ul>
- *     <li>{@code service} (or {code serviceTagName}) - Retrofit service interface name</li>
+ *     <li>{@code service} (or {@code serviceTagName}) - Retrofit service interface name
+ *                                                       or provided {@code serviceName}</li>
  *     <li>{@code path}   - Retrofit service interface method path taken from method annotation
  *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
  *     <li>{@code method} - Retrofit service interface method
@@ -82,12 +83,13 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
 
     RetrofitClassAwareMeterIdPrefixFunction(String name,
                                             @Nullable String serviceTagName,
+                                            @Nullable String serviceName,
                                             Class<?> serviceClass) {
-        super(name, null, null);
+        super(name, null, null, null);
 
         this.name = name;
         this.serviceTagName = firstNonNull(serviceTagName, "service");
-        serviceName = serviceClass.getSimpleName();
+        this.serviceName = firstNonNull(serviceName, serviceClass.getSimpleName());
         this.methodNameToTags = defineTagsForMethods(serviceClass);
     }
 
