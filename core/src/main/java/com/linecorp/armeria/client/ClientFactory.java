@@ -222,7 +222,6 @@ public interface ClientFactory extends AutoCloseable {
         return null;
     }
 
-
     /**
      * Makes sure the specified {@link URI} is supported by this {@link ClientFactory}.
      *

@@ -271,8 +271,8 @@ public final class Clients {
     }
 
     /**
-     * Creates a new client that connects to the specified {@link EndpointGroup} with the {@link SessionProtocol} and
-     * the {@link SerializationFormat} using the default {@link ClientFactory}.
+     * Creates a new client that connects to the specified {@link EndpointGroup} with
+     * the {@link SessionProtocol} and the {@link SerializationFormat} using the default {@link ClientFactory}.
      *
      * @param protocol the session protocol
      * @param format the {@link SerializationFormat} for remote procedure call
@@ -820,12 +820,13 @@ public final class Clients {
     }
 
     /**
-     * Returns {@code true} if the specified {@code uri} is an undefined {@link URI}.
+     * Returns {@code true} if the specified {@code uri} is an undefined {@link URI}, which signifies that
+     * a {@link Client}, was created without a {@link URI} or {@link EndpointGroup}. For example,
+     * {@code isUndefinedUri(WebClient.of().uri())} will return {@code true}.
      */
     public static boolean isUndefinedUri(URI uri) {
         return uri == WebClientBuilder.UNDEFINED_URI;
     }
-
 
     private Clients() {}
 }

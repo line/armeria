@@ -82,7 +82,6 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         final Class<?> clientType = params.clientType();
         final ClientOptions options = params.options();
 
-
         final SerializationFormat serializationFormat = scheme.serializationFormat();
         final Class<?> stubClass = clientType.getEnclosingClass();
         if (stubClass == null) {

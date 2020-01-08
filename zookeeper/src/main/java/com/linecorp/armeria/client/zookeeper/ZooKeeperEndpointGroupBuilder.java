@@ -33,6 +33,9 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 
+/**
+ * Builds a {@link ZooKeeperEndpointGroup}.
+ */
 public class ZooKeeperEndpointGroupBuilder {
 
     @Nullable
@@ -66,16 +69,28 @@ public class ZooKeeperEndpointGroupBuilder {
         customizers = null;
     }
 
+    /**
+     * Sets the {@link EndpointSelectionStrategy} of the {@link ZooKeeperEndpointGroup}.
+     */
     public ZooKeeperEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         return this;
     }
 
+    /**
+     * Sets the {@link NodeValueCodec} of the {@link ZooKeeperEndpointGroup}.
+     */
     public ZooKeeperEndpointGroupBuilder codec(NodeValueCodec nodeValueCodec) {
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         return this;
     }
 
+    /**
+     * Specifies the {@link Consumer} that customizes the {@link CuratorFramework}.
+     *
+     * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
+     *                               instance.
+     */
     public ZooKeeperEndpointGroupBuilder customizer(
             Consumer<? super CuratorFrameworkFactory.Builder> customizer) {
         checkState(customizers != null, "Cannot customize if using an existing CuratorFramework instance.");
@@ -83,6 +98,9 @@ public class ZooKeeperEndpointGroupBuilder {
         return this;
     }
 
+    /**
+     * Returns a new {@link ZooKeeperEndpointGroup} created with the properties set so far.
+     */
     public ZooKeeperEndpointGroup build() {
         final CuratorFramework client;
         final boolean internalClient;

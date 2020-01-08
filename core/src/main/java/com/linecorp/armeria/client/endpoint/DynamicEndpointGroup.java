@@ -50,10 +50,18 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture =
             new EventLoopCheckingCompletableFuture<>();
 
+    /**
+     * Creates a new empty {@link DynamicEndpointGroup} that uses
+     * {@link EndpointSelectionStrategy#weightedRoundRobin()} as its {@link EndpointSelectionStrategy}.
+     */
     public DynamicEndpointGroup() {
         this(EndpointSelectionStrategy.weightedRoundRobin());
     }
 
+    /**
+     * Creates a new empty {@link DynamicEndpointGroup} that uses the specified
+     * {@link EndpointSelectionStrategy}.
+     */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
     }

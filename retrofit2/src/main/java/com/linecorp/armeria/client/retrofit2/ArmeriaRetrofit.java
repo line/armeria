@@ -19,33 +19,56 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import com.linecorp.armeria.client.WebClient;
+
 import okhttp3.HttpUrl;
 import retrofit2.Retrofit;
 
+/**
+ * Provides various ways to create a {@link Retrofit} which uses {@link WebClient} for sending requests.
+ */
 public final class ArmeriaRetrofit {
 
+    /**
+     * Returns a new {@link Retrofit} with the specified {@code baseUrl}.
+     */
     public static Retrofit of(String baseUrl) {
         return builder(baseUrl).build();
     }
 
+    /**
+     * Returns a new {@link Retrofit} with the specified {@code baseUrl}.
+     */
     public static Retrofit of(URI baseUrl) {
         return builder(baseUrl).build();
     }
 
+    /**
+     * Returns a new {@link Retrofit} with the specified {@code baseUrl}.
+     */
     public static Retrofit of(HttpUrl baseUrl) {
         return builder(baseUrl).build();
     }
 
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} created with the specified {@code baseUrl}.
+     */
     public static ArmeriaRetrofitBuilder builder(String baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
         return builder(HttpUrl.get(baseUrl));
     }
 
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} created with the specified {@code baseUrl}.
+     */
     public static ArmeriaRetrofitBuilder builder(URI baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
         return builder(HttpUrl.get(baseUrl.toString()));
     }
 
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} created with the specified {@code baseUrl}.
+     */
     public static ArmeriaRetrofitBuilder builder(HttpUrl baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
         return new ArmeriaRetrofitBuilder(baseUrl);

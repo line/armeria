@@ -42,6 +42,9 @@ public interface ClientBuilderParams {
         return new DefaultClientBuilderParams(factory, uri, type, options);
     }
 
+    /**
+     * Returns a newly created {@link ClientBuilderParams} from the specified properties.
+     */
     static ClientBuilderParams of(ClientFactory factory, Scheme scheme, EndpointGroup endpointGroup,
                                   @Nullable String path, Class<?> type, ClientOptions options) {
         requireNonNull(factory, "factory");

@@ -40,14 +40,31 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
 
+    /**
+     * Returns a new {@link ZooKeeperEndpointGroup} that retrieves the {@link Endpoint} list from
+     * the ZNode at the specified connection string and path. A new ZooKeeper client will be created internally.
+     * The ZooKeeper client will be destroyed when the returned {@link ZooKeeperEndpointGroup} is closed.
+     */
     public static ZooKeeperEndpointGroup of(String zkConnectionStr, String zNodePath) {
         return builder(zkConnectionStr, zNodePath).build();
     }
 
+    /**
+     * Returns a new {@link ZooKeeperEndpointGroup} that retrieves the {@link Endpoint} list from
+     * the ZNode at the specified path using the specified {@link CuratorFramework}.
+     * Note that the specified {@link CuratorFramework} will not be destroyed when the returned
+     * {@link ZooKeeperEndpointGroup} is closed.
+     */
     public static ZooKeeperEndpointGroup of(CuratorFramework client, String zNodePath) {
         return builder(client, zNodePath).build();
     }
 
+    /**
+     * Returns a new {@link ZooKeeperEndpointGroupBuilder} created with the specified ZooKeeper connection
+     * string and ZNode path. The {@link ZooKeeperEndpointGroup} built by the returned builder will create
+     * a new ZooKeeper client internally. The ZooKeeper client will be destroyed when
+     * the {@link ZooKeeperEndpointGroup} is closed.
+     */
     public static ZooKeeperEndpointGroupBuilder builder(String zkConnectionStr, String zNodePath) {
         requireNonNull(zkConnectionStr, "zkConnectionStr");
         checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr is empty.");
@@ -55,6 +72,11 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         return new ZooKeeperEndpointGroupBuilder(zkConnectionStr, zNodePath);
     }
 
+    /**
+     * Returns a new {@link ZooKeeperEndpointGroupBuilder} created with the specified {@link CuratorFramework}
+     * and ZNode path. Note that the specified {@link CuratorFramework} will not be destroyed when
+     * the {@link ZooKeeperEndpointGroup} built by the returned builder is closed.
+     */
     public static ZooKeeperEndpointGroupBuilder builder(CuratorFramework client, String zNodePath) {
         requireNonNull(client, "client");
         validateZNodePath(zNodePath);
