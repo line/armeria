@@ -145,7 +145,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Sets the {@code path} of the client.
      */
     public ClientBuilder path(String path) {
-        ensureEndpoint();
+        ensureEndpointGroup();
         requireNonNull(path, "path");
         checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path)", path);
         this.path = path;
@@ -156,7 +156,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Sets the {@link SerializationFormat} of the client. The default is {@link SerializationFormat#NONE}.
      */
     public ClientBuilder serializationFormat(SerializationFormat format) {
-        ensureEndpoint();
+        ensureEndpointGroup();
         if (scheme != null) {
             throw new IllegalStateException("scheme is already given");
         }
@@ -194,11 +194,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
         return scheme == null ? Scheme.of(format, protocol) : scheme;
     }
 
-    private void ensureEndpoint() {
+    private void ensureEndpointGroup() {
         if (endpointGroup == null) {
             throw new IllegalStateException(
-                    getClass().getSimpleName() + " must be created with an " + Endpoint.class.getSimpleName() +
-                    " to call this method.");
+                    getClass().getSimpleName() + " must be created with an " +
+                    EndpointGroup.class.getSimpleName() + " to call this method.");
         }
     }
 }

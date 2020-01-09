@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 /**
  * A list of {@link Endpoint}s.
  */
-public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable {
+public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelector, SafeCloseable {
 
     /**
      * Returns a singleton {@link EndpointGroup} which does not contain any {@link Endpoint}s.
@@ -138,12 +138,12 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
     EndpointSelectionStrategy selectionStrategy();
 
     /**
-     * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
-     * {@link ClientRequestContext}.
+     * Selects an {@link Endpoint} from this {@link EndpointGroup}.
      *
      * @return the {@link Endpoint} selected by the {@link EndpointSelectionStrategy},
      *         which was specified when constructing this {@link EndpointGroup}.
      */
+    @Override
     Endpoint select(ClientRequestContext ctx);
 
     /**
