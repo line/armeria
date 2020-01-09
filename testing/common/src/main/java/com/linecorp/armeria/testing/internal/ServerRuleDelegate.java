@@ -311,7 +311,8 @@ public abstract class ServerRuleDelegate {
 
     private static void validatePath(String path) {
         if (!requireNonNull(path, "path").startsWith("/")) {
-            throw new IllegalArgumentException("path: " + path + " (expected: an absolute path)");
+            throw new IllegalArgumentException("path: " + path +
+                                               " (expected: an absolute path starting with '/')");
         }
     }
 }

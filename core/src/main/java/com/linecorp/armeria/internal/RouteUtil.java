@@ -52,7 +52,7 @@ public final class RouteUtil {
     public static final String ROOT_LOGGER_NAME = "__ROOT__";
 
     /**
-     * Ensures that the specified {@code path} is an absolute path.
+     * Ensures that the specified {@code path} is an absolute path that starts with {@code "/"}.
      *
      * @return {@code path}
      *
@@ -62,7 +62,8 @@ public final class RouteUtil {
     public static String ensureAbsolutePath(String path, String paramName) {
         requireNonNull(path, paramName);
         if (path.isEmpty() || path.charAt(0) != '/') {
-            throw new IllegalArgumentException(paramName + ": " + path + " (expected: an absolute path)");
+            throw new IllegalArgumentException(paramName + ": " + path +
+                                               " (expected: an absolute path starting with '/')");
         }
         return path;
     }

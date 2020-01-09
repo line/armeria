@@ -147,7 +147,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     public ClientBuilder path(String path) {
         ensureEndpointGroup();
         requireNonNull(path, "path");
-        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path)", path);
+        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path starting with '/')", path);
         this.path = path;
         return this;
     }

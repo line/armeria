@@ -100,7 +100,7 @@ public interface HttpVfs {
     /**
      * Finds the file at the specified {@code path}.
      *
-     * @param path an absolute path whose component separator is {@code '/'}
+     * @param path an absolute path that starts with {@code '/'}, whose component separator is {@code '/'}
      * @param clock the {@link Clock} which provides the current date and time
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
@@ -113,7 +113,7 @@ public interface HttpVfs {
     /**
      * Returns whether the file at the specified {@code path} is a directory.
      *
-     * @param path an absolute path whose component separator is {@code '/'}.
+     * @param path an absolute path that starts with {@code '/'}, whose component separator is {@code '/'}
      * @return {@code true} if the file is a directory. {@code false} if the directory does not exist or
      *         the file listing is not available.
      */
@@ -122,7 +122,7 @@ public interface HttpVfs {
     /**
      * Lists the files at the specified directory {@code path} non-recursively.
      *
-     * @param path an absolute path whose component separator is {@code '/'}.
+     * @param path an absolute path that starts with {@code '/'}, whose component separator is {@code '/'}
      * @return the list of the file names. If the file is a directory, the file name will end with
      *         {@code '/'}. If the directory does not exist or the file listing is not available,
      *         an empty {@link List} is returned.
