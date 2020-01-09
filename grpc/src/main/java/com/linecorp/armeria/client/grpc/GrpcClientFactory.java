@@ -88,7 +88,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             throw newUnknownClientTypeException(clientType);
         }
 
-        final HttpClient httpClient = newHttpClientDelegate(params);
+        final HttpClient httpClient = newHttpClient(delegate(), params);
         final Method stubFactoryMethod = findStubFactoryMethod(clientType, stubClass);
 
         final MessageMarshaller jsonMarshaller =

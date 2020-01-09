@@ -58,16 +58,16 @@ public class DecoratingClientFactory implements ClientFactory {
      * {@link ClientOptions} with the specified {@link ClientBuilderParams}. Note that {@code path} and
      * {@link SerializationFormat} are always {@code "/"} and {@link SerializationFormat#NONE}.
      */
-    protected final HttpClient newHttpClientDelegate(ClientBuilderParams params) {
+    protected static HttpClient newHttpClient(ClientFactory httpClientFactory, ClientBuilderParams params) {
         final URI uri = params.uri();
         if (Clients.isUndefinedUri(uri)) {
-            return (HttpClient) delegate().newClient(
-                    ClientBuilderParams.of(delegate(), uri, HttpClient.class, params.options()));
+            return (HttpClient) httpClientFactory.newClient(
+                    ClientBuilderParams.of(httpClientFactory, uri, HttpClient.class, params.options()));
         }
 
         final Scheme newScheme = Scheme.of(SerializationFormat.NONE, params.scheme().sessionProtocol());
-        return (HttpClient) delegate().newClient(
-                ClientBuilderParams.of(delegate(), newScheme, params.endpointGroup(),
+        return (HttpClient) httpClientFactory.newClient(
+                ClientBuilderParams.of(httpClientFactory, newScheme, params.endpointGroup(),
                                        null, HttpClient.class, params.options()));
     }
 
