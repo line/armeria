@@ -25,6 +25,7 @@ import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -57,12 +58,12 @@ final class ArmeriaCallFactory implements Factory {
     private final int baseWebClientPort;
     private final WebClient baseWebClient;
     private final SubscriberFactory subscriberFactory;
-    private final BiFunction<SessionProtocol, HttpUrl, WebClient> nonBaseWebClientFactory;
+    private final BiFunction<SessionProtocol, Endpoint, WebClient> nonBaseWebClientFactory;
 
-    ArmeriaCallFactory(
-            String baseWebClientHost, int baseWebClientPort, WebClient baseWebClient,
-            SubscriberFactory subscriberFactory,
-            BiFunction<? super SessionProtocol, ? super HttpUrl, ? extends WebClient> nonBaseWebClientFactory) {
+    ArmeriaCallFactory(String baseWebClientHost, int baseWebClientPort, WebClient baseWebClient,
+                       SubscriberFactory subscriberFactory,
+                       BiFunction<? super SessionProtocol, ? super Endpoint,
+                               ? extends WebClient> nonBaseWebClientFactory) {
 
         this.baseWebClientHost = baseWebClientHost;
         this.baseWebClientPort = baseWebClientPort;
@@ -70,8 +71,8 @@ final class ArmeriaCallFactory implements Factory {
         this.subscriberFactory = subscriberFactory;
 
         @SuppressWarnings("unchecked")
-        final BiFunction<SessionProtocol, HttpUrl, WebClient> castNonBaseWebClientFactory =
-                (BiFunction<SessionProtocol, HttpUrl, WebClient>) nonBaseWebClientFactory;
+        final BiFunction<SessionProtocol, Endpoint, WebClient> castNonBaseWebClientFactory =
+                (BiFunction<SessionProtocol, Endpoint, WebClient>) nonBaseWebClientFactory;
         this.nonBaseWebClientFactory = castNonBaseWebClientFactory;
     }
 
@@ -89,7 +90,8 @@ final class ArmeriaCallFactory implements Factory {
         }
 
         final SessionProtocol protocol = url.isHttps() ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
-        return nonBaseWebClientFactory.apply(protocol, url);
+        final Endpoint endpoint = Endpoint.of(url.host(), url.port());
+        return nonBaseWebClientFactory.apply(protocol, endpoint);
     }
 
     static class ArmeriaCall implements Call {

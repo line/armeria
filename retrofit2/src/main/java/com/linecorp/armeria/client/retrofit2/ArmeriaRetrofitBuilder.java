@@ -19,14 +19,14 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
-
-import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
@@ -55,7 +55,7 @@ public final class ArmeriaRetrofitBuilder {
 
     private boolean streaming;
     private Executor callbackExecutor = CommonPools.blockingTaskExecutor();
-    private BiFunction<? super SessionProtocol, ? super HttpUrl, ? extends WebClient> nonBaseClientFactory;
+    private BiFunction<? super SessionProtocol, ? super Endpoint, ? extends WebClient> nonBaseClientFactory;
 
     ArmeriaRetrofitBuilder(WebClient webClient) {
         final URI uri = webClient.uri();
@@ -97,33 +97,15 @@ public final class ArmeriaRetrofitBuilder {
      * </ul></p>
      *
      * <p>You can use this method to create a customized non-base {@link WebClient}, for example to send
-     * an additional header, override the timeout, enforce HTTP/1 or even override the target host:
+     * an additional header, override the timeout or enforce HTTP/1:
      * <pre>{@code
-     * EndpointGroup groupFoo = EndpointGroup.of(Endpoint.of("node-1.foo.com"),
-     *                                           Endpoint.of("node-2.foo.com"));
-     * EndpointGroup groupBar = EndpointGroup.of(Endpoint.of("node-1.bar.com"),
-     *                                           Endpoint.of("node-2.bar.com"));
-     *
-     * WebClient defaultWebClient = WebClient.of(SessionProtocol.HTTP, groupFoo);
-     *
-     * ArmeriaRetrofit.builder(defaultWebClient)
-     *                .nonBaseClientFactory((protocol, url) -> {
+     * ArmeriaRetrofit.builder("http://example.com/")
+     *                .nonBaseClientFactory((protocol, endpoint) -> {
      *                    // Enforce HTTP/1.
      *                    final SessionProtocol actualProtocol =
      *                            protocol.isTls() ? SessionProtocol.H1 : SessionProtocol.H1C;
      *
-     *                    final EndpointGroup actualEndpointGroup;
-     *                    if ("group-bar".equals(url.host())) {
-     *                        // Client-side load-balancing:
-     *                        // - Make the request go to 'node-1.bar.com' or 'node-2.bar.com'
-     *                        //   if the target host is 'group-bar'.
-     *                        actualEndpointGroup = groupBar;
-     *                    } else {
-     *                        // Use the given host and port otherwise.
-     *                        actualEndpointGroup = Endpoint.of(url.host(), url.port());
-     *                    }
-     *
-     *                    return WebClient.builder(actualProtocol, actualEndpointGroup)
+     *                    return WebClient.builder(actualProtocol, endpoint)
      *                                    // Derive most settings from 'defaultWebClient'.
      *                                    .factory(defaultWebClient.factory())
      *                                    .options(defaultWebClient.options())
@@ -149,7 +131,7 @@ public final class ArmeriaRetrofitBuilder {
      * }</pre></p>
      */
     public ArmeriaRetrofitBuilder nonBaseClientFactory(
-            BiFunction<? super SessionProtocol, ? super HttpUrl, ? extends WebClient> nonBaseClientFactory) {
+            BiFunction<? super SessionProtocol, ? super Endpoint, ? extends WebClient> nonBaseClientFactory) {
         this.nonBaseClientFactory = requireNonNull(nonBaseClientFactory, "nonBaseClientFactory");
         return this;
     }
@@ -223,22 +205,24 @@ public final class ArmeriaRetrofitBuilder {
         retrofitBuilder.callFactory(new ArmeriaCallFactory(
                 baseWebClientHost, baseWebClientPort, baseWebClient,
                 streaming ? SubscriberFactory.streaming(callbackExecutor)
-                          : SubscriberFactory.blocking(), new CachedWebClientMapping(nonBaseClientFactory)
+                          : SubscriberFactory.blocking(), new CachedNonBaseClientFactory(nonBaseClientFactory)
         ));
 
         return retrofitBuilder.build();
     }
 
-    private static class CachedWebClientMapping implements BiFunction<SessionProtocol, HttpUrl, WebClient> {
+    private static class CachedNonBaseClientFactory
+            implements BiFunction<SessionProtocol, Endpoint, WebClient> {
 
-        private final BiFunction<SessionProtocol, HttpUrl, WebClient> webClientFactory;
-        private final Cache<Object, WebClient> cache;
+        private final BiFunction<SessionProtocol, Endpoint, WebClient> nonBaseClientFactory;
+        private final Cache<Map.Entry<SessionProtocol, Endpoint>, WebClient> cache;
 
         @SuppressWarnings("unchecked")
-        CachedWebClientMapping(
-                BiFunction<? super SessionProtocol, ? super HttpUrl, ? extends WebClient> webClientFactory) {
+        CachedNonBaseClientFactory(
+                BiFunction<? super SessionProtocol, ? super Endpoint,
+                        ? extends WebClient> nonBaseClientFactory) {
 
-            this.webClientFactory = (BiFunction<SessionProtocol, HttpUrl, WebClient>) webClientFactory;
+            this.nonBaseClientFactory = (BiFunction<SessionProtocol, Endpoint, WebClient>) nonBaseClientFactory;
 
             cache = Caffeine.newBuilder()
                             .maximumSize(8192) // TODO(trustin): Add a flag if there's demand for it.
@@ -246,56 +230,19 @@ public final class ArmeriaRetrofitBuilder {
         }
 
         @Override
-        public WebClient apply(SessionProtocol protocol, HttpUrl url) {
-            final Key key = new Key(protocol, url.host(), url.port());
-            final WebClient webClient = cache.get(key, unused -> webClientFactory.apply(protocol, url));
-            checkState(webClient != null, "webClientFactory returned null.");
+        public WebClient apply(SessionProtocol protocol, Endpoint endpoint) {
+            final Map.Entry<SessionProtocol, Endpoint> key = Maps.immutableEntry(protocol, endpoint);
+            final WebClient webClient =
+                    cache.get(key, unused -> nonBaseClientFactory.apply(protocol, endpoint));
+            checkState(webClient != null, "nonBaseClientFactory returned null.");
             return webClient;
         }
 
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
-                              .add("webClientFactory", webClientFactory)
+                              .add("nonBaseClientFactory", nonBaseClientFactory)
                               .add("cache", cache)
-                              .toString();
-        }
-    }
-
-    private static final class Key {
-        final SessionProtocol protocol;
-        final String host;
-        final int port;
-        final int hashCode;
-
-        Key(SessionProtocol protocol, String host, int port) {
-            this.protocol = protocol;
-            this.host = host;
-            this.port = port;
-            hashCode = (protocol.hashCode() * 31 + host.hashCode()) * 31 + port;
-        }
-
-        @Override
-        public int hashCode() {
-            return hashCode;
-        }
-
-        @Override
-        public boolean equals(@Nullable Object obj) {
-            if (obj == null || obj.getClass() != Key.class) {
-                return false;
-            }
-
-            final Key that = (Key) obj;
-            return protocol == that.protocol && port == that.port && host.equals(that.host);
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("protocol", protocol)
-                              .add("host", host)
-                              .add("port", port)
                               .toString();
         }
     }

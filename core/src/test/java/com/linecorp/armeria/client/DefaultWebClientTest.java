@@ -16,22 +16,22 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 class DefaultWebClientTest {
@@ -95,11 +95,54 @@ class DefaultWebClientTest {
     }
 
     @Test
-    void requestAbortPropagatesException() {
-        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/");
-        req.abort(new IllegalStateException("closed"));
-        assertThatThrownBy(() -> req.aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IllegalStateException.class);
+    void endpointRemapper() {
+        final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
+                                                     Endpoint.of("127.0.0.1", 1));
+        final WebClient client = WebClient.builder("http://group")
+                                          .endpointRemapper(endpoint -> {
+                                              if ("group".equals(endpoint.host())) {
+                                                  return group;
+                                              } else {
+                                                  return endpoint;
+                                              }
+                                          })
+                                          .build();
+
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            client.get("/").drainAll();
+            final RequestLog log = ctxCaptor.get().log();
+            await().untilAsserted(() -> {
+                final ClientRequestContext cctx = (ClientRequestContext) log.context();
+                assertThat(cctx.endpointGroup()).isSameAs(group);
+                assertThat(cctx.endpoint()).isEqualTo(Endpoint.of("127.0.0.1", 1));
+                assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");
+            });
+        }
+    }
+
+    @Test
+    void endpointRemapperForUnspecifiedUri() {
+        final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
+                                                     Endpoint.of("127.0.0.1", 1));
+        final WebClient client = WebClient.builder()
+                                          .endpointRemapper(endpoint -> {
+                                              if ("group".equals(endpoint.host())) {
+                                                  return group;
+                                              } else {
+                                                  return endpoint;
+                                              }
+                                          })
+                                          .build();
+
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            client.get("http://group").drainAll();
+            final RequestLog log = ctxCaptor.get().log();
+            await().untilAsserted(() -> {
+                final ClientRequestContext cctx = (ClientRequestContext) log.context();
+                assertThat(cctx.endpointGroup()).isSameAs(group);
+                assertThat(cctx.endpoint()).isEqualTo(Endpoint.of("127.0.0.1", 1));
+                assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");
+            });
+        }
     }
 }

@@ -474,14 +474,17 @@ class ArmeriaCallFactoryTest {
         final EndpointGroup groupBar = EndpointGroup.of(Endpoint.of("127.0.0.1", server.httpPort()),
                                                         Endpoint.of("127.0.0.1", server.httpPort()));
 
-        final Service service = ArmeriaRetrofit.builder(SessionProtocol.HTTP, groupFoo)
-                                               .nonBaseClientFactory((protocol, url) -> {
-                                                   if ("group_bar".equals(url.host())) {
-                                                       return WebClient.of(protocol, groupBar);
-                                                   }
-                                                   return WebClient.of(protocol,
-                                                                       Endpoint.of(url.host(), url.port()));
-                                               })
+        final WebClient baseWebClient = WebClient.builder(SessionProtocol.HTTP, groupFoo)
+                                                 .endpointRemapper(endpoint -> {
+                                                     if ("group_bar".equals(endpoint.host())) {
+                                                         return groupBar;
+                                                     } else {
+                                                         return endpoint;
+                                                     }
+                                                 })
+                                                 .build();
+
+        final Service service = ArmeriaRetrofit.builder(baseWebClient)
                                                .addConverterFactory(converterFactory)
                                                .build()
                                                .create(Service.class);
@@ -496,17 +499,21 @@ class ArmeriaCallFactoryTest {
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", server.httpPort()),
                                                      Endpoint.of("127.0.0.1", server.httpPort()));
 
-        final Service service = ArmeriaRetrofit.builder("http://127.0.0.1:1")
-                                               .nonBaseClientFactory((protocol, url) -> {
-                                                   if ("my-group".equals(url.host())) {
-                                                       return WebClient.of(protocol, group);
-                                                   }
-                                                   return WebClient.of(protocol,
-                                                                       Endpoint.of(url.host(), url.port()));
-                                               })
+        final WebClient baseWebClient = WebClient.builder("http://127.0.0.1:1")
+                                                 .endpointRemapper(endpoint -> {
+                                                     if ("my-group".equals(endpoint.host())) {
+                                                         return group;
+                                                     } else {
+                                                         return endpoint;
+                                                     }
+                                                 })
+                                                 .build();
+
+        final Service service = ArmeriaRetrofit.builder(baseWebClient)
                                                .addConverterFactory(converterFactory)
                                                .build()
                                                .create(Service.class);
+
         assertThat(service.fullUrl("//localhost:" + server.httpPort() + "/nest/pojo").get()).isEqualTo(
                 new Pojo("Leonard", 21));
         assertThat(service.fullUrl("//my-group/nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
@@ -584,8 +591,8 @@ class ArmeriaCallFactoryTest {
         final Service service = ArmeriaRetrofit
                 .builder(defaultWebClient)
                 .addConverterFactory(converterFactory)
-                .nonBaseClientFactory((protocol, url) -> {
-                    if ("not-default".equals(url.host())) {
+                .nonBaseClientFactory((protocol, endpoint) -> {
+                    if ("not-default".equals(endpoint.host())) {
                         return WebClient
                                 .builder("h2c://127.0.0.1:" + server.httpPort())
                                 .decorator((delegate, ctx, req) -> {
@@ -595,7 +602,7 @@ class ArmeriaCallFactoryTest {
                                 .build();
                     }
 
-                    return fail("Unexpected URL: %s", url);
+                    return fail("Unexpected URL: %s", endpoint);
                 })
                 .build().create(Service.class);
 
