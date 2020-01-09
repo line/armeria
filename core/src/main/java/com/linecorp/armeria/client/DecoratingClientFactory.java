@@ -69,7 +69,7 @@ public class DecoratingClientFactory implements ClientFactory {
                                                null, HttpClient.class, params.options());
         }
 
-        return (HttpClient) newClient(newParams);
+        return (HttpClient) delegate().newClient(newParams);
     }
 
     @Override
