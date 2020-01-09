@@ -82,7 +82,7 @@ final class ClientThreadLocalState {
 
     void addCapturedContext(ClientRequestContext ctx) {
         if (pendingContextCaptor != null) {
-            pendingContextCaptor.captured.add(ctx);
+            pendingContextCaptor.add(ctx);
         }
     }
 
@@ -123,10 +123,17 @@ final class ClientThreadLocalState {
         final List<ClientRequestContext> captured = new ArrayList<>();
 
         @Nullable
-        private final DefaultClientRequestContextCaptor oldCaptor;
+        private DefaultClientRequestContextCaptor oldCaptor;
 
         DefaultClientRequestContextCaptor(@Nullable DefaultClientRequestContextCaptor oldCaptor) {
             this.oldCaptor = oldCaptor;
+        }
+
+        void add(ClientRequestContext ctx) {
+            captured.add(ctx);
+            if (oldCaptor != null) {
+                oldCaptor.add(ctx);
+            }
         }
 
         @Override
@@ -135,6 +142,15 @@ final class ClientThreadLocalState {
                 throw new NoSuchElementException("No context was captured; no request was made?");
             }
             return captured.get(0);
+        }
+
+        @Nullable
+        @Override
+        public ClientRequestContext getOrNull() {
+            if (!captured.isEmpty()) {
+                return captured.get(0);
+            }
+            return null;
         }
 
         @Override
@@ -150,6 +166,7 @@ final class ClientThreadLocalState {
         @Override
         public void close() {
             pendingContextCaptor = oldCaptor;
+            oldCaptor = null;
             maybeRemoveThreadLocal();
         }
     }

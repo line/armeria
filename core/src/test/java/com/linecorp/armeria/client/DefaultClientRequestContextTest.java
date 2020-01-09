@@ -149,6 +149,8 @@ class DefaultClientRequestContextTest {
                 assertThat(counter).hasValue(1);
                 assertThatThrownBy(ctxCaptor::get).isInstanceOf(NoSuchElementException.class)
                                                   .hasMessageContaining("no request was made");
+
+                assertThat(ctxCaptor.getOrNull()).isNull();
             }
         }
 
@@ -175,22 +177,28 @@ class DefaultClientRequestContextTest {
             assertThat(ctxCaptor1.getAll()).containsExactly(ctx1);
 
             final ClientRequestContext ctx2;
+            final ClientRequestContext ctx3;
             ClientRequestContextCaptor ctxCaptor2 = null;
             try {
                 ctxCaptor2 = Clients.newContextCaptor();
                 ctx2 = newContext();
-                // The context captured by the second captor should not affect the first captor.
-                assertThat(ctxCaptor1.getAll()).containsExactly(ctx1);
+                // The context captured by the second captor is also captured by the first captor.
+                assertThat(ctxCaptor1.getAll()).containsExactly(ctx1, ctx2);
                 assertThat(ctxCaptor2.getAll()).containsExactly(ctx2);
+                try (ClientRequestContextCaptor ctxCaptor3 = Clients.newContextCaptor()) {
+                    ctx3 = newContext();
+                    assertThat(ctxCaptor1.getAll()).containsExactly(ctx1, ctx2, ctx3);
+                    assertThat(ctxCaptor2.getAll()).containsExactly(ctx2, ctx3);
+                }
             } finally {
                 if (ctxCaptor2 != null) {
                     ctxCaptor2.close();
                 }
             }
 
-            final DefaultClientRequestContext ctx3 = newContext();
-            assertThat(ctxCaptor1.getAll()).containsExactly(ctx1, ctx3);
-            assertThat(ctxCaptor2.getAll()).containsExactly(ctx2);
+            final DefaultClientRequestContext ctx4 = newContext();
+            assertThat(ctxCaptor1.getAll()).containsExactly(ctx1, ctx2, ctx3, ctx4);
+            assertThat(ctxCaptor2.getAll()).containsExactly(ctx2, ctx3);
         }
 
         // Thread-local state must be cleaned up.

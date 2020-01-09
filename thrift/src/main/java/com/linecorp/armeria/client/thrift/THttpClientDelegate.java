@@ -146,7 +146,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             final CompletableFuture<AggregatedHttpResponse> future =
                     delegate().execute(ctx, httpReq).aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
 
-            future.handleAsync((res, cause) -> {
+            future.handle((res, cause) -> {
                 if (cause != null) {
                     handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause));
                     return null;
@@ -171,7 +171,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                 }
 
                 return null;
-            }, ctx.contextAwareExecutor()).exceptionally(CompletionActions::log);
+            }).exceptionally(CompletionActions::log);
         } catch (Throwable cause) {
             handlePreDecodeException(ctx, reply, func, cause);
         }
