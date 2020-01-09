@@ -44,8 +44,22 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     private final Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper;
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
-        super(params, delegate, meterRegistry);
+        super(fillDefaultOptions(params), delegate, meterRegistry);
         endpointRemapper = options().get(WebClientOptions.ENDPOINT_REMAPPER);
+    }
+
+    private static ClientBuilderParams fillDefaultOptions(ClientBuilderParams params) {
+        final ClientOptions options = params.options();
+        if (options.getOrNull(WebClientOptions.ENDPOINT_REMAPPER) != null) {
+            return params;
+        }
+
+        final ClientOptionsBuilder optionsBuilder = options.toBuilder();
+        optionsBuilder.option(WebClientOptions.ENDPOINT_REMAPPER, Function.identity());
+        final ClientOptions newOptions = optionsBuilder.build();
+
+        return ClientBuilderParams.of(params.factory(), params.scheme(), params.endpointGroup(),
+                                      params.absolutePathRef(), params.clientType(), newOptions);
     }
 
     @Override

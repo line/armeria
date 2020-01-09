@@ -67,7 +67,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
         uri = UNDEFINED_URI;
         scheme = null;
         endpointGroup = null;
-        setDefaultWebClientOptions();
     }
 
     /**
@@ -94,7 +93,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
         }
         scheme = null;
         endpointGroup = null;
-        setDefaultWebClientOptions();
     }
 
     /**
@@ -109,11 +107,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
         uri = null;
         scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
-        setDefaultWebClientOptions();
-    }
-
-    private void setDefaultWebClientOptions() {
-        option(WebClientOptions.ENDPOINT_REMAPPER, Function.identity());
     }
 
     private static Scheme validateScheme(String scheme) {
