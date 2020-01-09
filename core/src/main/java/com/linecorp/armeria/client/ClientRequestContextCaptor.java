@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -35,6 +37,12 @@ public interface ClientRequestContextCaptor extends SafeCloseable, Supplier<Clie
      */
     @Override
     ClientRequestContext get();
+
+    /**
+     * Returns the {@link ClientRequestContext} captured first, or {@code null} if unavailable.
+     */
+    @Nullable
+    ClientRequestContext getOrNull();
 
     /**
      * Returns all {@link ClientRequestContext}s captured so far. An empty list is returned

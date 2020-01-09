@@ -34,6 +34,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class ClientRequestContextPushedOnCallbackTest {
@@ -77,9 +78,12 @@ class ClientRequestContextPushedOnCallbackTest {
 
     @Test
     void pushedContextOnAsyncMethodCallback_onError() throws Exception {
-        final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
         final AsyncIface client = Clients.builder(server.uri(BINARY, "/exception")).build(AsyncIface.class);
+        checkContextOnAsyncMethodCallbackOnError(client);
+    }
 
+    private static void checkContextOnAsyncMethodCallbackOnError(AsyncIface client) throws Exception {
+        final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
         final ClientRequestContext ctx;
         final CountDownLatch latch = new CountDownLatch(1);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -98,5 +102,15 @@ class ClientRequestContextPushedOnCallbackTest {
 
         latch.await();
         assertThat(ctx).isSameAs(ctxHolder.get());
+    }
+
+    @Test
+    void pushedContextOnAsyncMethodCallback_exceptionInDecorator() throws Exception {
+        final AsyncIface client = Clients.builder(server.uri(BINARY, "/exception"))
+                                         .rpcDecorator((delegate, ctx, req) -> {
+                                             throw new AnticipatedException();
+                                         }).build(AsyncIface.class);
+
+        checkContextOnAsyncMethodCallbackOnError(client);
     }
 }
