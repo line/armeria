@@ -58,17 +58,18 @@ public class DecoratingClientFactory implements ClientFactory {
      * {@link ClientOptions} with the specified {@link ClientBuilderParams}. Note that {@code path} and
      * {@link SerializationFormat} are always {@code "/"} and {@link SerializationFormat#NONE}.
      */
-    protected static HttpClient newHttpClient(ClientFactory httpClientFactory, ClientBuilderParams params) {
+    protected HttpClient newHttpClient(ClientBuilderParams params) {
         final URI uri = params.uri();
+        final ClientBuilderParams newParams;
         if (Clients.isUndefinedUri(uri)) {
-            return (HttpClient) httpClientFactory.newClient(
-                    ClientBuilderParams.of(httpClientFactory, uri, HttpClient.class, params.options()));
+            newParams = ClientBuilderParams.of(delegate(), uri, HttpClient.class, params.options());
+        } else {
+            final Scheme newScheme = Scheme.of(SerializationFormat.NONE, params.scheme().sessionProtocol());
+            newParams = ClientBuilderParams.of(delegate(), newScheme, params.endpointGroup(),
+                                               null, HttpClient.class, params.options());
         }
 
-        final Scheme newScheme = Scheme.of(SerializationFormat.NONE, params.scheme().sessionProtocol());
-        return (HttpClient) httpClientFactory.newClient(
-                ClientBuilderParams.of(httpClientFactory, newScheme, params.endpointGroup(),
-                                       null, HttpClient.class, params.options()));
+        return (HttpClient) newClient(newParams);
     }
 
     @Override

@@ -69,7 +69,7 @@ final class THttpClientFactory extends DecoratingClientFactory {
         final Class<?> clientType = params.clientType();
         final ClientOptions options = params.options();
         final RpcClient delegate = options.decoration().rpcDecorate(
-                new THttpClientDelegate(newHttpClient(delegate(), params),
+                new THttpClientDelegate(newHttpClient(params),
                                         params.scheme().serializationFormat()));
 
         if (clientType == THttpClient.class) {
