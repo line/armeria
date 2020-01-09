@@ -86,13 +86,13 @@ class ClientFactoryBuilderTest {
     }
 
     @Test
-    void shouldInheritChannelOptionInClientFactoryOptions() {
+    void shouldPreserveChannelOptionInClientFactory() {
         final ClientFactory factory = ClientFactory.builder()
                 .options(ClientFactoryOptions.of())
                 .build();
         final Map<ChannelOption<?>, Object> channelOptions =
                 factory.options().get(ClientFactoryOption.CHANNEL_OPTIONS);
-        final Integer connectTimeoutMillis = (Integer) channelOptions.get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+        final int connectTimeoutMillis = (int) channelOptions.get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         assertThat(connectTimeoutMillis).isEqualTo(Flags.defaultConnectTimeoutMillis());
     }
 
