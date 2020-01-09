@@ -58,8 +58,12 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         optionsBuilder.option(WebClientOptions.ENDPOINT_REMAPPER, Function.identity());
         final ClientOptions newOptions = optionsBuilder.build();
 
-        return ClientBuilderParams.of(params.factory(), params.scheme(), params.endpointGroup(),
-                                      params.absolutePathRef(), params.clientType(), newOptions);
+        if (Clients.isUndefinedUri(params.uri())) {
+            return ClientBuilderParams.of(params.factory(), params.uri(), params.clientType(), newOptions);
+        } else {
+            return ClientBuilderParams.of(params.factory(), params.scheme(), params.endpointGroup(),
+                                          params.absolutePathRef(), params.clientType(), newOptions);
+        }
     }
 
     @Override
