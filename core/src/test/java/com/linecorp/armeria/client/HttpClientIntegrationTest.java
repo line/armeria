@@ -56,6 +56,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
@@ -736,6 +737,38 @@ class HttpClientIntegrationTest {
         final AggregatedHttpResponse response = client.execute(
                 AggregatedHttpRequest.of(HttpMethod.GET, "/only-once/request")).aggregate().get();
 
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+
+        clientFactory.close();
+    }
+
+    @Test
+    void testDefaultClientFactoryOptions() throws Exception {
+        final ClientFactory clientFactory = ClientFactory.builder()
+                                                         .options(ClientFactoryOptions.of())
+                                                         .build();
+        final WebClient client = WebClient.builder(server.httpUri("/"))
+                                          .factory(clientFactory)
+                                          .build();
+
+        final AggregatedHttpResponse response = client.execute(
+                AggregatedHttpRequest.of(HttpMethod.GET, "/hello/world")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+
+        clientFactory.close();
+    }
+
+    @Test
+    void testEmptyClientFactoryOptions() throws Exception {
+        final ClientFactory clientFactory = ClientFactory.builder()
+                                                         .options(ClientFactoryOptions.of(ImmutableList.of()))
+                                                         .build();
+        final WebClient client = WebClient.builder(server.httpUri("/"))
+                                          .factory(clientFactory)
+                                          .build();
+
+        final AggregatedHttpResponse response = client.execute(
+                AggregatedHttpRequest.of(HttpMethod.GET, "/hello/world")).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
         clientFactory.close();

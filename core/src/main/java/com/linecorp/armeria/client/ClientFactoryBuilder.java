@@ -212,7 +212,11 @@ public final class ClientFactoryBuilder {
     public <T> ClientFactoryBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
         requireNonNull(value, "value");
+        channelOption0(option, value);
+        return this;
+    }
 
+    private void channelOption0(ChannelOption<?> option, Object value) {
         @SuppressWarnings("unchecked")
         final Map<ChannelOption<?>, Object> channelOptions =
                 (Map<ChannelOption<?>, Object>) options.computeIfAbsent(
@@ -220,7 +224,6 @@ public final class ClientFactoryBuilder {
                         k -> ClientFactoryOption.CHANNEL_OPTIONS.newValue(
                                 new Object2ObjectArrayMap<>())).value();
         channelOptions.put(option, value);
-        return this;
     }
 
     /**
@@ -472,7 +475,14 @@ public final class ClientFactoryBuilder {
      */
     public <T> ClientFactoryBuilder option(ClientFactoryOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
-        options.put(optionValue.option(), optionValue);
+        if (ClientFactoryOption.CHANNEL_OPTIONS == optionValue.option()) {
+            @SuppressWarnings("unchecked")
+            final Map<ChannelOption<?>, Object> channelOptions =
+                    (Map<ChannelOption<?>, Object>) optionValue.value();
+            channelOptions.forEach(this::channelOption0);
+        } else {
+            options.put(optionValue.option(), optionValue);
+        }
         return this;
     }
 
@@ -487,11 +497,11 @@ public final class ClientFactoryBuilder {
 
     private ClientFactoryOptions buildOptions() {
         options.computeIfAbsent(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY, k -> {
-           final Function<? super EventLoopGroup, ? extends EventLoopScheduler>  eventLoopSchedulerFactory =
-                   eventLoopGroup -> new DefaultEventLoopScheduler(
-                           eventLoopGroup, maxNumEventLoopsPerEndpoint, maxNumEventLoopsPerHttp1Endpoint,
-                           maxNumEventLoopsFunctions);
-           return ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY.newValue(eventLoopSchedulerFactory);
+            final Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory =
+                    eventLoopGroup -> new DefaultEventLoopScheduler(
+                            eventLoopGroup, maxNumEventLoopsPerEndpoint, maxNumEventLoopsPerHttp1Endpoint,
+                            maxNumEventLoopsFunctions);
+            return ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY.newValue(eventLoopSchedulerFactory);
         });
 
         options.computeIfAbsent(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY, k -> {
