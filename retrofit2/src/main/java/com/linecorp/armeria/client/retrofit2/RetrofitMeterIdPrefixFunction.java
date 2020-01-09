@@ -41,7 +41,7 @@ import retrofit2.Invocation;
  *                                  if Retrofit service interface name is not available</li>　
  *     <li>{@code method} - Retrofit service interface method name or {@link HttpMethod#name()} if Retrofit
  *                          service interface name is not available</li>
- *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
+ *     <li>{@code http.status} - {@link HttpStatus#code()}</li>
  * </ul>
  */
 public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {

@@ -113,24 +113,24 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
         example.getFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
                 .containsKeys(
-                        "foo.activeRequests#value{httpMethod=GET,method=getFoo,path=/foo," + serviceTag + '}',
-                        "foo.requestDuration#count{" +
-                        "httpMethod=GET,httpStatus=200,method=getFoo,path=/foo," + serviceTag + '}'));
+                        "foo.active.requests#value{http.method=GET,method=getFoo,path=/foo," + serviceTag + '}',
+                        "foo.request.duration#count{" +
+                        "http.method=GET,http.status=200,method=getFoo,path=/foo," + serviceTag + '}'));
 
         example.postFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
                 .containsKeys(
-                        "foo.activeRequests#value{httpMethod=GET,method=getFoo,path=/foo," + serviceTag + '}',
-                        "foo.requestDuration#count{" +
-                        "httpMethod=POST,httpStatus=200,method=postFoo,path=/foo," + serviceTag + '}'));
+                        "foo.active.requests#value{http.method=GET,method=getFoo,path=/foo," + serviceTag + '}',
+                        "foo.request.duration#count{" +
+                        "http.method=POST,http.status=200,method=postFoo,path=/foo," + serviceTag + '}'));
 
         example.traceFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
                 .containsKeys(
-                        "foo.activeRequests#value{httpMethod=TRACE,method=traceFoo,path=/foo," +
+                        "foo.active.requests#value{http.method=TRACE,method=traceFoo,path=/foo," +
                         serviceTag + '}',
-                        "foo.requestDuration#count{" +
-                        "httpMethod=TRACE,httpStatus=200,method=traceFoo,path=/foo," + serviceTag + '}'));
+                        "foo.request.duration#count{" +
+                        "http.method=TRACE,http.status=200,method=traceFoo,path=/foo," + serviceTag + '}'));
     }
 
     private static Stream<Arguments> metrics() {
@@ -206,7 +206,7 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
         return Arguments.of(
                 methodName,
                 ImmutableList.of(
-                        Tag.of("httpMethod", httpMethod),
+                        Tag.of("http.method", httpMethod),
                         Tag.of("method", methodName),
                         Tag.of("path", path))
         );

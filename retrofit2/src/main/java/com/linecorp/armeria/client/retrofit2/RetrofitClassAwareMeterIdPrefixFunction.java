@@ -57,10 +57,10 @@ import retrofit2.http.PUT;
  *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
  *     <li>{@code method} - Retrofit service interface method
  *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
- *     <li>{@code httpMethod} - HTTP method name from Retrofit service interface method annotation
+ *     <li>{@code http.method} - HTTP method name from Retrofit service interface method annotation
  *                              or from {@link RequestLog#method()} if Retrofit service interface
  *                              method not available</li>
- *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
+ *     <li>{@code http.status} - {@link HttpStatus#code()}</li>
  * </ul>
  */
 final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefixFunction {
@@ -70,7 +70,7 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
     );
     private static final String METHOD_TAG_NAME = "method";
     private static final String PATH_TAG_NAME = "path";
-    private static final String HTTP_METHOD_TAG_NAME = "httpMethod";
+    private static final String HTTP_METHOD_TAG_NAME = "http.method";
     private static final List<Tag> DEFAULT_METHOD_TAGS = ImmutableList.of(
             Tag.of(METHOD_TAG_NAME, "UNKNOWN"),
             Tag.of(PATH_TAG_NAME, "UNKNOWN")
