@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -105,7 +106,13 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
     }
 
     private static String nullOrEmptyToSlash(@Nullable String absolutePathRef) {
-        return Strings.isNullOrEmpty(absolutePathRef) ? "/" : absolutePathRef;
+        if (Strings.isNullOrEmpty(absolutePathRef)) {
+            return "/";
+        }
+
+        checkArgument(absolutePathRef.charAt(0) == '/',
+                      "absolutePathRef: %s (must start with '/')", absolutePathRef);
+        return absolutePathRef;
     }
 
     @Override

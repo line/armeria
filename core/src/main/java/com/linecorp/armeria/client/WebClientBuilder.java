@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -140,7 +141,15 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      * Sets the {@code path} of the client.
      */
     public WebClientBuilder path(String path) {
-        this.path = requireNonNull(path, "path");
+        if (endpointGroup == null) {
+            throw new IllegalStateException(
+                    getClass().getSimpleName() + " must be created with an " +
+                    EndpointGroup.class.getSimpleName() + " to call this method.");
+        }
+
+        requireNonNull(path, "path");
+        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path starting with '/')", path);
+        this.path = path;
         return this;
     }
 
