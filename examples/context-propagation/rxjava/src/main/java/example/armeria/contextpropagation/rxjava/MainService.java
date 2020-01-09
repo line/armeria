@@ -57,9 +57,6 @@ public class MainService implements HttpService {
                       // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted
                       // inside the logic (e.g., your DB call will be traced!).
                       .subscribeOn(Schedulers.from(ctx.blockingTaskExecutor()))
-                      // Because we used subscribeOn without the context aware scheduler, we need to make sure
-                      // callbacks run on the context executor using observeOn.
-                      .observeOn(contextAwareScheduler)
                       .flattenAsFlowable(l -> l);
 
         final Flowable<Long> extractNumsFromRequest =
@@ -89,6 +86,10 @@ public class MainService implements HttpService {
                         // Unless you know what you're doing, always use subscribeOn with the context executor
                         // to have the context mounted and stay on a single thread to reduce concurrency issues.
                         .subscribeOn(contextAwareScheduler)
+                        // When concatenating flowables, you should almost always call observeOn with the
+                        // context executor because we don't know here whether the subscription is on it or
+                        // something like a blocking task executor.
+                        .observeOn(contextAwareScheduler)
                         .flatMapSingle(num -> {
                             // The context is mounted in a thread-local, meaning it is available to all logic
                             // such as tracing.
