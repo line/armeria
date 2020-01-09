@@ -90,11 +90,11 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
                                   @Nullable String serviceName,
                                   @Nullable String defaultServiceName) {
         this.name = name;
-        if (serviceName != null || defaultServiceName != null) {
+        if (defaultServiceName != null || serviceName != null) {
             this.serviceTagName = firstNonNull(serviceTagName, "service");
         } else if (serviceTagName != null) {
-            throw new IllegalStateException("If you specify serviceTagName you need " +
-                                            "to specify one of defaultServiceName or serviceName");
+            defaultServiceName = "UNKNOWN";
+            this.serviceTagName = serviceTagName;
         } else {
             this.serviceTagName = null;
         }

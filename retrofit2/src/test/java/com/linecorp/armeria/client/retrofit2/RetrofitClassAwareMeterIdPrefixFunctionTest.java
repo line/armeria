@@ -32,7 +32,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpMethod;
@@ -98,53 +97,15 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
         }
     };
 
-    @Test
-    void metrics() {
-        final Example example =
-                new ArmeriaRetrofitBuilder(clientFactory)
-                        .baseUrl("h1c://127.0.0.1:" + server.httpPort())
-                        .clientOptions(ClientOptions.builder()
-                                                    .decorator(MetricCollectingClient.newDecorator(
-                                                            RetrofitClassAwareMeterIdPrefixFunction
-                                                                    .of("foo", Example.class)))
-                                                    .build())
-                        .build()
-                        .create(Example.class);
-
-        example.getFoo().join();
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
-                .containsKeys(
-                        "foo.activeRequests#value{httpMethod=GET,method=getFoo,path=/foo,service=Example}",
-                        "foo.requestDuration#count{" +
-                        "httpMethod=GET,httpStatus=200,method=getFoo,path=/foo,service=Example}"));
-
-        example.postFoo().join();
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
-                .containsKeys(
-                        "foo.activeRequests#value{httpMethod=GET,method=getFoo,path=/foo,service=Example}",
-                        "foo.requestDuration#count{" +
-                        "httpMethod=GET,httpStatus=200,method=getFoo,path=/foo,service=Example}"));
-
-        example.traceFoo().join();
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
-                .containsKeys(
-                        "foo.activeRequests#value{httpMethod=TRACE,method=traceFoo,path=/foo,service=Example}",
-                        "foo.requestDuration#count{" +
-                        "httpMethod=TRACE,httpStatus=200,method=traceFoo,path=/foo,service=Example}"));
-    }
-
-    @Test
-    void metrics_withServiceTag() {
+    @ParameterizedTest
+    @MethodSource
+    void metrics(RetrofitMeterIdPrefixFunction meterIdPrefixFunction, String serviceTag) {
         final Example example =
                 new ArmeriaRetrofitBuilder(clientFactory)
                         .baseUrl("h1c://127.0.0.1:" + server.httpPort())
                         .withClientOptions((s, clientOptionsBuilder) -> {
-                            return clientOptionsBuilder.decorator(
-                                    MetricCollectingClient.newDecorator(
-                                            RetrofitClassAwareMeterIdPrefixFunction
-                                                    .builder("foo", Example.class)
-                                                    .withServiceTag("tservice", "fallbackService")
-                                                    .build()));
+                            return clientOptionsBuilder
+                                    .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction));
                         })
                         .build()
                         .create(Example.class);
@@ -152,23 +113,58 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
         example.getFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
                 .containsKeys(
-                        "foo.activeRequests#value{httpMethod=GET,method=getFoo,path=/foo,tservice=Example}",
+                        "foo.activeRequests#value{httpMethod=GET,method=getFoo,path=/foo," + serviceTag + '}',
                         "foo.requestDuration#count{" +
-                        "httpMethod=GET,httpStatus=200,method=getFoo,path=/foo,tservice=Example}"));
+                        "httpMethod=GET,httpStatus=200,method=getFoo,path=/foo," + serviceTag + '}'));
 
         example.postFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
                 .containsKeys(
-                        "foo.activeRequests#value{httpMethod=GET,method=getFoo,path=/foo,tservice=Example}",
+                        "foo.activeRequests#value{httpMethod=GET,method=getFoo,path=/foo," + serviceTag + '}',
                         "foo.requestDuration#count{" +
-                        "httpMethod=POST,httpStatus=200,method=postFoo,path=/foo,tservice=Example}"));
+                        "httpMethod=POST,httpStatus=200,method=postFoo,path=/foo," + serviceTag + '}'));
 
         example.traceFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
                 .containsKeys(
-                        "foo.activeRequests#value{httpMethod=TRACE,method=traceFoo,path=/foo,tservice=Example}",
+                        "foo.activeRequests#value{httpMethod=TRACE,method=traceFoo,path=/foo," +
+                        serviceTag + '}',
                         "foo.requestDuration#count{" +
-                        "httpMethod=TRACE,httpStatus=200,method=traceFoo,path=/foo,tservice=Example}"));
+                        "httpMethod=TRACE,httpStatus=200,method=traceFoo,path=/foo," + serviceTag + '}'));
+    }
+
+    private static Stream<Arguments> metrics() {
+        return Stream.of(
+                Arguments.of(RetrofitMeterIdPrefixFunction.of("foo", Example.class),
+                             "service=Example"),
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .builder("foo")
+                                     .serviceClass(Example.class)
+                                     .build(),
+                             "service=Example"),
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .builder("foo", Example.class)
+                                     .serviceName("serviceName")
+                                     .build(),
+                             "service=serviceName"),
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .builder("foo", Example.class)
+                                     .withServiceTag("tservice", "fallbackService")
+                                     .build(),
+                             "tservice=Example"),
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .builder("foo", Example.class)
+                                     .serviceTag("tservice")
+                                     .build(),
+                             "tservice=Example"),
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .builder("foo", Example.class)
+                                     .withServiceTag("serviceTagName", "defaultServiceName")
+                                     .serviceTag("tservice")
+                                     .serviceName("serviceName")
+                                     .build(),
+                             "tservice=serviceName")
+        );
     }
 
     @Test
