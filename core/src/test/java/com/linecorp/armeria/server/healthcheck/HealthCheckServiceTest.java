@@ -34,12 +34,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -128,7 +130,7 @@ class HealthCheckServiceTest {
         assertResponseEquals("GET /hc HTTP/1.0",
                              "HTTP/1.1 200 OK\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
-                             "armeria-lphc: 60\r\n" +
+                             "armeria-lphc: 60, 10\r\n" +
                              "content-length: 16\r\n\r\n" +
                              "{\"healthy\":true}");
     }
@@ -139,7 +141,7 @@ class HealthCheckServiceTest {
         assertResponseEquals("GET /hc HTTP/1.0",
                              "HTTP/1.1 503 Service Unavailable\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
-                             "armeria-lphc: 60\r\n" +
+                             "armeria-lphc: 60, 10\r\n" +
                              "content-length: 17\r\n\r\n" +
                              "{\"healthy\":false}");
     }
@@ -149,7 +151,7 @@ class HealthCheckServiceTest {
         assertResponseEquals("HEAD /hc HTTP/1.0",
                              "HTTP/1.1 200 OK\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
-                             "armeria-lphc: 60\r\n" +
+                             "armeria-lphc: 60, 10\r\n" +
                              "content-length: 16\r\n\r\n");
     }
 
@@ -159,7 +161,7 @@ class HealthCheckServiceTest {
         assertResponseEquals("HEAD /hc HTTP/1.0",
                              "HTTP/1.1 503 Service Unavailable\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
-                             "armeria-lphc: 60\r\n" +
+                             "armeria-lphc: 60, 10\r\n" +
                              "content-length: 17\r\n\r\n");
     }
 
@@ -188,10 +190,14 @@ class HealthCheckServiceTest {
         // Make the server unhealthy so the response comes in.
         checker.setHealthy(false);
         withTimeout(() -> assertThat(f.join()).isEqualTo(AggregatedHttpResponse.of(
+                ImmutableList.of(ResponseHeaders.builder(HttpStatus.PROCESSING)
+                                                .set("armeria-lphc", "60, 10")
+                                                .build()),
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", 60),
-                HttpData.ofUtf8("{\"healthy\":false}"))));
+                                   "armeria-lphc", "60, 10"),
+                HttpData.ofUtf8("{\"healthy\":false}"),
+                HttpHeaders.of())));
     }
 
     @Test
@@ -205,7 +211,7 @@ class HealthCheckServiceTest {
         withTimeout(() -> assertThat(f.get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", 60),
+                                   "armeria-lphc", "60, 10"),
                 HttpData.ofUtf8("{\"healthy\":false}"))));
     }
 
@@ -223,10 +229,14 @@ class HealthCheckServiceTest {
         // Make the server healthy so the response comes in.
         checker.setHealthy(true);
         withTimeout(() -> assertThat(f.get()).isEqualTo(AggregatedHttpResponse.of(
+                ImmutableList.of(ResponseHeaders.builder(HttpStatus.PROCESSING)
+                                                .set("armeria-lphc", "60, 10")
+                                                .build()),
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", 60),
-                HttpData.ofUtf8("{\"healthy\":true}"))));
+                                   "armeria-lphc", "60, 10"),
+                HttpData.ofUtf8("{\"healthy\":true}"),
+                HttpHeaders.of())));
     }
 
     @Test
@@ -237,7 +247,7 @@ class HealthCheckServiceTest {
         withTimeout(() -> assertThat(f.get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", 60),
+                                   "armeria-lphc", "60, 10"),
                 HttpData.ofUtf8("{\"healthy\":true}"))));
     }
 
@@ -246,12 +256,17 @@ class HealthCheckServiceTest {
         withTimeout(() -> {
             final AggregatedHttpResponse res = sendLongPollingGet("healthy", 1).get();
             assertThat(res).isEqualTo(AggregatedHttpResponse.of(
+                    ImmutableList.of(ResponseHeaders.builder(HttpStatus.PROCESSING)
+                                                    .set("armeria-lphc", "60, 10")
+                                                    .build()),
                     ResponseHeaders.builder()
                                    .endOfStream(true)
                                    .status(HttpStatus.NOT_MODIFIED)
                                    .contentType(MediaType.JSON_UTF_8)
-                                   .setInt("armeria-lphc", 60)
-                                   .build()));
+                                   .set("armeria-lphc", "60, 10")
+                                   .build(),
+                    HttpData.empty(),
+                    HttpHeaders.of()));
         });
     }
 
@@ -294,7 +309,7 @@ class HealthCheckServiceTest {
         assertThat(f.get(10, TimeUnit.SECONDS)).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", 0),
+                                   "armeria-lphc", "0, 0"),
                 HttpData.ofUtf8("{\"healthy\":true}")));
     }
 
@@ -316,7 +331,7 @@ class HealthCheckServiceTest {
         assertThat(res1).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", 60),
+                                   "armeria-lphc", "60, 10"),
                 HttpData.ofUtf8("{\"healthy\":false}")));
 
         // Make healthy.
@@ -325,7 +340,7 @@ class HealthCheckServiceTest {
         assertThat(res2).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", 60),
+                                   "armeria-lphc", "60, 10"),
                 HttpData.ofUtf8("{\"healthy\":true}")));
     }
 
@@ -340,7 +355,7 @@ class HealthCheckServiceTest {
         assertThat(res1).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", 60),
+                                   "armeria-lphc", "60, 10"),
                 HttpData.ofUtf8("{\"healthy\":false}")));
 
         // Make healthy.
@@ -350,7 +365,7 @@ class HealthCheckServiceTest {
         assertThat(res2).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", 60),
+                                   "armeria-lphc", "60, 10"),
                 HttpData.ofUtf8("{\"healthy\":true}")));
     }
 
@@ -364,7 +379,7 @@ class HealthCheckServiceTest {
         assertThat(res1).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
-                                   "armeria-lphc", 60),
+                                   "armeria-lphc", "60, 10"),
                 HttpData.ofUtf8("not ok")));
 
         // Make healthy.
@@ -373,7 +388,7 @@ class HealthCheckServiceTest {
         assertThat(res2).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
-                                   "armeria-lphc", 60),
+                                   "armeria-lphc", "60, 10"),
                 HttpData.ofUtf8("ok")));
 
         // Send a no-op request.
@@ -382,7 +397,7 @@ class HealthCheckServiceTest {
         assertThat(res3).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
-                                   "armeria-lphc", 60),
+                                   "armeria-lphc", "60, 10"),
                 HttpData.ofUtf8("ok")));
     }
 
