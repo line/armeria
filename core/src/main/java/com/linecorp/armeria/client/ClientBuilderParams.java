@@ -76,7 +76,7 @@ public interface ClientBuilderParams {
     String absolutePathRef(); // Name inspired by https://stackoverflow.com/a/47545070/55808
 
     /**
-     * Returns the URI of endpoint URI of the client.
+     * Returns the endpoint URI of the client.
      */
     URI uri();
 

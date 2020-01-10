@@ -155,7 +155,7 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
         return MoreObjects.toStringHelper(this)
                           .add("factory", factory)
                           .add("scheme", scheme)
-                          .add("endpoint", endpointGroup)
+                          .add("endpointGroup", endpointGroup)
                           .add("absolutePathRef", absolutePathRef)
                           .add("type", type)
                           .add("options", options).toString();

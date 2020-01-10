@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.endpoint;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -21,7 +20,7 @@ import com.linecorp.armeria.common.Flags;
 
 /**
  * An {@link EndpointGroupException} raised when the resolution of an {@link EndpointGroup} fails
- * because there are no {@link Endpoint}s in the {@link EndpointGroup}..
+ * because there are no {@link Endpoint}s in the {@link EndpointGroup}.
  */
 public final class EmptyEndpointGroupException extends EndpointGroupException {
 

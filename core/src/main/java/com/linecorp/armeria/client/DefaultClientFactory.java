@@ -139,7 +139,7 @@ final class DefaultClientFactory implements ClientFactory {
     public Object newClient(ClientBuilderParams params) {
         validateParams(params);
         final Scheme scheme = params.scheme();
-        // `factory` must be non-null because we validates params.scheme() with validateParams().
+        // `factory` must be non-null because we validated params.scheme() with validateParams().
         final ClientFactory factory = clientFactories.get(scheme);
         assert factory != null;
         return factory.newClient(params);
