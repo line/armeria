@@ -75,25 +75,21 @@ final class THttpClientFactory extends DecoratingClientFactory {
         if (clientType == THttpClient.class) {
             // Create a THttpClient with path.
             return new DefaultTHttpClient(params, delegate, meterRegistry());
-        } else {
-            // Create a THttpClient without path.
-            final ClientBuilderParams delegateParams;
-            if ("/".equals(params.uri().getRawPath())) {
-                delegateParams = params;
-            } else {
-                delegateParams = ClientBuilderParams.of(params.factory(),
-                                                        params.scheme(),
-                                                        params.endpointGroup(),
-                                                        "/", THttpClient.class,
-                                                        options);
-            }
-
-            final THttpClient thriftClient = new DefaultTHttpClient(delegateParams, delegate, meterRegistry());
-
-            return Proxy.newProxyInstance(
-                    clientType.getClassLoader(),
-                    new Class<?>[] { clientType },
-                    new THttpClientInvocationHandler(params, thriftClient));
         }
+
+        // Create a THttpClient without path.
+        final ClientBuilderParams delegateParams =
+                ClientBuilderParams.of(params.factory(),
+                                       params.scheme(),
+                                       params.endpointGroup(),
+                                       "/", THttpClient.class,
+                                       options);
+
+        final THttpClient thriftClient = new DefaultTHttpClient(delegateParams, delegate, meterRegistry());
+
+        return Proxy.newProxyInstance(
+                clientType.getClassLoader(),
+                new Class<?>[] { clientType },
+                new THttpClientInvocationHandler(params, thriftClient));
     }
 }

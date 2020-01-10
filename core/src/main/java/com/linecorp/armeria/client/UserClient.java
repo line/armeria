@@ -72,7 +72,7 @@ public abstract class UserClient<I extends Request, O extends Response>
     }
 
     @Override
-    public ClientFactory factory() {
+    public final ClientFactory factory() {
         return params.factory();
     }
 
@@ -87,17 +87,17 @@ public abstract class UserClient<I extends Request, O extends Response>
     }
 
     @Override
-    public String absolutePathRef() {
+    public final String absolutePathRef() {
         return params.absolutePathRef();
     }
 
     @Override
-    public URI uri() {
+    public final URI uri() {
         return params.uri();
     }
 
     @Override
-    public Class<?> clientType() {
+    public final Class<?> clientType() {
         return params.clientType();
     }
 
