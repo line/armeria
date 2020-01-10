@@ -225,11 +225,15 @@ public final class ClientFactoryBuilder {
             options.put(ClientFactoryOption.CHANNEL_OPTIONS,
                         ClientFactoryOption.CHANNEL_OPTIONS.newValue(ImmutableMap.copyOf(newChannelOptions)));
         } else {
-            final Map<ChannelOption<?>, Object> oldChannelOptions = castOptions.value();
             final ImmutableMap.Builder<ChannelOption<?>, Object> builder =
-                    ImmutableMap.builderWithExpectedSize(oldChannelOptions.size() + newChannelOptions.size());
-            builder.putAll(oldChannelOptions);
+                    ImmutableMap.builderWithExpectedSize(newChannelOptions.size());
+            castOptions.value().forEach((channelOption, value) -> {
+                if (!newChannelOptions.containsKey(channelOption)) {
+                    builder.put(channelOption, value);
+                }
+            });
             builder.putAll(newChannelOptions);
+
             options.put(ClientFactoryOption.CHANNEL_OPTIONS,
                         ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build()));
         }
