@@ -49,7 +49,7 @@ class HttpClientUnwrapTest {
 
         assertThat(client.as(String.class)).isNull();
 
-        final ClientFactory factory = client.factory();
+        final ClientFactory factory = client.options().factory();
 
         assertThat(factory.unwrap(client, WebClient.class)).isSameAs(client);
 

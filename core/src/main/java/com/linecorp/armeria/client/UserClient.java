@@ -72,11 +72,6 @@ public abstract class UserClient<I extends Request, O extends Response>
     }
 
     @Override
-    public final ClientFactory factory() {
-        return params.factory();
-    }
-
-    @Override
     public final Scheme scheme() {
         return params.scheme();
     }
@@ -151,7 +146,7 @@ public abstract class UserClient<I extends Request, O extends Response>
         }
 
         final DefaultClientRequestContext ctx =
-                new DefaultClientRequestContext(factory(), meterRegistry, scheme().sessionProtocol(),
+                new DefaultClientRequestContext(meterRegistry, scheme().sessionProtocol(),
                                                 id, method, path, query, fragment, options(),
                                                 httpReq, rpcReq);
 

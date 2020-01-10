@@ -125,7 +125,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @Deprecated
     static WebClient of(ClientFactory factory, String uri, ClientOptionValue<?>... options) {
-        return builder(uri).factory(factory).options(options).build();
+        return builder(uri).options(options).factory(factory).build();
     }
 
     /**
@@ -143,7 +143,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @Deprecated
     static WebClient of(ClientFactory factory, String uri, ClientOptions options) {
-        return builder(uri).factory(factory).options(options).build();
+        return builder(uri).options(options).factory(factory).build();
     }
 
     /**
@@ -193,7 +193,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @Deprecated
     static WebClient of(ClientFactory factory, URI uri, ClientOptionValue<?>... options) {
-        return builder(uri).factory(factory).options(options).build();
+        return builder(uri).options(options).factory(factory).build();
     }
 
     /**
@@ -211,7 +211,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @Deprecated
     static WebClient of(ClientFactory factory, URI uri, ClientOptions options) {
-        return builder(uri).factory(factory).options(options).build();
+        return builder(uri).options(options).factory(factory).build();
     }
 
     /**
@@ -263,7 +263,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     @Deprecated
     static WebClient of(ClientFactory factory, SessionProtocol protocol, EndpointGroup endpointGroup,
                         ClientOptionValue<?>... options) {
-        return builder(protocol, endpointGroup).factory(factory).options(options).build();
+        return builder(protocol, endpointGroup).options(options).factory(factory).build();
     }
 
     /**
@@ -282,7 +282,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     @Deprecated
     static WebClient of(ClientFactory factory, SessionProtocol protocol, EndpointGroup endpointGroup,
                         ClientOptions options) {
-        return builder(protocol, endpointGroup).factory(factory).options(options).build();
+        return builder(protocol, endpointGroup).options(options).factory(factory).build();
     }
 
     /**

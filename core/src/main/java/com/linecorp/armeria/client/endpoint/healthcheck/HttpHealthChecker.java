@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
@@ -77,8 +76,7 @@ final class HttpHealthChecker implements AsyncCloseable {
         final Endpoint endpoint = ctx.endpoint();
         this.ctx = ctx;
         webClient = WebClient.builder(ctx.protocol(), endpoint)
-                             .factory(ctx.clientFactory())
-                             .options(ctx.clientConfigurator().apply(ClientOptions.builder()).build())
+                             .options(ctx.clientOptions())
                              .decorator(ResponseTimeoutUpdater::new)
                              .build();
         authority = endpoint.authority();

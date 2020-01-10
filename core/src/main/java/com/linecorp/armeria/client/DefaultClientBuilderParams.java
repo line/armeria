@@ -32,13 +32,9 @@ import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 /**
  * Default {@link ClientBuilderParams} implementation.
- *
- * @deprecated Use {@link ClientBuilderParams#of(ClientFactory, URI, Class, ClientOptions)}.
  */
-@Deprecated
-public class DefaultClientBuilderParams implements ClientBuilderParams {
+final class DefaultClientBuilderParams implements ClientBuilderParams {
 
-    private final ClientFactory factory;
     private final Scheme scheme;
     private final EndpointGroup endpointGroup;
     private final String absolutePathRef;
@@ -48,16 +44,12 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
 
     /**
      * Creates a new instance.
-     *
-     * @deprecated Use {@link ClientBuilderParams#of(ClientFactory, URI, Class, ClientOptions)}.
      */
-    @Deprecated
-    public DefaultClientBuilderParams(ClientFactory factory, URI uri, Class<?> type,
-                                      ClientOptions options) {
-        this.factory = requireNonNull(factory, "factory");
+    DefaultClientBuilderParams(URI uri, Class<?> type, ClientOptions options) {
+        final ClientFactory factory = requireNonNull(options, "options").factory();
         this.uri = factory.validateUri(uri);
         this.type = requireNonNull(type, "type");
-        this.options = requireNonNull(options, "options");
+        this.options = options;
 
         scheme = factory.validateScheme(Scheme.parse(uri.getScheme()));
         endpointGroup = Endpoint.parse(uri.getRawAuthority());
@@ -73,14 +65,14 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
         absolutePathRef = buf.toString();
     }
 
-    DefaultClientBuilderParams(ClientFactory factory, Scheme scheme, EndpointGroup endpointGroup,
+    DefaultClientBuilderParams(Scheme scheme, EndpointGroup endpointGroup,
                                @Nullable String absolutePathRef,
                                Class<?> type, ClientOptions options) {
-        this.factory = requireNonNull(factory, "factory");
+        final ClientFactory factory = requireNonNull(options, "options").factory();
         this.scheme = factory.validateScheme(scheme);
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
         this.type = requireNonNull(type, "type");
-        this.options = requireNonNull(options, "options");
+        this.options = options;
 
         final String schemeStr;
         if (scheme.serializationFormat() == SerializationFormat.NONE) {
@@ -116,11 +108,6 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
     }
 
     @Override
-    public ClientFactory factory() {
-        return factory;
-    }
-
-    @Override
     public Scheme scheme() {
         return scheme;
     }
@@ -153,7 +140,6 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("factory", factory)
                           .add("scheme", scheme)
                           .add("endpointGroup", endpointGroup)
                           .add("absolutePathRef", absolutePathRef)

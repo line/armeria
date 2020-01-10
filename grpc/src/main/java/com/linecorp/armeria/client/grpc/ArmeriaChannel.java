@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
@@ -127,11 +126,6 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     }
 
     @Override
-    public ClientFactory factory() {
-        return params.factory();
-    }
-
-    @Override
     public Scheme scheme() {
         return params.scheme();
     }
@@ -173,7 +167,6 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
     private DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req) {
         return new DefaultClientRequestContext(
-                factory(),
                 meterRegistry,
                 sessionProtocol,
                 options().requestIdGenerator().get(),

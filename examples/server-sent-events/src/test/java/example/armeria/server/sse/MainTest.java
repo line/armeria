@@ -42,7 +42,7 @@ class MainTest {
             server.stop().join();
         }
         if (client != null) {
-            client.factory().close();
+            client.options().factory().close();
         }
     }
 

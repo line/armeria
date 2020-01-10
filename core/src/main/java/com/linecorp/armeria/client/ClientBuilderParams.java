@@ -33,32 +33,34 @@ public interface ClientBuilderParams {
     /**
      * Returns a newly created {@link ClientBuilderParams} from the specified properties.
      */
-    static ClientBuilderParams of(ClientFactory factory, URI uri, Class<?> type,
-                                  ClientOptions options) {
-        requireNonNull(factory, "factory");
+    static ClientBuilderParams of(URI uri, Class<?> type, ClientOptions options) {
         requireNonNull(uri, "uri");
         requireNonNull(type, "type");
         requireNonNull(options, "options");
-        return new DefaultClientBuilderParams(factory, uri, type, options);
+        return new DefaultClientBuilderParams(uri, type, options);
     }
 
     /**
      * Returns a newly created {@link ClientBuilderParams} from the specified properties.
      */
-    static ClientBuilderParams of(ClientFactory factory, Scheme scheme, EndpointGroup endpointGroup,
+    static ClientBuilderParams of(Scheme scheme, EndpointGroup endpointGroup,
                                   @Nullable String path, Class<?> type, ClientOptions options) {
-        requireNonNull(factory, "factory");
         requireNonNull(scheme, "scheme");
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(type, "type");
         requireNonNull(options, "options");
-        return new DefaultClientBuilderParams(factory, scheme, endpointGroup, path, type, options);
+        return new DefaultClientBuilderParams(scheme, endpointGroup, path, type, options);
     }
 
     /**
      * Returns the {@link ClientFactory} who created the client.
+     *
+     * @deprecated Use {@link #options()} to get {@link ClientOption#FACTORY}.
      */
-    ClientFactory factory();
+    @Deprecated
+    default ClientFactory factory() {
+        return options().get(ClientOption.FACTORY);
+    }
 
     /**
      * Returns the {@link Scheme} of the client.

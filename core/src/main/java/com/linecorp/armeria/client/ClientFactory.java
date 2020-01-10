@@ -312,7 +312,7 @@ public interface ClientFactory extends AutoCloseable {
      */
     default ClientBuilderParams validateParams(ClientBuilderParams params) {
         requireNonNull(params, "params");
-        if (params.factory() != this) {
+        if (params.options().factory() != this) {
             validateScheme(params.scheme());
         } else {
             // Validated already, unless `ClientBuilderParams` has a bug.

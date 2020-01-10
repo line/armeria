@@ -58,7 +58,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     private final Scheme scheme;
     @Nullable
     private String path;
-    private ClientFactory factory = ClientFactory.ofDefault();
 
     /**
      * Creates a new instance.
@@ -123,14 +122,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     }
 
     /**
-     * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#ofDefault()}.
-     */
-    public WebClientBuilder factory(ClientFactory factory) {
-        this.factory = requireNonNull(factory, "factory");
-        return this;
-    }
-
-    /**
      * Sets the {@code path} of the client.
      */
     public WebClientBuilder path(String path) {
@@ -154,15 +145,19 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      *                                  {@link WebClient#builder(URI)} is not an HTTP scheme
      */
     public WebClient build() {
+        final ClientOptions options = buildOptions();
+        final ClientFactory factory = options.factory();
+        final ClientBuilderParams params;
+
         if (uri != null) {
-            return (WebClient) factory.newClient(ClientBuilderParams.of(
-                    factory, uri, WebClient.class, buildOptions()));
+            params = ClientBuilderParams.of(uri, WebClient.class, options);
         } else {
             assert scheme != null;
             assert endpointGroup != null;
-            return (WebClient) factory.newClient(ClientBuilderParams.of(
-                    factory, scheme, endpointGroup, path, WebClient.class, buildOptions()));
+            params = ClientBuilderParams.of(scheme, endpointGroup, path, WebClient.class, options);
         }
+
+        return (WebClient) factory.newClient(params);
     }
 
     @Override
