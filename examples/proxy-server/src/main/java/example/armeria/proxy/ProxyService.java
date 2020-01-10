@@ -36,7 +36,7 @@ public final class ProxyService extends AbstractHttpService {
     private static final EndpointGroup animationGroup = EndpointGroup.of(
             // You can use EndpointSelectionStrategy.weightedRoundRobin() or even
             // implement your own strategy to balance requests.
-            EndpointSelectionStrategy.unweightedRoundRobin(),
+            EndpointSelectionStrategy.roundRobin(),
             Endpoint.of("127.0.0.1", 8081),
             Endpoint.of("127.0.0.1", 8082),
             Endpoint.of("127.0.0.1", 8083));

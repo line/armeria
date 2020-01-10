@@ -90,7 +90,7 @@ class RetryingClientLoadBalancingTest {
                                                   .map(InetSocketAddress::getPort)
                                                   .collect(toImmutableList());
 
-        final EndpointGroup group = EndpointGroup.of(EndpointSelectionStrategy.unweightedRoundRobin(),
+        final EndpointGroup group = EndpointGroup.of(EndpointSelectionStrategy.roundRobin(),
                                                      expectedPorts.stream()
                                                                   .map(port -> Endpoint.of("127.0.0.1", port))
                                                                   .collect(toImmutableList()));

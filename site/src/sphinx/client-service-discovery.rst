@@ -42,7 +42,7 @@ unless specified otherwise. Armeria currently provides the following :api:`Endpo
 implementations out-of-the-box:
 
 - ``EndpointSelectionStrategy.weightedRoundRobin`` for weighted round robin.
-- ``EndpointSelectionStrategy.unweightedRoundRobin`` for unweighted round robin.
+- ``EndpointSelectionStrategy.roundRobin`` for round robin.
 - :api:`StickyEndpointSelectionStrategy` for pinning requests based on a criteria
   such as a request parameter value.
 - You can also implement your own :api:`EndpointSelectionStrategy`.
@@ -52,7 +52,7 @@ when you build an :api:`EndpointGroup`:
 
 .. code-block:: java
 
-    EndpointSelectionStrategy strategy = EndpointSelectionStrategy.unweightedRoundRobin();
+    EndpointSelectionStrategy strategy = EndpointSelectionStrategy.roundRobin();
 
     EndpointGroup group1 = EndpointGroup.of(
             strategy,

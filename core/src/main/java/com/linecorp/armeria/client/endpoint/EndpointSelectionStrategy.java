@@ -27,7 +27,7 @@ public interface EndpointSelectionStrategy {
     /**
      * Simple round-robin strategy.
      *
-     * @deprecated Use {@link #unweightedRoundRobin()}.
+     * @deprecated Use {@link #roundRobin()}.
      */
     @Deprecated
     EndpointSelectionStrategy ROUND_ROBIN = RoundRobinStrategy.INSTANCE;
@@ -43,18 +43,18 @@ public interface EndpointSelectionStrategy {
     /**
      * Returns a weighted round-robin strategy.
      *
-     * @see #unweightedRoundRobin()
+     * @see #roundRobin()
      */
     static EndpointSelectionStrategy weightedRoundRobin() {
         return WeightedRoundRobinStrategy.INSTANCE;
     }
 
     /**
-     * Returns an unweighted round-robin strategy, which ignores {@link Endpoint#weight()}.
+     * Returns a round-robin strategy, which ignores {@link Endpoint#weight()}.
      *
      * @see #weightedRoundRobin()
      */
-    static EndpointSelectionStrategy unweightedRoundRobin() {
+    static EndpointSelectionStrategy roundRobin() {
         return RoundRobinStrategy.INSTANCE;
     }
 

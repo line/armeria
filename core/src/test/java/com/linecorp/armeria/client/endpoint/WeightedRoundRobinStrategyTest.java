@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.unweightedRoundRobin;
+import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.roundRobin;
 import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.weightedRoundRobin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,12 +51,12 @@ class WeightedRoundRobinStrategyTest {
     @Test
     void testRoundRobinSelect() {
         final EndpointGroup group = EndpointGroup.of(
-                unweightedRoundRobin(),
+                roundRobin(),
                 Endpoint.of("127.0.0.1", 1234),
                 Endpoint.of("127.0.0.1", 2345),
                 Endpoint.of("127.0.0.1", 3456));
 
-        assertThat(group.selectionStrategy()).isSameAs(unweightedRoundRobin());
+        assertThat(group.selectionStrategy()).isSameAs(roundRobin());
 
         assertThat(group.select(ctx).authority()).isEqualTo("127.0.0.1:1234");
         assertThat(group.select(ctx).authority()).isEqualTo("127.0.0.1:2345");
