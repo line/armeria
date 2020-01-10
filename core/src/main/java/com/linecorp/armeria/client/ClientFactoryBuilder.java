@@ -40,6 +40,7 @@ import javax.net.ssl.TrustManagerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -55,7 +56,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
-import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
  * Builds a new {@link ClientFactory}.
@@ -212,18 +212,27 @@ public final class ClientFactoryBuilder {
     public <T> ClientFactoryBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
         requireNonNull(value, "value");
-        channelOption0(option, value);
+        channelOptions(ImmutableMap.of(option, value));
         return this;
     }
 
-    private void channelOption0(ChannelOption<?> option, Object value) {
+    private void channelOptions(Map<ChannelOption<?>, Object> newChannelOptions) {
         @SuppressWarnings("unchecked")
-        final Map<ChannelOption<?>, Object> channelOptions =
-                (Map<ChannelOption<?>, Object>) options.computeIfAbsent(
-                        ClientFactoryOption.CHANNEL_OPTIONS,
-                        k -> ClientFactoryOption.CHANNEL_OPTIONS.newValue(
-                                new Object2ObjectArrayMap<>())).value();
-        channelOptions.put(option, value);
+        final ClientFactoryOptionValue<Map<ChannelOption<?>, Object>> castOptions =
+                (ClientFactoryOptionValue<Map<ChannelOption<?>, Object>>) options.get(
+                        ClientFactoryOption.CHANNEL_OPTIONS);
+        if (castOptions == null) {
+            options.put(ClientFactoryOption.CHANNEL_OPTIONS,
+                        ClientFactoryOption.CHANNEL_OPTIONS.newValue(ImmutableMap.copyOf(newChannelOptions)));
+        } else {
+            final Map<ChannelOption<?>, Object> oldChannelOptions = castOptions.value();
+            final ImmutableMap.Builder<ChannelOption<?>, Object> builder =
+                    ImmutableMap.builderWithExpectedSize(oldChannelOptions.size() + newChannelOptions.size());
+            builder.putAll(oldChannelOptions);
+            builder.putAll(newChannelOptions);
+            options.put(ClientFactoryOption.CHANNEL_OPTIONS,
+                        ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build()));
+        }
     }
 
     /**
@@ -285,7 +294,7 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder addressResolverGroupFactory(
             Function<? super EventLoopGroup,
-                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory) {
+                    ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory) {
         requireNonNull(addressResolverGroupFactory, "addressResolverGroupFactory");
         checkState(dnsResolverGroupCustomizers == null,
                    "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
@@ -479,7 +488,7 @@ public final class ClientFactoryBuilder {
             @SuppressWarnings("unchecked")
             final Map<ChannelOption<?>, Object> channelOptions =
                     (Map<ChannelOption<?>, Object>) optionValue.value();
-            channelOptions.forEach(this::channelOption0);
+            channelOptions(channelOptions);
         } else {
             options.put(optionValue.option(), optionValue);
         }
