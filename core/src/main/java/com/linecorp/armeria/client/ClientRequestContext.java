@@ -565,7 +565,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Schedules the response timeout that is triggered at the specified time represented
      * as the number since the epoch ({@code 1970-01-01T00:00:00Z}).
-     * Note that the response timeout is triggered immediately if the specified time is before now.
+     * Note that the response will be timed out immediately if the specified time is before now.
      * The initial timeout is set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <p>For example:
@@ -584,7 +584,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Schedules the response timeout that is triggered at the specified time represented
      * as the number of milliseconds since the epoch ({@code 1970-01-01T00:00:00Z}).
-     * Note that the response timeout is triggered immediately if the specified time is before now.
+     * Note that the response will be timed out immediately if the specified time is before now.
      * The initial timeout is set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <p>For example:

@@ -152,8 +152,9 @@ public class DefaultTimeoutController implements TimeoutController {
     @Override
     public void timeoutNow() {
         ensureInitialized();
-        cancelTimeout();
-        timeoutTask.run();
+        if (cancelTimeout()) {
+            timeoutTask.run();
+        }
     }
 
     @Override
