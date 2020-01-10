@@ -326,7 +326,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     /**
      * Received response for previously sent {@code PING} request.
      */
-    @SuppressWarnings("checkstyle:RegexpMultiline")
     @Override
     public void onPingAckRead(final ChannelHandlerContext ctx, final long data) throws Http2Exception {
         pingHandler.onPingAckRead(ctx, data);
