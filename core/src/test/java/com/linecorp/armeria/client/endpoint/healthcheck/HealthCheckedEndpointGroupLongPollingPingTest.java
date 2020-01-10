@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.Queue;
@@ -182,8 +183,11 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
 
             // The second request must time out while long-polling.
             final RequestLog longPollingRequestLog = healthCheckRequestLogs.take();
-            assertThat(longPollingRequestLog.responseCause())
-                    .isInstanceOf(ResponseTimeoutException.class);
+
+            await().untilAsserted(() -> {
+                assertThat(longPollingRequestLog.responseCause())
+                        .isInstanceOf(ResponseTimeoutException.class);
+            });
 
             // There must be no '102 Processing' headers received.
             final BlockingQueue<ResponseHeaders> receivedInformationals =
