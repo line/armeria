@@ -151,8 +151,10 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
 
             // The second request must time out while long-polling.
             final RequestLog longPollingRequestLog = healthCheckRequestLogs.take();
-            assertThat(longPollingRequestLog.responseCause())
-                    .isInstanceOf(ResponseTimeoutException.class);
+            await().untilAsserted(() -> {
+                assertThat(longPollingRequestLog.responseCause())
+                        .isInstanceOf(ResponseTimeoutException.class);
+            });
 
             // There must be only one '102 Processing' header received.
             final BlockingQueue<ResponseHeaders> receivedInformationals =
@@ -183,7 +185,6 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
 
             // The second request must time out while long-polling.
             final RequestLog longPollingRequestLog = healthCheckRequestLogs.take();
-
             await().untilAsserted(() -> {
                 assertThat(longPollingRequestLog.responseCause())
                         .isInstanceOf(ResponseTimeoutException.class);
