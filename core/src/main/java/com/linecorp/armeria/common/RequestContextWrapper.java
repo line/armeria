@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -145,26 +144,6 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     @Override
     public EventLoop eventLoop() {
         return delegate().eventLoop();
-    }
-
-    @Override
-    public void onEnter(Consumer<? super RequestContext> callback) {
-        delegate().onEnter(callback);
-    }
-
-    @Override
-    public void onExit(Consumer<? super RequestContext> callback) {
-        delegate().onExit(callback);
-    }
-
-    @Override
-    public void invokeOnEnterCallbacks() {
-        delegate().invokeOnEnterCallbacks();
-    }
-
-    @Override
-    public void invokeOnExitCallbacks() {
-        delegate().invokeOnExitCallbacks();
     }
 
     @Nullable
