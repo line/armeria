@@ -14,12 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Preconditions;
-
+import io.netty.handler.codec.http2.Http2Error;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2PingFrame;
 
 /**
@@ -34,21 +38,21 @@ class Http2PingRequestResponsePair {
     private Http2PingFrame responseFrame;
 
     public void setRequestFrame(final Http2PingFrame requestFrame) {
-        Preconditions.checkNotNull(requestFrame, "requestFrame");
-        Preconditions.checkArgument(!requestFrame.ack(), "requestFrame should not have ACK set");
-        Preconditions.checkState(responseFrame != null, "Pending response for previous request");
+        checkNotNull(requestFrame, "requestFrame");
+        checkArgument(!requestFrame.ack(), "requestFrame should not have ACK set");
+        checkState(responseFrame == null, "Pending response for previous request");
 
         this.requestFrame = requestFrame;
     }
 
-    public void setResponseFrame(final Http2PingFrame responseFrame) {
-        Preconditions.checkNotNull(responseFrame, "responseFrame");
-        Preconditions.checkArgument(responseFrame.ack(), "response should have ACK flag set");
-        Preconditions.checkState(requestFrame != null, "ACK received before request sent");
-        this.responseFrame = responseFrame;
+    public void setResponseFrame(final Http2PingFrame responseFrame) throws Http2Exception {
+        checkNotNull(responseFrame, "responseFrame");
+        checkArgument(responseFrame.ack(), "response should have ACK flag set");
+        checkState(requestFrame != null, "ACK received before request sent");
 
-        if (responseFrame.content() == requestFrame.content()) {
-            throw new RuntimeException("asd");
+        this.responseFrame = responseFrame;
+        if (responseFrame.content() != requestFrame.content()) {
+            throw new Http2Exception(Http2Error.PROTOCOL_ERROR);
         }
         reset();
     }

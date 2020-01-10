@@ -27,7 +27,9 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.DefaultPingHandler;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.PingHandler;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -55,6 +57,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private final Http2Connection conn;
     private final Http2ConnectionEncoder encoder;
     private final Http2GoAwayHandler goAwayHandler;
+    private final PingHandler pingHandler;
 
     Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory) {
         super(channel,
@@ -62,6 +65,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         conn = encoder.connection();
         this.encoder = encoder;
         goAwayHandler = new Http2GoAwayHandler();
+        pingHandler = new DefaultPingHandler(encoder.frameWriter());
     }
 
     @Override
@@ -162,11 +166,13 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
         disconnectWhenFinished();
         goAwayHandler.onGoAwayReceived(channel(), lastStreamId, errorCode, debugData);
+        pingHandler.stop();
     }
 
     @Override
     public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
         ctx.fireChannelRead(settings);
+        pingHandler.start(ctx);
     }
 
     @Override
@@ -284,10 +290,14 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                                boolean exclusive) {}
 
     @Override
-    public void onPingRead(ChannelHandlerContext ctx, long data) {}
+    public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+        pingHandler.onPingRead(ctx, data);
+    }
 
     @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, long data) {}
+    public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+        pingHandler.onPingAckRead(ctx, data);
+    }
 
     @Override
     public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {}

@@ -14,23 +14,36 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception;
 
-interface PingHandler {
+/**
+ * Ping handler that handles PING events.
+ */
+public interface PingHandler {
 
+    /**
+     * Starts the handler.
+     */
     void start(ChannelHandlerContext ctx);
 
     /**
      * Handles when a {@code PING} is received with {@code ACK} flag set.
+     * @throws Http2Exception e.
      */
     void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception;
 
     /**
      * Handles when a {@code PING} is received with {@code ACK} not set. Typically
      * received from client.
+     * @throws Http2Exception e.
      */
     void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception;
+
+    /**
+     * Stops the ping handler. TODO add more description.
+     */
+    void stop();
 }
