@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
-import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.util.AttributeKey;
@@ -52,10 +51,6 @@ import io.netty.util.AttributeKey;
 class HealthCheckedEndpointGroupLongPollingPingTest {
 
     private static final Duration RETRY_INTERVAL = Duration.ofSeconds(3);
-    private static final String HEALTH_CHECK_PATH = "/healthcheck";
-
-    private static final SettableHealthChecker health = new SettableHealthChecker();
-    private static final Duration LONG_POLLING_TIMEOUT = Duration.ofSeconds(1);
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -64,7 +59,6 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
             sb.service("/ping", HealthCheckService.builder()
                                                   .longPolling(Duration.ofSeconds(60), 0,
                                                                Duration.ofSeconds(1))
-                                                  .checkers(health)
                                                   .build());
 
             sb.service("/no_ping_after_initial_ping", (ctx, req) -> {
