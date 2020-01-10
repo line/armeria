@@ -150,6 +150,13 @@ public class DefaultTimeoutController implements TimeoutController {
     }
 
     @Override
+    public void timeoutNow() {
+        ensureInitialized();
+        cancelTimeout();
+        timeoutTask.run();
+    }
+
+    @Override
     public boolean cancelTimeout() {
         final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
         if (timeoutFuture == null) {

@@ -20,7 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,9 +30,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -65,6 +69,14 @@ class HttpServerRequestTimeoutTest {
               .service("/timeout-before-writing", (ctx, req) -> {
                   final Flux<Long> publisher = Flux.interval(Duration.ofMillis(300));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
+              })
+              .service("/timeout-immediately", (ctx, req) -> {
+                  ctx.setRequestTimeoutAt(Instant.now().minusSeconds(1));
+                  return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
+              })
+              .service("/no-timeout", (ctx, req) -> {
+                  ctx.clearRequestTimeout();
+                  return HttpResponse.streaming();
               });
         }
     };
@@ -118,5 +130,20 @@ class HttpServerRequestTimeoutTest {
         final AggregatedHttpResponse response = client.get(
                 serverWithoutTimeout.uri("/") + "/extend-timeout-from-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(200);
+    }
+
+    @Test
+    void setRequestTimeoutAtPastTimeClient() {
+        final WebClient client = WebClient
+                .builder(server.uri("/"))
+                .decorator((delegate, ctx, req) -> {
+                    ctx.eventLoop().schedule(() -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
+                                             1, TimeUnit.SECONDS);
+                    return delegate.execute(ctx, req);
+                })
+                .build();
+        assertThatThrownBy(() -> client.get(server.uri("/") + "/no-timeout").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(ResponseTimeoutException.class);
     }
 }

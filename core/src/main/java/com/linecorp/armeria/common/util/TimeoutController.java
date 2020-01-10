@@ -44,6 +44,11 @@ public interface TimeoutController {
     void resetTimeout(long newTimeoutMillis);
 
     /**
+     * Trigger the current timeout immediately.
+     */
+    void timeoutNow();
+
+    /**
      * Cancels the current timeout scheduled.
      */
     boolean cancelTimeout();

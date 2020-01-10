@@ -529,12 +529,20 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
         checkArgument(responseTimeoutAtMillis >= 0,
                       "responseTimeoutAtMillis: " + responseTimeoutAtMillis + " (expected: >= 0)");
-        final long nowMillis = Instant.now().toEpochMilli();
-        final long responseTimeoutAfter = responseTimeoutAtMillis - nowMillis;
-        checkArgument(responseTimeoutAfter > 0,
-                      "responseTimeoutAtMillis: %s (expected: > 'now=%s')", responseTimeoutAtMillis, nowMillis);
+        final long responseTimeoutAfter = responseTimeoutAtMillis - Instant.now().toEpochMilli();
 
-        setResponseTimeoutAfterMillis(responseTimeoutAfter);
+        if (responseTimeoutAfter <= 0) {
+            final TimeoutController responseTimeoutController = this.responseTimeoutController;
+            if (responseTimeoutController != null) {
+                if (eventLoop().inEventLoop()) {
+                    responseTimeoutController.timeoutNow();
+                } else {
+                    eventLoop().execute(responseTimeoutController::timeoutNow);
+                }
+            }
+        } else {
+            setResponseTimeoutAfterMillis(responseTimeoutAfter);
+        }
     }
 
     @Override

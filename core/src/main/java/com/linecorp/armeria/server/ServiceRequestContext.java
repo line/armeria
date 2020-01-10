@@ -479,6 +479,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Schedules the request timeout that is triggered at the specified time represented
      * as the number since the epoch ({@code 1970-01-01T00:00:00Z}).
+     * Note that the request timeout is triggered immediately if the specified time is before now.
      * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
@@ -497,6 +498,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Schedules the request timeout that is triggered at the specified time represented
      * as the number since the epoch ({@code 1970-01-01T00:00:00Z}).
+     * Note that the request timeout is triggered immediately if the specified time is before now.
      * The initial timeout is set from {@link ServiceConfig#requestTimeoutMillis()}.
      *
      * <p>For example:
