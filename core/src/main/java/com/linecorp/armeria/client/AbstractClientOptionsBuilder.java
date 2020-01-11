@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -289,6 +290,46 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      */
     public B requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
        return option(ClientOption.REQUEST_ID_GENERATOR, requestIdGenerator);
+    }
+
+    /**
+     * Sets a {@link Function} that remaps an {@link Endpoint} into an {@link EndpointGroup}.
+     * This {@link ClientOption} is useful when you need to override a single target host into
+     * a group of hosts to enable client-side load-balancing, e.g.
+     * <pre>{@code
+     * MyService.Iface client =
+     *     Clients.newClient("tbinary+http://example.com/api",
+     *                       MyService.Iface.class);
+     *
+     * EndpointGroup myGroup = EndpointGroup.of(Endpoint.of("node-1.example.com")),
+     *                                          Endpoint.of("node-2.example.com")));
+     *
+     * MyService.Iface derivedClient =
+     *     Clients.newDerivedClient(client, options -> {
+     *         return options.toBuilder()
+     *                       .endpointRemapper(endpoint -> {
+     *                           if (endpoint.host().equals("example.com")) {
+     *                               return myGroup;
+     *                           } else {
+     *                               return endpoint;
+     *                           }
+     *                       })
+     *                       .build();
+     *     });
+     *
+     * // This request goes to 'node-1.example.com' or 'node-2.example.com'.
+     * derivedClient.call();
+     * }</pre>
+     *
+     * <p>Note that the remapping does not occur recursively but only once.</p>
+     *
+     * @see ClientOption#ENDPOINT_REMAPPER
+     * @see ClientOptions#endpointRemapper()
+     */
+    public B endpointRemapper(
+            Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
+        requireNonNull(endpointRemapper, "endpointRemapper");
+        return option(ClientOption.ENDPOINT_REMAPPER, endpointRemapper);
     }
 
     /**

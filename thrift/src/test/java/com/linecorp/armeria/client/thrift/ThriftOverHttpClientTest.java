@@ -53,6 +53,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.client.logging.LoggingRpcClient;
@@ -763,6 +764,31 @@ class ThriftOverHttpClientTest {
                     })
                     .hasMessageContaining(":status=500");
         });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void endpointMapping(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+
+        final Endpoint group = Endpoint.of("127.0.0.1", protocol.isTls() ? server.httpsPort()
+                                                                         : server.httpPort());
+        final HelloService.Iface client =
+                Clients.builder(format.uriText() + '+' + protocol.uriText() +
+                                "://my-group/" + Handlers.HELLO.path(format))
+                       .factory(clientFactory)
+                       .options(clientOptions)
+                       .endpointRemapper(endpoint -> {
+                           if ("my-group".equals(endpoint.host())) {
+                               return group;
+                           } else {
+                               return endpoint;
+                           }
+                       })
+                       .build(Handlers.HELLO.iface());
+
+        assertThat(client.hello("trustin")).isEqualTo("Hello, trustin!");
     }
 
     private static String uri(Handlers handler, SerializationFormat format,

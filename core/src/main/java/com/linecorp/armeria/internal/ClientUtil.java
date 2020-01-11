@@ -24,6 +24,7 @@ import java.util.function.BiFunction;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
@@ -47,6 +48,7 @@ public final class ClientUtil {
         requireNonNull(fallback, "fallback");
 
         try {
+            endpointGroup = mapEndpoint(ctx, endpointGroup);
             if (ctx.init(endpointGroup)) {
                 return pushAndExecute(delegate, ctx);
             } else {
@@ -62,6 +64,15 @@ public final class ClientUtil {
             }
         } catch (Throwable cause) {
             return failAndGetFallbackResponse(ctx, fallback, cause);
+        }
+    }
+
+    private static EndpointGroup mapEndpoint(ClientRequestContext ctx, EndpointGroup endpointGroup) {
+        if (endpointGroup instanceof Endpoint) {
+            return requireNonNull(ctx.options().endpointRemapper().apply((Endpoint) endpointGroup),
+                                  "endpointRemapper returned null.");
+        } else {
+            return endpointGroup;
         }
     }
 

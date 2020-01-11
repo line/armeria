@@ -18,10 +18,8 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isAbsoluteUri;
-import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,29 +39,8 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     static final WebClient DEFAULT = new WebClientBuilder().build();
 
-    private final Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper;
-
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
-        super(fillDefaultOptions(params), delegate, meterRegistry);
-        endpointRemapper = options().get(WebClientOptions.ENDPOINT_REMAPPER);
-    }
-
-    private static ClientBuilderParams fillDefaultOptions(ClientBuilderParams params) {
-        final ClientOptions options = params.options();
-        if (options.getOrNull(WebClientOptions.ENDPOINT_REMAPPER) != null) {
-            return params;
-        }
-
-        final ClientOptionsBuilder optionsBuilder = options.toBuilder();
-        optionsBuilder.option(WebClientOptions.ENDPOINT_REMAPPER, Function.identity());
-        final ClientOptions newOptions = optionsBuilder.build();
-
-        if (Clients.isUndefinedUri(params.uri())) {
-            return ClientBuilderParams.of(params.factory(), params.uri(), params.clientType(), newOptions);
-        } else {
-            return ClientBuilderParams.of(params.factory(), params.scheme(), params.endpointGroup(),
-                                          params.absolutePathRef(), params.clientType(), newOptions);
-        }
+        super(params, delegate, meterRegistry);
     }
 
     @Override
@@ -82,12 +59,12 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         }
 
         if (uri != null) {
-            final EndpointGroup endpointGroup = mapEndpoint(Endpoint.parse(uri.getAuthority()));
+            final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
             final String path = uri.getRawPath();
             final HttpRequest newReq = req.withHeaders(req.headers().toBuilder()
                     .path(query == null ? path : path + '?' + query));
-            return execute(endpointGroup, newReq);
+            return execute(endpoint, newReq);
         }
 
         if (Clients.isUndefinedUri(uri())) {
@@ -105,7 +82,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         } else {
             newReq = req;
         }
-        return execute(mapEndpoint(endpointGroup()), newReq);
+        return execute(endpointGroup(), newReq);
     }
 
     private HttpResponse execute(EndpointGroup endpointGroup, HttpRequest req) {
@@ -134,14 +111,5 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     @Override
     public HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
         return execute(aggregatedReq.toHttpRequest());
-    }
-
-    private EndpointGroup mapEndpoint(EndpointGroup endpointGroup) {
-        if (endpointGroup instanceof Endpoint) {
-            return requireNonNull(endpointRemapper.apply((Endpoint) endpointGroup),
-                                  "endpointRemapper returned null.");
-        } else {
-            return endpointGroup;
-        }
     }
 }

@@ -30,6 +30,8 @@ import javax.annotation.Nullable;
 
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -267,14 +269,15 @@ public interface ClientFactory extends AutoCloseable {
             parsedSchemeStr = parsedScheme.uriText();
         }
 
-        if (scheme.equals(parsedSchemeStr) && uri.getRawPath() != null) {
+        final String path = Strings.emptyToNull(uri.getRawPath());
+        if (scheme.equals(parsedSchemeStr) && path != null) {
             return uri;
         }
 
         // Replace the specified URI's scheme with the normalized one.
         try {
             return new URI(parsedSchemeStr, uri.getRawAuthority(),
-                           firstNonNull(uri.getRawPath(), "/"), uri.getRawQuery(),
+                           firstNonNull(path, "/"), uri.getRawQuery(),
                            uri.getRawFragment());
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e.getMessage(), e);

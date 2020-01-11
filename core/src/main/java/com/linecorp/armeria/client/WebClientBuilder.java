@@ -147,37 +147,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     }
 
     /**
-     * Sets a {@link Function} that remaps an {@link Endpoint} or an absolute URL's authority into
-     * an {@link EndpointGroup}. This is useful when you need to override a single target host into
-     * a group of hosts to enable client-side load-balancing, e.g.
-     * <pre>{@code
-     * EndpointGroup myGroup = EndpointGroup.of(Endpoint.of("node-1.my-group.com")),
-     *                                          Endpoint.of("node-2.my-group.com")));
-     * WebClient client = WebClient.builder()
-     *                             .endpointRemapper(endpoint -> {
-     *                                 if (endpoint.host().equals("my-group.com")) {
-     *                                     return myGroup;
-     *                                 } else {
-     *                                     return endpoint;
-     *                                 }
-     *                             })
-     *                             .build();
-     *
-     * // This request goes to 'node-1.my-group.com' or 'node-2.my-group.com'.
-     * HttpResponse res = client.get("http://my-group.com/");
-     * }</pre>
-     *
-     * <p>Note that the remapping does not occur recursively but only once.</p>
-     *
-     * @see WebClientOptions#ENDPOINT_REMAPPER
-     */
-    public WebClientBuilder endpointRemapper(
-            Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
-        requireNonNull(endpointRemapper, "endpointRemapper");
-        return option(WebClientOptions.ENDPOINT_REMAPPER, endpointRemapper);
-    }
-
-    /**
      * Returns a newly-created web client based on the properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in

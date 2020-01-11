@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
@@ -112,6 +113,14 @@ public final class ClientOption<T> extends AbstractOption<T> {
      */
     public static final ClientOption<Supplier<RequestId>> REQUEST_ID_GENERATOR = valueOf(
             "REQUEST_ID_GENERATOR");
+
+    /**
+     * A {@link Function} that remaps a target {@link Endpoint} into an {@link EndpointGroup}.
+     *
+     * @see ClientBuilder#endpointRemapper(Function)
+     */
+    public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
+            valueOf("ENDPOINT_REMAPPER");
 
     /**
      * Returns the {@link ClientOption} of the specified name.
