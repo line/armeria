@@ -119,7 +119,10 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         this.subscription = subscription;
 
         // Schedule the initial request timeout.
-        initTimeout(reqCtx.requestTimeoutMillis());
+        final long requestTimeoutMillis = reqCtx.requestTimeoutMillis();
+        if (requestTimeoutMillis > 0) {
+            scheduleTimeout(requestTimeoutMillis);
+        }
 
         // Start consuming.
         subscription.request(1);

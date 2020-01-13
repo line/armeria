@@ -341,6 +341,19 @@ class DefaultClientRequestContextTest {
     }
 
     @Test
+    void clearResponseTimeoutWithPendingTask() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
+        ctx.clearResponseTimeout();
+        final TimeoutController timeoutController = mock(TimeoutController.class);
+        ctx.setResponseTimeoutController(timeoutController);
+
+        verify(timeoutController, timeout(Duration.ofSeconds(1)))
+                .cancelTimeout();
+        assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
+    }
+
+    @Test
     void setResponseTimeout() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);

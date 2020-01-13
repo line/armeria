@@ -24,24 +24,28 @@ package com.linecorp.armeria.common.util;
 public interface TimeoutController {
 
     /**
-     * Initializes the timeout scheduler with the specified {@code timeoutMillis}.
+     * Schedules a new timeout with the specified {@code timeoutMillis}.
+     * @return {@code true} if the timeout is scheduled.
      */
-    void initTimeout(long timeoutMillis);
+    boolean scheduleTimeout(long timeoutMillis);
 
     /**
      * Extends the current timeout by the specified {@code adjustmentMillis}.
+     * This method does nothing if no timeout was scheduled previously.
      * Note that a negative {@code adjustmentMillis} reduces the current timeout.
      *
      * @param adjustmentMillis the adjustment of time amount value in milliseconds.
+     * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
      */
-    void extendTimeout(long adjustmentMillis);
+    boolean extendTimeout(long adjustmentMillis);
 
     /**
      * Sets the amount of time that is after the specified {@code newTimeoutMillis} from now.
      *
      * @param newTimeoutMillis the new timeout value in milliseconds. {@code 0} if disabled.
+     * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
      */
-    void resetTimeout(long newTimeoutMillis);
+    boolean resetTimeout(long newTimeoutMillis);
 
     /**
      * Trigger the current timeout immediately.
@@ -50,6 +54,7 @@ public interface TimeoutController {
 
     /**
      * Cancels the current timeout scheduled.
+     * @return {@code true} if the current timeout is canceled.
      */
     boolean cancelTimeout();
 

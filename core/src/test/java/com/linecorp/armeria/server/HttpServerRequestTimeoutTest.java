@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +29,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -130,20 +128,5 @@ class HttpServerRequestTimeoutTest {
         final AggregatedHttpResponse response = client.get(
                 serverWithoutTimeout.uri("/") + "/extend-timeout-from-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(200);
-    }
-
-    @Test
-    void setRequestTimeoutAtPastTimeClient() {
-        final WebClient client = WebClient
-                .builder(server.uri("/"))
-                .decorator((delegate, ctx, req) -> {
-                    ctx.eventLoop().schedule(() -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
-                                             1, TimeUnit.SECONDS);
-                    return delegate.execute(ctx, req);
-                })
-                .build();
-        assertThatThrownBy(() -> client.get(server.uri("/") + "/no-timeout").aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(ResponseTimeoutException.class);
     }
 }

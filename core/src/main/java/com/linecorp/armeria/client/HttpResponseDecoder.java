@@ -324,7 +324,9 @@ abstract class HttpResponseDecoder {
         }
 
         void initTimeout() {
-            initTimeout(responseTimeoutMillis);
+            if (responseTimeoutMillis > 0) {
+                scheduleTimeout(responseTimeoutMillis);
+            }
         }
 
         private TimeoutTask newTimeoutTask() {

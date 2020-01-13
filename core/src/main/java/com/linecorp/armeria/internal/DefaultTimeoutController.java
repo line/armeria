@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -40,8 +41,8 @@ public class DefaultTimeoutController implements TimeoutController {
     private final EventLoop eventLoop;
 
     private long timeoutMillis;
-    private long firstStartTimeNanos;
-    private long lastStartTimeNanos;
+    private long firstExecutionTimeNanos;
+    private long lastExecutionTimeNanos;
 
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
@@ -78,80 +79,88 @@ public class DefaultTimeoutController implements TimeoutController {
      * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
      */
     @Override
-    public void initTimeout(long timeoutMillis) {
-        if (timeoutFuture != null || timeoutTask == null || !timeoutTask.canSchedule()) {
-            // No need to schedule a response timeout if:
-            // - the timeout has been scheduled already,
-            // - the timeout task is not set yet or
-            // - the timeout task cannot schedule yet or
-            return;
+    public boolean scheduleTimeout(long timeoutMillis) {
+        checkArgument(timeoutMillis > 0,
+                      "timeoutMillis: " + timeoutMillis + " (expected: > 0)");
+        ensureInitialized();
+        cancelTimeout();
+        if (!timeoutTask.canSchedule()) {
+            return false;
         }
 
         this.timeoutMillis = timeoutMillis;
-        firstStartTimeNanos = lastStartTimeNanos = System.nanoTime();
-        if (timeoutMillis > 0) {
-            timeoutFuture = eventLoop.schedule(timeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
-        }
+        lastExecutionTimeNanos = System.nanoTime();
+        timeoutFuture = eventLoop.schedule(timeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
+        return true;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
+     * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     */
     @Override
-    public void extendTimeout(long adjustmentMillis) {
+    public boolean extendTimeout(long adjustmentMillis) {
         ensureInitialized();
-        if (adjustmentMillis == 0) {
-            return;
+        if (adjustmentMillis == 0 || timeoutFuture == null) {
+            return true;
         }
 
         // Cancel the previously scheduled timeout, if exists.
         cancelTimeout();
-
-        if (timeoutTask.canSchedule()) {
-            // Calculate the amount of time passed since the creation of this subscriber.
-            final long currentNanoTime = System.nanoTime();
-            final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
-            // newTimeoutMillis = timeoutMillis - passedTimeMillis + adjustmentMillis
-            final long newTimeoutMillis = LongMath.saturatedAdd(
-                    LongMath.saturatedSubtract(timeoutMillis, passedTimeMillis), adjustmentMillis);
-            timeoutMillis = newTimeoutMillis;
-            lastStartTimeNanos = currentNanoTime;
-            if (newTimeoutMillis > 0) {
-                timeoutFuture = eventLoop.schedule(
-                        timeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
-            } else {
-                // We went past the dead line set by the new timeout already.
-                timeoutTask.run();
-            }
+        if (!timeoutTask.canSchedule()) {
+            return false;
         }
+
+        // Calculate the amount of time passed since lastStart
+        final long currentNanoTime = System.nanoTime();
+        final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastExecutionTimeNanos);
+        // newTimeoutMillis = timeoutMillis - passedTimeMillis + adjustmentMillis
+        final long newTimeoutMillis = LongMath.saturatedAdd(
+                LongMath.saturatedSubtract(timeoutMillis, passedTimeMillis), adjustmentMillis);
+        timeoutMillis = newTimeoutMillis;
+        lastExecutionTimeNanos = currentNanoTime;
+        if (newTimeoutMillis > 0) {
+            timeoutFuture = eventLoop.schedule(
+                    timeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
+        } else {
+            // We went past the dead line set by the new timeout already.
+            timeoutTask.run();
+        }
+        return true;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
+     * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     */
     @Override
-    public void resetTimeout(long newTimeoutMillis) {
+    public boolean resetTimeout(long newTimeoutMillis) {
         ensureInitialized();
         if (newTimeoutMillis <= 0) {
             timeoutMillis = newTimeoutMillis;
             cancelTimeout();
-            return;
+            return true;
         }
 
-        if (timeoutTask.canSchedule()) {
-            final long currentNanoTime = System.nanoTime();
-            final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastStartTimeNanos);
-            final long remainingTimeoutMillis = LongMath.saturatedSubtract(timeoutMillis, passedTimeMillis);
-            lastStartTimeNanos = currentNanoTime;
-            if (remainingTimeoutMillis == newTimeoutMillis) {
-                return;
-            }
-
-            // Cancel the previously scheduled timeout, if exists.
-            cancelTimeout();
-            timeoutMillis = newTimeoutMillis;
-            timeoutFuture = eventLoop.schedule(timeoutTask, newTimeoutMillis,
-                                               TimeUnit.MILLISECONDS);
+        if (!timeoutTask.canSchedule()) {
+            return false;
         }
+
+        // Cancel the previously scheduled timeout, if exists.
+        cancelTimeout();
+        timeoutMillis = newTimeoutMillis;
+        timeoutFuture = eventLoop.schedule(timeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
+        return true;
     }
 
     @Override
     public void timeoutNow() {
-        ensureInitialized();
+        checkState(timeoutTask != null,
+                   "setTimeoutTask(timeoutTask) is not called yet.");
         if (cancelTimeout()) {
             timeoutTask.run();
         }
@@ -171,13 +180,14 @@ public class DefaultTimeoutController implements TimeoutController {
     private void ensureInitialized() {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
-        checkState(firstStartTimeNanos > 0,
-                   "initTimeout(timeoutMillis) is not called yet.");
+        if (firstExecutionTimeNanos == 0) {
+            firstExecutionTimeNanos = lastExecutionTimeNanos = System.nanoTime();
+        }
     }
 
     @Override
     public long startTimeNanos() {
-        return firstStartTimeNanos;
+        return firstExecutionTimeNanos;
     }
 
     @VisibleForTesting
