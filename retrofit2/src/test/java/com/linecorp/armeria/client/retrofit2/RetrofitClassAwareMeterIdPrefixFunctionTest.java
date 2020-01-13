@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -100,15 +101,12 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
     @ParameterizedTest
     @MethodSource
     void metrics(RetrofitMeterIdPrefixFunction meterIdPrefixFunction, String serviceTag) {
-        final Example example =
-                new ArmeriaRetrofitBuilder(clientFactory)
-                        .baseUrl("h1c://127.0.0.1:" + server.httpPort())
-                        .withClientOptions((s, clientOptionsBuilder) -> {
-                            return clientOptionsBuilder
-                                    .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction));
-                        })
-                        .build()
-                        .create(Example.class);
+        final Example example = ArmeriaRetrofit
+                .of(WebClient.builder(server.httpUri("/"))
+                             .factory(clientFactory)
+                             .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
+                             .build())
+                .create(Example.class);
 
         example.getFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))

@@ -75,8 +75,7 @@ class RetrofitMeterIdPrefixFunctionTest {
         final Example example = ArmeriaRetrofit
                 .of(WebClient.builder(server.httpUri("/"))
                              .factory(clientFactory)
-                             .decorator(MetricCollectingClient.newDecorator(
-                                     RetrofitMeterIdPrefixFunction.of("foo")))
+                             .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
                              .build())
                 .create(Example.class);
 

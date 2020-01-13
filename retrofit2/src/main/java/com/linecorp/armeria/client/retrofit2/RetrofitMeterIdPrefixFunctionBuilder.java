@@ -42,11 +42,6 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
         this.name = name;
     }
 
-    RetrofitMeterIdPrefixFunctionBuilder(String name, Class<?> serviceClass) {
-        this.name = name;
-        this.serviceClass = serviceClass;
-    }
-
     /**
      * Adds a tag that signifies the service name to the generated {@link MeterIdPrefix}es.
      *
