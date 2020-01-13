@@ -6,7 +6,6 @@ import java.time.Duration;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
@@ -35,6 +34,9 @@ public final class ProxyService extends AbstractHttpService {
      * with ZooKeeper</a> and <a href="https://line.github.io/centraldogma/">centraldogma</a>.
      */
     private static final EndpointGroup animationGroup = EndpointGroup.of(
+            // You can use EndpointSelectionStrategy.weightedRoundRobin() or even
+            // implement your own strategy to balance requests.
+            EndpointSelectionStrategy.roundRobin(),
             Endpoint.of("127.0.0.1", 8081),
             Endpoint.of("127.0.0.1", 8082),
             Endpoint.of("127.0.0.1", 8083));
@@ -61,12 +63,7 @@ public final class ProxyService extends AbstractHttpService {
         // Wait until the initial health check is finished.
         healthCheckedGroup.awaitInitialEndpoints();
 
-        EndpointGroupRegistry.register("animation_apis", healthCheckedGroup,
-                                       // You can use EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN or even
-                                       // implement your own strategy to balance requests.
-                                       EndpointSelectionStrategy.ROUND_ROBIN);
-
-        return WebClient.builder("http://group:animation_apis")
+        return WebClient.builder(SessionProtocol.HTTP, healthCheckedGroup)
                         // Disable timeout to serve infinite streaming response.
                         .responseTimeoutMillis(0)
                         .decorator(LoggingClient.newDecorator())

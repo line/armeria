@@ -27,13 +27,14 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -65,7 +66,6 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
     private final MeterRegistry meterRegistry;
     private final SessionProtocol sessionProtocol;
-    private final Endpoint endpoint;
     private final SerializationFormat serializationFormat;
     @Nullable
     private final MessageMarshaller jsonMarshaller;
@@ -75,14 +75,12 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                    HttpClient httpClient,
                    MeterRegistry meterRegistry,
                    SessionProtocol sessionProtocol,
-                   Endpoint endpoint,
                    SerializationFormat serializationFormat,
                    @Nullable MessageMarshaller jsonMarshaller) {
         this.params = params;
         this.httpClient = httpClient;
         this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
-        this.endpoint = endpoint;
         this.serializationFormat = serializationFormat;
         this.jsonMarshaller = jsonMarshaller;
 
@@ -103,7 +101,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         ctx.logBuilder().deferResponseContent();
         return new ArmeriaClientCall<>(
                 ctx,
-                endpoint,
+                params.endpointGroup(),
                 httpClient,
                 req,
                 method,
@@ -131,6 +129,21 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     @Override
     public ClientFactory factory() {
         return params.factory();
+    }
+
+    @Override
+    public Scheme scheme() {
+        return params.scheme();
+    }
+
+    @Override
+    public EndpointGroup endpointGroup() {
+        return params.endpointGroup();
+    }
+
+    @Override
+    public String absolutePathRef() {
+        return params.absolutePathRef();
     }
 
     @Override

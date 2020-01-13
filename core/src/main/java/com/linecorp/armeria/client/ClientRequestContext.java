@@ -35,7 +35,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.endpoint.EndpointSelector;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -378,13 +378,13 @@ public interface ClientRequestContext extends RequestContext {
                                            Endpoint endpoint);
 
     /**
-     * Returns the {@link EndpointSelector} used for the current {@link Request}.
+     * Returns the {@link EndpointGroup} used for the current {@link Request}.
      *
-     * @return the {@link EndpointSelector} if a user specified a group {@link Endpoint}.
-     *         {@code null} if a user specified a host {@link Endpoint}.
+     * @return the {@link EndpointGroup} if a user specified an {@link EndpointGroup} when initiating
+     *         a {@link Request}. {@code null} if a user specified an {@link Endpoint}.
      */
     @Nullable
-    EndpointSelector endpointSelector();
+    EndpointGroup endpointGroup();
 
     /**
      * Returns the remote {@link Endpoint} of the current {@link Request}.

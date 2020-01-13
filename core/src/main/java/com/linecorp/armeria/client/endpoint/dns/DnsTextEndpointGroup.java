@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.internal.dns.DnsQuestionWithoutTrailingDot;
@@ -71,10 +72,10 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
 
     private final Function<byte[], Endpoint> mapping;
 
-    DnsTextEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
-                         DnsServerAddressStreamProvider serverAddressStreamProvider,
+    DnsTextEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
+                         int minTtl, int maxTtl, DnsServerAddressStreamProvider serverAddressStreamProvider,
                          Backoff backoff, String hostname, Function<byte[], Endpoint> mapping) {
-        super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
+        super(selectionStrategy, eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
               ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.TXT)),
               unused -> {});
         this.mapping = mapping;
@@ -120,11 +121,7 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
             }
 
             if (endpoint != null) {
-                if (endpoint.isGroup()) {
-                    logger().warn("{} Ignoring group endpoint: {}", logPrefix(), endpoint);
-                } else {
-                    builder.add(endpoint);
-                }
+                builder.add(endpoint);
             }
         }
 

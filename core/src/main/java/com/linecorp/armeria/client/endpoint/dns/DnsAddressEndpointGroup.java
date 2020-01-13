@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.internal.dns.DnsQuestionWithoutTrailingDot;
@@ -82,12 +83,12 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
     private final String hostname;
     private final int port;
 
-    DnsAddressEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
-                            DnsServerAddressStreamProvider serverAddressStreamProvider,
+    DnsAddressEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
+                            int minTtl, int maxTtl, DnsServerAddressStreamProvider serverAddressStreamProvider,
                             Backoff backoff, @Nullable ResolvedAddressTypes resolvedAddressTypes,
                             String hostname, int port) {
 
-        super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
+        super(selectionStrategy, eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
               newQuestions(hostname, resolvedAddressTypes),
               resolverBuilder -> {
                   if (resolvedAddressTypes != null) {

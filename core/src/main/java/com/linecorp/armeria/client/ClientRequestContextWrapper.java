@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.endpoint.EndpointSelector;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContextWrapper;
@@ -69,8 +69,8 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public EndpointSelector endpointSelector() {
-        return delegate().endpointSelector();
+    public EndpointGroup endpointGroup() {
+        return delegate().endpointGroup();
     }
 
     @Override

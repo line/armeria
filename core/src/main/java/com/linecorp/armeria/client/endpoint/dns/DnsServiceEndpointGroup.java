@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.internal.dns.DnsQuestionWithoutTrailingDot;
@@ -65,10 +66,11 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
         return new DnsServiceEndpointGroupBuilder(hostname);
     }
 
-    DnsServiceEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
+    DnsServiceEndpointGroup(EndpointSelectionStrategy selectionStrategy,
+                            EventLoop eventLoop, int minTtl, int maxTtl,
                             DnsServerAddressStreamProvider serverAddressStreamProvider,
                             Backoff backoff, String hostname) {
-        super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
+        super(selectionStrategy, eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
               ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.SRV)),
               unused -> {});
         start();

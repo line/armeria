@@ -62,6 +62,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -1299,6 +1300,23 @@ public class GrpcClientTest {
                 .isInstanceOfSatisfying(StatusRuntimeException.class,
                                         e -> assertThat(e.getStatus().getDescription())
                                                 .isEqualTo(statusMessage));
+    }
+
+    @Test
+    public void endpointRemapper() {
+        final EndpointGroup group = Endpoint.of("127.0.0.1", server.httpPort());
+        final TestServiceBlockingStub stub =
+                Clients.builder("gproto+http://my-group")
+                       .endpointRemapper(endpoint -> {
+                           if ("my-group".equals(endpoint.host())) {
+                               return group;
+                           } else {
+                               return endpoint;
+                           }
+                       })
+                       .build(TestServiceBlockingStub.class);
+
+        assertThat(stub.emptyCall(Empty.newBuilder().build())).isNotNull();
     }
 
     private static void assertSuccess(StreamRecorder<?> recorder) {

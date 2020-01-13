@@ -17,15 +17,15 @@ package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
-public class OrElseEndpointGroupTest {
+class OrElseEndpointGroupTest {
     @Test
-    public void updateFirstEndpoints() {
+    void updateFirstEndpoints() {
         final DynamicEndpointGroup firstEndpointGroup = new DynamicEndpointGroup();
         final DynamicEndpointGroup secondEndpointGroup = new DynamicEndpointGroup();
         final EndpointGroup endpointGroup = new OrElseEndpointGroup(firstEndpointGroup, secondEndpointGroup);
@@ -46,7 +46,7 @@ public class OrElseEndpointGroupTest {
     }
 
     @Test
-    public void updateSecondEndpoints() {
+    void updateSecondEndpoints() {
         final DynamicEndpointGroup firstEndpointGroup = new DynamicEndpointGroup();
         final DynamicEndpointGroup secondEndpointGroup = new DynamicEndpointGroup();
         final EndpointGroup endpointGroup = new OrElseEndpointGroup(firstEndpointGroup, secondEndpointGroup);

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -220,14 +219,6 @@ class DefaultEventLoopSchedulerTest {
 
         // The entries for endpoint B shouldn't be affected.
         entriesB.forEach(e -> assertThat(e.activeRequests()).isEqualTo(1));
-    }
-
-    @Test
-    void endpointShouldBeHost() {
-        final DefaultEventLoopScheduler s = defaultEventLoopScheduler();
-        assertThatThrownBy(() -> s.acquire(Endpoint.ofGroup("foo"), SessionProtocol.HTTP))
-                .isExactlyInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("endpoint must be a host");
     }
 
     @Test

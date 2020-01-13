@@ -18,26 +18,21 @@ package com.linecorp.armeria.client.retrofit2;
 import static com.linecorp.armeria.client.Clients.withContextCustomizer;
 
 import java.io.IOException;
-import java.net.URI;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -59,25 +54,26 @@ import retrofit2.Invocation;
  */
 final class ArmeriaCallFactory implements Factory {
 
-    static final String GROUP_PREFIX = "group_";
-    private static final Pattern GROUP_PREFIX_MATCHER = Pattern.compile(GROUP_PREFIX);
-    private final Map<String, WebClient> httpClients = new ConcurrentHashMap<>();
-    private final WebClient baseHttpClient;
-    private final ClientFactory clientFactory;
-    private final BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator;
-    private final String baseAuthority;
+    private final String baseWebClientHost;
+    private final int baseWebClientPort;
+    private final WebClient baseWebClient;
     private final SubscriberFactory subscriberFactory;
+    private final BiFunction<SessionProtocol, Endpoint, WebClient> nonBaseWebClientFactory;
 
-    ArmeriaCallFactory(WebClient baseHttpClient,
-                       ClientFactory clientFactory,
-                       BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator,
-                       SubscriberFactory subscriberFactory) {
-        this.baseHttpClient = baseHttpClient;
-        this.clientFactory = clientFactory;
-        this.configurator = configurator;
+    ArmeriaCallFactory(String baseWebClientHost, int baseWebClientPort, WebClient baseWebClient,
+                       SubscriberFactory subscriberFactory,
+                       BiFunction<? super SessionProtocol, ? super Endpoint,
+                               ? extends WebClient> nonBaseWebClientFactory) {
+
+        this.baseWebClientHost = baseWebClientHost;
+        this.baseWebClientPort = baseWebClientPort;
+        this.baseWebClient = baseWebClient;
         this.subscriberFactory = subscriberFactory;
-        baseAuthority = baseHttpClient.uri().getAuthority();
-        httpClients.put(baseAuthority, baseHttpClient);
+
+        @SuppressWarnings("unchecked")
+        final BiFunction<SessionProtocol, Endpoint, WebClient> castNonBaseWebClientFactory =
+                (BiFunction<SessionProtocol, Endpoint, WebClient>) nonBaseWebClientFactory;
+        this.nonBaseWebClientFactory = castNonBaseWebClientFactory;
     }
 
     @Override
@@ -85,23 +81,17 @@ final class ArmeriaCallFactory implements Factory {
         return new ArmeriaCall(this, request);
     }
 
-    private static boolean isGroup(String authority) {
-        return authority.startsWith(GROUP_PREFIX);
-    }
+    WebClient getWebClient(HttpUrl url) {
+        if (baseWebClient.scheme().sessionProtocol().isTls() == url.isHttps() &&
+            baseWebClientHost.equals(url.host()) &&
+            baseWebClientPort == url.port()) {
 
-    WebClient getHttpClient(String authority, String sessionProtocol) {
-        if (baseAuthority.equals(authority)) {
-            return baseHttpClient;
+            return baseWebClient;
         }
-        return httpClients.computeIfAbsent(authority, key -> {
-            final String finalAuthority = isGroup(key) ?
-                                          GROUP_PREFIX_MATCHER.matcher(key).replaceFirst("group:") : key;
-            final String uriText = sessionProtocol + "://" + finalAuthority;
-            return WebClient.builder(uriText)
-                            .factory(clientFactory)
-                            .options(configurator.apply(uriText, ClientOptions.builder()).build())
-                            .build();
-        });
+
+        final SessionProtocol protocol = url.isHttps() ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
+        final Endpoint endpoint = Endpoint.of(url.host(), url.port());
+        return nonBaseWebClientFactory.apply(protocol, endpoint);
     }
 
     static class ArmeriaCall implements Call {
@@ -131,16 +121,16 @@ final class ArmeriaCallFactory implements Factory {
 
         private static HttpResponse doCall(ArmeriaCallFactory callFactory, Request request) {
             final HttpUrl httpUrl = request.url();
-            final URI uri = httpUrl.uri();
-            final WebClient webClient = callFactory.getHttpClient(uri.getAuthority(), uri.getScheme());
-            final String uriString;
-            if (uri.getQuery() == null) {
-                uriString = httpUrl.encodedPath();
+            final WebClient webClient = callFactory.getWebClient(httpUrl);
+            final String absolutePathRef;
+            if (httpUrl.encodedQuery() == null) {
+                absolutePathRef = httpUrl.encodedPath();
             } else {
-                uriString = httpUrl.encodedPath() + '?' + httpUrl.encodedQuery();
+                absolutePathRef = httpUrl.encodedPath() + '?' + httpUrl.encodedQuery();
             }
+
             final RequestHeadersBuilder headers = RequestHeaders.builder(HttpMethod.valueOf(request.method()),
-                                                                         uriString);
+                                                                         absolutePathRef);
             final Headers requestHeaders = request.headers();
             final int numHeaders = requestHeaders.size();
             for (int i = 0; i < numHeaders; i++) {

@@ -69,7 +69,7 @@ public final class DnsAddressEndpointGroupBuilder
      * Returns a newly created {@link DnsAddressEndpointGroup}.
      */
     public DnsAddressEndpointGroup build() {
-        return new DnsAddressEndpointGroup(eventLoop(), minTtl(), maxTtl(),
+        return new DnsAddressEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
                                            serverAddressStreamProvider(), backoff(),
                                            resolvedAddressTypes, hostname(), port);
     }

@@ -63,8 +63,6 @@ import com.google.common.io.Closeables;
 import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.client.encoding.DeflateStreamDecoderFactory;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
-import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -421,20 +419,14 @@ class HttpClientIntegrationTest {
     }
 
     private static void testEndpointWithAlternateAuthority(EndpointGroup group) {
-        final String groupName = "testEndpointWithAlternateAuthority";
-        EndpointGroupRegistry.register(groupName, group, EndpointSelectionStrategy.ROUND_ROBIN);
-        try {
-            final WebClient client = WebClient.builder("http://group:" + groupName)
-                                              .setHttpHeader(HttpHeaderNames.AUTHORITY,
-                                                             "255.255.255.255.xip.io")
-                                              .build();
+        final WebClient client = WebClient.builder(SessionProtocol.HTTP, group)
+                                          .setHttpHeader(HttpHeaderNames.AUTHORITY,
+                                                         "255.255.255.255.xip.io")
+                                          .build();
 
-            final AggregatedHttpResponse res = client.get("/hello/world").aggregate().join();
-            assertThat(res.status()).isEqualTo(HttpStatus.OK);
-            assertThat(res.contentUtf8()).isEqualTo("success");
-        } finally {
-            EndpointGroupRegistry.unregister(groupName);
-        }
+        final AggregatedHttpResponse res = client.get("/hello/world").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("success");
     }
 
     @Test
@@ -608,7 +600,7 @@ class HttpClientIntegrationTest {
     @Test
     void testCloseClientFactory() throws Exception {
         final ClientFactory factory = ClientFactory.builder().build();
-        final WebClient client = factory.newClient("none+" + server.uri("/"), WebClient.class);
+        final WebClient client = WebClient.builder(server.uri("/")).factory(factory).build();
         final HttpRequestWriter req = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET,
                                                                               "/stream-closed"));
         final HttpResponse res = client.execute(req);

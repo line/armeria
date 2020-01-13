@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -66,15 +67,15 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
+     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
      * the {@link SessionProtocol} using the default {@link ClientFactory} and the default
      * {@link ClientOptions}.
      *
-     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
-     * @param endpoint the server {@link Endpoint}
+     * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
      */
-    static WebClient of(SessionProtocol protocol, Endpoint endpoint) {
-        return builder(protocol, endpoint).build();
+    static WebClient of(SessionProtocol protocol, EndpointGroup endpointGroup) {
+        return builder(protocol, endpointGroup).build();
     }
 
     /**
@@ -214,73 +215,74 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
+     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
      * the {@link SessionProtocol} using the default {@link ClientFactory}.
      *
-     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
-     * @param endpoint the server {@link Endpoint}
+     * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
      * @param options the {@link ClientOptionValue}s
      *
-     * @deprecated Use {@link #builder(SessionProtocol, Endpoint)}
+     * @deprecated Use {@link #builder(SessionProtocol, EndpointGroup)}
      *             and {@link WebClientBuilder#options(ClientOptionValue[])}.
      */
     @Deprecated
-    static WebClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptionValue<?>... options) {
-        return builder(protocol, endpoint).options(options).build();
-    }
-
-    /**
-     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
-     * the {@link SessionProtocol} using the default {@link ClientFactory}.
-     *
-     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
-     * @param endpoint the server {@link Endpoint}
-     * @param options the {@link ClientOptions}
-     *
-     * @deprecated Use {@link #builder(SessionProtocol, Endpoint)}
-     *             and {@link WebClientBuilder#options(ClientOptions)}.
-     */
-    @Deprecated
-    static WebClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptions options) {
-        return builder(protocol, endpoint).options(options).build();
-    }
-
-    /**
-     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
-     * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
-     *
-     * @param factory an alternative {@link ClientFactory}
-     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
-     * @param endpoint the server {@link Endpoint}
-     * @param options the {@link ClientOptionValue}s
-     *
-     * @deprecated Use {@link #builder(SessionProtocol, Endpoint)},
-     *             {@link WebClientBuilder#factory(ClientFactory)}
-     *             and {@link WebClientBuilder#options(ClientOptionValue[])}.
-     */
-    @Deprecated
-    static WebClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
+    static WebClient of(SessionProtocol protocol, EndpointGroup endpointGroup,
                         ClientOptionValue<?>... options) {
-        return builder(protocol, endpoint).factory(factory).options(options).build();
+        return builder(protocol, endpointGroup).options(options).build();
     }
 
     /**
-     * Returns a new {@link WebClient} that connects to the specified {@link Endpoint} with
+     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
+     * the {@link SessionProtocol} using the default {@link ClientFactory}.
+     *
+     * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param options the {@link ClientOptions}
+     *
+     * @deprecated Use {@link #builder(SessionProtocol, EndpointGroup)}
+     *             and {@link WebClientBuilder#options(ClientOptions)}.
+     */
+    @Deprecated
+    static WebClient of(SessionProtocol protocol, EndpointGroup endpointGroup, ClientOptions options) {
+        return builder(protocol, endpointGroup).options(options).build();
+    }
+
+    /**
+     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
      * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
-     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
-     * @param endpoint the server {@link Endpoint}
+     * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param options the {@link ClientOptionValue}s
+     *
+     * @deprecated Use {@link #builder(SessionProtocol, EndpointGroup)},
+     *             {@link WebClientBuilder#factory(ClientFactory)}
+     *             and {@link WebClientBuilder#options(ClientOptionValue[])}.
+     */
+    @Deprecated
+    static WebClient of(ClientFactory factory, SessionProtocol protocol, EndpointGroup endpointGroup,
+                        ClientOptionValue<?>... options) {
+        return builder(protocol, endpointGroup).factory(factory).options(options).build();
+    }
+
+    /**
+     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
+     * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
      * @param options the {@link ClientOptions}
      *
-     * @deprecated Use {@link #builder(SessionProtocol, Endpoint)},
+     * @deprecated Use {@link #builder(SessionProtocol, EndpointGroup)},
      *             {@link WebClientBuilder#factory(ClientFactory)}
      *             and {@link WebClientBuilder#options(ClientOptions)}.
      */
     @Deprecated
-    static WebClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
+    static WebClient of(ClientFactory factory, SessionProtocol protocol, EndpointGroup endpointGroup,
                         ClientOptions options) {
-        return builder(protocol, endpoint).factory(factory).options(options).build();
+        return builder(protocol, endpointGroup).factory(factory).options(options).build();
     }
 
     /**
@@ -312,13 +314,13 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
 
     /**
      * Returns a new {@link WebClientBuilder} created with the specified {@link SessionProtocol}
-     * and base {@link Endpoint}.
+     * and base {@link EndpointGroup}.
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    static WebClientBuilder builder(SessionProtocol sessionProtocol, Endpoint endpoint) {
-        return new WebClientBuilder(sessionProtocol, endpoint);
+    static WebClientBuilder builder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
+        return new WebClientBuilder(sessionProtocol, endpointGroup);
     }
 
     /**

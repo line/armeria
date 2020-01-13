@@ -69,7 +69,7 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
         return new StickyEndpointSelector(requestContextHasher, endpointGroup);
     }
 
-    private final class StickyEndpointSelector implements EndpointSelector {
+    private static final class StickyEndpointSelector implements EndpointSelector {
 
         private final ToLongFunction<ClientRequestContext> requestContextHasher;
         private final EndpointGroup endpointGroup;
@@ -81,21 +81,11 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
         }
 
         @Override
-        public EndpointGroup group() {
-            return endpointGroup;
-        }
-
-        @Override
-        public EndpointSelectionStrategy strategy() {
-            return StickyEndpointSelectionStrategy.this;
-        }
-
-        @Override
         public Endpoint select(ClientRequestContext ctx) {
 
             final List<Endpoint> endpoints = endpointGroup.endpoints();
             if (endpoints.isEmpty()) {
-                throw new EndpointGroupException(endpointGroup + " is empty");
+                throw EmptyEndpointGroupException.get();
             }
 
             final long key = requestContextHasher.applyAsLong(ctx);

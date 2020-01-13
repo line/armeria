@@ -22,8 +22,6 @@ import java.net.StandardProtocolFamily;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
 class EndpointTest {
@@ -49,30 +47,11 @@ class EndpointTest {
         assertThat(bar.hasIpAddr()).isFalse();
         assertThat(bar.hasPort()).isTrue();
         assertThat(bar.toUri("none+http").toString()).isEqualTo("none+http://bar:80");
-
-        assertThat(Endpoint.parse("group:foo")).isEqualTo(Endpoint.ofGroup("foo"));
-    }
-
-    @Test
-    void group() {
-        final Endpoint foo = Endpoint.ofGroup("foo");
-        assertThat(foo.isGroup()).isTrue();
-        assertThat(foo.groupName()).isEqualTo("foo");
-        assertThat(foo.authority()).isEqualTo("group:foo");
-        assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://group:foo");
-
-        assertThatThrownBy(foo::host).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(foo::ipAddr).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(foo::ipFamily).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(foo::hasIpAddr).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(foo::port).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(foo::hasPort).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void hostWithoutPort() {
         final Endpoint foo = Endpoint.of("foo.com");
-        assertThat(foo.isGroup()).isFalse();
         assertThat(foo.host()).isEqualTo("foo.com");
         assertThat(foo.ipAddr()).isNull();
         assertThat(foo.ipFamily()).isNull();
@@ -86,14 +65,12 @@ class EndpointTest {
         assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://foo.com");
 
         assertThatThrownBy(foo::port).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(foo::groupName).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> foo.withDefaultPort(-1)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void hostWithPort() {
         final Endpoint foo = Endpoint.of("foo.com", 80);
-        assertThat(foo.isGroup()).isFalse();
         assertThat(foo.host()).isEqualTo("foo.com");
         assertThat(foo.ipAddr()).isNull();
         assertThat(foo.ipFamily()).isNull();
@@ -105,8 +82,6 @@ class EndpointTest {
         assertThat(foo.weight()).isEqualTo(1000);
         assertThat(foo.authority()).isEqualTo("foo.com:80");
         assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://foo.com:80");
-
-        assertThatThrownBy(foo::groupName).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -291,17 +266,9 @@ class EndpointTest {
 
     @Test
     void toUri() {
-        final Endpoint group = Endpoint.ofGroup("a");
-        assertThat(group.toUri("http").toString())
-                .isEqualTo("http://group:a");
-        assertThat(group.toUri(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP)).toString())
-                .isEqualTo("none+http://group:a");
-
         final Endpoint router = Endpoint.of("192.168.0.1");
         assertThat(router.toUri("none+h1").toString())
                 .isEqualTo("none+h1://192.168.0.1");
-        assertThat(group.toUri(SessionProtocol.H1).toString())
-                .isEqualTo("none+h1://group:a");
         assertThat(router.withDefaultPort(80).toUri("none+h1").toString())
                 .isEqualTo("none+h1://192.168.0.1:80");
 
@@ -329,27 +296,16 @@ class EndpointTest {
 
         assertThat(naver.toUri("https", ""))
                 .isEqualTo(naver.toUri("https", null));
-
-        assertThatThrownBy(() -> group.toUri("http://www.badguys.com"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> group.toUri(Scheme.of(SerializationFormat.THRIFT_JSON, SessionProtocol.H1)))
-                .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void equals() {
         final Endpoint a1 = Endpoint.of("a");
         final Endpoint a2 = Endpoint.of("a");
-        final Endpoint groupA1 = Endpoint.ofGroup("a");
-        final Endpoint groupA2 = Endpoint.ofGroup("a");
 
         assertThat(a1).isNotEqualTo(new Object());
-        assertThat(a1).isNotEqualTo(groupA1);
-        assertThat(groupA1).isNotEqualTo(a1);
         assertThat(a1).isEqualTo(a1);
         assertThat(a1).isEqualTo(a2);
-        assertThat(groupA1).isEqualTo(groupA1);
-        assertThat(groupA1).isEqualTo(groupA2);
     }
 
     @Test
@@ -392,7 +348,6 @@ class EndpointTest {
         assertThat(Endpoint.of("a", 80).hashCode()).isNotZero();
         assertThat(Endpoint.of("a").withIpAddr("::1").hashCode()).isNotZero();
         assertThat(Endpoint.of("a", 80).withIpAddr("::1").hashCode()).isNotZero();
-        assertThat(Endpoint.ofGroup("a").hashCode()).isNotZero();
 
         // Weight is not part of comparison.
         final int hash = Endpoint.of("a", 80).withWeight(500).hashCode();
@@ -401,7 +356,6 @@ class EndpointTest {
 
     @Test
     void testToString() {
-        assertThat(Endpoint.ofGroup("g").toString()).isEqualTo("Endpoint{group:g}");
         assertThat(Endpoint.of("a").toString()).isEqualTo("Endpoint{a, weight=1000}");
         assertThat(Endpoint.of("a", 80).toString()).isEqualTo("Endpoint{a:80, weight=1000}");
         assertThat(Endpoint.of("a").withIpAddr("::1").toString())
@@ -414,15 +368,10 @@ class EndpointTest {
 
     @Test
     void comparison() {
-        assertThat(Endpoint.ofGroup("a")).isEqualByComparingTo(Endpoint.ofGroup("a"));
-        assertThat(Endpoint.ofGroup("a")).isLessThan(Endpoint.ofGroup("b"));
-        assertThat(Endpoint.ofGroup("a")).isLessThan(Endpoint.of("a"));
-
         assertThat(Endpoint.of("a")).isEqualByComparingTo(Endpoint.of("a"));
         assertThat(Endpoint.of("a")).isLessThan(Endpoint.of("b"));
         assertThat(Endpoint.of("a")).isLessThan(Endpoint.of("a", 8080));
         assertThat(Endpoint.of("a")).isLessThan(Endpoint.of("a").withIpAddr("1.1.1.1"));
-        assertThat(Endpoint.of("a")).isGreaterThan(Endpoint.ofGroup("a"));
 
         assertThat(Endpoint.of("a", 8080)).isEqualByComparingTo(Endpoint.of("a", 8080));
         assertThat(Endpoint.of("a", 8080)).isGreaterThan(Endpoint.of("a"));

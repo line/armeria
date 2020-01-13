@@ -525,7 +525,8 @@ public final class RouteBuilder {
         }
         if (!pathPattern.startsWith("/")) {
             throw new IllegalArgumentException(
-                    "pathPattern: " + pathPattern + " (not an absolute path or a unknown pattern type)");
+                    "pathPattern: " + pathPattern +
+                    " (not an absolute path starting with '/' or a unknown pattern type)");
         }
         if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
             return new ExactPathMapping(pathPattern);

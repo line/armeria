@@ -38,7 +38,7 @@ import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -46,19 +46,15 @@ import com.linecorp.armeria.common.SessionProtocol;
 import io.netty.util.NetUtil;
 
 /**
- * A remote endpoint that refers to a single host or a group of multiple hosts.
+ * A remote endpoint that refers to a single host.
  *
- * <p>A host endpoint has {@link #host()}, optional {@link #ipAddr()} and optional {@link #port()}. It can be
+ * <p>An endpoint has {@link #host()}, optional {@link #ipAddr()} and optional {@link #port()}. It can be
  * represented as {@code "<host>"} or {@code "<host>:<port>"} in the authority part of a URI. It can have
- * an IP address if the host name has been resolved and thus there's no need to query a DNS server.
- *
- * <p>A group endpoint has {@link #groupName()} and it can be represented as {@code "group:<groupName>"}
- * in the authority part of a URI. It can be resolved into a host endpoint with
- * {@link #resolve(ClientRequestContext)}.
+ * an IP address if the host name has been resolved and thus there's no need to query a DNS server.</p>
  */
 public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
-    private static final Comparator<Endpoint> NON_GROUP_COMPARATOR =
+    private static final Comparator<Endpoint> COMPARATOR =
             Comparator.comparing(Endpoint::host)
                       .thenComparing(e -> e.ipAddr, Comparator.nullsFirst(Comparator.naturalOrder()))
                       .thenComparing(e -> e.port);
@@ -75,7 +71,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Parse the authority part of a URI. The authority part may have one of the following formats:
      * <ul>
-     *   <li>{@code "group:<groupName>"} for a group endpoint</li>
      *   <li>{@code "<host>:<port>"} for a host endpoint</li>
      *   <li>{@code "<host>"} for a host endpoint with no port number specified</li>
      * </ul>
@@ -84,20 +79,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public static Endpoint parse(String authority) {
         requireNonNull(authority, "authority");
-        if (authority.startsWith("group:")) {
-            return ofGroup(authority.substring(6));
-        }
-
         final HostAndPort parsed = HostAndPort.fromString(authority).withDefaultPort(0);
         return create(parsed.getHost(), parsed.getPort());
-    }
-
-    /**
-     * Creates a new group {@link Endpoint}.
-     */
-    public static Endpoint ofGroup(String name) {
-        requireNonNull(name, "name");
-        return new Endpoint(name);
     }
 
     /**
@@ -165,29 +148,15 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         IPv6_ONLY
     }
 
-    @Nullable
-    private final String groupName;
-    @Nullable
     private final String host;
     @Nullable
     private final String ipAddr;
     private final int port;
     private final int weight;
     private final List<Endpoint> endpoints;
-    @Nullable // null if this endpoint is a group.
     private final HostType hostType;
     @Nullable
     private String authority;
-
-    private Endpoint(String groupName) {
-        this.groupName = groupName;
-        host = null;
-        ipAddr = null;
-        port = 0;
-        weight = 0;
-        hostType = null;
-        endpoints = ImmutableList.of(this);
-    }
 
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType) {
         this.host = host;
@@ -195,34 +164,11 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         this.port = port;
         this.weight = weight;
         this.hostType = hostType;
-        groupName = null;
         endpoints = ImmutableList.of(this);
 
         // hostType must be HOSTNAME_ONLY when ipAddr is null and vice versa.
         assert ipAddr == null && hostType == HostType.HOSTNAME_ONLY ||
                ipAddr != null && hostType != HostType.HOSTNAME_ONLY;
-    }
-
-    /**
-     * Returns {@code true} if this endpoint refers to a group.
-     */
-    public boolean isGroup() {
-        return groupName != null;
-    }
-
-    /**
-     * Resolves this endpoint into a host endpoint associated with the specified
-     * {@link ClientRequestContext}.
-     *
-     * @return the {@link Endpoint} resolved by {@link EndpointGroupRegistry}.
-     *         {@code this} if this endpoint is already a host endpoint.
-     */
-    public Endpoint resolve(ClientRequestContext ctx) {
-        if (isGroup()) {
-            return EndpointGroupRegistry.selectNode(ctx, groupName);
-        } else {
-            return this;
-        }
     }
 
     @Override
@@ -231,18 +177,18 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     @Override
-    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
-        return CompletableFuture.completedFuture(endpoints);
+    public EndpointSelectionStrategy selectionStrategy() {
+        return EndpointSelectionStrategy.weightedRoundRobin();
     }
 
-    /**
-     * Returns the group name of this endpoint.
-     *
-     * @throws IllegalStateException if this endpoint is not a group but a host
-     */
-    public String groupName() {
-        ensureGroup();
-        return groupName;
+    @Override
+    public Endpoint select(ClientRequestContext ctx) {
+        return this;
+    }
+
+    @Override
+    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+        return CompletableFuture.completedFuture(endpoints);
     }
 
     /**
@@ -251,7 +197,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public String host() {
-        ensureSingle();
         return host;
     }
 
@@ -263,7 +208,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     @Nullable
     public String ipAddr() {
-        ensureSingle();
         return ipAddr;
     }
 
@@ -285,7 +229,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public boolean isIpAddrOnly() {
-        ensureSingle();
         return hostType == HostType.IPv4_ONLY || hostType == HostType.IPv6_ONLY;
     }
 
@@ -298,7 +241,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     @Nullable
     public StandardProtocolFamily ipFamily() {
-        ensureSingle();
         switch (hostType) {
             case HOSTNAME_AND_IPv4:
             case IPv4_ONLY:
@@ -318,7 +260,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      *                               this endpoint does not have its port specified.
      */
     public int port() {
-        ensureSingle();
         if (port == 0) {
             throw new IllegalStateException("port not specified");
         }
@@ -333,7 +274,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public int port(int defaultValue) {
-        ensureSingle();
         return port != 0 ? port : defaultValue;
     }
 
@@ -344,7 +284,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public boolean hasPort() {
-        ensureSingle();
         return port != 0;
     }
 
@@ -359,7 +298,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withPort(int port) {
-        ensureSingle();
         validatePort("port", port);
         if (this.port == port) {
             return this;
@@ -376,7 +314,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withoutPort() {
-        ensureSingle();
         if (port == 0) {
             return this;
         }
@@ -393,7 +330,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withDefaultPort(int defaultPort) {
-        ensureSingle();
         validatePort("defaultPort", defaultPort);
 
         if (port != 0) {
@@ -415,7 +351,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withoutDefaultPort(int defaultPort) {
-        ensureSingle();
         validatePort("defaultPort", defaultPort);
         if (port == defaultPort) {
             return new Endpoint(host, ipAddr, 0, weight, hostType);
@@ -432,7 +367,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withIpAddr(@Nullable String ipAddr) {
-        ensureSingle();
         if (ipAddr == null) {
             return withoutIpAddr();
         }
@@ -487,7 +421,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withWeight(int weight) {
-        ensureSingle();
         validateWeight(weight);
         if (this.weight == weight) {
             return this;
@@ -499,7 +432,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns the weight of this endpoint.
      */
     public int weight() {
-        ensureSingle();
         return weight;
     }
 
@@ -514,9 +446,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return authority;
         }
 
-        if (isGroup()) {
-            authority = "group:" + groupName;
-        } else if (port != 0) {
+        if (port != 0) {
             if (hostType == HostType.IPv6_ONLY) {
                 authority = '[' + host() + "]:" + port;
             } else {
@@ -622,18 +552,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
     }
 
-    private void ensureGroup() {
-        if (!isGroup()) {
-            throw new IllegalStateException("not a group endpoint");
-        }
-    }
-
-    private void ensureSingle() {
-        if (isGroup()) {
-            throw new IllegalStateException("not a host:port endpoint");
-        }
-    }
-
     private static void validatePort(String name, int port) {
         checkArgument(port > 0 && port <= 65535, "%s: %s (expected: 1-65535)", name, port);
     }
@@ -653,60 +571,30 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         final Endpoint that = (Endpoint) obj;
-        if (isGroup()) {
-            if (that.isGroup()) {
-                return groupName().equals(that.groupName());
-            } else {
-                return false;
-            }
-        } else {
-            if (that.isGroup()) {
-                return false;
-            } else {
-                return host().equals(that.host()) &&
-                       Objects.equals(ipAddr, that.ipAddr) &&
-                       port == that.port;
-            }
-        }
+        return host().equals(that.host()) &&
+               Objects.equals(ipAddr, that.ipAddr) &&
+               port == that.port;
     }
 
     @Override
     public int hashCode() {
-        if (isGroup()) {
-            return groupName.hashCode();
-        } else {
-            return (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
-        }
+        return (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
     }
 
     @Override
     public int compareTo(Endpoint that) {
-        if (isGroup()) {
-            if (that.isGroup()) {
-                return groupName().compareTo(that.groupName());
-            } else {
-                return -1;
-            }
-        } else {
-            if (that.isGroup()) {
-                return 1;
-            } else {
-                return NON_GROUP_COMPARATOR.compare(this, that);
-            }
-        }
+        return COMPARATOR.compare(this, that);
     }
 
     @Override
     public String toString() {
         final ToStringHelper helper = MoreObjects.toStringHelper(this);
         helper.addValue(authority());
-        if (!isGroup()) {
-            if (hostType == HostType.HOSTNAME_AND_IPv4 ||
-                hostType == HostType.HOSTNAME_AND_IPv6) {
-                helper.add("ipAddr", ipAddr);
-            }
-            helper.add("weight", weight);
+        if (hostType == HostType.HOSTNAME_AND_IPv4 ||
+            hostType == HostType.HOSTNAME_AND_IPv6) {
+            helper.add("ipAddr", ipAddr);
         }
+        helper.add("weight", weight);
         return helper.toString();
     }
 }

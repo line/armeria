@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
 
@@ -29,6 +30,7 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
     private final EndpointGroup second;
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
+    private final EndpointSelector selector;
 
     OrElseEndpointGroup(EndpointGroup first, EndpointGroup second) {
         this.first = requireNonNull(first, "first");
@@ -39,6 +41,8 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
         initialEndpointsFuture = CompletableFuture
                 .anyOf(first.initialEndpointsFuture(), second.initialEndpointsFuture())
                 .thenApply(unused -> endpoints());
+
+        selector = first.selectionStrategy().newSelector(this);
     }
 
     @Override
@@ -48,6 +52,16 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
             return endpoints;
         }
         return second.endpoints();
+    }
+
+    @Override
+    public EndpointSelectionStrategy selectionStrategy() {
+        return first.selectionStrategy();
+    }
+
+    @Override
+    public Endpoint select(ClientRequestContext ctx) {
+        return selector.select(ctx);
     }
 
     @Override

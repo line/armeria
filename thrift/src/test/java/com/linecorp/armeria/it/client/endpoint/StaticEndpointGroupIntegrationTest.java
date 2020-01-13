@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.it.client.endpoint;
 
-import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Rule;
@@ -26,8 +25,6 @@ import org.junit.rules.TestName;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
-import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
@@ -49,33 +46,28 @@ public class StaticEndpointGroupIntegrationTest {
         serverTwo.start();
         serverThree.start();
 
-        final EndpointGroup endpointGroup = new StaticEndpointGroup(
+        final EndpointGroup endpointGroup = EndpointGroup.of(
                 Endpoint.of("127.0.0.1", serverOne.httpPort()).withWeight(1),
                 Endpoint.of("127.0.0.1", serverTwo.httpPort()).withWeight(2),
                 Endpoint.of("127.0.0.1", serverThree.httpPort()).withWeight(3));
-        final String groupName = name.getMethodName();
-        final String endpointGroupMark = "group:";
 
-        EndpointGroupRegistry.register(groupName, endpointGroup, WEIGHTED_ROUND_ROBIN);
-
-        HelloService.Iface ipService = Clients.newClient(
-                "ttext+http://" + endpointGroupMark + groupName + "/serverIp",
-                HelloService.Iface.class);
+        HelloService.Iface ipService = Clients.builder("ttext+http", endpointGroup)
+                                              .path("/serverIp")
+                                              .build(HelloService.Iface.class);
         assertThat(ipService.hello("ip")).isEqualTo(
                 "host:127.0.0.1:" + serverOne.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo(
                 "host:127.0.0.1:" + serverTwo.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverThree.httpPort());
 
-        final StaticEndpointGroup serverGroup2 = new StaticEndpointGroup(
+        final EndpointGroup serverGroup2 = EndpointGroup.of(
                 Endpoint.of("127.0.0.1", serverOne.httpPort()).withWeight(2),
                 Endpoint.of("127.0.0.1", serverTwo.httpPort()).withWeight(4),
                 Endpoint.of("127.0.0.1", serverThree.httpPort()).withWeight(3));
 
-        EndpointGroupRegistry.register(groupName, serverGroup2, WEIGHTED_ROUND_ROBIN);
-
-        ipService = Clients.newClient("tbinary+http://" + endpointGroupMark + groupName + "/serverIp",
-                                      HelloService.Iface.class);
+        ipService = Clients.builder("tbinary+http", serverGroup2)
+                           .path("/serverIp")
+                           .build(HelloService.Iface.class);
 
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverOne.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverThree.httpPort());

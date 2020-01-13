@@ -20,6 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.Scheme;
+
 /**
  * Provides the construction parameters of a client.
  */
@@ -38,9 +43,37 @@ public interface ClientBuilderParams {
     }
 
     /**
+     * Returns a newly created {@link ClientBuilderParams} from the specified properties.
+     */
+    static ClientBuilderParams of(ClientFactory factory, Scheme scheme, EndpointGroup endpointGroup,
+                                  @Nullable String path, Class<?> type, ClientOptions options) {
+        requireNonNull(factory, "factory");
+        requireNonNull(scheme, "scheme");
+        requireNonNull(endpointGroup, "endpointGroup");
+        requireNonNull(type, "type");
+        requireNonNull(options, "options");
+        return new DefaultClientBuilderParams(factory, scheme, endpointGroup, path, type, options);
+    }
+
+    /**
      * Returns the {@link ClientFactory} who created the client.
      */
     ClientFactory factory();
+
+    /**
+     * Returns the {@link Scheme} of the client.
+     */
+    Scheme scheme();
+
+    /**
+     * Returns the {@link EndpointGroup} of the client.
+     */
+    EndpointGroup endpointGroup();
+
+    /**
+     * Returns the {@link String} that consists of path, query string and fragment.
+     */
+    String absolutePathRef(); // Name inspired by https://stackoverflow.com/a/47545070/55808
 
     /**
      * Returns the endpoint URI of the client.
