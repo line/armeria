@@ -1,5 +1,0 @@
-type: armeria
-connector:
-  type: armeria-https
-  keyStorePath: /some/path/keystore.jks
-  keyStorePassword: changeme
