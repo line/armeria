@@ -29,7 +29,7 @@ public final class EmptyEndpointGroupException extends EndpointGroupException {
     static final EmptyEndpointGroupException INSTANCE = new EmptyEndpointGroupException(false);
 
     /**
-     * Returns a {@link EmptyEndpointGroupException} which may be a singleton or a new instance, depending on
+     * Returns an {@link EmptyEndpointGroupException} which may be a singleton or a new instance, depending on
      * {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static EmptyEndpointGroupException get() {

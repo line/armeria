@@ -193,25 +193,25 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     /**
-     * Initializes this context with the specified {@link Endpoint}.
+     * Initializes this context with the specified {@link EndpointGroup}.
      * This method must be invoked to finish the construction of this context.
      *
      * @return {@code true} if the initialization has succeeded.
      *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
      *         completed with the cause of the failure.
      */
-    public boolean init(EndpointGroup endpoint) {
-        assert this.endpoint == null : this.endpoint;
+    public boolean init(EndpointGroup endpointGroup) {
+        assert endpoint == null : endpoint;
         assert !initialized;
         initialized = true;
 
         try {
-            if (endpoint instanceof Endpoint) {
-                endpointGroup = null;
-                updateEndpoint((Endpoint) endpoint);
+            if (endpointGroup instanceof Endpoint) {
+                this.endpointGroup = null;
+                updateEndpoint((Endpoint) endpointGroup);
                 runThreadLocalContextCustomizers();
             } else {
-                endpointGroup = endpoint;
+                this.endpointGroup = endpointGroup;
                 // Note: thread-local customizer must be run before EndpointSelector.select()
                 //       so that the customizer can inject the attributes which may be required
                 //       by the EndpointSelector.
@@ -222,7 +222,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             if (eventLoop == null) {
                 assert factory != null;
                 final ReleasableHolder<EventLoop> releasableEventLoop =
-                        factory.acquireEventLoop(this.endpoint, sessionProtocol());
+                        factory.acquireEventLoop(endpoint, sessionProtocol());
                 eventLoop = releasableEventLoop.get();
                 log.addListener(unused -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
             }
