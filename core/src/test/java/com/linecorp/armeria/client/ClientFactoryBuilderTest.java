@@ -19,10 +19,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+import com.linecorp.armeria.common.Flags;
+
+import io.netty.channel.ChannelOption;
 import io.netty.resolver.DefaultAddressResolverGroup;
 
 class ClientFactoryBuilderTest {
@@ -78,6 +83,17 @@ class ClientFactoryBuilderTest {
                 assertThat(optVal.value()).isEqualTo(factory1.options().asMap().get(opt).value());
             }
         });
+    }
+
+    @Test
+    void shouldPreserveChannelOptionInClientFactory() {
+        final ClientFactory factory = ClientFactory.builder()
+                .options(ClientFactoryOptions.of())
+                .build();
+        final Map<ChannelOption<?>, Object> channelOptions =
+                factory.options().get(ClientFactoryOption.CHANNEL_OPTIONS);
+        final int connectTimeoutMillis = (int) channelOptions.get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+        assertThat(connectTimeoutMillis).isEqualTo(Flags.defaultConnectTimeoutMillis());
     }
 
     @Test
