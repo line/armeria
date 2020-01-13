@@ -33,11 +33,13 @@ package com.linecorp.armeria.dropwizard;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.VirtualHostBuilder;
@@ -736,6 +738,16 @@ class ArmeriaSettings {
      */
     static class Compression {
         /**
+         * The default MIME Types of an HTTP response which are applicable for the HTTP content encoding.
+         */
+        private static final String[] DEFAULT_MIME_TYPES =
+                Stream.of(MediaType.HTML_UTF_8, MediaType.XML_UTF_8, MediaType.PLAIN_TEXT_UTF_8,
+                          MediaType.CSS_UTF_8, MediaType.TEXT_JAVASCRIPT_UTF_8,
+                          MediaType.JAVASCRIPT_UTF_8, MediaType.APPLICATION_XML_UTF_8)
+                      .map(MediaType::nameWithoutParameters)
+                      .toArray(String[]::new);
+
+        /**
          * Specifies whether the HTTP content encoding is enabled.
          */
         private boolean enabled;
@@ -743,10 +755,7 @@ class ArmeriaSettings {
         /**
          * The MIME Types of an HTTP response which are applicable for the HTTP content encoding.
          */
-        private String[] mimeTypes = {
-                "text/html", "text/xml", "text/plain", "text/css", "text/javascript",
-                "application/javascript", "application/json", "application/xml"
-        };
+        private String[] mimeTypes = DEFAULT_MIME_TYPES;
 
         /**
          * The {@code "user-agent"} header values which are not applicable for the HTTP content encoding.

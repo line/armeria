@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.dropwizard;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -25,9 +23,6 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 
 public class TestApplication extends Application<TestConfiguration> {
-    @Nullable
-    ServerBuilder serverBuilder;
-
     @Override
     public void initialize(Bootstrap<TestConfiguration> bootstrap) {
         final ArmeriaBundle<TestConfiguration> bundle =
@@ -35,7 +30,6 @@ public class TestApplication extends Application<TestConfiguration> {
                     @Override
                     public void configure(ServerBuilder builder) {
                         builder.service("/armeria", (ctx, res) -> HttpResponse.of("Hello, Armeria!"));
-                        serverBuilder = builder;
                     }
                 };
         bootstrap.addBundle(bundle);
