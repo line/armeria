@@ -58,8 +58,8 @@ import retrofit2.http.PUT;
  *     <li>{@code method} - Retrofit service interface method
  *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
  *     <li>{@code http.method} - HTTP method name from Retrofit service interface method annotation
- *                              or from {@link RequestLog#method()} if Retrofit service interface
- *                              method not available</li>
+ *                               or from {@link RequestLog#method()} if Retrofit service interface
+ *                               method not available</li>
  *     <li>{@code http.status} - {@link HttpStatus#code()}</li>
  * </ul>
  */
@@ -90,7 +90,7 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
         this.name = name;
         this.serviceTagName = firstNonNull(serviceTagName, "service");
         this.serviceName = firstNonNull(serviceName, serviceClass.getSimpleName());
-        this.methodNameToTags = defineTagsForMethods(serviceClass);
+        methodNameToTags = defineTagsForMethods(serviceClass);
     }
 
     @Override

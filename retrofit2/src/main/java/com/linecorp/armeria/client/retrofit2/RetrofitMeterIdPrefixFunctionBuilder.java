@@ -93,7 +93,7 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
      * @param serviceClass class that defines retrofit client service.
      */
     public RetrofitMeterIdPrefixFunctionBuilder serviceClass(Class<?> serviceClass) {
-        this.serviceClass = serviceClass;
+        this.serviceClass = requireNonNull(serviceClass, "serviceClass");
         return this;
     }
 
