@@ -261,8 +261,8 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final HelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
-                                                     .factory(clientFactory)
                                                      .options(clientOptions)
+                                                     .factory(clientFactory)
                                                      .build(Handlers.HELLO.iface());
             assertThat(client.hello("kukuman")).isEqualTo("Hello, kukuman!");
             assertThat(client.hello(null)).isEqualTo("Hello, null!");
@@ -281,8 +281,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final HelloService.AsyncIface client =
                     Clients.builder(uri(Handlers.HELLO, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.HELLO.asyncIface());
 
             final int testCount = 10;
@@ -316,8 +316,8 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final HelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
-                                                     .factory(clientFactory)
                                                      .options(clientOptions)
+                                                     .factory(clientFactory)
                                                      .build(Handlers.HELLO.iface());
             try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
                 client.hello("kukuman");
@@ -338,8 +338,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final HelloService.AsyncIface client =
                     Clients.builder(uri(Handlers.HELLO, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.HELLO.asyncIface());
 
             try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
@@ -361,8 +361,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final OnewayHelloService.Iface client =
                     Clients.builder(uri(Handlers.ONEWAYHELLO, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.ONEWAYHELLO.iface());
             client.hello("kukuman");
             client.hello("kukuman2");
@@ -379,8 +379,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final OnewayHelloService.AsyncIface client =
                     Clients.builder(uri(Handlers.ONEWAYHELLO, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.ONEWAYHELLO.asyncIface());
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -407,8 +407,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final OnewayHelloService.Iface client =
                     Clients.builder(uri(Handlers.EXCEPTION_ONEWAY, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.EXCEPTION_ONEWAY.iface());
             client.hello("kukuman");
             client.hello("kukuman2");
@@ -425,8 +425,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final OnewayHelloService.AsyncIface client =
                     Clients.builder(uri(Handlers.EXCEPTION_ONEWAY, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.EXCEPTION_ONEWAY.asyncIface());
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -453,8 +453,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final DevNullService.Iface client =
                     Clients.builder(uri(Handlers.DEVNULL, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.DEVNULL.iface());
             client.consume("kukuman");
             client.consume("kukuman2");
@@ -471,8 +471,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final DevNullService.AsyncIface client =
                     Clients.builder(uri(Handlers.DEVNULL, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.DEVNULL.asyncIface());
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -498,8 +498,8 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final BinaryService.Iface client = Clients.builder(uri(Handlers.BINARY, format, protocol))
-                                                      .factory(clientFactory)
                                                       .options(clientOptions)
+                                                      .factory(clientFactory)
                                                       .build(Handlers.BINARY.iface());
 
             final ByteBuffer result = client.process(ByteBuffer.wrap(new byte[] { 1, 2 }));
@@ -519,8 +519,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final TimeService.Iface client =
                     Clients.builder(uri(Handlers.TIME, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.TIME.iface());
 
             final long serverTime = client.getServerTime();
@@ -536,8 +536,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final TimeService.AsyncIface client =
                     Clients.builder(uri(Handlers.TIME, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.TIME.asyncIface());
 
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -557,8 +557,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final FileService.Iface client =
                     Clients.builder(uri(Handlers.FILE, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.FILE.iface());
 
             assertThatThrownBy(() -> client.create("test")).isInstanceOf(FileServiceException.class);
@@ -573,8 +573,8 @@ class ThriftOverHttpClientTest {
         withTimeout(() -> {
             final FileService.AsyncIface client =
                     Clients.builder(uri(Handlers.FILE, format, protocol))
-                           .factory(clientFactory)
                            .options(clientOptions)
+                           .factory(clientFactory)
                            .build(Handlers.FILE.asyncIface());
 
             final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -596,8 +596,8 @@ class ThriftOverHttpClientTest {
             final String TOKEN_B = "token 5678";
 
             final HeaderService.Iface client = Clients.builder(uri(Handlers.HEADER, format, protocol))
-                                                      .factory(clientFactory)
                                                       .options(clientOptions)
+                                                      .factory(clientFactory)
                                                       .build(Handlers.HEADER.iface());
 
             assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
@@ -625,8 +625,8 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final HelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
-                                                     .factory(clientFactory)
                                                      .options(clientOptions)
+                                                     .factory(clientFactory)
                                                      .build(Handlers.HELLO.iface());
             recordMessageLogs = true;
             client.hello("trustin");
@@ -671,8 +671,8 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final OnewayHelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
-                                                           .factory(clientFactory)
                                                            .options(clientOptions)
+                                                           .factory(clientFactory)
                                                            .build(Handlers.ONEWAYHELLO.iface());
             recordMessageLogs = true;
             client.hello("trustin");
@@ -710,8 +710,8 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final HelloService.Iface client = Clients.builder(uri(Handlers.EXCEPTION, format, protocol))
-                                                     .factory(clientFactory)
                                                      .options(clientOptions)
+                                                     .factory(clientFactory)
                                                      .build(Handlers.EXCEPTION.iface());
             recordMessageLogs = true;
 
@@ -755,8 +755,8 @@ class ThriftOverHttpClientTest {
             throws Exception {
         withTimeout(() -> {
             final HelloService.Iface client = Clients.builder(server.uri(protocol, format, "/500"))
-                                                     .factory(clientFactory)
                                                      .options(clientOptions)
+                                                     .factory(clientFactory)
                                                      .build(Handlers.HELLO.iface());
             assertThatThrownBy(() -> client.hello(""))
                     .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
@@ -777,8 +777,8 @@ class ThriftOverHttpClientTest {
         final HelloService.Iface client =
                 Clients.builder(format.uriText() + '+' + protocol.uriText() +
                                 "://my-group/" + Handlers.HELLO.path(format))
-                       .factory(clientFactory)
                        .options(clientOptions)
+                       .factory(clientFactory)
                        .endpointRemapper(endpoint -> {
                            if ("my-group".equals(endpoint.host())) {
                                return group;
