@@ -25,6 +25,7 @@ public interface TimeoutController {
 
     /**
      * Schedules a new timeout with the specified {@code timeoutMillis}.
+     * If a timeout is scheduled already, this method will not start a new timeout.
      * @return {@code true} if the timeout is scheduled.
      */
     boolean scheduleTimeout(long timeoutMillis);

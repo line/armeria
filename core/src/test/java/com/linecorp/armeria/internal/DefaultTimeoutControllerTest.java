@@ -139,4 +139,10 @@ class DefaultTimeoutControllerTest {
         assertThat(timeoutController.timeoutMillis()).isEqualTo(0);
         assertThat((Object) timeoutController.timeoutFuture()).isNull();
     }
+
+    @Test
+    void ignoreScheduledTimeoutAfterReset() {
+        timeoutController.resetTimeout(100);
+        assertThat(timeoutController.scheduleTimeout(1)).isFalse();
+    }
 }

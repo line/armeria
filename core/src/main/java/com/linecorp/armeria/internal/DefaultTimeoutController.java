@@ -82,14 +82,22 @@ public class DefaultTimeoutController implements TimeoutController {
     public boolean scheduleTimeout(long timeoutMillis) {
         checkArgument(timeoutMillis > 0,
                       "timeoutMillis: " + timeoutMillis + " (expected: > 0)");
-        ensureInitialized();
+        // Do nothing if the timeout was scheduled already
+        if (timeoutFuture != null) {
+            return false;
+        }
+
         cancelTimeout();
         if (!timeoutTask.canSchedule()) {
             return false;
         }
 
         this.timeoutMillis = timeoutMillis;
-        lastExecutionTimeNanos = System.nanoTime();
+        final long nanoTime = System.nanoTime();
+        if (firstExecutionTimeNanos == 0) {
+            firstExecutionTimeNanos = nanoTime;
+        }
+        lastExecutionTimeNanos = nanoTime;
         timeoutFuture = eventLoop.schedule(timeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
         return true;
     }
