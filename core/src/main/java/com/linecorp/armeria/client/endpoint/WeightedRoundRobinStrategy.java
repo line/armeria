@@ -30,6 +30,10 @@ import com.linecorp.armeria.client.Endpoint;
 
 final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
+    static final WeightedRoundRobinStrategy INSTANCE = new WeightedRoundRobinStrategy();
+
+    private WeightedRoundRobinStrategy() {}
+
     @Override
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
         return new WeightedRoundRobinSelector(endpointGroup);
@@ -46,24 +50,13 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
      * </ul>
      */
     private static final class WeightedRoundRobinSelector implements EndpointSelector {
-        private final EndpointGroup endpointGroup;
+
         private final AtomicInteger sequence = new AtomicInteger();
         private volatile EndpointsAndWeights endpointsAndWeights;
 
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
-            this.endpointGroup = endpointGroup;
             endpointsAndWeights = new EndpointsAndWeights(endpointGroup.endpoints());
             endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints));
-        }
-
-        @Override
-        public EndpointGroup group() {
-            return endpointGroup;
-        }
-
-        @Override
-        public EndpointSelectionStrategy strategy() {
-            return WEIGHTED_ROUND_ROBIN;
         }
 
         @Override
@@ -182,7 +175,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
             Endpoint selectEndpoint(int currentSequence) {
                 if (endpoints.isEmpty()) {
-                    throw new EndpointGroupException(endpoints + " is empty");
+                    throw EmptyEndpointGroupException.get();
                 }
 
                 if (weighted) {

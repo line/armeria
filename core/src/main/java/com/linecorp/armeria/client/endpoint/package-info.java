@@ -19,7 +19,6 @@
  *
  * <h2>Starting points</h2>
  * <ul>
- *   <li>{@link com.linecorp.armeria.client.endpoint.EndpointGroupRegistry}</li>
  *   <li>{@link com.linecorp.armeria.client.endpoint.EndpointGroup}</li>
  * </ul>
  */

@@ -40,8 +40,7 @@ public final class DnsServiceEndpointGroupBuilder
      * Returns a newly created {@link DnsServiceEndpointGroup}.
      */
     public DnsServiceEndpointGroup build() {
-        return new DnsServiceEndpointGroup(eventLoop(), minTtl(), maxTtl(),
-                                           serverAddressStreamProvider(),
-                                           backoff(), hostname());
+        return new DnsServiceEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
+                                           serverAddressStreamProvider(), backoff(), hostname());
     }
 }

@@ -15,12 +15,14 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -58,7 +60,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     @Nullable
     private final URI uri;
     @Nullable
-    private final Endpoint endpoint;
+    private final EndpointGroup endpointGroup;
     @Nullable
     private final Scheme scheme;
     @Nullable
@@ -94,7 +96,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link Endpoint} with the {@code scheme}.
      *
-     * @deprecated Use {@link Clients#builder(String, Endpoint)}.
+     * @deprecated Use {@link Clients#builder(String, EndpointGroup)}.
      */
     @Deprecated
     public ClientBuilder(String scheme, Endpoint endpoint) {
@@ -105,7 +107,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link Endpoint} with the {@link Scheme}.
      *
-     * @deprecated Use {@link Clients#builder(Scheme, Endpoint)}.
+     * @deprecated Use {@link Clients#builder(Scheme, EndpointGroup)}.
      */
     @Deprecated
     public ClientBuilder(Scheme scheme, Endpoint endpoint) {
@@ -116,7 +118,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link Endpoint} with the {@link SessionProtocol}.
      *
-     * @deprecated Use {@link Clients#builder(SessionProtocol, Endpoint)}.
+     * @deprecated Use {@link Clients#builder(SessionProtocol, EndpointGroup)}.
      */
     @Deprecated
     public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
@@ -124,11 +126,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     ClientBuilder(@Nullable URI uri, @Nullable Scheme scheme, @Nullable SessionProtocol protocol,
-                  @Nullable Endpoint endpoint) {
+                  @Nullable EndpointGroup endpointGroup) {
         this.uri = uri;
         this.scheme = scheme;
         this.protocol = protocol;
-        this.endpoint = endpoint;
+        this.endpointGroup = endpointGroup;
     }
 
     /**
@@ -143,9 +145,10 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Sets the {@code path} of the client.
      */
     public ClientBuilder path(String path) {
-        ensureEndpoint();
-
-        this.path = requireNonNull(path, "path");
+        ensureEndpointGroup();
+        requireNonNull(path, "path");
+        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path starting with '/')", path);
+        this.path = path;
         return this;
     }
 
@@ -153,7 +156,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Sets the {@link SerializationFormat} of the client. The default is {@link SerializationFormat#NONE}.
      */
     public ClientBuilder serializationFormat(SerializationFormat format) {
-        ensureEndpoint();
+        ensureEndpointGroup();
         if (scheme != null) {
             throw new IllegalStateException("scheme is already given");
         }
@@ -173,24 +176,29 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     public <T> T build(Class<T> clientType) {
         requireNonNull(clientType, "clientType");
 
+        final Object client;
         if (uri != null) {
-            return factory.newClient(uri, clientType, buildOptions());
-        } else if (path != null) {
-            return factory.newClient(scheme(), endpoint, path, clientType, buildOptions());
+            client = factory.newClient(ClientBuilderParams.of(factory, uri, clientType, buildOptions()));
         } else {
-            return factory.newClient(scheme(), endpoint, clientType, buildOptions());
+            assert endpointGroup != null;
+            client = factory.newClient(ClientBuilderParams.of(factory, scheme(), endpointGroup,
+                                                              path, clientType, buildOptions()));
         }
+
+        @SuppressWarnings("unchecked")
+        final T cast = (T) client;
+        return cast;
     }
 
     private Scheme scheme() {
         return scheme == null ? Scheme.of(format, protocol) : scheme;
     }
 
-    private void ensureEndpoint() {
-        if (endpoint == null) {
+    private void ensureEndpointGroup() {
+        if (endpointGroup == null) {
             throw new IllegalStateException(
-                    getClass().getSimpleName() + " must be created with an " + Endpoint.class.getSimpleName() +
-                    " to call this method.");
+                    getClass().getSimpleName() + " must be created with an " +
+                    EndpointGroup.class.getSimpleName() + " to call this method.");
         }
     }
 }

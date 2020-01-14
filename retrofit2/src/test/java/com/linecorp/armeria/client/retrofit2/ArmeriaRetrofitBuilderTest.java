@@ -16,77 +16,66 @@
 package com.linecorp.armeria.client.retrofit2;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import retrofit2.Retrofit;
 
-public class ArmeriaRetrofitBuilderTest {
+class ArmeriaRetrofitBuilderTest {
 
     @Test
-    public void build() throws Exception {
-        final Retrofit retrofit = new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080/").build();
+    void build() throws Exception {
+        final Retrofit retrofit = ArmeriaRetrofit.of("http://example.com:8080/");
         assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
     }
 
     @Test
-    public void build_wrongScheme() throws Exception {
-        final Throwable thrown = catchThrowable(
-                () -> new ArmeriaRetrofitBuilder().baseUrl("foo://example.com:8080").build());
-        assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
-                          .hasMessage("baseUrl must have an HTTP scheme: foo://example.com:8080");
-    }
-
-    @Test
-    public void build_withoutSlashAtEnd() throws Exception {
-        final Retrofit retrofit = new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080").build();
+    void build_withoutSlashAtEnd() throws Exception {
+        final Retrofit retrofit = ArmeriaRetrofit.of("http://example.com:8080");
         assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
     }
 
     @Test
-    public void build_withNonRootPath() throws Exception {
-        assertThat(new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080/a/b/c/")
-                                               .build().baseUrl().toString())
+    void build_withNonRootPath() throws Exception {
+        assertThat(ArmeriaRetrofit.of("http://example.com:8080/a/b/c/").baseUrl().toString())
                 .isEqualTo("http://example.com:8080/a/b/c/");
     }
 
     @Test
-    public void build_withNonRootPathNonSlashEnd() throws Exception {
-        final Throwable thrown = catchThrowable(
-                () -> new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080/a/b/c").build());
-        assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
-                          .hasMessage("baseUrl must end with /: http://example.com:8080/a/b/c");
+    void build_withNonRootPathNonSlashEnd() throws Exception {
+        assertThatThrownBy(() -> ArmeriaRetrofit.of("http://example.com:8080/a/b/c"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("baseUrl must end in /: http://example.com:8080/a/b/c");
     }
 
     @Test
-    public void build_moreSessionProtocol() throws Exception {
-        assertThat(new ArmeriaRetrofitBuilder().baseUrl("h1c://example.com:8080/").build().baseUrl()
-                                               .toString())
+    void build_moreSessionProtocol() throws Exception {
+        assertThat(ArmeriaRetrofit.of("h1c://example.com:8080/").baseUrl().toString())
                 .isEqualTo("http://example.com:8080/");
-        assertThat(new ArmeriaRetrofitBuilder().baseUrl("h2c://example.com:8080/").build().baseUrl()
-                                               .toString())
+        assertThat(ArmeriaRetrofit.of("h2c://example.com:8080/").baseUrl().toString())
                 .isEqualTo("http://example.com:8080/");
-        assertThat(new ArmeriaRetrofitBuilder().baseUrl("h1://example.com:8080/").build().baseUrl()
-                                               .toString())
+        assertThat(ArmeriaRetrofit.of("h1://example.com:8080/").baseUrl().toString())
                 .isEqualTo("https://example.com:8080/");
-        assertThat(new ArmeriaRetrofitBuilder().baseUrl("h2://example.com:8080/").build().baseUrl()
-                                               .toString())
+        assertThat(ArmeriaRetrofit.of("h2://example.com:8080/").baseUrl().toString())
                 .isEqualTo("https://example.com:8080/");
-        assertThat(new ArmeriaRetrofitBuilder().baseUrl("https://example.com:8080/").build().baseUrl()
-                                               .toString())
+        assertThat(ArmeriaRetrofit.of("https://example.com:8080/").baseUrl().toString())
                 .isEqualTo("https://example.com:8080/");
     }
 
     @Test
-    public void build_armeriaGroupAuthority() throws Exception {
-        assertThat(new ArmeriaRetrofitBuilder().baseUrl("http://group:myGroup/").build().baseUrl()
-                                               .toString())
-                // NB: lower-cased by OkHttp
-                .isEqualTo("http://group_mygroup/");
+    void build_armeriaGroupAuthority() throws Exception {
+        final Endpoint endpoint = Endpoint.of("127.0.0.1", 8080);
+        final EndpointGroup group = EndpointGroup.of(endpoint, endpoint);
 
-        assertThat(new ArmeriaRetrofitBuilder().baseUrl("http://group:myGroup").build().baseUrl()
-                                               .toString())
-                .isEqualTo("http://group_mygroup/");
+        assertThat(ArmeriaRetrofit.of(SessionProtocol.H2C, endpoint).baseUrl().toString())
+                .isEqualTo("http://127.0.0.1:8080/");
+
+        assertThat(ArmeriaRetrofit.of(SessionProtocol.H2, group).baseUrl().toString())
+                .startsWith("https://armeria-group-");
     }
 }

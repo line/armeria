@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientOption.DECORATION;
+import static com.linecorp.armeria.client.ClientOption.ENDPOINT_REMAPPER;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
 import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
 import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
@@ -38,6 +39,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.Iterables;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -82,7 +84,8 @@ public final class ClientOptions extends AbstractOptions {
             HTTP_HEADERS.newValue(HttpHeaders.of()),
             REQ_CONTENT_PREVIEWER_FACTORY.newValue(ContentPreviewerFactory.disabled()),
             RES_CONTENT_PREVIEWER_FACTORY.newValue(ContentPreviewerFactory.disabled()),
-            REQUEST_ID_GENERATOR.newValue(RequestId::random)
+            REQUEST_ID_GENERATOR.newValue(RequestId::random),
+            ENDPOINT_REMAPPER.newValue(Function.identity())
     };
 
     /**
@@ -331,6 +334,15 @@ public final class ClientOptions extends AbstractOptions {
      */
     public Supplier<RequestId> requestIdGenerator() {
         return get(REQUEST_ID_GENERATOR);
+    }
+
+    /**
+     * Returns the {@link Function} that remaps a target {@link Endpoint} into an {@link EndpointGroup}.
+     *
+     * @see ClientBuilder#endpointRemapper(Function)
+     */
+    public Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper() {
+        return get(ENDPOINT_REMAPPER);
     }
 
     /**

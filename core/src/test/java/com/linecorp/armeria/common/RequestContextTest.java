@@ -21,7 +21,6 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -31,12 +30,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -44,7 +41,6 @@ import java.util.stream.IntStream;
 
 import javax.annotation.Nullable;
 
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -88,14 +84,6 @@ public class RequestContextTest {
 
     @Mock
     private Channel channel;
-
-    @Nullable
-    private Deque<RequestContext> ctxStack;
-
-    @Before
-    public void setContextStack() {
-        ctxStack = new LinkedBlockingDeque<>();
-    }
 
     @Test
     public void contextAwareEventExecutor() throws Exception {
@@ -149,11 +137,10 @@ public class RequestContextTest {
         final AtomicBoolean callbackCalled = new AtomicBoolean(false);
         executor.execute(() -> {
             assertCurrentContext(context);
-            assertDepth(1);
             callbackCalled.set(true);
         });
         assertThat(callbackCalled.get()).isTrue();
-        assertDepth(0);
+        assertCurrentContext(null);
     }
 
     @Test
@@ -161,10 +148,9 @@ public class RequestContextTest {
         final RequestContext context = createContext();
         context.makeContextAware(() -> {
             assertCurrentContext(context);
-            assertDepth(1);
             return "success";
         }).call();
-        assertDepth(0);
+        assertCurrentContext(null);
     }
 
     @Test
@@ -172,9 +158,8 @@ public class RequestContextTest {
         final RequestContext context = createContext();
         context.makeContextAware(() -> {
             assertCurrentContext(context);
-            assertDepth(1);
         }).run();
-        assertDepth(0);
+        assertCurrentContext(null);
     }
 
     @Test
@@ -184,10 +169,9 @@ public class RequestContextTest {
                 Executors.newSingleThreadScheduledExecutor());
         final ScheduledFuture<?> future = executor.schedule(() -> {
             assertCurrentContext(context);
-            assertDepth(1);
         }, 100, TimeUnit.MILLISECONDS);
         future.get();
-        assertDepth(0);
+        assertCurrentContext(null);
     }
 
     @Test
@@ -197,10 +181,10 @@ public class RequestContextTest {
         final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.addListener(context.makeContextAware((FutureListener<String>) f -> {
             assertCurrentContext(context);
-            assertDepth(1);
             assertThat(f.getNow()).isEqualTo("success");
         }));
         promise.setSuccess("success");
+        assertCurrentContext(null);
     }
 
     @Test
@@ -210,10 +194,10 @@ public class RequestContextTest {
         final ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
         promise.addListener(context.makeContextAware((ChannelFutureListener) f -> {
             assertCurrentContext(context);
-            assertDepth(1);
             assertThat(f.getNow()).isNull();
         }));
         promise.setSuccess(null);
+        assertCurrentContext(null);
     }
 
     @Test
@@ -225,10 +209,9 @@ public class RequestContextTest {
             assertThat(result).isEqualTo("success");
             assertThat(cause).isNull();
             assertCurrentContext(context);
-            assertDepth(1);
         });
         originalFuture.complete("success");
-        assertDepth(0);
+        assertCurrentContext(null);
         resultFuture.get(); // this will propagate assertions.
     }
 
@@ -265,11 +248,11 @@ public class RequestContextTest {
                 assertThat(result).isEqualTo("success");
                 assertThat(cause).isNull();
                 assertCurrentContext(context);
-                assertDepth(1);
             });
 
             latch.countDown();
             resultFuture.get(); // this will wait and propagate assertions.
+            assertCurrentContext(null);
         } finally {
             shutdownAndAwaitTermination(executor);
         }
@@ -315,19 +298,9 @@ public class RequestContextTest {
     }
 
     @Test
-    public void makeContextAwareRunnableNoContextAwareHandler() {
-        final RequestContext context = createContext(false);
-        context.makeContextAware(() -> {
-            assertCurrentContext(context);
-            assertDepth(0);
-        }).run();
-        assertDepth(0);
-    }
-
-    @Test
     public void replace() {
-        final RequestContext ctx1 = createContext(false);
-        final RequestContext ctx2 = createContext(false);
+        final RequestContext ctx1 = createContext();
+        final RequestContext ctx2 = createContext();
         try (SafeCloseable ignored = ctx1.push()) {
             assertCurrentContext(ctx1);
             try (SafeCloseable ignored2 = ctx2.replace()) {
@@ -335,10 +308,7 @@ public class RequestContextTest {
             }
             assertCurrentContext(ctx1);
         }
-    }
-
-    private void assertDepth(int expectedDepth) {
-        assertThat(ctxStack).hasSize(expectedDepth);
+        assertCurrentContext(null);
     }
 
     private static List<Callable<String>> makeTaskList(int startId,
@@ -361,8 +331,8 @@ public class RequestContextTest {
         }
     }
 
-    private static void assertCurrentContext(RequestContext context) {
-        final RequestContext ctx = RequestContext.current();
+    private static void assertCurrentContext(@Nullable RequestContext context) {
+        final RequestContext ctx = RequestContext.currentOrNull();
         assertThat(ctx).isSameAs(context);
     }
 
@@ -370,29 +340,7 @@ public class RequestContextTest {
         assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
     }
 
-    private ServiceRequestContext createContext() {
-        return createContext(true);
-    }
-
-    private ServiceRequestContext createContext(boolean addContextAwareHandler) {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        if (addContextAwareHandler) {
-            final AtomicReference<Thread> thread = new AtomicReference<>();
-            final AtomicInteger ctxStackSize = new AtomicInteger();
-            ctx.onEnter(myCtx -> {
-                thread.set(Thread.currentThread());
-                assertThat(ctxStack).isNotNull();
-                ctxStack.addLast(myCtx);
-                ctxStackSize.set(ctxStack.size());
-                assertThat(myCtx).isSameAs(ctx);
-            });
-            ctx.onExit(myCtx -> {
-                assertThat(Thread.currentThread()).isSameAs(thread.get());
-                assertThat(ctxStack).hasSize(ctxStackSize.get());
-                assertThat(ctxStack.removeLast()).isSameAs(myCtx);
-                assertThat(myCtx).isSameAs(ctx);
-            });
-        }
-        return ctx;
+    private static ServiceRequestContext createContext() {
+        return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
     }
 }

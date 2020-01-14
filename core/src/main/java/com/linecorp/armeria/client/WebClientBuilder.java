@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -27,6 +28,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -41,24 +43,17 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     /**
      * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
      */
-    private static final URI UNDEFINED_URI = URI.create("http://undefined");
+    static final URI UNDEFINED_URI = URI.create("http://undefined");
 
     private static final Set<SessionProtocol> SUPPORTED_PROTOCOLS =
             Sets.immutableEnumSet(
                     ImmutableList.<SessionProtocol>builder().addAll(SessionProtocol.httpValues())
                                                             .addAll(SessionProtocol.httpsValues()).build());
 
-    /**
-     * Returns {@code true} if the specified {@code uri} is an undefined {@link URI}.
-     */
-    static boolean isUndefinedUri(URI uri) {
-        return UNDEFINED_URI == uri;
-    }
-
     @Nullable
     private final URI uri;
     @Nullable
-    private final Endpoint endpoint;
+    private final EndpointGroup endpointGroup;
     @Nullable
     private final Scheme scheme;
     @Nullable
@@ -71,7 +66,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     WebClientBuilder() {
         uri = UNDEFINED_URI;
         scheme = null;
-        endpoint = null;
+        endpointGroup = null;
     }
 
     /**
@@ -81,7 +76,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      *                                  in {@link SessionProtocol}
      */
     WebClientBuilder(URI uri) {
-        if (isUndefinedUri(uri)) {
+        if (Clients.isUndefinedUri(uri)) {
             this.uri = uri;
         } else {
             final String givenScheme = requireNonNull(uri, "uri").getScheme();
@@ -97,7 +92,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
             }
         }
         scheme = null;
-        endpoint = null;
+        endpointGroup = null;
     }
 
     /**
@@ -106,12 +101,12 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    WebClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+    WebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
         validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
 
         uri = null;
         scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
-        this.endpoint = requireNonNull(endpoint, "endpoint");
+        this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
     }
 
     private static Scheme validateScheme(String scheme) {
@@ -123,8 +118,8 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
             }
         }
 
-        throw new IllegalArgumentException("scheme : " + scheme + " (expected: one of " +
-                                           ImmutableList.copyOf(SessionProtocol.values()) + ')');
+        throw new IllegalArgumentException("scheme : " + scheme +
+                                           " (expected: one of " + SUPPORTED_PROTOCOLS + ')');
     }
 
     /**
@@ -139,7 +134,15 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      * Sets the {@code path} of the client.
      */
     public WebClientBuilder path(String path) {
-        this.path = requireNonNull(path, "path");
+        if (endpointGroup == null) {
+            throw new IllegalStateException(
+                    getClass().getSimpleName() + " must be created with an " +
+                    EndpointGroup.class.getSimpleName() + " to call this method.");
+        }
+
+        requireNonNull(path, "path");
+        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path starting with '/')", path);
+        this.path = path;
         return this;
     }
 
@@ -152,11 +155,13 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
      */
     public WebClient build() {
         if (uri != null) {
-            return factory.newClient(uri, WebClient.class, buildOptions());
-        } else if (path != null) {
-            return factory.newClient(scheme, endpoint, path, WebClient.class, buildOptions());
+            return (WebClient) factory.newClient(ClientBuilderParams.of(
+                    factory, uri, WebClient.class, buildOptions()));
         } else {
-            return factory.newClient(scheme, endpoint, WebClient.class, buildOptions());
+            assert scheme != null;
+            assert endpointGroup != null;
+            return (WebClient) factory.newClient(ClientBuilderParams.of(
+                    factory, scheme, endpointGroup, path, WebClient.class, buildOptions()));
         }
     }
 

@@ -33,8 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.DefaultClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -94,7 +94,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             AtomicIntegerFieldUpdater.newUpdater(ArmeriaClientCall.class, "pendingMessages");
 
     private final DefaultClientRequestContext ctx;
-    private final Endpoint endpoint;
+    private final EndpointGroup endpointGroup;
     private final HttpClient httpClient;
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
@@ -121,7 +121,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     ArmeriaClientCall(
             DefaultClientRequestContext ctx,
-            Endpoint endpoint,
+            EndpointGroup endpointGroup,
             HttpClient httpClient,
             HttpRequestWriter req,
             MethodDescriptor<I, O> method,
@@ -135,7 +135,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             boolean unsafeWrapResponseBuffers,
             String advertisedEncodingsHeader) {
         this.ctx = ctx;
-        this.endpoint = endpoint;
+        this.endpointGroup = endpointGroup;
         this.httpClient = httpClient;
         this.req = req;
         this.method = method;
@@ -205,7 +205,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
 
         final HttpResponse res = initContextAndExecuteWithFallback(
-                httpClient, ctx, endpoint,
+                httpClient, ctx, endpointGroup,
                 (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(cause)
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));

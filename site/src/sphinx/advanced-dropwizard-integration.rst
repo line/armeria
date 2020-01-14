@@ -121,32 +121,149 @@ Server Properties
 
     Not all Dropwizard configurations can be passed into the Armeria server.  Currently supported parameters are:
 
-    - ``maxThreads``
-    - ``maxRequestLength``
-    - ``idleThreadTimeout``
-    - ``shutdownGracePeriod``
+.. code-block:: yml
+
+    server:
+      type: armeria
+      gracefulShutdownQuietPeriodMillis: 5000
+      gracefulShutdownTimeoutMillis: 40000
+      maxRequestLength: 10485760
+      maxNumConnections: 2147483647
+      dateHeaderEnabled: true
+      serverHeaderEnabled: false
+      verboseResponses: false
+      defaultHostname: "host.name.com"
+      ports:
+        - port: 8080
+          protocol: HTTP
+        - ip: 127.0.0.1
+          port: 8081
+          protocol: HTTPS
+        - port: 8443
+          protocols:
+            - HTTPS
+            - PROXY
+              ports:
+      compression:
+        enabled: true
+        mimeTypes:
+          - text/*
+          - application/json
+        excludedUserAgents:
+          - some-user-agent
+          - another-user-agent
+        minResponseSize: 1KB
+      ssl:
+        keyAlias: "host.name.com"
+        keyStore: "classpath:keystore.jks"
+        keyStorePassword: "changeme"
+        trustStore: "classpath:truststore.jks"
+        trustStorePassword: "changeme"
+      http1:
+        maxChunkSize: 4096
+        maxInitialLineLength: 4096
+      http2:
+        initialConnectionWindowSize: 1MB
+        initialStreamWindowSize: 1MB
+        maxFrameSize: 16384
+        maxHeaderListSize: 8192
+      proxy:
+        maxTlvSize: 65319
+      accessLog:
+        type: common
 
 Where defined, the Armeria ServerFactory will prefer Armeria's default properties over Dropwizard's.
 The following additional properties are able to be added to configure the :api:`ServerBuilder` before being
 passed to the :api:`ArmeriaBundle`.
 
-+-----------------------------+-----------------------------------------------------------------------------+
-| Property                    | Description                                                                 |
-+=============================+=============================================================================+
-| ``connector``               | the connector type  (default ``armeria-http``)                              |
-+-----------------------------+-----------------------------------------------------------------------------+
-| ``accessLogWriter``         | the access log writer  (default ``common``)                                 |
-+-----------------------------+-----------------------------------------------------------------------------+
-| ``jerseyEnabled``           | whether to enable JAX-RS resources defined by Dropwizard (default ``true``) |
-+-----------------------------+-----------------------------------------------------------------------------+
-| ``maxNumConnections``       | the maximum allowed number of open connections                              |
-+-----------------------------+-----------------------------------------------------------------------------+
-| ``dateHeaderEnabled``       | sets the response header to include default ``"Date"`` header               |
-+-----------------------------+-----------------------------------------------------------------------------+
-| ``verboseResponses``        | sets the response header not to include default ``"Server"`` header         |
-+-----------------------------+-----------------------------------------------------------------------------+
-| ``defaultHostname``         | sets the default hostname of the default :api:`VirtualHostBuilder`          |
-+-----------------------------+-----------------------------------------------------------------------------+
++------------------------+---------------------------------------+-------------------------------------------------+
+| Path                   | Property                              | Description                                     |
++========================+=======================================+=================================================+
+| ``server``             | ``jerseyEnabled``                     | Whether to enable JAX-RS resources defined by   |
+|                        |                                       | Dropwizard (default: ``true``)                  |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``maxRequestLength``                  | The default server-side maximum length of       |
+|                        |                                       | a request                                       |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``maxNumConnections``                 | The maximum allowed number of open connections  |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``dateHeaderEnabled``                 | Whether to include default ``"Data"`` header    |
+|                        |                                       | in the response header (default: ``true``)      |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``serverHeaderEnabled``               | Whether to include default ``"Server"`` header  |
+|                        |                                       | in the response header (default: ``false``)     |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``verboseResponses``                  | Whether the verbose response mode is enabled    |
+|                        |                                       | (default: ``false``)                            |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``defaultHostname``                   | The default hostname of the default             |
+|                        |                                       | :api:`VirtualHostBuilder`                       |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``gracefulShutdownQuietPeriodMillis`` | The number of milliseconds to wait after the    |
+|                        |                                       | last processed request to be considered safe    |
+|                        |                                       | for shutdown                                    |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server``             | ``gracefulShutdownTimeoutMillis``     | The number of milliseconds to wait after going  |
+|                        |                                       | unhealthy before forcing the server to shutdown |
+|                        |                                       | regardless of if it is still processing requests|
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server.ports``       | ``port``                              | The port to run the server on (default: 8080)   |
++                        +---------------------------------------+-------------------------------------------------+
+|                        | ``ip``                                | The IP address to bind to                       |
++                        +---------------------------------------+-------------------------------------------------+
+|                        | ``iface``                             | The network interface to bind to                |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server.compression`` | ``enabled``                           | Whether to enable the HTTP content encoding     |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``mimeTypes``                         | The MIME Types of an HTTP response which are    |
+|                        |                                       | applicable for the HTTP content encoding        |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``excludedUserAgents``                | The ``"User-Agent"`` header values which are not|
+|                        |                                       | applicable for the HTTP content encoding        |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``minResponseSize``                   | The minimum bytes for encoding the content of   |
+|                        |                                       | an HTTP response                                |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server.ssl``         | ``enabled``                           | Whether to enable SSL support                   |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``keyAlias``                          | The alias that identifies the key in            |
+|                        |                                       | the key store                                   |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``keyStore``                          | The path to the key store that holds the SSL    |
+|                        |                                       | certificate (typically a jks file)              |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``keyStorePassword``                  | The password used to access the key store       |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``trustStore``                        | The trust store that holds SSL certificates     |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``trustStorePassword``                | The password used to access the trust store     |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server.http1``       | ``maxChunkSize``                      | The maximum length of each chunk in an HTTP/1   |
+|                        |                                       | response content                                |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``maxInitialLineLength``              | The maximum length of an HTTP/1 response        |
+|                        |                                       | initial line                                    |
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server.http2``       | ``initialConnectionWindowSize``       | The initial connection-level HTTP/2 flow control|
+|                        |                                       | window size                                     |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``initialStreamingWindowSize``        | The initial stream-level HTTP/2 flow control    |
+|                        |                                       | window size                                     |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``maxFrameSize``                      | The maximum size of HTTP/2 frame that can be    |
+|                        |                                       | received                                        |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``maxStreamsPerConnection``           | The maximum number of concurrent streams per    |
+|                        |                                       | HTTP/2 connection. Unset means there is no limit|
+|                        |                                       | on the number of concurrent streams             |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``maxHeaderListSize``                 | The maximum size of headers that can be received|
++------------------------+---------------------------------------+-------------------------------------------------+
+| ``server.accessLog``   | ``type``                              | The access log type that is supposed to be one  |
+|                        |                                       | of ``"common"``, ``"combined"`` or ``"custom"`` |
+|                        +---------------------------------------+-------------------------------------------------+
+|                        | ``format``                            | The access log format string                    |
++------------------------+---------------------------------------+-------------------------------------------------+
 
 Server Access Logs
 ------------------
@@ -162,7 +279,8 @@ Use NCSA common log format.
 
     server:
       type: armeria
-      accessLogWriter:
+    armeria:
+      accessLog:
         type: common
 
 ``combined``
@@ -173,7 +291,7 @@ Use NCSA combined log format.
 
     server:
       type: armeria
-      accessLogWriter:
+      accessLog:
         type: combined
 
 ``custom``
@@ -184,77 +302,6 @@ Use your own log format. Refer to :ref:`customizing-log-format` for supported fo
 
     server:
       type: armeria
-      accessLogWriter:
+      accessLog:
         type: custom
         format: "...log format..."
-
-Server Connectors
------------------
-Although Armeria itself does support server multiple protocols over the same port, this bundle currently only
-supports one protocol per Server connector. Same as standard Dropwizard, these are configured with the
-``connector`` type.
-
-All connectors share the following properties:
-
-+-----------------------------+----------------------------------------------------------------------+
-| Property                    | Description                                                          |
-+=============================+======================================================================+
-| ``port``                    | the port to run the server on  (default 8080)                        |
-+-----------------------------+----------------------------------------------------------------------+
-
-``armeria-http``
-^^^^^^^^^^^^^^^^
-
-.. code-block:: yml
-
-    server:
-      type: armeria
-      connector:
-        type: armeria-http
-
-Additional properties
-
-+-----------------------------+----------------------------------------------------------------------+
-| Property                    | Description                                                          |
-+=============================+======================================================================+
-| ``maxChunkSize``            | the maximum length of each chunk in an HTTP/1 response content.      |
-|                             | The content or a chunk longer than this value will be split into     |
-|                             | smaller chunks so that their lengths never exceed it.                |
-+-----------------------------+----------------------------------------------------------------------+
-| ``maxInitialLineLength``    | the maximum length of an HTTP/1 response initial line                |
-+-----------------------------+----------------------------------------------------------------------+
-| ``maxResponseHeaderSize``   | the maximum length of all headers in an HTTP/1 response              |
-+-----------------------------+----------------------------------------------------------------------+
-
-``armeria-https``
-^^^^^^^^^^^^^^^^^
-
-.. code-block:: yml
-
-    server:
-      type: armeria
-      connector:
-        type: armeria-https
-        keyStorePath: /some/path/keystore.jks
-        keyStorePassword: changeme
-
-Additional properties
-
-+-----------------------------------+----------------------------------------------------------------------+
-| Property                          | Description                                                          |
-+===================================+======================================================================+
-| ``keyCertChainFile``              | a certificate chain file                                             |
-+-----------------------------------+----------------------------------------------------------------------+
-| ``selfSigned``                    | if the certificate is self-signed                                    |
-+-----------------------------------+----------------------------------------------------------------------+
-| ``initialConnectionWindowSize``   | the initial connection-level HTTP/2 flow control window size         |
-+----------------------------------------------------------------------------------------------------------+
-| ``initialStreamingWindowSize``    | the initial stream-level HTTP/2 flow control window size             |
-+-----------------------------------+----------------------------------------------------------------------+
-| ``maxFrameSize``                  | the maximum size of HTTP/2 frame that can be received                |
-+-----------------------------------+----------------------------------------------------------------------+
-| ``maxStreamsPerConnection``       | the maximum number of concurrent streams per HTTP/2 connection.      |
-|                                   | Unset means there is no limit on the number of concurrent streams    |
-+-----------------------------------+----------------------------------------------------------------------+
-| ``maxHeaderListSize``             | the maximum size of headers that can be received                     |
-+-----------------------------------+----------------------------------------------------------------------+

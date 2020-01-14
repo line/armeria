@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,24 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.dropwizard.logging;
+package com.linecorp.armeria.dropwizard;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.dropwizard.Configuration;
 
-import com.linecorp.armeria.server.logging.AccessLogWriter;
-
-import io.dropwizard.jackson.Discoverable;
-
-/**
- * A JSON type responsible for returning various {@link AccessLogWriter} implementations.
- */
-@JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        property = "type"
-)
-public interface AccessLogWriterFactory extends Discoverable {
-    /**
-     * Returns the {@link AccessLogWriter}.
-     */
-    AccessLogWriter getWriter();
-}
+class TestConfiguration extends Configuration {}

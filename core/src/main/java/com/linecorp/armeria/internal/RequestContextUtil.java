@@ -18,10 +18,8 @@ package com.linecorp.armeria.internal;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Utilities for {@link RequestContext}.
@@ -35,56 +33,6 @@ public final class RequestContextUtil {
      */
     public static SafeCloseable noopSafeCloseable() {
         return noopSafeCloseable;
-    }
-
-    /**
-     * Runs callbacks if {@code runCallbacks} is {@code true} and returns the {@link SafeCloseable}
-     * which will remove the current {@link RequestContext} in the thread-local when
-     * {@link SafeCloseable#close()} is invoked.
-     */
-    public static SafeCloseable pushWithoutRootCtx(RequestContext currentCtx, boolean runCallbacks) {
-        requireNonNull(currentCtx, "currentCtx");
-        if (runCallbacks) {
-            currentCtx.invokeOnEnterCallbacks();
-            return () -> {
-                currentCtx.invokeOnExitCallbacks();
-                RequestContextThreadLocal.remove();
-            };
-        } else {
-            return RequestContextThreadLocal::remove;
-        }
-    }
-
-    /**
-     * Runs callbacks if {@code runCallbacks} is {@code true} and returns the {@link SafeCloseable}
-     * which will set the root in the thread-local when {@link SafeCloseable#close()} is invoked.
-     */
-    public static SafeCloseable pushWithRootCtx(ClientRequestContext currentCtx, ServiceRequestContext root,
-                                                boolean runCallbacks) {
-        return pushWithRootAndOldCtx(currentCtx, root, root, runCallbacks);
-    }
-
-    /**
-     * Runs callbacks in {@code currentCtx} and {@code root} if {@code runCallbacks} is {@code true} and
-     * returns the {@link SafeCloseable} which will set the {@code oldCtx} in the thread-local
-     * when {@link SafeCloseable#close()} is invoked.
-     */
-    public static SafeCloseable pushWithRootAndOldCtx(ClientRequestContext currentCtx,
-                                                      ServiceRequestContext root,
-                                                      RequestContext oldCtx, boolean runCallbacks) {
-        requireNonNull(currentCtx, "currentCtx");
-        requireNonNull(root, "root");
-        requireNonNull(oldCtx, "oldCtx");
-        if (runCallbacks) {
-            root.invokeOnChildCallbacks(currentCtx);
-            currentCtx.invokeOnEnterCallbacks();
-            return () -> {
-                currentCtx.invokeOnExitCallbacks();
-                RequestContextThreadLocal.set(oldCtx);
-            };
-        } else {
-            return () -> RequestContextThreadLocal.set(oldCtx);
-        }
     }
 
     /**

@@ -13,16 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.endpoint;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -56,11 +52,12 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     /**
-     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file loads
-     * properties whose name starts with {@code endpointKeyPrefix}:
+     * Returns a new {@link PropertiesEndpointGroup} created from the specified classpath resource.
+     * The value of each property whose name starts with {@code endpointKeyPrefix} will be parsed with
+     * {@link Endpoint#parse(String)}, and then loaded into the {@link PropertiesEndpointGroup}, e.g.
      *
      * <pre>{@code
+     * # endpointKeyPrefix = 'example.hosts.'
      * example.hosts.0=example1.com:36462
      * example.hosts.1=example2.com:36462
      * example.hosts.2=example3.com:36462
@@ -71,21 +68,16 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      */
     public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
                                              String endpointKeyPrefix) {
-        final URL resourceUrl = getResourceUrl(
-                requireNonNull(classLoader, "classLoader"),
-                requireNonNull(resourceName, "resourceName"));
-        return new PropertiesEndpointGroup(loadEndpoints(
-                resourceUrl,
-                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                0));
+        return builder(classLoader, resourceName, endpointKeyPrefix).build();
     }
 
     /**
-     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file loads
-     * properties whose name starts with {@code endpointKeyPrefix}:
+     * Returns a new {@link PropertiesEndpointGroup} created from the specified classpath resource.
+     * The value of each property whose name starts with {@code endpointKeyPrefix} will be parsed with
+     * {@link Endpoint#parse(String)}, and then loaded into the {@link PropertiesEndpointGroup}, e.g.
      *
      * <pre>{@code
+     * # endpointKeyPrefix = 'example.hosts.'
      * example.hosts.0=example1.com:36462
      * example.hosts.1=example2.com:36462
      * example.hosts.2=example3.com:36462
@@ -94,25 +86,23 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
      * @param defaultPort the default port number to use
+     *
+     * @deprecated Use {@link #builder(ClassLoader, String, String)}
+     *             and {@link PropertiesEndpointGroupBuilder#defaultPort(int)}.
      */
+    @Deprecated
     public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
                                              String endpointKeyPrefix, int defaultPort) {
-        validateDefaultPort(defaultPort);
-        final URL resourceUrl = getResourceUrl(
-                requireNonNull(classLoader, "classLoader"),
-                requireNonNull(resourceName, "resourceName"));
-        return new PropertiesEndpointGroup(loadEndpoints(
-                resourceUrl,
-                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                defaultPort));
+        return builder(classLoader, resourceName, endpointKeyPrefix).defaultPort(defaultPort).build();
     }
 
     /**
-     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} is filtered
-     * to properties whose name starts with {@code endpointKeyPrefix}:
+     * Returns a new {@link PropertiesEndpointGroup} created from the specified {@link Properties}.
+     * The value of each property whose name starts with {@code endpointKeyPrefix} will be parsed with
+     * {@link Endpoint#parse(String)}, and then loaded into the {@link PropertiesEndpointGroup}, e.g.
      *
      * <pre>{@code
+     * # endpointKeyPrefix = 'example.hosts.'
      * example.hosts.0=example1.com:36462
      * example.hosts.1=example2.com:36462
      * example.hosts.2=example3.com:36462
@@ -122,18 +112,16 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      * @param endpointKeyPrefix the property name prefix
      */
     public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix) {
-        return new PropertiesEndpointGroup(loadEndpoints(
-                requireNonNull(properties, "properties"),
-                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                0));
+        return builder(properties, endpointKeyPrefix).build();
     }
 
     /**
-     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} is filtered
-     * to properties whose name starts with {@code endpointKeyPrefix}:
+     * Returns a new {@link PropertiesEndpointGroup} created from the specified {@link Properties}.
+     * The value of each property whose name starts with {@code endpointKeyPrefix} will be parsed with
+     * {@link Endpoint#parse(String)}, and then loaded into the {@link PropertiesEndpointGroup}, e.g.
      *
      * <pre>{@code
+     * # endpointKeyPrefix = 'example.hosts.'
      * example.hosts.0=example1.com:36462
      * example.hosts.1=example2.com:36462
      * example.hosts.2=example3.com:36462
@@ -142,46 +130,24 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      * @param properties the {@link Properties} where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
      * @param defaultPort the default port number to use
+     *
+     * @deprecated Use {@link #builder(Properties, String)}
+     *             and {@link PropertiesEndpointGroupBuilder#defaultPort(int)}.
      */
+    @Deprecated
     public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix,
                                              int defaultPort) {
-        validateDefaultPort(defaultPort);
-        return new PropertiesEndpointGroup(loadEndpoints(
-                requireNonNull(properties, "properties"),
-                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                defaultPort));
+        return builder(properties, endpointKeyPrefix).defaultPort(defaultPort).build();
     }
 
     /**
-     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@code path} of a resource file. The resource file loads
-     * properties whose name starts with {@code endpointKeyPrefix}. The {@code path} is watched for further
-     * updates.
+     * Returns a new {@link PropertiesEndpointGroup} created from the file at the specified {@link Path}.
+     * Any updates in the file will trigger a dynamic reload. The value of each property whose name starts
+     * with {@code endpointKeyPrefix} will be parsed with {@link Endpoint#parse(String)}, and then loaded
+     * into the {@link PropertiesEndpointGroup}, e.g.
      *
      * <pre>{@code
-     * example.hosts.0=example1.com:36462
-     * example.hosts.1=example2.com:36462
-     * example.hosts.2=example3.com:36462
-     * }</pre>
-     *
-     * @param path the path of the file where list of {@link Endpoint}s is loaded from
-     * @param endpointKeyPrefix the property name prefix
-     * @param defaultPort the default port number to use
-     */
-    public static PropertiesEndpointGroup of(Path path, String endpointKeyPrefix, int defaultPort) {
-        validateDefaultPort(defaultPort);
-        return new PropertiesEndpointGroup(requireNonNull(path, "path"),
-                                           requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                                           defaultPort);
-    }
-
-    /**
-     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@code path} of a resource file. The resource file loads
-     * properties whose name starts with {@code endpointKeyPrefix}. The {@code path} is watched for
-     * further updates.
-     *
-     * <pre>{@code
+     * # endpointKeyPrefix = 'example.hosts.'
      * example.hosts.0=example1.com:36462
      * example.hosts.1=example2.com:36462
      * example.hosts.2=example3.com:36462
@@ -191,25 +157,117 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      * @param endpointKeyPrefix the property name prefix
      */
     public static PropertiesEndpointGroup of(Path path, String endpointKeyPrefix) {
-        return new PropertiesEndpointGroup(requireNonNull(path, "path"),
-                                           requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                                           0);
+        return builder(path, endpointKeyPrefix).build();
     }
 
-    private static URL getResourceUrl(ClassLoader classLoader, String resourceName) {
-        final URL resourceUrl = classLoader.getResource(resourceName);
-        checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
-        return resourceUrl;
+    /**
+     * Returns a new {@link PropertiesEndpointGroup} created from the file at the specified {@link Path}.
+     * Any updates in the file will trigger a dynamic reload. The value of each property whose name starts
+     * with {@code endpointKeyPrefix} will be parsed with {@link Endpoint#parse(String)}, and then loaded
+     * into the {@link PropertiesEndpointGroup}, e.g.
+     *
+     * <pre>{@code
+     * # endpointKeyPrefix = 'example.hosts.'
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param path the path of the file where list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     * @param defaultPort the default port number to use
+     *
+     * @deprecated Use {@link #builder(Path, String)}
+     *             and {@link PropertiesEndpointGroupBuilder#defaultPort(int)}.
+     */
+    @Deprecated
+    public static PropertiesEndpointGroup of(Path path, String endpointKeyPrefix, int defaultPort) {
+        return builder(path, endpointKeyPrefix).defaultPort(defaultPort).build();
     }
 
-    private static List<Endpoint> loadEndpoints(URL resourceUrl, String endpointKeyPrefix, int defaultPort) {
-        try (InputStream in = resourceUrl.openStream()) {
-            final Properties props = new Properties();
-            props.load(in);
-            return loadEndpoints(props, endpointKeyPrefix, defaultPort);
-        } catch (IOException e) {
-            throw new IllegalArgumentException("failed to load: " + resourceUrl.getFile(), e);
-        }
+    /**
+     * Returns a new {@link PropertiesEndpointGroupBuilder} created from the specified classpath resource.
+     * The value of each property whose name starts with {@code endpointKeyPrefix} will be parsed with
+     * {@link Endpoint#parse(String)}, and then loaded into the {@link PropertiesEndpointGroup}, e.g.
+     *
+     * <pre>{@code
+     * # endpointKeyPrefix = 'example.hosts.'
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     */
+    public static PropertiesEndpointGroupBuilder builder(ClassLoader classLoader, String resourceName,
+                                                         String endpointKeyPrefix) {
+        requireNonNull(classLoader, "classLoader");
+        requireNonNull(resourceName, "resourceName");
+        requireNonNull(endpointKeyPrefix, "endpointKeyPrefix");
+        return new PropertiesEndpointGroupBuilder(classLoader, resourceName, endpointKeyPrefix);
+    }
+
+    /**
+     * Returns a new {@link PropertiesEndpointGroupBuilder} created from the specified {@link Properties}.
+     * The value of each property whose name starts with {@code endpointKeyPrefix} will be parsed with
+     * {@link Endpoint#parse(String)}, and then loaded into the {@link PropertiesEndpointGroup}, e.g.
+     *
+     * <pre>{@code
+     * # endpointKeyPrefix = 'example.hosts.'
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param properties the {@link Properties} where the list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     */
+    public static PropertiesEndpointGroupBuilder builder(Properties properties, String endpointKeyPrefix) {
+        requireNonNull(properties, "properties");
+        requireNonNull(endpointKeyPrefix, "endpointKeyPrefix");
+        return new PropertiesEndpointGroupBuilder(properties, endpointKeyPrefix);
+    }
+
+    /**
+     * Returns a new {@link PropertiesEndpointGroupBuilder} created from the file at the specified
+     * {@link Path}. Any updates in the file will trigger a dynamic reload. The value of each property
+     * whose name starts with {@code endpointKeyPrefix} will be parsed with {@link Endpoint#parse(String)},
+     * and then loaded into the {@link PropertiesEndpointGroup}, e.g.
+     *
+     * <pre>{@code
+     * # endpointKeyPrefix = 'example.hosts.'
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param path the path of the file where list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     */
+    public static PropertiesEndpointGroupBuilder builder(Path path, String endpointKeyPrefix) {
+        requireNonNull(path, "path");
+        requireNonNull(endpointKeyPrefix, "endpointKeyPrefix");
+        return new PropertiesEndpointGroupBuilder(path, endpointKeyPrefix);
+    }
+
+    @Nullable
+    private FileWatchRegisterKey watchRegisterKey;
+
+    PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy, List<Endpoint> endpoints) {
+        super(selectionStrategy);
+        setEndpoints(endpoints);
+    }
+
+    PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy,
+                            Path path, String endpointKeyPrefix, int defaultPort) {
+        super(selectionStrategy);
+        setEndpoints(loadEndpoints(
+                path,
+                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                defaultPort));
+        watchRegisterKey = registry.register(path, () ->
+                setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort)));
     }
 
     private static List<Endpoint> loadEndpoints(Path path, String endpointKeyPrefix, int defaultPort) {
@@ -234,34 +292,10 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
             if (key.startsWith(endpointKeyPrefix)) {
                 final Endpoint endpoint = Endpoint.parse(value);
-                checkState(!endpoint.isGroup(),
-                           "properties contains an endpoint group which is not allowed: %s in %s",
-                           value, properties);
                 newEndpoints.add(defaultPort == 0 ? endpoint : endpoint.withDefaultPort(defaultPort));
             }
         }
         return ImmutableList.copyOf(newEndpoints);
-    }
-
-    private static void validateDefaultPort(int defaultPort) {
-        checkArgument(defaultPort > 0 && defaultPort <= 65535,
-                      "defaultPort: %s (expected: 1-65535)", defaultPort);
-    }
-
-    @Nullable
-    private FileWatchRegisterKey watchRegisterKey;
-
-    private PropertiesEndpointGroup(List<Endpoint> endpoints) {
-        setEndpoints(endpoints);
-    }
-
-    private PropertiesEndpointGroup(Path path, String endpointKeyPrefix, int defaultPort) {
-        setEndpoints(loadEndpoints(
-                path,
-                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                defaultPort));
-        watchRegisterKey = registry.register(path, () ->
-                setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort)));
     }
 
     @Override

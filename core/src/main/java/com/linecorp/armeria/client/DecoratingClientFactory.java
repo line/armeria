@@ -22,9 +22,9 @@ import java.net.URI;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -35,7 +35,7 @@ import io.netty.channel.EventLoopGroup;
 /**
  * A {@link ClientFactory} that delegates the creation of {@link Client}s to another {@link ClientFactory}.
  */
-public class DecoratingClientFactory extends AbstractClientFactory {
+public class DecoratingClientFactory implements ClientFactory {
 
     private final ClientFactory delegate;
 
@@ -49,8 +49,27 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     /**
      * Returns the delegate {@link ClientFactory}.
      */
-    protected ClientFactory delegate() {
+    protected final ClientFactory delegate() {
         return delegate;
+    }
+
+    /**
+     * Creates a new {@link HttpClient} which uses the same {@link SessionProtocol}, {@link EndpointGroup} and
+     * {@link ClientOptions} with the specified {@link ClientBuilderParams}. Note that {@code path} and
+     * {@link SerializationFormat} are always {@code "/"} and {@link SerializationFormat#NONE}.
+     */
+    protected HttpClient newHttpClient(ClientBuilderParams params) {
+        final URI uri = params.uri();
+        final ClientBuilderParams newParams;
+        if (Clients.isUndefinedUri(uri)) {
+            newParams = ClientBuilderParams.of(delegate(), uri, HttpClient.class, params.options());
+        } else {
+            final Scheme newScheme = Scheme.of(SerializationFormat.NONE, params.scheme().sessionProtocol());
+            newParams = ClientBuilderParams.of(delegate(), newScheme, params.endpointGroup(),
+                                               null, HttpClient.class, params.options());
+        }
+
+        return (HttpClient) delegate().newClient(newParams);
     }
 
     @Override
@@ -89,14 +108,8 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        return delegate().newClient(uri, clientType, options);
-    }
-
-    @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                           ClientOptions options) {
-        return delegate().newClient(scheme, endpoint, path, clientType, options);
+    public Object newClient(ClientBuilderParams params) {
+        return delegate().newClient(params);
     }
 
     @Override

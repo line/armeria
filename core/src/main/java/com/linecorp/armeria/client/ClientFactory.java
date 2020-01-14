@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -28,7 +30,10 @@ import javax.annotation.Nullable;
 
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.Unwrappable;
@@ -153,86 +158,10 @@ public interface ClientFactory extends AutoCloseable {
     ClientFactoryOptions options();
 
     /**
-     * Creates a new client that connects to the specified {@code uri}.
-     *
-     * @param uri the URI of the server endpoint
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptionValue}s
+     * Creates a new client with the specified {@link ClientBuilderParams}. The client instance returned
+     * by this method must be an instance of {@link ClientBuilderParams#clientType()}.
      */
-    <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options);
-
-    /**
-     * Creates a new client that connects to the specified {@code uri}.
-     *
-     * @param uri the URI of the server endpoint
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptions}
-     */
-    <T> T newClient(String uri, Class<T> clientType, ClientOptions options);
-
-    /**
-     * Creates a new client that connects to the specified {@link URI}.
-     *
-     * @param uri the URI of the server endpoint
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptionValue}s
-     */
-    <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options);
-
-    /**
-     * Creates a new client that connects to the specified {@link URI}.
-     *
-     * @param uri the URI of the server endpoint
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptions}
-     */
-    <T> T newClient(URI uri, Class<T> clientType, ClientOptions options);
-
-    /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}.
-     *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptionValue}s
-     */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptionValue<?>... options);
-
-    /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}.
-     *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptions}
-     */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options);
-
-    /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}
-     * and {@code path}.
-     *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
-     * @param path the service {@code path}
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptionValue}s
-     */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                    ClientOptionValue<?>... options);
-
-    /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}
-     * and {@code path}.
-     *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
-     * @param path the service {@code path}
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptions}
-     */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                    ClientOptions options);
+    Object newClient(ClientBuilderParams params);
 
     /**
      * Returns the {@link ClientBuilderParams} held in {@code client}. This is used when creating a new derived
@@ -293,6 +222,102 @@ public interface ClientFactory extends AutoCloseable {
         }
 
         return null;
+    }
+
+    /**
+     * Makes sure the specified {@link URI} is supported by this {@link ClientFactory}.
+     *
+     * @param uri the {@link URI} of the server endpoint
+     * @return the validated and normalized {@link URI} which always has a non-empty path.
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@link URI} is not supported by this
+     *                                  {@link ClientFactory}
+     */
+    default URI validateUri(URI uri) {
+        requireNonNull(uri, "uri");
+
+        if (Clients.isUndefinedUri(uri)) {
+            // We use a special singleton marker URI for clients that do not explicitly define a
+            // host or scheme at construction time.
+            // As this isn't created by users, we don't need to normalize it.
+            return uri;
+        }
+
+        if (uri.getAuthority() == null) {
+            throw new IllegalArgumentException("URI with missing authority: " + uri);
+        }
+
+        final String scheme = uri.getScheme();
+        if (scheme == null) {
+            throw new IllegalArgumentException("URI with missing scheme: " + uri);
+        }
+        final Scheme parsedScheme = Scheme.tryParse(scheme);
+        if (parsedScheme == null) {
+            throw new IllegalArgumentException("URI with undefined scheme: " + uri);
+        }
+
+        final Set<Scheme> supportedSchemes = supportedSchemes();
+        if (!supportedSchemes.contains(parsedScheme)) {
+            throw new IllegalArgumentException(
+                    "URI with unsupported scheme: " + uri + " (expected: " + supportedSchemes + ')');
+        }
+
+        final String parsedSchemeStr;
+        if (parsedScheme.serializationFormat() == SerializationFormat.NONE) {
+            parsedSchemeStr = parsedScheme.sessionProtocol().uriText();
+        } else {
+            parsedSchemeStr = parsedScheme.uriText();
+        }
+
+        final String path = Strings.emptyToNull(uri.getRawPath());
+        if (scheme.equals(parsedSchemeStr) && path != null) {
+            return uri;
+        }
+
+        // Replace the specified URI's scheme with the normalized one.
+        try {
+            return new URI(parsedSchemeStr, uri.getRawAuthority(),
+                           firstNonNull(path, "/"), uri.getRawQuery(),
+                           uri.getRawFragment());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Makes sure the specified {@link Scheme} is supported by this {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme} of the server endpoint
+     * @return the specified {@link Scheme}
+     *
+     * @throws IllegalArgumentException if the {@link Scheme} is not supported by this {@link ClientFactory}
+     */
+    default Scheme validateScheme(Scheme scheme) {
+        requireNonNull(scheme, "scheme");
+
+        final Set<Scheme> supportedSchemes = supportedSchemes();
+        if (!supportedSchemes.contains(scheme)) {
+            throw new IllegalArgumentException(
+                    "Unsupported scheme: " + scheme + " (expected: " + supportedSchemes + ')');
+        }
+
+        return scheme;
+    }
+
+    /**
+     * Makes sure the specified {@link ClientBuilderParams} has the {@link Scheme} supported by
+     * this {@link ClientFactory}.
+     *
+     * @return the specified {@link ClientBuilderParams}
+     */
+    default ClientBuilderParams validateParams(ClientBuilderParams params) {
+        requireNonNull(params, "params");
+        if (params.factory() != this) {
+            validateScheme(params.scheme());
+        } else {
+            // Validated already, unless `ClientBuilderParams` has a bug.
+        }
+        return params;
     }
 
     /**

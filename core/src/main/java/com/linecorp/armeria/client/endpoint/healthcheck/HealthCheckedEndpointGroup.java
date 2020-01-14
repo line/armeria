@@ -117,7 +117,10 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy) {
-        this.delegate = requireNonNull(delegate, "delegate");
+
+        super(requireNonNull(delegate, "delegate").selectionStrategy());
+
+        this.delegate = delegate;
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.protocol = requireNonNull(protocol, "protocol");
         this.port = port;

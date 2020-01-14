@@ -11,7 +11,7 @@ Retrofit integration
 `Retrofit`_ is a library that simplifies the access to RESTful services by turning an HTTP API into a Java
 interface.
 
-Armeria provides a builder class called :api:`ArmeriaRetrofitBuilder` that builds an alternative
+Armeria provides a builder class called :api:`ArmeriaRetrofit` that builds an alternative
 ``Retrofit`` implementation that replaces the networking engine of from `OkHttp`_ to Armeria. By doing so,
 you get the following benefits:
 
@@ -33,10 +33,9 @@ you get the following benefits:
         CompletableFuture<UserInfo> getUserInfo(@Path("id") String id);
     }
 
-    Retrofit retrofit = new ArmeriaRetrofitBuilder()
-            .baseUrl("http://localhost:8080/")
-            .addConverterFactory(JacksonConverterFactory.create())
-            .build();
+    Retrofit retrofit = ArmeriaRetrofit.builder("http://localhost:8080/")
+                                       .addConverterFactory(JacksonConverterFactory.create())
+                                       .build();
 
     MyService service = retrofit.create(MyService.class);
     UserInfo userInfo = service.getUserInfo("foo").get();

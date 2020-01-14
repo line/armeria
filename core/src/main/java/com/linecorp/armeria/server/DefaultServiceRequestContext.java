@@ -24,15 +24,12 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import javax.annotation.Nonnull;
@@ -41,7 +38,6 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -78,9 +74,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
 
     private boolean timedOut;
-
-    @Nullable
-    private List<BiConsumer<? super ServiceRequestContext, ? super ClientRequestContext>> onChildCallbacks;
 
     private final Channel ch;
     private final ServiceConfig cfg;
@@ -205,28 +198,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         maxRequestLength = cfg.maxRequestLength();
         additionalResponseHeaders = HttpHeaders.of();
         additionalResponseTrailers = HttpHeaders.of();
-    }
-
-    @Override
-    public void onChild(BiConsumer<? super ServiceRequestContext, ? super ClientRequestContext> callback) {
-        requireNonNull(callback, "callback");
-        if (onChildCallbacks == null) {
-            onChildCallbacks = new ArrayList<>(4);
-        }
-        onChildCallbacks.add(callback);
-    }
-
-    @Override
-    public void invokeOnChildCallbacks(ClientRequestContext newCtx) {
-        final List<BiConsumer<? super ServiceRequestContext, ? super ClientRequestContext>> callbacks =
-                onChildCallbacks;
-        if (callbacks == null) {
-            return;
-        }
-
-        for (BiConsumer<? super ServiceRequestContext, ? super ClientRequestContext> callback : callbacks) {
-            callback.accept(this, newCtx);
-        }
     }
 
     @Nonnull

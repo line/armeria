@@ -22,17 +22,8 @@ import com.linecorp.armeria.client.Endpoint;
 /**
  * Selects an {@link Endpoint} from an {@link EndpointGroup}.
  */
+@FunctionalInterface
 public interface EndpointSelector {
-    /**
-     * Returns the {@link EndpointGroup} held by this selector.
-     */
-    EndpointGroup group();
-
-    /**
-     * Returns the {@link EndpointSelectionStrategy} used by this selector to select an {@link Endpoint}.
-     */
-    EndpointSelectionStrategy strategy();
-
     /**
      * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
      * {@link ClientRequestContext}.

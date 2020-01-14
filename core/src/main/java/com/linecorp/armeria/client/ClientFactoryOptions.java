@@ -29,6 +29,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -44,7 +45,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
-import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
  * A set of {@link ClientFactoryOption}s and their respective values.
@@ -78,7 +78,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
             ClientFactoryOption.WORKER_GROUP.newValue(DEFAULT_WORKER_GROUP),
             ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE.newValue(false),
             ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY.newValue(DEFAULT_EVENT_LOOP_SCHEDULER_FACTORY),
-            ClientFactoryOption.CHANNEL_OPTIONS.newValue(new Object2ObjectArrayMap<>()),
+            ClientFactoryOption.CHANNEL_OPTIONS.newValue(ImmutableMap.of()),
             ClientFactoryOption.TLS_CUSTOMIZER.newValue(DEFAULT_TLS_CUSTOMIZER),
             ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY),
             ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE.newValue(

@@ -21,9 +21,11 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_MD5;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 
@@ -66,5 +68,14 @@ class DefaultAggregatedHttpRequestTest {
         assertThat(drained).containsExactly(
                 HttpData.of(StandardCharsets.UTF_8, "bar"),
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
+    }
+
+    @Test
+    void requestAbortPropagatesException() {
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/");
+        req.abort(new IllegalStateException("closed"));
+        assertThatThrownBy(() -> req.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IllegalStateException.class);
     }
 }

@@ -28,6 +28,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closer;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
 
@@ -41,14 +42,18 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
     private final AtomicBoolean dirty;
 
+    private final EndpointSelectionStrategy selectionStrategy;
+    private final EndpointSelector selector;
+
     private volatile List<Endpoint> merged = ImmutableList.of();
 
     /**
      * Constructs a new {@link CompositeEndpointGroup} that merges all the given {@code endpointGroups}.
      */
-    CompositeEndpointGroup(Iterable<EndpointGroup> endpointGroups) {
-        requireNonNull(endpointGroups, "endpointGroups");
-        this.endpointGroups = ImmutableList.copyOf(endpointGroups);
+    CompositeEndpointGroup(EndpointSelectionStrategy selectionStrategy,
+                           Iterable<EndpointGroup> endpointGroups) {
+
+        this.endpointGroups = ImmutableList.copyOf(requireNonNull(endpointGroups, "endpointGroups"));
         dirty = new AtomicBoolean(true);
 
         for (EndpointGroup endpointGroup : endpointGroups) {
@@ -63,6 +68,9 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
                                                            .map(EndpointGroup::initialEndpointsFuture)
                                                            .toArray(CompletableFuture[]::new))
                                  .thenApply(unused -> endpoints());
+
+        this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+        selector = requireNonNull(selectionStrategy, "selectionStrategy").newSelector(this);
     }
 
     @Override
@@ -83,6 +91,16 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
         }
 
         return merged = newEndpoints.build();
+    }
+
+    @Override
+    public EndpointSelectionStrategy selectionStrategy() {
+        return selectionStrategy;
+    }
+
+    @Override
+    public Endpoint select(ClientRequestContext ctx) {
+        return selector.select(ctx);
     }
 
     @Override

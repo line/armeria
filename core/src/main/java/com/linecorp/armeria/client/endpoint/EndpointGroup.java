@@ -30,6 +30,7 @@ import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.Listenable;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -37,7 +38,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 /**
  * A list of {@link Endpoint}s.
  */
-public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable {
+public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelector, SafeCloseable {
 
     /**
      * Returns a singleton {@link EndpointGroup} which does not contain any {@link Endpoint}s.
@@ -50,10 +51,11 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
      * Returns an {@link EndpointGroup} that combines all the {@link Endpoint}s of {@code endpointGroups}.
      * {@code endpointGroups} can be instances of {@link Endpoint} as well, any {@link EndpointGroup}s and
      * {@link Endpoint} will all be combined into a single {@link EndpointGroup} that contains the total set.
+     * The {@link EndpointGroup} returned by this method will use
+     * {@link EndpointSelectionStrategy#weightedRoundRobin()} for selecting an {@link Endpoint}.
      */
     static EndpointGroup of(EndpointGroup... endpointGroups) {
-        requireNonNull(endpointGroups, "endpointGroups");
-        return of(ImmutableList.copyOf(endpointGroups));
+        return of(EndpointSelectionStrategy.weightedRoundRobin(), endpointGroups);
     }
 
     /**
@@ -61,7 +63,30 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
      * {@code endpointGroups} can be instances of {@link Endpoint} as well, any {@link EndpointGroup}s and
      * {@link Endpoint} will all be combined into a single {@link EndpointGroup} that contains the total set.
      */
+    static EndpointGroup of(EndpointSelectionStrategy selectionStrategy, EndpointGroup... endpointGroups) {
+        requireNonNull(endpointGroups, "endpointGroups");
+        return of(selectionStrategy, ImmutableList.copyOf(endpointGroups));
+    }
+
+    /**
+     * Returns an {@link EndpointGroup} that combines all the {@link Endpoint}s of {@code endpointGroups}.
+     * {@code endpointGroups} can be instances of {@link Endpoint} as well, any {@link EndpointGroup}s and
+     * {@link Endpoint} will all be combined into a single {@link EndpointGroup} that contains the total set.
+     * The {@link EndpointGroup} returned by this method will use
+     * {@link EndpointSelectionStrategy#weightedRoundRobin()} for selecting an {@link Endpoint}.
+     */
     static EndpointGroup of(Iterable<? extends EndpointGroup> endpointGroups) {
+        return of(EndpointSelectionStrategy.weightedRoundRobin(), endpointGroups);
+    }
+
+    /**
+     * Returns an {@link EndpointGroup} that combines all the {@link Endpoint}s of {@code endpointGroups}.
+     * {@code endpointGroups} can be instances of {@link Endpoint} as well, any {@link EndpointGroup}s and
+     * {@link Endpoint} will all be combined into a single {@link EndpointGroup} that contains the total set.
+     */
+    static EndpointGroup of(EndpointSelectionStrategy selectionStrategy,
+                            Iterable<? extends EndpointGroup> endpointGroups) {
+        requireNonNull(selectionStrategy, "selectionStrategy");
         requireNonNull(endpointGroups, "endpointGroups");
 
         final List<EndpointGroup> groups = new ArrayList<>();
@@ -88,24 +113,38 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
                 return staticEndpoints.get(0);
             }
             // Only static endpoints, return an optimized endpoint group.
-            return new StaticEndpointGroup(staticEndpoints);
+            return new StaticEndpointGroup(selectionStrategy, staticEndpoints);
         }
 
         if (!staticEndpoints.isEmpty()) {
-            groups.add(new StaticEndpointGroup(staticEndpoints));
+            groups.add(new StaticEndpointGroup(selectionStrategy, staticEndpoints));
         }
 
         if (groups.size() == 1) {
             return groups.get(0);
         }
 
-        return new CompositeEndpointGroup(groups);
+        return new CompositeEndpointGroup(selectionStrategy, groups);
     }
 
     /**
-     * Return the endpoints held by this {@link EndpointGroup}.
+     * Returns the endpoints held by this {@link EndpointGroup}.
      */
     List<Endpoint> endpoints();
+
+    /**
+     * Returns the {@link EndpointSelectionStrategy} of this {@link EndpointGroup}.
+     */
+    EndpointSelectionStrategy selectionStrategy();
+
+    /**
+     * Selects an {@link Endpoint} from this {@link EndpointGroup}.
+     *
+     * @return the {@link Endpoint} selected by the {@link EndpointSelectionStrategy},
+     *         which was specified when constructing this {@link EndpointGroup}.
+     */
+    @Override
+    Endpoint select(ClientRequestContext ctx);
 
     /**
      * Returns a {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.

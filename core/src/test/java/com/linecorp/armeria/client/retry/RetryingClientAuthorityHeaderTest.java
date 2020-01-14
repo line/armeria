@@ -25,11 +25,10 @@ import org.junit.Test;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
-import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -80,9 +79,8 @@ public class RetryingClientAuthorityHeaderTest {
         final EndpointGroup endpointGroup = EndpointGroup.of(
                 Endpoint.of("www.foo.com", backend1.httpPort()).withIpAddr("127.0.0.1"),
                 Endpoint.of("www.bar.com", backend2.httpPort()).withIpAddr("127.0.0.1"));
-        EndpointGroupRegistry.register("backends", endpointGroup, EndpointSelectionStrategy.ROUND_ROBIN);
 
-        return WebClient.builder("h2c://group:backends")
+        return WebClient.builder(SessionProtocol.H2C, endpointGroup)
                         .decorator(RetryingClient.newDecorator(RetryStrategy.onServerErrorStatus()))
                         .build();
     }

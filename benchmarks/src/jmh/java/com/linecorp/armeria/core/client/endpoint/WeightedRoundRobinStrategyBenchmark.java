@@ -27,7 +27,6 @@ import org.openjdk.jmh.annotations.State;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
 
@@ -40,19 +39,19 @@ public class WeightedRoundRobinStrategyBenchmark {
     final int numEndpoints = 500;
 
     // normal round robin, all weight: 300
-    EndpointSelector selectorSameWeight;
+    EndpointGroup groupSameWeight;
 
     // mainly weight: 1, max weight: 30
-    EndpointSelector selectorRandomMainly1Max30;
+    EndpointGroup groupRandomMainly1Max30;
 
     // randomly, max weight: 10
-    EndpointSelector selectorRandomMax10;
+    EndpointGroup groupRandomMax10;
 
     // randomly, max weight: 100
-    EndpointSelector selectorRandomMax100;
+    EndpointGroup groupRandomMax100;
 
     // all weights are unique
-    EndpointSelector selectorUnique;
+    EndpointGroup groupUnique;
 
     interface EndpointGenerator {
         Endpoint generate(int id);
@@ -66,68 +65,57 @@ public class WeightedRoundRobinStrategyBenchmark {
         return result;
     }
 
-    private static EndpointSelector getEndpointSelector(List<Endpoint> endpoints, String groupName) {
-        EndpointGroupRegistry.register(groupName,
-                                       EndpointGroup.of(endpoints),
-                                       EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN);
-        final EndpointSelector nodeSelector = EndpointGroupRegistry.getNodeSelector(groupName);
-        assert nodeSelector != null;
-        return nodeSelector;
+    private static EndpointGroup getEndpointGroup(List<Endpoint> endpoints) {
+        return EndpointGroup.of(EndpointSelectionStrategy.weightedRoundRobin(), endpoints);
     }
 
     @Setup
     public void setupCases() {
         final Random rand = new Random();
 
-        selectorSameWeight = getEndpointSelector(generateEndpoints(
+        groupSameWeight = getEndpointGroup(generateEndpoints(
                 id -> Endpoint.of("127.0.0.1", id + 1)
-                        .withWeight(
-                                300
-                        )), "same-weight");
+                              .withWeight(300)));
 
-        selectorRandomMainly1Max30 = getEndpointSelector(generateEndpoints(
-                id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
-                        1 + (id % 50 == 0 ? 29 : 0)
-                )), "main-1-max-30");
+        groupRandomMainly1Max30 = getEndpointGroup(generateEndpoints(
+                id -> Endpoint.of("127.0.0.1", id + 1)
+                              .withWeight(1 + (id % 50 == 0 ? 29 : 0))));
 
-        selectorRandomMax10 = getEndpointSelector(generateEndpoints(
-                id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
-                        1 + rand.nextInt(10)
-                )), "random-max-10");
+        groupRandomMax10 = getEndpointGroup(generateEndpoints(
+                id -> Endpoint.of("127.0.0.1", id + 1)
+                              .withWeight(1 + rand.nextInt(10))));
 
-        selectorRandomMax100 = getEndpointSelector(generateEndpoints(
-                id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
-                        1 + rand.nextInt(100)
-                )), "random-max-100");
+        groupRandomMax100 = getEndpointGroup(generateEndpoints(
+                id -> Endpoint.of("127.0.0.1", id + 1)
+                              .withWeight(1 + rand.nextInt(100))));
 
-        selectorUnique = getEndpointSelector(generateEndpoints(
-                id -> Endpoint.of("127.0.0.1", id + 1).withWeight(
-                        id + 1
-                )), "unique");
+        groupUnique = getEndpointGroup(generateEndpoints(
+                id -> Endpoint.of("127.0.0.1", id + 1)
+                              .withWeight(id + 1)));
     }
 
     @Benchmark
     public Endpoint sameWeight() throws Exception {
-        return selectorSameWeight.select(null);
+        return groupSameWeight.select(null);
     }
 
     @Benchmark
     public Endpoint randomMainly1Max30() throws Exception {
-        return selectorRandomMainly1Max30.select(null);
+        return groupRandomMainly1Max30.select(null);
     }
 
     @Benchmark
     public Endpoint randomMax10() throws Exception {
-        return selectorRandomMax10.select(null);
+        return groupRandomMax10.select(null);
     }
 
     @Benchmark
     public Endpoint randomMax100() throws Exception {
-        return selectorRandomMax100.select(null);
+        return groupRandomMax100.select(null);
     }
 
     @Benchmark
     public Endpoint unique() throws Exception {
-        return selectorUnique.select(null);
+        return groupUnique.select(null);
     }
 }

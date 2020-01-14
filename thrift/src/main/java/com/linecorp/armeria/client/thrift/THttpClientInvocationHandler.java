@@ -34,7 +34,9 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -46,21 +48,30 @@ final class THttpClientInvocationHandler
     private static final Object[] NO_ARGS = new Object[0];
 
     private final ClientBuilderParams params;
-    private final String path;
-    @Nullable
-    private final String fragment;
 
-    THttpClientInvocationHandler(ClientBuilderParams params,
-                                 THttpClient thriftClient, String path, @Nullable String fragment) {
+    THttpClientInvocationHandler(ClientBuilderParams params, THttpClient thriftClient) {
         super(thriftClient);
         this.params = params;
-        this.path = path;
-        this.fragment = fragment;
     }
 
     @Override
     public ClientFactory factory() {
         return params.factory();
+    }
+
+    @Override
+    public Scheme scheme() {
+        return params.scheme();
+    }
+
+    @Override
+    public EndpointGroup endpointGroup() {
+        return params.endpointGroup();
+    }
+
+    @Override
+    public String absolutePathRef() {
+        return params.absolutePathRef();
     }
 
     @Override
@@ -97,7 +108,7 @@ final class THttpClientInvocationHandler
 
         switch (methodName) {
         case "toString":
-            return params.clientType().getSimpleName() + '(' + path + ')';
+            return params.clientType().getSimpleName() + '(' + uri().getRawPath() + ')';
         case "hashCode":
             return System.identityHashCode(proxy);
         case "equals":
@@ -126,6 +137,8 @@ final class THttpClientInvocationHandler
         }
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final String path = uri().getRawPath();
+            final String fragment = uri().getRawFragment();
             try {
                 final RpcResponse reply;
                 if (fragment != null) {

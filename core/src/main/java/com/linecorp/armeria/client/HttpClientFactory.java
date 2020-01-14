@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -28,8 +27,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -54,7 +51,7 @@ import io.netty.resolver.AddressResolverGroup;
 /**
  * A {@link ClientFactory} that creates an HTTP client.
  */
-final class HttpClientFactory extends AbstractClientFactory {
+final class HttpClientFactory implements ClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
@@ -228,57 +225,34 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        final Scheme scheme = validateScheme(uri);
-        final Endpoint endpoint = newEndpoint(uri);
+    public Object newClient(ClientBuilderParams params) {
+        validateParams(params);
 
-        return newClient(uri, scheme, endpoint, clientType, options);
-    }
-
-    @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
-                           ClientOptions options) {
-        final URI uri = endpoint.toUri(scheme, path);
-        return newClient(uri, scheme, endpoint, clientType, options);
-    }
-
-    private <T> T newClient(URI uri, Scheme scheme, Endpoint endpoint, Class<T> clientType,
-                            ClientOptions options) {
+        final Class<?> clientType = params.clientType();
         validateClientType(clientType);
 
-        final HttpClient delegate = options.decoration().decorate(clientDelegate);
+        final HttpClient delegate = params.options().decoration().decorate(clientDelegate);
 
         if (clientType == HttpClient.class) {
-            @SuppressWarnings("unchecked")
-            final T castClient = (T) delegate;
-            return castClient;
+            return delegate;
         }
 
         if (clientType == WebClient.class) {
-            final WebClient client = newWebClient(uri, scheme, endpoint, options, delegate);
-
-            @SuppressWarnings("unchecked")
-            final T castClient = (T) client;
-            return castClient;
+            return new DefaultWebClient(params, delegate, meterRegistry);
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }
     }
 
-    private DefaultWebClient newWebClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
-                                          HttpClient delegate) {
-        return new DefaultWebClient(
-                ClientBuilderParams.of(this, uri, WebClient.class, options),
-                delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
-    }
-
-    private static void validateClientType(Class<?> clientType) {
+    private static Class<?> validateClientType(Class<?> clientType) {
         if (clientType != WebClient.class && clientType != HttpClient.class) {
             throw new IllegalArgumentException(
                     "clientType: " + clientType +
                     " (expected: " + WebClient.class.getSimpleName() + " or " +
                     HttpClient.class.getSimpleName() + ')');
         }
+
+        return clientType;
     }
 
     boolean isClosing() {

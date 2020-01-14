@@ -315,14 +315,14 @@ public interface RequestContext {
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
      *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
-     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
+     * thread-local. Please see {@link ServiceRequestContext#push()} and
+     * {@link ClientRequestContext#push()} to find out the satisfying conditions.
      *
      * @deprecated Use {@link #push()}.
      */
     @Deprecated
     static SafeCloseable push(RequestContext ctx) {
-        return ctx.push(true);
+        return ctx.push();
     }
 
     /**
@@ -330,14 +330,14 @@ public interface RequestContext {
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
      *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
-     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
+     * thread-local. Please see {@link ServiceRequestContext#push()} and
+     * {@link ClientRequestContext#push()} to find out the satisfying conditions.
      *
-     * @deprecated Use {@link #push(boolean)}.
+     * @deprecated Use {@link #push()}.
      */
     @Deprecated
     static SafeCloseable push(RequestContext ctx, boolean runCallbacks) {
-        return ctx.push(runCallbacks);
+        return ctx.push();
     }
 
     /**
@@ -349,51 +349,42 @@ public interface RequestContext {
      * }
      * }</pre>
      *
-     * <p>The callbacks added by {@link #onEnter(Consumer)} and {@link #onExit(Consumer)} will be invoked
-     * when the context is pushed to and removed from the thread-local stack respectively.
-     *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
-     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
+     * thread-local. Please see {@link ServiceRequestContext#push()} and
+     * {@link ClientRequestContext#push()} to find out the satisfying conditions.
      */
-    default SafeCloseable push() {
-        return push(true);
-    }
+    SafeCloseable push();
 
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
-     * <pre>{@code
-     * try (SafeCloseable ignored = ctx.push(true)) {
-     *     ...
-     * }
-     * }</pre>
      *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
-     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
+     * thread-local. Please see {@link ServiceRequestContext#push()} and
+     * {@link ClientRequestContext#push()} to find out the satisfying conditions.
      *
-     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
-     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
-     *                     removed from the thread-local stack respectively.
-     *                     If {@code false}, no callbacks will be executed.
-     *                     NOTE: In case of re-entrance, the callbacks will never run.
+     * @param runCallbacks This is not used.
+     *
+     * @deprecated Use {@link #push()}.
      */
-    SafeCloseable push(boolean runCallbacks);
+    @Deprecated
+    default SafeCloseable push(boolean runCallbacks) {
+        return push();
+    }
 
     /**
      * Pushes this context to the thread-local stack. To pop the context from the stack,
      * call {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block.
      *
      * <p>This method may throw an {@link IllegalStateException} according to the status of the current
-     * thread-local. Please see {@link ServiceRequestContext#push(boolean)} and
-     * {@link ClientRequestContext#push(boolean)} to find out the satisfying conditions.
+     * thread-local. Please see {@link ServiceRequestContext#push()} and
+     * {@link ClientRequestContext#push()} to find out the satisfying conditions.
      *
      * @deprecated Use {@link #push()}.
      */
     @Deprecated
     default SafeCloseable pushIfAbsent() {
-        return push(true);
+        return push();
     }
 
     /**
@@ -404,8 +395,8 @@ public interface RequestContext {
      * prevent the situation where a wrong {@link RequestContext} is pushed into the thread-local.
      * Use {@link #push()} instead.
      *
-     * @see ClientRequestContext#push(boolean)
-     * @see ServiceRequestContext#push(boolean)
+     * @see ClientRequestContext#push()
+     * @see ServiceRequestContext#push()
      */
     default SafeCloseable replace() {
         final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
@@ -594,62 +585,6 @@ public interface RequestContext {
     default Logger makeContextAware(Logger logger) {
         return new RequestContextAwareLogger(this, requireNonNull(logger, "logger"));
     }
-
-    /**
-     * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
-     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
-     * should be restored by this callback.
-     *
-     * @param callback a {@link Consumer} whose argument is this context
-     */
-    void onEnter(Consumer<? super RequestContext> callback);
-
-    /**
-     * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
-     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
-     * should be restored by this callback.
-     *
-     * @deprecated Use {@link #onEnter(Consumer)} instead.
-     */
-    @Deprecated
-    default void onEnter(Runnable callback) {
-        onEnter(ctx -> callback.run());
-    }
-
-    /**
-     * Registers {@code callback} to be run when re-exiting this {@link RequestContext}, usually when using
-     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
-     * should be reset by this callback.
-     *
-     * @param callback a {@link Consumer} whose argument is this context
-     */
-    void onExit(Consumer<? super RequestContext> callback);
-
-    /**
-     * Registers {@code callback} to be run when re-exiting this {@link RequestContext}, usually when using
-     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
-     * should be reset by this callback.
-     *
-     * @deprecated Use {@link #onExit(Consumer)} instead.
-     */
-    @Deprecated
-    default void onExit(Runnable callback) {
-        onExit(ctx -> callback.run());
-    }
-
-    /**
-     * Invokes all {@link #onEnter(Consumer)} callbacks. It is discouraged to use this method directly.
-     * Use {@link #makeContextAware(Runnable)} or {@link #push(boolean)} instead so that the callbacks are
-     * invoked automatically.
-     */
-    void invokeOnEnterCallbacks();
-
-    /**
-     * Invokes all {@link #onExit(Consumer)} callbacks. It is discouraged to use this method directly.
-     * Use {@link #makeContextAware(Runnable)} or {@link #push(boolean)} instead so that the callbacks are
-     * invoked automatically.
-     */
-    void invokeOnExitCallbacks();
 
     /**
      * Resolves the specified {@code promise} with the specified {@code result} so that the {@code promise} is

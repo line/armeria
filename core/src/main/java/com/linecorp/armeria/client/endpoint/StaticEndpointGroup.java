@@ -22,49 +22,43 @@ import java.util.concurrent.CompletableFuture;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
 /**
  * A static immutable {@link EndpointGroup}.
- *
- * @deprecated Use {@link EndpointGroup#of(EndpointGroup...)}.
  */
-@Deprecated
-public final class StaticEndpointGroup implements EndpointGroup {
+final class StaticEndpointGroup implements EndpointGroup {
 
-    static final StaticEndpointGroup EMPTY = new StaticEndpointGroup();
+    static final StaticEndpointGroup EMPTY =
+            new StaticEndpointGroup(new EmptyEndpointSelectionStrategy(), ImmutableList.of());
 
     private final List<Endpoint> endpoints;
-
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
+    private final EndpointSelectionStrategy selectionStrategy;
+    private final EndpointSelector selector;
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link EndpointGroup#of(EndpointGroup...)}.
-     */
-    @Deprecated
-    public StaticEndpointGroup(Endpoint... endpoints) {
-        this(ImmutableList.copyOf(requireNonNull(endpoints, "endpoints")));
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link EndpointGroup#of(Iterable)}.
-     */
-    @Deprecated
-    public StaticEndpointGroup(Iterable<Endpoint> endpoints) {
-        requireNonNull(endpoints, "endpoints");
-
-        this.endpoints = ImmutableList.copyOf(endpoints);
-
+    StaticEndpointGroup(EndpointSelectionStrategy selectionStrategy,
+                        Iterable<Endpoint> endpoints) {
+        this.endpoints = ImmutableList.copyOf(requireNonNull(endpoints, "endpoints"));
         initialEndpointsFuture = CompletableFuture.completedFuture(this.endpoints);
+        this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+        selector = selectionStrategy.newSelector(this);
     }
 
     @Override
     public List<Endpoint> endpoints() {
         return endpoints;
+    }
+
+    @Override
+    public EndpointSelectionStrategy selectionStrategy() {
+        return selectionStrategy;
+    }
+
+    @Override
+    public Endpoint select(ClientRequestContext ctx) {
+        return selector.select(ctx);
     }
 
     @Override
@@ -75,5 +69,14 @@ public final class StaticEndpointGroup implements EndpointGroup {
     @Override
     public String toString() {
         return StaticEndpointGroup.class.getSimpleName() + endpoints;
+    }
+
+    private static class EmptyEndpointSelectionStrategy implements EndpointSelectionStrategy {
+        @Override
+        public EndpointSelector newSelector(EndpointGroup endpointGroup) {
+            return ctx -> {
+                throw EmptyEndpointGroupException.get();
+            };
+        }
     }
 }

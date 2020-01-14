@@ -89,8 +89,6 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
                     final Endpoint endpoint = ctx.endpoint();
                     if (endpoint == null) {
                         return "UNKNOWN";
-                    } else if (endpoint.isGroup()) {
-                        return endpoint.authority();
                     } else {
                         final String ipAddr = endpoint.ipAddr();
                         if (ipAddr == null || endpoint.isIpAddrOnly()) {
