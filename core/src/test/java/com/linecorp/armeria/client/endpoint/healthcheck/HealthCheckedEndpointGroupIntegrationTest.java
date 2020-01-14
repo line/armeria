@@ -43,7 +43,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
-class HttpHealthCheckedEndpointGroupTest {
+class HealthCheckedEndpointGroupIntegrationTest {
 
     private static final String HEALTH_CHECK_PATH = "/healthcheck";
 

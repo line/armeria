@@ -39,6 +39,7 @@ import com.linecorp.armeria.server.auth.AuthService;
 public final class HealthCheckServiceBuilder {
 
     private static final int DEFAULT_LONG_POLLING_TIMEOUT_SECONDS = 60;
+    private static final int DEFAULT_PING_INTERVAL_SECONDS = 5;
     private static final double DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE = 0.2;
 
     private final ImmutableSet.Builder<HealthChecker> healthCheckers = ImmutableSet.builder();
@@ -50,6 +51,7 @@ public final class HealthCheckServiceBuilder {
                                                                                  "{\"healthy\":false}");
     private long maxLongPollingTimeoutMillis = TimeUnit.SECONDS.toMillis(DEFAULT_LONG_POLLING_TIMEOUT_SECONDS);
     private double longPollingTimeoutJitterRate = DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE;
+    private long pingIntervalMillis = TimeUnit.SECONDS.toMillis(DEFAULT_PING_INTERVAL_SECONDS);
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
 
@@ -131,10 +133,11 @@ public final class HealthCheckServiceBuilder {
      *                              in the {@code "prefer: wait=<n>"} request header.
      *                              Specify {@code 0} to disable long-polling support.
      * @return {@code this}
-     * @see #longPolling(Duration, double)
+     * @see #longPolling(Duration, double, Duration)
      */
     public HealthCheckServiceBuilder longPolling(Duration maxLongPollingTimeout) {
-        return longPolling(maxLongPollingTimeout, longPollingTimeoutJitterRate);
+        return longPolling(maxLongPollingTimeout, longPollingTimeoutJitterRate,
+                           Duration.ofMillis(pingIntervalMillis));
     }
 
     /**
@@ -146,10 +149,61 @@ public final class HealthCheckServiceBuilder {
      *                                    a client in the {@code "prefer: wait=<n>"} request header.
      *                                    Specify {@code 0} to disable long-polling support.
      * @return {@code this}
-     * @see #longPolling(long, double)
+     * @see #longPolling(long, double, long)
      */
     public HealthCheckServiceBuilder longPolling(long maxLongPollingTimeoutMillis) {
-        return longPolling(maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate);
+        return longPolling(maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate, pingIntervalMillis);
+    }
+
+    /**
+     * Enables or disables long-polling support. By default, long-polling support is enabled with
+     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_SECONDS} seconds and
+     * the jitter rate of {@value #DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE}.
+     *
+     * @param maxLongPollingTimeout A positive maximum allowed timeout value which is specified by a client
+     *                              in the {@code "prefer: wait=<n>"} request header.
+     *                              Specify {@code 0} to disable long-polling support.
+     * @param longPollingTimeoutJitterRate The jitter rate which adds a random variation to the long-polling
+     *                                     timeout specified in the {@code "prefer: wait=<n>"} header.
+     * @return {@code this}
+     * @see #longPolling(Duration)
+     *
+     * @deprecated Use {@link #longPolling(Duration, double, Duration)}.
+     */
+    @Deprecated
+    public HealthCheckServiceBuilder longPolling(Duration maxLongPollingTimeout,
+                                                 double longPollingTimeoutJitterRate) {
+        return longPolling(maxLongPollingTimeout, longPollingTimeoutJitterRate,
+                           Duration.ofMillis(pingIntervalMillis));
+    }
+
+    /**
+     * Enables or disables long-polling support. By default, long-polling support is enabled with
+     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_SECONDS} seconds and
+     * the jitter rate of {@value #DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE}.
+     *
+     * @param maxLongPollingTimeoutMillis A positive maximum allowed timeout value which is specified by
+     *                                    a client in the {@code "prefer: wait=<n>"} request header.
+     *                                    Specify {@code 0} to disable long-polling support.
+     * @param longPollingTimeoutJitterRate The jitter rate which adds a random variation to the long-polling
+     *                                     timeout specified in the {@code "prefer: wait=<n>"} header.
+     * @return {@code this}
+     * @see #longPolling(long)
+     *
+     * @deprecated Use {@link #longPolling(long, double, long)}.
+     */
+    @Deprecated
+    public HealthCheckServiceBuilder longPolling(long maxLongPollingTimeoutMillis,
+                                                 double longPollingTimeoutJitterRate) {
+        checkArgument(maxLongPollingTimeoutMillis >= 0,
+                      "maxLongPollingTimeoutMillis: %s (expected: >= 0)",
+                      maxLongPollingTimeoutMillis);
+        checkArgument(longPollingTimeoutJitterRate >= 0 && longPollingTimeoutJitterRate <= 1,
+                      "longPollingTimeoutJitterRate: %s (expected: >= 0 && <= 1)",
+                      longPollingTimeoutJitterRate);
+        this.maxLongPollingTimeoutMillis = maxLongPollingTimeoutMillis;
+        this.longPollingTimeoutJitterRate = longPollingTimeoutJitterRate;
+        return this;
     }
 
     /**
@@ -166,11 +220,19 @@ public final class HealthCheckServiceBuilder {
      * @see #longPolling(Duration)
      */
     public HealthCheckServiceBuilder longPolling(Duration maxLongPollingTimeout,
-                                                 double longPollingTimeoutJitterRate) {
+                                                 double longPollingTimeoutJitterRate,
+                                                 Duration pingInterval) {
         requireNonNull(maxLongPollingTimeout, "maxLongPollingTimeout");
         checkArgument(!maxLongPollingTimeout.isNegative(),
                       "maxLongPollingTimeout: %s (expected: >= 0)", maxLongPollingTimeout);
-        return longPolling(maxLongPollingTimeout.toMillis(), longPollingTimeoutJitterRate);
+
+        requireNonNull(pingInterval, "pingInterval");
+        checkArgument(!pingInterval.isNegative(),
+                      "pingInterval: %s (expected >= 0)", pingInterval);
+
+        return longPolling(maxLongPollingTimeout.toMillis(),
+                           longPollingTimeoutJitterRate,
+                           pingInterval.toMillis());
     }
 
     /**
@@ -187,15 +249,19 @@ public final class HealthCheckServiceBuilder {
      * @see #longPolling(long)
      */
     public HealthCheckServiceBuilder longPolling(long maxLongPollingTimeoutMillis,
-                                                 double longPollingTimeoutJitterRate) {
+                                                 double longPollingTimeoutJitterRate,
+                                                 long pingIntervalMillis) {
         checkArgument(maxLongPollingTimeoutMillis >= 0,
                       "maxLongPollingTimeoutMillis: %s (expected: >= 0)",
                       maxLongPollingTimeoutMillis);
+        checkArgument(pingIntervalMillis >= 0,
+                      "pingIntervalMillis: %s (expected: >= 0)");
         checkArgument(longPollingTimeoutJitterRate >= 0 && longPollingTimeoutJitterRate <= 1,
                       "longPollingTimeoutJitterRate: %s (expected: >= 0 && <= 1)",
                       longPollingTimeoutJitterRate);
         this.maxLongPollingTimeoutMillis = maxLongPollingTimeoutMillis;
         this.longPollingTimeoutJitterRate = longPollingTimeoutJitterRate;
+        this.pingIntervalMillis = pingIntervalMillis;
         return this;
     }
 
@@ -242,6 +308,6 @@ public final class HealthCheckServiceBuilder {
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      updateHandler);
+                                      pingIntervalMillis, updateHandler);
     }
 }

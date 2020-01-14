@@ -30,7 +30,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.RequestHeaders;
 
-class HttpHealthCheckedEndpointGroupAuthorityTest {
+class HealthCheckedEndpointGroupAuthorityTest {
 
     private static final String HEALTH_CHECK_PATH = "/healthcheck";
 

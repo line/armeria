@@ -46,7 +46,7 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-class HttpHealthCheckedEndpointGroupLongPollingTest {
+class HealthCheckedEndpointGroupLongPollingTest {
 
     private static final Duration RETRY_INTERVAL = Duration.ofSeconds(3);
     private static final String HEALTH_CHECK_PATH = "/healthcheck";
@@ -133,7 +133,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
                 }
 
                 assertThat(stoppingResponseHeaders.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-                assertThat(stoppingResponseHeaders.getLong("armeria-lphc", -1)).isEqualTo(0);
+                assertThat(stoppingResponseHeaders.getLong("armeria-lphc")).isNull();
                 break;
             }
 
