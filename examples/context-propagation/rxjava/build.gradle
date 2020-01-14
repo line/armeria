@@ -1,0 +1,14 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    compile project(':core')
+    compile project(':rxjava')
+    
+    compile 'net.javacrumbs.future-converter:future-converter-rxjava2-java8'
+}
+
+application {
+    mainClassName = 'example.armeria.contextpropagation.rxjava.Main'
+}

@@ -1,0 +1,11 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    compile project(':core')
+}
+
+application {
+    mainClassName = 'example.armeria.contextpropagation.manual.Main'
+}
