@@ -67,8 +67,8 @@ final class HttpHealthChecker implements AsyncCloseable {
     private final String path;
     private final boolean useGet;
     private boolean wasHealthy;
-    private long maxLongPollingSeconds;
-    private long pingIntervalSeconds;
+    private int maxLongPollingSeconds;
+    private int pingIntervalSeconds;
     @Nullable
     private HttpResponse lastResponse;
     private boolean closed;
@@ -117,15 +117,18 @@ final class HttpHealthChecker implements AsyncCloseable {
 
     @Override
     public synchronized CompletableFuture<?> closeAsync() {
-        if (lastResponse != null) {
-            if (!closed) {
-                closed = true;
-                lastResponse.abort();
-            }
-            return lastResponse.completionFuture().handle((unused1, unused2) -> null);
-        } else {
+        if (lastResponse == null) {
+            // Called even before the first request is sent.
+            closed = true;
             return CompletableFuture.completedFuture(null);
         }
+
+        if (!closed) {
+            closed = true;
+            lastResponse.abort();
+        }
+
+        return lastResponse.completionFuture().handle((unused1, unused2) -> null);
     }
 
     private final class ResponseTimeoutUpdater extends SimpleDecoratingHttpClient {
@@ -136,10 +139,7 @@ final class HttpHealthChecker implements AsyncCloseable {
         @Override
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
             if (maxLongPollingSeconds > 0) {
-                final long responseTimeoutMillis = ctx.responseTimeoutMillis();
-                if (responseTimeoutMillis > 0) {
-                    ctx.extendResponseTimeoutMillis(TimeUnit.SECONDS.toMillis(maxLongPollingSeconds));
-                }
+                ctx.extendResponseTimeoutMillis(TimeUnit.SECONDS.toMillis(maxLongPollingSeconds));
             }
             return delegate().execute(ctx, req);
         }
@@ -233,8 +233,8 @@ final class HttpHealthChecker implements AsyncCloseable {
             }
 
             final int commaPos = longPollingSettings.indexOf(',');
-            long maxLongPollingSeconds = 0;
-            long pingIntervalSeconds = 0;
+            int maxLongPollingSeconds = 0;
+            int pingIntervalSeconds = 0;
             try {
                 maxLongPollingSeconds = Integer.max(
                         0, Integer.parseInt(longPollingSettings.substring(0, commaPos).trim()));
@@ -260,12 +260,13 @@ final class HttpHealthChecker implements AsyncCloseable {
                 return;
             }
 
-            final long pingIntervalSeconds = HttpHealthChecker.this.pingIntervalSeconds;
-            final long pingTimeoutNanos = LongMath.saturatedMultiply(
-                    TimeUnit.SECONDS.toNanos(pingIntervalSeconds), 2);
+            final int pingIntervalSeconds = HttpHealthChecker.this.pingIntervalSeconds;
             if (pingIntervalSeconds <= 0) {
                 return;
             }
+
+            final long pingTimeoutNanos = LongMath.saturatedMultiply(
+                    TimeUnit.SECONDS.toNanos(pingIntervalSeconds), 2);
 
             pingCheckFuture = reqCtx.eventLoop().scheduleWithFixedDelay(() -> {
                 if (System.nanoTime() - lastPingTimeNanos >= pingTimeoutNanos) {
