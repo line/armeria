@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
-import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootAndOldCtx;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -331,16 +330,9 @@ public interface ClientRequestContext extends RequestContext {
         }
 
         final ServiceRequestContext root = root();
-        if (oldCtx instanceof ServiceRequestContext && oldCtx == root) {
-            return pushWithRootAndOldCtx(this, root, root);
-        }
-
-        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
-            if (root == null) {
-                return RequestContextThreadLocal::remove;
-            }
-
-            return pushWithRootAndOldCtx(this, root, oldCtx);
+        if ((oldCtx instanceof ServiceRequestContext && oldCtx == root) ||
+            oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
+            return () -> RequestContextThreadLocal.set(oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.

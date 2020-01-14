@@ -18,13 +18,10 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.Deque;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
@@ -34,13 +31,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class ClientRequestContextTest {
-
-    private final Deque<OnChildEntry> onChildCallbacks = new LinkedBlockingDeque<>();
-
-    @BeforeEach
-    void clear() {
-        onChildCallbacks.clear();
-    }
 
     @Test
     void current() {
@@ -153,15 +143,8 @@ class ClientRequestContextTest {
 
             try (SafeCloseable ignored1 = cctx1.push()) {
                 assertCurrentCtx(cctx1);
-                OnChildEntry onChild = onChildCallbacks.getLast();
-                assertThat(onChild.curCtx).isSameAs(sctx);
-                assertThat(onChild.newCtx).isSameAs(cctx1);
-
                 try (SafeCloseable ignored2 = cctx2.push()) {
                     assertCurrentCtx(cctx2);
-                    onChild = onChildCallbacks.getLast();
-                    assertThat(onChild.curCtx).isSameAs(sctx);
-                    assertThat(onChild.newCtx).isSameAs(cctx2);
                 }
                 assertCurrentCtx(cctx1);
             }
@@ -180,15 +163,9 @@ class ClientRequestContextTest {
                 assertCurrentCtx(cctx1);
                 final ClientRequestContext cctx2 = clientRequestContext();
                 assertThat(cctx1.root()).isSameAs(cctx2.root());
-                OnChildEntry onChild = onChildCallbacks.getLast();
-                assertThat(onChild.curCtx).isSameAs(sctx);
-                assertThat(onChild.newCtx).isSameAs(cctx1);
 
                 try (SafeCloseable ignored2 = cctx2.push()) {
                     assertCurrentCtx(cctx2);
-                    onChild = onChildCallbacks.getLast();
-                    assertThat(onChild.curCtx).isSameAs(sctx);
-                    assertThat(onChild.newCtx).isSameAs(cctx2);
                 }
                 assertCurrentCtx(cctx1);
             }
@@ -209,15 +186,9 @@ class ClientRequestContextTest {
                 assertCurrentCtx(derived);
                 final ClientRequestContext cctx2 = clientRequestContext();
                 assertThat(derived.root()).isSameAs(cctx2.root());
-                OnChildEntry onChild = onChildCallbacks.getLast();
-                assertThat(onChild.curCtx).isSameAs(sctx);
-                assertThat(onChild.newCtx).isSameAs(derived);
 
                 try (SafeCloseable ignored2 = cctx2.push()) {
                     assertCurrentCtx(cctx2);
-                    onChild = onChildCallbacks.getLast();
-                    assertThat(onChild.curCtx).isSameAs(sctx);
-                    assertThat(onChild.newCtx).isSameAs(cctx2);
                 }
                 assertCurrentCtx(derived);
             }
@@ -251,11 +222,10 @@ class ClientRequestContextTest {
             final ClientRequestContext cctx2 = clientRequestContext();
             assertThat(cctx1.root()).isNull();
             assertThat(cctx2.root()).isNull();
-            assertThat(onChildCallbacks).isEmpty();
             try (SafeCloseable ignored2 = cctx2.push()) {
                 assertCurrentCtx(cctx2);
-                assertThat(onChildCallbacks).isEmpty();
             }
+            assertCurrentCtx(cctx1);
         }
         assertCurrentCtx(null);
     }
@@ -265,23 +235,11 @@ class ClientRequestContextTest {
         assertThat(current).isSameAs(ctx);
     }
 
-    private ServiceRequestContext serviceRequestContext() {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        ctx.onChild((curCtx, newCtx) -> onChildCallbacks.add(new OnChildEntry(curCtx, newCtx)));
-        return ctx;
+    private static ServiceRequestContext serviceRequestContext() {
+        return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
     }
 
     private static ClientRequestContext clientRequestContext() {
         return ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-    }
-
-    private static final class OnChildEntry {
-        final ServiceRequestContext curCtx;
-        final ClientRequestContext newCtx;
-
-        private OnChildEntry(ServiceRequestContext curCtx, ClientRequestContext newCtx) {
-            this.curCtx = curCtx;
-            this.newCtx = newCtx;
-        }
     }
 }

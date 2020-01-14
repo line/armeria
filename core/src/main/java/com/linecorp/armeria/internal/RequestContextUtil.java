@@ -18,10 +18,8 @@ package com.linecorp.armeria.internal;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Utilities for {@link RequestContext}.
@@ -35,22 +33,6 @@ public final class RequestContextUtil {
      */
     public static SafeCloseable noopSafeCloseable() {
         return noopSafeCloseable;
-    }
-
-    /**
-     * Runs callbacks in {@code currentCtx} and {@code root} if {@code runCallbacks} is {@code true} and
-     * returns the {@link SafeCloseable} which will set the {@code oldCtx} in the thread-local
-     * when {@link SafeCloseable#close()} is invoked.
-     */
-    public static SafeCloseable pushWithRootAndOldCtx(ClientRequestContext currentCtx,
-                                                      ServiceRequestContext root, RequestContext oldCtx) {
-        requireNonNull(currentCtx, "currentCtx");
-        requireNonNull(root, "root");
-        requireNonNull(oldCtx, "oldCtx");
-        root.invokeOnChildCallbacks(currentCtx);
-        return () -> {
-            RequestContextThreadLocal.set(oldCtx);
-        };
     }
 
     /**

@@ -23,12 +23,10 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiConsumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
@@ -78,16 +76,6 @@ public class ServiceRequestContextWrapper
     @Override
     public InetAddress clientAddress() {
         return delegate().clientAddress();
-    }
-
-    @Override
-    public void onChild(BiConsumer<? super ServiceRequestContext, ? super ClientRequestContext> callback) {
-        delegate().onChild(callback);
-    }
-
-    @Override
-    public void invokeOnChildCallbacks(ClientRequestContext newCtx) {
-        delegate().invokeOnChildCallbacks(newCtx);
     }
 
     @Override

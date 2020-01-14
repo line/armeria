@@ -43,7 +43,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.RequestLogListener;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.JavaVersionSpecific;
@@ -585,63 +584,6 @@ public interface RequestContext {
      */
     default Logger makeContextAware(Logger logger) {
         return new RequestContextAwareLogger(this, requireNonNull(logger, "logger"));
-    }
-
-    /**
-     * Do not use this method. The callback is never invoked.
-     *
-     * <p>This method has a limitation which is that the callback cannot be called when this
-     * {@link RequestContext} is pushed first. So we decided to remove this method and provide
-     * better API after 1.0. If you are using this, please find another way to achieve the same behavior.
-     * Most of the cases, you might be able to just use {@link RequestLogListener}.
-     * Also, you might follow this approach which is using your own thread-local.
-     * https://github.com/SourceForgery/tachikoma/pull/191
-     * If you're still struggle to replace this method, please come to our slack workspace and let us know.
-     * We might be a help to you.
-     *
-     * <p>Please check out https://github.com/line/armeria/pull/2375
-     *
-     * @deprecated Do not use this method.
-     */
-    @Deprecated
-    default void onEnter(Consumer<? super RequestContext> callback, String doNotUseThisMethod) {
-        /* no-op */
-    }
-
-    /**
-     * Do not use this method. The callback is never invoked.
-     *
-     * @deprecated Do not use this method.
-     *
-     * @see #onEnter(Consumer, String)
-     */
-    @Deprecated
-    default void onEnter(Runnable callback, String doNotUseThisMethod) {
-        /* no-op */
-    }
-
-    /**
-     * Do not use this method. The callback is never invoked.
-     *
-     * @deprecated Do not use this method.
-     *
-     * @see #onEnter(Consumer, String)
-     */
-    @Deprecated
-    default void onExit(Consumer<? super RequestContext> callback, String doNotUseThisMethod) {
-        /* no-op */
-    }
-
-    /**
-     * Do not use this method. The callback is never invoked.
-     *
-     * @deprecated Do not use this method.
-     *
-     * @see #onEnter(Consumer, String)
-     */
-    @Deprecated
-    default void onExit(Runnable callback, String doNotUseThisMethod) {
-        /* no-op */
     }
 
     /**

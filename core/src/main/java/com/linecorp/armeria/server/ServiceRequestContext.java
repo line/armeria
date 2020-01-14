@@ -26,7 +26,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -228,28 +227,6 @@ public interface ServiceRequestContext extends RequestContext {
         RequestContextThreadLocal.set(oldCtx);
         throw newIllegalContextPushingException(this, oldCtx);
     }
-
-    /**
-     * Registers {@code callback} to be run when this context is replaced by a child context.
-     * You could use this method to the child contexts that may be created later:
-     * <pre>{@code
-     * ctx.onChild((curCtx, newCtx) -> {
-     *     assert ctx == curCtx && curCtx != newCtx;
-     *     ...
-     * });
-     * }</pre>
-     *
-     * @param callback a {@link BiConsumer} whose first argument is this context and
-     *                 whose second argument is the new context that replaces this context
-     */
-    void onChild(BiConsumer<? super ServiceRequestContext, ? super ClientRequestContext> callback);
-
-    /**
-     * Invokes all {@link #onChild(BiConsumer)} callbacks. It is discouraged to use this method directly.
-     * Use {@link #makeContextAware(Runnable)} or {@link #push()} instead so that the callbacks are
-     * invoked automatically.
-     */
-    void invokeOnChildCallbacks(ClientRequestContext newCtx);
 
     @Override
     ServiceRequestContext newDerivedContext(RequestId id,
