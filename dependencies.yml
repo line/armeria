@@ -62,6 +62,11 @@ com.google.api:
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
+com.google.dagger:
+  dagger: { version: &DAGGER_VERSION '2.25.4' }
+  dagger-compiler: { version: *DAGGER_VERSION }
+  dagger-producers: { version: *DAGGER_VERSION }
+
 com.google.guava:
   guava:
     version: &GUAVA_VERSION '28.1-jre'
@@ -119,6 +124,7 @@ com.spotify:
     relocations:
     - from: com.spotify.futures
       to: com.linecorp.armeria.internal.shaded.futures
+  futures-extra: { version: 4.2.2 }
 
 com.squareup.retrofit2:
   retrofit:
@@ -287,6 +293,9 @@ log4j:
 
 me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.5.0' }
+
+net.javacrumbs.future-converter:
+  future-converter-rxjava2-java8: { version: 1.2.0 }
 
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '2.11.1' }

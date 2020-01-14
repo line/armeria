@@ -1,0 +1,16 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    compile project(':core')
+
+    compile 'com.google.dagger:dagger'
+    compile 'com.google.dagger:dagger-producers'
+    annotationProcessor 'com.google.dagger:dagger-compiler'
+    compile 'com.spotify:futures-extra'
+}
+
+application {
+    mainClassName = 'example.armeria.contextpropagation.dagger.Main'
+}
