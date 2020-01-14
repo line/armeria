@@ -19,9 +19,6 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
-import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootAndOldCtx;
-import static com.linecorp.armeria.internal.RequestContextUtil.pushWithRootCtx;
-import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -29,7 +26,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -303,7 +299,7 @@ public interface ClientRequestContext extends RequestContext {
      * Pushes this context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
-     * try (SafeCloseable ignored = ctx.push(true)) {
+     * try (SafeCloseable ignored = ctx.push()) {
      *     ...
      * }
      * }</pre>
@@ -320,14 +316,9 @@ public interface ClientRequestContext extends RequestContext {
      *       and this {@link #root()} is {@code null}</li>
      * </ul>
      * Otherwise, this method will throw an {@link IllegalStateException}.
-     *
-     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
-     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
-     *                     removed from the thread-local stack respectively.
-     *                     NOTE: In case of reentrance, the callbacks will never run.
      */
     @Override
-    default SafeCloseable push(boolean runCallbacks) {
+    default SafeCloseable push() {
         final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance
@@ -335,20 +326,13 @@ public interface ClientRequestContext extends RequestContext {
         }
 
         if (oldCtx == null) {
-            return pushWithoutRootCtx(this, runCallbacks);
+            return RequestContextThreadLocal::remove;
         }
 
         final ServiceRequestContext root = root();
-        if (oldCtx instanceof ServiceRequestContext && oldCtx == root) {
-            return pushWithRootCtx(this, root, runCallbacks);
-        }
-
-        if (oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
-            if (root == null) {
-                return pushWithoutRootCtx(this, runCallbacks);
-            }
-
-            return pushWithRootAndOldCtx(this, root, oldCtx, runCallbacks);
+        if ((oldCtx instanceof ServiceRequestContext && oldCtx == root) ||
+            oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
+            return () -> RequestContextThreadLocal.set(oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.

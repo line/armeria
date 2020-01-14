@@ -20,11 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -54,12 +51,6 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     private volatile HttpRequest req;
     @Nullable
     private volatile RpcRequest rpcReq;
-
-    // Callbacks
-    @Nullable
-    private List<Consumer<? super RequestContext>> onEnterCallbacks;
-    @Nullable
-    private List<Consumer<? super RequestContext>> onExitCallbacks;
 
     /**
      * Creates a new instance.
@@ -246,43 +237,5 @@ public abstract class NonWrappingRequestContext implements RequestContext {
      */
     public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         return attrs.ownAttrs();
-    }
-
-    @Override
-    public final void onEnter(Consumer<? super RequestContext> callback) {
-        requireNonNull(callback, "callback");
-        if (onEnterCallbacks == null) {
-            onEnterCallbacks = new ArrayList<>(4);
-        }
-        onEnterCallbacks.add(callback);
-    }
-
-    @Override
-    public final void onExit(Consumer<? super RequestContext> callback) {
-        requireNonNull(callback, "callback");
-        if (onExitCallbacks == null) {
-            onExitCallbacks = new ArrayList<>(4);
-        }
-        onExitCallbacks.add(callback);
-    }
-
-    @Override
-    public void invokeOnEnterCallbacks() {
-        invokeCallbacks(onEnterCallbacks);
-    }
-
-    @Override
-    public void invokeOnExitCallbacks() {
-        invokeCallbacks(onExitCallbacks);
-    }
-
-    private void invokeCallbacks(@Nullable List<Consumer<? super RequestContext>> callbacks) {
-        if (callbacks == null) {
-            return;
-        }
-
-        for (Consumer<? super RequestContext> callback : callbacks) {
-            callback.accept(this);
-        }
     }
 }

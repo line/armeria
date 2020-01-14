@@ -281,7 +281,7 @@ public class AnnotatedService implements HttpService {
      */
     private Object invoke(ServiceRequestContext ctx, HttpRequest req,
                           @Nullable AggregatedHttpRequest aggregatedRequest) {
-        try (SafeCloseable ignored = ctx.push(false)) {
+        try (SafeCloseable ignored = ctx.push()) {
             final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedRequest);
             final Object[] arguments = toArguments(resolvers, resolverContext);
             return method.invoke(object, arguments);
@@ -459,7 +459,7 @@ public class AnnotatedService implements HttpService {
                                             ResponseHeaders headers,
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
-            try (SafeCloseable ignored = ctx.push(false)) {
+            try (SafeCloseable ignored = ctx.push()) {
                 for (final ResponseConverterFunction func : functions) {
                     try {
                         return func.convertResponse(ctx, headers, result, trailers);

@@ -17,7 +17,6 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
-import static com.linecorp.armeria.internal.RequestContextUtil.pushWithoutRootCtx;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -27,8 +26,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -195,7 +192,7 @@ public interface ServiceRequestContext extends RequestContext {
      * Pushes this context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
-     * try (SafeCloseable ignored = ctx.push(true)) {
+     * try (SafeCloseable ignored = ctx.push()) {
      *     ...
      * }
      * }</pre>
@@ -209,14 +206,9 @@ public interface ServiceRequestContext extends RequestContext {
      *       is the same {@link ServiceRequestContext} as this</li>
      * </ul>
      * Otherwise, this method will throw an {@link IllegalStateException}.
-     *
-     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
-     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
-     *                     removed from the thread-local stack respectively. The callbacks are executed only
-     *                     when the thread-local does not have any {@link RequestContext} in it.
      */
     @Override
-    default SafeCloseable push(boolean runCallbacks) {
+    default SafeCloseable push() {
         final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance
@@ -228,36 +220,13 @@ public interface ServiceRequestContext extends RequestContext {
         }
 
         if (oldCtx == null) {
-            return pushWithoutRootCtx(this, runCallbacks);
+            return RequestContextThreadLocal::remove;
         }
 
         // Put the oldCtx back before throwing an exception.
         RequestContextThreadLocal.set(oldCtx);
         throw newIllegalContextPushingException(this, oldCtx);
     }
-
-    /**
-     * Registers {@code callback} to be run when this context is replaced by a child context.
-     * You could use this method to the child contexts that may be created later:
-     * <pre>{@code
-     * ctx.onChild((curCtx, newCtx) -> {
-     *     assert ctx == curCtx && curCtx != newCtx;
-     *     // Add a callback to the child context.
-     *     newCtx.onExit(() -> { ... });
-     * });
-     * }</pre>
-     *
-     * @param callback a {@link BiConsumer} whose first argument is this context and
-     *                 whose second argument is the new context that replaces this context
-     */
-    void onChild(BiConsumer<? super ServiceRequestContext, ? super ClientRequestContext> callback);
-
-    /**
-     * Invokes all {@link #onChild(BiConsumer)} callbacks. It is discouraged to use this method directly.
-     * Use {@link #makeContextAware(Runnable)} or {@link #push(boolean)} instead so that the callbacks are
-     * invoked automatically.
-     */
-    void invokeOnChildCallbacks(ClientRequestContext newCtx);
 
     @Override
     ServiceRequestContext newDerivedContext(RequestId id,
