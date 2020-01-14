@@ -13,22 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.retrofit2.metric;
+package com.linecorp.armeria.client.retrofit2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
-import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit;
-import com.linecorp.armeria.client.retrofit2.RetrofitMeterIdPrefixFunction;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -36,9 +38,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -64,66 +64,60 @@ class RetrofitMeterIdPrefixFunctionTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/foo", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-
-                @Override
-                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-            });
+        protected void configure(ServerBuilder sb) {
+            sb.service("/foo", ((ctx, req) -> HttpResponse.of(HttpStatus.OK)));
         }
     };
 
-    @Test
-    void metrics() {
+    @ParameterizedTest
+    @MethodSource
+    void metrics(RetrofitMeterIdPrefixFunction meterIdPrefixFunction, String serviceTag) {
         final Example example = ArmeriaRetrofit
                 .of(WebClient.builder(server.httpUri("/"))
                              .factory(clientFactory)
-                             .decorator(MetricCollectingClient.newDecorator(
-                                     RetrofitMeterIdPrefixFunction.of("foo")))
+                             .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
                              .build())
                 .create(Example.class);
 
         example.getFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
                 .containsKeys("foo.active.requests#value{method=getFoo}",
-                              "foo.request.duration#count{http.status=200,method=getFoo}"));
+                              "foo.request.duration#count{http.status=200,method=getFoo" + serviceTag + '}'));
 
         example.postFoo().join();
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
                 .containsKeys("foo.active.requests#value{method=postFoo}",
-                              "foo.request.duration#count{http.status=200,method=postFoo}"));
+                              "foo.request.duration#count{http.status=200,method=postFoo" + serviceTag + '}'));
     }
 
-    @Test
-    void metrics_withServiceTag() {
-        final RetrofitMeterIdPrefixFunction meterIdPrefixFunction =
-                RetrofitMeterIdPrefixFunction.builder("foo")
-                                             .withServiceTag("service", "fallbackService")
-                                             .build();
-
-        final Example example = ArmeriaRetrofit
-                .of(WebClient.builder(server.httpUri("/"))
-                             .factory(clientFactory)
-                             .decorator(MetricCollectingClient.newDecorator(
-                                     meterIdPrefixFunction))
-                             .build())
-                .create(Example.class);
-
-        example.getFoo().join();
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
-                .containsKeys("foo.active.requests#value{method=getFoo,service=Example}",
-                              "foo.request.duration#count{http.status=200,method=getFoo,service=Example}"));
-
-        example.postFoo().join();
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
-                .containsKeys("foo.active.requests#value{method=postFoo,service=Example}",
-                              "foo.request.duration#count{http.status=200,method=postFoo,service=Example}"));
+    private static Stream<Arguments> metrics() {
+        return Stream.of(
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .of("foo"),
+                             ""),
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .builder("foo")
+                                     .withServiceTag("tservice", "fallbackService")
+                                     .build(),
+                             ",tservice=Example"),
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .builder("foo")
+                                     .serviceTag("tservice")
+                                     .build(),
+                             ",tservice=Example"),
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .builder("foo")
+                                     .serviceTag("tservice")
+                                     .serviceName("serviceName")
+                                     .build(),
+                             ",tservice=serviceName"),
+                Arguments.of(RetrofitMeterIdPrefixFunction
+                                     .builder("foo")
+                                     .withServiceTag("serviceTagName", "defaultServiceName")
+                                     .serviceName("serviceName")
+                                     .build(),
+                             ",serviceTagName=serviceName")
+        );
     }
 
     @Test

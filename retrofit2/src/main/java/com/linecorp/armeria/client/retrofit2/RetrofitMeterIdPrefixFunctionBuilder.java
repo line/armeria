@@ -33,6 +33,10 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
     private String serviceTagName;
     @Nullable
     private String defaultServiceName;
+    @Nullable
+    private String serviceName;
+    @Nullable
+    private Class<?> serviceClass;
 
     RetrofitMeterIdPrefixFunctionBuilder(String name) {
         this.name = name;
@@ -43,7 +47,9 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
      *
      * @param serviceTagName the name of the tag to be added, e.g. {@code "service.name"}
      * @param defaultServiceName the default value of the tag, e.g. {@code "myService"}
+     * @deprecated Please use {@link #serviceTag(String)} and {@link #serviceName(String)} instead.
      */
+    @Deprecated
     public RetrofitMeterIdPrefixFunctionBuilder withServiceTag(String serviceTagName,
                                                                String defaultServiceName) {
         this.serviceTagName = requireNonNull(serviceTagName, "serviceTagName");
@@ -52,9 +58,47 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
     }
 
     /**
+     * Renames a tag in generated metrics that indicate service name. Default name for the tag {@code service}.
+     * Unless service name set with {@link #serviceName} in place of service name
+     * would be used name of the retrofit client service class. In case retrofit client service class
+     * cannot be defined {@code UNKNOWN} would be used.
+     *
+     * @param serviceTagName the name of the tag to be added, e.g.: {@code "serviceName"}
+     */
+    public RetrofitMeterIdPrefixFunctionBuilder serviceTag(String serviceTagName) {
+        this.serviceTagName = requireNonNull(serviceTagName, "serviceTagName");
+        return this;
+    }
+
+    /**
+     * Define service name that should be used for metric with tag defined in {@link #serviceTag(String)}
+     * instead of retrofit client service class.
+     *
+     * @param serviceName service name to be reported in metrics
+     */
+    public RetrofitMeterIdPrefixFunctionBuilder serviceName(String serviceName) {
+        this.serviceName = requireNonNull(serviceName, "serviceName");
+        return this;
+    }
+
+    /**
+     * Adds retrofit client service class that would be used to provide additional tags for metrics
+     * based on retrofit annotations. See {@link RetrofitClassAwareMeterIdPrefixFunction}.
+     *
+     * @param serviceClass class that defines retrofit client service.
+     */
+    public RetrofitMeterIdPrefixFunctionBuilder serviceClass(Class<?> serviceClass) {
+        this.serviceClass = requireNonNull(serviceClass, "serviceClass");
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the properties specified so far.
      */
     public RetrofitMeterIdPrefixFunction build() {
-        return new RetrofitMeterIdPrefixFunction(name, serviceTagName, defaultServiceName);
+        if (serviceClass == null) {
+            return new RetrofitMeterIdPrefixFunction(name, serviceTagName, serviceName, defaultServiceName);
+        }
+        return new RetrofitClassAwareMeterIdPrefixFunction(name, serviceTagName, serviceName, serviceClass);
     }
 }

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
@@ -36,20 +37,28 @@ import retrofit2.Invocation;
  * Returns the default function for retrofit that creates a {@link MeterIdPrefix} with the specified name and
  * the {@link Tag}s derived from the {@link RequestLog} properties and {@link Invocation}.
  * <ul>
- *     <li>{@code service} - Retrofit service interface name or defaultServiceName if Retrofit service interface
- *                           name is not available</li>　
+ *     <li>{@code serviceTagName} - Retrofit service interface name or defaultServiceName
+ *                                  if Retrofit service interface name is not available</li>　
  *     <li>{@code method} - Retrofit service interface method name or {@link HttpMethod#name()} if Retrofit
  *                          service interface name is not available</li>
- *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
+ *     <li>{@code http.status} - {@link HttpStatus#code()}</li>
  * </ul>
  */
-public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
+public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
     /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the specified {@code name}.
      */
     public static RetrofitMeterIdPrefixFunction of(String name) {
         return builder(name).build();
+    }
+
+    /**
+     * Returns a newly created {@link RetrofitClassAwareMeterIdPrefixFunction} with the specified {@code name}
+     * and {@code serviceClass}.
+     */
+    public static RetrofitMeterIdPrefixFunction of(String name, Class<?> serviceClass) {
+        return builder(name).serviceClass(serviceClass).build();
     }
 
     /**
@@ -61,25 +70,32 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
 
     private final String name;
     @Nullable
+    private final String serviceName;
+    @Nullable
     private final String serviceTagName;
     @Nullable
     private final String defaultServiceName;
 
-    RetrofitMeterIdPrefixFunction(String name, @Nullable String serviceTagName,
+    RetrofitMeterIdPrefixFunction(String name,
+                                  @Nullable String serviceTagName,
+                                  @Nullable String serviceName,
                                   @Nullable String defaultServiceName) {
         this.name = name;
-        if (serviceTagName != null && defaultServiceName != null) {
+        if (defaultServiceName != null || serviceName != null) {
+            this.serviceTagName = firstNonNull(serviceTagName, "service");
+        } else if (serviceTagName != null) {
+            defaultServiceName = "UNKNOWN";
             this.serviceTagName = serviceTagName;
-            this.defaultServiceName = defaultServiceName;
         } else {
             this.serviceTagName = null;
-            this.defaultServiceName = null;
         }
+        this.serviceName = serviceName;
+        this.defaultServiceName = defaultServiceName;
     }
 
     @Override
     public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
-        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
+        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(2);
         buildTags(tagListBuilder, log);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
@@ -96,14 +112,14 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
         final Invocation invocation = InvocationUtil.getInvocation(log);
         if (invocation != null) {
             if (serviceTagName != null) {
-                tagListBuilder.add(Tag.of(serviceTagName,
-                                          invocation.method().getDeclaringClass().getSimpleName()));
+                final String service = firstNonNull(serviceName,
+                                                    invocation.method().getDeclaringClass().getSimpleName());
+                tagListBuilder.add(Tag.of(serviceTagName, service));
             }
             tagListBuilder.add(Tag.of("method", invocation.method().getName()));
         } else {
             if (serviceTagName != null) {
-                assert defaultServiceName != null;
-                tagListBuilder.add(Tag.of(serviceTagName, defaultServiceName));
+                tagListBuilder.add(Tag.of(serviceTagName, firstNonNull(serviceName, defaultServiceName)));
             }
             tagListBuilder.add(Tag.of("method", log.method().name()));
         }
