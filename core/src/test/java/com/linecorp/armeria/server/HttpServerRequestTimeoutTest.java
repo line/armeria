@@ -138,7 +138,8 @@ class HttpServerRequestTimeoutTest {
 
     @Test
     void requestTimeout_503() {
-        final AggregatedHttpResponse response = clientWithoutTimeout.get("/timeout-before-writing").aggregate().join();
+        final AggregatedHttpResponse response =
+                clientWithoutTimeout.get("/timeout-before-writing").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -164,7 +165,8 @@ class HttpServerRequestTimeoutTest {
             "/timeout-by-decorator/after",
     })
     void extendRequestTimeoutByDecorator(String path) {
-        final AggregatedHttpResponse response = clientWithoutTimeout.get(server.uri("/") + path).aggregate().join();
+        final AggregatedHttpResponse response =
+                clientWithoutTimeout.get(server.uri("/") + path).aggregate().join();
         assertThat(response.status().code()).isEqualTo(200);
     }
 
@@ -174,7 +176,8 @@ class HttpServerRequestTimeoutTest {
             "/timeout-by-decorator/after",
     })
     void limitRequestTimeoutByDecorator(String path) {
-        final AggregatedHttpResponse response = clientWithoutTimeout.get(serverWithoutTimeout.uri("/") + path).aggregate().join();
+        final AggregatedHttpResponse response =
+                clientWithoutTimeout.get(serverWithoutTimeout.uri("/") + path).aggregate().join();
         assertThat(response.status().code()).isEqualTo(503);
     }
 }
