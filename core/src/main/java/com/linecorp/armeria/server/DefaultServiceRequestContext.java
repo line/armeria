@@ -30,6 +30,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nonnull;
@@ -103,6 +104,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Nullable
     private volatile TimeoutController requestTimeoutController;
+    @Nullable
+    private Consumer<TimeoutController> pendingTimeoutTask;
 
     @Nullable
     private String strVal;
@@ -353,6 +356,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             } else {
                 eventLoop().execute(requestTimeoutController::cancelTimeout);
             }
+        } else {
+            pendingTimeoutTask = TimeoutController::cancelTimeout;
         }
     }
 
@@ -389,6 +394,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             } else {
                 eventLoop().execute(() -> requestTimeoutController.extendTimeout(adjustmentMillis));
             }
+        } else {
+            pendingTimeoutTask = timeoutController -> timeoutController.extendTimeout(adjustmentMillis);
         }
     }
 
@@ -413,6 +420,14 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                 eventLoop().execute(() -> requestTimeoutController
                         .resetTimeout(requestTimeoutMillis));
             }
+        } else {
+            final long startTimeNanos = System.nanoTime();
+            pendingTimeoutTask = timeoutController -> {
+                final long passedTimeMillis0 =
+                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+                final long timeoutMillis = Math.max(1, requestTimeoutMillis - passedTimeMillis0);
+                timeoutController.resetTimeout(timeoutMillis);
+            };
         }
 
         this.requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, requestTimeoutMillis);
@@ -437,6 +452,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                 } else {
                     eventLoop().execute(requestTimeoutController::timeoutNow);
                 }
+            } else {
+                pendingTimeoutTask = TimeoutController::timeoutNow;
             }
         } else {
             setRequestTimeoutAfterMillis(requestTimeoutAfter);
@@ -637,6 +654,15 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             throw new IllegalStateException("requestTimeoutController is set already.");
         }
         this.requestTimeoutController = requestTimeoutController;
+
+        final Consumer<TimeoutController> pendingTimeoutTask = this.pendingTimeoutTask;
+        if (pendingTimeoutTask != null) {
+            if (eventLoop().inEventLoop()) {
+                pendingTimeoutTask.accept(requestTimeoutController);
+            } else {
+                eventLoop().execute(() -> pendingTimeoutTask.accept(requestTimeoutController));
+            }
+        }
     }
 
     @Override
