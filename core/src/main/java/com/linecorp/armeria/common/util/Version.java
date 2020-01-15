@@ -95,7 +95,7 @@ public final class Version {
      * with arbitrary {@code unknown} values.
      */
     public static Version get(String artifactId, ClassLoader classLoader) {
-        final Version version = identify(classLoader).get(artifactId);
+        final Version version = getAll(classLoader).get(artifactId);
         if (version != null) {
             return version;
         }
@@ -114,8 +114,8 @@ public final class Version {
      *
      * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
      */
-    public static Map<String, Version> identify() {
-        return identify(Version.class.getClassLoader());
+    public static Map<String, Version> getAll() {
+        return getAll(Version.class.getClassLoader());
     }
 
     /**
@@ -123,7 +123,7 @@ public final class Version {
      *
      * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
      */
-    public static Map<String, Version> identify(ClassLoader classLoader) {
+    public static Map<String, Version> getAll(ClassLoader classLoader) {
         requireNonNull(classLoader, "classLoader");
 
         return VERSIONS.computeIfAbsent(classLoader, cl -> {
@@ -196,6 +196,31 @@ public final class Version {
 
             return versions.build();
         });
+    }
+
+    /**
+     * Retrieves the version information of Armeria artifacts.
+     * This method is a shortcut for {@code identify(Version.class.getClassLoader())}.
+     *
+     * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
+     *
+     * @deprecated Use {@link #getAll()}.
+     */
+    @Deprecated
+    public static Map<String, Version> identify() {
+        return getAll(Version.class.getClassLoader());
+    }
+
+    /**
+     * Retrieves the version information of Armeria artifacts using the specified {@link ClassLoader}.
+     *
+     * @return A {@link Map} whose keys are Maven artifact IDs and whose values are {@link Version}s
+     *
+     * @deprecated Use {@link #getAll(ClassLoader)}.
+     */
+    @Deprecated
+    public static Map<String, Version> identify(ClassLoader classLoader) {
+        return getAll(classLoader);
     }
 
     private static long parseIso8601(String value) {

@@ -45,7 +45,7 @@ public class HBaseClientCompatibilityTest {
     @Test(expected = NotAllMetaRegionsOnlineException.class)
     public void testGuavaConflict() throws Exception {
         // Make sure Armeria is available in the class path.
-        assertThat(Version.identify(Server.class.getClassLoader())).isNotNull();
+        assertThat(Version.getAll(Server.class.getClassLoader())).isNotNull();
         // Make sure newer Guava is available in the class path.
         assertThat(Stopwatch.class.getDeclaredConstructor().getModifiers()).is(new Condition<>(
                 value -> !Modifier.isPublic(value),
