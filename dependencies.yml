@@ -417,7 +417,6 @@ org.jctools:
 
 org.jetbrains.kotlin:
   kotlin-allopen: { version: &KOTLIN_VERSION '1.3.61' }
-  kotlin-gradle-plugin: { version: *KOTLIN_VERSION }
 
 org.jlleitschuh.gradle:
   ktlint-gradle: { version: '9.1.1' }

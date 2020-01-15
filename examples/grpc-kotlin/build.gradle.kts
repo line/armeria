@@ -13,9 +13,9 @@ buildscript {
 
 plugins {
     application
+    id("org.jetbrains.kotlin.jvm")
 }
 
-apply(plugin = "org.jetbrains.kotlin.jvm")
 apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
 application {
