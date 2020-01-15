@@ -20,16 +20,11 @@ import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.Server
-import com.linecorp.armeria.server.ServiceRequestContext
 
 fun main(args: Array<String>) {
     val backend = Server.builder()
-        .service("/square/{num}") { ctx: ServiceRequestContext, _ ->
-            val num = try {
-                ctx.pathParam("num")?.toLong()
-            } catch (e: NumberFormatException) {
-                return@service HttpResponse.of(HttpStatus.BAD_REQUEST)
-            }
+        .service("/square/{num}") { ctx, _ ->
+            val num = ctx.pathParam("num")?.toLong()
             if (num != null) {
                 HttpResponse.of((num * num).toString())
             } else {
@@ -43,10 +38,10 @@ fun main(args: Array<String>) {
         .http(8080)
         .serviceUnder("/", MainService(backendClient))
         .build()
-    Runtime.getRuntime().addShutdownHook(Thread(Runnable {
+    Runtime.getRuntime().addShutdownHook(Thread {
         backend.stop().join()
         frontend.stop().join()
-    }))
+    })
     backend.start().join()
     frontend.start().join()
 }

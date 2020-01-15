@@ -16,16 +16,18 @@
 
 package example.armeria.contextpropagation.manual
 
-import com.google.common.base.Splitter
-import com.google.common.collect.ImmutableList
-import com.google.common.collect.Iterables
-import com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.AggregatedHttpResponse
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.server.HttpService
 import com.linecorp.armeria.server.ServiceRequestContext
+import com.google.common.base.Splitter
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.Iterables
+import com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly
+import java.time.Duration
+import java.util.stream.Collectors
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
@@ -34,16 +36,12 @@ import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.future.future
 import kotlinx.coroutines.withContext
-import java.time.Duration
-import java.util.function.Function
-import java.util.stream.Collectors
 
 class MainService(private val backendClient: WebClient) : HttpService {
     override fun serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse {
         val ctxExecutor = ctx.contextAwareExecutor()
         val response = GlobalScope.future(ctxExecutor.asCoroutineDispatcher()) {
-
-            val numsFromRequest = async { fetchFromRequest(req) }
+            val numsFromRequest = async { fetchFromRequest(ctx, req) }
             val numsFromDb = async { fetchFromFakeDb(ctx) }
             val nums = awaitAll(numsFromRequest, numsFromDb).flatten()
 
@@ -62,14 +60,17 @@ class MainService(private val backendClient: WebClient) : HttpService {
             require(ctx.eventLoop().inEventLoop())
             HttpResponse.of(
                 backendResponses.stream()
-                    .map(Function { obj: AggregatedHttpResponse -> obj.contentUtf8() })
+                    .map(AggregatedHttpResponse::contentUtf8)
                     .collect(Collectors.joining("\n"))
             )
         }
         return HttpResponse.from(response)
     }
 
-    private suspend fun fetchFromRequest(req: HttpRequest): List<Long> {
+    private suspend fun fetchFromRequest(ctx: ServiceRequestContext, req: HttpRequest): List<Long> {
+        // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
+        require(ServiceRequestContext.current() === ctx)
+        require(ctx.eventLoop().inEventLoop())
         val aggregatedHttpRequest = req.aggregate().await()
         val nums = mutableListOf<Long>()
         for (token in Iterables.concat(

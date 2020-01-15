@@ -6,11 +6,9 @@ plugins {
 dependencies {
     implementation project(':core')
 
-    implementation 'io.reactivex.rxjava2:rxjava'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-rx2'
 }
 
 application {
