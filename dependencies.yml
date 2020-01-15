@@ -419,6 +419,11 @@ org.jetbrains.kotlin:
   kotlin-allopen: { version: &KOTLIN_VERSION '1.3.61' }
   kotlin-gradle-plugin: { version: *KOTLIN_VERSION }
 
+org.jetbrains.kotlinx:
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.3' }
+  kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
+  kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
+
 org.jlleitschuh.gradle:
   ktlint-gradle: { version: '9.1.1' }
 
