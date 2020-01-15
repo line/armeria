@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package example.armeria.contextpropagation.manual
+package example.armeria.contextpropagation.kotlin
 
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.AggregatedHttpResponse
@@ -41,6 +41,7 @@ class MainService(private val backendClient: WebClient) : HttpService {
     override fun serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse {
         val ctxExecutor = ctx.contextAwareExecutor()
         val response = GlobalScope.future(ctxExecutor.asCoroutineDispatcher()) {
+
             val numsFromRequest = async { fetchFromRequest(ctx, req) }
             val numsFromDb = async { fetchFromFakeDb(ctx) }
             val nums = awaitAll(numsFromRequest, numsFromDb).flatten()
@@ -52,12 +53,15 @@ class MainService(private val backendClient: WebClient) : HttpService {
                         // as tracing.
                         require(ServiceRequestContext.current() === ctx)
                         require(ctx.eventLoop().inEventLoop())
+
                         backendClient.get("/square/$num").aggregate().asDeferred()
                     }.toTypedArray()
                 ).toList()
+
             // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
             require(ServiceRequestContext.current() === ctx)
             require(ctx.eventLoop().inEventLoop())
+
             HttpResponse.of(
                 backendResponses.stream()
                     .map(AggregatedHttpResponse::contentUtf8)
@@ -71,7 +75,13 @@ class MainService(private val backendClient: WebClient) : HttpService {
         // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
         require(ServiceRequestContext.current() === ctx)
         require(ctx.eventLoop().inEventLoop())
+
         val aggregatedHttpRequest = req.aggregate().await()
+
+        // The context is kept after resume.
+        require(ServiceRequestContext.current() === ctx)
+        require(ctx.eventLoop().inEventLoop())
+
         val nums = mutableListOf<Long>()
         for (token in Iterables.concat(
             NUM_SPLITTER.split(aggregatedHttpRequest.path().substring(1)),
@@ -86,6 +96,7 @@ class MainService(private val backendClient: WebClient) : HttpService {
         // The context is mounted in a thread-local, meaning it is available to all logic such as tracing.
         require(ServiceRequestContext.current() === ctx)
         require(ctx.eventLoop().inEventLoop())
+
         // This logic mimics using a blocking method, which would usually be something like a MySQL
         // database query using JDBC.
         return withContext(ctx.blockingTaskExecutor().asCoroutineDispatcher()) {
@@ -93,6 +104,7 @@ class MainService(private val backendClient: WebClient) : HttpService {
             // as tracing.
             require(ServiceRequestContext.current() === ctx)
             require(!ctx.eventLoop().inEventLoop())
+
             sleepUninterruptibly(Duration.ofMillis(50))
             ImmutableList.of(23L, -23L)
         }

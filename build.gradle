@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 buildscript {
     repositories {
         mavenCentral()
@@ -138,6 +140,12 @@ configure(projectsWithFlags('java')) {
         options.compilerArgs += ['--release', '8']
 
         dependsOn checkJavaVersion
+    }
+
+    tasks.withType(KotlinCompile) {
+        kotlinOptions {
+            jvmTarget = "1.8"
+        }
     }
 }
 
