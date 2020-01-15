@@ -342,6 +342,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         return requestTimeoutMillis;
     }
 
+    // TODO(ikhoon): Deduplicate timeout logics and detach pending timeout controls from
+    //               DefaultServiceRequestContext and DefalutClientRequestContext
     @Override
     public void clearRequestTimeout() {
         if (requestTimeoutMillis == 0) {
