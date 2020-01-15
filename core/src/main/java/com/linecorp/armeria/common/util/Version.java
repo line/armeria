@@ -45,10 +45,15 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.TreeMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.MapMaker;
 import com.google.common.io.Closeables;
 
 /**
@@ -63,6 +68,8 @@ public final class Version {
 
     // Forked from Netty 4.1.34 at d0912f27091e4548466df81f545c017a25c9d256
 
+    private static final Logger logger = LoggerFactory.getLogger(Version.class);
+
     private static final String PROP_RESOURCE_PATH = "META-INF/com.linecorp.armeria.versions.properties";
 
     private static final String PROP_VERSION = ".version";
@@ -70,6 +77,9 @@ public final class Version {
     private static final String PROP_SHORT_COMMIT_HASH = ".shortCommitHash";
     private static final String PROP_LONG_COMMIT_HASH = ".longCommitHash";
     private static final String PROP_REPO_STATUS = ".repoStatus";
+
+    private static final Map<ClassLoader, Map<String, Version>> VERSIONS =
+            new MapMaker().weakKeys().makeMap();
 
     /**
      * Retrieves the version information of Armeria artifacts.
@@ -89,61 +99,76 @@ public final class Version {
     public static Map<String, Version> identify(ClassLoader classLoader) {
         requireNonNull(classLoader, "classLoader");
 
-        // Collect all properties.
-        final Properties props = new Properties();
-        try {
-            final Enumeration<URL> resources = classLoader.getResources(PROP_RESOURCE_PATH);
-            while (resources.hasMoreElements()) {
-                final URL url = resources.nextElement();
-                final InputStream in = url.openStream();
-                try {
-                    props.load(in);
-                } finally {
-                    Closeables.closeQuietly(in);
+        return VERSIONS.computeIfAbsent(classLoader, cl -> {
+            boolean foundProperties = false;
+
+            // Collect all properties.
+            final Properties props = new Properties();
+            try {
+                final Enumeration<URL> resources = cl.getResources(PROP_RESOURCE_PATH);
+                while (resources.hasMoreElements()) {
+                    foundProperties = true;
+                    final URL url = resources.nextElement();
+                    final InputStream in = url.openStream();
+                    try {
+                        props.load(in);
+                    } finally {
+                        Closeables.closeQuietly(in);
+                    }
                 }
-            }
-        } catch (Exception ignore) {
-            // Not critical. Just ignore.
-        }
-
-        // Collect all artifactIds.
-        final Set<String> artifactIds = new HashSet<>();
-        for (Object o: props.keySet()) {
-            final String k = (String) o;
-
-            final int dotIndex = k.indexOf('.');
-            if (dotIndex <= 0) {
-                continue;
+            } catch (Exception ignore) {
+                // Not critical. Just ignore.
             }
 
-            final String artifactId = k.substring(0, dotIndex);
-
-            // Skip the entries without required information.
-            if (!props.containsKey(artifactId + PROP_VERSION) ||
-                !props.containsKey(artifactId + PROP_COMMIT_DATE) ||
-                !props.containsKey(artifactId + PROP_SHORT_COMMIT_HASH) ||
-                !props.containsKey(artifactId + PROP_LONG_COMMIT_HASH) ||
-                !props.containsKey(artifactId + PROP_REPO_STATUS)) {
-                continue;
+            if (!foundProperties) {
+                logger.info(
+                        "Could not find any property files at " +
+                        "META-INF/com.linecorp.armeria.versions.properties. " +
+                        "This usually indicates an issue with your application packaging, for example using " +
+                        "a fat-jar method that only keeps one copy of any file. For maximum functionality, " +
+                        "it is recommended to fix your packaging to include these files.");
+                return ImmutableMap.of();
             }
 
-            artifactIds.add(artifactId);
-        }
+            // Collect all artifactIds.
+            final Set<String> artifactIds = new HashSet<>();
+            for (Object o: props.keySet()) {
+                final String k = (String) o;
 
-        final Map<String, Version> versions = new TreeMap<>();
-        for (String artifactId: artifactIds) {
-            versions.put(
-                    artifactId,
-                    new Version(
-                            artifactId,
-                            props.getProperty(artifactId + PROP_VERSION),
-                            parseIso8601(props.getProperty(artifactId + PROP_COMMIT_DATE)),
-                            props.getProperty(artifactId + PROP_SHORT_COMMIT_HASH),
-                            props.getProperty(artifactId + PROP_LONG_COMMIT_HASH),
-                            props.getProperty(artifactId + PROP_REPO_STATUS)));
-        }
+                final int dotIndex = k.indexOf('.');
+                if (dotIndex <= 0) {
+                    continue;
+                }
 
-        return versions;
+                final String artifactId = k.substring(0, dotIndex);
+
+                // Skip the entries without required information.
+                if (!props.containsKey(artifactId + PROP_VERSION) ||
+                    !props.containsKey(artifactId + PROP_COMMIT_DATE) ||
+                    !props.containsKey(artifactId + PROP_SHORT_COMMIT_HASH) ||
+                    !props.containsKey(artifactId + PROP_LONG_COMMIT_HASH) ||
+                    !props.containsKey(artifactId + PROP_REPO_STATUS)) {
+                    continue;
+                }
+
+                artifactIds.add(artifactId);
+            }
+
+            final ImmutableSortedMap.Builder<String, Version> versions = ImmutableSortedMap.naturalOrder();
+            for (String artifactId : artifactIds) {
+                versions.put(
+                        artifactId,
+                        new Version(
+                                artifactId,
+                                props.getProperty(artifactId + PROP_VERSION),
+                                parseIso8601(props.getProperty(artifactId + PROP_COMMIT_DATE)),
+                                props.getProperty(artifactId + PROP_SHORT_COMMIT_HASH),
+                                props.getProperty(artifactId + PROP_LONG_COMMIT_HASH),
+                                props.getProperty(artifactId + PROP_REPO_STATUS)));
+            }
+
+            return versions.build();
+        });
     }
 
     private static long parseIso8601(String value) {
