@@ -6,7 +6,6 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${managedVersions["org.jetbrains.kotlin:kotlin-gradle-plugin"]}")
         classpath("org.jlleitschuh.gradle:ktlint-gradle:${managedVersions["org.jlleitschuh.gradle:ktlint-gradle"]}")
     }
 }
