@@ -152,14 +152,14 @@ public final class Version {
                         "Could not find any property files at " +
                         "META-INF/com.linecorp.armeria.versions.properties. " +
                         "This usually indicates an issue with your application packaging, for example using " +
-                        "a fat-jar method that only keeps one copy of any file. For maximum functionality, " +
+                        "a fat JAR method that only keeps one copy of any file. For maximum functionality, " +
                         "it is recommended to fix your packaging to include these files.");
                 return ImmutableMap.of();
             }
 
             // Collect all artifactIds.
             final Set<String> artifactIds = new HashSet<>();
-            for (Object o: props.keySet()) {
+            for (Object o : props.keySet()) {
                 final String k = (String) o;
 
                 final int dotIndex = k.indexOf('.');
