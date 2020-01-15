@@ -77,6 +77,10 @@ public class DefaultTimeoutController implements TimeoutController {
      *
      * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
      * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     *
+     * @return {@code true} if the timeout is scheduled.
+     *         {@code false} if the timeout could not be scheduled because the timeout is currently being
+     *         scheduled or the {@link TimeoutTask} could not be scheduled now.
      */
     @Override
     public boolean scheduleTimeout(long timeoutMillis) {
@@ -107,6 +111,10 @@ public class DefaultTimeoutController implements TimeoutController {
      *
      * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
      * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     *
+     * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
+     *         {@code false} if the current timeout could not be extended because
+     *         the {@link TimeoutTask} could not be scheduled now.
      */
     @Override
     public boolean extendTimeout(long adjustmentMillis) {
@@ -144,6 +152,9 @@ public class DefaultTimeoutController implements TimeoutController {
      *
      * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
      * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
+     *         {@code false} if tne current timeout could not be reset because
+     *         the {@link TimeoutTask} could not be scheduled now.
      */
     @Override
     public boolean resetTimeout(long newTimeoutMillis) {
@@ -166,12 +177,15 @@ public class DefaultTimeoutController implements TimeoutController {
     }
 
     @Override
-    public void timeoutNow() {
+    public boolean timeoutNow() {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
         if (cancelTimeout()) {
             timeoutTask.run();
+            return true;
         }
+
+        return false;
     }
 
     @Override
