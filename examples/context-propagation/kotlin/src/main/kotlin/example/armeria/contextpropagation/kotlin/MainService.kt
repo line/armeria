@@ -23,10 +23,11 @@ import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.server.HttpService
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.google.common.base.Splitter
-import com.google.common.collect.ImmutableList
 import com.google.common.collect.Iterables
-import com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly
+import com.google.common.util.concurrent.Uninterruptibles
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.function.Supplier
 import java.util.stream.Collectors
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -35,7 +36,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.future.future
-import kotlinx.coroutines.withContext
 
 class MainService(private val backendClient: WebClient) : HttpService {
     override fun serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse {
@@ -45,6 +45,10 @@ class MainService(private val backendClient: WebClient) : HttpService {
             val numsFromRequest = async { fetchFromRequest(ctx, req) }
             val numsFromDb = async { fetchFromFakeDb(ctx) }
             val nums = awaitAll(numsFromRequest, numsFromDb).flatten()
+
+            // The context is kept after resume.
+            require(ServiceRequestContext.current() === ctx)
+            require(ctx.eventLoop().inEventLoop())
 
             val backendResponses =
                 awaitAll(
@@ -99,15 +103,21 @@ class MainService(private val backendClient: WebClient) : HttpService {
 
         // This logic mimics using a blocking method, which would usually be something like a MySQL
         // database query using JDBC.
-        return withContext(ctx.blockingTaskExecutor().asCoroutineDispatcher()) {
-            // The context is mounted in a thread-local, meaning it is available to all logic such
-            // as tracing.
-            require(ServiceRequestContext.current() === ctx)
-            require(!ctx.eventLoop().inEventLoop())
+        return CompletableFuture.supplyAsync(
+            Supplier<List<Long>> {
+                // The context is mounted in a thread-local, meaning it is available to all logic such
+                // as tracing.
+                require(ServiceRequestContext.current() === ctx)
+                require(!ctx.eventLoop().inEventLoop())
 
-            sleepUninterruptibly(Duration.ofMillis(50))
-            ImmutableList.of(23L, -23L)
-        }
+                Uninterruptibles.sleepUninterruptibly( Duration.ofMillis( 50 ) )
+                listOf(12L)
+            },
+            // Always run blocking logic on the blocking task executor. By using
+            // ServiceRequestContext.blockingTaskExecutor, you also ensure the context is mounted inside the
+            // logic (e.g., your DB call will be traced!).
+            ctx.blockingTaskExecutor()
+        ).await()
     }
 
     companion object {
