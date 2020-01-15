@@ -31,14 +31,12 @@ final class HttpHeaderUtil {
             return host;
         }
 
-        return new StringBuilder(host.length() + 6).append(host).append(':').append(port).toString();
+        return host + ':' + port;
     }
 
     private static String createUserAgentName() {
-        final Version version = Version.identify(HttpHeaderUtil.class.getClassLoader())
-                                       .get(CLIENT_ARTIFACT_ID);
-
-        return CLIENT_ARTIFACT_ID + '/' + (version != null ? version.artifactVersion() : "unknown");
+        final Version version = Version.get(CLIENT_ARTIFACT_ID, HttpHeaderUtil.class.getClassLoader());
+        return CLIENT_ARTIFACT_ID + '/' + version.artifactVersion();
     }
 
     private HttpHeaderUtil() {}

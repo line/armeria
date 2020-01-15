@@ -82,6 +82,33 @@ public final class Version {
             new MapMaker().weakKeys().makeMap();
 
     /**
+     * Returns the version information for the Armeria artifact named {@code artifactId}. If information for
+     * the artifact can't be found, a default value is returned with arbitrary {@code unknown} values.
+     */
+    public static Version get(String artifactId) {
+        return get(artifactId, Version.class.getClassLoader());
+    }
+
+    /**
+     * Returns the version information for the Armeria artifact named {@code artifactId} using the specified
+     * {@link ClassLoader}. If information for the artifact can't be found, a default value is returned
+     * with arbitrary {@code unknown} values.
+     */
+    public static Version get(String artifactId, ClassLoader classLoader) {
+        final Version version = identify(classLoader).get(artifactId);
+        if (version != null) {
+            return version;
+        }
+        return new Version(
+                artifactId,
+                "unknown",
+                0,
+                "unknown",
+                "unknown",
+                "unknown");
+    }
+
+    /**
      * Retrieves the version information of Armeria artifacts.
      * This method is a shortcut for {@code identify(Version.class.getClassLoader())}.
      *

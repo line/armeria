@@ -317,23 +317,20 @@ public final class Server implements AutoCloseable {
     @VisibleForTesting
     void setupVersionMetrics() {
         final MeterRegistry meterRegistry = config().meterRegistry();
-        final Map<String, Version> map = Version.identify(Server.class.getClassLoader());
-        final Version versionInfo = map.get("armeria");
-        if (versionInfo != null) {
-            final String version = versionInfo.artifactVersion();
-            final String commit = versionInfo.longCommitHash();
-            final String repositoryStatus = versionInfo.repositoryStatus();
-            final List<Tag> tags = ImmutableList.of(Tag.of("version", version),
-                                                    Tag.of("commit", commit),
-                                                    Tag.of(Flags.useLegacyMeterNames() ? "repoStatus"
-                                                                                       : "repo.status",
-                                                           repositoryStatus));
-            Gauge.builder("armeria.build.info", () -> 1)
-                 .tags(tags)
-                 .description("A metric with a constant '1' value labeled by version and commit hash" +
-                              " from which Armeria was built.")
-                 .register(meterRegistry);
-        }
+        final Version versionInfo = Version.get("armeria", Server.class.getClassLoader());
+        final String version = versionInfo.artifactVersion();
+        final String commit = versionInfo.longCommitHash();
+        final String repositoryStatus = versionInfo.repositoryStatus();
+        final List<Tag> tags = ImmutableList.of(Tag.of("version", version),
+                                                Tag.of("commit", commit),
+                                                Tag.of(Flags.useLegacyMeterNames() ? "repoStatus"
+                                                                                   : "repo.status",
+                                                       repositoryStatus));
+        Gauge.builder("armeria.build.info", () -> 1)
+             .tags(tags)
+             .description("A metric with a constant '1' value labeled by version and commit hash" +
+                          " from which Armeria was built.")
+             .register(meterRegistry);
     }
 
     @Override

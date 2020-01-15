@@ -69,7 +69,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
 
     private static final String SERVER_HEADER =
-            "Armeria/" + Version.identify(HttpResponseSubscriber.class.getClassLoader()).get("armeria")
+            "Armeria/" + Version.get("armeria", HttpResponseSubscriber.class.getClassLoader())
                                 .artifactVersion();
 
     enum State {
