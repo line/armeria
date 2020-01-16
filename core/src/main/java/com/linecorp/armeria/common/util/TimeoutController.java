@@ -29,20 +29,18 @@ public interface TimeoutController {
      *
      * @param timeoutMillis a positive time amount value in milliseconds.
      * @return {@code true} if the timeout is scheduled.
-     *         {@code false} if the timeout could not be scheduled because the timeout is currently being
-     *         scheduled.
+     *         {@code false} if the timeout has been scheduled already
+     *         or the timeout has been triggered already.
      */
     boolean scheduleTimeout(long timeoutMillis);
 
     /**
      * Extends the current timeout by the specified {@code adjustmentMillis}.
-     * This method does nothing if no timeout was scheduled previously.
      * Note that a negative {@code adjustmentMillis} reduces the current timeout.
      *
      * @param adjustmentMillis the adjustment of time amount value in milliseconds.
      * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
-     *         {@code false} if the current timeout could not be extended
-     *         because of some constraints in the class that implements this interface.
+     *         {@code false} if no timeout was scheduled previously or the timeout has been triggered already.
      */
     boolean extendTimeout(long adjustmentMillis);
 
@@ -51,24 +49,23 @@ public interface TimeoutController {
      *
      * @param newTimeoutMillis the new timeout value in milliseconds. {@code 0} if disabled.
      * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
-     *         {@code false} if the current timeout could not be reset
-     *         because of some constraints in the class that implements this interface.
+     *         {@code false} if the timeout has been triggered already.
      */
     boolean resetTimeout(long newTimeoutMillis);
 
     /**
      * Trigger the current timeout immediately.
+     *
      * @return {@code true} if the current timeout is triggered successfully.
-     *         {@code false} if the current timeout could not be triggered now because
-     *         the timeout schedule has already completed normally.
+     *         {@code false} if no timeout was scheduled previously or the timeout has been triggered already.
      */
     boolean timeoutNow();
 
     /**
      * Cancels the current timeout scheduled.
-     * @return {@code true} if the current timeout is canceled or no timeout is being scheduled.
-     *         {@code false} if the current timeout could not be cancelled typically because
-     *         the timeout schedule has already completed normally.
+     * You can schedule a new timeout with {@link #scheduleTimeout(long)} if this method returns {@code true}.
+     * @return {@code true} if the current timeout is canceled or no timeout was scheduled previously.
+     *         {@code false} if the timeout has been triggered already.
      */
     boolean cancelTimeout();
 

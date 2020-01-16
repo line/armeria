@@ -19,7 +19,10 @@ package com.linecorp.armeria.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +31,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.internal.DefaultTimeoutController.State;
 import com.linecorp.armeria.internal.DefaultTimeoutController.TimeoutTask;
 
 class DefaultTimeoutControllerTest {
@@ -37,7 +41,7 @@ class DefaultTimeoutControllerTest {
         CommonPools.workerGroup();
     }
 
-    DefaultTimeoutController timeoutController;
+    StatusCheckedTaskTimeoutController timeoutController;
     volatile boolean isTimeout;
 
     @BeforeEach
@@ -54,7 +58,9 @@ class DefaultTimeoutControllerTest {
                 isTimeout = true;
             }
         };
-        timeoutController = new DefaultTimeoutController(timeoutTask, CommonPools.workerGroup().next());
+        timeoutController =
+                new StatusCheckedTaskTimeoutController(
+                        new DefaultTimeoutController(timeoutTask, CommonPools.workerGroup().next()));
     }
 
     @Test
@@ -144,5 +150,146 @@ class DefaultTimeoutControllerTest {
     void ignoreScheduledTimeoutAfterReset() {
         timeoutController.resetTimeout(100);
         assertThat(timeoutController.scheduleTimeout(1)).isFalse();
+    }
+
+    @Test
+    void onInvalidTimeoutTask() {
+        final DefaultTimeoutController timeoutController = new DefaultTimeoutController(
+                new TimeoutTask() {
+
+                    @Override
+                    public boolean canSchedule() {
+                        return false;
+                    }
+
+                    @Override
+                    public void run() { throw new Error("Should not reach here"); }
+                },
+                CommonPools.workerGroup().next());
+
+        assertThat(timeoutController.scheduleTimeout(1000)).isFalse();
+        assertThat(timeoutController.extendTimeout(2000)).isFalse();
+        assertThat(timeoutController.resetTimeout(3000)).isFalse();
+        assertThat(timeoutController.timeoutNow()).isFalse();
+        assertThat(timeoutController.cancelTimeout()).isTrue();
+    }
+
+    private static class StatusCheckedTaskTimeoutController implements TimeoutController {
+
+        private final DefaultTimeoutController delegate;
+
+        StatusCheckedTaskTimeoutController(DefaultTimeoutController delegate) {
+            // Assume the timeout task could be scheduled always
+            assertThat(delegate.timeoutTask().canSchedule()).isTrue();
+            this.delegate = delegate;
+        }
+
+        @Override
+        public boolean scheduleTimeout(long timeoutMillis) {
+            final State prevState = delegate.state();
+            final boolean result = delegate.scheduleTimeout(timeoutMillis);
+            if (result) {
+                // Previous: DISABLED
+                assertThat(prevState).isEqualTo(State.DISABLED);
+                // Transition to: SCHEDULE
+                assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
+            } else {
+                // Previous: !DISABLED
+                assertThat(prevState).isNotEqualTo(State.DISABLED);
+                // Transition to: No changes
+                assertThat(prevState).isEqualTo(delegate.state());
+            }
+            return result;
+        }
+
+        @Override
+        public boolean extendTimeout(long adjustmentMillis) {
+            final State prevState = delegate.state();
+            final boolean result = delegate.extendTimeout(adjustmentMillis);
+            if (result) {
+                // Previous: SCHEDULE
+                assertThat(prevState).isEqualTo(State.SCHEDULED);
+                // Transition to: SCHEDULE
+                assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
+            } else {
+                // Previous: !SCHEDULE
+                assertThat(prevState).isNotEqualTo(State.SCHEDULED);
+                // Transition to: No changes
+                assertThat(delegate.state()).isEqualTo(prevState);
+            }
+            return result;
+        }
+
+        @Override
+        public boolean resetTimeout(long newTimeoutMillis) {
+            final State prevState = delegate.state();
+            final boolean result = delegate.resetTimeout(newTimeoutMillis);
+            if (result) {
+                // Previous: !TIMED_OUT
+                assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
+                // Transition to: SCHEDULE or DISABLED
+                if (newTimeoutMillis > 0) {
+                    assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
+                } else {
+                    assertThat(delegate.state()).isEqualTo(State.DISABLED);
+                }
+            } else {
+                // Previous: TIMED_OUT
+                assertThat(prevState).isEqualTo(State.TIMED_OUT);
+                // Transition to: TIMED_OUT
+                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
+            }
+            return result;
+        }
+
+        @Override
+        public boolean timeoutNow() {
+            final State prevState = delegate.state();
+            final boolean result = delegate.timeoutNow();
+            if (result) {
+                // Previous: !TIMED_OUT
+                assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
+                // Transition to: TIMED_OUT
+                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
+            } else {
+                // Previous: TIMED_OUT
+                assertThat(prevState).isEqualTo(State.TIMED_OUT);
+                // Transition to: TIMED_OUT
+                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
+            }
+            return result;
+        }
+
+        @Override
+        public boolean cancelTimeout() {
+            final State prevState = delegate.state();
+            final boolean canceled = delegate.cancelTimeout();
+            if (canceled) {
+                // Previous: !TIMED_OUT
+                assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
+                // Transition to: DISABLED
+                assertThat(delegate.state()).isEqualTo(State.DISABLED);
+            } else {
+                // Previous: TIMED_OUT
+                assertThat(prevState).isEqualTo(State.TIMED_OUT);
+                // Transition to: TIMED_OUT
+                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
+            }
+            return canceled;
+        }
+
+        @Override
+        public long startTimeNanos() {
+            return delegate.startTimeNanos();
+        }
+
+        long timeoutMillis() {
+            return delegate.timeoutMillis();
+        }
+
+        @Nullable
+        public ScheduledFuture<?> timeoutFuture() {return delegate.timeoutFuture();}
+
+        public State state() {return delegate.state();}
     }
 }

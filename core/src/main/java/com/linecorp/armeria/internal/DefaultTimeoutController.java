@@ -36,6 +36,12 @@ import io.netty.channel.EventLoop;
  */
 public class DefaultTimeoutController implements TimeoutController {
 
+    enum State {
+        DISABLED,
+        SCHEDULED,
+        TIMED_OUT,
+    }
+
     @Nullable
     private TimeoutTask timeoutTask;
     private final EventLoop eventLoop;
@@ -46,6 +52,7 @@ public class DefaultTimeoutController implements TimeoutController {
 
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
+    private State state = State.DISABLED;
 
     /**
      * Creates a new instance with the specified {@link TimeoutTask} and {@link EventLoop}.
@@ -79,30 +86,27 @@ public class DefaultTimeoutController implements TimeoutController {
      * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
      *
      * @return {@code true} if the timeout is scheduled.
-     *         {@code false} if the timeout could not be scheduled because the timeout is currently being
-     *         scheduled or the {@link TimeoutTask} could not be scheduled now.
+     *         {@code false} if the timeout has been scheduled already, the timeout has been triggered already
+     *         or the {@link TimeoutTask} could not be scheduled now.
      */
     @Override
     public boolean scheduleTimeout(long timeoutMillis) {
         checkArgument(timeoutMillis > 0,
                       "timeoutMillis: " + timeoutMillis + " (expected: > 0)");
-        // Do nothing if the timeout was scheduled already
-        if (timeoutFuture != null) {
+        if (State.DISABLED != state || !timeoutTask.canSchedule()) {
             return false;
         }
 
         cancelTimeout();
-        if (!timeoutTask.canSchedule()) {
-            return false;
-        }
-
         this.timeoutMillis = timeoutMillis;
         final long nanoTime = System.nanoTime();
         if (firstExecutionTimeNanos == 0) {
             firstExecutionTimeNanos = nanoTime;
         }
         lastExecutionTimeNanos = nanoTime;
-        timeoutFuture = eventLoop.schedule(timeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
+
+        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
+        state = State.SCHEDULED;
         return true;
     }
 
@@ -113,37 +117,39 @@ public class DefaultTimeoutController implements TimeoutController {
      * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
      *
      * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
-     *         {@code false} if the current timeout could not be extended because
-     *         the {@link TimeoutTask} could not be scheduled now.
+     *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
+     *         or the {@link TimeoutTask} could not be scheduled now.
      */
     @Override
     public boolean extendTimeout(long adjustmentMillis) {
         ensureInitialized();
-        if (adjustmentMillis == 0 || timeoutFuture == null) {
+        if (State.SCHEDULED != state || !timeoutTask.canSchedule()) {
+            return false;
+        }
+
+        if (adjustmentMillis == 0) {
             return true;
         }
 
         // Cancel the previously scheduled timeout, if exists.
         cancelTimeout();
-        if (!timeoutTask.canSchedule()) {
-            return false;
-        }
 
         // Calculate the amount of time passed since lastStart
         final long currentNanoTime = System.nanoTime();
         final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(currentNanoTime - lastExecutionTimeNanos);
-        // newTimeoutMillis = timeoutMillis - passedTimeMillis + adjustmentMillis
         final long newTimeoutMillis = LongMath.saturatedAdd(
                 LongMath.saturatedSubtract(timeoutMillis, passedTimeMillis), adjustmentMillis);
         timeoutMillis = newTimeoutMillis;
         lastExecutionTimeNanos = currentNanoTime;
-        if (newTimeoutMillis > 0) {
-            timeoutFuture = eventLoop.schedule(
-                    timeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
-        } else {
-            // We went past the dead line set by the new timeout already.
-            timeoutTask.run();
+
+        if (newTimeoutMillis <= 0) {
+            invokeTimeoutTask();
+            state = State.TIMED_OUT;
+            return false;
         }
+
+        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
+        state = State.SCHEDULED;
         return true;
     }
 
@@ -152,36 +158,49 @@ public class DefaultTimeoutController implements TimeoutController {
      *
      * <p>Note that the {@link TimeoutTask} should be set via the {@link #setTimeoutTask(TimeoutTask)} or
      * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
+     *
      * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
-     *         {@code false} if tne current timeout could not be reset because
+     *         {@code false} if the timeout has been triggered already or
      *         the {@link TimeoutTask} could not be scheduled now.
      */
     @Override
     public boolean resetTimeout(long newTimeoutMillis) {
         ensureInitialized();
+        if (state == State.TIMED_OUT || !timeoutTask.canSchedule()) {
+            return false;
+        }
         if (newTimeoutMillis <= 0) {
             timeoutMillis = newTimeoutMillis;
             cancelTimeout();
             return true;
         }
 
-        if (!timeoutTask.canSchedule()) {
-            return false;
-        }
-
         // Cancel the previously scheduled timeout, if exists.
         cancelTimeout();
         timeoutMillis = newTimeoutMillis;
-        timeoutFuture = eventLoop.schedule(timeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
+        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
+        state = State.SCHEDULED;
         return true;
     }
 
+    /**
+     * Trigger the current timeout immediately.
+     *
+     * @return {@code true} if the current timeout is triggered successfully.
+     *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
+     *         or the {@link TimeoutTask} could not be scheduled now.
+     */
     @Override
     public boolean timeoutNow() {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
+
+        if (State.SCHEDULED != state || !timeoutTask.canSchedule()) {
+            return false;
+        }
+
         if (cancelTimeout()) {
-            timeoutTask.run();
+            invokeTimeoutTask();
             return true;
         }
 
@@ -190,20 +209,36 @@ public class DefaultTimeoutController implements TimeoutController {
 
     @Override
     public boolean cancelTimeout() {
-        final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
-        if (timeoutFuture == null) {
+        if (State.TIMED_OUT == state) {
+            return false;
+        }
+        if (State.DISABLED == state) {
             return true;
         }
 
+        final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
+        assert timeoutFuture != null;
+
         this.timeoutFuture = null;
-        return timeoutFuture.cancel(false);
+        final boolean canceled = timeoutFuture.cancel(false);
+        state = State.DISABLED;
+        return canceled;
     }
+
 
     private void ensureInitialized() {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
         if (firstExecutionTimeNanos == 0) {
             firstExecutionTimeNanos = lastExecutionTimeNanos = System.nanoTime();
+        }
+    }
+
+    @Nullable
+    private void invokeTimeoutTask() {
+        if (timeoutTask != null) {
+            timeoutTask.run();
+            state = State.TIMED_OUT;
         }
     }
 
@@ -222,6 +257,18 @@ public class DefaultTimeoutController implements TimeoutController {
     ScheduledFuture<?> timeoutFuture() {
         return timeoutFuture;
     }
+
+    @VisibleForTesting
+    TimeoutTask timeoutTask() {
+        return timeoutTask;
+    }
+
+    @VisibleForTesting
+    State state() {
+        return state;
+    }
+
+
 
     /**
      * A timeout task that is invoked when the deadline exceeded.
