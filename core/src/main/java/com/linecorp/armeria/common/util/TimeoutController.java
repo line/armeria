@@ -61,8 +61,8 @@ public interface TimeoutController {
     boolean timeoutNow();
 
     /**
-     * Cancels the current timeout scheduled.
-     * You can schedule a new timeout with {@link #scheduleTimeout(long)} if this method returns {@code true}.
+     * Cancels the current timeout scheduled. You can schedule a new timeout with
+     * {@link #scheduleTimeout(long)} if the current timeout is canceled successfully.
      * @return {@code true} if the current timeout is canceled or no timeout was scheduled previously.
      *         {@code false} if the timeout has been triggered already.
      */
