@@ -1356,6 +1356,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             this.interestedFlags = interestedFlags;
         }
 
+        void completeLog(RequestLog log) {
+            super.complete(log);
+        }
+
         @Override
         public boolean complete(RequestLog value) {
             // Disallow users from completing arbitrarily.
@@ -1373,8 +1377,16 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return false;
         }
 
-        void completeLog(RequestLog log) {
-            super.complete(log);
+        @Override
+        public void obtrudeValue(RequestLog value) {
+            // Disallow users from completing arbitrarily.
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void obtrudeException(Throwable ex) {
+            // Disallow users from completing arbitrarily.
+            throw new UnsupportedOperationException();
         }
     }
 
