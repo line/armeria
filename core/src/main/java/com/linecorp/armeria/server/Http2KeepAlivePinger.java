@@ -20,56 +20,72 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Stopwatch;
-
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2FrameWriter;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.concurrent.GenericFutureListener;
 
+/*
+ Idle time should always be less than pingtimeoutinnanos
+ */
+@NotThreadSafe
 class Http2KeepAlivePinger {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2KeepAlivePinger.class);
-    private Http2FrameWriter frameWriter;
+    private final Http2FrameWriter frameWriter;
     private long pingTimeoutInNanos;
-    private ThreadLocalRandom random;
-    private Stopwatch stopwatch;
-    private long pingWrittenTime;
+    private final ThreadLocalRandom random = ThreadLocalRandom.current();
+    private State state = State.NOT_STARTED;
+
+    @Nullable
     private Future<?> shutdownFuture;
+    @Nullable
     private ChannelFuture pingWriteFuture;
     private ChannelHandlerContext ctx;
-
-    private Runnable shutdownRunnable = () -> {
-        logger.trace("Closing channel: {} as PING timed out.", ctx.channel().id());
+    private final Runnable shutdownRunnable = () -> {
+        final ChannelId id = ctx.channel().id();
+        logger.trace("Closing channel: {} as PING timed out.", id);
         final ChannelFuture close = ctx.close();
         close.addListener(future -> {
             if (future.isSuccess()) {
-                logger.trace("Closed channel as PING timed out.");
+                logger.trace("Closed channel: {} as PING timed out.", id);
             } else {
-                ctx.fireExceptionCaught(future.cause());
+                logger.trace("Cannot close channel: {}", id, future.cause());
             }
         });
     };
-
-    private GenericFutureListener<ChannelFuture> pingWriteFutureListener = future -> {
+    private final GenericFutureListener<ChannelFuture> pingWriteListener = future ->{
+        final EventLoop el = future.channel().eventLoop();
         if (future.isSuccess()) {
-            shutdownFuture = ctx.executor().schedule(
+            shutdownFuture = el.schedule(
                     shutdownRunnable, pingTimeoutInNanos, TimeUnit.NANOSECONDS);
-            stopwatch.reset();
-        } else {
-            // Likely closed.
+            state = State.PENDING_ACK;
         }
     };
 
-    public void onChannelIdle(ChannelHandlerContext ctx) {
-        final long nano = stopwatch.elapsed().toNanos();
-        final Channel channel;
+    Http2KeepAlivePinger(Http2FrameWriter frameWriter, long pingTimeoutInNanos) {
+        this.frameWriter = frameWriter;
+        this.pingTimeoutInNanos = pingTimeoutInNanos;
+    }
+
+    public void onChannelIdle(ChannelHandlerContext ctx, IdleStateEvent event) {
+        if (event.state() != IdleState.ALL_IDLE) {
+            // Only interested in ALL_IDLE event.
+            return;
+        }
+
         pingWriteFuture = frameWriter.writePing(ctx, false, random.nextLong(), ctx.newPromise())
-                                     .addListener(pingWriteFutureListener);
+                .addListener(pingWriteListener);
     }
 
     public void onChannelInactive(ChannelHandlerContext ctx) {
@@ -82,11 +98,17 @@ class Http2KeepAlivePinger {
     }
 
     public void onPingAck() {
-
+        // Is it costly to cancel?
+        if (state != State.PENDING_ACK) {
+            // we got ack for something not sent at the first place.
+        }
+        state = State.PING_ACK_RECEIVED;
+        if (shutdownFuture != null) {
+            shutdownFuture.cancel(false);
+        }
     }
 
-    private void closeChannel() {
-
+    private enum State {
+        PENDING_ACK, PING_ACK_RECEIVED, NOT_STARTED
     }
-
 }
