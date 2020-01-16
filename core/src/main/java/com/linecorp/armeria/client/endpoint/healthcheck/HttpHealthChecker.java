@@ -27,8 +27,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.math.LongMath;
-
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
@@ -185,7 +184,8 @@ final class HttpHealthChecker implements AsyncCloseable {
                 final ResponseHeaders headers = (ResponseHeaders) obj;
                 updateLongPollingSettings(headers);
 
-                final HttpStatusClass statusClass = headers.status().codeClass();
+                final HttpStatus status = headers.status();
+                final HttpStatusClass statusClass = status.codeClass();
                 switch (statusClass) {
                     case INFORMATIONAL:
                         maybeSchedulePingCheck();
@@ -198,13 +198,21 @@ final class HttpHealthChecker implements AsyncCloseable {
                         receivedExpectedResponse = true;
                         break;
                     default:
-                        if (headers.status() == HttpStatus.NOT_MODIFIED) {
+                        if (status == HttpStatus.NOT_MODIFIED) {
                             isHealthy = wasHealthy;
                             receivedExpectedResponse = true;
                         } else {
                             // Do not use long polling on an unexpected status for safety.
                             maxLongPollingSeconds = 0;
-                            logger.warn("{} Unexpected health check response: {}", reqCtx, headers);
+
+                            if (statusClass == HttpStatusClass.CLIENT_ERROR) {
+                                logger.warn("{} Unexpected 4xx health check response: {} A 4xx response " +
+                                            "generally indicates a misconfiguration of the client. " +
+                                            "Did you happen to forget to configure the {}'s client options?",
+                                            reqCtx, headers, HealthCheckedEndpointGroup.class.getSimpleName());
+                            } else {
+                                logger.warn("{} Unexpected health check response: {}", reqCtx, headers);
+                            }
                         }
                 }
             } finally {
@@ -263,9 +271,7 @@ final class HttpHealthChecker implements AsyncCloseable {
                 return;
             }
 
-            final long pingTimeoutNanos = LongMath.saturatedMultiply(
-                    TimeUnit.SECONDS.toNanos(pingIntervalSeconds), 2);
-
+            final long pingTimeoutNanos = TimeUnit.SECONDS.toNanos(pingIntervalSeconds) * 2;
             pingCheckFuture = reqCtx.eventLoop().scheduleWithFixedDelay(() -> {
                 if (System.nanoTime() - lastPingTimeNanos >= pingTimeoutNanos) {
                     // Did not receive a ping on time.
