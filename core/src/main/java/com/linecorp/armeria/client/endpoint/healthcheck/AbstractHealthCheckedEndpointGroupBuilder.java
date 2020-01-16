@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
 import static java.util.Objects.requireNonNull;
 
@@ -44,8 +45,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     private SessionProtocol protocol = SessionProtocol.HTTP;
     private Backoff retryBackoff = DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
-    private ClientFactory clientFactory = ClientFactory.ofDefault();
-    private Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator = Function.identity();
+    private ClientOptionsBuilder clientOptionsBuilder = ClientOptions.builder();
     private int port;
     @Nullable
     private Double maxEndpointRatio;
@@ -67,7 +67,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * {@link EndpointGroup}.
      */
     public AbstractHealthCheckedEndpointGroupBuilder clientFactory(ClientFactory clientFactory) {
-        this.clientFactory = requireNonNull(clientFactory, "clientFactory");
+        clientOptionsBuilder.factory(requireNonNull(clientFactory, "clientFactory"));
         return this;
     }
 
@@ -141,8 +141,8 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * }</pre>
      */
     public AbstractHealthCheckedEndpointGroupBuilder clientOptions(ClientOptions clientOptions) {
-        requireNonNull(clientOptions, "clientOptions");
-        return withClientOptions(b -> b.options(clientOptions));
+        clientOptionsBuilder.options(requireNonNull(clientOptions, "clientOptions"));
+        return this;
     }
 
     /**
@@ -157,7 +157,10 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      */
     public AbstractHealthCheckedEndpointGroupBuilder withClientOptions(
             Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
-        this.configurator = this.configurator.andThen(requireNonNull(configurator, "configurator"));
+        final ClientOptionsBuilder newBuilder =
+                requireNonNull(configurator, "configurator").apply(clientOptionsBuilder);
+        checkState(newBuilder != null, "configurator returned null.");
+        clientOptionsBuilder = newBuilder;
         return this;
     }
 
@@ -212,9 +215,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
             }
         }
 
-        return new HealthCheckedEndpointGroup(delegate, clientFactory, protocol, port,
-                                              retryBackoff, configurator, newCheckerFactory(),
-                                              healthCheckStrategy);
+        return new HealthCheckedEndpointGroup(delegate, protocol, port, retryBackoff,
+                                              clientOptionsBuilder.build(),
+                                              newCheckerFactory(), healthCheckStrategy);
     }
 
     /**

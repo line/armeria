@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientOption.DECORATION;
 import static com.linecorp.armeria.client.ClientOption.ENDPOINT_REMAPPER;
+import static com.linecorp.armeria.client.ClientOption.FACTORY;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
 import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
 import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
@@ -77,6 +78,7 @@ public final class ClientOptions extends AbstractOptions {
                     ExtensionHeaderNames.STREAM_PROMISE_ID.text()));
 
     private static final ClientOptionValue<?>[] DEFAULT_OPTIONS = {
+            FACTORY.newValue(ClientFactory.ofDefault()),
             WRITE_TIMEOUT_MILLIS.newValue(Flags.defaultWriteTimeoutMillis()),
             RESPONSE_TIMEOUT_MILLIS.newValue(Flags.defaultResponseTimeoutMillis()),
             MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
@@ -247,6 +249,13 @@ public final class ClientOptions extends AbstractOptions {
      */
     public Map<ClientOption<Object>, ClientOptionValue<Object>> asMap() {
         return asMap0();
+    }
+
+    /**
+     * Returns the {@link ClientFactory} used for creating a client.
+     */
+    public ClientFactory factory() {
+        return get(FACTORY);
     }
 
     /**

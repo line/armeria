@@ -70,8 +70,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
 
     private SerializationFormat format = SerializationFormat.NONE;
 
-    private ClientFactory factory = ClientFactory.ofDefault();
-
     /**
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
      *
@@ -134,14 +132,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     /**
-     * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#ofDefault()}.
-     */
-    public ClientBuilder factory(ClientFactory factory) {
-        this.factory = requireNonNull(factory, "factory");
-        return this;
-    }
-
-    /**
      * Sets the {@code path} of the client.
      */
     public ClientBuilder path(String path) {
@@ -177,12 +167,14 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
         requireNonNull(clientType, "clientType");
 
         final Object client;
+        final ClientOptions options = buildOptions();
+        final ClientFactory factory = options.factory();
         if (uri != null) {
-            client = factory.newClient(ClientBuilderParams.of(factory, uri, clientType, buildOptions()));
+            client = factory.newClient(ClientBuilderParams.of(uri, clientType, options));
         } else {
             assert endpointGroup != null;
-            client = factory.newClient(ClientBuilderParams.of(factory, scheme(), endpointGroup,
-                                                              path, clientType, buildOptions()));
+            client = factory.newClient(ClientBuilderParams.of(scheme(), endpointGroup,
+                                                              path, clientType, options));
         }
 
         @SuppressWarnings("unchecked")

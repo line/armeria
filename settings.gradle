@@ -56,6 +56,8 @@ includeWithFlags ':examples:context-propagation-manual-example', 'java'
 project(':examples:context-propagation-manual-example').projectDir = file('examples/context-propagation/manual')
 includeWithFlags ':examples:context-propagation-rxjava-example', 'java'
 project(':examples:context-propagation-rxjava-example').projectDir = file('examples/context-propagation/rxjava')
+includeWithFlags ':examples:context-propagation-kotlin-example', 'java'
+project(':examples:context-propagation-kotlin-example').projectDir = file('examples/context-propagation/kotlin')
 includeWithFlags ':examples:dropwizard-example',                 'java'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:grpc-example',                       'java'

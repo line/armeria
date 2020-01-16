@@ -169,7 +169,7 @@ public final class Clients {
     public static <T> T newClient(ClientFactory factory, String uri,
                                   Class<T> clientType, ClientOptionValue<?>... options) {
 
-        return builder(uri).factory(factory).options(options).build(clientType);
+        return builder(uri).options(options).factory(factory).build(clientType);
     }
 
     /**
@@ -190,7 +190,7 @@ public final class Clients {
     @Deprecated
     public static <T> T newClient(ClientFactory factory, String uri,
                                   Class<T> clientType, ClientOptions options) {
-        return builder(uri).factory(factory).options(options).build(clientType);
+        return builder(uri).options(options).factory(factory).build(clientType);
     }
 
     /**
@@ -247,7 +247,7 @@ public final class Clients {
     @Deprecated
     public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
-        return builder(uri).factory(factory).options(options).build(clientType);
+        return builder(uri).options(options).factory(factory).build(clientType);
     }
 
     /**
@@ -267,7 +267,7 @@ public final class Clients {
      */
     @Deprecated
     public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType, ClientOptions options) {
-        return builder(uri).factory(factory).options(options).build(clientType);
+        return builder(uri).options(options).factory(factory).build(clientType);
     }
 
     /**
@@ -345,7 +345,7 @@ public final class Clients {
                                   Class<T> clientType, ClientOptionValue<?>... options) {
         final Scheme scheme = Scheme.of(requireNonNull(format, "format"),
                                         requireNonNull(protocol, "protocol"));
-        return builder(scheme, endpointGroup).factory(factory).options(options).build(clientType);
+        return builder(scheme, endpointGroup).options(options).factory(factory).build(clientType);
     }
 
     /**
@@ -372,7 +372,7 @@ public final class Clients {
                                   EndpointGroup endpointGroup, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = Scheme.of(requireNonNull(format, "format"),
                                         requireNonNull(protocol, "protocol"));
-        return builder(scheme, endpointGroup).factory(factory).options(options).build(clientType);
+        return builder(scheme, endpointGroup).options(options).factory(factory).build(clientType);
     }
 
     /**
@@ -435,7 +435,7 @@ public final class Clients {
     @Deprecated
     public static <T> T newClient(ClientFactory factory, Scheme scheme, EndpointGroup endpointGroup,
                                   Class<T> clientType, ClientOptionValue<?>... options) {
-        return builder(scheme, endpointGroup).factory(factory).options(options).build(clientType);
+        return builder(scheme, endpointGroup).options(options).factory(factory).build(clientType);
     }
 
     /**
@@ -457,7 +457,7 @@ public final class Clients {
     @Deprecated
     public static <T> T newClient(ClientFactory factory, Scheme scheme, EndpointGroup endpointGroup,
                                   Class<T> clientType, ClientOptions options) {
-        return builder(scheme, endpointGroup).factory(factory).options(options).build(clientType);
+        return builder(scheme, endpointGroup).options(options).factory(factory).build(clientType);
     }
 
     /**
@@ -557,7 +557,6 @@ public final class Clients {
             T client, Function<? super ClientOptions, ClientOptions> configurator) {
         final ClientBuilderParams params = builderParams(client);
         final ClientBuilder builder = builder(params.uri());
-        builder.factory(params.factory());
         builder.options(configurator.apply(params.options()));
 
         return newDerivedClient(builder, params.clientType());
@@ -571,7 +570,6 @@ public final class Clients {
     private static ClientBuilder newDerivedBuilder(ClientBuilderParams params) {
         final ClientBuilder builder = builder(params.scheme(), params.endpointGroup());
         builder.path(params.absolutePathRef());
-        builder.factory(params.factory());
         builder.options(params.options());
         return builder;
     }
@@ -614,7 +612,7 @@ public final class Clients {
             return null;
         }
 
-        return params.factory().unwrap(client, type);
+        return params.options().factory().unwrap(client, type);
     }
 
     /**

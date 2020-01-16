@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
@@ -52,11 +51,6 @@ final class THttpClientInvocationHandler
     THttpClientInvocationHandler(ClientBuilderParams params, THttpClient thriftClient) {
         super(thriftClient);
         this.params = params;
-    }
-
-    @Override
-    public ClientFactory factory() {
-        return params.factory();
     }
 
     @Override

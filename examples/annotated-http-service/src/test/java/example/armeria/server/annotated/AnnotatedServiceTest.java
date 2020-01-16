@@ -37,7 +37,7 @@ class AnnotatedServiceTest {
             server.stop().join();
         }
         if (client != null) {
-            client.factory().close();
+            client.options().factory().close();
         }
     }
 

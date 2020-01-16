@@ -75,8 +75,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     private boolean initialized;
     @Nullable
-    private ClientFactory factory;
-    @Nullable
     private EventLoop eventLoop;
     private final ClientOptions options;
     @Nullable
@@ -124,15 +122,14 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        this(null, requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq);
+        this(eventLoop, meterRegistry, sessionProtocol,
+             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext());
     }
 
     /**
      * Creates a new instance. Note that {@link #init(EndpointGroup)} method must be invoked to finish
      * the construction of this context.
      *
-     * @param factory the {@link ClientFactory} which is used to acquire an {@link EventLoop}
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param id the {@link RequestId} that contains the identifier of the current {@link Request}
      *           and {@link Response} pair.
@@ -140,32 +137,21 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * @param rpcReq the {@link RpcRequest} associated with this context
      */
     public DefaultClientRequestContext(
-            ClientFactory factory, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        this(requireNonNull(factory, "factory"), null, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq);
-    }
-
-    private DefaultClientRequestContext(
-            @Nullable ClientFactory factory, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
-            SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
-            @Nullable String query, @Nullable String fragment, ClientOptions options,
-            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        this(factory, eventLoop, meterRegistry, sessionProtocol,
+        this(null, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext());
     }
 
     private DefaultClientRequestContext(
-            @Nullable ClientFactory factory, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
+            @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             @Nullable ServiceRequestContext root) {
-        super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq,
-              root);
+        super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
 
-        this.factory = factory;
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
         this.fragment = fragment;
@@ -221,9 +207,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             }
 
             if (eventLoop == null) {
-                assert factory != null;
                 final ReleasableHolder<EventLoop> releasableEventLoop =
-                        factory.acquireEventLoop(endpoint, sessionProtocol());
+                        options().factory().acquireEventLoop(endpoint, sessionProtocol());
                 eventLoop = releasableEventLoop.get();
                 log.completeFuture().thenAccept(unused -> releasableEventLoop.release());
             }
