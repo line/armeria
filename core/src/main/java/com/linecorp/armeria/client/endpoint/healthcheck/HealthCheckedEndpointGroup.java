@@ -44,8 +44,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -94,11 +93,10 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     final EndpointGroup delegate;
-    private final ClientFactory clientFactory;
     private final SessionProtocol protocol;
     private final int port;
     private final Backoff retryBackoff;
-    private final Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator;
+    private final ClientOptions clientOptions;
     private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory;
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
@@ -112,20 +110,18 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * Creates a new instance.
      */
     HealthCheckedEndpointGroup(
-            EndpointGroup delegate, ClientFactory clientFactory,
-            SessionProtocol protocol, int port, Backoff retryBackoff,
-            Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator,
+            EndpointGroup delegate, SessionProtocol protocol, int port,
+            Backoff retryBackoff, ClientOptions clientOptions,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy) {
 
         super(requireNonNull(delegate, "delegate").selectionStrategy());
 
         this.delegate = delegate;
-        this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.protocol = requireNonNull(protocol, "protocol");
         this.port = port;
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
-        this.clientConfigurator = requireNonNull(clientConfigurator, "clientConfigurator");
+        this.clientOptions = requireNonNull(clientOptions, "clientOptions");
         this.checkerFactory = requireNonNull(checkerFactory, "checkerFactory");
         this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
 
@@ -320,18 +316,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         }
 
         @Override
-        public ClientFactory clientFactory() {
-            return clientFactory;
-        }
-
-        @Override
         public SessionProtocol protocol() {
             return protocol;
         }
 
         @Override
-        public Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator() {
-            return clientConfigurator;
+        public ClientOptions clientOptions() {
+            return clientOptions;
         }
 
         @Override
@@ -448,7 +439,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         }
 
         private EventLoopGroup eventLoopGroup() {
-            return clientFactory.eventLoopGroup();
+            return clientOptions.factory().eventLoopGroup();
         }
 
         private void rejectIfDestroyed(Object command) {

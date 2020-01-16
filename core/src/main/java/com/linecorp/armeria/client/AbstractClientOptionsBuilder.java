@@ -119,6 +119,14 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
     }
 
     /**
+     * Sets the {@link ClientFactory} used for creating a client.
+     * The default is {@link ClientFactory#ofDefault()}.
+     */
+    public B factory(ClientFactory factory) {
+        return option(ClientOption.FACTORY, requireNonNull(factory, "factory"));
+    }
+
+    /**
      * Sets the timeout of a socket write attempt.
      *
      * @deprecated Use {@link #writeTimeout(Duration)}.

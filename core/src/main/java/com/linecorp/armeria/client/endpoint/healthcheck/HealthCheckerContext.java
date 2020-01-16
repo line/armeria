@@ -17,11 +17,9 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -36,19 +34,14 @@ public interface HealthCheckerContext {
     Endpoint endpoint();
 
     /**
-     * Returns the {@link ClientFactory} which is used for sending health check requests.
-     */
-    ClientFactory clientFactory();
-
-    /**
      * Returns the {@link SessionProtocol} to be used when sending health check requests.
      */
     SessionProtocol protocol();
 
     /**
-     * Returns the {@link Function} that customizes a {@link Client} that sends health check requests.
+     * Returns the {@link ClientOptions} of the {@link Client} that sends health check requests.
      */
-    Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator();
+    ClientOptions clientOptions();
 
     /**
      * Returns the {@link ScheduledExecutorService} which is used for scheduling the tasks related with

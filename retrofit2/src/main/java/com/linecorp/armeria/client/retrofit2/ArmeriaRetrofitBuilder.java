@@ -72,12 +72,10 @@ public final class ArmeriaRetrofitBuilder {
         // Re-create the base client without a path, because Retrofit will always provide a full path.
         baseWebClient = WebClient.builder(protocol,
                                           webClient.endpointGroup())
-                                 .factory(webClient.factory())
                                  .options(webClient.options())
                                  .build();
 
         nonBaseClientFactory = (p, url) -> WebClient.builder(p, Endpoint.of(url.host(), url.port()))
-                                                    .factory(baseWebClient.factory())
                                                     .options(baseWebClient.options())
                                                     .build();
     }

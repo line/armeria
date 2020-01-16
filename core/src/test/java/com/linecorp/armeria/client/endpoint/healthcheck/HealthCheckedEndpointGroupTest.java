@@ -31,53 +31,22 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.AsyncCloseable;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.healthcheck.HealthCheckService;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 
 class HealthCheckedEndpointGroupTest {
 
     private static final double UNHEALTHY = 0;
     private static final double HEALTHY = 1;
-
-    private static final String HEALTH_CHECK_PATH = "/healthcheck";
-
-    private static class HealthCheckServerExtension extends ServerExtension {
-
-        HealthCheckServerExtension() {
-            super(false); // Disable auto-start.
-        }
-
-        @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(0);
-            sb.https(0);
-            sb.tlsSelfSigned();
-            sb.service(HEALTH_CHECK_PATH, HealthCheckService.builder().longPolling(0).build());
-        }
-    }
-
-    private final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
-
-    @RegisterExtension
-    static final ServerExtension serverOne = new HealthCheckServerExtension();
-
-    @RegisterExtension
-    static final ServerExtension serverTwo = new HealthCheckServerExtension();
 
     @Test
     void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
@@ -201,14 +170,11 @@ class HealthCheckedEndpointGroupTest {
         final MockEndpointGroup delegate = new MockEndpointGroup();
         delegate.set(candidate1, candidate2);
 
-        try (HealthCheckedEndpointGroup group = new HealthCheckedEndpointGroup(delegate,
-                                                                   ClientFactory.ofDefault(),
-                                                                   SessionProtocol.HTTP,
-                                                                   80,
-                                                                   DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                                                   Function.identity(),
-                                                                   checkFactory,
-                                                                   new InfinityUpdateHealthCheckStrategy())) {
+        try (HealthCheckedEndpointGroup group =
+                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                                                    DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                                    ClientOptions.of(), checkFactory,
+                                                    new InfinityUpdateHealthCheckStrategy())) {
 
             assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
 

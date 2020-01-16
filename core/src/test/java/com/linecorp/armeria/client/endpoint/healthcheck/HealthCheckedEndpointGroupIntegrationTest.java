@@ -294,8 +294,10 @@ class HealthCheckedEndpointGroupIntegrationTest {
     private static HealthCheckedEndpointGroup build(HealthCheckedEndpointGroupBuilder builder,
                                                     SessionProtocol protocol) {
         return builder.protocol(protocol)
-                      .clientFactory(ClientFactory.insecure())
-                      .clientOptions(ClientOptions.builder().decorator(LoggingClient.newDecorator()).build())
+                      .clientOptions(ClientOptions.builder()
+                                                  .factory(ClientFactory.insecure())
+                                                  .decorator(LoggingClient.newDecorator())
+                                                  .build())
                       .build();
     }
 }

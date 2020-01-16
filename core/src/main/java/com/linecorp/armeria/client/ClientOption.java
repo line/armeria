@@ -47,6 +47,11 @@ public final class ClientOption<T> extends AbstractOption<T> {
     };
 
     /**
+     * The {@link ClientFactory} used for creating a client.
+     */
+    public static final ClientOption<ClientFactory> FACTORY = valueOf("FACTORY");
+
+    /**
      * The timeout of a socket write.
      */
     public static final ClientOption<Long> WRITE_TIMEOUT_MILLIS = valueOf("WRITE_TIMEOUT_MILLIS");
