@@ -22,12 +22,24 @@ import java.util.concurrent.CompletableFuture;
  * method releases the resources asynchronously, returning the {@link CompletableFuture} which is completed
  * after the resources are released.
  */
-@FunctionalInterface
-public interface AsyncCloseable {
+public interface AsyncCloseable extends AutoCloseable {
     /**
-     * Releases the resources held by this object asynchronously.
+     * Returns the {@link CompletableFuture} which is completed after the resources are released. Note that
+     * you must use {@link #close()} or {@link #closeAsync()} to release the resources actually. This method
+     * merely returns the {@link CompletableFuture}.
+     */
+    CompletableFuture<?> closeFuture();
+
+    /**
+     * Releases any underlying resources held by this object asynchronously.
      *
      * @return the {@link CompletableFuture} which is completed after the resources are released
      */
     CompletableFuture<?> closeAsync();
+
+    /**
+     * Releases any underlying resources held by this object synchronously.
+     */
+    @Override
+    void close();
 }

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -23,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * @param <V> the type of the startup result. Use {@link Void} if unused.
  * @param <L> the type of the life cycle event listener. Use {@link Void} if unused.
  */
-public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
+public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(StartStopSupport.class);
 
@@ -53,7 +53,19 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
 
     private final Executor executor;
     private final List<L> listeners = new CopyOnWriteArrayList<>();
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(f -> {
+        stop(null).handle((result, cause) -> {
+            if (cause != null) {
+                f.completeExceptionally(cause);
+            } else {
+                f.complete(null);
+            }
+            return null;
+        });
+    });
+
     private volatile State state = State.STOPPED;
+
     /**
      * This future is {@code V}-typed when STARTING/STARTED and {@link Void}-typed when STOPPING/STOPPED.
      */
@@ -170,9 +182,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
                 try {
                     notifyListeners(State.STARTING, arg, null, null);
                     final CompletionStage<V> f = doStart(arg);
-                    if (f == null) {
-                        throw new IllegalStateException("doStart() returned null.");
-                    }
+                    checkState(f != null, "doStart() returned null.");
 
                     f.handle((result, cause) -> {
                         if (cause != null) {
@@ -262,9 +272,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
                 try {
                     notifyListeners(State.STOPPING, null, arg, null);
                     final CompletionStage<Void> f = doStop(arg);
-                    if (f == null) {
-                        throw new IllegalStateException("doStop() returned null.");
-                    }
+                    checkState(f != null, "doStop() returned null.");
 
                     f.handle((unused, cause) -> {
                         if (cause != null) {
@@ -293,35 +301,26 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
         return future;
     }
 
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return closeable.closeAsync();
+    }
+
+    @Override
+    public CompletableFuture<?> closeFuture() {
+        return closeable.closeFuture();
+    }
+
     /**
      * A synchronous version of {@link #stop(Object)}. Exceptions occurred during shutdown are reported to
      * {@link #closeFailed(Throwable)}. No argument (i.e. {@code null}) is passed.
      */
     @Override
     public final void close() {
-        final CompletableFuture<Void> f;
-        synchronized (this) {
-            if (state == State.STOPPED) {
-                return;
-            }
-            f = stop(null);
-        }
-
-        boolean interrupted = false;
-        for (;;) {
-            try {
-                f.get();
-                break;
-            } catch (InterruptedException ignored) {
-                interrupted = true;
-            } catch (ExecutionException e) {
-                closeFailed(Exceptions.peel(e));
-                break;
-            }
-        }
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
+        try {
+            closeable.close();
+        } catch (Throwable e) {
+            closeFailed(Exceptions.peel(e));
         }
     }
 

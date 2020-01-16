@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
@@ -68,7 +69,7 @@ final class HttpHealthChecker implements AsyncCloseable {
     private int pingIntervalSeconds;
     @Nullable
     private HttpResponse lastResponse;
-    private boolean closed;
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::doCloseAsync);
 
     HttpHealthChecker(HealthCheckerContext ctx, String path, boolean useGet) {
         final Endpoint endpoint = ctx.endpoint();
@@ -87,7 +88,7 @@ final class HttpHealthChecker implements AsyncCloseable {
     }
 
     private synchronized void check() {
-        if (closed) {
+        if (closeable.isClosing()) {
             return;
         }
 
@@ -112,19 +113,28 @@ final class HttpHealthChecker implements AsyncCloseable {
     }
 
     @Override
-    public synchronized CompletableFuture<?> closeAsync() {
+    public CompletableFuture<?> closeAsync() {
+        return closeable.closeAsync();
+    }
+
+    synchronized void doCloseAsync(CompletableFuture<?> future) {
         if (lastResponse == null) {
             // Called even before the first request is sent.
-            closed = true;
-            return CompletableFuture.completedFuture(null);
-        }
-
-        if (!closed) {
-            closed = true;
+            future.complete(null);
+        } else {
             lastResponse.abort();
+            lastResponse.completionFuture().handle((unused1, unused2) -> future.complete(null));
         }
+    }
 
-        return lastResponse.completionFuture().handle((unused1, unused2) -> null);
+    @Override
+    public void close() {
+        closeable.close();
+    }
+
+    @Override
+    public CompletableFuture<?> closeFuture() {
+        return closeable.closeAsync();
     }
 
     private final class ResponseTimeoutUpdater extends SimpleDecoratingHttpClient {
@@ -169,7 +179,7 @@ final class HttpHealthChecker implements AsyncCloseable {
 
         @Override
         public void onNext(HttpObject obj) {
-            if (closed) {
+            if (closeable.isClosing()) {
                 subscription.cancel();
                 return;
             }

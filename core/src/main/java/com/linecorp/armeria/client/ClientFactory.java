@@ -24,10 +24,14 @@ import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
@@ -35,12 +39,15 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import reactor.core.scheduler.NonBlocking;
 
 /**
  * Creates and manages clients.
@@ -60,7 +67,7 @@ import io.netty.channel.EventLoopGroup;
  * {@link ClientFactory}, use {@link #closeDefault()}.
  * </p>
  */
-public interface ClientFactory extends AutoCloseable {
+public interface ClientFactory extends AsyncCloseable {
 
     /**
      * The default {@link ClientFactory} implementation.
@@ -96,12 +103,38 @@ public interface ClientFactory extends AutoCloseable {
      * Closes the default {@link ClientFactory}.
      */
     static void closeDefault() {
-        LoggerFactory.getLogger(ClientFactory.class).debug(
-                "Closing the default {}", ClientFactory.class.getSimpleName());
-        try {
-            DefaultClientFactory.DEFAULT.doClose();
-        } finally {
-            DefaultClientFactory.INSECURE.doClose();
+        final Logger logger = LoggerFactory.getLogger(ClientFactory.class);
+        logger.debug("Closing the default client factories");
+        final CompletableFuture<Void> closeFuture = CompletableFuture.allOf(
+                DefaultClientFactory.DEFAULT.closeAsync(false),
+                DefaultClientFactory.INSECURE.closeAsync(false)).handle((unused1, cause) -> {
+            if (cause == null) {
+                logger.debug("Closed the default client factories");
+            } else {
+                logger.warn("Failed to close the default client factories:", Exceptions.peel(cause));
+            }
+            return null;
+        });
+
+        if (!(Thread.currentThread() instanceof NonBlocking)) {
+            boolean interrupted = false;
+            try {
+                for (;;) {
+                    try {
+                        closeFuture.get();
+                        break;
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    } catch (ExecutionException | CancellationException ignored) {
+                        // Will be logged by the callback we added above.
+                        break;
+                    }
+                }
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
     }
 

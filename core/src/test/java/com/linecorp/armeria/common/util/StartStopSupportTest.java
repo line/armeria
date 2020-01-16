@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -29,7 +28,9 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
 import java.util.EventListener;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -38,6 +39,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nullable;
@@ -256,66 +258,92 @@ public class StartStopSupportTest {
     public void rollbackFailure() throws Throwable {
         final Exception startException = new AnticipatedException();
         final Exception stopException = new AnticipatedException();
-        final StartStop startStop = spy(new StartStop(arg -> {
+        final List<Throwable> rollbackFailed = new ArrayList<>();
+        final StartStop startStop = new StartStop(arg -> {
             throw startException;
         }, arg -> {
             throw stopException;
-        }));
+        }) {
+            @Override
+            protected void rollbackFailed(Throwable cause) {
+                rollbackFailed.add(cause);
+            }
+        };
 
         assertThatThrownBy(() -> startStop.start(true).join())
                 .isInstanceOf(CompletionException.class)
                 .hasCause(startException);
 
-        verify(startStop, times(1)).rollbackFailed(stopException);
+        assertThat(rollbackFailed).containsExactly(stopException);
     }
 
     @Test
     public void listenerNotifications() {
         final CountDownLatch startLatch = new CountDownLatch(1);
         final CountDownLatch stopLatch = new CountDownLatch(1);
-        final EventListener listener = mock(EventListener.class);
-        final StartStop startStop = spy(new StartStop(arg -> {
+        final EventListener listener = new EventListener() {
+            @Override
+            public String toString() {
+                return "the_listener";
+            }
+        };
+
+        final List<String> recording = new ArrayList<>();
+        final StartStop startStop = new StartStop(arg -> {
             startLatch.await();
             return "bar";
         }, arg -> {
             stopLatch.await();
             return null;
-        }));
+        }) {
+            @Override
+            protected void notifyStarting(EventListener listener, @Nullable Integer arg) {
+                recording.add("starting " + listener + ' ' + arg);
+            }
+
+            @Override
+            protected void notifyStarted(EventListener listener,
+                                         @Nullable Integer arg,
+                                         @Nullable String result) {
+                recording.add("started " + listener + ' ' + arg + ' ' + result);
+            }
+
+            @Override
+            protected void notifyStopping(EventListener listener, @Nullable Long arg) {
+                recording.add("stopping " + listener + ' ' + arg);
+            }
+
+            @Override
+            protected void notifyStopped(EventListener listener, @Nullable Long arg) throws Exception {
+                recording.add("stopped " + listener + ' ' + arg);
+            }
+        };
         startStop.addListener(listener);
 
         final CompletableFuture<String> startFuture = startStop.start(1, true);
         await().untilAsserted(() -> {
-            verify(startStop, times(1)).notifyStarting(listener, 1);
-            verify(startStop, never()).notifyStarted(same(listener), any(), any());
-            verify(startStop, never()).notifyStopping(same(listener), any());
-            verify(startStop, never()).notifyStopped(same(listener), any());
+            assertThat(recording).containsExactly("starting the_listener 1");
             assertThat(startFuture).isNotDone();
         });
 
+        recording.clear();
         startLatch.countDown();
         await().untilAsserted(() -> {
-            verify(startStop, times(1)).notifyStarting(listener, 1);
-            verify(startStop, times(1)).notifyStarted(listener, 1, "bar");
-            verify(startStop, never()).notifyStopping(same(listener), any());
-            verify(startStop, never()).notifyStopped(same(listener), any());
+            assertThat(recording).containsExactly("started the_listener 1 bar");
             assertThat(startFuture).isCompletedWithValue("bar");
         });
 
+        recording.clear();
         final CompletableFuture<Void> stopFuture = startStop.stop(2L);
         await().untilAsserted(() -> {
-            verify(startStop, times(1)).notifyStarting(listener, 1);
-            verify(startStop, times(1)).notifyStarted(listener, 1, "bar");
-            verify(startStop, times(1)).notifyStopping(listener, 2L);
-            verify(startStop, never()).notifyStopped(same(listener), any());
+            assertThat(recording).containsExactly("stopping the_listener 2");
             assertThat(stopFuture).isNotDone();
         });
 
+        recording.clear();
         stopLatch.countDown();
         await().untilAsserted(() -> {
-            verify(startStop, times(1)).notifyStarting(listener, 1);
-            verify(startStop, times(1)).notifyStarted(listener, 1, "bar");
-            verify(startStop, times(1)).notifyStopping(listener, 2L);
-            verify(startStop, times(1)).notifyStopped(listener, 2L);
+            assertThat(recording).containsExactly("stopped the_listener 2");
             assertThat(stopFuture).isCompletedWithValue(null);
         });
     }
@@ -323,29 +351,59 @@ public class StartStopSupportTest {
     @Test
     public void listenerNotificationFailure() throws Exception {
         final EventListener listener = mock(EventListener.class);
-        final Exception exception = new AnticipatedException();
-        final StartStop startStop = spy(new StartStop(arg -> "foo", arg -> null));
-        doThrow(exception).when(startStop).notifyStarting(any(), any());
+        final AnticipatedException exception = new AnticipatedException();
+        final List<String> recording = new ArrayList<>();
+        final StartStop startStop = new StartStop(arg -> "foo", arg -> null) {
+            @Override
+            protected void notifyStarting(EventListener listener, @Nullable Integer arg) {
+                throw exception;
+            }
+
+            @Override
+            protected void notificationFailed(EventListener listener, Throwable cause) {
+                recording.add(listener + " " + cause);
+            }
+        };
 
         startStop.addListener(listener);
         assertThat(startStop.start(true).join()).isEqualTo("foo");
-        verify(startStop).notificationFailed(listener, exception);
+        assertThat(recording).containsExactly(listener + " " + exception);
     }
 
     @Test
     public void listenerRemoval() throws Exception {
         final EventListener listener = mock(EventListener.class);
-        final StartStop startStop = spy(new StartStop(arg -> "bar", arg -> null));
+        final AtomicInteger called = new AtomicInteger();
+        final StartStop startStop = new StartStop(arg -> "bar", arg -> null) {
+            @Override
+            protected void notifyStarting(EventListener listener, @Nullable Integer arg) {
+                called.incrementAndGet();
+            }
+
+            @Override
+            protected void notifyStarted(EventListener listener,
+                                         @Nullable Integer arg,
+                                         @Nullable String result) {
+                called.incrementAndGet();
+            }
+
+            @Override
+            protected void notifyStopping(EventListener listener, @Nullable Long arg) {
+                called.incrementAndGet();
+            }
+
+            @Override
+            protected void notifyStopped(EventListener listener, @Nullable Long arg) {
+                called.incrementAndGet();
+            }
+        };
         startStop.addListener(listener);
         startStop.removeListener(listener);
 
         assertThat(startStop.start(true).join()).isEqualTo("bar");
         assertThat(startStop.stop().join()).isNull();
 
-        verify(startStop, never()).notifyStarting(same(listener), any());
-        verify(startStop, never()).notifyStarted(same(listener), any(), any());
-        verify(startStop, never()).notifyStopping(same(listener), any());
-        verify(startStop, never()).notifyStopped(same(listener), any());
+        assertThat(called).hasValue(0);
     }
 
     @Test
@@ -384,14 +442,21 @@ public class StartStopSupportTest {
     @Test
     public void closeFailure() {
         final Exception exception = new AnticipatedException();
-        final StartStop startStop = spy(new StartStop(arg -> "bar", arg -> {
+        final List<Throwable> recording = new ArrayList<>();
+        final StartStop startStop = new StartStop(arg -> "bar", arg -> {
             throw exception;
-        }));
+        }) {
+            @Override
+            protected void closeFailed(Throwable cause) {
+                recording.add(cause);
+            }
+        };
         startStop.start(true).join();
+        assertThat(recording).isEmpty();
 
         for (int i = 0; i < 2; i++) { // Check twice to ensure idempotence.
             startStop.close();
-            verify(startStop, times(1)).closeFailed(exception);
+            assertThat(recording).containsExactly(exception);
         }
     }
 

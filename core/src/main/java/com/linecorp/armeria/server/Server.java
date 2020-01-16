@@ -58,6 +58,7 @@ import com.spotify.futures.CompletableFutures;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
@@ -89,7 +90,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  *
  * @see ServerBuilder
  */
-public final class Server implements AutoCloseable {
+public final class Server implements AsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
@@ -296,9 +297,16 @@ public final class Server implements AutoCloseable {
         return config().workerGroup().next();
     }
 
-    /**
-     * A shortcut to {@link #stop() stop().get()}.
-     */
+    @Override
+    public CompletableFuture<?> closeFuture() {
+        return startStop.closeFuture();
+    }
+
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return startStop.closeAsync();
+    }
+
     @Override
     public void close() {
         startStop.close();
