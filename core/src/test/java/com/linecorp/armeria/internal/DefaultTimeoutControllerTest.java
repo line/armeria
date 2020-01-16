@@ -153,7 +153,7 @@ class DefaultTimeoutControllerTest {
     }
 
     @Test
-    void onInvalidTimeoutTask() {
+    void disabledTimeoutTask() {
         final DefaultTimeoutController timeoutController = new DefaultTimeoutController(
                 new TimeoutTask() {
 
