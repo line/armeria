@@ -414,8 +414,10 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         long passedTimeMillis = 0;
         final TimeoutController requestTimeoutController = this.requestTimeoutController;
         if (requestTimeoutController != null) {
-            passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(
-                    System.nanoTime() - requestTimeoutController.startTimeNanos());
+            final Long startTimeNanos = requestTimeoutController.startTimeNanos();
+            if (startTimeNanos != null) {
+                passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+            }
             if (eventLoop().inEventLoop()) {
                 requestTimeoutController.resetTimeout(requestTimeoutMillis);
             } else {

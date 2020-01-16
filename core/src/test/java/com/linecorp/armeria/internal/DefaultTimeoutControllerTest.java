@@ -281,7 +281,7 @@ class DefaultTimeoutControllerTest {
         }
 
         @Override
-        public long startTimeNanos() {
+        public Long startTimeNanos() {
             return delegate.startTimeNanos();
         }
 

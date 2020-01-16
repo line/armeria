@@ -246,8 +246,8 @@ public class DefaultTimeoutController implements TimeoutController {
     }
 
     @Override
-    public long startTimeNanos() {
-        return firstExecutionTimeNanos;
+    public Long startTimeNanos() {
+        return isExecutedAtLeastOnce ? firstExecutionTimeNanos : null;
     }
 
     @VisibleForTesting

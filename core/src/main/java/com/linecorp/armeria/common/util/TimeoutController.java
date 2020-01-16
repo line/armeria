@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.util;
 
+import javax.annotation.Nullable;
+
 /**
  * A controller that schedules the timeout task with the initial value or reschedule when the timeout
  * setting is changed.
@@ -73,7 +75,9 @@ public interface TimeoutController {
     boolean cancelTimeout();
 
     /**
-     * Returns the start time of the initial timeout in nanoseconds.
+     * Returns the start time of the initial timeout in nanoseconds
+     * or {@code null} if no timeout was scheduled previously.
      */
-    long startTimeNanos();
+    @Nullable
+    Long startTimeNanos();
 }
