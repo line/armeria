@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -66,7 +67,7 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
      */
     LoggingRpcClient(RpcClient delegate,
                      @Nullable Logger logger,
-                     Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+                     Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
                      Function<? super RequestLog, LogLevel> responseLogLevelMapper,
                      Function<? super HttpHeaders, ?> requestHeadersSanitizer,
                      Function<Object, ?> requestContentSanitizer,

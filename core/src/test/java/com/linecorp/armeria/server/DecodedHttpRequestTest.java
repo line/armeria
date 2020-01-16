@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.util.List;
 
@@ -122,7 +121,7 @@ public class DecodedHttpRequestTest {
         assertThat(req.tryWrite(new ByteBufHttpData(newBuffer("hello"), false))).isTrue();
         req.close();
 
-        await().untilAsserted(() -> assertThat(sctx.log().requestContentPreview()).isEqualTo("hello"));
+        assertThat(sctx.log().requestCompleteFuture().join().requestContentPreview()).isEqualTo("hello");
     }
 
     private static DecodedHttpRequest decodedHttpRequest() {

@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -194,18 +193,17 @@ class AccessLogFormatsTest {
                                      .build();
         ctx.setAttr(Attr.ATTR_KEY, new Attr("line"));
 
-        final RequestLog log = ctx.log();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
-
         logBuilder.endRequest();
-        assertThat(ctx.log().isAvailable(RequestLogAvailability.REQUEST_END)).isTrue();
-        assertThat(log.isAvailable(RequestLogAvailability.REQUEST_END)).isTrue();
+        ctx.log().ensureRequestComplete();
 
         logBuilder.responseHeaders(ResponseHeaders.of(HttpStatus.OK,
                                                       HttpHeaderNames.CONTENT_TYPE,
                                                       MediaType.PLAIN_TEXT_UTF_8));
         logBuilder.responseLength(1024);
         logBuilder.endResponse();
+
+        final RequestLog log = ctx.log().ensureComplete();
 
         final String localhostAddress = NetUtil.LOCALHOST.getHostAddress();
         final String timestamp = defaultDateTimeFormatter.format(ZonedDateTime.ofInstant(
@@ -272,16 +270,20 @@ class AccessLogFormatsTest {
                                      .remoteAddress(remote)
                                      .proxiedAddresses(proxied)
                                      .build();
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+
+        final RequestLog log = ctx.log().ensureComplete();
 
         List<AccessLogComponent> format;
 
         // Client IP address
         format = AccessLogFormats.parseCustom("%a");
-        assertThat(AccessLogger.format(format, ctx.log())).isEqualTo("10.1.0.2");
+        assertThat(AccessLogger.format(format, log)).isEqualTo("10.1.0.2");
 
         // Remote IP address of a channel
         format = AccessLogFormats.parseCustom("%{c}a");
-        assertThat(AccessLogger.format(format, ctx.log())).isEqualTo("10.1.0.1");
+        assertThat(AccessLogger.format(format, log)).isEqualTo("10.1.0.1");
     }
 
     @Test
@@ -293,12 +295,12 @@ class AccessLogFormatsTest {
                                                  HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
                                                  HttpHeaderNames.REFERER, "http://log.example.com",
                                                  HttpHeaderNames.COOKIE, "a=1;b=2"))).build();
-        final RequestLog log = ctx.log();
+        final RequestLog log = ctx.log().partial();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
 
         // AccessLogger#format will be called after response is finished.
         final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
-        log.addListener(logHolder::set, RequestLogAvailability.COMPLETE);
+        log.completeFuture().thenAccept(logHolder::set);
 
         // RequestLogAvailabilityException will be raised inside AccessLogger#format before injecting each
         // component to RequestLog. So we cannot get the expected log message here.
@@ -324,7 +326,7 @@ class AccessLogFormatsTest {
                                      .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
                                      .build();
 
-        final RequestLog log = ctx.log();
+        final RequestLog log = ctx.log().partial();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
 
         List<AccessLogComponent> format;
@@ -377,7 +379,6 @@ class AccessLogFormatsTest {
     void requestLogWithEmptyCause() {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
-        final RequestLog log = ctx.log();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
 
         final List<AccessLogComponent> format =
@@ -386,7 +387,7 @@ class AccessLogFormatsTest {
         logBuilder.endRequest();
         logBuilder.endResponse();
 
-        assertThat(AccessLogger.format(format, log)).isEqualTo("- -");
+        assertThat(AccessLogger.format(format, ctx.log().ensureComplete())).isEqualTo("- -");
     }
 
     @Test
@@ -395,7 +396,7 @@ class AccessLogFormatsTest {
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                      .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
                                      .build();
-        final RequestLog log = ctx.log();
+        final RequestLog log = ctx.log().partial();
 
         assertThat(AccessLogger.format(AccessLogFormats.parseCustom("%t"), log))
                 .isEqualTo(formatString(defaultDateTimeFormatter, requestStartTimeMillis));

@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.logging;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -125,10 +124,14 @@ interface AccessLogComponent {
 
         private static final Map<String, DateTimeFormatter> predefinedFormatters =
                 getFields(DateTimeFormatter.class, field -> {
-                    final int m = field.getModifiers();
-                    // public static final DateTimeFormatter ...
-                    return Modifier.isPublic(m) && Modifier.isStatic(m) && Modifier.isFinal(m) &&
-                           (field.getType() == DateTimeFormatter.class);
+                    if (field == null) {
+                        return false;
+                    } else {
+                        final int m = field.getModifiers();
+                        // public static final DateTimeFormatter ...
+                        return Modifier.isPublic(m) && Modifier.isStatic(m) && Modifier.isFinal(m) &&
+                               (field.getType() == DateTimeFormatter.class);
+                    }
                 }).stream().collect(Collectors.toMap(Field::getName, f -> {
                     try {
                         return (DateTimeFormatter) f.get(null);
@@ -290,7 +293,7 @@ interface AccessLogComponent {
                 case REQUEST_LINE:
                     final StringBuilder requestLine = new StringBuilder();
 
-                    requestLine.append(log.method())
+                    requestLine.append(log.requestHeaders().method())
                                .append(' ')
                                .append(log.requestHeaders().path());
 
@@ -306,11 +309,11 @@ interface AccessLogComponent {
                     return requestLine.toString();
 
                 case RESPONSE_STATUS_CODE:
-                    return log.statusCode();
+                    return log.responseHeaders().status().code();
                 case RESPONSE_LENGTH:
                     return log.responseLength();
                 case REQUEST_ID:
-                    final RequestId id = log.id();
+                    final RequestId id = log.context().id();
                     if ("short".equals(variable)) {
                         return id.shortText();
                     } else {
@@ -427,11 +430,11 @@ interface AccessLogComponent {
             // The same order as methods in the RequestLog interface.
             switch (variable) {
                 case "method":
-                    return RequestLog::method;
+                    return log -> log.requestHeaders().method();
                 case "path":
-                    return RequestLog::path;
+                    return log -> log.context().path();
                 case "query":
-                    return RequestLog::query;
+                    return log -> log.context().query();
 
                 case "requestStartTimeMillis":
                     return RequestLog::requestStartTimeMillis;
@@ -473,7 +476,7 @@ interface AccessLogComponent {
                 case "sessionProtocol":
                     return RequestLog::sessionProtocol;
                 case "serializationFormat":
-                    return RequestLog::serializationFormat;
+                    return log -> log.scheme().serializationFormat();
                 case "scheme":
                     return RequestLog::scheme;
                 case "host":
@@ -487,9 +490,9 @@ interface AccessLogComponent {
                         return authority;
                     };
                 case "status":
-                    return RequestLog::status;
+                    return log -> log.responseHeaders().status();
                 case "statusCode":
-                    return RequestLog::statusCode;
+                    return log -> log.responseHeaders().status().code();
 
                 default:
                     throw new IllegalArgumentException("unexpected request log variable: " + variable);

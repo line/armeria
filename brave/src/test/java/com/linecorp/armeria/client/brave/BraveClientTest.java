@@ -242,7 +242,7 @@ class BraveClientTest {
         ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseContent(rpcRes, res);
         ctx.logBuilder().endResponse();
-        return ctx.log();
+        return ctx.log().ensureComplete();
     }
 
     private static void assertTags(@Nullable Span span) {

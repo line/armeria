@@ -29,8 +29,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 class HttpClientWithRequestLogTest {
@@ -101,8 +100,8 @@ class HttpClientWithRequestLogTest {
                 WebClient.builder("http://unresolved.armeria.com")
                          .decorator(new ExceptionHoldingDecorator())
                          .decorator((delegate, ctx, req) -> {
-                             ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
-                                                   RequestLogAvailability.REQUEST_START);
+                             ctx.log().partialFuture(RequestLogProperty.REQUEST_START_TIME)
+                                .thenAccept(log -> ref.set(ClientConnectionTimings.get(log)));
                              return delegate.execute(ctx, req);
                          })
                          .build();
@@ -133,8 +132,8 @@ class HttpClientWithRequestLogTest {
                 WebClient.builder("http://127.0.0.1:1")
                          .decorator(new ExceptionHoldingDecorator())
                          .decorator((delegate, ctx, req) -> {
-                             ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
-                                                   RequestLogAvailability.REQUEST_START);
+                             ctx.log().partialFuture(RequestLogProperty.REQUEST_START_TIME)
+                                .thenAccept(log -> ref.set(ClientConnectionTimings.get(log)));
                              return delegate.execute(ctx, req);
                          })
                          .build();
@@ -163,11 +162,8 @@ class HttpClientWithRequestLogTest {
         @Override
         public HttpResponse execute(HttpClient delegate, ClientRequestContext ctx,
                                     HttpRequest req) throws Exception {
-            final RequestLog requestLog = ctx.log();
-            requestLog.addListener(log -> requestCauseHolder.set(log.requestCause()),
-                                   RequestLogAvailability.REQUEST_END);
-            requestLog.addListener(log -> responseCauseHolder.set(log.responseCause()),
-                                   RequestLogAvailability.RESPONSE_END);
+            ctx.log().requestCompleteFuture().thenAccept(log -> requestCauseHolder.set(log.requestCause()));
+            ctx.log().completeFuture().thenAccept(log -> responseCauseHolder.set(log.responseCause()));
             return delegate.execute(ctx, req);
         }
     }

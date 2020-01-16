@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
@@ -46,12 +46,13 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
 
-public class HttpResponseSubscriberTest {
+class HttpResponseSubscriberTest {
 
     @Test
-    public void contentPreview() {
+    void contentPreview() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext sctx = serviceRequestContext(headers);
+        sctx.logBuilder().endRequest();
         final HttpResponseSubscriber responseSubscriber = responseSubscriber(headers, sctx);
 
         responseSubscriber.onSubscribe(mock(Subscription.class));
@@ -60,7 +61,7 @@ public class HttpResponseSubscriberTest {
         responseSubscriber.onNext(new ByteBufHttpData(newBuffer("hello"), true));
         responseSubscriber.onComplete();
 
-        assertThat(sctx.log().responseContentPreview()).isEqualTo("hello");
+        assertThat(sctx.log().completeFuture().join().responseContentPreview()).isEqualTo("hello");
     }
 
     private static DefaultServiceRequestContext serviceRequestContext(RequestHeaders headers) {

@@ -39,14 +39,14 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 import io.netty.handler.codec.DateFormatter;
@@ -201,7 +201,7 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
-        derivedCtx.log().addListener(log -> {
+        derivedCtx.log().partialFuture(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             if (needsContentInStrategy) {
                 final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(
                         response, maxSignalLength(derivedCtx.maxResponseLength()), derivedCtx.eventLoop());
@@ -212,14 +212,14 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
                                                                 resDuplicator::abort));
             } else {
                 final Throwable responseCause =
-                        log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;
+                        log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
                 final Runnable originalResClosingTask =
                         responseCause == null ? response::abort : () -> response.abort(responseCause);
                 retryStrategy().shouldRetry(derivedCtx, responseCause)
                                .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator, originalReq,
                                                      returnedRes, future, response, originalResClosingTask));
             }
-        }, RequestLogAvailability.RESPONSE_HEADERS);
+        });
     }
 
     private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
@@ -273,8 +273,14 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
     }
 
     private static long getRetryAfterMillis(ClientRequestContext ctx) {
-        final HttpHeaders headers = firstNonNull(ctx.log().responseHeaders(), HttpHeaders.of());
-        final String value = headers.get(HttpHeaderNames.RETRY_AFTER);
+        final RequestLogAccess log = ctx.log();
+        final String value;
+        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            value = log.partial().responseHeaders().get(HttpHeaderNames.RETRY_AFTER);
+        } else {
+            value = null;
+        }
+
         if (value != null) {
             try {
                 return Duration.ofSeconds(Integer.parseInt(value)).toMillis();

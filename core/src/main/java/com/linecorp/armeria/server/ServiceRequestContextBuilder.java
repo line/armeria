@@ -73,6 +73,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
     private HttpService service = fakeService;
     @Nullable
+    private Route route;
+    @Nullable
     private RoutingResult routingResult;
     @Nullable
     private ProxiedAddresses proxiedAddresses;
@@ -87,6 +89,14 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      */
     public ServiceRequestContextBuilder service(HttpService service) {
         this.service = requireNonNull(service, "service");
+        return this;
+    }
+
+    /**
+     * Sets the {@link Route} of the request. If not set, it is auto-generated from the request.
+     */
+    public ServiceRequestContextBuilder route(Route route) {
+        this.route = requireNonNull(route, "route");
         return this;
     }
 
@@ -133,15 +143,20 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         // Build a fake server which never starts up.
         final ServerBuilder serverBuilder = Server.builder()
                                                   .meterRegistry(meterRegistry())
-                                                  .workerGroup(eventLoop(), false)
-                                                  .service(path(), service);
+                                                  .workerGroup(eventLoop(), false);
+        if (route != null) {
+            serverBuilder.service(route, service);
+        } else {
+            serverBuilder.service(path(), service);
+        }
+
         serverConfigurators.forEach(configurator -> configurator.accept(serverBuilder));
 
         final Server server = serverBuilder.build();
         server.addListener(rejectingListener);
 
         // Retrieve the ServiceConfig of the fake service.
-        final ServiceConfig serviceCfg = findServiceConfig(server, path(), service);
+        final ServiceConfig serviceCfg = findServiceConfig(server, service);
 
         // Build the fake objects related with path mapping.
         final HttpRequest req = request();
@@ -174,17 +189,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
     }
 
-    private static ServiceConfig findServiceConfig(Server server, String path, HttpService service) {
+    private static ServiceConfig findServiceConfig(Server server, HttpService service) {
         for (ServiceConfig cfg : server.config().defaultVirtualHost().serviceConfigs()) {
-            final Route route = cfg.route();
-            if (route.pathType() != RoutePathType.EXACT) {
-                continue;
-            }
-
-            if (!path.equals(route.paths().get(0))) {
-                continue;
-            }
-
             if (cfg.service().as(service.getClass()) != null) {
                 return cfg;
             }

@@ -45,7 +45,7 @@ public class RequestMetricSupportBenchmark {
 
     @Benchmark
     public String registerSameTags() {
-        final MeterIdPrefix prefix = PREFIX_FUNC.apply(NoopMeterRegistry.get(), REQUEST_LOG);
+        final MeterIdPrefix prefix = PREFIX_FUNC.completeRequestPrefix(NoopMeterRegistry.get(), REQUEST_LOG);
         // Normally we would be memoizing an object with actual metrics but for this benchmark it doesn't matter
         // what object we use, we just want to check the performance of creating a prefix and registering.
         return MicrometerUtil.register(NoopMeterRegistry.get(), prefix,

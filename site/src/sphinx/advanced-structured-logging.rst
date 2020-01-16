@@ -161,33 +161,42 @@ until the request processing ends. Also, some properties related to the (de)seri
 such as ``serializationFormat`` and ``requestContent``, will not be available when request processing just
 started.
 
-To get notified when a certain set of properties are available, you can add a listener to a ``RequestLog``:
+The collected properties must be accessed via :api:`RequestLogAccess`, which provides a safe access to the
+collected properties via the following methods:
+
+- ``isComplete()`` or ``completeFuture()`` to check if or to get notified when all request and response
+  properties are available.
+- ``isRequestComplete()`` or ``requestCompleteFuture()`` to check if or to get notified when all request
+  properties are available.
+- ``isAvailable(RequestLogProperty...)`` or ``partialFuture(RequestLogProperty...)`` to check if or to get
+  notified when a certain set of properties are available.
 
 .. code-block:: java
 
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.common.logging.RequestLog;
-    import com.linecorp.armeria.common.logging.RequestLogAvailability;
+    import com.linecorp.armeria.common.logging.RequestLogProperty;
     import com.linecorp.armeria.server.ServiceRequestContext;
     import com.linecorp.armeria.server.AbstractHttpService;
 
-    public class MyService extends AbstractHttpService {
-        @Override
-        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-            final RequestLog log = ctx.log();
+    HttpService myService = (ctx, req) -> {
+        final RequestLogAccess logAccess = ctx.log();
 
-            log.addListener(log -> {
-                System.err.println("Handled a request: " + log);
-            }, RequestLogAvailability.COMPLETE);
+        logAccess.partialFuture(RequestLogProperty.REQUEST_HEADERS)
+                 .thenAccept(log -> {
+                     assert log.isAvailable(RequestLogProperty.REQUEST_HEADERS);
+                     System.err.println("Started to handle a request: " +
+                                        log.requestHeaders());
+                 });
 
-            return super.serve(ctx, req);
-        }
+        logAccess.completeFuture()
+                 .thenAccept(log -> {
+                     assert log.isComplete();
+                     System.err.println("Handled a request: " + log);
+                 });
+        ...
     }
-
-Note that :api:`RequestLogAvailability` is specified when adding a listener.
-:api:`RequestLogAvailability` is an enum that is used to express which :api:`RequestLog` properties
-you are interested in. ``COMPLETE`` will make your listener invoked when all properties are available.
 
 Availability of client timing properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -201,19 +210,20 @@ request and response properties, you need to use :api:`ClientConnectionTimings` 
     import com.linecorp.armeria.client.WebClient;
 
     WebClient client = WebClient
-            .builder("http://armeria.com")
-            .decorator((delegate, ctx, req) -> {
-                ctx.log().addListener(
-                        log -> {
-                            final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
-                            if (timings != null) {
-                                System.err.println("Connection acquisition duration: " +
-                                                   timings.connectionAcquisitionDurationNanos());
-                            }
-                        }, RequestLogAvailability.REQUEST_START); // Can get after a request is started.
-                return delegate.execute(ctx, req);
-            })
-            .build();
+        .builder("http://armeria.com")
+        .decorator((delegate, ctx, req) -> {
+            // Can get as soon as a request is started.
+            ctx.log().partialFuture(RequestLogProperty.REQUEST_START_TIME)
+               .thenAccept(log -> {
+                   final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
+                   if (timings != null) {
+                       System.err.println("Connection acquisition duration: " +
+                                          timings.connectionAcquisitionDurationNanos());
+                   }
+               });
+            return delegate.execute(ctx, req);
+        })
+        .build();
 
 .. note::
 
@@ -451,13 +461,13 @@ You can retrieve the child logs using ``RequestLog.children()``.
 .. code-block:: java
 
     final RequestContext ctx = ...;
-    ctx.log().addListner(log -> {
+    ctx.log().completeFuture(log -> {
         if (!log.children().isEmpty()) {
             System.err.println("A request finished after " + log.children().size() + " attempt(s): " + log);
         } else {
             System.err.println("A request is done: " + log);
         }
-    }, RequestLogAvailability.COMPLETE);
+    });
 
 :api:`RetryingClient` is a good example that leverages this feature.
 See :ref:`retry-with-logging` for more information.

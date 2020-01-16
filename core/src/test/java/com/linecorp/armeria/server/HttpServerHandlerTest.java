@@ -67,7 +67,9 @@ class HttpServerHandlerTest {
         final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.delete("/hello").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.METHOD_NOT_ALLOWED);
-        await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/hello"));
+        await().untilAsserted(() -> {
+            assertThat(logHolder.get().requestHeaders().path()).isEqualTo("/hello");
+        });
         assertThat(logHolder.get().requestCause()).isNull();
     }
 
@@ -76,7 +78,9 @@ class HttpServerHandlerTest {
         final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/non_existent").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-        await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/non_existent"));
+        await().untilAsserted(() -> {
+            assertThat(logHolder.get().requestHeaders().path()).isEqualTo("/non_existent");
+        });
         assertThat(logHolder.get().requestCause()).isNull();
     }
 
@@ -85,7 +89,9 @@ class HttpServerHandlerTest {
         final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/httpStatusException").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.CREATED);
-        await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/httpStatusException"));
+        await().untilAsserted(() -> {
+            assertThat(logHolder.get().requestHeaders().path()).isEqualTo("/httpStatusException");
+        });
         assertThat(logHolder.get().requestCause()).isNull();
     }
 
@@ -94,7 +100,9 @@ class HttpServerHandlerTest {
         final WebClient client = WebClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/httpResponseException").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.CREATED);
-        await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/httpResponseException"));
+        await().untilAsserted(() -> {
+            assertThat(logHolder.get().requestHeaders().path()).isEqualTo("/httpResponseException");
+        });
         assertThat(logHolder.get().requestCause()).isNull();
     }
 }

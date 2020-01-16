@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.Channel;
@@ -147,8 +148,9 @@ class HttpResponseWrapperTest {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
         final InboundTrafficController controller = InboundTrafficController.disabled();
-        final TestHttpResponseDecoder decoder =
-                new TestHttpResponseDecoder(cctx.log().channel(), controller);
+        final Channel channel = cctx.log().ensurePartial(RequestLogProperty.SESSION).channel();
+        assertThat(channel).isNotNull();
+        final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 
         res.init(controller);
         return decoder.addResponse(1, res, cctx, cctx.eventLoop(), cctx.responseTimeoutMillis(),
@@ -156,8 +158,7 @@ class HttpResponseWrapperTest {
     }
 
     private static class TestHttpResponseDecoder extends HttpResponseDecoder {
-        TestHttpResponseDecoder(Channel channel,
-                                InboundTrafficController inboundTrafficController) {
+        TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
             super(channel, inboundTrafficController);
         }
     }

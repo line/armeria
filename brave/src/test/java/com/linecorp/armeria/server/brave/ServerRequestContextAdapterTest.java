@@ -19,26 +19,23 @@ package com.linecorp.armeria.server.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -47,121 +44,152 @@ import brave.http.HttpServerRequest;
 import brave.http.HttpServerResponse;
 
 class ServerRequestContextAdapterTest {
-
-    @Mock
-    private ServiceRequestContext ctx;
-    @Mock
-    private RequestLog requestLog;
-    private HttpServerRequest request;
-    private HttpServerResponse response;
-
-    @BeforeEach
-    void setUp() {
-        request = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
-        response = ServiceRequestContextAdapter.asHttpServerResponse(ctx);
-    }
-
     @Test
     void path() {
-        when(ctx.path()).thenReturn("/foo");
-        assertThat(request.path()).isEqualTo("/foo");
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/foo");
+        final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(
+                ServiceRequestContext.of(req));
+
+        assertThat(braveReq.path()).isEqualTo("/foo");
     }
 
     @Test
     void method() {
-        when(ctx.method()).thenReturn(HttpMethod.GET);
-        assertThat(request.method()).isEqualTo("GET");
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/foo");
+        final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(
+                ServiceRequestContext.of(req));
+
+        assertThat(braveReq.method()).isEqualTo("GET");
     }
 
     @Test
     void url() {
-        when(ctx.request()).thenReturn(HttpRequest.of(
+        final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.GET, "/foo?name=hoge",
                                   HttpHeaderNames.SCHEME, "http",
-                                  HttpHeaderNames.AUTHORITY, "example.com")));
-        assertThat(request.url()).isEqualTo("http://example.com/foo?name=hoge");
+                                  HttpHeaderNames.AUTHORITY, "example.com"));
+
+        final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(
+                ServiceRequestContext.of(req));
+
+        assertThat(braveReq.url()).isEqualTo("http://example.com/foo?name=hoge");
     }
 
     @Test
     void statusCode() {
-        when(ctx.log()).thenReturn(requestLog);
-        when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(true);
-        when(requestLog.status()).thenReturn(HttpStatus.OK);
-        assertThat(response.statusCode()).isEqualTo(200);
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK));
+        ctx.logBuilder().endResponse();
 
-        when(requestLog.status()).thenReturn(HttpStatus.UNKNOWN);
-        assertThat(response.statusCode()).isEqualTo(0);
-    }
+        final HttpServerResponse res =
+                ServiceRequestContextAdapter.asHttpServerResponse(ctx.log().ensureComplete());
 
-    @Test
-    void statusCode_notAvailable() {
-        when(ctx.log()).thenReturn(requestLog);
-        when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
-        assertThat(response.statusCode()).isEqualTo(0);
+        assertThat(res.statusCode()).isEqualTo(200);
     }
 
     @Test
     void serializationFormat() {
-        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
-        when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.of("tjson"), SessionProtocol.HTTP));
-        assertThat(ServiceRequestContextAdapter.serializationFormat(requestLog)).isEqualTo("tjson");
+        final ServiceRequestContext ctx1 = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().serializationFormat(SerializationFormat.UNKNOWN);
+        ctx1.logBuilder().endRequest();
+        ctx1.logBuilder().endResponse();
 
-        when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(ServiceRequestContextAdapter.serializationFormat(requestLog)).isNull();
+        assertThat(ServiceRequestContextAdapter.serializationFormat(ctx1.log().ensureComplete()))
+                .isEqualTo("unknown");
+
+        final ServiceRequestContext ctx2 = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx2.logBuilder().endRequest();
+        ctx2.logBuilder().endResponse();
+        assertThat(ServiceRequestContextAdapter.serializationFormat(ctx2.log().ensureComplete())).isNull();
     }
 
     @Test
     void rpcMethod() {
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)).thenReturn(true);
-        assertThat(ServiceRequestContextAdapter.rpcMethod(requestLog)).isNull();
+        final ServiceRequestContext ctx1 = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().requestContent(RpcRequest.of(Object.class, "foo"), null);
+        ctx1.logBuilder().endRequest();
+        ctx1.logBuilder().endResponse();
 
-        final RpcRequest rpcRequest = mock(RpcRequest.class);
-        when(requestLog.requestContent()).thenReturn(rpcRequest);
-        when(rpcRequest.method()).thenReturn("foo");
-        assertThat(ServiceRequestContextAdapter.rpcMethod(requestLog)).isEqualTo("foo");
+        assertThat(ServiceRequestContextAdapter.rpcMethod(ctx1.log().ensureComplete()))
+                .isEqualTo("foo");
+
+        final ServiceRequestContext ctx2 = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx2.logBuilder().endRequest();
+        ctx2.logBuilder().endResponse();
+        assertThat(ServiceRequestContextAdapter.rpcMethod(ctx2.log().ensureComplete())).isNull();
     }
 
     @Test
     void requestHeader() {
-        when(ctx.log()).thenReturn(requestLog);
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
-        final RequestHeaders requestHeaders = mock(RequestHeaders.class);
-        when(requestLog.requestHeaders()).thenReturn(requestHeaders);
-        when(requestHeaders.get("foo")).thenReturn("bar");
-        assertThat(request.header("foo")).isEqualTo("bar");
+        final ServiceRequestContext ctx = ServiceRequestContext.of(
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/", "foo", "bar")));
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+
+        final HttpServerRequest braveReq =
+                ServiceRequestContextAdapter.asHttpServerRequest(ctx);
+        assertThat(braveReq.header("foo")).isEqualTo("bar");
+        assertThat(braveReq.header("bar")).isNull();
     }
 
     @Test
     void parseClientIpAndPort() throws Exception {
-        when(ctx.remoteAddress())
-                .thenReturn(new InetSocketAddress(
-                        InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), 1234));
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .remoteAddress(new InetSocketAddress("127.0.0.1", 1234))
+                                     .build();
+
+        final HttpServerRequest req =
+                ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = mock(Span.class);
         when(span.remoteIpAndPort("127.0.0.1", 1234)).thenReturn(true);
-        assertThat(request.parseClientIpAndPort(span)).isTrue();
+        assertThat(req.parseClientIpAndPort(span)).isTrue();
+        verify(span, times(1)).remoteIpAndPort("127.0.0.1", 1234);
+        verifyNoMoreInteractions(span);
     }
 
     @Test
     void route() {
-        when(ctx.route()).thenReturn(Route.builder().path("/foo/:bar/hoge").build());
-        assertThat(response.route()).isEqualTo("/foo/:/hoge");
+        final HttpServerResponse res = newRouteResponse(Route.builder()
+                                                             .path("/foo/:bar/hoge")
+                                                             .build());
+        assertThat(res.route()).isEqualTo("/foo/:/hoge");
     }
 
     @Test
     void route_prefix() {
-        when(ctx.route()).thenReturn(Route.builder().path("exact:/foo").build());
-        assertThat(response.route()).isEqualTo("/foo");
+        final HttpServerResponse res = newRouteResponse(Route.builder()
+                                                             .path("exact:/foo")
+                                                             .build());
+        assertThat(res.route()).isEqualTo("/foo");
     }
 
     @Test
     void route_pathWithPrefix_glob() {
-        when(ctx.route()).thenReturn(Route.builder().path("/foo/", "glob:bar").build());
-        assertThat(response.route()).isEqualTo("/foo/**/bar");
+        final HttpServerResponse res = newRouteResponse(Route.builder()
+                                                             .path("/foo/", "glob:bar")
+                                                             .build());
+        assertThat(res.route()).isEqualTo("/foo/**/bar");
     }
 
     @Test
     void route_pathWithPrefix_regex() {
-        when(ctx.route()).thenReturn(Route.builder().path("/foo/", "regex:(bar|baz)").build());
-        assertThat(response.route()).isEqualTo("/foo/(bar|baz)");
+        final HttpServerResponse res = newRouteResponse(Route.builder()
+                                                             .path("/foo/", "regex:(bar|baz)")
+                                                             .build());
+        assertThat(res.route()).isEqualTo("/foo/(bar|baz)");
+    }
+
+    private static HttpServerResponse newRouteResponse(Route route) {
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .route(route)
+                                     .build();
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+
+        return ServiceRequestContextAdapter.asHttpServerResponse(ctx.log().ensureComplete());
     }
 }

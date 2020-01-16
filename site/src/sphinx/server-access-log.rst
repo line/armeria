@@ -218,8 +218,8 @@ the condition.
 
 .. _request-log:
 
-Retrieving values from RequestLog
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Retrieving values from ``RequestLog``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 :api:`RequestLog` holds information about the request, so a user may want to write these values to his or
 her access log file. To write them in a simple way, ``%{variable}L`` token is provided with the following

@@ -51,7 +51,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
@@ -387,12 +386,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             unfinishedRequests.put(req, res);
 
             if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), routed.route())) {
-                reqCtx.log().addListener(log -> {
+                reqCtx.log().completeFuture().thenAccept(log -> {
                     final HttpStatus status = log.responseHeaders().status();
                     if (status.code() >= 200 && status.code() < 400) {
                         pathAndQuery.storeInCache(originalPath);
                     }
-                }, RequestLogAvailability.COMPLETE);
+                });
             }
 
             req.completionFuture().handle((ret, cause) -> {
@@ -553,8 +552,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Respect the first specified cause.
                 logBuilder.endResponse(firstNonNull(cause, f.cause()));
             }
-            reqCtx.log().addListener(log -> reqCtx.accessLogWriter().log(log),
-                                     RequestLogAvailability.COMPLETE);
+            reqCtx.log().completeFuture().thenAccept(reqCtx.accessLogWriter()::log);
         });
         return future;
     }

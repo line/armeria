@@ -165,7 +165,7 @@ public class DefaultRequestLogTest {
         assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
 
         child.serializationFormat(SerializationFormat.NONE);
-        assertThat(log.serializationFormat()).isSameAs(SerializationFormat.NONE);
+        assertThat(log.scheme().serializationFormat()).isSameAs(SerializationFormat.NONE);
 
         child.requestFirstBytesTransferred();
         assertThat(log.requestFirstBytesTransferredTimeNanos())
@@ -236,7 +236,7 @@ public class DefaultRequestLogTest {
         final IllegalArgumentException cause = new IllegalArgumentException(VERY_LONG_STRING);
         logBuilder.endRequest(cause);
 
-        assertThat(ctx.log().toStringRequestOnly().length()).isLessThanOrEqualTo(
+        assertThat(ctx.log().ensureRequestComplete().toStringRequestOnly().length()).isLessThanOrEqualTo(
                 REQUEST_STRING_BUILDER_CAPACITY +
                 reqHeaders.toString().length() +
                 VERY_LONG_STRING.length() +
@@ -267,7 +267,7 @@ public class DefaultRequestLogTest {
         final IllegalArgumentException cause = new IllegalArgumentException(VERY_LONG_STRING);
         logBuilder.endResponse(cause);
 
-        assertThat(ctx.log().toStringResponseOnly().length()).isLessThanOrEqualTo(
+        assertThat(ctx.log().ensureComplete().toStringResponseOnly().length()).isLessThanOrEqualTo(
                 RESPONSE_STRING_BUILDER_CAPACITY +
                 resHeaders.toString().length() +
                 VERY_LONG_STRING.length() +

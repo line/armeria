@@ -70,7 +70,7 @@ class GracefulShutdownIntegrationTest {
 
             final AccessLogWriter writer1 = new AccessLogWriter() {
                 @Override
-                public void log(RequestLog log) throws Exception {}
+                public void log(RequestLog log) {}
 
                 @Override
                 public CompletableFuture<Void> shutdown() {
@@ -80,7 +80,7 @@ class GracefulShutdownIntegrationTest {
             };
             final AccessLogWriter writer2 = new AccessLogWriter() {
                 @Override
-                public void log(RequestLog log) throws Exception {}
+                public void log(RequestLog log) {}
 
                 @Override
                 public CompletableFuture<Void> shutdown() {

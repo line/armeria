@@ -67,7 +67,7 @@ import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Processor;
@@ -300,8 +300,8 @@ class ThriftOverHttpClientTServletIntegrationTest {
 
         return Clients.builder(uri)
                       .rpcDecorator((delegate, ctx, req) -> {
-                          ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
-                                                RequestLogAvailability.REQUEST_START);
+                          ctx.log().partialFuture(RequestLogProperty.REQUEST_START_TIME)
+                             .thenAccept(log -> sessionProtocol.set(log.sessionProtocol()));
                           return delegate.execute(ctx, req);
                       })
                       .build(HelloService.Iface.class);

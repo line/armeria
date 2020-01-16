@@ -55,7 +55,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcTrailersUtil;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.grpc.ForwardingDecompressor;
@@ -392,7 +392,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             throw new UncheckedIOException(e);
         }
 
-        if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+        if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
             ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
         }
 
@@ -419,7 +419,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     public void endOfStream() {
         setClientStreamClosed();
         if (!closeCalled) {
-            if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+            if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
             }
 

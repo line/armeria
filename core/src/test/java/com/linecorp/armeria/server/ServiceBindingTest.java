@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewerAdapter;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class ServiceBindingTest {
@@ -75,7 +74,7 @@ class ServiceBindingTest {
               .responseContentPreviewerFactory(responseContentPreviewerFactory)
               .accessLogWriter(log -> accessLogWriterCheckLatch.countDown(), true)
               .decorator(delegate -> (ctx, req) -> {
-                  ctx.log().addListener(log -> {
+                  ctx.log().completeFuture().thenAccept(log -> {
                       assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
                       assertThat(ctx.maxRequestLength()).isEqualTo(8192);
                       assertThat(ctx.verboseResponses()).isTrue();
@@ -83,7 +82,7 @@ class ServiceBindingTest {
                       assertThat(log.responseContentPreview()).isEqualTo("response content");
 
                       propertyCheckLatch.countDown();
-                  }, RequestLogAvailability.COMPLETE);
+                  });
                   return delegate.serve(ctx, req);
               })
               .build((ctx, req) -> {

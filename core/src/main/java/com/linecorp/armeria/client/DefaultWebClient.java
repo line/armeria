@@ -28,7 +28,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -95,7 +95,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         return execute(endpointGroup, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req,
                        (ctx, cause) -> {
-                           if (ctx != null && !ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
+                           if (ctx != null && !ctx.log().isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
                                // An exception is raised even before sending a request, so abort the request to
                                // release the elements.
                                if (cause == null) {

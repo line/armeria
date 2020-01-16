@@ -32,7 +32,7 @@ import io.netty.channel.Channel;
 final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
-    public void addChild(RequestLog child) {}
+    public void addChild(RequestLogAccess child) {}
 
     @Override
     public void endResponseWithLastChild() {}

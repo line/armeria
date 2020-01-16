@@ -18,12 +18,8 @@
 package com.linecorp.armeria.client.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -31,107 +27,116 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 import brave.http.HttpClientRequest;
 import brave.http.HttpClientResponse;
 
 class ClientRequestContextAdapterTest {
-
-    @Mock
-    private ClientRequestContext ctx;
-    @Mock
-    private RequestLog requestLog;
-    @Mock
-    private RequestHeadersBuilder headersBuilder;
-    private HttpClientRequest request;
-    private HttpClientResponse response;
-
-    @BeforeEach
-    void setUp() {
-        request = ClientRequestContextAdapter.asHttpClientRequest(ctx, headersBuilder);
-        response = ClientRequestContextAdapter.asHttpClientResponse(ctx);
-    }
-
     @Test
     void path() {
-        when(ctx.path()).thenReturn("/foo");
-        assertThat(request.path()).isEqualTo("/foo");
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/foo");
+        final HttpClientRequest braveReq = ClientRequestContextAdapter.asHttpClientRequest(
+                ClientRequestContext.of(req),
+                req.headers().toBuilder());
+
+        assertThat(braveReq.path()).isEqualTo("/foo");
     }
 
     @Test
     void method() {
-        when(ctx.method()).thenReturn(HttpMethod.GET);
-        assertThat(request.method()).isEqualTo("GET");
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/foo");
+        final HttpClientRequest braveReq = ClientRequestContextAdapter.asHttpClientRequest(
+                ClientRequestContext.of(req),
+                req.headers().toBuilder());
+
+        assertThat(braveReq.method()).isEqualTo("GET");
     }
 
     @Test
     void url() {
-        when(ctx.request()).thenReturn(HttpRequest.of(
+        final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.GET, "/foo?name=hoge",
                                   HttpHeaderNames.SCHEME, "http",
-                                  HttpHeaderNames.AUTHORITY, "example.com")));
-        assertThat(request.url()).isEqualTo("http://example.com/foo?name=hoge");
+                                  HttpHeaderNames.AUTHORITY, "example.com"));
+
+        final HttpClientRequest braveReq = ClientRequestContextAdapter.asHttpClientRequest(
+                ClientRequestContext.of(req),
+                req.headers().toBuilder());
+
+        assertThat(braveReq.url()).isEqualTo("http://example.com/foo?name=hoge");
     }
 
     @Test
     void statusCode() {
-        when(ctx.log()).thenReturn(requestLog);
-        when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(true);
-        when(requestLog.status()).thenReturn(HttpStatus.OK);
-        assertThat(response.statusCode()).isEqualTo(200);
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK));
+        ctx.logBuilder().endResponse();
 
-        when(requestLog.status()).thenReturn(HttpStatus.UNKNOWN);
-        assertThat(response.statusCode()).isEqualTo(0);
-    }
+        final HttpClientResponse res =
+                ClientRequestContextAdapter.asHttpClientResponse(ctx.log().ensureComplete());
 
-    @Test
-    void statusCode_notAvailable() {
-        when(ctx.log()).thenReturn(requestLog);
-        when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
-        assertThat(response.statusCode()).isEqualTo(0);
+        assertThat(res.statusCode()).isEqualTo(200);
     }
 
     @Test
     void protocol() {
-        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
-        when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(ClientRequestContextAdapter.protocol(requestLog)).isEqualTo("http");
+        final ClientRequestContext ctx = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                             .sessionProtocol(SessionProtocol.H2C)
+                                                             .build();
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+        assertThat(ClientRequestContextAdapter.protocol(ctx.log().ensureComplete())).isEqualTo("h2c");
     }
 
     @Test
     void serializationFormat() {
-        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
-        when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.of("tjson"), SessionProtocol.HTTP));
-        assertThat(ClientRequestContextAdapter.serializationFormat(requestLog)).isEqualTo("tjson");
-        when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(ClientRequestContextAdapter.serializationFormat(requestLog)).isNull();
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().serializationFormat(SerializationFormat.UNKNOWN);
+        ctx1.logBuilder().endRequest();
+        ctx1.logBuilder().endResponse();
+
+        assertThat(ClientRequestContextAdapter.serializationFormat(ctx1.log().ensureComplete()))
+                .isEqualTo("unknown");
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx2.logBuilder().endRequest();
+        ctx2.logBuilder().endResponse();
+        assertThat(ClientRequestContextAdapter.serializationFormat(ctx2.log().ensureComplete())).isNull();
     }
 
     @Test
     void rpcMethod() {
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)).thenReturn(true);
-        assertThat(ClientRequestContextAdapter.rpcMethod(requestLog)).isNull();
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().requestContent(RpcRequest.of(Object.class, "foo"), null);
+        ctx1.logBuilder().endRequest();
+        ctx1.logBuilder().endResponse();
 
-        final RpcRequest rpcRequest = mock(RpcRequest.class);
-        when(requestLog.requestContent()).thenReturn(rpcRequest);
-        when(rpcRequest.method()).thenReturn("foo");
-        assertThat(ClientRequestContextAdapter.rpcMethod(requestLog)).isEqualTo("foo");
+        assertThat(ClientRequestContextAdapter.rpcMethod(ctx1.log().ensureComplete()))
+                .isEqualTo("foo");
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx2.logBuilder().endRequest();
+        ctx2.logBuilder().endResponse();
+        assertThat(ClientRequestContextAdapter.rpcMethod(ctx2.log().ensureComplete())).isNull();
     }
 
     @Test
     void requestHeader() {
-        when(ctx.log()).thenReturn(requestLog);
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
-        final RequestHeaders requestHeaders = mock(RequestHeaders.class);
-        when(requestLog.requestHeaders()).thenReturn(requestHeaders);
-        when(requestHeaders.get("foo")).thenReturn("bar");
-        assertThat(request.header("foo")).isEqualTo("bar");
+        final ClientRequestContext ctx = ClientRequestContext.of(
+                        HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/", "foo", "bar")));
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+
+        final HttpClientRequest braveReq =
+                ClientRequestContextAdapter.asHttpClientRequest(ctx,
+                                                                ctx.request().headers().toBuilder());
+        assertThat(braveReq.header("foo")).isEqualTo("bar");
+        assertThat(braveReq.header("bar")).isNull();
     }
 }

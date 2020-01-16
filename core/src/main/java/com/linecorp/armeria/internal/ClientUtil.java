@@ -29,8 +29,8 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -60,7 +60,7 @@ public final class ClientUtil {
                 if (res instanceof StreamMessage) {
                     ((StreamMessage<?>) res).abort();
                 }
-                return fallback.apply(ctx, ctx.log().requestCause());
+                return fallback.apply(ctx, ctx.log().partial().requestCause());
             }
         } catch (Throwable cause) {
             return failAndGetFallbackResponse(ctx, fallback, cause);
@@ -106,7 +106,7 @@ public final class ClientUtil {
             Throwable cause) {
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
-        if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
+        if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
             // An exception is raised even before sending a request,
             // so end the request with the exception.
             logBuilder.endRequest(cause);

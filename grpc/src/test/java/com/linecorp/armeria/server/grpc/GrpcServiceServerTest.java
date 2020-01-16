@@ -79,7 +79,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -401,7 +400,7 @@ class GrpcServiceServerTest {
                     service -> service
                             .decorate(LoggingService.newDecorator())
                             .decorate((delegate, ctx, req) -> {
-                                ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
+                                ctx.log().completeFuture().thenAccept(requestLogQueue::add);
                                 return delegate.serve(ctx, req);
                             }));
 
@@ -449,8 +448,7 @@ class GrpcServiceServerTest {
                                        .build()
                                        .decorate(LoggingService.newDecorator())
                                        .decorate((delegate, ctx, req) -> {
-                                           ctx.log().addListener(requestLogQueue::add,
-                                                                 RequestLogAvailability.COMPLETE);
+                                           ctx.log().completeFuture().thenAccept(requestLogQueue::add);
                                            return delegate.serve(ctx, req);
                                        }));
         }
@@ -469,8 +467,7 @@ class GrpcServiceServerTest {
                                        .build()
                                        .decorate(LoggingService.newDecorator())
                                        .decorate((delegate, ctx, req) -> {
-                                           ctx.log().addListener(requestLogQueue::add,
-                                                                 RequestLogAvailability.COMPLETE);
+                                           ctx.log().completeFuture().thenAccept(requestLogQueue::add);
                                            return delegate.serve(ctx, req);
                                        }));
         }
@@ -489,8 +486,7 @@ class GrpcServiceServerTest {
                                        .build()
                                        .decorate(LoggingService.newDecorator())
                                        .decorate((delegate, ctx, req) -> {
-                                           ctx.log().addListener(requestLogQueue::add,
-                                                                 RequestLogAvailability.COMPLETE);
+                                           ctx.log().completeFuture().thenAccept(requestLogQueue::add);
                                            return delegate.serve(ctx, req);
                                        }));
         }
@@ -885,7 +881,7 @@ class GrpcServiceServerTest {
         await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
 
         final RequestLog log = requestLogQueue.take();
-        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+        assertThat(log.isComplete()).isTrue();
         assertThat(log.requestContent()).isNotNull();
         assertThat(log.responseContent()).isNull();
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
@@ -1262,7 +1258,7 @@ class GrpcServiceServerTest {
 
     private static void checkRequestLog(RequestLogChecker checker) throws Exception {
         final RequestLog log = requestLogQueue.take();
-        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+        assertThat(log.isComplete()).isTrue();
 
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
         final RpcResponse rpcRes = (RpcResponse) log.responseContent();
@@ -1282,7 +1278,7 @@ class GrpcServiceServerTest {
 
     private static void checkRequestLogStatus(RequestLogStatusChecker checker) throws Exception {
         final RequestLog log = requestLogQueue.take();
-        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+        assertThat(log.isComplete()).isTrue();
 
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
         final RpcResponse rpcRes = (RpcResponse) log.responseContent();
@@ -1295,7 +1291,7 @@ class GrpcServiceServerTest {
 
     private static void assertNoRpcContent() throws InterruptedException {
         final RequestLog log = requestLogQueue.take();
-        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+        assertThat(log.isComplete()).isTrue();
         assertThat(log.requestContent()).isNull();
         assertThat(log.responseContent()).isNull();
     }

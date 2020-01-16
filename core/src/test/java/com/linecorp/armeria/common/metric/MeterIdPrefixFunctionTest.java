@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -40,20 +41,20 @@ class MeterIdPrefixFunctionTest {
 
     @Test
     void testWithTags() {
-        final MeterIdPrefixFunction f =
-                (registry, log) -> new MeterIdPrefix("requests_total", "region", "us-west");
+        final MeterIdPrefixFunction f = MeterIdPrefixFunction.of(
+                (registry, log) -> new MeterIdPrefix("requests_total", "region", "us-west"));
 
-        assertThat(f.withTags("zone", "1a", "host", "foo").apply(null, null))
+        assertThat(f.withTags("zone", "1a", "host", "foo").completeRequestPrefix(null, null))
                 .isEqualTo(new MeterIdPrefix("requests_total",
                                              "region", "us-west", "zone", "1a", "host", "foo"));
     }
 
     @Test
     void testWithUnzippedTags() {
-        final MeterIdPrefixFunction f =
-                (registry, log) -> new MeterIdPrefix("requests_total", "region", "us-east");
+        final MeterIdPrefixFunction f = MeterIdPrefixFunction.of(
+                (registry, log) -> new MeterIdPrefix("requests_total", "region", "us-east"));
 
-        assertThat(f.withTags("host", "bar").apply(null, null))
+        assertThat(f.withTags("host", "bar").completeRequestPrefix(null, null))
                 .isEqualTo(new MeterIdPrefix("requests_total", "region", "us-east", "host", "bar"));
     }
 
@@ -61,17 +62,17 @@ class MeterIdPrefixFunctionTest {
     void testAndThen() {
         final MeterIdPrefixFunction f = new MeterIdPrefixFunction() {
             @Override
-            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
+            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
                 return new MeterIdPrefix("oof");
             }
 
             @Override
-            public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
+            public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
                 return new MeterIdPrefix("foo", ImmutableList.of());
             }
         };
         final MeterIdPrefixFunction f2 = f.andThen((registry, id) -> id.append("bar"));
-        assertThat(f2.apply(PrometheusMeterRegistries.newRegistry(), null))
+        assertThat(f2.completeRequestPrefix(PrometheusMeterRegistries.newRegistry(), null))
                 .isEqualTo(new MeterIdPrefix("foo.bar", ImmutableList.of()));
         assertThat(f2.activeRequestPrefix(PrometheusMeterRegistries.newRegistry(), null))
                 .isEqualTo(new MeterIdPrefix("oof.bar", ImmutableList.of()));
@@ -87,7 +88,8 @@ class MeterIdPrefixFunctionTest {
 
         // A simple HTTP request.
         ctx = newContext(HttpMethod.GET, "/", null);
-        res = f.apply(registry, ctx.log());
+        ctx.logBuilder().endResponse();
+        res = f.completeRequestPrefix(registry, ctx.log().ensureComplete());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("http.status", "0"),
@@ -96,7 +98,8 @@ class MeterIdPrefixFunctionTest {
 
         // An RPC request.
         ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(Object.class, "doFoo"));
-        res = f.apply(registry, ctx.log());
+        ctx.logBuilder().endResponse();
+        res = f.completeRequestPrefix(registry, ctx.log().ensureComplete());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("http.status", "0"),
@@ -107,7 +110,8 @@ class MeterIdPrefixFunctionTest {
         ctx = newContext(HttpMethod.GET, "/get", null);
         ctx.logBuilder().startResponse();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
-        res = f.apply(registry, ctx.log());
+        ctx.logBuilder().endResponse();
+        res = f.completeRequestPrefix(registry, ctx.log().ensureComplete());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("http.status", "200"),
@@ -125,7 +129,7 @@ class MeterIdPrefixFunctionTest {
 
         // A simple HTTP request.
         ctx = newContext(HttpMethod.GET, "/", null);
-        res = f.activeRequestPrefix(registry, ctx.log());
+        res = f.activeRequestPrefix(registry, ctx.log().ensureRequestComplete());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("method", "GET"),
@@ -133,7 +137,7 @@ class MeterIdPrefixFunctionTest {
 
         // An RPC request.
         ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(Object.class, "doFoo"));
-        res = f.activeRequestPrefix(registry, ctx.log());
+        res = f.activeRequestPrefix(registry, ctx.log().ensureRequestComplete());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("method", "doFoo"),
@@ -143,7 +147,7 @@ class MeterIdPrefixFunctionTest {
         ctx = newContext(HttpMethod.GET, "/get", null);
         ctx.logBuilder().startResponse();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
-        res = f.activeRequestPrefix(registry, ctx.log());
+        res = f.activeRequestPrefix(registry, ctx.log().ensureRequestComplete());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostname.pattern", "*"),
                                                Tag.of("method", "GET"),

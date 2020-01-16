@@ -36,7 +36,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -98,8 +98,8 @@ class RetryingClientLoadBalancingTest {
         final RetryStrategy retryStrategy = (ctx, cause) -> {
             // Get the response status.
             final HttpStatus status;
-            if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-                status = ctx.log().responseHeaders().status();
+            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                status = ctx.log().partial().responseHeaders().status();
             } else {
                 status = null;
             }

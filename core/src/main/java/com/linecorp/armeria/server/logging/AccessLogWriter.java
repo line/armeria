@@ -65,7 +65,7 @@ public interface AccessLogWriter {
     /**
      * Logs the specified {@link RequestLog}.
      */
-    void log(RequestLog log) throws Exception;
+    void log(RequestLog log);
 
     /**
      * Returns a new {@link AccessLogWriter} which combines two {@link AccessLogWriter}s.
@@ -73,7 +73,7 @@ public interface AccessLogWriter {
     default AccessLogWriter andThen(AccessLogWriter after) {
         return new AccessLogWriter() {
             @Override
-            public void log(RequestLog log) throws Exception {
+            public void log(RequestLog log) {
                 try {
                     AccessLogWriter.this.log(log);
                 } finally {

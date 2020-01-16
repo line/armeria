@@ -74,7 +74,6 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
@@ -203,7 +202,7 @@ public class GrpcClientTest {
     public void setUp() {
         requestLogQueue.clear();
         final DecoratingHttpClientFunction requestLogRecorder = (delegate, ctx, req) -> {
-            ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
+            ctx.log().completeFuture().thenAccept(requestLogQueue::add);
             return delegate.execute(ctx, req);
         };
 
@@ -575,7 +574,7 @@ public class GrpcClientTest {
         assertThat(GrpcStatus.fromThrowable(responseObserver.getError()).getCode()).isEqualTo(Code.CANCELLED);
 
         final RequestLog log = requestLogQueue.take();
-        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+        assertThat(log.isComplete()).isTrue();
         assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
         final Throwable cause = ((RpcResponse) log.responseContent()).cause();
         assertThat(cause).isInstanceOf(StatusException.class);
@@ -1336,7 +1335,7 @@ public class GrpcClientTest {
 
     private void checkRequestLog(RequestLogChecker checker) throws Exception {
         final RequestLog log = requestLogQueue.take();
-        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+        assertThat(log.isComplete()).isTrue();
 
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
         final RpcResponse rpcRes = (RpcResponse) log.responseContent();
@@ -1356,7 +1355,7 @@ public class GrpcClientTest {
 
     private void checkRequestLogError(RequestLogErrorChecker checker) throws Exception {
         final RequestLog log = requestLogQueue.take();
-        assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
+        assertThat(log.isComplete()).isTrue();
 
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
         if (rpcReq != null) {

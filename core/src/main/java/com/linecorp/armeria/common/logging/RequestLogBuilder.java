@@ -49,15 +49,15 @@ public interface RequestLogBuilder {
     RequestLogBuilder NOOP = new NoopRequestLogBuilder();
 
     /**
-     * Adds the specified {@link RequestLog} so that the logs are propagated from the {@code child}.
+     * Adds the specified {@link RequestLogAccess} so that the logs are propagated from the {@code child}.
      * Note that only the request-side logs of the first added child will be propagated. To fill the
      * response-side logs you need to call {@link #endResponseWithLastChild()}.
      */
-    void addChild(RequestLog child);
+    void addChild(RequestLogAccess child);
 
     /**
-     * Fills the response-side logs from the last added child. Note that already fulfilled
-     * {@link RequestLogAvailability}s in the child log will be propagated immediately.
+     * Fills the response-side logs from the last added child. Note that already collected properties
+     * in the child log will be propagated immediately.
      */
     void endResponseWithLastChild();
 

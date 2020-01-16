@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.logging.LoggingDecorators.logRequest
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -35,8 +36,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.logging.RequestLogListener;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -48,11 +48,11 @@ import com.linecorp.armeria.common.util.Sampler;
 abstract class AbstractLoggingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private final RequestLogListener requestLogger = new RequestLogger();
-    private final RequestLogListener responseLogger = new ResponseLogger();
+    private final RequestLogger requestLogger = new RequestLogger();
+    private final ResponseLogger responseLogger = new ResponseLogger();
 
     private final Logger logger;
-    private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
+    private final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
     private final Function<? super HttpHeaders, ?> requestHeadersSanitizer;
     private final Function<Object, ?> requestContentSanitizer;
@@ -89,7 +89,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
      */
     AbstractLoggingClient(Client<I, O> delegate,
                           @Nullable Logger logger,
-                          Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+                          Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
                           Function<? super RequestLog, LogLevel> responseLogLevelMapper,
                           Function<? super HttpHeaders, ?> requestHeadersSanitizer,
                           Function<Object, ?> requestContentSanitizer,
@@ -118,15 +118,15 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(requestLogger, RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(responseLogger, RequestLogAvailability.COMPLETE);
+            ctx.log().requestCompleteFuture().thenAccept(requestLogger);
+            ctx.log().completeFuture().thenAccept(responseLogger);
         }
         return delegate().execute(ctx, req);
     }
 
-    private class RequestLogger implements RequestLogListener {
+    private class RequestLogger implements Consumer<RequestOnlyLog> {
         @Override
-        public void onRequestLog(RequestLog log) throws Exception {
+        public void accept(RequestOnlyLog log) {
             logRequest(logger, log,
                        requestLogLevelMapper,
                        requestHeadersSanitizer,
@@ -134,9 +134,9 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
         }
     }
 
-    private class ResponseLogger implements RequestLogListener {
+    private class ResponseLogger implements Consumer<RequestLog> {
         @Override
-        public void onRequestLog(RequestLog log) throws Exception {
+        public void accept(RequestLog log) {
             logResponse(logger, log,
                         requestLogLevelMapper,
                         responseLogLevelMapper,

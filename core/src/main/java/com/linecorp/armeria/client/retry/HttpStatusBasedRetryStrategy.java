@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * Provides a {@link RetryStrategy} that decides to retry the request based on the {@link HttpStatus} of
@@ -47,8 +47,8 @@ final class HttpStatusBasedRetryStrategy implements RetryStrategy {
     @Override
     public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
         final HttpStatus status;
-        if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-            status = ctx.log().responseHeaders().status();
+        if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            status = ctx.log().partial().responseHeaders().status();
         } else {
             status = null;
         }

@@ -46,7 +46,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.PooledByteBufAllocator;
@@ -101,8 +100,8 @@ public class ByteBufLeakTest {
             }
 
             private static void addListenerForCountingCompletedRequests() {
-                ServiceRequestContext.current().log().addListener(
-                        log -> completed.incrementAndGet(), RequestLogAvailability.COMPLETE);
+                ServiceRequestContext.current().log().completeFuture()
+                                     .thenAccept(log -> completed.incrementAndGet());
                 requestReceived.set(true);
             }
         }
@@ -163,7 +162,7 @@ public class ByteBufLeakTest {
         ensureAllBuffersAreReleased();
     }
 
-    private void ensureAllBuffersAreReleased() {
+    private static void ensureAllBuffersAreReleased() {
         await().untilAsserted(() -> {
             NettyDataBuffer buffer;
             while ((buffer = allocatedBuffers.peek()) != null) {

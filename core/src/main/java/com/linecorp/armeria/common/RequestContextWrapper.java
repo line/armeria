@@ -26,7 +26,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -127,7 +127,7 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     }
 
     @Override
-    public RequestLog log() {
+    public RequestLogAccess log() {
         return delegate().log();
     }
 
