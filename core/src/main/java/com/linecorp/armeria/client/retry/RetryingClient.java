@@ -152,7 +152,7 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
-        final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req, 0, ctx.eventLoop());
+        final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop(), 0);
         doExecute0(ctx, reqDuplicator, req, res, responseFuture);
         return res;
     }
@@ -187,11 +187,11 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
 
         final HttpRequest duplicateReq;
         if (initialAttempt) {
-            duplicateReq = rootReqDuplicator.duplicateStream();
+            duplicateReq = rootReqDuplicator.duplicate();
         } else {
             final RequestHeadersBuilder newHeaders = originalReq.headers().toBuilder();
             newHeaders.setInt(ARMERIA_RETRY_COUNT, totalAttempts - 1);
-            duplicateReq = rootReqDuplicator.duplicateStream(newHeaders.build());
+            duplicateReq = rootReqDuplicator.duplicate(newHeaders.build());
         }
 
         final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(),
@@ -203,12 +203,12 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
 
         derivedCtx.log().addListener(log -> {
             if (needsContentInStrategy) {
-                final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(
-                        response, maxSignalLength(derivedCtx.maxResponseLength()), derivedCtx.eventLoop());
+                final HttpResponseDuplicator resDuplicator =
+                        response.toDuplicator(derivedCtx.eventLoop(), derivedCtx.maxResponseLength());
                 retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse(resDuplicator))
                                           .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
                                                                 originalReq, returnedRes, future,
-                                                                resDuplicator.duplicateStream(true),
+                                                                resDuplicator.duplicate(true),
                                                                 resDuplicator::abort));
             } else {
                 final Throwable responseCause =
@@ -241,7 +241,7 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
     }
 
     private ContentPreviewResponse contentPreviewResponse(HttpResponseDuplicator resDuplicator) {
-        return new ContentPreviewResponse(resDuplicator.duplicateStream(), contentPreviewLength);
+        return new ContentPreviewResponse(resDuplicator.duplicate(), contentPreviewLength);
     }
 
     private BiFunction<Backoff, Throwable, Void> handleBackoff(ClientRequestContext ctx,

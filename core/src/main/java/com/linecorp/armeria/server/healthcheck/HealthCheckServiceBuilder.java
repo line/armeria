@@ -228,7 +228,7 @@ public final class HealthCheckServiceBuilder {
 
         requireNonNull(pingInterval, "pingInterval");
         checkArgument(!pingInterval.isNegative(),
-                      "pingInterval: %s (expected >= 0)", pingInterval);
+                      "pingInterval: %s (expected: >= 0)", pingInterval);
 
         return longPolling(maxLongPollingTimeout.toMillis(),
                            longPollingTimeoutJitterRate,

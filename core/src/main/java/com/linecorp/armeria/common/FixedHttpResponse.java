@@ -28,6 +28,8 @@ import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
  */
 final class FixedHttpResponse {
 
+    // TODO(minwoox): Override toDuplicator(...) methods for optimization
+
     static final class OneElementFixedHttpResponse
             extends OneElementFixedStreamMessage<HttpObject> implements HttpResponse {
         OneElementFixedHttpResponse(ResponseHeaders headers) {

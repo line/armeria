@@ -155,11 +155,11 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
         }
 
         if (needsContentInStrategy) {
-            final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(
-                    response, maxSignalLength(ctx.maxResponseLength()), ctx.eventLoop());
+            final HttpResponseDuplicator resDuplicator =
+                    response.toDuplicator(ctx.eventLoop(), ctx.maxResponseLength());
             reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(
-                    ctx, resDuplicator.duplicateStream()));
-            return resDuplicator.duplicateStream(true);
+                    ctx, resDuplicator.duplicate()));
+            return resDuplicator.duplicate(true);
         }
 
         ctx.log().addListener(log -> {
@@ -168,12 +168,5 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
             reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(ctx, cause));
         }, RequestLogAvailability.RESPONSE_HEADERS);
         return response;
-    }
-
-    private static int maxSignalLength(long maxResponseLength) {
-        if (maxResponseLength == 0 || maxResponseLength > Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
-        }
-        return (int) maxResponseLength;
     }
 }

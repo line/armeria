@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -318,6 +319,21 @@ public interface StreamMessage<T> extends Publisher<T> {
     CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options);
 
     /**
+     * To duplicator.
+     */
+    default StreamMessageDuplicator<T> toDuplicator() {
+        return toDuplicator(defaultSubscriberExecutor());
+    }
+
+    /**
+     * To duplicator.
+     */
+    default StreamMessageDuplicator<T> toDuplicator(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        return new DefaultStreamMessageDuplicator<>(this, unused -> 0, executor, 0 /* no limit for length */);
+    }
+
+    /**
      * Returns the default {@link EventExecutor} which will be used when a user subscribes using
      * {@link #subscribe(Subscriber)}, {@link #subscribe(Subscriber, SubscriptionOption...)},
      * {@link #drainAll()} and {@link #drainAll(SubscriptionOption...)}.
@@ -326,7 +342,10 @@ public interface StreamMessage<T> extends Publisher<T> {
      * different depending on this {@link StreamMessage} implementation.
      */
     default EventExecutor defaultSubscriberExecutor() {
-        return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
+        final EventLoop eventExecutor = RequestContext.mapCurrent(RequestContext::eventLoop,
+                                                                  () -> CommonPools.workerGroup().next());
+        assert eventExecutor != null;
+        return eventExecutor;
     }
 
     /**

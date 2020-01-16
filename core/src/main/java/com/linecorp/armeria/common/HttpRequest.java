@@ -427,10 +427,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * the trailers of the request is received fully.
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate() {
-        final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingCompletableFuture<>();
-        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
-        subscribe(aggregator);
-        return future;
+        return aggregate(defaultSubscriberExecutor());
     }
 
     /**
@@ -452,11 +449,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * use {@link #aggregate()}.
      */
     default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
-        requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingCompletableFuture<>();
-        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
-        subscribe(aggregator, SubscriptionOption.WITH_POOLED_OBJECTS);
-        return future;
+        return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
     }
 
     /**
@@ -473,5 +466,63 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
         subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
+    }
+
+    /**
+     * Returns a new {@link HttpRequestDuplicator} that duplicates multiple {@link HttpRequest}s which publish
+     * the same elements with this {@link HttpRequest}.
+     * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
+     * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
+     * {@link HttpRequestDuplicator}.
+     */
+    @Override
+    default HttpRequestDuplicator toDuplicator() {
+        return toDuplicator(Flags.defaultMaxRequestLength());
+    }
+
+    /**
+     * Returns a new {@link HttpRequestDuplicator} that duplicates multiple {@link HttpRequest}s which publish
+     * the same elements with this {@link HttpRequest}.
+     * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
+     * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
+     * {@link HttpRequestDuplicator}.
+     *
+     * @param executor the executor to duplicate
+     */
+    @Override
+    default HttpRequestDuplicator toDuplicator(EventExecutor executor) {
+        return toDuplicator(executor, Flags.defaultMaxRequestLength());
+    }
+
+    /**
+     * Returns a new {@link HttpRequestDuplicator} that duplicates multiple {@link HttpRequest}s which publish
+     * the same elements with this {@link HttpRequest}.
+     * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
+     * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
+     * {@link HttpRequestDuplicator}.
+     *
+     * @param maxRequestLength the maximum request length that the duplicator can hold in its buffer.
+     *                         {@link ContentTooLargeException} is raised if the length of the buffered
+     *                         {@link HttpData} is greater than this value.
+     */
+    default HttpRequestDuplicator toDuplicator(long maxRequestLength) {
+        return toDuplicator(defaultSubscriberExecutor(), maxRequestLength);
+    }
+
+    /**
+     * Returns a new {@link HttpRequestDuplicator} that duplicates multiple {@link HttpRequest}s which publish
+     * the same elements with this {@link HttpRequest}.
+     * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
+     * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
+     * {@link HttpRequestDuplicator}.
+     *
+     * @param executor the executor to duplicate
+     * @param maxRequestLength the maximum request length that the duplicator can hold in its buffer.
+     *                         {@link ContentTooLargeException} is raised if the length of the buffered
+     *                         {@link HttpData} is greater than this value.
+     */
+    default HttpRequestDuplicator toDuplicator(EventExecutor executor, long maxRequestLength) {
+        requireNonNull(executor, "executor");
+        return new DefaultHttpRequestDuplicator(this, executor, maxRequestLength);
     }
 }

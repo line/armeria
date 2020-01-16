@@ -45,6 +45,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
@@ -58,79 +59,44 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
- * Allows subscribing to a {@link StreamMessage} multiple times by duplicating the stream.
- *
- * <p>Only one subscriber can subscribe other stream messages such as {@link DefaultStreamMessage},
- * {@link DeferredStreamMessage}, etc.
- * This factory is wrapping one of those {@link StreamMessage}s and spawns duplicated stream messages
- * which are created using {@link AbstractStreamMessageDuplicator#duplicateStream()} and subscribed
- * by subscribers one by one.</p>
- *
- * <p>The published elements can be shared across {@link Subscriber}s, if you subscribe with the
- * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, so do not manipulate the
- * data unless you copy them.</p>
- *
- * <p>This factory has to be closed by {@link AbstractStreamMessageDuplicator#close()} when
- * you do not need the contents anymore, otherwise memory leak might happen.</p>
+ * A default duplicator.
  *
  * @param <T> the type of elements
- * @param <U> the type of the upstream {@link StreamMessage} and duplicated {@link StreamMessage}s
+ * @see StreamMessageDuplicator
  */
-public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage<T>>
-        implements SafeCloseable {
+public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicator<T>, SafeCloseable {
 
     private final StreamMessageProcessor<T> processor;
 
     private final EventExecutor duplicatorExecutor;
 
     /**
-     * Creates a new instance which subscribes to the specified upstream {@link StreamMessage} and
-     * publishes to multiple subscribers.
-     *
-     * @param upstream the {@link StreamMessage} who will publish data to subscribers
-     * @param signalLengthGetter the signal length getter that produces the length of signals
-     * @param executor the executor to use for upstream signals
-     * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
+     * Creates a new instance.
      */
-    protected AbstractStreamMessageDuplicator(
-            U upstream, SignalLengthGetter<? super T> signalLengthGetter,
-            @Nullable EventExecutor executor, long maxSignalLength) {
+    public DefaultStreamMessageDuplicator(
+            StreamMessage<T> upstream, SignalLengthGetter<? super T> signalLengthGetter,
+           EventExecutor executor, long maxSignalLength) {
         requireNonNull(upstream, "upstream");
         requireNonNull(signalLengthGetter, "signalLengthGetter");
+        requireNonNull(executor, "executor");
         checkArgument(maxSignalLength >= 0,
                       "maxSignalLength: %s (expected: >= 0)", maxSignalLength);
-        if (executor != null) {
-            duplicatorExecutor = executor;
-        } else {
-            final EventLoop currentExecutor = RequestContext.mapCurrent(
-                    RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
-            assert currentExecutor != null;
-            duplicatorExecutor = currentExecutor;
-        }
-
+        duplicatorExecutor = executor;
         processor = new StreamMessageProcessor<>(upstream, signalLengthGetter,
                                                  duplicatorExecutor, maxSignalLength);
     }
 
-    /**
-     * Creates a new {@link StreamMessage} that duplicates the upstream {@link StreamMessage} specified when
-     * creating this duplicator.
-     */
-    public StreamMessage<T> duplicateStream() {
-        return duplicateStream(false);
+    @Override
+    public StreamMessage<T> duplicate() {
+        return duplicate(false);
     }
 
-    /**
-     * Creates a new {@link StreamMessage} that duplicates the upstream {@link StreamMessage} specified when
-     * creating this duplicator.
-     *
-     * @param lastStream whether to prevent further duplication
-     */
-    public StreamMessage<T> duplicateStream(boolean lastStream) {
+    @Override
+    public StreamMessage<T> duplicate(boolean lastStream) {
         if (!processor.isDuplicable()) {
             throw new IllegalStateException("duplicator is closed or last downstream is added.");
         }
-        return new ChildStreamMessage<>(this, processor, lastStream);
+        return new ChildStreamMessage<T>(this, processor, lastStream);
     }
 
     /**
@@ -141,32 +107,17 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         return duplicatorExecutor;
     }
 
-    /**
-     * Closes this duplicator and prevents it from further duplication.
-     * {@link #duplicateStream()} will raise an {@link IllegalStateException} after
-     * this method is invoked. Note that the previously {@linkplain #duplicateStream() duplicated streams}
-     * will not be closed but will continue publishing data until the upstream {@link StreamMessage}
-     * is closed. All the data published from the upstream {@link StreamMessage} are cleaned up when
-     * all {@linkplain #duplicateStream() duplicated streams} are complete.
-     */
     @Override
     public void close() {
         processor.close();
     }
 
-    /**
-     * Closes this duplicator and aborts all stream messages returned by {@link #duplicateStream()}.
-     * This will also clean up the data published from the upstream {@link StreamMessage}.
-     */
+    @Override
     public void abort() {
         processor.abort(AbortedStreamException.get());
     }
 
-    /**
-     * Closes this duplicator and aborts all stream messages returned by {@link #duplicateStream()}
-     * with the specified {@link Throwable}.
-     * This will also clean up the data published from the upstream {@link StreamMessage}.
-     */
+    @Override
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
         processor.abort(cause);
@@ -181,12 +132,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
              */
             DUPLICABLE,
             /**
-             * {@link AbstractStreamMessageDuplicator#duplicateStream(boolean)} has been called.
+             * {@link DefaultStreamMessageDuplicator#duplicate(boolean)} has been called.
              * Will enter {@link #CLOSED}.
              */
             LAST_DOWNSTREAM_ADDED,
             /**
-             * {@link AbstractStreamMessageDuplicator#close()} has been called.
+             * {@link DefaultStreamMessageDuplicator#close()} has been called.
              */
             CLOSED
         }
@@ -290,8 +241,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 if (dataLength > 0) {
                     final int allowedMaxSignalLength = maxSignalLength - signalLength;
                     if (dataLength > allowedMaxSignalLength) {
-                        final IllegalStateException cause = new IllegalStateException(
-                                "signal length greater than the maxSignalLength: " + maxSignalLength);
+                        final ContentTooLargeException cause = ContentTooLargeException.get();
                         upstream.abort(cause);
                         throw cause;
                     }
@@ -496,7 +446,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
                 ChildStreamMessage.class, DownstreamSubscription.class, "subscription");
 
-        private final AbstractStreamMessageDuplicator<T, ?> parent;
+        private final DefaultStreamMessageDuplicator<T> parent;
         private final StreamMessageProcessor<T> processor;
         private final boolean lastStream;
 
@@ -506,7 +456,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         private final CompletableFuture<Void> completionFuture = new EventLoopCheckingCompletableFuture<>();
 
-        ChildStreamMessage(AbstractStreamMessageDuplicator<T, ?> parent,
+        ChildStreamMessage(DefaultStreamMessageDuplicator<T> parent,
                            StreamMessageProcessor<T> processor, boolean lastStream) {
             this.parent = parent;
             this.processor = processor;
@@ -645,7 +595,6 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
     }
 
-    @VisibleForTesting
     static class DownstreamSubscription<T> implements Subscription {
 
         private static final int REQUEST_REMOVAL_THRESHOLD = 50;

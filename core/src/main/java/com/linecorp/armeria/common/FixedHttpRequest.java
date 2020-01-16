@@ -27,6 +27,8 @@ import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
  */
 final class FixedHttpRequest {
 
+    // TODO(minwoox): Override toDuplicator(...) methods for optimization
+
     static final class EmptyFixedHttpRequest
             extends EmptyFixedStreamMessage<HttpObject> implements HttpRequest {
 

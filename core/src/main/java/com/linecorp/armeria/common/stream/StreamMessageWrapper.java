@@ -38,7 +38,7 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     /**
      * Creates a new instance that wraps a {@code delegate}.
      */
-    public StreamMessageWrapper(StreamMessage<? extends T> delegate) {
+    protected StreamMessageWrapper(StreamMessage<? extends T> delegate) {
         requireNonNull(delegate, "delegate");
         this.delegate = delegate;
     }
@@ -105,6 +105,18 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
         delegate().abort(cause);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public StreamMessageDuplicator<T> toDuplicator() {
+        return (StreamMessageDuplicator<T>) delegate().toDuplicator();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public StreamMessageDuplicator<T> toDuplicator(EventExecutor executor) {
+        return (StreamMessageDuplicator<T>) delegate().toDuplicator(executor);
     }
 
     @Override
