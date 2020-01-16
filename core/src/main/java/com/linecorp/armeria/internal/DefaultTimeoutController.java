@@ -49,6 +49,7 @@ public class DefaultTimeoutController implements TimeoutController {
     private long timeoutMillis;
     private long firstExecutionTimeNanos;
     private long lastExecutionTimeNanos;
+    private boolean isExecutedAtLeastOnce;
 
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
@@ -93,14 +94,15 @@ public class DefaultTimeoutController implements TimeoutController {
     public boolean scheduleTimeout(long timeoutMillis) {
         checkArgument(timeoutMillis > 0,
                       "timeoutMillis: " + timeoutMillis + " (expected: > 0)");
-        if (State.DISABLED != state || !timeoutTask.canSchedule()) {
+        if (state != State.DISABLED || !timeoutTask.canSchedule()) {
             return false;
         }
 
         cancelTimeout();
         this.timeoutMillis = timeoutMillis;
         final long nanoTime = System.nanoTime();
-        if (firstExecutionTimeNanos == 0) {
+        if (!isExecutedAtLeastOnce) {
+            isExecutedAtLeastOnce = true;
             firstExecutionTimeNanos = nanoTime;
         }
         lastExecutionTimeNanos = nanoTime;
@@ -123,7 +125,7 @@ public class DefaultTimeoutController implements TimeoutController {
     @Override
     public boolean extendTimeout(long adjustmentMillis) {
         ensureInitialized();
-        if (State.SCHEDULED != state || !timeoutTask.canSchedule()) {
+        if (state != State.SCHEDULED || !timeoutTask.canSchedule()) {
             return false;
         }
 
@@ -144,7 +146,6 @@ public class DefaultTimeoutController implements TimeoutController {
 
         if (newTimeoutMillis <= 0) {
             invokeTimeoutTask();
-            state = State.TIMED_OUT;
             return false;
         }
 
@@ -195,7 +196,7 @@ public class DefaultTimeoutController implements TimeoutController {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
 
-        if (State.SCHEDULED != state || !timeoutTask.canSchedule()) {
+        if (state != State.SCHEDULED || !timeoutTask.canSchedule()) {
             return false;
         }
 
@@ -209,11 +210,11 @@ public class DefaultTimeoutController implements TimeoutController {
 
     @Override
     public boolean cancelTimeout() {
-        if (State.TIMED_OUT == state) {
-            return false;
-        }
-        if (State.DISABLED == state) {
-            return true;
+        switch (state) {
+            case TIMED_OUT:
+                return false;
+            case DISABLED:
+                return true;
         }
 
         final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
@@ -228,16 +229,19 @@ public class DefaultTimeoutController implements TimeoutController {
     private void ensureInitialized() {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
-        if (firstExecutionTimeNanos == 0) {
+        if (!isExecutedAtLeastOnce) {
+            isExecutedAtLeastOnce = true;
             firstExecutionTimeNanos = lastExecutionTimeNanos = System.nanoTime();
         }
     }
 
-    @Nullable
     private void invokeTimeoutTask() {
         if (timeoutTask != null) {
-            timeoutTask.run();
-            state = State.TIMED_OUT;
+            try {
+                timeoutTask.run();
+            } finally {
+                state = State.TIMED_OUT;
+            }
         }
     }
 

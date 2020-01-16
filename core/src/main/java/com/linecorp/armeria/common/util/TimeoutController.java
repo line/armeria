@@ -29,7 +29,8 @@ public interface TimeoutController {
      *
      * @param timeoutMillis a positive time amount value in milliseconds.
      * @return {@code true} if the timeout is scheduled.
-     *         {@code false} if the timeout has been scheduled or the timeout has been triggered already.
+     *         {@code false} if the timeout has been scheduled, triggered already
+     *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
     boolean scheduleTimeout(long timeoutMillis);
 
@@ -39,7 +40,8 @@ public interface TimeoutController {
      *
      * @param adjustmentMillis the adjustment of time amount value in milliseconds.
      * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
-     *         {@code false} if no timeout was scheduled previously or the timeout has been triggered already.
+     *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
+     *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
     boolean extendTimeout(long adjustmentMillis);
 
@@ -48,7 +50,8 @@ public interface TimeoutController {
      *
      * @param newTimeoutMillis the new timeout value in milliseconds. {@code 0} if disabled.
      * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
-     *         {@code false} if the timeout has been triggered already.
+     *         {@code false} if the timeout has been triggered already
+     *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
     boolean resetTimeout(long newTimeoutMillis);
 
@@ -56,7 +59,8 @@ public interface TimeoutController {
      * Trigger the current timeout immediately.
      *
      * @return {@code true} if the current timeout is triggered successfully.
-     *         {@code false} if no timeout was scheduled previously or the timeout has been triggered already.
+     *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
+     *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
     boolean timeoutNow();
 
