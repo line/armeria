@@ -317,8 +317,7 @@ public final class Server implements AutoCloseable {
     @VisibleForTesting
     void setupVersionMetrics() {
         final MeterRegistry meterRegistry = config().meterRegistry();
-        final Map<String, Version> map = Version.identify(getClass().getClassLoader());
-        final Version versionInfo = map.get("armeria");
+        final Version versionInfo = Version.get("armeria", Server.class.getClassLoader());
         final String version = versionInfo.artifactVersion();
         final String commit = versionInfo.longCommitHash();
         final String repositoryStatus = versionInfo.repositoryStatus();
