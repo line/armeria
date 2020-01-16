@@ -29,8 +29,7 @@ public interface TimeoutController {
      *
      * @param timeoutMillis a positive time amount value in milliseconds.
      * @return {@code true} if the timeout is scheduled.
-     *         {@code false} if the timeout has been scheduled already
-     *         or the timeout has been triggered already.
+     *         {@code false} if the timeout has been scheduled or the timeout has been triggered already.
      */
     boolean scheduleTimeout(long timeoutMillis);
 

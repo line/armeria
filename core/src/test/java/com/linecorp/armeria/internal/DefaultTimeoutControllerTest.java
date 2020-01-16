@@ -163,7 +163,9 @@ class DefaultTimeoutControllerTest {
                     }
 
                     @Override
-                    public void run() { throw new Error("Should not reach here"); }
+                    public void run() {
+                        throw new Error("Should not reach here");
+                    }
                 },
                 CommonPools.workerGroup().next());
 
@@ -288,8 +290,12 @@ class DefaultTimeoutControllerTest {
         }
 
         @Nullable
-        public ScheduledFuture<?> timeoutFuture() {return delegate.timeoutFuture();}
+        public ScheduledFuture<?> timeoutFuture() {
+            return delegate.timeoutFuture();
+        }
 
-        public State state() {return delegate.state();}
+        public State state() {
+            return delegate.state();
+        }
     }
 }

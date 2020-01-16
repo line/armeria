@@ -86,7 +86,7 @@ public class DefaultTimeoutController implements TimeoutController {
      * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
      *
      * @return {@code true} if the timeout is scheduled.
-     *         {@code false} if the timeout has been scheduled already, the timeout has been triggered already
+     *         {@code false} if the timeout has been scheduled, the timeout has been triggered already
      *         or the {@link TimeoutTask} could not be scheduled now.
      */
     @Override
@@ -225,7 +225,6 @@ public class DefaultTimeoutController implements TimeoutController {
         return canceled;
     }
 
-
     private void ensureInitialized() {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
@@ -267,8 +266,6 @@ public class DefaultTimeoutController implements TimeoutController {
     State state() {
         return state;
     }
-
-
 
     /**
      * A timeout task that is invoked when the deadline exceeded.
