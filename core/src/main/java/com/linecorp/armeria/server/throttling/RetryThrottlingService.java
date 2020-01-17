@@ -61,6 +61,6 @@ public class RetryThrottlingService extends ThrottlingService {
     @Override
     protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req, @Nullable Throwable cause)
             throws Exception {
-        return HttpResponse.of(strategy.getResponseHeaders());
+        return HttpResponse.of(strategy.getFailureResponseHeaders());
     }
 }

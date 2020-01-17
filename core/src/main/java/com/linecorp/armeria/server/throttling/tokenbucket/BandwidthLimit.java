@@ -37,16 +37,6 @@ public class BandwidthLimit {
     @Nonnull
     private final Duration period;
 
-    /**
-     * Specifies limitation in
-     *   <a href="https://github.com/vladimir-bukhtoyarov/bucket4j/blob/1.3/doc-pages/token-bucket-brief-overview.md#token-bucket-algorithm">classic interpretation</a>
-     *   of token-bucket algorithm.
-     * @param limit the bucket size - defines the count of tokens which can be held by bucket
-     *              and defines the speed at which tokens are regenerated in bucket
-     * @param overdraftLimit defines the maximum overdraft count of tokens which can be held by bucket,
-     *                       this must exceed the {@code limit}
-     * @param period the time window, during which the tokens will be regenerated
-     */
     BandwidthLimit(long limit, long overdraftLimit, @Nonnull Duration period) {
         // validate limit
         if (limit <= 0L) {
@@ -69,13 +59,33 @@ public class BandwidthLimit {
     }
 
     /**
+     * Creates new {@link BandwidthLimit}.
+     * Specifies limitation in
+     *   <a href="https://github.com/vladimir-bukhtoyarov/bucket4j/blob/1.3/doc-pages/token-bucket-brief-overview.md#token-bucket-algorithm">classic interpretation</a>
+     *   of token-bucket algorithm.
+     * @param limit the bucket size - defines the count of tokens which can be held by bucket
+     *              and defines the speed at which tokens are regenerated in bucket
+     * @param overdraftLimit defines the maximum overdraft count of tokens which can be held by bucket,
+     *                       this must exceed the {@code limit}
+     * @param period the time window, during which the tokens will be regenerated
+     */
+    public static BandwidthLimit of(long limit, long overdraftLimit, @Nonnull Duration period) {
+        return new BandwidthLimit(limit, overdraftLimit, period);
+    }
+
+    BandwidthLimit(long limit, @Nonnull Duration period) {
+        this(limit, 0, period);
+    }
+
+    /**
+     * Creates new {@link BandwidthLimit}.
      * Specifies easy limitation of {@code limit} tokens per {@code period} time window.
      * @param limit the bucket size - defines the maximum count of tokens which can be held by bucket
      *              and defines the speed at which tokens are regenerated in bucket
      * @param period the time window, during which the tokens will be regenerated
      */
-    BandwidthLimit(long limit, @Nonnull Duration period) {
-        this(limit, 0, period);
+    public static BandwidthLimit of(long limit, @Nonnull Duration period) {
+        return new BandwidthLimit(limit, period);
     }
 
     /**

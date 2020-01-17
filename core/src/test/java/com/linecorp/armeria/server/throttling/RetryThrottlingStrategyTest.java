@@ -39,7 +39,7 @@ public class RetryThrottlingStrategyTest {
                 .isEqualTo("throttling-strategy-TestRetryThrottlingStrategy");
         assertThat(strategy.retryAfterSeconds())
                 .isEqualTo("10");
-        final ResponseHeaders headers = strategy.getResponseHeaders();
+        final ResponseHeaders headers = strategy.getFailureResponseHeaders();
         assertThat(headers.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(headers.get(HttpHeaderNames.RETRY_AFTER)).isEqualTo("10");
     }

@@ -33,7 +33,7 @@ public abstract class RetryThrottlingStrategy<T extends Request> extends Throttl
 
     private static final HttpStatus DEFAULT_STATUS = HttpStatus.TOO_MANY_REQUESTS;
 
-    private final HttpStatus status;
+    private final HttpStatus failureStatus;
 
     /**
      * Creates a new {@link ThrottlingStrategy} with a default name
@@ -41,7 +41,7 @@ public abstract class RetryThrottlingStrategy<T extends Request> extends Throttl
      */
     protected RetryThrottlingStrategy() {
         super(null);
-        status = DEFAULT_STATUS;
+        failureStatus = DEFAULT_STATUS;
     }
 
     /**
@@ -50,7 +50,7 @@ public abstract class RetryThrottlingStrategy<T extends Request> extends Throttl
      */
     protected RetryThrottlingStrategy(@Nullable String name) {
         super(name);
-        status = DEFAULT_STATUS;
+        failureStatus = DEFAULT_STATUS;
     }
 
     /**
@@ -58,9 +58,9 @@ public abstract class RetryThrottlingStrategy<T extends Request> extends Throttl
      * Acceptable statuses: {@link HttpStatus#TOO_MANY_REQUESTS}, {@link HttpStatus#SERVICE_UNAVAILABLE}
      * and {@link HttpStatus#MOVED_PERMANENTLY}.
      */
-    protected RetryThrottlingStrategy(@Nullable String name, @Nonnull HttpStatus status) {
+    protected RetryThrottlingStrategy(@Nullable String name, @Nonnull HttpStatus failureStatus) {
         super(name);
-        this.status = Objects.requireNonNull(status, "status");
+        this.failureStatus = Objects.requireNonNull(failureStatus, "failureStatus");
     }
 
     /**
@@ -73,12 +73,12 @@ public abstract class RetryThrottlingStrategy<T extends Request> extends Throttl
      * Constructs {@link ResponseHeaders} for the given status
      * and optionally includes {@link HttpHeaderNames#RETRY_AFTER} header, if its value provided.
      */
-    protected ResponseHeaders getResponseHeaders() {
+    protected ResponseHeaders getFailureResponseHeaders() {
         final String retryAfterSeconds = retryAfterSeconds();
         if (retryAfterSeconds != null) {
-            return ResponseHeaders.of(status, HttpHeaderNames.RETRY_AFTER, retryAfterSeconds);
+            return ResponseHeaders.of(failureStatus, HttpHeaderNames.RETRY_AFTER, retryAfterSeconds);
         } else {
-            return ResponseHeaders.of(status);
+            return ResponseHeaders.of(failureStatus);
         }
     }
 }
