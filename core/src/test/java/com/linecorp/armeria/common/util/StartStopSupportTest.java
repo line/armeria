@@ -410,6 +410,8 @@ public class StartStopSupportTest {
     public void close() {
         final StartStop startStop = new StartStop(arg -> "foo", arg -> null);
         startStop.close();
+        assertThat(startStop.isClosing()).isTrue();
+        assertThat(startStop.isClosed()).isTrue();
     }
 
     @Test
@@ -479,6 +481,8 @@ public class StartStopSupportTest {
         });
         thread.start();
         await().until(() -> stopLatch.getCount() == 1);
+        assertThat(startStop.isClosing()).isTrue();
+        assertThat(startStop.isClosed()).isFalse();
 
         // Interrupt the thread that is blocked by close().
         thread.interrupt();
@@ -491,6 +495,17 @@ public class StartStopSupportTest {
 
         // Make sure the thread interruption state has been restored.
         await().untilAsserted(() -> assertThat(interrupted).isTrue());
+        assertThat(startStop.isClosing()).isTrue();
+        assertThat(startStop.isClosed()).isTrue();
+    }
+
+    @Test
+    public void startAfterClose() throws Exception {
+        final StartStop startStop = new StartStop(arg -> "foo", arg -> null);
+        startStop.close();
+        assertThatThrownBy(() -> startStop.start(false).join()).isInstanceOf(CompletionException.class)
+                                                               .hasCauseInstanceOf(IllegalStateException.class)
+                                                               .hasRootCauseMessage("closed already");
     }
 
     @Test
