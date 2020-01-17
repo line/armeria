@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -129,36 +128,6 @@ public interface RequestLog extends RequestOnlyLog {
      */
     @Nullable
     Throwable responseCause();
-
-    /**
-     * Returns the status of the {@link Response}.
-     *
-     * @return the {@link HttpStatus}. {@link HttpStatus#UNKNOWN} if the {@link Response} has failed even
-     *         before receiving its first non-informational headers.
-     * @throws RequestLogAvailabilityException if the property is not available yet.
-     * @see RequestLogProperty#RESPONSE_HEADERS
-     *
-     * @deprecated Use {@code log.responseHeaders().status()}.
-     */
-    @Deprecated
-    default HttpStatus status() {
-        return responseHeaders().status();
-    }
-
-    /**
-     * Returns the status code of the {@link Response}.
-     *
-     * @return the integer value of the {@link #status()}. {@code 0} if the {@link Response} has failed even
-     *         before receiving its first non-informational headers.
-     *
-     * @throws RequestLogAvailabilityException if the property is not available yet.
-     * @see RequestLogProperty#RESPONSE_HEADERS
-     * @deprecated Use {@code log.responseHeaders().status().code()}.
-     */
-    @Deprecated
-    default int statusCode() {
-        return status().code();
-    }
 
     /**
      * Returns the non-informational status {@link ResponseHeaders}.

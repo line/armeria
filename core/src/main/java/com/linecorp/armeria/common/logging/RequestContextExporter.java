@@ -235,9 +235,6 @@ public final class RequestContextExporter {
         final State state = state(ctx);
         final RequestLog log = ctx.log().partial();
         final int availabilities = log.availabilityStamp();
-
-        // Note: This equality check is extremely fast.
-        //       See RequestLogAvailabilitySet for more information.
         if (availabilities != state.availabilities) {
             state.availabilities = availabilities;
             export(state, ctx, log);

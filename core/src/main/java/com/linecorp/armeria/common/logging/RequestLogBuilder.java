@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
@@ -38,28 +37,7 @@ import io.netty.channel.Channel;
 /**
  * Updates a {@link RequestLog} with newly available information.
  */
-public interface RequestLogBuilder {
-
-    /**
-     * A dummy {@link RequestLogBuilder} that discards everything it collected.
-     *
-     * @deprecated This field will be removed without a replacement. Use {@link DefaultRequestLog} or a mock.
-     */
-    @Deprecated
-    RequestLogBuilder NOOP = new NoopRequestLogBuilder();
-
-    /**
-     * Adds the specified {@link RequestLogAccess} so that the logs are propagated from the {@code child}.
-     * Note that only the request-side logs of the first added child will be propagated. To fill the
-     * response-side logs you need to call {@link #endResponseWithLastChild()}.
-     */
-    void addChild(RequestLogAccess child);
-
-    /**
-     * Fills the response-side logs from the last added child. Note that already collected properties
-     * in the child log will be propagated immediately.
-     */
-    void endResponseWithLastChild();
+public interface RequestLogBuilder extends RequestLogAccess {
 
     // Methods related with a request:
 
@@ -71,7 +49,6 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#authority()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
      *
@@ -92,7 +69,6 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#authority()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
      *
@@ -110,7 +86,6 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#authority()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
      *
@@ -136,7 +111,6 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#authority()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
      *
@@ -401,4 +375,19 @@ public interface RequestLogBuilder {
      * @param responseEndTimeNanos {@link System#nanoTime()} value when the response ended.
      */
     void endResponse(Throwable responseCause, long responseEndTimeNanos);
+
+    // Methods related with nested logs
+
+    /**
+     * Adds the specified {@link RequestLogAccess} so that the logs are propagated from the {@code child}.
+     * Note that only the request-side logs of the first added child will be propagated. To fill the
+     * response-side logs you need to call {@link #endResponseWithLastChild()}.
+     */
+    void addChild(RequestLogAccess child);
+
+    /**
+     * Fills the response-side logs from the last added child. Note that already collected properties
+     * in the child log will be propagated immediately.
+     */
+    void endResponseWithLastChild();
 }

@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import java.net.InetSocketAddress;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -23,11 +22,8 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -46,82 +42,6 @@ import io.netty.channel.Channel;
  * @see RequestLogAccess#ensureRequestComplete()
  */
 public interface RequestOnlyLog extends RequestLogAccess {
-    /**
-     * Returns the method of the {@link Request}. This method is a shortcut to {@code context().method()}.
-     * This method returns non-{@code null} regardless of what {@link RequestLogProperty}s are currently
-     * available.
-     *
-     * @deprecated Use {@code log.context().method()}.
-     */
-    @Deprecated
-    default HttpMethod method() {
-        return context().method();
-    }
-
-    /**
-     * Returns the absolute path part of the {@link Request} URI, excluding the query part,
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
-     * This method is a shortcut to {@code context().path()}.
-     * This method returns non-{@code null} regardless of what {@link RequestLogProperty}s are currently
-     * available.
-     *
-     * @deprecated Use {@code log.context().path()}.
-     */
-    @Deprecated
-    default String path() {
-        return context().path();
-    }
-
-    /**
-     * Returns the absolute path part of the current {@link Request} URI, excluding the query part,
-     * decoded in UTF-8.
-     * This method is a shortcut to {@code context().decodedPath()}.
-     * This method returns non-{@code null} regardless of what {@link RequestLogProperty}s are currently
-     * available.
-     *
-     * @deprecated Use {@code log.context().decodedPath()}.
-     */
-    @Deprecated
-    default String decodedPath() {
-        return context().decodedPath();
-    }
-
-    /**
-     * Returns the query part of the {@link Request} URI, without the leading {@code '?'},
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
-     * This method is a shortcut to {@code context().query()}.
-     * This property is available regardless of what {@link RequestLogProperty}s are currently available.
-     *
-     * @deprecated Use {@code log.context().query()}.
-     */
-    @Deprecated
-    @Nullable
-    default String query() {
-        return context().query();
-    }
-
-    /**
-     * Returns the host name of the {@link Request}.
-     *
-     * @deprecated Do not use this method. Get the remote or local address from {@link #context()} or get
-     *             the authority from {@link #authority()}.
-     *
-     * @return the host name. {@code null} if the {@link Request} has failed even before a connection is
-     *         established.
-     * @throws RequestLogAvailabilityException if this property is not available yet
-     */
-    @Nullable
-    @Deprecated
-    default String host() {
-        final RequestContext ctx = context();
-        final InetSocketAddress addr;
-        if (ctx instanceof ClientRequestContext) {
-            addr = ctx.remoteAddress();
-        } else {
-            addr = ctx.localAddress();
-        }
-        return addr != null ? addr.getHostString() : null;
-    }
 
     /**
      * Returns the time when the processing of the request started, in microseconds since the epoch.
@@ -231,43 +151,12 @@ public interface RequestOnlyLog extends RequestLogAccess {
     SessionProtocol sessionProtocol();
 
     /**
-     * Returns the {@link SerializationFormat} of the {@link Request}.
-     *
-     * @throws RequestLogAvailabilityException if the property is not available yet.
-     * @see RequestLogProperty#SESSION
-     *
-     * @deprecated Use {@code log.scheme().serializationFormat()}.
-     */
-    @Deprecated
-    default SerializationFormat serializationFormat() {
-        return scheme().serializationFormat();
-    }
-
-    /**
      * Returns the {@link Scheme} of the {@link Request}.
      *
      * @throws RequestLogAvailabilityException if the property is not available yet.
      * @see RequestLogProperty#SCHEME
      */
     Scheme scheme();
-
-    /**
-     * Returns the authority of the {@link Request}.
-     *
-     * @return the authority. {@code "?"} if the {@link Request} has failed even before its headers are
-     *         properly constructed.
-     *
-     * @throws RequestLogAvailabilityException if the property is not available yet.
-     * @see RequestLogProperty#REQUEST_HEADERS
-     *
-     * @deprecated Use {@code log.requestHeaders().authority()}.
-     */
-    @Deprecated
-    default String authority() {
-        final String authority = requestHeaders().authority();
-        assert authority != null;
-        return authority;
-    }
 
     /**
      * Returns the {@link RequestHeaders}. If the {@link Request} was not received or sent at all,

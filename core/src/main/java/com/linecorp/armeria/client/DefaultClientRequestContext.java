@@ -351,7 +351,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     @Nullable
     protected Channel channel() {
-        if (log.isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
+        if (log.isAvailable(RequestLogProperty.SESSION)) {
             return log.channel();
         } else {
             return null;
@@ -367,7 +367,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Nullable
     @Override
     public SSLSession sslSession() {
-        if (log.isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
+        if (log.isAvailable(RequestLogProperty.SESSION)) {
             return log.sslSession();
         } else {
             return null;

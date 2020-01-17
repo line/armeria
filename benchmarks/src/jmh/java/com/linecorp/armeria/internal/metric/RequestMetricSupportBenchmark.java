@@ -24,7 +24,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
@@ -35,12 +36,18 @@ import io.netty.channel.Channel;
 public class RequestMetricSupportBenchmark {
 
     private static final MeterIdPrefixFunction PREFIX_FUNC = MeterIdPrefixFunction.ofDefault("benchmark");
-    private static final DefaultRequestLog REQUEST_LOG = new DefaultRequestLog(
-            ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")));
-
+    private static final RequestLog REQUEST_LOG;
     static {
-        REQUEST_LOG.startRequest(mock(Channel.class), SessionProtocol.H2C);
-        REQUEST_LOG.requestContent(RpcRequest.of(RequestMetricSupportBenchmark.class, "benchmark"), null);
+        final RequestLogBuilder builder =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .logBuilder();
+
+        builder.startRequest(mock(Channel.class), SessionProtocol.H2C);
+        builder.requestContent(RpcRequest.of(RequestMetricSupportBenchmark.class, "benchmark"), null);
+        builder.endRequest();
+        builder.endResponse();
+
+        REQUEST_LOG = builder.ensureComplete();
     }
 
     @Benchmark
