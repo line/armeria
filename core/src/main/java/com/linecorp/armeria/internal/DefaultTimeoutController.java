@@ -94,21 +94,15 @@ public class DefaultTimeoutController implements TimeoutController {
     public boolean scheduleTimeout(long timeoutMillis) {
         checkArgument(timeoutMillis > 0,
                       "timeoutMillis: " + timeoutMillis + " (expected: > 0)");
+        ensureInitialized();
         if (state != State.DISABLED || !timeoutTask.canSchedule()) {
             return false;
         }
 
         cancelTimeout();
         this.timeoutMillis = timeoutMillis;
-        final long nanoTime = System.nanoTime();
-        if (!isExecutedAtLeastOnce) {
-            isExecutedAtLeastOnce = true;
-            firstExecutionTimeNanos = nanoTime;
-        }
-        lastExecutionTimeNanos = nanoTime;
-
-        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
         state = State.SCHEDULED;
+        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, timeoutMillis, TimeUnit.MILLISECONDS);
         return true;
     }
 
@@ -149,8 +143,8 @@ public class DefaultTimeoutController implements TimeoutController {
             return false;
         }
 
-        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
         state = State.SCHEDULED;
+        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
         return true;
     }
 
@@ -179,8 +173,8 @@ public class DefaultTimeoutController implements TimeoutController {
         // Cancel the previously scheduled timeout, if exists.
         cancelTimeout();
         timeoutMillis = newTimeoutMillis;
-        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
         state = State.SCHEDULED;
+        timeoutFuture = eventLoop.schedule(this::invokeTimeoutTask, newTimeoutMillis, TimeUnit.MILLISECONDS);
         return true;
     }
 
@@ -196,34 +190,58 @@ public class DefaultTimeoutController implements TimeoutController {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
 
-        if (state != State.SCHEDULED || !timeoutTask.canSchedule()) {
+        if (!timeoutTask.canSchedule()) {
             return false;
         }
 
-        if (cancelTimeout()) {
-            invokeTimeoutTask();
-            return true;
+        switch (state) {
+            case TIMED_OUT:
+                return false;
+            case DISABLED:
+                invokeTimeoutTask();
+                return true;
+            default: // state == State.SCHEDULED
+                if (cancelTimeout()) {
+                    invokeTimeoutTask();
+                    return true;
+                } else {
+                    return false;
+                }
         }
-
-        return false;
     }
 
     @Override
     public boolean cancelTimeout() {
         switch (state) {
             case TIMED_OUT:
-                return false;
             case DISABLED:
-                return true;
+                return false;
         }
 
         final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
         assert timeoutFuture != null;
 
-        this.timeoutFuture = null;
         final boolean canceled = timeoutFuture.cancel(false);
-        state = State.DISABLED;
+        this.timeoutFuture = null;
+        if (canceled) {
+            state = State.DISABLED;
+        }
         return canceled;
+    }
+
+    @Override
+    public boolean isScheduled() {
+        return state == State.SCHEDULED;
+    }
+
+    @Override
+    public boolean isTimedOut() {
+        return state == State.TIMED_OUT;
+    }
+
+    @Override
+    public boolean isDisabled() {
+        return state == State.DISABLED;
     }
 
     private void ensureInitialized() {
@@ -237,11 +255,9 @@ public class DefaultTimeoutController implements TimeoutController {
 
     private void invokeTimeoutTask() {
         if (timeoutTask != null) {
-            try {
-                timeoutTask.run();
-            } finally {
-                state = State.TIMED_OUT;
-            }
+            // Set TIMED_OUT flag first to prevent duplicate execution
+            state = State.TIMED_OUT;
+            timeoutTask.run();
         }
     }
 

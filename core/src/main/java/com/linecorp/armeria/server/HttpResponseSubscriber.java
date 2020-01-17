@@ -261,10 +261,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     @Override
     public void onComplete() {
-        if (!cancelTimeout() && reqCtx.requestTimeoutHandler() == null) {
+        if (isTimedOut() && reqCtx.requestTimeoutHandler() == null) {
             // We have already returned a failed response due to a timeout.
             return;
         }
+
+        cancelTimeout();
 
         if (wroteNothing(state)) {
             logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());

@@ -61,6 +61,7 @@ class DefaultTimeoutControllerTest {
         timeoutController =
                 new StatusCheckedTaskTimeoutController(
                         new DefaultTimeoutController(timeoutTask, CommonPools.workerGroup().next()));
+        assertThat(timeoutController.isDisabled()).isTrue();
     }
 
     @Test
@@ -147,6 +148,94 @@ class DefaultTimeoutControllerTest {
     }
 
     @Test
+    void scheduleTimeoutWhenScheduled() {
+        assertThat(timeoutController.scheduleTimeout(1000)).isTrue();
+        assertThat(timeoutController.scheduleTimeout(1000)).isFalse();
+    }
+
+    @Test
+    void scheduleTimeoutWhenTimedOut() {
+        assertThat(timeoutController.timeoutNow()).isTrue();
+        assertThat(timeoutController.scheduleTimeout(1000)).isFalse();
+    }
+
+    @Test
+    void extendTimeoutWhenDisabled() {
+        assertThat(timeoutController.extendTimeout(1000)).isFalse();
+    }
+
+    @Test
+    void extendTimeoutWhenScheduled() {
+        assertThat(timeoutController.scheduleTimeout(1000)).isTrue();
+        assertThat(timeoutController.extendTimeout(1000)).isTrue();
+    }
+
+    @Test
+    void extendTimeoutWhenTimedOut() {
+        assertThat(timeoutController.timeoutNow()).isTrue();
+        assertThat(timeoutController.extendTimeout(1000)).isFalse();
+    }
+
+    @Test
+    void resetTimeoutWhenDisabled() {
+        assertThat(timeoutController.resetTimeout(1000)).isTrue();
+    }
+
+    @Test
+    void resetTimeoutWhenScheduled() {
+        assertThat(timeoutController.scheduleTimeout(1000)).isTrue();
+        assertThat(timeoutController.resetTimeout(1000)).isTrue();
+    }
+
+    @Test
+    void resetTimeoutWhenTimedOut() {
+        assertThat(timeoutController.timeoutNow()).isTrue();
+        assertThat(timeoutController.resetTimeout(1000)).isFalse();
+    }
+
+    @Test
+    void cancelTimeoutWhenDisabled() {
+        assertThat(timeoutController.isDisabled()).isTrue();
+        assertThat(timeoutController.cancelTimeout()).isFalse();
+    }
+
+    @Test
+    void cancelTimeoutWhenScheduled() {
+        assertThat(timeoutController.scheduleTimeout(1000)).isTrue();
+        assertThat(timeoutController.cancelTimeout()).isTrue();
+    }
+
+    @Test
+    void cancelTimeoutWhenTimedOut() {
+        assertThat(timeoutController.timeoutNow()).isTrue();
+        assertThat(timeoutController.cancelTimeout()).isFalse();
+    }
+
+    @Test
+    void timeoutNowWhenDisabled() {
+        assertThat(timeoutController.isDisabled()).isTrue();
+        assertThat(timeoutController.timeoutNow()).isTrue();
+    }
+
+    @Test
+    void timeoutNowWhenScheduled() {
+        timeoutController.scheduleTimeout(1000);
+        assertThat(timeoutController.timeoutNow()).isTrue();
+    }
+
+    @Test
+    void timeoutNowWhenTimedOut() {
+        timeoutController.timeoutNow();
+        assertThat(timeoutController.timeoutNow()).isFalse();
+    }
+
+    @Test
+    void multipleTimeoutNow() {
+        assertThat(timeoutController.timeoutNow()).isTrue();
+        assertThat(timeoutController.timeoutNow()).isFalse();
+    }
+
+    @Test
     void ignoreScheduledTimeoutAfterReset() {
         timeoutController.resetTimeout(100);
         assertThat(timeoutController.scheduleTimeout(1)).isFalse();
@@ -173,7 +262,7 @@ class DefaultTimeoutControllerTest {
         assertThat(timeoutController.extendTimeout(2000)).isFalse();
         assertThat(timeoutController.resetTimeout(3000)).isFalse();
         assertThat(timeoutController.timeoutNow()).isFalse();
-        assertThat(timeoutController.cancelTimeout()).isTrue();
+        assertThat(timeoutController.cancelTimeout()).isFalse();
     }
 
     private static class StatusCheckedTaskTimeoutController implements TimeoutController {
@@ -227,7 +316,7 @@ class DefaultTimeoutControllerTest {
             final State prevState = delegate.state();
             final boolean result = delegate.resetTimeout(newTimeoutMillis);
             if (result) {
-                // Previous: !TIMED_OUT
+                // Previous: SCHEDULED
                 assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
                 // Transition to: SCHEDULE or DISABLED
                 if (newTimeoutMillis > 0) {
@@ -267,17 +356,40 @@ class DefaultTimeoutControllerTest {
             final State prevState = delegate.state();
             final boolean canceled = delegate.cancelTimeout();
             if (canceled) {
-                // Previous: !TIMED_OUT
+                // Previous: SCHEDULED
                 assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
-                // Transition to: DISABLED
+                // Transition to: TIMED_OUT
                 assertThat(delegate.state()).isEqualTo(State.DISABLED);
             } else {
-                // Previous: TIMED_OUT
-                assertThat(prevState).isEqualTo(State.TIMED_OUT);
-                // Transition to: TIMED_OUT
-                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
+                // Previous: DISABLED or TIMED_OUT
+                assertThat(prevState == State.DISABLED || prevState == State.TIMED_OUT).isTrue();
+                // Transition to: No changes
+                assertThat(delegate.state()).isEqualTo(prevState);
             }
             return canceled;
+        }
+
+        @Override
+        public boolean isScheduled() {
+            return delegate.isScheduled();
+        }
+
+        @Override
+        public boolean isTimedOut() {
+            final boolean timedOut = delegate.isTimedOut();
+            if (timedOut) {
+                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
+            }
+            return timedOut;
+        }
+
+        @Override
+        public boolean isDisabled() {
+            final boolean disabled = delegate.isDisabled();
+            if (disabled) {
+                assertThat(delegate.state()).isEqualTo(State.DISABLED);
+            }
+            return disabled;
         }
 
         @Override
