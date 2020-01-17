@@ -32,6 +32,13 @@ public final class AsyncCloseableSupport implements AsyncCloseable {
     private static final AtomicIntegerFieldUpdater<AsyncCloseableSupport> closingUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AsyncCloseableSupport.class, "closing");
 
+    private static final AsyncCloseableSupport CLOSED;
+
+    static {
+        CLOSED = AsyncCloseableSupport.of();
+        CLOSED.closeAsync();
+    }
+
     /**
      * Returns a new {@link AsyncCloseableSupport} that will be completed immediately on {@link #close()} or
      * {@link #closeAsync()}. This method is useful when you don't have any resources to release.
@@ -106,9 +113,7 @@ public final class AsyncCloseableSupport implements AsyncCloseable {
      * Returns the {@link AsyncCloseableSupport} which has been closed already.
      */
     public static AsyncCloseableSupport closed() {
-        final AsyncCloseableSupport support = of();
-        support.closeAsync();
-        return support;
+        return CLOSED;
     }
 
     private final Consumer<CompletableFuture<?>> closeAction;

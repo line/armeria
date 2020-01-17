@@ -18,9 +18,9 @@ package com.linecorp.armeria.common.util;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * An object that may hold resources until it is closed. Unlike {@link AutoCloseable}, the {@link #closeAsync()}
- * method releases the resources asynchronously, returning the {@link CompletableFuture} which is completed
- * after the resources are released.
+ * An object that may hold resources until it is closed. In addition to {@link AutoCloseable#close()},
+ * this interface provides {@link #closeAsync()} which releases the resources asynchronously, returning
+ * a {@link CompletableFuture} which is completed after the resources are released.
  */
 public interface AsyncCloseable extends AutoCloseable {
     /**
