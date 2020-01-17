@@ -37,6 +37,7 @@ public class RequestMetricSupportBenchmark {
 
     private static final MeterIdPrefixFunction PREFIX_FUNC = MeterIdPrefixFunction.ofDefault("benchmark");
     private static final RequestLog REQUEST_LOG;
+
     static {
         final RequestLogBuilder builder =
                 ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"))
