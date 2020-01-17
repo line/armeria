@@ -61,7 +61,7 @@ public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> impl
     }
 
     @Override
-    protected EventExecutor defaultSubscriberExecutor() {
+    public EventExecutor defaultSubscriberExecutor() {
         if (executor != null) {
             return executor;
         }

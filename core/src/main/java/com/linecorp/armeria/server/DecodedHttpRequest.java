@@ -94,7 +94,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     }
 
     @Override
-    protected EventLoop defaultSubscriberExecutor() {
+    public EventLoop defaultSubscriberExecutor() {
         return eventLoop;
     }
 
