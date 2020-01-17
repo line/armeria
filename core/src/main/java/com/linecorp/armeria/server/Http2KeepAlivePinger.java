@@ -60,7 +60,9 @@ class Http2KeepAlivePinger {
     private final Http2FrameWriter frameWriter;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
     private final Stopwatch stopwatch = Stopwatch.createUnstarted();
-    private final Runnable shutdownRunnable = () -> {
+
+    private ChannelHandlerContext ctx;
+    private Runnable shutdownRunnable = () -> {
         final Channel channel = ctx.channel();
         logger.trace("Closing channel: {} as PING timed out.", channel);
         final ChannelFuture close = ctx.close();
@@ -78,7 +80,6 @@ class Http2KeepAlivePinger {
     private Future<?> shutdownFuture;
     @Nullable
     private ChannelFuture pingWriteFuture;
-    private ChannelHandlerContext ctx;
     private final GenericFutureListener<ChannelFuture> pingWriteListener = future -> {
         final EventLoop el = future.channel().eventLoop();
         if (future.isSuccess()) {
