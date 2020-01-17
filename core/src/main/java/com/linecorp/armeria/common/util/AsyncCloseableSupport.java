@@ -24,6 +24,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Consumer;
 
+import com.linecorp.armeria.internal.UnupdatableCompletableFuture;
+
 /**
  * Provides support for implementing {@link AsyncCloseable}.
  */
@@ -35,7 +37,7 @@ public final class AsyncCloseableSupport implements AsyncCloseable {
     private static final AsyncCloseableSupport CLOSED;
 
     static {
-        CLOSED = AsyncCloseableSupport.of();
+        CLOSED = of();
         CLOSED.closeAsync();
     }
 
@@ -118,7 +120,8 @@ public final class AsyncCloseableSupport implements AsyncCloseable {
 
     private final Consumer<CompletableFuture<?>> closeAction;
     private final CompletableFuture<?> closeFuture = new CompletableFuture<>();
-    private final CompletableFuture<?> unupdatableCloseFuture = UnupdatableCompletableFuture.wrap(closeFuture);
+    private final UnupdatableCompletableFuture<?> unupdatableCloseFuture =
+            UnupdatableCompletableFuture.wrap(closeFuture);
     private volatile int closing;
 
     private AsyncCloseableSupport(Consumer<CompletableFuture<?>> closeAction) {

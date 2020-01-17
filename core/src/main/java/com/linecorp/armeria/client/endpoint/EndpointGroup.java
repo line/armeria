@@ -32,13 +32,13 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.Listenable;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
  * A list of {@link Endpoint}s.
  */
-public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelector, SafeCloseable {
+public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelector, AsyncCloseable {
 
     /**
      * Returns a singleton {@link EndpointGroup} which does not contain any {@link Endpoint}s.
@@ -184,9 +184,6 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
 
     @Override
     default void removeListener(Consumer<?> listener) {}
-
-    @Override
-    default void close() {}
 
     /**
      * Creates a new {@link EndpointGroup} that tries this {@link EndpointGroup} first and then the specified

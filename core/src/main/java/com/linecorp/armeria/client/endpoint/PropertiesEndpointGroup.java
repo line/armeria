@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -299,13 +300,10 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     @Override
-    public void close() {
-        try {
-            super.close();
-        } finally {
-            if (watchRegisterKey != null) {
-                registry.unregister(watchRegisterKey);
-            }
+    protected void doCloseAsync(CompletableFuture<?> future) {
+        if (watchRegisterKey != null) {
+            registry.unregister(watchRegisterKey);
         }
+        future.complete(null);
     }
 }

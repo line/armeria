@@ -16,8 +16,8 @@
 package com.linecorp.armeria.common.util;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.util.UnupdatableCompletableFuture.completedFuture;
-import static com.linecorp.armeria.common.util.UnupdatableCompletableFuture.exceptionallyCompletedFuture;
+import static com.linecorp.armeria.internal.UnupdatableCompletableFuture.completedFuture;
+import static com.linecorp.armeria.internal.UnupdatableCompletableFuture.exceptionallyCompletedFuture;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -31,6 +31,8 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.internal.UnupdatableCompletableFuture;
 
 /**
  * Provides asynchronous start-stop life cycle support.
@@ -53,16 +55,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
 
     private final Executor executor;
     private final List<L> listeners = new CopyOnWriteArrayList<>();
-    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(f -> {
-        stop(null).handle((result, cause) -> {
-            if (cause != null) {
-                f.completeExceptionally(cause);
-            } else {
-                f.complete(null);
-            }
-            return null;
-        });
-    });
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     private volatile State state = State.STOPPED;
 
@@ -345,6 +338,17 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
     @Override
     public CompletableFuture<?> closeAsync() {
         return closeable.closeAsync();
+    }
+
+    private void closeAsync(CompletableFuture<?> future) {
+        stop(null).handle((result, cause) -> {
+            if (cause != null) {
+                future.completeExceptionally(cause);
+            } else {
+                future.complete(null);
+            }
+            return null;
+        });
     }
 
     /**

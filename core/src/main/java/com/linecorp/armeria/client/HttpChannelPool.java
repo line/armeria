@@ -61,7 +61,7 @@ final class HttpChannelPool implements AsyncCloseable {
     private static final Channel[] EMPTY_CHANNELS = new Channel[0];
 
     private final EventLoop eventLoop;
-    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::doCloseAsync);
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     // Fields for pooling connections:
     private final Map<PoolKey, Deque<PooledChannel>>[] pool;
@@ -482,23 +482,9 @@ final class HttpChannelPool implements AsyncCloseable {
         return closeable.closeAsync();
     }
 
-    /**
-     * Closes all {@link Channel}s managed by this pool.
-     */
-    @Override
-    public void close() {
-        if (Thread.currentThread() instanceof NonBlocking) {
-            // Avoid blocking operation if we're in an event loop, because otherwise we might see a dead lock
-            // while waiting for the channels to be closed.
-            closeable.closeAsync();
-        } else {
-            closeable.close();
-        }
-    }
-
-    private void doCloseAsync(CompletableFuture<?> future) {
+    private void closeAsync(CompletableFuture<?> future) {
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> doCloseAsync(future));
+            eventLoop.execute(() -> closeAsync(future));
             return;
         }
 
@@ -525,6 +511,20 @@ final class HttpChannelPool implements AsyncCloseable {
 
         for (Channel ch : allChannels) {
             ch.close().addListener(listener);
+        }
+    }
+
+    /**
+     * Closes all {@link Channel}s managed by this pool.
+     */
+    @Override
+    public void close() {
+        if (Thread.currentThread() instanceof NonBlocking) {
+            // Avoid blocking operation if we're in an event loop, because otherwise we might see a dead lock
+            // while waiting for the channels to be closed.
+            closeable.closeAsync();
+        } else {
+            closeable.close();
         }
     }
 

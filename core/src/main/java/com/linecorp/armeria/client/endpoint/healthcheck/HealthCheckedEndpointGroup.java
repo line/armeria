@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
@@ -104,7 +103,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
     @VisibleForTesting
     final Set<Endpoint> healthyEndpoints = new NonBlockingHashSet<>();
-    private volatile boolean closed;
 
     /**
      * Creates a new instance.
@@ -148,7 +146,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private void refreshContexts() {
         synchronized (contexts) {
-            if (closed) {
+            if (isClosing()) {
                 return;
             }
 
@@ -194,34 +192,23 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     @Override
-    public void close() {
-        if (closed) {
-            return;
-        }
-
-        // Note: This method is thread-safe and idempotent as long as
-        //       super.close() and delegate.close() are so.
-        closed = true;
-
+    protected void doCloseAsync(CompletableFuture<?> future) {
         // Stop the health checkers in parallel.
-        final CompletableFuture<List<Object>> stopFutures;
+        final CompletableFuture<?> stopFutures;
         synchronized (contexts) {
-            stopFutures = CompletableFutures.allAsList(
+            stopFutures = CompletableFuture.allOf(
                     contexts.values().stream()
                             .map(ctx -> ctx.destroy().exceptionally(cause -> {
                                 logger.warn("Failed to stop a health checker for: {}",
                                             ctx.endpoint(), cause);
                                 return null;
                             }))
-                            .collect(toImmutableList()));
+                            .toArray(CompletableFuture[]::new));
             contexts.clear();
         }
 
-        super.close();
-        delegate.close();
-
-        // Wait until the health checkers are fully stopped.
-        stopFutures.join();
+        stopFutures.handle((unused1, unused2) -> delegate.closeAsync())
+                   .handle((unused1, unused2) -> future.complete(null));
     }
 
     /**

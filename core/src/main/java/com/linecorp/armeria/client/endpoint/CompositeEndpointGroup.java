@@ -18,19 +18,18 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.Closer;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
+import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 
 /**
  * An {@link EndpointGroup} that merges the result of any number of other {@link EndpointGroup}s.
@@ -44,6 +43,8 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
 
     private final EndpointSelectionStrategy selectionStrategy;
     private final EndpointSelector selector;
+
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     private volatile List<Endpoint> merged = ImmutableList.of();
 
@@ -109,17 +110,34 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
     }
 
     @Override
+    public CompletableFuture<?> closeFuture() {
+        return closeable.closeFuture();
+    }
+
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return closeable.closeAsync();
+    }
+
+    private void closeAsync(CompletableFuture<?> future) {
+        final CompletableFuture<?>[] closeFutures =
+                endpointGroups.stream()
+                              .map(AsyncCloseable::closeAsync)
+                              .toArray(CompletableFuture[]::new);
+
+        CompletableFuture.allOf(closeFutures).handle((unused, cause) -> {
+            if (cause != null) {
+                future.completeExceptionally(cause);
+            } else {
+                future.complete(null);
+            }
+            return null;
+        });
+    }
+
+    @Override
     public void close() {
-        final Closer closer = Closer.create();
-        for (EndpointGroup endpointGroup : endpointGroups) {
-            closer.register(endpointGroup::close);
-        }
-        try {
-            closer.close();
-        } catch (IOException e) {
-            // Can't happen since EndpointGroup is AutoCloseable, not Closeable.
-            throw new UncheckedIOException(e);
-        }
+        closeable.close();
     }
 
     @Override

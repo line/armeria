@@ -95,7 +95,7 @@ final class HttpClientFactory implements ClientFactory {
     private final Supplier<EventLoop> eventLoopSupplier =
             () -> RequestContext.mapCurrent(RequestContext::eventLoop, () -> eventLoopGroup().next());
     private final ClientFactoryOptions options;
-    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::doCloseAsync);
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     HttpClientFactory(ClientFactoryOptions options) {
         workerGroup = options.workerGroup();
@@ -279,18 +279,7 @@ final class HttpClientFactory implements ClientFactory {
         return closeable.closeAsync();
     }
 
-    @Override
-    public void close() {
-        if (Thread.currentThread() instanceof NonBlocking) {
-            // Avoid blocking operation if we're in an event loop, because otherwise we might see a dead lock
-            // while waiting for the channels to be closed.
-            closeable.closeAsync();
-        } else {
-            closeable.close();
-        }
-    }
-
-    private void doCloseAsync(CompletableFuture<?> future) {
+    private void closeAsync(CompletableFuture<?> future) {
         final List<CompletableFuture<?>> dependencies = new ArrayList<>(pools.size());
         for (final Iterator<HttpChannelPool> i = pools.values().iterator(); i.hasNext();) {
             dependencies.add(i.next().closeAsync());
@@ -316,6 +305,17 @@ final class HttpClientFactory implements ClientFactory {
             }
             return null;
         });
+    }
+
+    @Override
+    public void close() {
+        if (Thread.currentThread() instanceof NonBlocking) {
+            // Avoid blocking operation if we're in an event loop, because otherwise we might see a dead lock
+            // while waiting for the channels to be closed.
+            closeable.closeAsync();
+        } else {
+            closeable.close();
+        }
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {

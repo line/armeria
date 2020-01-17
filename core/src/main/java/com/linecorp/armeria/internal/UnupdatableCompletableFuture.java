@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.internal;
 
 import static java.util.Objects.requireNonNull;
 
@@ -21,12 +21,27 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.util.Exceptions;
+
 /**
  * A {@link CompletableFuture} which prevents the caller from completing it.
  */
-final class UnupdatableCompletableFuture<T> extends CompletableFuture<T> {
+public final class UnupdatableCompletableFuture<T> extends CompletableFuture<T> {
+
+    private static final UnupdatableCompletableFuture<?> NIL;
+
+    static {
+        NIL = new UnupdatableCompletableFuture<>();
+        NIL.doComplete(null);
+    }
 
     public static <U> UnupdatableCompletableFuture<U> completedFuture(@Nullable U value) {
+        if (value == null) {
+            @SuppressWarnings("unchecked")
+            final UnupdatableCompletableFuture<U> cast = (UnupdatableCompletableFuture<U>) NIL;
+            return cast;
+        }
+
         final UnupdatableCompletableFuture<U> future = new UnupdatableCompletableFuture<>();
         future.doComplete(value);
         return future;

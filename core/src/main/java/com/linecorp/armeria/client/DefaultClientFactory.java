@@ -81,7 +81,7 @@ final class DefaultClientFactory implements ClientFactory {
     private final HttpClientFactory httpClientFactory;
     private final Map<Scheme, ClientFactory> clientFactories;
     private final List<ClientFactory> clientFactoriesToClose;
-    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::doCloseAsync);
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     DefaultClientFactory(HttpClientFactory httpClientFactory) {
         this.httpClientFactory = httpClientFactory;
@@ -182,7 +182,7 @@ final class DefaultClientFactory implements ClientFactory {
         return closeable.closeAsync();
     }
 
-    private void doCloseAsync(CompletableFuture<?> future) {
+    private void closeAsync(CompletableFuture<?> future) {
         final CompletableFuture<?>[] delegateCloseFutures =
                 clientFactoriesToClose.stream()
                                       .map(ClientFactory::closeAsync)

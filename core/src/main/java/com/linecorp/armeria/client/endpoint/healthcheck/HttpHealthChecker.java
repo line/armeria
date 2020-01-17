@@ -69,7 +69,7 @@ final class HttpHealthChecker implements AsyncCloseable {
     private int pingIntervalSeconds;
     @Nullable
     private HttpResponse lastResponse;
-    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::doCloseAsync);
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     HttpHealthChecker(HealthCheckerContext ctx, String path, boolean useGet) {
         final Endpoint endpoint = ctx.endpoint();
@@ -117,7 +117,7 @@ final class HttpHealthChecker implements AsyncCloseable {
         return closeable.closeAsync();
     }
 
-    synchronized void doCloseAsync(CompletableFuture<?> future) {
+    private synchronized void closeAsync(CompletableFuture<?> future) {
         if (lastResponse == null) {
             // Called even before the first request is sent.
             future.complete(null);
