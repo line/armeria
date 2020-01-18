@@ -108,13 +108,13 @@ class Http2KeepAliveHandler {
 
         logger.debug("{} event triggered on channel: {}. Sending PING", event, channel);
         writePing(ctx);
-        state = State.PING_SCHEDULED;
     }
 
     private void writePing(ChannelHandlerContext ctx) {
         lastPingPayload = random.nextLong();
         pingWriteFuture = frameWriter.writePing(ctx, false, lastPingPayload, ctx.newPromise())
                                      .addListener(pingWriteListener);
+        state = State.PING_SCHEDULED;
         ctx.flush();
     }
 
