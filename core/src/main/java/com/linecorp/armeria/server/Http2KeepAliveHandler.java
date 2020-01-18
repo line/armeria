@@ -32,6 +32,7 @@ import com.google.common.base.Stopwatch;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Error;
@@ -41,15 +42,14 @@ import io.netty.handler.codec.http2.Http2PingFrame;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.concurrent.GenericFutureListener;
 
 /**
  * This will send {@link Http2PingFrame} when an {@link IdleStateEvent} is emitted by {@link IdleStateHandler}.
  * Specifically, it will write a PING frame to remote and then expects an ACK back within
  * configured pingTimeOut. If timeout exceeds then channel will be closed.
- *</p>
+ * </p>
  * This constructor will fail to initialize when pipeline does not have {@link IdleStateHandler}.
- *</p>
+ * </p>
  * This class is not thread-safe and all methods are to be called from single thread such as {@link EventLoop}.
  */
 @NotThreadSafe
@@ -71,26 +71,28 @@ class Http2KeepAliveHandler {
     private long lastPingPayload;
 
     private final Runnable shutdownRunnable = () -> {
-        logger.debug("Closing channel: {} as PING timed out.", channel);
-        final ChannelFuture close = channel.close();
-        close.addListener(future -> {
+        logger.debug("{} Closing channel due to PING timeout", channel);
+        channel.close().addListener(future -> {
             if (future.isSuccess()) {
-                logger.debug("Closed channel: {} as PING timed out.", channel);
+                logger.debug("{} Closed channel due to PING timeout", channel);
             } else {
-                logger.debug("Cannot close channel: {}.", channel, future.cause());
+                logger.debug("{} Channel cannot be closed", channel, future.cause());
             }
         });
     };
 
-    private final GenericFutureListener<ChannelFuture> pingWriteListener = future -> {
-        final EventLoop el = future.channel().eventLoop();
+    private final ChannelFutureListener pingWriteListener = future -> {
+        final Channel ch = future.channel();
         if (future.isSuccess()) {
+            final EventLoop el = ch.eventLoop();
             shutdownFuture = el.schedule(shutdownRunnable, pingTimeoutInNanos, TimeUnit.NANOSECONDS);
             state = State.PENDING_PING_ACK;
             stopwatch.reset().start();
         } else {
-            // write failed, likely the channel is closed.
-            logger.debug("PING write failed for channel: {}", channel);
+            if (ch.isActive()) {
+                // write failed, likely the channel is closed.
+                logger.debug("PING write failed for channel: {}", channel, future.cause());
+            }
         }
     };
 
