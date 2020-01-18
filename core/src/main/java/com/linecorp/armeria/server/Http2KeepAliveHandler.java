@@ -90,7 +90,6 @@ class Http2KeepAliveHandler {
             stopwatch.reset().start();
         } else {
             if (ch.isActive()) {
-                // write failed, likely the channel is closed.
                 logger.debug("PING write failed for channel: {}", channel, future.cause());
             }
         }
