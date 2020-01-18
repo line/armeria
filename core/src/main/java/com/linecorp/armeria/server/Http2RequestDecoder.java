@@ -74,13 +74,16 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final InboundTrafficController inboundTrafficController;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
+    private final Http2KeepAliveHandler keepAlive;
     private int nextId;
 
-    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme) {
+    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme,
+                        Http2KeepAliveHandler keepAlive) {
         this.cfg = cfg;
         this.channel = channel;
         this.writer = writer;
         this.scheme = scheme;
+        this.keepAlive = keepAlive;
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
         goAwayHandler = new Http2GoAwayHandler();
@@ -315,5 +318,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
         goAwayHandler.onGoAwayReceived(channel, lastStreamId, errorCode, debugData);
+    }
+
+    @Override
+    public void onPingAckRead(final ChannelHandlerContext ctx, final long data) throws Http2Exception {
+        keepAlive.onPingAck(data);
     }
 }

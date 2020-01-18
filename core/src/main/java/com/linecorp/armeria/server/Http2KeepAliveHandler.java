@@ -60,9 +60,16 @@ class Http2KeepAliveHandler {
     private final Http2FrameWriter frameWriter;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
     private final Stopwatch stopwatch = Stopwatch.createUnstarted();
+
+    @Nullable
+    private ChannelFuture pingWriteFuture;
+    @Nullable
+    private Future<?> shutdownFuture;
     private long pingTimeoutInNanos;
     private State state = State.IDLE;
     private Channel channel;
+    private long lastPingPayload;
+
     private final Runnable shutdownRunnable = () -> {
         logger.debug("Closing channel: {} as PING timed out.", channel);
         final ChannelFuture close = channel.close();
@@ -75,8 +82,6 @@ class Http2KeepAliveHandler {
         });
     };
 
-    @Nullable
-    private Future<?> shutdownFuture;
     private final GenericFutureListener<ChannelFuture> pingWriteListener = future -> {
         final EventLoop el = future.channel().eventLoop();
         if (future.isSuccess()) {
@@ -88,9 +93,6 @@ class Http2KeepAliveHandler {
             logger.debug("PING write failed for channel: {}", channel);
         }
     };
-    @Nullable
-    private ChannelFuture pingWriteFuture;
-    private long lastPingPayload;
 
     Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, long pingTimeoutInNanos) {
         this.channel = channel;
@@ -134,13 +136,13 @@ class Http2KeepAliveHandler {
         final long elapsed = stopwatch.elapsed(TimeUnit.NANOSECONDS);
 
         if (state != State.PENDING_PING_ACK) {
-            throw new Http2Exception(Http2Error.PROTOCOL_ERROR, "State expected PENDING_PING_ACK but is " +
-                                                                state);
+            throw new Http2Exception(Http2Error.PROTOCOL_ERROR,
+                                     "State expected PENDING_PING_ACK but is " + state);
         }
         if (lastPingPayload != data) {
-            throw new Http2Exception(Http2Error.PROTOCOL_ERROR, "PING received but payload does not match. " +
-                                                                "Expected: " + lastPingPayload + ' ' +
-                                                                "Received :" + data);
+            throw new Http2Exception(Http2Error.PROTOCOL_ERROR,
+                                     "PING received but payload does not match. " + "Expected: " +
+                                     lastPingPayload + ' ' + "Received :" + data);
         }
         if (shutdownFuture != null) {
             shutdownFuture.cancel(false);

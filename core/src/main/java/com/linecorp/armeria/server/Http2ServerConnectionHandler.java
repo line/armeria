@@ -16,26 +16,32 @@
 
 package com.linecorp.armeria.server;
 
+import java.time.Duration;
+
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.timeout.IdleStateEvent;
 
 final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler {
 
     private final GracefulShutdownSupport gracefulShutdownSupport;
     private final Http2RequestDecoder requestDecoder;
+    private final Http2KeepAliveHandler keepAlive;
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig config,
                                  GracefulShutdownSupport gracefulShutdownSupport, String scheme) {
 
         super(decoder, encoder, initialSettings);
-
         this.gracefulShutdownSupport = gracefulShutdownSupport;
-        requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme);
+        keepAlive = new Http2KeepAliveHandler(channel, encoder().frameWriter(),
+                                              Duration.ofSeconds(1).toNanos());
+        requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAlive);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);
 
@@ -52,5 +58,20 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     @Override
     protected boolean needsImmediateDisconnection() {
         return gracefulShutdownSupport.isShuttingDown() || requestDecoder.goAwayHandler().receivedErrorGoAway();
+    }
+
+    @Override
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
+        keepAlive.onChannelInactive();
+        super.channelInactive(ctx);
+    }
+
+    @Override
+    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+        if (evt instanceof IdleStateEvent) {
+            keepAlive.onChannelIdle(ctx, (IdleStateEvent) evt);
+            return;
+        }
+        super.userEventTriggered(ctx, evt);
     }
 }
