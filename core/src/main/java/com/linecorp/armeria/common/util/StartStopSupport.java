@@ -16,8 +16,8 @@
 package com.linecorp.armeria.common.util;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.UnupdatableCompletableFuture.completedFuture;
-import static com.linecorp.armeria.internal.UnupdatableCompletableFuture.exceptionallyCompletedFuture;
+import static com.linecorp.armeria.internal.UnmodifiableFuture.completedFuture;
+import static com.linecorp.armeria.internal.UnmodifiableFuture.exceptionallyCompletedFuture;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.internal.UnupdatableCompletableFuture;
+import com.linecorp.armeria.internal.UnmodifiableFuture;
 
 /**
  * Provides asynchronous start-stop life cycle support.
@@ -62,7 +62,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
     /**
      * This future is {@code V}-typed when STARTING/STARTED and {@link Void}-typed when STOPPING/STOPPED.
      */
-    private UnupdatableCompletableFuture<?> future = completedFuture(null);
+    private UnmodifiableFuture<?> future = completedFuture(null);
 
     /**
      * Creates a new instance.
@@ -148,9 +148,9 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
         return start0(arg, rollbackArg, failIfStarted);
     }
 
-    private synchronized UnupdatableCompletableFuture<V> start0(@Nullable T arg,
-                                                                @Nullable U rollbackArg,
-                                                                boolean failIfStarted) {
+    private synchronized UnmodifiableFuture<V> start0(@Nullable T arg,
+                                                      @Nullable U rollbackArg,
+                                                      boolean failIfStarted) {
         if (closeable.isClosing()) {
             return exceptionallyCompletedFuture(new IllegalStateException("closed already"));
         }
@@ -163,13 +163,13 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
                             new IllegalStateException("must be stopped to start; currently " + state));
                 } else {
                     @SuppressWarnings("unchecked")
-                    final UnupdatableCompletableFuture<V> castFuture = (UnupdatableCompletableFuture<V>) future;
+                    final UnmodifiableFuture<V> castFuture = (UnmodifiableFuture<V>) future;
                     return castFuture;
                 }
             case STOPPING:
                 // A user called start() to restart, but not stopped completely yet.
                 // Try again once stopped.
-                return UnupdatableCompletableFuture.wrap(
+                return UnmodifiableFuture.wrap(
                         future.exceptionally(unused -> null)
                               .thenComposeAsync(unused -> start(arg, failIfStarted), executor));
         }
@@ -208,7 +208,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
             }
         }
 
-        final UnupdatableCompletableFuture<V> future = UnupdatableCompletableFuture.wrap(
+        final UnmodifiableFuture<V> future = UnmodifiableFuture.wrap(
                 startFuture.handleAsync((result, cause) -> {
                     if (cause != null) {
                         // Failed to start. Stop and complete with the start failure cause.
@@ -252,12 +252,12 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
         return stop0(arg, rollback);
     }
 
-    private synchronized UnupdatableCompletableFuture<Void> stop0(@Nullable U arg, boolean rollback) {
+    private synchronized UnmodifiableFuture<Void> stop0(@Nullable U arg, boolean rollback) {
         switch (state) {
             case STARTING:
                 if (!rollback) {
                     // Try again once started.
-                    return UnupdatableCompletableFuture.wrap(
+                    return UnmodifiableFuture.wrap(
                             future.exceptionally(unused -> null) // Ignore the exception.
                                   .thenComposeAsync(unused -> stop(arg), executor));
                 } else {
@@ -266,8 +266,8 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
             case STOPPING:
             case STOPPED:
                 @SuppressWarnings("unchecked")
-                final UnupdatableCompletableFuture<Void> castFuture =
-                        (UnupdatableCompletableFuture<Void>) future;
+                final UnmodifiableFuture<Void> castFuture =
+                        (UnmodifiableFuture<Void>) future;
                 return castFuture;
         }
 
@@ -305,7 +305,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
             }
         }
 
-        final UnupdatableCompletableFuture<Void> future = UnupdatableCompletableFuture.wrap(
+        final UnmodifiableFuture<Void> future = UnmodifiableFuture.wrap(
                 stopFuture.whenCompleteAsync((unused1, cause) -> enter(State.STOPPED, null, arg, null),
                                              executor));
         this.future = future;

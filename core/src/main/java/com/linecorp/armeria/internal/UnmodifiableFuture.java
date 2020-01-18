@@ -26,36 +26,36 @@ import com.linecorp.armeria.common.util.Exceptions;
 /**
  * A {@link CompletableFuture} which prevents the caller from completing it.
  */
-public final class UnupdatableCompletableFuture<T> extends CompletableFuture<T> {
+public final class UnmodifiableFuture<T> extends CompletableFuture<T> {
 
-    private static final UnupdatableCompletableFuture<?> NIL;
+    private static final UnmodifiableFuture<?> NIL;
 
     static {
-        NIL = new UnupdatableCompletableFuture<>();
+        NIL = new UnmodifiableFuture<>();
         NIL.doComplete(null);
     }
 
-    public static <U> UnupdatableCompletableFuture<U> completedFuture(@Nullable U value) {
+    public static <U> UnmodifiableFuture<U> completedFuture(@Nullable U value) {
         if (value == null) {
             @SuppressWarnings("unchecked")
-            final UnupdatableCompletableFuture<U> cast = (UnupdatableCompletableFuture<U>) NIL;
+            final UnmodifiableFuture<U> cast = (UnmodifiableFuture<U>) NIL;
             return cast;
         }
 
-        final UnupdatableCompletableFuture<U> future = new UnupdatableCompletableFuture<>();
+        final UnmodifiableFuture<U> future = new UnmodifiableFuture<>();
         future.doComplete(value);
         return future;
     }
 
-    public static <U> UnupdatableCompletableFuture<U> exceptionallyCompletedFuture(Throwable cause) {
+    public static <U> UnmodifiableFuture<U> exceptionallyCompletedFuture(Throwable cause) {
         requireNonNull(cause, "cause");
-        final UnupdatableCompletableFuture<U> future = new UnupdatableCompletableFuture<>();
+        final UnmodifiableFuture<U> future = new UnmodifiableFuture<>();
         future.doCompleteExceptionally(cause);
         return future;
     }
 
-    public static <U> UnupdatableCompletableFuture<U> wrap(CompletableFuture<U> future) {
-        final UnupdatableCompletableFuture<U> unupdatable = new UnupdatableCompletableFuture<>();
+    public static <U> UnmodifiableFuture<U> wrap(CompletableFuture<U> future) {
+        final UnmodifiableFuture<U> unupdatable = new UnmodifiableFuture<>();
         future.handle((result, cause) -> {
             if (cause != null) {
                 unupdatable.doCompleteExceptionally(Exceptions.peel(cause));
@@ -67,7 +67,7 @@ public final class UnupdatableCompletableFuture<T> extends CompletableFuture<T> 
         return unupdatable;
     }
 
-    private UnupdatableCompletableFuture() {}
+    private UnmodifiableFuture() {}
 
     @Override
     public boolean complete(@Nullable T value) {

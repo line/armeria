@@ -42,7 +42,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.UnupdatableCompletableFuture;
+import com.linecorp.armeria.internal.UnmodifiableFuture;
 
 import io.netty.util.NetUtil;
 
@@ -565,12 +565,12 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public CompletableFuture<?> closeFuture() {
-        return UnupdatableCompletableFuture.completedFuture(null);
+        return UnmodifiableFuture.completedFuture(null);
     }
 
     @Override
     public CompletableFuture<?> closeAsync() {
-        return UnupdatableCompletableFuture.completedFuture(null);
+        return UnmodifiableFuture.completedFuture(null);
     }
 
     @Override

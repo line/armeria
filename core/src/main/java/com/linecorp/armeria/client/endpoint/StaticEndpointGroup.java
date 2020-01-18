@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.UnupdatableCompletableFuture;
+import com.linecorp.armeria.internal.UnmodifiableFuture;
 
 /**
  * A static immutable {@link EndpointGroup}.
@@ -69,12 +69,12 @@ final class StaticEndpointGroup implements EndpointGroup {
 
     @Override
     public CompletableFuture<?> closeFuture() {
-        return UnupdatableCompletableFuture.completedFuture(null);
+        return UnmodifiableFuture.completedFuture(null);
     }
 
     @Override
     public CompletableFuture<?> closeAsync() {
-        return UnupdatableCompletableFuture.completedFuture(null);
+        return UnmodifiableFuture.completedFuture(null);
     }
 
     @Override
