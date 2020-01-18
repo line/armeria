@@ -37,6 +37,7 @@ import io.netty.channel.EventLoop;
 public class DefaultTimeoutController implements TimeoutController {
 
     enum State {
+        INIT,
         DISABLED,
         SCHEDULED,
         TIMED_OUT,
@@ -49,11 +50,10 @@ public class DefaultTimeoutController implements TimeoutController {
     private long timeoutMillis;
     private long firstExecutionTimeNanos;
     private long lastExecutionTimeNanos;
-    private boolean isExecutedAtLeastOnce;
 
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
-    private State state = State.DISABLED;
+    private State state = State.INIT;
 
     /**
      * Creates a new instance with the specified {@link TimeoutTask} and {@link EventLoop}.
@@ -182,7 +182,7 @@ public class DefaultTimeoutController implements TimeoutController {
      * Trigger the current timeout immediately.
      *
      * @return {@code true} if the current timeout is triggered successfully.
-     *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
+     *         {@code false} the timeout has been triggered already
      *         or the {@link TimeoutTask} could not be scheduled now.
      */
     @Override
@@ -197,24 +197,28 @@ public class DefaultTimeoutController implements TimeoutController {
         switch (state) {
             case TIMED_OUT:
                 return false;
+            case INIT:
             case DISABLED:
                 invokeTimeoutTask();
                 return true;
-            default: // state == State.SCHEDULED
+            case SCHEDULED:
                 if (cancelTimeout()) {
                     invokeTimeoutTask();
                     return true;
                 } else {
                     return false;
                 }
+            default:
+                throw new Error(); // Should not reach here.
         }
     }
 
     @Override
     public boolean cancelTimeout() {
         switch (state) {
-            case TIMED_OUT:
+            case INIT:
             case DISABLED:
+            case TIMED_OUT:
                 return false;
         }
 
@@ -230,25 +234,20 @@ public class DefaultTimeoutController implements TimeoutController {
     }
 
     @Override
-    public boolean isScheduled() {
-        return state == State.SCHEDULED;
-    }
-
-    @Override
     public boolean isTimedOut() {
         return state == State.TIMED_OUT;
     }
 
     @Override
     public boolean isDisabled() {
-        return state == State.DISABLED;
+        return state == State.INIT || state == State.DISABLED;
     }
 
     private void ensureInitialized() {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
-        if (!isExecutedAtLeastOnce) {
-            isExecutedAtLeastOnce = true;
+        if (state == State.INIT) {
+            state = State.DISABLED;
             firstExecutionTimeNanos = lastExecutionTimeNanos = System.nanoTime();
         }
     }
@@ -263,7 +262,7 @@ public class DefaultTimeoutController implements TimeoutController {
 
     @Override
     public Long startTimeNanos() {
-        return isExecutedAtLeastOnce ? firstExecutionTimeNanos : null;
+        return state != State.INIT ? firstExecutionTimeNanos : null;
     }
 
     @VisibleForTesting

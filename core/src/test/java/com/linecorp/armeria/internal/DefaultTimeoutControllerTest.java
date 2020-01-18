@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal;
 
+import static com.linecorp.armeria.internal.DefaultTimeoutController.State.DISABLED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -281,12 +282,12 @@ class DefaultTimeoutControllerTest {
             final boolean result = delegate.scheduleTimeout(timeoutMillis);
             if (result) {
                 // Previous: DISABLED
-                assertThat(prevState).isEqualTo(State.DISABLED);
+                assertThat(prevState == State.INIT || prevState == DISABLED).isTrue();
                 // Transition to: SCHEDULE
                 assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
             } else {
                 // Previous: !DISABLED
-                assertThat(prevState).isNotEqualTo(State.DISABLED);
+                assertThat(prevState == State.INIT || prevState == DISABLED).isFalse();
                 // Transition to: No changes
                 assertThat(prevState).isEqualTo(delegate.state());
             }
@@ -305,8 +306,12 @@ class DefaultTimeoutControllerTest {
             } else {
                 // Previous: !SCHEDULE
                 assertThat(prevState).isNotEqualTo(State.SCHEDULED);
-                // Transition to: No changes
-                assertThat(delegate.state()).isEqualTo(prevState);
+                // Transition to:
+                if (prevState == State.INIT) {
+                    assertThat(delegate.state()).isEqualTo(State.DISABLED);
+                } else {
+                    assertThat(delegate.state()).isEqualTo(prevState);
+                }
             }
             return result;
         }
@@ -322,7 +327,7 @@ class DefaultTimeoutControllerTest {
                 if (newTimeoutMillis > 0) {
                     assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
                 } else {
-                    assertThat(delegate.state()).isEqualTo(State.DISABLED);
+                    assertThat(delegate.state()).isEqualTo(DISABLED);
                 }
             } else {
                 // Previous: TIMED_OUT
@@ -359,10 +364,10 @@ class DefaultTimeoutControllerTest {
                 // Previous: SCHEDULED
                 assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
                 // Transition to: TIMED_OUT
-                assertThat(delegate.state()).isEqualTo(State.DISABLED);
+                assertThat(delegate.state()).isEqualTo(DISABLED);
             } else {
-                // Previous: DISABLED or TIMED_OUT
-                assertThat(prevState == State.DISABLED || prevState == State.TIMED_OUT).isTrue();
+                // Previous: !SCHEDULED
+                assertThat(prevState).isNotEqualTo(State.SCHEDULED);
                 // Transition to: No changes
                 assertThat(delegate.state()).isEqualTo(prevState);
             }
@@ -370,26 +375,13 @@ class DefaultTimeoutControllerTest {
         }
 
         @Override
-        public boolean isScheduled() {
-            return delegate.isScheduled();
-        }
-
-        @Override
         public boolean isTimedOut() {
-            final boolean timedOut = delegate.isTimedOut();
-            if (timedOut) {
-                assertThat(delegate.state()).isEqualTo(State.TIMED_OUT);
-            }
-            return timedOut;
+            return delegate.isTimedOut();
         }
 
         @Override
         public boolean isDisabled() {
-            final boolean disabled = delegate.isDisabled();
-            if (disabled) {
-                assertThat(delegate.state()).isEqualTo(State.DISABLED);
-            }
-            return disabled;
+            return delegate.isDisabled();
         }
 
         @Override

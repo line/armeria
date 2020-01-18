@@ -61,7 +61,7 @@ public interface TimeoutController {
      * Trigger the current timeout immediately.
      *
      * @return {@code true} if the current timeout is triggered successfully.
-     *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
+     *         {@code false} if the timeout has been triggered already
      *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
     boolean timeoutNow();
@@ -73,14 +73,6 @@ public interface TimeoutController {
      *         {@code false} if the timeout has been triggered already or no timeout was scheduled previously.
      */
     boolean cancelTimeout();
-
-    /**
-     * Returns whether the timeout is scheduled or not.
-     *
-     * @return {@code true} the timeout is scheduled now.
-     *         {@code false} if the timeout has been triggered already or no timeout was scheduled previously.
-     */
-    boolean isScheduled();
 
     /**
      * Returns whether the timeout has been triggered or not.

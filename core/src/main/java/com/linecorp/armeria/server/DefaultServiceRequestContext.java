@@ -359,7 +359,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                 eventLoop().execute(requestTimeoutController::cancelTimeout);
             }
         } else {
-            pendingTimeoutTask = TimeoutController::cancelTimeout;
+            setPendingTimeoutTask(TimeoutController::cancelTimeout);
         }
     }
 
@@ -397,7 +397,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                 eventLoop().execute(() -> requestTimeoutController.extendTimeout(adjustmentMillis));
             }
         } else {
-            pendingTimeoutTask = timeoutController -> timeoutController.extendTimeout(adjustmentMillis);
+            setPendingTimeoutTask(timeoutController -> timeoutController.extendTimeout(adjustmentMillis));
         }
     }
 
@@ -426,12 +426,12 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             }
         } else {
             final long startTimeNanos = System.nanoTime();
-            pendingTimeoutTask = timeoutController -> {
+            setPendingTimeoutTask(timeoutController -> {
                 final long passedTimeMillis0 =
                         TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
                 final long timeoutMillis = Math.max(1, requestTimeoutMillis - passedTimeMillis0);
                 timeoutController.resetTimeout(timeoutMillis);
-            };
+            });
         }
 
         this.requestTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, requestTimeoutMillis);
@@ -457,7 +457,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                     eventLoop().execute(requestTimeoutController::timeoutNow);
                 }
             } else {
-                pendingTimeoutTask = TimeoutController::timeoutNow;
+                setPendingTimeoutTask(TimeoutController::timeoutNow);
             }
         } else {
             setRequestTimeoutAfterMillis(requestTimeoutAfter);
@@ -666,6 +666,14 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             } else {
                 eventLoop().execute(() -> pendingTimeoutTask.accept(requestTimeoutController));
             }
+        }
+    }
+
+    private void setPendingTimeoutTask(Consumer<TimeoutController> pendingTimeoutTask) {
+        if (this.pendingTimeoutTask == null) {
+            this.pendingTimeoutTask = pendingTimeoutTask;
+        } else {
+           this.pendingTimeoutTask = this.pendingTimeoutTask.andThen(pendingTimeoutTask);
         }
     }
 

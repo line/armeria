@@ -448,7 +448,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 eventLoop().execute(responseTimeoutController::cancelTimeout);
             }
         } else {
-            pendingTimeoutTask = TimeoutController::cancelTimeout;
+            setPendingTimeoutTask(TimeoutController::cancelTimeout);
         }
     }
 
@@ -486,7 +486,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 eventLoop().execute(() -> responseTimeoutController.extendTimeout(adjustmentMillis));
             }
         } else {
-            pendingTimeoutTask = timeoutController -> timeoutController.extendTimeout(adjustmentMillis);
+            setPendingTimeoutTask(timeoutController -> timeoutController.extendTimeout(adjustmentMillis));
         }
     }
 
@@ -514,12 +514,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             }
         } else {
             final long startTimeNanos = System.nanoTime();
-            pendingTimeoutTask = timeoutController -> {
-                    final long passedTimeMillis0 =
-                            TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-                    final long timeoutMillis = Math.max(1, responseTimeoutMillis - passedTimeMillis0);
-                    timeoutController.resetTimeout(timeoutMillis);
-            };
+            setPendingTimeoutTask(timeoutController -> {
+                final long passedTimeMillis0 =
+                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+                final long timeoutMillis = Math.max(1, responseTimeoutMillis - passedTimeMillis0);
+                timeoutController.resetTimeout(timeoutMillis);
+            });
         }
 
         this.responseTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, responseTimeoutMillis);
@@ -545,7 +545,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                     eventLoop().execute(responseTimeoutController::timeoutNow);
                 }
             } else {
-                pendingTimeoutTask = TimeoutController::timeoutNow;
+                setPendingTimeoutTask(TimeoutController::timeoutNow);
             }
         } else {
             setResponseTimeoutAfterMillis(responseTimeoutAfter);
@@ -590,6 +590,14 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             } else {
                 eventLoop().execute(() -> pendingTimeoutTask.accept(responseTimeoutController));
             }
+        }
+    }
+
+    private void setPendingTimeoutTask(Consumer<TimeoutController> pendingTimeoutTask) {
+        if (this.pendingTimeoutTask == null) {
+            this.pendingTimeoutTask = pendingTimeoutTask;
+        } else {
+            this.pendingTimeoutTask = this.pendingTimeoutTask.andThen(pendingTimeoutTask);
         }
     }
 
