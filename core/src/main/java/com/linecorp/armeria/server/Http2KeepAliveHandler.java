@@ -53,67 +53,69 @@ import io.netty.util.concurrent.GenericFutureListener;
  * This class is not thread-safe and all methods are to be called from single thread such as {@link EventLoop}.
  */
 @NotThreadSafe
-class Http2KeepAlivePinger {
+class Http2KeepAliveHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(Http2KeepAlivePinger.class);
+    private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandler.class);
 
     private final Http2FrameWriter frameWriter;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
     private final Stopwatch stopwatch = Stopwatch.createUnstarted();
-
-    private ChannelHandlerContext ctx;
-    private Runnable shutdownRunnable = () -> {
-        final Channel channel = ctx.channel();
-        logger.trace("Closing channel: {} as PING timed out.", channel);
-        final ChannelFuture close = ctx.close();
+    private long pingTimeoutInNanos;
+    private State state = State.IDLE;
+    private Channel channel;
+    private final Runnable shutdownRunnable = () -> {
+        logger.debug("Closing channel: {} as PING timed out.", channel);
+        final ChannelFuture close = channel.close();
         close.addListener(future -> {
             if (future.isSuccess()) {
-                logger.trace("Closed channel: {} as PING timed out.", channel);
+                logger.debug("Closed channel: {} as PING timed out.", channel);
             } else {
-                logger.trace("Cannot close channel: {}.", channel, future.cause());
+                logger.debug("Cannot close channel: {}.", channel, future.cause());
             }
         });
     };
-    private long pingTimeoutInNanos;
-    private State state = State.IDLE;
+
     @Nullable
     private Future<?> shutdownFuture;
-    @Nullable
-    private ChannelFuture pingWriteFuture;
     private final GenericFutureListener<ChannelFuture> pingWriteListener = future -> {
         final EventLoop el = future.channel().eventLoop();
         if (future.isSuccess()) {
-            shutdownFuture = el.schedule(
-                    shutdownRunnable, pingTimeoutInNanos, TimeUnit.NANOSECONDS);
+            shutdownFuture = el.schedule(shutdownRunnable, pingTimeoutInNanos, TimeUnit.NANOSECONDS);
             state = State.PENDING_PING_ACK;
             stopwatch.reset().start();
         } else {
             // write failed, likely the channel is closed.
-            logger.trace("PING write failed for channel: {}", ctx.channel());
+            logger.debug("PING write failed for channel: {}", channel);
         }
     };
+    @Nullable
+    private ChannelFuture pingWriteFuture;
     private long lastPingPayload;
 
-    Http2KeepAlivePinger(ChannelHandlerContext ctx, Http2FrameWriter frameWriter, long pingTimeoutInNanos) {
-        checkState(ctx.channel().pipeline().get(IdleStateHandler.class) != null,
-                   "Expecting IdleStateHandler to be in pipeline, but not found");
-        this.ctx = ctx;
+    Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, long pingTimeoutInNanos) {
+        this.channel = channel;
         this.frameWriter = frameWriter;
         this.pingTimeoutInNanos = pingTimeoutInNanos;
     }
 
-    public void onChannelIdle(IdleStateEvent event) {
-        // Check if we are PENDING_PING. If not then one of this is true:
-        // (1) Channel has pending ACK. (2) Channel is already shutdown.
-        checkState(state == State.IDLE, "");
+    public void onChannelIdle(ChannelHandlerContext ctx, IdleStateEvent event) {
+        checkState(state == State.IDLE, "Waiting for PING ACK or shutdown");
+
+        // Only interested in ALL_IDLE event.
         if (event.state() != IdleState.ALL_IDLE) {
-            // Only interested in ALL_IDLE event.
             return;
         }
 
+        logger.debug("{} event triggered on channel: {}. Sending PING", event, channel);
+        writePing(ctx);
+        state = State.PING_SCHEDULED;
+    }
+
+    private void writePing(ChannelHandlerContext ctx) {
         lastPingPayload = random.nextLong();
         pingWriteFuture = frameWriter.writePing(ctx, false, lastPingPayload, ctx.newPromise())
                                      .addListener(pingWriteListener);
+        ctx.flush();
     }
 
     public void onChannelInactive() {
@@ -130,22 +132,33 @@ class Http2KeepAlivePinger {
 
     public void onPingAck(long data) throws Http2Exception {
         final long elapsed = stopwatch.elapsed(TimeUnit.NANOSECONDS);
+
         if (state != State.PENDING_PING_ACK) {
-            // we got ACK for something not sent at the first place.
+            throw new Http2Exception(Http2Error.PROTOCOL_ERROR, "State expected PENDING_PING_ACK but is " +
+                                                                state);
         }
         if (lastPingPayload != data) {
-            throw new Http2Exception(Http2Error.PROTOCOL_ERROR);
+            throw new Http2Exception(Http2Error.PROTOCOL_ERROR, "PING received but payload does not match. " +
+                                                                "Expected: " + lastPingPayload + ' ' +
+                                                                "Received :" + data);
         }
         if (shutdownFuture != null) {
             shutdownFuture.cancel(false);
         }
-        logger.trace("Channel: {} received PING(ACK=1) in {}ns.", elapsed, ctx.channel());
+        logger.debug("Channel: {} received PING(ACK=1) in {}ns.", channel, elapsed);
         state = State.IDLE;
     }
 
+    /**
+     * State changes from IDLE -> PING_SCHEDULED -> PENDING_PING_ACK - IDLE and so on.
+     * When the channel is inactive then the state changes to SHUTDOWN.
+     */
     private enum State {
-        /* Waiting for IdleStateEvent so we can write PING */
+        /* Nothing happening, but waiting for IdleStateEvent */
         IDLE,
+
+        /* PING is scheduled */
+        PING_SCHEDULED,
 
         /* PING is sent and is pending ACK */
         PENDING_PING_ACK,
