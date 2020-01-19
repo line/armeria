@@ -17,6 +17,7 @@ package com.linecorp.armeria.common;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -191,6 +192,12 @@ public final class Flags {
     private static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS =
             getLong("defaultClientIdleTimeoutMillis",
                     DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_NANOS = Duration.ofSeconds(3).toNanos();
+    private static final long DEFAULT_HTTP2_PING_TIMEOUT_NANOS =
+            getLong("defaultHttp2PingTimeoutNanos",
+                    DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_NANOS,
                     value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
@@ -673,6 +680,19 @@ public final class Flags {
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
+    }
+
+    /**
+     * Returns the default value for http2 PING timeout.
+     * Note that this flag is only in effect when DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS for server and
+     * DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS for client are greater than 0
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_NANOS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultHttp2PingTimeoutNanos=<integer>} JVM option to override
+     * the default value.
+     */
+    public static long defaultHttp2PingTimeoutNanos() {
+        return DEFAULT_HTTP2_PING_TIMEOUT_NANOS;
     }
 
     /**

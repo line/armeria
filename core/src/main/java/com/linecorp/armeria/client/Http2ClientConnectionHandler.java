@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import java.time.Duration;
-
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 
@@ -41,7 +40,8 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.clientFactory = clientFactory;
 
-        keepAlive = new Http2KeepAliveHandler(channel, encoder.frameWriter(), Duration.ofSeconds(1).toNanos());
+        keepAlive = new Http2KeepAliveHandler(channel, encoder.frameWriter(),
+                                              Flags.defaultHttp2PingTimeoutNanos());
         responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAlive);
         connection().addListener(responseDecoder);
         decoder().frameListener(responseDecoder);
