@@ -46,10 +46,8 @@ import io.netty.handler.timeout.IdleStateHandler;
 /**
  * This will send {@link Http2PingFrame} when an {@link IdleStateEvent} is emitted by {@link IdleStateHandler}.
  * Specifically, it will write a PING frame to remote and then expects an ACK back within
- * configured pingTimeOut. If timeout exceeds then channel will be closed.
- * </p>
- * This constructor will fail to initialize when pipeline does not have {@link IdleStateHandler}.
- * </p>
+ * configured {@code pingTimeoutInNanos}. If timeout exceeds then channel will be closed.
+ * <p>
  * This class is <b>not</b> thread-safe and all methods are to be called from single thread such as
  * {@link EventLoop}.
  */
