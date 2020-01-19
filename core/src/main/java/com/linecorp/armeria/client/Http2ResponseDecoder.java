@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
+import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -55,12 +56,15 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private final Http2Connection conn;
     private final Http2ConnectionEncoder encoder;
     private final Http2GoAwayHandler goAwayHandler;
+    private final Http2KeepAliveHandler keepAlive;
 
-    Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory) {
+    Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory,
+                         Http2KeepAliveHandler keepAlive) {
         super(channel,
               InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
+        this.keepAlive = keepAlive;
         goAwayHandler = new Http2GoAwayHandler();
     }
 
@@ -287,7 +291,9 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onPingRead(ChannelHandlerContext ctx, long data) {}
 
     @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, long data) {}
+    public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+        keepAlive.onPingAck(data);
+    }
 
     @Override
     public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {}

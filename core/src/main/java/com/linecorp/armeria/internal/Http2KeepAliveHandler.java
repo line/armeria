@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -50,10 +50,11 @@ import io.netty.handler.timeout.IdleStateHandler;
  * </p>
  * This constructor will fail to initialize when pipeline does not have {@link IdleStateHandler}.
  * </p>
- * This class is not thread-safe and all methods are to be called from single thread such as {@link EventLoop}.
+ * This class is <b>not</b> thread-safe and all methods are to be called from single thread such as
+ * {@link EventLoop}.
  */
 @NotThreadSafe
-class Http2KeepAliveHandler {
+public class Http2KeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandler.class);
 
@@ -68,8 +69,6 @@ class Http2KeepAliveHandler {
     private long pingTimeoutInNanos;
     private State state = State.IDLE;
     private Channel channel;
-    private long lastPingPayload;
-
     private final Runnable shutdownRunnable = () -> {
         logger.debug("{} Closing channel due to PING timeout", channel);
         channel.close().addListener(future -> {
@@ -80,7 +79,6 @@ class Http2KeepAliveHandler {
             }
         });
     };
-
     private final ChannelFutureListener pingWriteListener = future -> {
         final Channel ch = future.channel();
         if (future.isSuccess()) {
@@ -94,22 +92,30 @@ class Http2KeepAliveHandler {
             }
         }
     };
+    private long lastPingPayload;
 
-    Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, long pingTimeoutInNanos) {
+    public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, long pingTimeoutInNanos) {
         this.channel = channel;
         this.frameWriter = frameWriter;
         this.pingTimeoutInNanos = pingTimeoutInNanos;
     }
 
+    private static void throwProtocolErrorException(String msg, Object... args) throws Http2Exception {
+        throw new Http2Exception(Http2Error.PROTOCOL_ERROR, String.format(msg, args));
+    }
+
+    /**
+     * Callback for when the channel is idle.
+     */
     public void onChannelIdle(ChannelHandlerContext ctx, IdleStateEvent event) {
-        checkState(state == State.IDLE, "Waiting for PING ACK or shutdown");
+        checkState(state == State.IDLE, "Invalid state. Expecting IDLE but was " + state);
 
         // Only interested in ALL_IDLE event.
         if (event.state() != IdleState.ALL_IDLE) {
             return;
         }
 
-        logger.debug("{} {} event triggered on channel. Sending PING", channel, event);
+        logger.debug("{} {} event triggered on channel. Sending PING(ACK=0)", channel, event);
         writePing(ctx);
     }
 
@@ -121,6 +127,9 @@ class Http2KeepAliveHandler {
         ctx.flush();
     }
 
+    /**
+     * Callback for when channel is in-active to cleans up resources.
+     */
     public void onChannelInactive() {
         state = State.SHUTDOWN;
         if (shutdownFuture != null) {
@@ -133,17 +142,21 @@ class Http2KeepAliveHandler {
         }
     }
 
+    /**
+     * Validates the PING ACK.
+     * @param data data received with the PING ACK
+     * @throws Http2Exception when the PING ACK data does not match to PING data or when a PING ACK is
+     *                        received without PING sent.
+     */
     public void onPingAck(long data) throws Http2Exception {
         final long elapsed = stopwatch.elapsed(TimeUnit.NANOSECONDS);
 
         if (state != State.PENDING_PING_ACK) {
-            throw new Http2Exception(Http2Error.PROTOCOL_ERROR,
-                                     "State expected PENDING_PING_ACK but is " + state);
+            throwProtocolErrorException("State expected PENDING_PING_ACK but is %s", state);
         }
         if (lastPingPayload != data) {
-            throw new Http2Exception(Http2Error.PROTOCOL_ERROR,
-                                     "PING received but payload does not match. " + "Expected: " +
-                                     lastPingPayload + ' ' + "Received :" + data);
+            throwProtocolErrorException("PING received but payload does not match. Expected %d Received %d",
+                                        lastPingPayload, data);
         }
         if (shutdownFuture != null) {
             final boolean isCancelled = shutdownFuture.cancel(false);
@@ -151,7 +164,7 @@ class Http2KeepAliveHandler {
                 logger.debug("{} shutdownFuture cannot be cancelled because of late PING ACK", channel);
             }
         }
-        logger.debug("{} received PING(ACK=1) in {}ns", channel, elapsed);
+        logger.debug("{} Received PING(ACK=1) in {} ns", channel, elapsed);
         state = State.IDLE;
     }
 
