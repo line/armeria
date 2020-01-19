@@ -90,7 +90,7 @@ class Http2KeepAliveHandler {
             stopwatch.reset().start();
         } else {
             if (ch.isActive()) {
-                logger.debug("PING write failed for channel: {}", channel, future.cause());
+                logger.debug("{} PING write failed", channel, future.cause());
             }
         }
     };
@@ -109,7 +109,7 @@ class Http2KeepAliveHandler {
             return;
         }
 
-        logger.debug("{} event triggered on channel: {}. Sending PING", event, channel);
+        logger.debug("{} {} event triggered on channel. Sending PING", channel, event);
         writePing(ctx);
     }
 
@@ -146,9 +146,12 @@ class Http2KeepAliveHandler {
                                      lastPingPayload + ' ' + "Received :" + data);
         }
         if (shutdownFuture != null) {
-            shutdownFuture.cancel(false);
+            final boolean isCancelled = shutdownFuture.cancel(false);
+            if (!isCancelled) {
+                logger.debug("{} shutdownFuture cannot be cancelled because of late PING ACK", channel);
+            }
         }
-        logger.debug("Channel: {} received PING(ACK=1) in {}ns.", channel, elapsed);
+        logger.debug("{} received PING(ACK=1) in {}ns", channel, elapsed);
         state = State.IDLE;
     }
 
