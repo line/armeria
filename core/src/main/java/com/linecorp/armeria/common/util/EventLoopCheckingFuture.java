@@ -29,25 +29,24 @@ import javax.annotation.Nullable;
 /**
  * A {@link CompletableFuture} that warns the user if they call a method that blocks the event loop.
  */
-public class EventLoopCheckingCompletableFuture<T> extends CompletableFuture<T> {
+public class EventLoopCheckingFuture<T> extends CompletableFuture<T> {
 
     /**
-     * Returns an {@link EventLoopCheckingCompletableFuture} which has been completed with the specified
-     * {@code value}.
+     * Returns an {@link EventLoopCheckingFuture} which has been completed with the specified {@code value}.
      */
-    public static <U> EventLoopCheckingCompletableFuture<U> completedFuture(@Nullable U value) {
-        final EventLoopCheckingCompletableFuture<U> future = new EventLoopCheckingCompletableFuture<>();
+    public static <U> EventLoopCheckingFuture<U> completedFuture(@Nullable U value) {
+        final EventLoopCheckingFuture<U> future = new EventLoopCheckingFuture<>();
         future.complete(value);
         return future;
     }
 
     /**
-     * Returns an {@link EventLoopCheckingCompletableFuture} which has been completed exceptionally with
-     * the specified {@link Throwable}.
+     * Returns an {@link EventLoopCheckingFuture} which has been completed exceptionally with the specified
+     * {@link Throwable}.
      */
-    public static <U> EventLoopCheckingCompletableFuture<U> exceptionallyCompletedFuture(Throwable cause) {
+    public static <U> EventLoopCheckingFuture<U> exceptionallyCompletedFuture(Throwable cause) {
         requireNonNull(cause, "cause");
-        final EventLoopCheckingCompletableFuture<U> future = new EventLoopCheckingCompletableFuture<>();
+        final EventLoopCheckingFuture<U> future = new EventLoopCheckingFuture<>();
         future.completeExceptionally(cause);
         return future;
     }

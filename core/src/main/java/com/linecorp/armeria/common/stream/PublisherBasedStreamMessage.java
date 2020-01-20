@@ -33,7 +33,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.annotations.VisibleForTesting;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -51,7 +51,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             PublisherBasedStreamMessage.class, AbortableSubscriber.class, "subscriber");
 
     private final Publisher<? extends T> publisher;
-    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingCompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
     @Nullable
     @SuppressWarnings("unused") // Updated only via subscriberUpdater.
     private volatile AbortableSubscriber subscriber;

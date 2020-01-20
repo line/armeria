@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
  * </ul>
  * Also, {@link #cancel(boolean)} will do nothing but returning whether cancelled or not.
  */
-public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFuture<T> {
+public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
 
     private static final UnmodifiableFuture<?> NIL;
 

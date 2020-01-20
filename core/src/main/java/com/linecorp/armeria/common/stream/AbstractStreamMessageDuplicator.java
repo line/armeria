@@ -46,7 +46,7 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.buffer.ByteBuf;
@@ -504,7 +504,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @SuppressWarnings("unused")
         private volatile DownstreamSubscription<T> subscription;
 
-        private final CompletableFuture<Void> completionFuture = new EventLoopCheckingCompletableFuture<>();
+        private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
         ChildStreamMessage(AbstractStreamMessageDuplicator<T, ?> parent,
                            StreamMessageProcessor<T> processor, boolean lastStream) {

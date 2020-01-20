@@ -52,7 +52,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AsyncCloseable;
-import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.netty.channel.EventLoopGroup;
@@ -251,7 +251,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         @Nullable
         private AsyncCloseable handle;
-        final CompletableFuture<?> initialCheckFuture = new EventLoopCheckingCompletableFuture<>();
+        final CompletableFuture<?> initialCheckFuture = new EventLoopCheckingFuture<>();
         private boolean destroyed;
 
         DefaultHealthCheckerContext(Endpoint endpoint) {

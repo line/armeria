@@ -33,7 +33,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.PooledObjects;
 
 import io.netty.util.ReferenceCountUtil;
@@ -45,7 +45,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     static final CloseEvent CANCELLED_CLOSE = new CloseEvent(CancelledSubscriptionException.INSTANCE);
     static final CloseEvent ABORTED_CLOSE = new CloseEvent(AbortedStreamException.INSTANCE);
 
-    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingCompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
