@@ -27,29 +27,29 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
-public class ThriftFuturesTest {
+class ThriftFuturesTest {
 
     @Test
-    public void testSuccessfulCompletedFuture() throws Exception {
+    void testSuccessfulCompletedFuture() throws Exception {
         final ThriftCompletableFuture<String> future = successfulCompletedFuture("success");
         assertThat(future.get()).isEqualTo("success");
     }
 
     @Test
-    public void testFailedCompletedFuture() throws Exception {
+    void testFailedCompletedFuture() throws Exception {
         final ThriftCompletableFuture<String> future = failedCompletedFuture(new IllegalStateException());
         assertThat(catchThrowable(future::get)).hasCauseInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    public void testSuccessfulListenableFuture() throws Exception {
+    void testSuccessfulListenableFuture() throws Exception {
         assumeUnshadedGuava();
         final ThriftListenableFuture<String> future = successfulListenableFuture("success");
         assertThat(future.get()).isEqualTo("success");
     }
 
     @Test
-    public void testFailedListenableFuture() throws Exception {
+    void testFailedListenableFuture() throws Exception {
         assumeUnshadedGuava();
         final ThriftListenableFuture<String> future = failedListenableFuture(new IllegalStateException());
         assertThat(catchThrowable(future::get)).hasCauseInstanceOf(IllegalStateException.class);
