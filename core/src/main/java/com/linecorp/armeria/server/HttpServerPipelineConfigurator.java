@@ -162,14 +162,14 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final Http1ObjectEncoder responseEncoder = new Http1ObjectEncoder(p.channel(), true, false);
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
-        configureIdleTimeoutHandler(p);
+        configureIdleTimeoutHandler(p, false);
         p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, responseEncoder,
                                         SessionProtocol.H1C, proxiedAddresses));
     }
 
-    private void configureIdleTimeoutHandler(ChannelPipeline p) {
+    private void configureIdleTimeoutHandler(ChannelPipeline p, boolean isHttp2) {
         if (config.idleTimeoutMillis() > 0) {
-            p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis()));
+            p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis(), isHttp2));
         }
     }
 
@@ -392,7 +392,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            configureIdleTimeoutHandler(p);
+            configureIdleTimeoutHandler(p, true);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, null,
                                             SessionProtocol.H2, proxiedAddresses));
         }
@@ -406,7 +406,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
-            configureIdleTimeoutHandler(p);
+            configureIdleTimeoutHandler(p, false);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, writer,
                                             SessionProtocol.H1, proxiedAddresses));
         }

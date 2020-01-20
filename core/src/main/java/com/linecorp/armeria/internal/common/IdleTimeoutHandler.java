@@ -32,14 +32,24 @@ public abstract class IdleTimeoutHandler extends IdleStateHandler {
     private static final Logger logger = LoggerFactory.getLogger(IdleTimeoutHandler.class);
 
     private final String name;
+    private boolean isHttp2;
 
-    protected IdleTimeoutHandler(String name, long idleTimeoutMillis) {
+    protected IdleTimeoutHandler(String name, long idleTimeoutMillis, boolean isHttp2) {
         super(0, 0, idleTimeoutMillis, TimeUnit.MILLISECONDS);
         this.name = requireNonNull(name, "name");
+        this.isHttp2 = isHttp2;
     }
 
+    /**
+     * If the channel is serving http2 the we will leverage sending PING's using {@link Http2KeepAliveHandler}
+     * but if it is http1.1 channel then we will close the channel
+     */
     @Override
     protected final void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
+        if (isHttp2) {
+            ctx.fireUserEventTriggered(evt);
+            return;
+        }
         if (!evt.isFirst()) {
             return;
         }
@@ -51,4 +61,8 @@ public abstract class IdleTimeoutHandler extends IdleStateHandler {
     }
 
     protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
+
+    public void setHttp2(boolean http2) {
+        isHttp2 = http2;
+    }
 }

@@ -106,7 +106,7 @@ public class Http2KeepAliveHandler {
      * Callback for when the channel is idle.
      */
     public void onChannelIdle(ChannelHandlerContext ctx, IdleStateEvent event) {
-        checkState(state == State.IDLE, "Invalid state. Expecting IDLE but was " + state);
+        checkState(state == State.IDLE, "Invalid state. Expecting IDLE but was %s", state);
 
         // Only interested in ALL_IDLE event.
         if (event.state() != IdleState.ALL_IDLE) {

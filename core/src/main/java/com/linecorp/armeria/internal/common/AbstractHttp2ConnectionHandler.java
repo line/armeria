@@ -125,6 +125,27 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         super.close(ctx, promise);
     }
 
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded(ctx);
+        changeIdleStateHandlerToHttp2(ctx);
+    }
+
+    /**
+     * This is helper method that is used when application level protocol is upgraded. For ex:
+     * http1.1 to http2. In this case, we also leverage http2 ping by setting
+     * {@code idleTimeoutHandler.setHttp2(true)} which will send pings.
+     */
+    private static void changeIdleStateHandlerToHttp2(ChannelHandlerContext ctx) {
+        final IdleTimeoutHandler idleTimeoutHandler = ctx.pipeline().get(
+                IdleTimeoutHandler.class);
+        if (idleTimeoutHandler == null) {
+            // Means that config.idleTimeoutMillis() < 0; So ignore
+            return;
+        }
+        idleTimeoutHandler.setHttp2(true);
+    }
+
     /**
      * Returns {@code true} if the connection has to be closed immediately rather than sending a GOAWAY
      * frame and waiting for the remaining streams. This method should return {@code true} when:

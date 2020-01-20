@@ -38,7 +38,7 @@ public class HttpServerIdleTimeoutHandlerTest {
     @Before
     public void before() {
         server = new MockHttpServerHandler();
-        ch = new EmbeddedChannel(new HttpServerIdleTimeoutHandler(idleTimeoutMillis), server);
+        ch = new EmbeddedChannel(new HttpServerIdleTimeoutHandler(idleTimeoutMillis, false), server);
         assertTrue(ch.isOpen());
     }
 

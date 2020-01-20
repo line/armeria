@@ -23,7 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 final class HttpClientIdleTimeoutHandler extends IdleTimeoutHandler {
 
     HttpClientIdleTimeoutHandler(long idleTimeoutMillis) {
-        super("client", idleTimeoutMillis);
+        super("client", idleTimeoutMillis, false);
     }
 
     @Override
