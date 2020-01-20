@@ -170,7 +170,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public boolean isComplete() {
-        return isAvailable(flags, RequestLogProperty.FLAGS_ALL_COMPLETE);
+        return isComplete(flags);
+    }
+
+    private boolean isComplete(int flags) {
+        return flags == RequestLogProperty.FLAGS_ALL_COMPLETE;
     }
 
     @Override
@@ -197,7 +201,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public RequestLog partial() {
-        return flags != RequestLogProperty.FLAGS_ALL_COMPLETE ? this : notCheckingAccessor;
+        return partial(flags);
+    }
+
+    private RequestLog partial(int flags) {
+        return isComplete(flags) ? notCheckingAccessor : this;
     }
 
     @Override
@@ -223,8 +231,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             futures.put(interestedFlags, newFuture);
         }
 
+        final int flags = this.flags;
         if (isAvailable(flags, interestedFlags)) {
-            newFuture.completeLog(partial());
+            newFuture.completeLog(partial(flags));
         }
 
         // Safe to allow using as CompletableFuture<RequestOnlyLog>
@@ -317,13 +326,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void updateAvailability(int flags) {
         for (;;) {
-            final int oldAvailability = this.flags;
-            final int newAvailability = oldAvailability | flags;
-            if (oldAvailability == newAvailability) {
+            final int oldFlags = this.flags;
+            final int newFlags = oldFlags | flags;
+            if (oldFlags == newFlags) {
                 break;
             }
 
-            if (flagsUpdater.compareAndSet(this, oldAvailability, newAvailability)) {
+            if (flagsUpdater.compareAndSet(this, oldFlags, newFlags)) {
                 final RequestLogFuture[] satisfiedFutures;
                 synchronized (futures) {
                     satisfiedFutures = satisfiedFutures();
@@ -333,7 +342,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                         if (f == null) {
                             break;
                         }
-                        f.completeLog(partial());
+                        f.completeLog(partial(newFlags));
                     }
                 }
                 break;
@@ -1401,7 +1410,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private final class CompleteRequestLog implements RequestLog {
         @Override
         public boolean isComplete() {
-            return true;
+            // Can't always return true because this class is also used as a RequestOnlyLog.
+            return DefaultRequestLog.this.isComplete();
         }
 
         @Override
@@ -1411,12 +1421,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public boolean isAvailable(RequestLogProperty property) {
-            return true;
+            // Can't always return true because this class is also used as a RequestOnlyLog.
+            return DefaultRequestLog.this.isAvailable(property);
         }
 
         @Override
         public RequestLog partial() {
-            return this;
+            // Can't always return this because this class is also used as a RequestOnlyLog.
+            return DefaultRequestLog.this.partial();
         }
 
         @Override
@@ -1446,7 +1458,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public RequestLog ensureComplete() {
-            return this;
+            // Can't return this because this class is also used as a RequestOnlyLog.
+            return DefaultRequestLog.this.ensureComplete();
         }
 
         @Override
@@ -1456,17 +1469,20 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public RequestLog ensurePartial(RequestLogProperty property) {
-            return this;
+            // Can't always return this because this class is also used as a RequestOnlyLog.
+            return DefaultRequestLog.this.ensurePartial(property);
         }
 
         @Override
         public RequestLog ensurePartial(RequestLogProperty... properties) {
-            return this;
+            // Can't always return this because this class is also used as a RequestOnlyLog.
+            return DefaultRequestLog.this.ensurePartial(properties);
         }
 
         @Override
         public RequestLog ensurePartial(Iterable<RequestLogProperty> properties) {
-            return this;
+            // Can't always return this because this class is also used as a RequestOnlyLog.
+            return DefaultRequestLog.this.ensurePartial(properties);
         }
 
         @Override
