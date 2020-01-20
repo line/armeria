@@ -40,6 +40,7 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 
 import io.netty.channel.EventLoopGroup;
 
@@ -56,7 +57,7 @@ class HealthCheckedEndpointGroupTest {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        // Schedule the task which update the endpoint one second later to ensure that the change is happening
+        // Schedule the task which updates the endpoint one second later to ensure that the change is happening
         // while creating the HealthCheckedEndpointGroup.
         final EventLoopGroup executors = CommonPools.workerGroup();
         executors.schedule(
@@ -69,17 +70,18 @@ class HealthCheckedEndpointGroupTest {
             @Override
             protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
                 return (Function<HealthCheckerContext, AsyncCloseable>) ctx -> {
-                    // Call updateHealth after the endpoint is changed so that
+                    // Call updateHealth *after* the endpoint is changed so that
                     // snapshot.forEach(ctx -> ctx.initialCheckFuture.join()); performs the next action.
-                    executors.schedule(() -> {
+                    new Thread(() -> {
                         try {
+                            Thread.sleep(2000);
                             latch.await();
                         } catch (InterruptedException e) {
                             // Ignore
                         }
                         ctx.updateHealth(1);
-                    }, 2, TimeUnit.SECONDS);
-                    return CompletableFuture::new;
+                    }).start();
+                    return AsyncCloseableSupport.of();
                 };
             }
         }.build();
@@ -97,7 +99,7 @@ class HealthCheckedEndpointGroupTest {
                 return ctx -> {
                     ctxCapture.set(ctx);
                     ctx.updateHealth(0);
-                    return () -> CompletableFuture.completedFuture(null);
+                    return AsyncCloseableSupport.of();
                 };
             }
         }.build()) {
@@ -118,7 +120,7 @@ class HealthCheckedEndpointGroupTest {
                 return ctx -> {
                     ctxCapture.set(ctx);
                     ctx.updateHealth(1);
-                    return () -> CompletableFuture.completedFuture(null);
+                    return AsyncCloseableSupport.of();
                 };
             }
         }.build()) {
@@ -145,8 +147,7 @@ class HealthCheckedEndpointGroupTest {
             assertThat(group.healthyEndpoints).isEmpty();
 
             // An attempt to schedule a new task for a disappeared endpoint must fail.
-            assertThatThrownBy(() -> ctx.executor().execute(() -> {
-            }))
+            assertThatThrownBy(() -> ctx.executor().execute(() -> {}))
                     .isInstanceOf(RejectedExecutionException.class)
                     .hasMessageContaining("destroyed");
         }
@@ -161,7 +162,7 @@ class HealthCheckedEndpointGroupTest {
             }
 
             ctx.updateHealth(HEALTHY);
-            return () -> CompletableFuture.completedFuture(null);
+            return AsyncCloseableSupport.of();
         };
 
         final Endpoint candidate1 = Endpoint.of("candidate1");

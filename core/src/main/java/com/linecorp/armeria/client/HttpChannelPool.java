@@ -21,15 +21,12 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -43,6 +40,8 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -54,13 +53,15 @@ import io.netty.channel.EventLoop;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import reactor.core.scheduler.NonBlocking;
 
-final class HttpChannelPool implements AutoCloseable {
+final class HttpChannelPool implements AsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpChannelPool.class);
+    private static final Channel[] EMPTY_CHANNELS = new Channel[0];
 
     private final EventLoop eventLoop;
-    private boolean closed;
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     // Fields for pooling connections:
     private final Map<PoolKey, Deque<PooledChannel>>[] pool;
@@ -192,6 +193,7 @@ final class HttpChannelPool implements AutoCloseable {
         // Find the most recently released channel while cleaning up the unhealthy channels.
         for (int i = queue.size(); i > 0; i--) {
             final PooledChannel pooledChannel = queue.peekLast();
+            assert pooledChannel != null;
             if (!isHealthy(pooledChannel)) {
                 queue.removeLast();
                 continue;
@@ -390,7 +392,7 @@ final class HttpChannelPool implements AutoCloseable {
             if (future.isSuccess()) {
                 final Channel channel = future.getNow();
                 final SessionProtocol protocol = getProtocolIfHealthy(channel);
-                if (closed || protocol == null) {
+                if (protocol == null || closeable.isClosing()) {
                     channel.close();
                     promise.completeExceptionally(
                             new UnprocessedRequestException(ClosedSessionException.get()));
@@ -470,70 +472,54 @@ final class HttpChannelPool implements AutoCloseable {
         getOrCreatePool(actualProtocol, key).addLast(pooledChannel);
     }
 
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return closeable.closeAsync();
+    }
+
+    private void closeAsync(CompletableFuture<?> future) {
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> closeAsync(future));
+            return;
+        }
+
+        // NB: Make a copy first, because close() will trigger the closeFuture listener
+        //     which mutates allChannels back, causing ConcurrentModificationException.
+        final Channel[] allChannels = this.allChannels.keySet().toArray(EMPTY_CHANNELS);
+        final int numAllChannels = allChannels.length;
+        if (numAllChannels == 0) {
+            future.complete(null);
+            return;
+        }
+
+        // Complete the given future when all channels are closed.
+        final ChannelFutureListener listener = new ChannelFutureListener() {
+            private int numRemainingChannels = numAllChannels;
+
+            @Override
+            public void operationComplete(ChannelFuture unused) throws Exception {
+                if (--numRemainingChannels <= 0) {
+                    future.complete(null);
+                }
+            }
+        };
+
+        for (Channel ch : allChannels) {
+            ch.close().addListener(listener);
+        }
+    }
+
     /**
      * Closes all {@link Channel}s managed by this pool.
      */
     @Override
     public void close() {
-        closed = true;
-
-        if (eventLoop.inEventLoop()) {
-            // While we'd prefer to block until the pool is actually closed, we cannot block for the channels to
-            // close if it was called from the event loop or we would deadlock. In practice, it's rare to call
-            // close from an event loop thread, and not a main thread.
-            doCloseAsync();
+        if (Thread.currentThread() instanceof NonBlocking) {
+            // Avoid blocking operation if we're in an event loop, because otherwise we might see a dead lock
+            // while waiting for the channels to be closed.
+            closeable.closeAsync();
         } else {
-            doCloseSync();
-        }
-    }
-
-    private void doCloseAsync() {
-        if (allChannels.isEmpty()) {
-            return;
-        }
-
-        final List<ChannelFuture> closeFutures = new ArrayList<>(allChannels.size());
-        for (Channel ch : allChannels.keySet()) {
-            // NB: Do not call close() here, because it will trigger the closeFuture listener
-            //     which mutates allChannels.
-            closeFutures.add(ch.closeFuture());
-        }
-
-        closeFutures.forEach(f -> f.channel().close());
-    }
-
-    private void doCloseSync() {
-        final CountDownLatch outerLatch = eventLoop.submit(() -> {
-            if (allChannels.isEmpty()) {
-                return null;
-            }
-
-            final int numChannels = allChannels.size();
-            final CountDownLatch latch = new CountDownLatch(numChannels);
-            final List<ChannelFuture> closeFutures = new ArrayList<>(numChannels);
-            for (Channel ch : allChannels.keySet()) {
-                // NB: Do not call close() here, because it will trigger the closeFuture listener
-                //     which mutates allChannels.
-                final ChannelFuture f = ch.closeFuture();
-                closeFutures.add(f);
-                f.addListener((ChannelFutureListener) future -> latch.countDown());
-            }
-            closeFutures.forEach(f -> f.channel().close());
-            return latch;
-        }).syncUninterruptibly().getNow();
-
-        if (outerLatch != null) {
-            boolean interrupted = false;
-            while (outerLatch.getCount() != 0) {
-                try {
-                    outerLatch.await();
-                } catch (InterruptedException e) {
-                    interrupted = true;
-                }
-            }
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
+            closeable.close();
         }
     }
 

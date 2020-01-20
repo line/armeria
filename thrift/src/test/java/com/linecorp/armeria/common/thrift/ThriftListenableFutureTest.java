@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,44 +15,29 @@
  */
 package com.linecorp.armeria.common.thrift;
 
-import static com.linecorp.armeria.common.thrift.ThriftFutures.failedCompletedFuture;
-import static com.linecorp.armeria.common.thrift.ThriftFutures.failedListenableFuture;
-import static com.linecorp.armeria.common.thrift.ThriftFutures.successfulCompletedFuture;
-import static com.linecorp.armeria.common.thrift.ThriftFutures.successfulListenableFuture;
+import static com.linecorp.armeria.common.thrift.ThriftListenableFuture.completedFuture;
+import static com.linecorp.armeria.common.thrift.ThriftListenableFuture.exceptionallyCompletedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import org.junit.jupiter.api.Test;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
-class ThriftFuturesTest {
-
-    @Test
-    void testSuccessfulCompletedFuture() throws Exception {
-        final ThriftCompletableFuture<String> future = successfulCompletedFuture("success");
-        assertThat(future.get()).isEqualTo("success");
-    }
-
-    @Test
-    void testFailedCompletedFuture() throws Exception {
-        final ThriftCompletableFuture<String> future = failedCompletedFuture(new IllegalStateException());
-        assertThat(catchThrowable(future::get)).hasCauseInstanceOf(IllegalStateException.class);
-    }
-
+class ThriftListenableFutureTest {
     @Test
     void testSuccessfulListenableFuture() throws Exception {
         assumeUnshadedGuava();
-        final ThriftListenableFuture<String> future = successfulListenableFuture("success");
+        final ThriftListenableFuture<String> future = completedFuture("success");
         assertThat(future.get()).isEqualTo("success");
     }
 
     @Test
     void testFailedListenableFuture() throws Exception {
         assumeUnshadedGuava();
-        final ThriftListenableFuture<String> future = failedListenableFuture(new IllegalStateException());
-        assertThat(catchThrowable(future::get)).hasCauseInstanceOf(IllegalStateException.class);
+        final ThriftListenableFuture<String> future = exceptionallyCompletedFuture(new IllegalStateException());
+        assertThatThrownBy(future::get).hasCauseInstanceOf(IllegalStateException.class);
     }
 
     private static void assumeUnshadedGuava() {

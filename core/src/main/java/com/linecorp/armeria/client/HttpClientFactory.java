@@ -20,13 +20,18 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -36,6 +41,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.TransportType;
 
@@ -47,11 +53,17 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.concurrent.FutureListener;
+import reactor.core.scheduler.NonBlocking;
 
 /**
  * A {@link ClientFactory} that creates an HTTP client.
  */
 final class HttpClientFactory implements ClientFactory {
+
+    private static final Logger logger = LoggerFactory.getLogger(HttpClientFactory.class);
+
+    private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
@@ -82,10 +94,8 @@ final class HttpClientFactory implements ClientFactory {
     private final EventLoopScheduler eventLoopScheduler;
     private final Supplier<EventLoop> eventLoopSupplier =
             () -> RequestContext.mapCurrent(RequestContext::eventLoop, () -> eventLoopGroup().next());
-
-    private volatile boolean closed;
-
     private final ClientFactoryOptions options;
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     HttpClientFactory(ClientFactoryOptions options) {
         workerGroup = options.workerGroup();
@@ -255,22 +265,62 @@ final class HttpClientFactory implements ClientFactory {
         return clientType;
     }
 
-    boolean isClosing() {
-        return closed;
+    @Override
+    public boolean isClosing() {
+        return closeable.isClosing();
     }
 
     @Override
-    public void close() {
-        closed = true;
+    public boolean isClosed() {
+        return closeable.isClosed();
+    }
 
+    @Override
+    public CompletableFuture<?> whenClosed() {
+        return closeable.whenClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return closeable.closeAsync();
+    }
+
+    private void closeAsync(CompletableFuture<?> future) {
+        final List<CompletableFuture<?>> dependencies = new ArrayList<>(pools.size());
         for (final Iterator<HttpChannelPool> i = pools.values().iterator(); i.hasNext();) {
-            i.next().close();
+            dependencies.add(i.next().closeAsync());
             i.remove();
         }
 
         addressResolverGroup.close();
-        if (shutdownWorkerGroupOnClose) {
-            workerGroup.shutdownGracefully().syncUninterruptibly();
+
+        CompletableFuture.allOf(dependencies.toArray(EMPTY_FUTURES)).handle((unused, cause) -> {
+            if (cause != null) {
+                logger.warn("Failed to close {}s:", HttpChannelPool.class.getSimpleName(), cause);
+            }
+
+            if (shutdownWorkerGroupOnClose) {
+                workerGroup.shutdownGracefully().addListener((FutureListener<Object>) f -> {
+                    if (f.cause() != null) {
+                        logger.warn("Failed to shut down a worker group:", f.cause());
+                    }
+                    future.complete(null);
+                });
+            } else {
+                future.complete(null);
+            }
+            return null;
+        });
+    }
+
+    @Override
+    public void close() {
+        if (Thread.currentThread() instanceof NonBlocking) {
+            // Avoid blocking operation if we're in an event loop, because otherwise we might see a dead lock
+            // while waiting for the channels to be closed.
+            closeable.closeAsync();
+        } else {
+            closeable.close();
         }
     }
 

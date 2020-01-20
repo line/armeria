@@ -15,15 +15,15 @@
  */
 package com.linecorp.armeria.common.util;
 
-import static com.spotify.futures.CompletableFutures.exceptionallyCompletedFuture;
+import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.exceptionallyCompletedFuture;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * @param <V> the type of the startup result. Use {@link Void} if unused.
  * @param <L> the type of the life cycle event listener. Use {@link Void} if unused.
  */
-public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
+public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(StartStopSupport.class);
 
@@ -53,11 +53,14 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
 
     private final Executor executor;
     private final List<L> listeners = new CopyOnWriteArrayList<>();
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
+
     private volatile State state = State.STOPPED;
+
     /**
      * This future is {@code V}-typed when STARTING/STARTED and {@link Void}-typed when STOPPING/STOPPED.
      */
-    private CompletableFuture<?> future = completedFuture(null);
+    private UnmodifiableFuture<?> future = completedFuture(null);
 
     /**
      * Creates a new instance.
@@ -139,8 +142,17 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
      *                      an {@link IllegalStateException} when the startup procedure is already
      *                      in progress or done
      */
-    public final synchronized CompletableFuture<V> start(@Nullable T arg, @Nullable U rollbackArg,
-                                                         boolean failIfStarted) {
+    public final CompletableFuture<V> start(@Nullable T arg, @Nullable U rollbackArg, boolean failIfStarted) {
+        return start0(arg, rollbackArg, failIfStarted);
+    }
+
+    private synchronized UnmodifiableFuture<V> start0(@Nullable T arg,
+                                                      @Nullable U rollbackArg,
+                                                      boolean failIfStarted) {
+        if (closeable.isClosing()) {
+            return exceptionallyCompletedFuture(new IllegalStateException("closed already"));
+        }
+
         switch (state) {
             case STARTING:
             case STARTED:
@@ -149,14 +161,15 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
                             new IllegalStateException("must be stopped to start; currently " + state));
                 } else {
                     @SuppressWarnings("unchecked")
-                    final CompletableFuture<V> castFuture = (CompletableFuture<V>) future;
+                    final UnmodifiableFuture<V> castFuture = (UnmodifiableFuture<V>) future;
                     return castFuture;
                 }
             case STOPPING:
                 // A user called start() to restart, but not stopped completely yet.
                 // Try again once stopped.
-                return future.exceptionally(unused -> null)
-                             .thenComposeAsync(unused -> start(arg, failIfStarted), executor);
+                return UnmodifiableFuture.wrap(
+                        future.exceptionally(unused -> null)
+                              .thenComposeAsync(unused -> start(arg, failIfStarted), executor));
         }
 
         assert state == State.STOPPED : "state: " + state;
@@ -170,9 +183,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
                 try {
                     notifyListeners(State.STARTING, arg, null, null);
                     final CompletionStage<V> f = doStart(arg);
-                    if (f == null) {
-                        throw new IllegalStateException("doStart() returned null.");
-                    }
+                    checkState(f != null, "doStart() returned null.");
 
                     f.handle((result, cause) -> {
                         if (cause != null) {
@@ -195,21 +206,22 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
             }
         }
 
-        final CompletableFuture<V> future = startFuture.handleAsync((result, cause) -> {
-            if (cause != null) {
-                // Failed to start. Stop and complete with the start failure cause.
-                final CompletableFuture<Void> rollbackFuture =
-                        stop(rollbackArg, true).exceptionally(stopCause -> {
-                            rollbackFailed(Exceptions.peel(stopCause));
-                            return null;
-                        });
+        final UnmodifiableFuture<V> future = UnmodifiableFuture.wrap(
+                startFuture.handleAsync((result, cause) -> {
+                    if (cause != null) {
+                        // Failed to start. Stop and complete with the start failure cause.
+                        final CompletableFuture<Void> rollbackFuture =
+                                stop(rollbackArg, true).exceptionally(stopCause -> {
+                                    rollbackFailed(Exceptions.peel(stopCause));
+                                    return null;
+                                });
 
-                return rollbackFuture.<V>thenCompose(unused -> exceptionallyCompletedFuture(cause));
-            } else {
-                enter(State.STARTED, arg, null, result);
-                return completedFuture(result);
-            }
-        }, executor).thenCompose(Function.identity());
+                        return rollbackFuture.<V>thenCompose(unused -> exceptionallyCompletedFuture(cause));
+                    } else {
+                        enter(State.STARTED, arg, null, result);
+                        return completedFuture(result);
+                    }
+                }, executor).thenCompose(Function.identity()));
 
         this.future = future;
         return future;
@@ -234,20 +246,26 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
         return stop(arg, false);
     }
 
-    private synchronized CompletableFuture<Void> stop(@Nullable U arg, boolean rollback) {
+    private CompletableFuture<Void> stop(@Nullable U arg, boolean rollback) {
+        return stop0(arg, rollback);
+    }
+
+    private synchronized UnmodifiableFuture<Void> stop0(@Nullable U arg, boolean rollback) {
         switch (state) {
             case STARTING:
                 if (!rollback) {
                     // Try again once started.
-                    return future.exceptionally(unused -> null) // Ignore the exception.
-                                 .thenComposeAsync(unused -> stop(arg), executor);
+                    return UnmodifiableFuture.wrap(
+                            future.exceptionally(unused -> null) // Ignore the exception.
+                                  .thenComposeAsync(unused -> stop(arg), executor));
                 } else {
                     break;
                 }
             case STOPPING:
             case STOPPED:
                 @SuppressWarnings("unchecked")
-                final CompletableFuture<Void> castFuture = (CompletableFuture<Void>) future;
+                final UnmodifiableFuture<Void> castFuture =
+                        (UnmodifiableFuture<Void>) future;
                 return castFuture;
         }
 
@@ -262,9 +280,7 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
                 try {
                     notifyListeners(State.STOPPING, null, arg, null);
                     final CompletionStage<Void> f = doStop(arg);
-                    if (f == null) {
-                        throw new IllegalStateException("doStop() returned null.");
-                    }
+                    checkState(f != null, "doStop() returned null.");
 
                     f.handle((unused, cause) -> {
                         if (cause != null) {
@@ -287,10 +303,42 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
             }
         }
 
-        final CompletableFuture<Void> future = stopFuture.whenCompleteAsync(
-                (unused1, cause) -> enter(State.STOPPED, null, arg, null), executor);
+        final UnmodifiableFuture<Void> future = UnmodifiableFuture.wrap(
+                stopFuture.whenCompleteAsync((unused1, cause) -> enter(State.STOPPED, null, arg, null),
+                                             executor));
         this.future = future;
         return future;
+    }
+
+    @Override
+    public boolean isClosing() {
+        return closeable.isClosing();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closeable.isClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> whenClosed() {
+        return closeable.whenClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return closeable.closeAsync();
+    }
+
+    private void closeAsync(CompletableFuture<?> future) {
+        stop(null).handle((result, cause) -> {
+            if (cause != null) {
+                future.completeExceptionally(cause);
+            } else {
+                future.complete(null);
+            }
+            return null;
+        });
     }
 
     /**
@@ -299,29 +347,10 @@ public abstract class StartStopSupport<T, U, V, L> implements AutoCloseable {
      */
     @Override
     public final void close() {
-        final CompletableFuture<Void> f;
-        synchronized (this) {
-            if (state == State.STOPPED) {
-                return;
-            }
-            f = stop(null);
-        }
-
-        boolean interrupted = false;
-        for (;;) {
-            try {
-                f.get();
-                break;
-            } catch (InterruptedException ignored) {
-                interrupted = true;
-            } catch (ExecutionException e) {
-                closeFailed(Exceptions.peel(e));
-                break;
-            }
-        }
-
-        if (interrupted) {
-            Thread.currentThread().interrupt();
+        try {
+            closeable.close();
+        } catch (Throwable e) {
+            closeFailed(Exceptions.peel(e));
         }
     }
 

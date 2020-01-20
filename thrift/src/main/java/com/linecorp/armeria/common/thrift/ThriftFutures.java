@@ -17,11 +17,17 @@ package com.linecorp.armeria.common.thrift;
 
 /**
  * Static factory methods pertaining to the {@link ThriftCompletableFuture} and {@link ThriftListenableFuture}.
+ *
+ * @deprecated Use the static factory methods in {@link ThriftFuture} or {@link ThriftListenableFuture}.
  */
+@Deprecated
 public final class ThriftFutures {
     /**
      * Returns a new {@link ThriftCompletableFuture} instance that has its value set immediately.
+     *
+     * @deprecated Use {@link ThriftFuture#completedFuture(Object)}.
      */
+    @Deprecated
     public static <T> ThriftCompletableFuture<T> successfulCompletedFuture(T value) {
         final ThriftCompletableFuture<T> future = new ThriftCompletableFuture<>();
         future.onComplete(value);
@@ -30,7 +36,10 @@ public final class ThriftFutures {
 
     /**
      * Returns a new {@link ThriftCompletableFuture} instance that has an exception set immediately.
+     *
+     * @deprecated Use {@link ThriftFuture#exceptionallyCompletedFuture(Throwable)}.
      */
+    @Deprecated
     public static <T> ThriftCompletableFuture<T> failedCompletedFuture(Exception e) {
         final ThriftCompletableFuture<T> future = new ThriftCompletableFuture<>();
         future.onError(e);
@@ -39,7 +48,10 @@ public final class ThriftFutures {
 
     /**
      * Returns a new {@link ThriftListenableFuture} instance that has its value set immediately.
+     *
+     * @deprecated Use {@link ThriftListenableFuture#completedFuture(Object)}.
      */
+    @Deprecated
     public static <T> ThriftListenableFuture<T> successfulListenableFuture(T value) {
         final ThriftListenableFuture<T> future = new ThriftListenableFuture<>();
         future.onComplete(value);
@@ -48,7 +60,10 @@ public final class ThriftFutures {
 
     /**
      * Returns a new {@link ThriftListenableFuture} instance that has an exception set immediately.
+     *
+     * @deprecated Use {@link ThriftListenableFuture#exceptionallyCompletedFuture(Throwable)}.
      */
+    @Deprecated
     public static <T> ThriftListenableFuture<T> failedListenableFuture(Exception e) {
         final ThriftListenableFuture<T> future = new ThriftListenableFuture<>();
         future.onError(e);

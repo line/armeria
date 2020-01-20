@@ -23,7 +23,10 @@ import org.apache.thrift.async.AsyncMethodCallback;
 /**
  * A {@link CompletableFuture} that can be passed in as an {@link AsyncMethodCallback}
  * when making an asynchronous client-side Thrift RPC.
+ *
+ * @deprecated Use {@link ThriftFuture}.
  */
+@Deprecated
 public class ThriftCompletableFuture<T> extends CompletableFuture<T> implements AsyncMethodCallback<T> {
     @Override
     public void onComplete(T t) {

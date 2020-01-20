@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,21 +18,27 @@ package com.linecorp.armeria.common.util;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * An object that may hold resources until it is closed. In addition to {@link AutoCloseable#close()},
- * this interface provides {@link #closeAsync()} which releases the resources asynchronously, returning
- * a {@link CompletableFuture} which is completed after the resources are released.
+ * A variant of {@link AsyncCloseable} which allows a user to check whether the object is closed or to get
+ * notified when closed.
  */
-public interface AsyncCloseable extends AutoCloseable {
+public interface ListenableAsyncCloseable extends AsyncCloseable {
     /**
-     * Releases any underlying resources held by this object asynchronously.
+     * Returns whether {@link #close()} or {@link #closeAsync()} has been called.
      *
-     * @return the {@link CompletableFuture} which is completed after the resources are released
+     * @see #isClosed()
      */
-    CompletableFuture<?> closeAsync();
+    boolean isClosing();
 
     /**
-     * Releases any underlying resources held by this object synchronously.
+     * Returns whether {@link #close()} or {@link #closeAsync()} operation has been completed.
+     *
+     * @see #isClosing()
      */
-    @Override
-    void close();
+    boolean isClosed();
+
+    /**
+     * Returns the {@link CompletableFuture} which is completed after the {@link #close()} or
+     * {@link #closeAsync()} operation is completed.
+     */
+    CompletableFuture<?> whenClosed();
 }

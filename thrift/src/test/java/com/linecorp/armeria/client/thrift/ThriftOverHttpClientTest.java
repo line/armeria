@@ -68,7 +68,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftCompletableFuture;
+import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -339,7 +339,7 @@ class ThriftOverHttpClientTest {
                            .build(Handlers.HELLO.asyncIface());
 
             try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
-                client.hello("kukuman", new ThriftCompletableFuture<>());
+                client.hello("kukuman", new ThriftFuture<>());
                 final ClientRequestContext ctx = ctxCaptor.get();
                 final RpcRequest rpcReq = ctx.rpcRequest();
                 assertThat(rpcReq).isNotNull();
