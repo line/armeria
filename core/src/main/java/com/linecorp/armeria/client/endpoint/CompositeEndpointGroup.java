@@ -110,11 +110,6 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
     }
 
     @Override
-    public CompletableFuture<?> closeFuture() {
-        return closeable.closeFuture();
-    }
-
-    @Override
     public CompletableFuture<?> closeAsync() {
         return closeable.closeAsync();
     }

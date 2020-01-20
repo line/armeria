@@ -27,9 +27,9 @@ import java.util.function.Consumer;
 import com.linecorp.armeria.internal.UnmodifiableFuture;
 
 /**
- * Provides support for implementing {@link AsyncCloseable}.
+ * Provides support for implementing {@link AsyncCloseable} or {@link ListenableAsyncCloseable}.
  */
-public final class AsyncCloseableSupport implements AsyncCloseable {
+public final class AsyncCloseableSupport implements ListenableAsyncCloseable {
 
     private static final AtomicIntegerFieldUpdater<AsyncCloseableSupport> closingUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AsyncCloseableSupport.class, "closing");
@@ -45,30 +45,27 @@ public final class AsyncCloseableSupport implements AsyncCloseable {
      * Returns a new {@link AsyncCloseableSupport} that will be completed immediately on {@link #close()} or
      * {@link #closeAsync()}. This method is useful when you don't have any resources to release.
      * <pre>{@code
-     * > public class MyClass {
-     * >     final AsyncCloseableSupport closeableSupport = AsyncCloseableSupport.of();
+     * > public class MyClass implements ListenableAsyncCloseable {
+     * >     final AsyncCloseableSupport closeable = AsyncCloseableSupport.of();
      * >
      * >     public void doSomething() {
-     * >         if (closeableSupport.isClosing()) {
+     * >         if (closeable.isClosing()) {
      * >             throw new IllegalStateException("Closed already");
      * >         }
      * >         ...
      * >     }
      * >
      * >     @Override
-     * >     public CompletableFuture<?> closeFuture() {
-     * >         return closeableSupport.closeFuture();
-     * >     }
+     * >     public boolean isClosing() { return closeable.isClosing(); }
      * >
      * >     @Override
-     * >     public CompletableFuture<?> closeAsync() {
-     * >         return closeableSupport.closeAsync();
-     * >     }
+     * >     public CompletableFuture<?> whenClosed() { return closeable.whenClosed(); }
      * >
      * >     @Override
-     * >     public CompletableFuture<?> close() {
-     * >         return closeableSupport.close();
-     * >     }
+     * >     public CompletableFuture<?> closeAsync() { return closeable.closeAsync(); }
+     * >
+     * >     @Override
+     * >     public void close() { closeable.close(); }
      * > }
      * }</pre>
      */
@@ -80,27 +77,24 @@ public final class AsyncCloseableSupport implements AsyncCloseable {
      * Returns a new {@link AsyncCloseableSupport} which calls the specified {@link Consumer} on
      * {@link #close()} or {@link #closeAsync()}.
      * <pre>{@code
-     * > class MyClass implements AutoCloseable {
-     * >     final AsyncCloseableSupport closeableSupport = AsyncCloseableSupport.of(f -> {
+     * > class MyClass implements AsyncCloseable {
+     * >     final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(f -> {
      * >         // Release resources here.
      * >         ...
      * >         f.complete(null);
      * >     });
      * >
      * >     @Override
-     * >     public CompletableFuture<?> closeFuture() {
-     * >         return closeableSupport.closeFuture();
-     * >     }
+     * >     public boolean isClosing() { return closeable.isClosing(); }
      * >
      * >     @Override
-     * >     public CompletableFuture<?> closeAsync() {
-     * >         return closeableSupport.closeAsync();
-     * >     }
+     * >     public CompletableFuture<?> whenClosed() { return closeable.whenClosed(); }
      * >
      * >     @Override
-     * >     public CompletableFuture<?> close() {
-     * >         return closeableSupport.close();
-     * >     }
+     * >     public CompletableFuture<?> closeAsync() { return closeable.closeAsync(); }
+     * >
+     * >     @Override
+     * >     public void close() { closeable.close(); }
      * > }
      * }</pre>
      *
@@ -128,20 +122,12 @@ public final class AsyncCloseableSupport implements AsyncCloseable {
         this.closeAction = closeAction;
     }
 
-    /**
-     * Returns whether {@link #close()} or {@link #closeAsync()} has been called.
-     *
-     * @see #isClosed()
-     */
+    @Override
     public boolean isClosing() {
         return closing != 0;
     }
 
-    /**
-     * Returns whether {@link #closeFuture()} has been completed.
-     *
-     * @see #isClosing()
-     */
+    @Override
     public boolean isClosed() {
         return closeFuture.isDone();
     }
@@ -151,7 +137,7 @@ public final class AsyncCloseableSupport implements AsyncCloseable {
         if (setClosing()) {
             invokeCloseAction();
         }
-        return closeFuture();
+        return whenClosed();
     }
 
     @Override
@@ -205,7 +191,7 @@ public final class AsyncCloseableSupport implements AsyncCloseable {
     }
 
     @Override
-    public CompletableFuture<?> closeFuture() {
+    public CompletableFuture<?> whenClosed() {
         return unupdatableCloseFuture;
     }
 }

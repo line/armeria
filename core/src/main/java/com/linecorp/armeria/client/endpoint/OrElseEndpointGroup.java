@@ -73,11 +73,6 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
     }
 
     @Override
-    public CompletableFuture<?> closeFuture() {
-        return closeable.closeFuture();
-    }
-
-    @Override
     public CompletableFuture<?> closeAsync() {
         return closeable.closeAsync();
     }

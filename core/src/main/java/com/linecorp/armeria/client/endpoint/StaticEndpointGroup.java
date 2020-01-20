@@ -68,11 +68,6 @@ final class StaticEndpointGroup implements EndpointGroup {
     }
 
     @Override
-    public CompletableFuture<?> closeFuture() {
-        return UnmodifiableFuture.completedFuture(null);
-    }
-
-    @Override
     public CompletableFuture<?> closeAsync() {
         return UnmodifiableFuture.completedFuture(null);
     }

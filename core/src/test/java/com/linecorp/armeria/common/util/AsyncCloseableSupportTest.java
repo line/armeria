@@ -37,24 +37,24 @@ class AsyncCloseableSupportTest {
         final AsyncCloseableSupport support = AsyncCloseableSupport.of();
         assertThat(support.isClosing()).isFalse();
         assertThat(support.isClosed()).isFalse();
-        assertThat(support.closeFuture()).isNotDone();
+        assertThat(support.whenClosed()).isNotDone();
 
         final AsyncCloseableSupport closedSupport = AsyncCloseableSupport.closed();
         assertThat(closedSupport.isClosing()).isTrue();
         assertThat(closedSupport.isClosed()).isTrue();
-        assertThat(closedSupport.closeFuture()).isCompletedWithValue(null);
+        assertThat(closedSupport.whenClosed()).isCompletedWithValue(null);
     }
 
     @Test
     void closeFutureReturnsSameFuture() {
         final AsyncCloseableSupport support = AsyncCloseableSupport.of();
-        assertThat(support.closeFuture()).isSameAs(support.closeFuture());
+        assertThat(support.whenClosed()).isSameAs(support.whenClosed());
     }
 
     @Test
     void closeFutureIsNotUpdatable() {
         final AsyncCloseableSupport support = AsyncCloseableSupport.of();
-        final CompletableFuture<?> closeFuture = support.closeFuture();
+        final CompletableFuture<?> closeFuture = support.whenClosed();
         assertThatThrownBy(() -> closeFuture.complete(null))
                 .isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> closeFuture.completeExceptionally(new Exception()))
@@ -75,7 +75,7 @@ class AsyncCloseableSupportTest {
         });
         support.close();
         assertThat(invoked).isTrue();
-        assertThat(support.closeFuture()).isCompletedWithValue(null);
+        assertThat(support.whenClosed()).isCompletedWithValue(null);
     }
 
     @Test

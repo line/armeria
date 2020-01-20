@@ -265,13 +265,19 @@ final class HttpClientFactory implements ClientFactory {
         return clientType;
     }
 
-    boolean isClosing() {
+    @Override
+    public boolean isClosing() {
         return closeable.isClosing();
     }
 
     @Override
-    public CompletableFuture<?> closeFuture() {
-        return closeable.closeFuture();
+    public boolean isClosed() {
+        return closeable.isClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> whenClosed() {
+        return closeable.whenClosed();
     }
 
     @Override

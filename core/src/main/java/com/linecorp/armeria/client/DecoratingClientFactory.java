@@ -125,8 +125,18 @@ public class DecoratingClientFactory implements ClientFactory {
     }
 
     @Override
-    public CompletableFuture<?> closeFuture() {
-        return delegate().closeFuture();
+    public boolean isClosing() {
+        return delegate().isClosing();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return delegate().isClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> whenClosed() {
+        return delegate().whenClosed();
     }
 
     @Override

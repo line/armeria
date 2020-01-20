@@ -39,8 +39,8 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.Unwrappable;
 
@@ -67,7 +67,7 @@ import reactor.core.scheduler.NonBlocking;
  * {@link ClientFactory}, use {@link #closeDefault()}.
  * </p>
  */
-public interface ClientFactory extends AsyncCloseable {
+public interface ClientFactory extends ListenableAsyncCloseable {
 
     /**
      * The default {@link ClientFactory} implementation.
@@ -352,11 +352,4 @@ public interface ClientFactory extends AsyncCloseable {
         }
         return params;
     }
-
-    /**
-     * Closes all clients managed by this factory and shuts down the {@link EventLoopGroup}
-     * created implicitly by this factory.
-     */
-    @Override
-    void close();
 }

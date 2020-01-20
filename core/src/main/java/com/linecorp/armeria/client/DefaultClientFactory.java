@@ -166,8 +166,18 @@ final class DefaultClientFactory implements ClientFactory {
     }
 
     @Override
-    public CompletableFuture<?> closeFuture() {
-        return closeable.closeFuture();
+    public boolean isClosing() {
+        return closeable.isClosing();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closeable.isClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> whenClosed() {
+        return closeable.whenClosed();
     }
 
     @Override
@@ -177,7 +187,7 @@ final class DefaultClientFactory implements ClientFactory {
 
     CompletableFuture<?> closeAsync(boolean checkDefault) {
         if (checkDefault && checkDefault()) {
-            return closeFuture();
+            return whenClosed();
         }
         return closeable.closeAsync();
     }

@@ -199,11 +199,6 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
     }
 
     @Override
-    public final CompletableFuture<?> closeFuture() {
-        return closeable.closeFuture();
-    }
-
-    @Override
     public final CompletableFuture<?> closeAsync() {
         return closeable.closeAsync();
     }

@@ -42,7 +42,7 @@ import com.linecorp.armeria.internal.UnmodifiableFuture;
  * @param <V> the type of the startup result. Use {@link Void} if unused.
  * @param <L> the type of the life cycle event listener. Use {@link Void} if unused.
  */
-public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
+public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(StartStopSupport.class);
 
@@ -312,27 +312,19 @@ public abstract class StartStopSupport<T, U, V, L> implements AsyncCloseable {
         return future;
     }
 
-    /**
-     * Returns whether {@link #close()} or {@link #closeAsync()} has been called.
-     *
-     * @see #isClosed()
-     */
+    @Override
     public boolean isClosing() {
         return closeable.isClosing();
     }
 
-    /**
-     * Returns whether {@link #closeFuture()} has been completed.
-     *
-     * @see #isClosing()
-     */
+    @Override
     public boolean isClosed() {
         return closeable.isClosed();
     }
 
     @Override
-    public CompletableFuture<?> closeFuture() {
-        return closeable.closeFuture();
+    public CompletableFuture<?> whenClosed() {
+        return closeable.whenClosed();
     }
 
     @Override

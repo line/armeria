@@ -473,11 +473,6 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     @Override
-    public CompletableFuture<?> closeFuture() {
-        return closeable.closeFuture();
-    }
-
-    @Override
     public CompletableFuture<?> closeAsync() {
         return closeable.closeAsync();
     }

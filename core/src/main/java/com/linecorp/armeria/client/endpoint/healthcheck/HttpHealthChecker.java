@@ -132,11 +132,6 @@ final class HttpHealthChecker implements AsyncCloseable {
         closeable.close();
     }
 
-    @Override
-    public CompletableFuture<?> closeFuture() {
-        return closeable.closeAsync();
-    }
-
     private final class ResponseTimeoutUpdater extends SimpleDecoratingHttpClient {
         ResponseTimeoutUpdater(HttpClient delegate) {
             super(delegate);

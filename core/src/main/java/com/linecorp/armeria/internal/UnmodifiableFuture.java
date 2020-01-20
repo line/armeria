@@ -55,6 +55,7 @@ public final class UnmodifiableFuture<T> extends CompletableFuture<T> {
     }
 
     public static <U> UnmodifiableFuture<U> wrap(CompletableFuture<U> future) {
+        requireNonNull(future, "future");
         final UnmodifiableFuture<U> unupdatable = new UnmodifiableFuture<>();
         future.handle((result, cause) -> {
             if (cause != null) {

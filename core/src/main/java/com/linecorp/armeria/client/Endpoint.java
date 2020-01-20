@@ -564,11 +564,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     // Methods from Auto/AsyncCloseable
 
     @Override
-    public CompletableFuture<?> closeFuture() {
-        return UnmodifiableFuture.completedFuture(null);
-    }
-
-    @Override
     public CompletableFuture<?> closeAsync() {
         return UnmodifiableFuture.completedFuture(null);
     }
