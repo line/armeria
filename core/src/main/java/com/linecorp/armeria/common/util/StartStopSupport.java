@@ -16,8 +16,8 @@
 package com.linecorp.armeria.common.util;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.UnmodifiableFuture.completedFuture;
-import static com.linecorp.armeria.internal.UnmodifiableFuture.exceptionallyCompletedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.exceptionallyCompletedFuture;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -31,8 +31,6 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.internal.UnmodifiableFuture;
 
 /**
  * Provides asynchronous start-stop life cycle support.

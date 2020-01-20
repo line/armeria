@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.internal.UnmodifiableFuture;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 /**
  * A static immutable {@link EndpointGroup}.

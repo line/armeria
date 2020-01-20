@@ -42,7 +42,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.UnmodifiableFuture;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.util.NetUtil;
 

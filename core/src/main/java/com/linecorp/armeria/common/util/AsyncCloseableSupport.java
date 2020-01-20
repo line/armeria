@@ -24,8 +24,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Consumer;
 
-import com.linecorp.armeria.internal.UnmodifiableFuture;
-
 /**
  * Provides support for implementing {@link AsyncCloseable} or {@link ListenableAsyncCloseable}.
  */

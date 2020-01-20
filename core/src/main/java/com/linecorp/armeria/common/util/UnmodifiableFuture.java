@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal;
+package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
@@ -21,11 +21,18 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
 
 /**
- * A {@link CompletableFuture} which prevents the caller from completing it.
+ * A {@link CompletableFuture} which prevents the caller from completing it. An attempt to call any of
+ * the following methods will trigger an {@link UnsupportedOperationException}:
+ * <ul>
+ *   <li>{@link #complete(Object)}</li>
+ *   <li>{@link #completeExceptionally(Throwable)}</li>
+ *   <li>{@link #obtrudeValue(Object)}</li>
+ *   <li>{@link #obtrudeException(Throwable)}</li>
+ * </ul>
+ * Also, {@link #cancel(boolean)} will do nothing but returning whether cancelled or not.
  */
 public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFuture<T> {
 
@@ -36,6 +43,9 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFut
         NIL.doComplete(null);
     }
 
+    /**
+     * Returns an {@link UnmodifiableFuture} which has been completed with the specified {@code value}.
+     */
     public static <U> UnmodifiableFuture<U> completedFuture(@Nullable U value) {
         if (value == null) {
             @SuppressWarnings("unchecked")
@@ -48,6 +58,10 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFut
         return future;
     }
 
+    /**
+     * Returns an {@link UnmodifiableFuture} which has been completed exceptionally with the specified
+     * {@link Throwable}.
+     */
     public static <U> UnmodifiableFuture<U> exceptionallyCompletedFuture(Throwable cause) {
         requireNonNull(cause, "cause");
         final UnmodifiableFuture<U> future = new UnmodifiableFuture<>();
@@ -55,6 +69,10 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFut
         return future;
     }
 
+    /**
+     * Returns an {@link UnmodifiableFuture} which will be completed when the specified
+     * {@link CompletableFuture} is completed.
+     */
     public static <U> UnmodifiableFuture<U> wrap(CompletableFuture<U> future) {
         requireNonNull(future, "future");
         final UnmodifiableFuture<U> unupdatable = new UnmodifiableFuture<>();
@@ -71,6 +89,9 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFut
 
     private UnmodifiableFuture() {}
 
+    /**
+     * Throws an {@link UnsupportedOperationException}.
+     */
     @Override
     public boolean complete(@Nullable T value) {
         throw new UnsupportedOperationException();
@@ -80,6 +101,9 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFut
         super.complete(value);
     }
 
+    /**
+     * Throws an {@link UnsupportedOperationException}.
+     */
     @Override
     public boolean completeExceptionally(Throwable ex) {
         throw new UnsupportedOperationException();
@@ -89,16 +113,25 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFut
         super.completeExceptionally(cause);
     }
 
+    /**
+     * Does nothing but returning whether this future has been cancelled or not.
+     */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        return false;
+        return isCancelled();
     }
 
+    /**
+     * Throws an {@link UnsupportedOperationException}.
+     */
     @Override
     public void obtrudeValue(@Nullable T value) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Throws an {@link UnsupportedOperationException}.
+     */
     @Override
     public void obtrudeException(Throwable ex) {
         throw new UnsupportedOperationException();
