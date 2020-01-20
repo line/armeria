@@ -46,8 +46,8 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;

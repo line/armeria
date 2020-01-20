@@ -33,8 +33,8 @@ import org.reactivestreams.Subscription;
 import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.internal.PooledObjects;
 import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.internal.PooledObjects;
 
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
