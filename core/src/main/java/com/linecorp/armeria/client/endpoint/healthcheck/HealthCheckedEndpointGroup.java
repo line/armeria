@@ -52,7 +52,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AsyncCloseable;
-import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.netty.channel.EventLoopGroup;

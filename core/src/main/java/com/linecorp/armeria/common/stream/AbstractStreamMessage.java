@@ -36,7 +36,7 @@ import com.spotify.futures.CompletableFutures;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.PooledObjects;
-import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
 
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;

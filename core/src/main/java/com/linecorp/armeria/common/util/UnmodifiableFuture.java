@@ -21,8 +21,6 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
-
 /**
  * A {@link CompletableFuture} which prevents the caller from completing it. An attempt to call any of
  * the following methods will trigger an {@link UnsupportedOperationException}:

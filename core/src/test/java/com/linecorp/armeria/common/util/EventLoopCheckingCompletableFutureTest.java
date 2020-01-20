@@ -14,14 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.eventloop;
+package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -122,5 +124,29 @@ class EventLoopCheckingCompletableFutureTest {
             assertThat(event.getLevel()).isEqualTo(Level.WARN);
             assertThat(event.getMessage()).startsWith("Calling a blocking method");
         });
+    }
+
+    @Test
+    void completedFuture() {
+        final EventLoopCheckingCompletableFuture<String> future =
+                EventLoopCheckingCompletableFuture.completedFuture("foo");
+        assertThat(future).isCompletedWithValue("foo");
+    }
+
+    @Test
+    void completedFutureWithNull() {
+        final EventLoopCheckingCompletableFuture<?> future =
+                EventLoopCheckingCompletableFuture.completedFuture(null);
+        assertThat(future).isCompletedWithValue(null);
+    }
+
+    @Test
+    void exceptionallyCompletedFuture() {
+        final Throwable cause = new Throwable();
+        final EventLoopCheckingCompletableFuture<?> future =
+                EventLoopCheckingCompletableFuture.exceptionallyCompletedFuture(cause);
+        assertThat(future).isCompletedExceptionally();
+        assertThatThrownBy(future::join).isInstanceOf(CompletionException.class)
+                                        .hasCauseReference(cause);
     }
 }

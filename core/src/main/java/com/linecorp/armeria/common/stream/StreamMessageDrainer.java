@@ -27,7 +27,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
 
 import io.netty.util.ReferenceCountUtil;
 
