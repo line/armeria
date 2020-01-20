@@ -61,13 +61,12 @@ public interface RequestLogAccess {
     boolean isRequestComplete();
 
     /**
-     * Returns {@code true} if the property signified by the specified {@link RequestLogProperty} is available.
+     * Returns {@code true} if the specified {@link RequestLogProperty} is available.
      */
     boolean isAvailable(RequestLogProperty property);
 
     /**
-     * Returns {@code true} if all of the properties signified by the specified {@link RequestLogProperty}s are
-     * available.
+     * Returns {@code true} if all of the specified {@link RequestLogProperty}s are available.
      *
      * @throws IllegalArgumentException if {@code properties} is empty.
      */
@@ -83,8 +82,7 @@ public interface RequestLogAccess {
     }
 
     /**
-     * Returns {@code true} if all of the properties signified by the specified {@link RequestLogProperty}s are
-     * available.
+     * Returns {@code true} if all of the specified {@link RequestLogProperty}s are available.
      *
      * @throws IllegalArgumentException if {@code properties} is empty.
      */
@@ -132,12 +130,12 @@ public interface RequestLogAccess {
     CompletableFuture<RequestOnlyLog> requestCompleteFuture();
 
     /**
-     * Returns a {@link CompletableFuture} which will be completed when the property signified by
-     * the specified {@link RequestLogProperty} is collected. The returned {@link CompletableFuture} is
-     * never completed exceptionally. Note that the completion of the returned {@link CompletableFuture}
-     * guarantees only the availability of the specified property, which means any attempt to access
-     * other properties than specified may trigger a {@link RequestLogAvailabilityException}. If in doubt,
-     * use {@link #completeFuture()} or {@link #requestCompleteFuture()}.
+     * Returns a {@link CompletableFuture} which will be completed when the specified
+     * {@link RequestLogProperty} is collected. The returned {@link CompletableFuture} is never completed
+     * exceptionally. Note that the completion of the returned {@link CompletableFuture} guarantees only
+     * the availability of the specified property, which means any attempt to access other properties than
+     * a {@link RequestLogAvailabilityException}.
+     * If in doubt, use {@link #completeFuture()} or {@link #requestCompleteFuture()}.
      * <pre>{@code
      * logAccess.partialFuture(RequestLogProperty.REQUEST_HEADERS)
      *          .thenAccept(log -> {
@@ -151,12 +149,12 @@ public interface RequestLogAccess {
     CompletableFuture<RequestLog> partialFuture(RequestLogProperty property);
 
     /**
-     * Returns a {@link CompletableFuture} which will be completed when all the properties signified by
-     * the specified {@link RequestLogProperty}s are collected. The returned {@link CompletableFuture} is
-     * never completed exceptionally. Note that the completion of the returned {@link CompletableFuture}
-     * guarantees only the availability of the specified properties, which means any attempt to access
-     * other properties than specified may trigger a {@link RequestLogAvailabilityException}. If in doubt,
-     * use {@link #completeFuture()} or {@link #requestCompleteFuture()}.
+     * Returns a {@link CompletableFuture} which will be completed when all the specified
+     * {@link RequestLogProperty}s are collected. The returned {@link CompletableFuture} is never completed
+     * exceptionally. Note that the completion of the returned {@link CompletableFuture} guarantees only
+     * the availability of the specified properties, which means any attempt to access other properties than
+     * specified may trigger a {@link RequestLogAvailabilityException}.
+     * If in doubt, use {@link #completeFuture()} or {@link #requestCompleteFuture()}.
      * <pre>{@code
      * logAccess.partialFuture(RequestLogProperty.REQUEST_HEADERS,
      *                         RequestLogProperty.RESPONSE_HEADERS)
@@ -175,12 +173,12 @@ public interface RequestLogAccess {
     CompletableFuture<RequestLog> partialFuture(RequestLogProperty... properties);
 
     /**
-     * Returns a {@link CompletableFuture} which will be completed when all the properties signified by
-     * the specified {@link RequestLogProperty}s are collected. The returned {@link CompletableFuture} is
-     * never completed exceptionally. Note that the completion of the returned {@link CompletableFuture}
-     * guarantees only the availability of the specified properties, which means any attempt to access
-     * other properties than specified may trigger a {@link RequestLogAvailabilityException}. If in doubt,
-     * use {@link #completeFuture()} or {@link #requestCompleteFuture()}.
+     * Returns a {@link CompletableFuture} which will be completed when all the specified
+     * {@link RequestLogProperty}s are collected. The returned {@link CompletableFuture} is never completed
+     * exceptionally. Note that the completion of the returned {@link CompletableFuture} guarantees only
+     * the availability of the specified properties, which means any attempt to access other properties than
+     * specified may trigger a {@link RequestLogAvailabilityException}.
+     * If in doubt, use {@link #completeFuture()} or {@link #requestCompleteFuture()}.
      * <pre>{@code
      * logAccess.partialFuture(Lists.of(RequestLogProperty.REQUEST_HEADERS,
      *                                  RequestLogProperty.RESPONSE_HEADERS))
@@ -214,16 +212,14 @@ public interface RequestLogAccess {
     RequestOnlyLog ensureRequestComplete();
 
     /**
-     * Returns the {@link RequestLog} that is guaranteed to have the property signified by the specified
-     * {@link RequestLogProperty}.
+     * Returns the {@link RequestLog} that is guaranteed to have the specified {@link RequestLogProperty}.
      *
      * @throws RequestLogAvailabilityException if the specified {@link RequestLogProperty} is not available yet.
      */
     RequestLog ensurePartial(RequestLogProperty property);
 
     /**
-     * Returns the {@link RequestLog} that is guaranteed to have all the properties signified by the specified
-     * {@link RequestLogProperty}s.
+     * Returns the {@link RequestLog} that is guaranteed to have all the specified {@link RequestLogProperty}s.
      *
      * @throws RequestLogAvailabilityException if any of the specified {@link RequestLogProperty}s are
      *                                         not available yet.
@@ -233,8 +229,7 @@ public interface RequestLogAccess {
     RequestLog ensurePartial(RequestLogProperty... properties);
 
     /**
-     * Returns the {@link RequestLog} that is guaranteed to have all the properties signified by the specified
-     * {@link RequestLogProperty}s.
+     * Returns the {@link RequestLog} that is guaranteed to have all the specified {@link RequestLogProperty}s.
      *
      * @throws RequestLogAvailabilityException if any of the specified {@link RequestLogProperty}s are
      *                                         not available yet.
