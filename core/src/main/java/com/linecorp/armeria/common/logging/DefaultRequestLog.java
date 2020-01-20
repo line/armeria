@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.channel.Channel;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -277,7 +278,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (!isRequestComplete()) {
             throw new RequestLogAvailabilityException(RequestOnlyLog.class.getSimpleName() + " not complete");
         }
-        return notCheckingAccessor;
+        return this;
     }
 
     @Override
@@ -339,11 +340,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                     satisfiedFutures = satisfiedFutures();
                 }
                 if (satisfiedFutures != null) {
+                    final RequestLog log = partial(newFlags);
                     for (RequestLogFuture f : satisfiedFutures) {
                         if (f == null) {
                             break;
                         }
-                        f.completeLog(partial(newFlags));
+                        f.completeLog(log);
                     }
                 }
                 break;
@@ -1410,10 +1412,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      * checking availability.
      */
     private final class CompleteRequestLog implements RequestLog {
+
+        @Nullable
+        private UnmodifiableFuture<RequestLog> completeFuture;
+
         @Override
         public boolean isComplete() {
-            // Can't always return true because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.isComplete();
+            return true;
         }
 
         @Override
@@ -1423,45 +1428,49 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public boolean isAvailable(RequestLogProperty property) {
-            // Can't always return true because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.isAvailable(property);
+            return true;
         }
 
         @Override
         public RequestLog partial() {
-            // Can't always return this because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.partial();
+            return this;
         }
 
         @Override
         public CompletableFuture<RequestLog> whenComplete() {
-            return DefaultRequestLog.this.whenComplete();
+            if (completeFuture == null) {
+                completeFuture = UnmodifiableFuture.completedFuture(this);
+            }
+            return completeFuture;
         }
 
         @Override
         public CompletableFuture<RequestOnlyLog> whenRequestComplete() {
-            return DefaultRequestLog.this.whenRequestComplete();
+            // OK to cast because the future is unmodifiable.
+            @SuppressWarnings("unchecked")
+            final CompletableFuture<RequestOnlyLog> cast =
+                    (CompletableFuture<RequestOnlyLog>) (CompletableFuture<?>) whenComplete();
+            return cast;
         }
 
         @Override
         public CompletableFuture<RequestLog> whenAvailable(RequestLogProperty property) {
-            return DefaultRequestLog.this.whenAvailable(property);
+            return whenComplete();
         }
 
         @Override
         public CompletableFuture<RequestLog> whenAvailable(RequestLogProperty... properties) {
-            return DefaultRequestLog.this.whenAvailable(properties);
+            return whenComplete();
         }
 
         @Override
         public CompletableFuture<RequestLog> whenAvailable(Iterable<RequestLogProperty> properties) {
-            return DefaultRequestLog.this.whenAvailable(properties);
+            return whenComplete();
         }
 
         @Override
         public RequestLog ensureComplete() {
-            // Can't return this because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.ensureComplete();
+            return this;
         }
 
         @Override
@@ -1471,25 +1480,22 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public RequestLog ensureAvailable(RequestLogProperty property) {
-            // Can't always return this because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.ensureAvailable(property);
+            return this;
         }
 
         @Override
         public RequestLog ensureAvailable(RequestLogProperty... properties) {
-            // Can't always return this because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.ensureAvailable(properties);
+            return this;
         }
 
         @Override
         public RequestLog ensureAvailable(Iterable<RequestLogProperty> properties) {
-            // Can't always return this because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.ensureAvailable(properties);
+            return this;
         }
 
         @Override
         public int availabilityStamp() {
-            return DefaultRequestLog.this.availabilityStamp();
+            return RequestLogProperty.FLAGS_ALL_COMPLETE;
         }
 
         @Override
