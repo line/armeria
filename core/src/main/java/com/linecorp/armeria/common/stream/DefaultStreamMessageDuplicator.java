@@ -44,16 +44,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;

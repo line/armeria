@@ -18,8 +18,6 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator;

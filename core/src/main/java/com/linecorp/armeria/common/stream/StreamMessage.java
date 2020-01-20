@@ -319,14 +319,24 @@ public interface StreamMessage<T> extends Publisher<T> {
     CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options);
 
     /**
-     * To duplicator.
+     * Returns a new {@link StreamMessageDuplicator} that duplicates multiple {@link StreamMessage}s which
+     * publish the same elements with this {@link StreamMessage}.
+     * Note that you cannot subscribe to this {@link StreamMessage} anymore after you call this method.
+     * To subscribe, call {@link StreamMessageDuplicator#duplicate()} from the returned
+     * {@link StreamMessageDuplicator}.
      */
     default StreamMessageDuplicator<T> toDuplicator() {
         return toDuplicator(defaultSubscriberExecutor());
     }
 
     /**
-     * To duplicator.
+     * Returns a new {@link StreamMessageDuplicator} that duplicates multiple {@link StreamMessage}s which
+     * publish the same elements with this {@link StreamMessage}.
+     * Note that you cannot subscribe to this {@link StreamMessage} anymore after you call this method.
+     * To subscribe, call {@link StreamMessageDuplicator#duplicate()} from the returned
+     * {@link StreamMessageDuplicator}.
+     *
+     * @param executor the executor to duplicate
      */
     default StreamMessageDuplicator<T> toDuplicator(EventExecutor executor) {
         requireNonNull(executor, "executor");
