@@ -33,8 +33,6 @@ import org.reactivestreams.Subscription;
 import com.google.common.annotations.VisibleForTesting;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
 
 import io.netty.util.concurrent.EventExecutor;
