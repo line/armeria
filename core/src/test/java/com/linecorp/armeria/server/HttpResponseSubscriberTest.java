@@ -61,7 +61,7 @@ class HttpResponseSubscriberTest {
         responseSubscriber.onNext(new ByteBufHttpData(newBuffer("hello"), true));
         responseSubscriber.onComplete();
 
-        assertThat(sctx.log().completeFuture().join().responseContentPreview()).isEqualTo("hello");
+        assertThat(sctx.log().whenComplete().join().responseContentPreview()).isEqualTo("hello");
     }
 
     private static DefaultServiceRequestContext serviceRequestContext(RequestHeaders headers) {

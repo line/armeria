@@ -141,7 +141,7 @@ public abstract class AbstractThriftOverHttpTest {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                             if (recordMessageLogs) {
-                                ctx.log().completeFuture().thenAccept(requestLogs::add);
+                                ctx.log().whenComplete().thenAccept(requestLogs::add);
                             }
                             return delegate().serve(ctx, req);
                         }

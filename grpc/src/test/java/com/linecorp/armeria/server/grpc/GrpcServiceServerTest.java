@@ -400,7 +400,7 @@ class GrpcServiceServerTest {
                     service -> service
                             .decorate(LoggingService.newDecorator())
                             .decorate((delegate, ctx, req) -> {
-                                ctx.log().completeFuture().thenAccept(requestLogQueue::add);
+                                ctx.log().whenComplete().thenAccept(requestLogQueue::add);
                                 return delegate.serve(ctx, req);
                             }));
 
@@ -448,7 +448,7 @@ class GrpcServiceServerTest {
                                        .build()
                                        .decorate(LoggingService.newDecorator())
                                        .decorate((delegate, ctx, req) -> {
-                                           ctx.log().completeFuture().thenAccept(requestLogQueue::add);
+                                           ctx.log().whenComplete().thenAccept(requestLogQueue::add);
                                            return delegate.serve(ctx, req);
                                        }));
         }
@@ -467,7 +467,7 @@ class GrpcServiceServerTest {
                                        .build()
                                        .decorate(LoggingService.newDecorator())
                                        .decorate((delegate, ctx, req) -> {
-                                           ctx.log().completeFuture().thenAccept(requestLogQueue::add);
+                                           ctx.log().whenComplete().thenAccept(requestLogQueue::add);
                                            return delegate.serve(ctx, req);
                                        }));
         }
@@ -486,7 +486,7 @@ class GrpcServiceServerTest {
                                        .build()
                                        .decorate(LoggingService.newDecorator())
                                        .decorate((delegate, ctx, req) -> {
-                                           ctx.log().completeFuture().thenAccept(requestLogQueue::add);
+                                           ctx.log().whenComplete().thenAccept(requestLogQueue::add);
                                            return delegate.serve(ctx, req);
                                        }));
         }

@@ -202,7 +202,7 @@ public class GrpcClientTest {
     public void setUp() {
         requestLogQueue.clear();
         final DecoratingHttpClientFunction requestLogRecorder = (delegate, ctx, req) -> {
-            ctx.log().completeFuture().thenAccept(requestLogQueue::add);
+            ctx.log().whenComplete().thenAccept(requestLogQueue::add);
             return delegate.execute(ctx, req);
         };
 

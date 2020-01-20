@@ -77,7 +77,7 @@ public abstract class StructuredLoggingService<L> extends SimpleDecoratingHttpSe
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        ctx.log().completeFuture().thenAccept(log -> {
+        ctx.log().whenComplete().thenAccept(log -> {
             final L structuredLog = logBuilder.build(log);
             if (structuredLog != null) {
                 writeLog(log, structuredLog);

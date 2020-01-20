@@ -150,7 +150,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
             assertFirstRequest(healthCheckRequestLogs);
 
             // The second request must time out while long-polling.
-            final RequestLog longPollingRequestLog = healthCheckRequestLogs.take().completeFuture().join();
+            final RequestLog longPollingRequestLog = healthCheckRequestLogs.take().whenComplete().join();
             assertThat(longPollingRequestLog.responseCause()).isInstanceOf(ResponseTimeoutException.class);
 
             // There must be only one '102 Processing' header received.
@@ -181,7 +181,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
             assertFirstRequest(healthCheckRequestLogs);
 
             // The second request must time out while long-polling.
-            final RequestLog longPollingRequestLog = healthCheckRequestLogs.take().completeFuture().join();
+            final RequestLog longPollingRequestLog = healthCheckRequestLogs.take().whenComplete().join();
             assertThat(longPollingRequestLog.responseCause()).isInstanceOf(ResponseTimeoutException.class);
 
             // There must be no '102 Processing' headers received.
@@ -197,7 +197,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
     private static void assertFirstRequest(
             BlockingQueue<RequestLogAccess> healthCheckRequestLogs) throws InterruptedException {
         // The first request is always non-long-polling, so there has to be no informationals.
-        final RequestLog firstNonLongPollingRequestLog = healthCheckRequestLogs.take().completeFuture().join();
+        final RequestLog firstNonLongPollingRequestLog = healthCheckRequestLogs.take().whenComplete().join();
         assertThat(firstNonLongPollingRequestLog.responseHeaders().status()).isEqualTo(HttpStatus.OK);
         assertThat(firstNonLongPollingRequestLog.context().attr(RECEIVED_INFORMATIONALS)).isEmpty();
     }

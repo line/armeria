@@ -74,7 +74,7 @@ class ServiceBindingTest {
               .responseContentPreviewerFactory(responseContentPreviewerFactory)
               .accessLogWriter(log -> accessLogWriterCheckLatch.countDown(), true)
               .decorator(delegate -> (ctx, req) -> {
-                  ctx.log().completeFuture().thenAccept(log -> {
+                  ctx.log().whenComplete().thenAccept(log -> {
                       assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
                       assertThat(ctx.maxRequestLength()).isEqualTo(8192);
                       assertThat(ctx.verboseResponses()).isTrue();

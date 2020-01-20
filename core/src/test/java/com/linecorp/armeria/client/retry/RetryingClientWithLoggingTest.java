@@ -138,8 +138,8 @@ public class RetryingClientWithLoggingTest {
         return delegate -> new SimpleDecoratingHttpClient(delegate) {
             @Override
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-                ctx.log().requestCompleteFuture().thenAccept(log -> listener.accept(log.partial()));
-                ctx.log().completeFuture().thenAccept(listener);
+                ctx.log().whenRequestComplete().thenAccept(log -> listener.accept(log.partial()));
+                ctx.log().whenComplete().thenAccept(listener);
                 return delegate().execute(ctx, req);
             }
         };

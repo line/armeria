@@ -452,7 +452,7 @@ class ArmeriaCallFactoryTest {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             final Response<Pojo> response = service.postForm("Cony", 26).get();
 
-            final RequestLog log = ctxCaptor.get().log().completeFuture().join();
+            final RequestLog log = ctxCaptor.get().log().whenComplete().join();
             assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
             assertThat(log.requestHeaders().authority()).isEqualTo("127.0.0.1:" + server.httpPort());
 
@@ -531,7 +531,7 @@ class ArmeriaCallFactoryTest {
             final Pojo pojo = service.pojo().get();
             assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
 
-            final RequestLog log = ctxCaptor.get().log().completeFuture().join();
+            final RequestLog log = ctxCaptor.get().log().whenComplete().join();
             assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H1C);
         }
     }

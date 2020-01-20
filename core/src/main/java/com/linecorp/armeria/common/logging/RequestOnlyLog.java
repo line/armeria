@@ -38,7 +38,7 @@ import io.netty.channel.Channel;
  * A set of informational properties for request-side only, collected while consuming a {@link Request}.
  *
  * @see RequestLogAccess#isRequestComplete()
- * @see RequestLogAccess#requestCompleteFuture()
+ * @see RequestLogAccess#whenRequestComplete()
  * @see RequestLogAccess#ensureRequestComplete()
  */
 public interface RequestOnlyLog extends RequestLogAccess {

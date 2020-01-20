@@ -32,13 +32,13 @@ import com.linecorp.armeria.common.RequestContext;
  * <p>The properties provided by {@link RequestLog} are not always fully available. Use the following
  * methods to access the properties safely:
  * <ul>
- *   <li>{@link #isComplete()} or {@link #completeFuture()} to check if or to get notified when all request
+ *   <li>{@link #isComplete()} or {@link #whenComplete()} to check if or to get notified when all request
  *       and response properties are available.</li>
- *   <li>{@link #isRequestComplete()} or {@link #requestCompleteFuture()} to check if or to get notified when
+ *   <li>{@link #isRequestComplete()} or {@link #whenRequestComplete()} to check if or to get notified when
  *       all request properties are available.</li>
  *   <li>{@link #isAvailable(RequestLogProperty)}, {@link #isAvailable(RequestLogProperty...)},
- *       {@link #isAvailable(Iterable)}, {@link #partialFuture(RequestLogProperty)},
- *       {@link #partialFuture(RequestLogProperty...)} or {@link #partialFuture(Iterable)} to check if or
+ *       {@link #isAvailable(Iterable)}, {@link #whenAvailable(RequestLogProperty)},
+ *       {@link #whenAvailable(RequestLogProperty...)} or {@link #whenAvailable(Iterable)} to check if or
  *       to get notified when a certain set of properties are available.</li>
  * </ul></p>
  *
@@ -104,7 +104,7 @@ public interface RequestLogAccess {
      * completely and thus all properties of the {@link RequestLog} have been collected.
      * The returned {@link CompletableFuture} is never completed exceptionally.
      * <pre>{@code
-     * logAccess.completeFuture().thenAccept(log -> {
+     * logAccess.whenComplete().thenAccept(log -> {
      *     HttpStatus status = log.responseHeaders().status();
      *     if (status == HttpStatus.OK) {
      *         ...
@@ -112,14 +112,14 @@ public interface RequestLogAccess {
      * });
      * }</pre>
      */
-    CompletableFuture<RequestLog> completeFuture();
+    CompletableFuture<RequestLog> whenComplete();
 
     /**
      * Returns a {@link CompletableFuture} which will be completed when the {@link Request} has been consumed
      * completely and thus all properties of the {@link RequestOnlyLog} have been collected.
      * The returned {@link CompletableFuture} is never completed exceptionally.
      * <pre>{@code
-     * logAccess.requestCompleteFuture().thenAccept(log -> {
+     * logAccess.whenRequestComplete().thenAccept(log -> {
      *     SerializationFormat serFmt = log.scheme().serializationFormat();
      *     if (serFmt == ThriftSerializationFormats.BINARY) {
      *         ...
@@ -127,7 +127,7 @@ public interface RequestLogAccess {
      * });
      * }</pre>
      */
-    CompletableFuture<RequestOnlyLog> requestCompleteFuture();
+    CompletableFuture<RequestOnlyLog> whenRequestComplete();
 
     /**
      * Returns a {@link CompletableFuture} which will be completed when the specified
@@ -135,9 +135,9 @@ public interface RequestLogAccess {
      * exceptionally. Note that the completion of the returned {@link CompletableFuture} guarantees only
      * the availability of the specified property, which means any attempt to access other properties than
      * a {@link RequestLogAvailabilityException}.
-     * If in doubt, use {@link #completeFuture()} or {@link #requestCompleteFuture()}.
+     * If in doubt, use {@link #whenComplete()} or {@link #whenRequestComplete()}.
      * <pre>{@code
-     * logAccess.partialFuture(RequestLogProperty.REQUEST_HEADERS)
+     * logAccess.whenAvailable(RequestLogProperty.REQUEST_HEADERS)
      *          .thenAccept(log -> {
      *              RequestHeaders headers = log.requestHeaders();
      *              if (headers.path().startsWith("/foo/")) {
@@ -146,7 +146,7 @@ public interface RequestLogAccess {
      *          });
      * }</pre>
      */
-    CompletableFuture<RequestLog> partialFuture(RequestLogProperty property);
+    CompletableFuture<RequestLog> whenAvailable(RequestLogProperty property);
 
     /**
      * Returns a {@link CompletableFuture} which will be completed when all the specified
@@ -154,9 +154,9 @@ public interface RequestLogAccess {
      * exceptionally. Note that the completion of the returned {@link CompletableFuture} guarantees only
      * the availability of the specified properties, which means any attempt to access other properties than
      * specified may trigger a {@link RequestLogAvailabilityException}.
-     * If in doubt, use {@link #completeFuture()} or {@link #requestCompleteFuture()}.
+     * If in doubt, use {@link #whenComplete()} or {@link #whenRequestComplete()}.
      * <pre>{@code
-     * logAccess.partialFuture(RequestLogProperty.REQUEST_HEADERS,
+     * logAccess.whenAvailable(RequestLogProperty.REQUEST_HEADERS,
      *                         RequestLogProperty.RESPONSE_HEADERS)
      *          .thenAccept(log -> {
      *              RequestHeaders reqHeaders = log.requestHeaders();
@@ -170,7 +170,7 @@ public interface RequestLogAccess {
      *
      * @throws IllegalArgumentException if {@code properties} is empty.
      */
-    CompletableFuture<RequestLog> partialFuture(RequestLogProperty... properties);
+    CompletableFuture<RequestLog> whenAvailable(RequestLogProperty... properties);
 
     /**
      * Returns a {@link CompletableFuture} which will be completed when all the specified
@@ -178,9 +178,9 @@ public interface RequestLogAccess {
      * exceptionally. Note that the completion of the returned {@link CompletableFuture} guarantees only
      * the availability of the specified properties, which means any attempt to access other properties than
      * specified may trigger a {@link RequestLogAvailabilityException}.
-     * If in doubt, use {@link #completeFuture()} or {@link #requestCompleteFuture()}.
+     * If in doubt, use {@link #whenComplete()} or {@link #whenRequestComplete()}.
      * <pre>{@code
-     * logAccess.partialFuture(Lists.of(RequestLogProperty.REQUEST_HEADERS,
+     * logAccess.whenAvailable(Lists.of(RequestLogProperty.REQUEST_HEADERS,
      *                                  RequestLogProperty.RESPONSE_HEADERS))
      *          .thenAccept(log -> {
      *              RequestHeaders reqHeaders = log.requestHeaders();
@@ -194,7 +194,7 @@ public interface RequestLogAccess {
      *
      * @throws IllegalArgumentException if {@code properties} is empty.
      */
-    CompletableFuture<RequestLog> partialFuture(Iterable<RequestLogProperty> properties);
+    CompletableFuture<RequestLog> whenAvailable(Iterable<RequestLogProperty> properties);
 
     /**
      * Returns the {@link RequestLog} that is guaranteed to have all properties, for both request and response
@@ -216,7 +216,7 @@ public interface RequestLogAccess {
      *
      * @throws RequestLogAvailabilityException if the specified {@link RequestLogProperty} is not available yet.
      */
-    RequestLog ensurePartial(RequestLogProperty property);
+    RequestLog ensureAvailable(RequestLogProperty property);
 
     /**
      * Returns the {@link RequestLog} that is guaranteed to have all the specified {@link RequestLogProperty}s.
@@ -226,7 +226,7 @@ public interface RequestLogAccess {
      *
      * @throws IllegalArgumentException if {@code properties} is empty.
      */
-    RequestLog ensurePartial(RequestLogProperty... properties);
+    RequestLog ensureAvailable(RequestLogProperty... properties);
 
     /**
      * Returns the {@link RequestLog} that is guaranteed to have all the specified {@link RequestLogProperty}s.
@@ -236,18 +236,19 @@ public interface RequestLogAccess {
      *
      * @throws IllegalArgumentException if {@code properties} is empty.
      */
-    RequestLog ensurePartial(Iterable<RequestLogProperty> properties);
+    RequestLog ensureAvailable(Iterable<RequestLogProperty> properties);
 
     /**
      * Returns the {@link RequestLog} for the {@link Request}, where all properties may not be available yet.
      * Note that this method is potentially unsafe; an attempt to access an unavailable property will trigger
-     * a {@link RequestLogAvailabilityException}. If in doubt, use {@link #completeFuture()} or
-     * {@link #requestCompleteFuture()}. Always consider guarding the property access with
+     * a {@link RequestLogAvailabilityException}. If in doubt, use {@link #whenComplete()} or
+     * {@link #whenRequestComplete()}. Always consider guarding the property access with
      * {@link #isAvailable(RequestLogProperty)} when you have to use this method:
      * <pre>{@code
      * RequestLogAccess logAccess = ...;
      * if (logAccess.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
      *     RequestHeaders headers = logAccess.partial().requestHeaders();
+     *     ...
      * }
      * }</pre>
      */

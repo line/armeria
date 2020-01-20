@@ -386,7 +386,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             unfinishedRequests.put(req, res);
 
             if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), routed.route())) {
-                reqCtx.log().completeFuture().thenAccept(log -> {
+                reqCtx.log().whenComplete().thenAccept(log -> {
                     final HttpStatus status = log.responseHeaders().status();
                     if (status.code() >= 200 && status.code() < 400) {
                         pathAndQuery.storeInCache(originalPath);
@@ -552,7 +552,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Respect the first specified cause.
                 logBuilder.endResponse(firstNonNull(cause, f.cause()));
             }
-            reqCtx.log().completeFuture().thenAccept(reqCtx.accessLogWriter()::log);
+            reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
         });
         return future;
     }

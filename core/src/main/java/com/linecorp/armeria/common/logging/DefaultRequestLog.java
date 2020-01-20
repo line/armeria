@@ -210,7 +210,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public CompletableFuture<RequestLog> completeFuture() {
+    public CompletableFuture<RequestLog> whenComplete() {
         return future(RequestLogProperty.FLAGS_ALL_COMPLETE);
     }
 
@@ -245,22 +245,22 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public CompletableFuture<RequestOnlyLog> requestCompleteFuture() {
+    public CompletableFuture<RequestOnlyLog> whenRequestComplete() {
         return future(RequestLogProperty.FLAGS_REQUEST_COMPLETE);
     }
 
     @Override
-    public CompletableFuture<RequestLog> partialFuture(RequestLogProperty property) {
+    public CompletableFuture<RequestLog> whenAvailable(RequestLogProperty property) {
         return future(requireNonNull(property, "property").flag());
     }
 
     @Override
-    public CompletableFuture<RequestLog> partialFuture(RequestLogProperty... properties) {
+    public CompletableFuture<RequestLog> whenAvailable(RequestLogProperty... properties) {
         return future(RequestLogProperty.flags(requireNonNull(properties, "properties")));
     }
 
     @Override
-    public CompletableFuture<RequestLog> partialFuture(Iterable<RequestLogProperty> properties) {
+    public CompletableFuture<RequestLog> whenAvailable(Iterable<RequestLogProperty> properties) {
         return future(RequestLogProperty.flags(requireNonNull(properties, "properties")));
     }
 
@@ -281,7 +281,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public RequestLog ensurePartial(RequestLogProperty property) {
+    public RequestLog ensureAvailable(RequestLogProperty property) {
         if (!isAvailable(property)) {
             throw new RequestLogAvailabilityException(property.name());
         }
@@ -289,7 +289,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public RequestLog ensurePartial(RequestLogProperty... properties) {
+    public RequestLog ensureAvailable(RequestLogProperty... properties) {
         if (!isAvailable(properties)) {
             throw new RequestLogAvailabilityException(Arrays.toString(properties));
         }
@@ -297,7 +297,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public RequestLog ensurePartial(Iterable<RequestLogProperty> properties) {
+    public RequestLog ensureAvailable(Iterable<RequestLogProperty> properties) {
         if (!isAvailable(properties)) {
             throw new RequestLogAvailabilityException(properties.toString());
         }
@@ -393,7 +393,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void propagateRequestSideLog(RequestLogAccess child) {
         // Update the available properties always by adding a callback,
         // because the child's properties will never be available immediately.
-        child.partialFuture(RequestLogProperty.SESSION, RequestLogProperty.REQUEST_START_TIME)
+        child.whenAvailable(RequestLogProperty.SESSION, RequestLogProperty.REQUEST_START_TIME)
              .thenAccept(log -> {
                  final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
                  if (timings != null) {
@@ -402,20 +402,20 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                  startRequest0(log.channel(), log.sessionProtocol(), null,
                                log.requestStartTimeNanos(), log.requestStartTimeMicros(), true);
              });
-        child.partialFuture(RequestLogProperty.SCHEME)
+        child.whenAvailable(RequestLogProperty.SCHEME)
              .thenAccept(log -> serializationFormat(log.scheme().serializationFormat()));
-        child.partialFuture(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
+        child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
              .thenAccept(log -> {
                  final Long timeNanos = log.requestFirstBytesTransferredTimeNanos();
                  if (timeNanos != null) {
                      requestFirstBytesTransferred(timeNanos);
                  }
              });
-        child.partialFuture(RequestLogProperty.REQUEST_HEADERS)
+        child.whenAvailable(RequestLogProperty.REQUEST_HEADERS)
              .thenAccept(log -> requestHeaders(log.requestHeaders()));
-        child.partialFuture(RequestLogProperty.REQUEST_CONTENT)
+        child.whenAvailable(RequestLogProperty.REQUEST_CONTENT)
              .thenAccept(log -> requestContent(log.requestContent(), log.rawRequestContent()));
-        child.requestCompleteFuture().thenAccept(log -> {
+        child.whenRequestComplete().thenAccept(log -> {
             requestLength(log.requestLength());
             requestContentPreview(log.requestContentPreview());
             requestTrailers(log.requestTrailers());
@@ -437,7 +437,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (lastChild.isAvailable(RequestLogProperty.RESPONSE_START_TIME)) {
             startResponse0(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMicros(), true);
         } else {
-            lastChild.partialFuture(RequestLogProperty.RESPONSE_START_TIME)
+            lastChild.whenAvailable(RequestLogProperty.RESPONSE_START_TIME)
                      .thenAccept(log -> startResponse0(log.responseStartTimeNanos(),
                                                        log.responseStartTimeMicros(), true));
         }
@@ -448,7 +448,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 responseFirstBytesTransferred(timeNanos);
             }
         } else {
-            lastChild.partialFuture(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
+            lastChild.whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
                      .thenAccept(log -> {
                          final Long timeNanos = log.responseFirstBytesTransferredTimeNanos();
                          if (timeNanos != null) {
@@ -460,21 +460,21 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (lastChild.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
             responseHeaders(lastChild.responseHeaders());
         } else {
-            lastChild.partialFuture(RequestLogProperty.RESPONSE_HEADERS)
+            lastChild.whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
                      .thenAccept(log -> responseHeaders(log.responseHeaders()));
         }
 
         if (lastChild.isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
             responseContent(lastChild.responseContent(), lastChild.rawResponseContent());
         } else {
-            lastChild.partialFuture(RequestLogProperty.RESPONSE_CONTENT)
+            lastChild.whenAvailable(RequestLogProperty.RESPONSE_CONTENT)
                      .thenAccept(log -> responseContent(log.responseContent(), log.rawResponseContent()));
         }
 
         if (lastChild.isComplete()) {
             propagateResponseEndData(lastChild);
         } else {
-            lastChild.completeFuture().thenAccept(this::propagateResponseEndData);
+            lastChild.whenComplete().thenAccept(this::propagateResponseEndData);
         }
     }
 
@@ -539,7 +539,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public long requestStartTimeMicros() {
-        ensurePartial(RequestLogProperty.REQUEST_START_TIME);
+        ensureAvailable(RequestLogProperty.REQUEST_START_TIME);
         return requestStartTimeMicros;
     }
 
@@ -550,49 +550,49 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public long requestStartTimeNanos() {
-        ensurePartial(RequestLogProperty.REQUEST_START_TIME);
+        ensureAvailable(RequestLogProperty.REQUEST_START_TIME);
         return requestStartTimeNanos;
     }
 
     @Override
     public Long requestFirstBytesTransferredTimeNanos() {
-        ensurePartial(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME);
+        ensureAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME);
         return requestFirstBytesTransferredTimeNanosSet ? requestFirstBytesTransferredTimeNanos : null;
     }
 
     @Override
     public long requestEndTimeNanos() {
-        ensurePartial(RequestLogProperty.REQUEST_END_TIME);
+        ensureAvailable(RequestLogProperty.REQUEST_END_TIME);
         return requestEndTimeNanos;
     }
 
     @Override
     public long requestDurationNanos() {
-        ensurePartial(RequestLogProperty.REQUEST_END_TIME);
+        ensureAvailable(RequestLogProperty.REQUEST_END_TIME);
         return requestEndTimeNanos - requestStartTimeNanos;
     }
 
     @Override
     public Throwable requestCause() {
-        ensurePartial(RequestLogProperty.REQUEST_CAUSE);
+        ensureAvailable(RequestLogProperty.REQUEST_CAUSE);
         return requestCause;
     }
 
     @Override
     public Channel channel() {
-        ensurePartial(RequestLogProperty.SESSION);
+        ensureAvailable(RequestLogProperty.SESSION);
         return channel;
     }
 
     @Override
     public SSLSession sslSession() {
-        ensurePartial(RequestLogProperty.SESSION);
+        ensureAvailable(RequestLogProperty.SESSION);
         return sslSession;
     }
 
     @Override
     public SessionProtocol sessionProtocol() {
-        ensurePartial(RequestLogProperty.SESSION);
+        ensureAvailable(RequestLogProperty.SESSION);
         assert sessionProtocol != null;
         return sessionProtocol;
     }
@@ -612,14 +612,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public Scheme scheme() {
-        ensurePartial(RequestLogProperty.SCHEME);
+        ensureAvailable(RequestLogProperty.SCHEME);
         assert scheme != null;
         return scheme;
     }
 
     @Override
     public long requestLength() {
-        ensurePartial(RequestLogProperty.REQUEST_LENGTH);
+        ensureAvailable(RequestLogProperty.REQUEST_LENGTH);
         return requestLength;
     }
 
@@ -683,7 +683,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public RequestHeaders requestHeaders() {
-        ensurePartial(RequestLogProperty.REQUEST_HEADERS);
+        ensureAvailable(RequestLogProperty.REQUEST_HEADERS);
         return requestHeaders;
     }
 
@@ -701,7 +701,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public Object requestContent() {
-        ensurePartial(RequestLogProperty.REQUEST_CONTENT);
+        ensureAvailable(RequestLogProperty.REQUEST_CONTENT);
         return requestContent;
     }
 
@@ -722,13 +722,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public Object rawRequestContent() {
-        ensurePartial(RequestLogProperty.REQUEST_CONTENT);
+        ensureAvailable(RequestLogProperty.REQUEST_CONTENT);
         return rawRequestContent;
     }
 
     @Override
     public String requestContentPreview() {
-        ensurePartial(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
+        ensureAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
         return requestContentPreview;
     }
 
@@ -756,7 +756,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public HttpHeaders requestTrailers() {
-        ensurePartial(RequestLogProperty.REQUEST_TRAILERS);
+        ensureAvailable(RequestLogProperty.REQUEST_TRAILERS);
         return requestTrailers;
     }
 
@@ -854,7 +854,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public long responseStartTimeMicros() {
-        ensurePartial(RequestLogProperty.RESPONSE_START_TIME);
+        ensureAvailable(RequestLogProperty.RESPONSE_START_TIME);
         return responseStartTimeMicros;
     }
 
@@ -865,43 +865,43 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public long responseStartTimeNanos() {
-        ensurePartial(RequestLogProperty.RESPONSE_START_TIME);
+        ensureAvailable(RequestLogProperty.RESPONSE_START_TIME);
         return responseStartTimeNanos;
     }
 
     @Override
     public Long responseFirstBytesTransferredTimeNanos() {
-        ensurePartial(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME);
+        ensureAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME);
         return responseFirstBytesTransferredTimeNanosSet ? responseFirstBytesTransferredTimeNanos : null;
     }
 
     @Override
     public long responseEndTimeNanos() {
-        ensurePartial(RequestLogProperty.RESPONSE_END_TIME);
+        ensureAvailable(RequestLogProperty.RESPONSE_END_TIME);
         return responseEndTimeNanos;
     }
 
     @Override
     public long responseDurationNanos() {
-        ensurePartial(RequestLogProperty.RESPONSE_END_TIME);
+        ensureAvailable(RequestLogProperty.RESPONSE_END_TIME);
         return responseEndTimeNanos - responseStartTimeNanos;
     }
 
     @Override
     public long totalDurationNanos() {
-        ensurePartial(RequestLogProperty.RESPONSE_END_TIME);
+        ensureAvailable(RequestLogProperty.RESPONSE_END_TIME);
         return responseEndTimeNanos - requestStartTimeNanos;
     }
 
     @Override
     public Throwable responseCause() {
-        ensurePartial(RequestLogProperty.RESPONSE_CAUSE);
+        ensureAvailable(RequestLogProperty.RESPONSE_CAUSE);
         return responseCause;
     }
 
     @Override
     public long responseLength() {
-        ensurePartial(RequestLogProperty.RESPONSE_LENGTH);
+        ensureAvailable(RequestLogProperty.RESPONSE_LENGTH);
         return responseLength;
     }
 
@@ -964,7 +964,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public ResponseHeaders responseHeaders() {
-        ensurePartial(RequestLogProperty.RESPONSE_HEADERS);
+        ensureAvailable(RequestLogProperty.RESPONSE_HEADERS);
         return responseHeaders;
     }
 
@@ -982,7 +982,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public Object responseContent() {
-        ensurePartial(RequestLogProperty.RESPONSE_CONTENT);
+        ensureAvailable(RequestLogProperty.RESPONSE_CONTENT);
         return responseContent;
     }
 
@@ -1009,7 +1009,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public String responseContentPreview() {
-        ensurePartial(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+        ensureAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         return responseContentPreview;
     }
 
@@ -1023,7 +1023,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public Object rawResponseContent() {
-        ensurePartial(RequestLogProperty.RESPONSE_CONTENT);
+        ensureAvailable(RequestLogProperty.RESPONSE_CONTENT);
         return rawResponseContent;
     }
 
@@ -1042,7 +1042,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public HttpHeaders responseTrailers() {
-        ensurePartial(RequestLogProperty.RESPONSE_TRAILERS);
+        ensureAvailable(RequestLogProperty.RESPONSE_TRAILERS);
         return responseTrailers;
     }
 
@@ -1434,28 +1434,28 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         @Override
-        public CompletableFuture<RequestLog> completeFuture() {
-            return DefaultRequestLog.this.completeFuture();
+        public CompletableFuture<RequestLog> whenComplete() {
+            return DefaultRequestLog.this.whenComplete();
         }
 
         @Override
-        public CompletableFuture<RequestOnlyLog> requestCompleteFuture() {
-            return DefaultRequestLog.this.requestCompleteFuture();
+        public CompletableFuture<RequestOnlyLog> whenRequestComplete() {
+            return DefaultRequestLog.this.whenRequestComplete();
         }
 
         @Override
-        public CompletableFuture<RequestLog> partialFuture(RequestLogProperty property) {
-            return DefaultRequestLog.this.partialFuture(property);
+        public CompletableFuture<RequestLog> whenAvailable(RequestLogProperty property) {
+            return DefaultRequestLog.this.whenAvailable(property);
         }
 
         @Override
-        public CompletableFuture<RequestLog> partialFuture(RequestLogProperty... properties) {
-            return DefaultRequestLog.this.partialFuture(properties);
+        public CompletableFuture<RequestLog> whenAvailable(RequestLogProperty... properties) {
+            return DefaultRequestLog.this.whenAvailable(properties);
         }
 
         @Override
-        public CompletableFuture<RequestLog> partialFuture(Iterable<RequestLogProperty> properties) {
-            return DefaultRequestLog.this.partialFuture(properties);
+        public CompletableFuture<RequestLog> whenAvailable(Iterable<RequestLogProperty> properties) {
+            return DefaultRequestLog.this.whenAvailable(properties);
         }
 
         @Override
@@ -1470,21 +1470,21 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         @Override
-        public RequestLog ensurePartial(RequestLogProperty property) {
+        public RequestLog ensureAvailable(RequestLogProperty property) {
             // Can't always return this because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.ensurePartial(property);
+            return DefaultRequestLog.this.ensureAvailable(property);
         }
 
         @Override
-        public RequestLog ensurePartial(RequestLogProperty... properties) {
+        public RequestLog ensureAvailable(RequestLogProperty... properties) {
             // Can't always return this because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.ensurePartial(properties);
+            return DefaultRequestLog.this.ensureAvailable(properties);
         }
 
         @Override
-        public RequestLog ensurePartial(Iterable<RequestLogProperty> properties) {
+        public RequestLog ensureAvailable(Iterable<RequestLogProperty> properties) {
             // Can't always return this because this class is also used as a RequestOnlyLog.
-            return DefaultRequestLog.this.ensurePartial(properties);
+            return DefaultRequestLog.this.ensureAvailable(properties);
         }
 
         @Override

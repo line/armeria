@@ -300,7 +300,7 @@ class AccessLogFormatsTest {
 
         // AccessLogger#format will be called after response is finished.
         final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
-        log.completeFuture().thenAccept(logHolder::set);
+        log.whenComplete().thenAccept(logHolder::set);
 
         // RequestLogAvailabilityException will be raised inside AccessLogger#format before injecting each
         // component to RequestLog. So we cannot get the expected log message here.

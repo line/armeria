@@ -116,7 +116,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             }
         }
 
-        ctx.log().completeFuture().thenAccept(log -> {
+        ctx.log().whenComplete().thenAccept(log -> {
             span.start(log.requestStartTimeMicros());
 
             final Long wireSendTimeNanos = log.requestFirstBytesTransferredTimeNanos();

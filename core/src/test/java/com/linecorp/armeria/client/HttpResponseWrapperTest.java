@@ -148,7 +148,7 @@ class HttpResponseWrapperTest {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
         final InboundTrafficController controller = InboundTrafficController.disabled();
-        final Channel channel = cctx.log().ensurePartial(RequestLogProperty.SESSION).channel();
+        final Channel channel = cctx.log().ensureAvailable(RequestLogProperty.SESSION).channel();
         assertThat(channel).isNotNull();
         final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 

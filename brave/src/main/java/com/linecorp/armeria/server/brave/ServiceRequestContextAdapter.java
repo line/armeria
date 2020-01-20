@@ -96,7 +96,7 @@ final class ServiceRequestContextAdapter {
 
         @Override
         public long startTimestamp() {
-            return ctx.log().ensurePartial(RequestLogProperty.REQUEST_START_TIME).requestStartTimeMicros();
+            return ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME).requestStartTimeMicros();
         }
     }
 

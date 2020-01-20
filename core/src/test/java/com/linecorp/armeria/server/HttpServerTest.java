@@ -417,7 +417,7 @@ class HttpServerTest {
                                 ctx.setRequestTimeoutAfterMillis(serverRequestTimeoutMillis);
                             }
                             ctx.setMaxRequestLength(serverMaxRequestLength);
-                            ctx.log().completeFuture().thenAccept(log -> {
+                            ctx.log().whenComplete().thenAccept(log -> {
                                 pendingRequestLogs.decrementAndGet();
                                 requestLogs.add(log);
                             });

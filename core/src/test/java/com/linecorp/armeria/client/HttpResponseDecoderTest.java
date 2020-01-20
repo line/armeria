@@ -76,10 +76,10 @@ class HttpResponseDecoderTest {
                                         .newDecorator());
         builder.decorator((delegate, ctx, req) -> {
             final AtomicReference<Thread> responseStartedThread = new AtomicReference<>();
-            ctx.log().partialFuture(RequestLogProperty.RESPONSE_START_TIME).thenAccept(log -> {
+            ctx.log().whenAvailable(RequestLogProperty.RESPONSE_START_TIME).thenAccept(log -> {
                 responseStartedThread.set(Thread.currentThread());
             });
-            ctx.log().completeFuture().thenAccept(log -> {
+            ctx.log().whenComplete().thenAccept(log -> {
                 final Thread thread = responseStartedThread.get();
                 if (thread != null && thread != Thread.currentThread()) {
                     logger.error("{} Response ended in another thread: {} != {}",

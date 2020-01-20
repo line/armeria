@@ -201,7 +201,7 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
-        derivedCtx.log().partialFuture(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
+        derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             if (needsContentInStrategy) {
                 final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(
                         response, maxSignalLength(derivedCtx.maxResponseLength()), derivedCtx.eventLoop());

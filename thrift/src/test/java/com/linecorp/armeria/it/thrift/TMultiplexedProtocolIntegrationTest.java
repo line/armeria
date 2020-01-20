@@ -55,7 +55,7 @@ public class TMultiplexedProtocolIntegrationTest {
                                 .addService("bar", (Iface) name -> "bar:" + name)
                                 .build()
                                 .decorate((delegate, ctx, req) -> {
-                                    ctx.log().partialFuture(RequestLogProperty.REQUEST_CONTENT)
+                                    ctx.log().whenAvailable(RequestLogProperty.REQUEST_CONTENT)
                                        .thenAccept(log -> {
                                            final RpcRequest call = (RpcRequest) log.requestContent();
                                            if (call != null) {

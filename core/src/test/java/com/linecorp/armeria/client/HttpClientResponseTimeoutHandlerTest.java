@@ -85,7 +85,7 @@ class HttpClientResponseTimeoutHandlerTest {
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
-        final RequestLog log = logHolder.get().completeFuture().join();
+        final RequestLog log = logHolder.get().whenComplete().join();
 
         if (useResponseTimeoutHandler) {
             await().untilTrue(invokeResponseTimeoutHandler);
@@ -118,7 +118,7 @@ class HttpClientResponseTimeoutHandlerTest {
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
-        final RequestLog log = logHolder.get().completeFuture().join();
+        final RequestLog log = logHolder.get().whenComplete().join();
 
         assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
                                                              .hasCauseInstanceOf(ClosedSessionException.class);
@@ -148,7 +148,7 @@ class HttpClientResponseTimeoutHandlerTest {
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
-        final RequestLog log = logHolder.get().completeFuture().join();
+        final RequestLog log = logHolder.get().whenComplete().join();
 
         assertThat(invokeResponseTimeoutHandler).isTrue();
         assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)

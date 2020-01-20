@@ -322,7 +322,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
-                    reqCtx.log().completeFuture().thenAccept(reqCtx.accessLogWriter()::log);
+                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                 }
 
                 subscription.request(1);
@@ -333,7 +333,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 setDone();
                 logBuilder().endResponse(f.cause());
                 subscription.cancel();
-                reqCtx.log().completeFuture().thenAccept(reqCtx.accessLogWriter()::log);
+                reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
             }
             HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
         });
@@ -402,7 +402,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
                     logBuilder().endResponse(cause);
-                    reqCtx.log().completeFuture().thenAccept(reqCtx.accessLogWriter()::log);
+                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                 }
             });
         }

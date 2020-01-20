@@ -226,7 +226,7 @@ class ThriftOverHttpClientTest {
         final ClientDecorationBuilder decoBuilder = ClientDecoration.builder();
         decoBuilder.addRpc((delegate, ctx, req) -> {
             if (recordMessageLogs) {
-                ctx.log().completeFuture().thenAccept(requestLogs::add);
+                ctx.log().whenComplete().thenAccept(requestLogs::add);
             }
             return delegate.execute(ctx, req);
         });

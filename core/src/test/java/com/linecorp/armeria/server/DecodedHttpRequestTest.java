@@ -121,7 +121,7 @@ public class DecodedHttpRequestTest {
         assertThat(req.tryWrite(new ByteBufHttpData(newBuffer("hello"), false))).isTrue();
         req.close();
 
-        assertThat(sctx.log().requestCompleteFuture().join().requestContentPreview()).isEqualTo("hello");
+        assertThat(sctx.log().whenRequestComplete().join().requestContentPreview()).isEqualTo("hello");
     }
 
     private static DecodedHttpRequest decodedHttpRequest() {

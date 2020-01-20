@@ -122,8 +122,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().requestCompleteFuture().thenAccept(requestLogger);
-            ctx.log().completeFuture().thenAccept(responseLogger);
+            ctx.log().whenRequestComplete().thenAccept(requestLogger);
+            ctx.log().whenComplete().thenAccept(responseLogger);
         }
         return delegate().serve(ctx, req);
     }

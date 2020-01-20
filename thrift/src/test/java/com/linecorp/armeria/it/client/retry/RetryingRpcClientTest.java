@@ -159,7 +159,7 @@ public class RetryingRpcClientTest {
                                                      .maxTotalAttempts(maxAttempts)
                                                      .newDecorator())
                       .rpcDecorator((delegate, ctx, req) -> {
-                          ctx.log().completeFuture().thenAccept(logQueue::add);
+                          ctx.log().whenComplete().thenAccept(logQueue::add);
                           return delegate.execute(ctx, req);
                       })
                       .build(HelloService.Iface.class);
@@ -242,7 +242,7 @@ public class RetryingRpcClientTest {
 
         assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
 
-        final RequestLog log = context.get().log().completeFuture().join();
+        final RequestLog log = context.get().log().whenComplete().join();
         verify(serviceHandler, only()).hello("hello");
         assertThat(log.requestCause()).isNull();
         assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);

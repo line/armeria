@@ -100,7 +100,7 @@ class HttpClientWithRequestLogTest {
                 WebClient.builder("http://unresolved.armeria.com")
                          .decorator(new ExceptionHoldingDecorator())
                          .decorator((delegate, ctx, req) -> {
-                             ctx.log().partialFuture(RequestLogProperty.REQUEST_START_TIME)
+                             ctx.log().whenAvailable(RequestLogProperty.REQUEST_START_TIME)
                                 .thenAccept(log -> ref.set(ClientConnectionTimings.get(log)));
                              return delegate.execute(ctx, req);
                          })
@@ -132,7 +132,7 @@ class HttpClientWithRequestLogTest {
                 WebClient.builder("http://127.0.0.1:1")
                          .decorator(new ExceptionHoldingDecorator())
                          .decorator((delegate, ctx, req) -> {
-                             ctx.log().partialFuture(RequestLogProperty.REQUEST_START_TIME)
+                             ctx.log().whenAvailable(RequestLogProperty.REQUEST_START_TIME)
                                 .thenAccept(log -> ref.set(ClientConnectionTimings.get(log)));
                              return delegate.execute(ctx, req);
                          })
@@ -162,8 +162,8 @@ class HttpClientWithRequestLogTest {
         @Override
         public HttpResponse execute(HttpClient delegate, ClientRequestContext ctx,
                                     HttpRequest req) throws Exception {
-            ctx.log().requestCompleteFuture().thenAccept(log -> requestCauseHolder.set(log.requestCause()));
-            ctx.log().completeFuture().thenAccept(log -> responseCauseHolder.set(log.responseCause()));
+            ctx.log().whenRequestComplete().thenAccept(log -> requestCauseHolder.set(log.requestCause()));
+            ctx.log().whenComplete().thenAccept(log -> responseCauseHolder.set(log.responseCause()));
             return delegate.execute(ctx, req);
         }
     }

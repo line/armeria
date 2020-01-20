@@ -162,7 +162,7 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
             return resDuplicator.duplicateStream(true);
         }
 
-        ctx.log().partialFuture(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
+        ctx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             final Throwable cause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(ctx, cause));

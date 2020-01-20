@@ -83,7 +83,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
             }
         }
 
-        ctx.log().completeFuture().thenAccept(log -> {
+        ctx.log().whenComplete().thenAccept(log -> {
             span.start(log.requestStartTimeMicros());
 
             final Long wireReceiveTimeNanos = log.requestFirstBytesTransferredTimeNanos();

@@ -76,7 +76,7 @@ public class ContentPreviewerTest {
                                                     .newDecorator())
                             .decorator((delegate, ctx, req) -> {
                                 if (waitingFuture != null) {
-                                    ctx.log().completeFuture().thenAccept(waitingFuture::complete);
+                                    ctx.log().whenComplete().thenAccept(waitingFuture::complete);
                                 }
                                 return delegate.execute(ctx, req);
                             }).build();
@@ -191,7 +191,7 @@ public class ContentPreviewerTest {
             sb.contentPreview(10, StandardCharsets.UTF_8);
             sb.decorator(delegate -> (ctx, req) -> {
                 if (waitingFuture != null) {
-                    ctx.log().completeFuture().thenAccept(waitingFuture::complete);
+                    ctx.log().whenComplete().thenAccept(waitingFuture::complete);
                 }
                 return delegate.serve(ctx, req);
             });

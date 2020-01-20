@@ -87,8 +87,8 @@ public class LoggingServiceTest {
         when(logger.isWarnEnabled()).thenReturn(true);
 
         when(ctx.log()).thenReturn(log);
-        when(log.requestCompleteFuture()).thenReturn(CompletableFuture.completedFuture(log));
-        when(log.completeFuture()).thenReturn(CompletableFuture.completedFuture(log));
+        when(log.whenRequestComplete()).thenReturn(CompletableFuture.completedFuture(log));
+        when(log.whenComplete()).thenReturn(CompletableFuture.completedFuture(log));
 
         when(log.toStringRequestOnly(any(), any(), any())).thenAnswer(invocation -> {
             final Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);

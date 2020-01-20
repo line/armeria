@@ -226,7 +226,7 @@ class HealthCheckedEndpointGroupLongPollingTest {
                 // Record when health check requests were sent.
                 final Queue<RequestLog> healthCheckRequestLogs = this.healthCheckRequestLogs;
                 if (healthCheckRequestLogs != null) {
-                    ctx.log().completeFuture().thenAccept(healthCheckRequestLogs::add);
+                    ctx.log().whenComplete().thenAccept(healthCheckRequestLogs::add);
                 }
                 return delegate.execute(ctx, req);
             });

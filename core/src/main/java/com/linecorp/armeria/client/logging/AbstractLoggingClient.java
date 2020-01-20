@@ -118,8 +118,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().requestCompleteFuture().thenAccept(requestLogger);
-            ctx.log().completeFuture().thenAccept(responseLogger);
+            ctx.log().whenRequestComplete().thenAccept(requestLogger);
+            ctx.log().whenComplete().thenAccept(responseLogger);
         }
         return delegate().execute(ctx, req);
     }

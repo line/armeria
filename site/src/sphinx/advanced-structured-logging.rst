@@ -164,11 +164,11 @@ started.
 The collected properties must be accessed via :api:`RequestLogAccess`, which provides a safe access to the
 collected properties via the following methods:
 
-- ``isComplete()`` or ``completeFuture()`` to check if or to get notified when all request and response
+- ``isComplete()`` or ``whenComplete()`` to check if or to get notified when all request and response
   properties are available.
-- ``isRequestComplete()`` or ``requestCompleteFuture()`` to check if or to get notified when all request
+- ``isRequestComplete()`` or ``whenRequestComplete()`` to check if or to get notified when all request
   properties are available.
-- ``isAvailable(RequestLogProperty...)`` or ``partialFuture(RequestLogProperty...)`` to check if or to get
+- ``isAvailable(RequestLogProperty...)`` or ``whenAvailable(RequestLogProperty...)`` to check if or to get
   notified when a certain set of properties are available.
 
 .. code-block:: java
@@ -183,14 +183,14 @@ collected properties via the following methods:
     HttpService myService = (ctx, req) -> {
         final RequestLogAccess logAccess = ctx.log();
 
-        logAccess.partialFuture(RequestLogProperty.REQUEST_HEADERS)
+        logAccess.whenAvailable(RequestLogProperty.REQUEST_HEADERS)
                  .thenAccept(log -> {
                      assert log.isAvailable(RequestLogProperty.REQUEST_HEADERS);
                      System.err.println("Started to handle a request: " +
                                         log.requestHeaders());
                  });
 
-        logAccess.completeFuture()
+        logAccess.whenComplete()
                  .thenAccept(log -> {
                      assert log.isComplete();
                      System.err.println("Handled a request: " + log);
@@ -213,7 +213,7 @@ request and response properties, you need to use :api:`ClientConnectionTimings` 
         .builder("http://armeria.com")
         .decorator((delegate, ctx, req) -> {
             // Can get as soon as a request is started.
-            ctx.log().partialFuture(RequestLogProperty.REQUEST_START_TIME)
+            ctx.log().whenAvailable(RequestLogProperty.REQUEST_START_TIME)
                .thenAccept(log -> {
                    final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
                    if (timings != null) {
@@ -461,7 +461,7 @@ You can retrieve the child logs using ``RequestLog.children()``.
 .. code-block:: java
 
     final RequestContext ctx = ...;
-    ctx.log().completeFuture().thenAccept(log -> {
+    ctx.log().whenComplete().thenAccept(log -> {
         if (!log.children().isEmpty()) {
             System.err.println("A request finished after " + log.children().size() + " attempt(s): " + log);
         } else {

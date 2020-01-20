@@ -66,7 +66,7 @@ public final class RequestMetricSupport {
         ctx.setAttr(requestMetricsSetKey, true);
 
         ctx.log()
-           .partialFuture(RequestLogProperty.REQUEST_HEADERS, RequestLogProperty.REQUEST_CONTENT)
+           .whenAvailable(RequestLogProperty.REQUEST_HEADERS, RequestLogProperty.REQUEST_CONTENT)
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server));
     }
 
@@ -101,7 +101,7 @@ public final class RequestMetricSupport {
                         reg.gauge(prefix.name(), prefix.tags(),
                                   new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
         activeRequestMetrics.increment();
-        ctx.log().completeFuture().thenAccept(requestLog -> {
+        ctx.log().whenComplete().thenAccept(requestLog -> {
             onResponse(requestLog, meterIdPrefixFunction, server);
             activeRequestMetrics.decrement();
         });

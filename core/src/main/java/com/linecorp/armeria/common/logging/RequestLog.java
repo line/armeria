@@ -36,7 +36,7 @@ import com.linecorp.armeria.server.VirtualHostBuilder;
  * A set of informational properties collected while processing a {@link Request} and {@link Response}.
  *
  * @see RequestLogAccess#isComplete()
- * @see RequestLogAccess#completeFuture()
+ * @see RequestLogAccess#whenComplete()
  * @see RequestLogAccess#ensureComplete()
  */
 public interface RequestLog extends RequestOnlyLog {
