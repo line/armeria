@@ -419,7 +419,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public void setWriteTimeoutMillis(long writeTimeoutMillis) {
         checkArgument(writeTimeoutMillis >= 0,
-                      "writeTimeoutMillis: " + writeTimeoutMillis + " (expected: >= 0)");
+                      "writeTimeoutMillis: %s (expected: >= 0)", writeTimeoutMillis);
         this.writeTimeoutMillis = writeTimeoutMillis;
     }
 
@@ -448,14 +448,14 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 eventLoop().execute(responseTimeoutController::cancelTimeout);
             }
         } else {
-            setPendingTimeoutTask(TimeoutController::cancelTimeout);
+            addPendingTimeoutTask(TimeoutController::cancelTimeout);
         }
     }
 
     @Override
     public void setResponseTimeoutMillis(long responseTimeoutMillis) {
         checkArgument(responseTimeoutMillis >= 0,
-                      "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: >= 0)");
+                      "responseTimeoutMillis: %s (expected: >= 0)", responseTimeoutMillis);
         if (responseTimeoutMillis == 0) {
             clearResponseTimeout();
         }
@@ -486,7 +486,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 eventLoop().execute(() -> responseTimeoutController.extendTimeout(adjustmentMillis));
             }
         } else {
-            setPendingTimeoutTask(timeoutController -> timeoutController.extendTimeout(adjustmentMillis));
+            addPendingTimeoutTask(timeoutController -> timeoutController.extendTimeout(adjustmentMillis));
         }
     }
 
@@ -498,7 +498,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public void setResponseTimeoutAfterMillis(long responseTimeoutMillis) {
         checkArgument(responseTimeoutMillis > 0,
-                      "responseTimeoutMillis: " + responseTimeoutMillis + " (expected: > 0)");
+                      "responseTimeoutMillis: %s (expected: > 0)", responseTimeoutMillis);
 
         long passedTimeMillis = 0;
         final TimeoutController responseTimeoutController = this.responseTimeoutController;
@@ -514,7 +514,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             }
         } else {
             final long startTimeNanos = System.nanoTime();
-            setPendingTimeoutTask(timeoutController -> {
+            addPendingTimeoutTask(timeoutController -> {
                 final long passedTimeMillis0 =
                         TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
                 final long timeoutMillis = Math.max(1, responseTimeoutMillis - passedTimeMillis0);
@@ -533,7 +533,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
         checkArgument(responseTimeoutAtMillis >= 0,
-                      "responseTimeoutAtMillis: " + responseTimeoutAtMillis + " (expected: >= 0)");
+                      "responseTimeoutAtMillis: %s (expected: >= 0)", responseTimeoutMillis);
         final long responseTimeoutAfter = responseTimeoutAtMillis - System.currentTimeMillis();
 
         if (responseTimeoutAfter <= 0) {
@@ -545,7 +545,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                     eventLoop().execute(responseTimeoutController::timeoutNow);
                 }
             } else {
-                setPendingTimeoutTask(TimeoutController::timeoutNow);
+                addPendingTimeoutTask(TimeoutController::timeoutNow);
             }
         } else {
             setResponseTimeoutAfterMillis(responseTimeoutAfter);
@@ -577,9 +577,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      */
     public void setResponseTimeoutController(TimeoutController responseTimeoutController) {
         requireNonNull(responseTimeoutController, "responseTimeoutController");
-        if (this.responseTimeoutController != null) {
-            throw new IllegalStateException("responseTimeoutController is set already.");
-        }
+        checkState(this.responseTimeoutController == null, "responseTimeoutController is set already.");
         this.responseTimeoutController = responseTimeoutController;
 
         // Invoke pending timeout task which was set before initializing responseTimeoutController
@@ -593,7 +591,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         }
     }
 
-    private void setPendingTimeoutTask(Consumer<TimeoutController> pendingTimeoutTask) {
+    private void addPendingTimeoutTask(Consumer<TimeoutController> pendingTimeoutTask) {
         if (this.pendingTimeoutTask == null) {
             this.pendingTimeoutTask = pendingTimeoutTask;
         } else {

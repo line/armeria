@@ -363,7 +363,7 @@ final class RoutingTrieBuilder<V> {
         private void updatePath(String path) {
             requireNonNull(path, "path");
             checkArgument(this.path.charAt(0) == path.charAt(0),
-                          "Not acceptable path for update: " + path);
+                          "Not acceptable path for update: %s", path);
             this.path = path;
         }
 

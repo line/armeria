@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal;
 
-import static com.linecorp.armeria.internal.DefaultTimeoutController.State.DISABLED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -282,14 +281,14 @@ class DefaultTimeoutControllerTest {
             final boolean result = delegate.scheduleTimeout(timeoutMillis);
             if (result) {
                 // Previous: DISABLED
-                assertThat(prevState == State.INIT || prevState == DISABLED).isTrue();
+                assertThat(prevState).isIn(State.INIT, State.DISABLED);
                 // Transition to: SCHEDULE
                 assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
             } else {
                 // Previous: !DISABLED
-                assertThat(prevState == State.INIT || prevState == DISABLED).isFalse();
+                assertThat(prevState).isNotIn(State.INIT, State.DISABLED);
                 // Transition to: No changes
-                assertThat(prevState).isEqualTo(delegate.state());
+                assertThat(delegate.state()).isEqualTo(prevState);
             }
             return result;
         }
@@ -327,7 +326,7 @@ class DefaultTimeoutControllerTest {
                 if (newTimeoutMillis > 0) {
                     assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
                 } else {
-                    assertThat(delegate.state()).isEqualTo(DISABLED);
+                    assertThat(delegate.state()).isEqualTo(State.DISABLED);
                 }
             } else {
                 // Previous: TIMED_OUT
@@ -364,7 +363,7 @@ class DefaultTimeoutControllerTest {
                 // Previous: SCHEDULED
                 assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
                 // Transition to: TIMED_OUT
-                assertThat(delegate.state()).isEqualTo(DISABLED);
+                assertThat(delegate.state()).isEqualTo(State.DISABLED);
             } else {
                 // Previous: !SCHEDULED
                 assertThat(prevState).isNotEqualTo(State.SCHEDULED);

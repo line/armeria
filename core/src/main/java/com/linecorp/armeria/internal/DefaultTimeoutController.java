@@ -88,12 +88,12 @@ public class DefaultTimeoutController implements TimeoutController {
      *
      * @return {@code true} if the timeout is scheduled.
      *         {@code false} if the timeout has been scheduled, the timeout has been triggered already
-     *         or the {@link TimeoutTask} could not be scheduled now.
+     *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
     public boolean scheduleTimeout(long timeoutMillis) {
         checkArgument(timeoutMillis > 0,
-                      "timeoutMillis: " + timeoutMillis + " (expected: > 0)");
+                      "timeoutMillis: %s (expected: > 0)", timeoutMillis);
         ensureInitialized();
         if (state != State.DISABLED || !timeoutTask.canSchedule()) {
             return false;
@@ -114,7 +114,7 @@ public class DefaultTimeoutController implements TimeoutController {
      *
      * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
      *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
-     *         or the {@link TimeoutTask} could not be scheduled now.
+     *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
     public boolean extendTimeout(long adjustmentMillis) {
@@ -155,8 +155,8 @@ public class DefaultTimeoutController implements TimeoutController {
      * the {@link #DefaultTimeoutController(TimeoutTask, EventLoop)} before calling this method.
      *
      * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
-     *         {@code false} if the timeout has been triggered already or
-     *         the {@link TimeoutTask} could not be scheduled now.
+     *         {@code false} if the timeout has been triggered already
+     *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
     public boolean resetTimeout(long newTimeoutMillis) {
@@ -183,7 +183,7 @@ public class DefaultTimeoutController implements TimeoutController {
      *
      * @return {@code true} if the current timeout is triggered successfully.
      *         {@code false} the timeout has been triggered already
-     *         or the {@link TimeoutTask} could not be scheduled now.
+     *         or the {@link TimeoutTask#canSchedule()} returned {@code false}.
      */
     @Override
     public boolean timeoutNow() {

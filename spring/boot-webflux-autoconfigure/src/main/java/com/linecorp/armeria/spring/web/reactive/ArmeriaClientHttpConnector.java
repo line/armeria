@@ -102,8 +102,8 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
         final String path = uri.getRawPath();
         final String query = uri.getRawQuery();
 
-        checkArgument(!Strings.isNullOrEmpty(authority), "URI is not absolute: " + uri);
-        checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: " + uri);
+        checkArgument(!Strings.isNullOrEmpty(authority), "URI is not absolute: %s", uri);
+        checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: %s", uri);
 
         final URI baseUri = URI.create(Strings.isNullOrEmpty(scheme) ? authority : scheme + "://" + authority);
         final WebClientBuilder builder = WebClient.builder(baseUri);
