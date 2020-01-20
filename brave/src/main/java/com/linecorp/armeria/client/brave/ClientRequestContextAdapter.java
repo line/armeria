@@ -108,6 +108,9 @@ final class ClientRequestContextAdapter {
         return new HttpClientResponse(log);
     }
 
+    /**
+     * Note that this class is used only after {@link RequestLog} is complete.
+     */
     @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpClientResponse extends brave.http.HttpClientResponse {
         private final RequestLog log;

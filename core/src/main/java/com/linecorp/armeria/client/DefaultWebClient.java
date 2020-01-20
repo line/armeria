@@ -96,8 +96,8 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                        pathAndQuery.path(), pathAndQuery.query(), null, req,
                        (ctx, cause) -> {
                            if (ctx != null && !ctx.log().isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
-                               // An exception is raised even before sending a request, so abort the request to
-                               // release the elements.
+                               // An exception has been raised even before sending a request,
+                               // so abort the request to release the elements.
                                if (cause == null) {
                                    req.abort();
                                } else {

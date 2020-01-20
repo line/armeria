@@ -275,7 +275,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (!isAvailable(property)) {
             throw new RequestLogAvailabilityException(property.name());
         }
-        return partial();
+        return this;
     }
 
     @Override
@@ -283,7 +283,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (!isAvailable(properties)) {
             throw new RequestLogAvailabilityException(Arrays.toString(properties));
         }
-        return partial();
+        return this;
     }
 
     @Override
@@ -291,7 +291,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (!isAvailable(properties)) {
             throw new RequestLogAvailabilityException(properties.toString());
         }
-        return partial();
+        return this;
     }
 
     @Override
@@ -319,19 +319,21 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         for (;;) {
             final int oldAvailability = this.flags;
             final int newAvailability = oldAvailability | flags;
+            if (oldAvailability == newAvailability) {
+                break;
+            }
+
             if (flagsUpdater.compareAndSet(this, oldAvailability, newAvailability)) {
-                if (oldAvailability != newAvailability) {
-                    final RequestLogFuture[] satisfiedFutures;
-                    synchronized (futures) {
-                        satisfiedFutures = satisfiedFutures();
-                    }
-                    if (satisfiedFutures != null) {
-                        for (RequestLogFuture f : satisfiedFutures) {
-                            if (f == null) {
-                                break;
-                            }
-                            f.completeLog(partial());
+                final RequestLogFuture[] satisfiedFutures;
+                synchronized (futures) {
+                    satisfiedFutures = satisfiedFutures();
+                }
+                if (satisfiedFutures != null) {
+                    for (RequestLogFuture f : satisfiedFutures) {
+                        if (f == null) {
+                            break;
                         }
+                        f.completeLog(partial());
                     }
                 }
                 break;
@@ -379,6 +381,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void propagateRequestSideLog(RequestLogAccess child) {
+        // Update the available properties always by adding a callback,
+        // because the child's properties will never be available immediately.
         child.partialFuture(RequestLogProperty.SESSION, RequestLogProperty.REQUEST_START_TIME)
              .thenAccept(log -> {
                  final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
@@ -419,7 +423,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void propagateResponseSideLog(RequestLog lastChild) {
-        // update the available logs if the lastChild already has them
+        // Update the available properties without adding a callback if the lastChild already has them.
         if (lastChild.isAvailable(RequestLogProperty.RESPONSE_START_TIME)) {
             startResponse0(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMicros(), true);
         } else {
@@ -1397,22 +1401,22 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private final class CompleteRequestLog implements RequestLog {
         @Override
         public boolean isComplete() {
-            return DefaultRequestLog.this.isComplete();
+            return true;
         }
 
         @Override
         public boolean isRequestComplete() {
-            return DefaultRequestLog.this.isRequestComplete();
+            return true;
         }
 
         @Override
         public boolean isAvailable(RequestLogProperty property) {
-            return DefaultRequestLog.this.isAvailable(property);
+            return true;
         }
 
         @Override
         public RequestLog partial() {
-            return DefaultRequestLog.this.partial();
+            return this;
         }
 
         @Override
@@ -1442,27 +1446,27 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public RequestLog ensureComplete() {
-            return DefaultRequestLog.this.ensureComplete();
+            return this;
         }
 
         @Override
         public RequestOnlyLog ensureRequestComplete() {
-            return DefaultRequestLog.this.ensureRequestComplete();
+            return this;
         }
 
         @Override
         public RequestLog ensurePartial(RequestLogProperty property) {
-            return DefaultRequestLog.this.ensurePartial(property);
+            return this;
         }
 
         @Override
         public RequestLog ensurePartial(RequestLogProperty... properties) {
-            return DefaultRequestLog.this.ensurePartial(properties);
+            return this;
         }
 
         @Override
         public RequestLog ensurePartial(Iterable<RequestLogProperty> properties) {
-            return DefaultRequestLog.this.ensurePartial(properties);
+            return this;
         }
 
         @Override

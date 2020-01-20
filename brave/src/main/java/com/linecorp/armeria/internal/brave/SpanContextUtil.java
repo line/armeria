@@ -20,16 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 
-import brave.Span;
-
 public final class SpanContextUtil {
-
-    /**
-     * Starts the {@link Span} when the log is ready.
-     */
-    public static void startSpan(Span span, RequestLog log) {
-        span.start(log.requestStartTimeMicros());
-    }
 
     public static long wallTimeMicros(RequestLog log, long timeNanos) {
         final long relativeTimeNanos = timeNanos - log.requestStartTimeNanos();

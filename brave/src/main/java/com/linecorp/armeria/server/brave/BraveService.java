@@ -22,8 +22,6 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -85,10 +83,9 @@ public final class BraveService extends SimpleDecoratingHttpService {
             }
         }
 
-        ctx.log().partialFuture(RequestLogProperty.REQUEST_START_TIME)
-           .thenAccept(log -> SpanContextUtil.startSpan(span, log));
-
         ctx.log().completeFuture().thenAccept(log -> {
+            span.start(log.requestStartTimeMicros());
+
             final Long wireReceiveTimeNanos = log.requestFirstBytesTransferredTimeNanos();
             assert wireReceiveTimeNanos != null;
             SpanTags.logWireReceive(span, wireReceiveTimeNanos, log);

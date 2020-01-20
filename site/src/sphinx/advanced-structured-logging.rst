@@ -461,7 +461,7 @@ You can retrieve the child logs using ``RequestLog.children()``.
 .. code-block:: java
 
     final RequestContext ctx = ...;
-    ctx.log().completeFuture(log -> {
+    ctx.log().completeFuture().thenAccept(log -> {
         if (!log.children().isEmpty()) {
             System.err.println("A request finished after " + log.children().size() + " attempt(s): " + log);
         } else {

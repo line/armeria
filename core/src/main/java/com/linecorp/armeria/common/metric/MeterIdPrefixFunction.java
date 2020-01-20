@@ -73,7 +73,6 @@ public interface MeterIdPrefixFunction {
             public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
                 // hostNamePattern, method, route
                 final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
-                // For optimal performance, add tags in order.
                 buildTags(tagListBuilder, log);
                 return new MeterIdPrefix(name, tagListBuilder.build());
             }
@@ -82,12 +81,14 @@ public interface MeterIdPrefixFunction {
             public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
                 // hostNamePattern, httpStatus, method, route
                 final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
-                // For optimal performance, add tags in order, except 'http.status'.
                 buildTags(tagListBuilder, log);
                 RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
                 return new MeterIdPrefix(name, tagListBuilder.build());
             }
 
+            /**
+             * Appends the tags in lexicographical order for better sort performance.
+             */
             private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestOnlyLog log) {
                 final RequestContext ctx = log.context();
                 final Object requestContent = log.requestContent();

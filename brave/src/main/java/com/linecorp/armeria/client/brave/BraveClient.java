@@ -33,8 +33,6 @@ import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.Span;
@@ -118,10 +116,9 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             }
         }
 
-        ctx.log().partialFuture(RequestLogProperty.REQUEST_START_TIME)
-           .thenAccept(log -> SpanContextUtil.startSpan(span, log));
-
         ctx.log().completeFuture().thenAccept(log -> {
+            span.start(log.requestStartTimeMicros());
+
             final Long wireSendTimeNanos = log.requestFirstBytesTransferredTimeNanos();
             if (wireSendTimeNanos != null) {
                 SpanTags.logWireSend(span, wireSendTimeNanos, log);

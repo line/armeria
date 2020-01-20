@@ -104,6 +104,9 @@ final class ServiceRequestContextAdapter {
         return new HttpServerResponse(log);
     }
 
+    /**
+     * Note that this class is used only after {@link RequestLog} is complete.
+     */
     @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpServerResponse extends brave.http.HttpServerResponse {
         private final RequestLog log;
