@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -86,37 +85,8 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber) {
-        delegate.subscribe(subscriber);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, boolean withPooledObjects) {
-        if (withPooledObjects) {
-            delegate.subscribe(subscriber, WITH_POOLED_OBJECTS);
-        } else {
-            delegate.subscribe(subscriber);
-        }
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, SubscriptionOption... options) {
-        delegate.subscribe(subscriber, options);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
         delegate.subscribe(subscriber, executor);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
-                          boolean withPooledObjects) {
-        if (withPooledObjects) {
-            delegate.subscribe(subscriber, executor, WITH_POOLED_OBJECTS);
-        } else {
-            delegate.subscribe(subscriber, executor);
-        }
     }
 
     @Override
@@ -126,41 +96,18 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
-    public CompletableFuture<List<HttpObject>> drainAll() {
-        return delegate.drainAll();
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll(boolean withPooledObjects) {
-        if (withPooledObjects) {
-            return drainAll(WITH_POOLED_OBJECTS);
-        } else {
-            return drainAll();
-        }
-    }
-
-    @Override
-    public CompletableFuture<List<HttpObject>> drainAll(SubscriptionOption... options) {
-        return delegate.drainAll(options);
-    }
-
-    @Override
     public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor) {
         return delegate.drainAll(executor);
     }
 
     @Override
-    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-        if (withPooledObjects) {
-            return drainAll(executor, WITH_POOLED_OBJECTS);
-        } else {
-            return drainAll(executor);
-        }
+    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+        return delegate.drainAll(executor, options);
     }
 
     @Override
-    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        return delegate.drainAll(executor, options);
+    public EventExecutor defaultSubscriberExecutor() {
+        return delegate.defaultSubscriberExecutor();
     }
 
     @Override

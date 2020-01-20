@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint.dns;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -66,7 +67,6 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     private final String logPrefix;
 
     private boolean started;
-    private volatile boolean stopped;
     @Nullable
     private volatile ScheduledFuture<?> scheduledFuture;
     @VisibleForTesting
@@ -120,7 +120,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void sendQueries(List<DnsQuestion> questions) {
-        if (stopped) {
+        if (isClosing()) {
             return;
         }
 
@@ -130,7 +130,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void onDnsRecords(Future<? super List<DnsRecord>> future) {
-        if (stopped) {
+        if (isClosing()) {
             if (future.isSuccess()) {
                 @SuppressWarnings("unchecked")
                 final List<DnsRecord> result = (List<DnsRecord>) future.getNow();
@@ -177,13 +177,12 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup {
      * Stops polling DNS servers for service updates.
      */
     @Override
-    public final void close() {
-        stopped = true;
-        super.close();
+    protected final void doCloseAsync(CompletableFuture<?> future) {
         final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
         }
+        future.complete(null);
     }
 
     /**

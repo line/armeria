@@ -33,9 +33,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.annotations.VisibleForTesting;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -53,7 +51,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             PublisherBasedStreamMessage.class, AbortableSubscriber.class, "subscriber");
 
     private final Publisher<? extends T> publisher;
-    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingCompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
     @Nullable
     @SuppressWarnings("unused") // Updated only via subscriberUpdater.
     private volatile AbortableSubscriber subscriber;
@@ -84,30 +82,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public final void subscribe(Subscriber<? super T> subscriber) {
-        subscribe(subscriber, defaultSubscriberExecutor());
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-        subscribe0(subscriber, defaultSubscriberExecutor(), false);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
-        requireNonNull(options, "options");
-
-        final boolean notifyCancellation = containsNotifyCancellation(options);
-        subscribe0(subscriber, defaultSubscriberExecutor(), notifyCancellation);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-        subscribe0(subscriber, executor, false);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, boolean withPooledObjects) {
         subscribe0(subscriber, executor, false);
     }
 
@@ -130,14 +105,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             assert oldSubscriber != null;
             failLateSubscriber(executor, subscriber, oldSubscriber.subscriber);
         }
-    }
-
-    /**
-     * Returns the default {@link EventExecutor} which will be used when a user subscribes using
-     * {@link #subscribe(Subscriber, SubscriptionOption...)}.
-     */
-    protected EventExecutor defaultSubscriberExecutor() {
-        return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
     }
 
     private boolean subscribe1(Subscriber<? super T> subscriber, EventExecutor executor,
@@ -163,21 +130,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public CompletableFuture<List<T>> drainAll() {
-        return drainAll(defaultSubscriberExecutor());
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
-        return drainAll(defaultSubscriberExecutor());
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
-        return drainAll(defaultSubscriberExecutor());
-    }
-
-    @Override
     public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
         requireNonNull(executor, "executor");
 
@@ -189,11 +141,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         return drainer.future();
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-        return drainAll(executor);
     }
 
     @Override

@@ -14,14 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.eventloop;
+package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -43,7 +45,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.util.concurrent.Future;
 
-class EventLoopCheckingCompletableFutureTest {
+class EventLoopCheckingFutureTest {
 
     @RegisterExtension
     public static final EventLoopExtension eventLoop = new EventLoopExtension() {
@@ -70,7 +72,7 @@ class EventLoopCheckingCompletableFutureTest {
 
     @Test
     void joinOnEventLoop() {
-        final EventLoopCheckingCompletableFuture<String> future = new EventLoopCheckingCompletableFuture<>();
+        final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
         final Future<?> eventLoopFuture = eventLoop.get().submit((Runnable) future::join);
         future.complete("complete");
         eventLoopFuture.syncUninterruptibly();
@@ -83,7 +85,7 @@ class EventLoopCheckingCompletableFutureTest {
 
     @Test
     void joinOffEventLoop() {
-        final EventLoopCheckingCompletableFuture<String> future = new EventLoopCheckingCompletableFuture<>();
+        final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
         final AtomicBoolean joined = new AtomicBoolean();
         CommonPools.blockingTaskExecutor().execute(() -> {
             future.join();
@@ -100,7 +102,7 @@ class EventLoopCheckingCompletableFutureTest {
 
     @Test
     void getOnEventLoop() {
-        final EventLoopCheckingCompletableFuture<String> future = new EventLoopCheckingCompletableFuture<>();
+        final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
         final Future<?> eventLoopFuture = eventLoop.get().submit((Callable<String>) future::get);
         future.complete("complete");
         eventLoopFuture.syncUninterruptibly();
@@ -113,7 +115,7 @@ class EventLoopCheckingCompletableFutureTest {
 
     @Test
     void getTimeoutOnEventLoop() {
-        final EventLoopCheckingCompletableFuture<String> future = new EventLoopCheckingCompletableFuture<>();
+        final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
         final Future<?> eventLoopFuture = eventLoop.get().submit(() -> future.get(10, TimeUnit.SECONDS));
         future.complete("complete");
         eventLoopFuture.syncUninterruptibly();
@@ -122,5 +124,29 @@ class EventLoopCheckingCompletableFutureTest {
             assertThat(event.getLevel()).isEqualTo(Level.WARN);
             assertThat(event.getMessage()).startsWith("Calling a blocking method");
         });
+    }
+
+    @Test
+    void completedFuture() {
+        final EventLoopCheckingFuture<String> future =
+                EventLoopCheckingFuture.completedFuture("foo");
+        assertThat(future).isCompletedWithValue("foo");
+    }
+
+    @Test
+    void completedFutureWithNull() {
+        final EventLoopCheckingFuture<?> future =
+                EventLoopCheckingFuture.completedFuture(null);
+        assertThat(future).isCompletedWithValue(null);
+    }
+
+    @Test
+    void exceptionallyCompletedFuture() {
+        final Throwable cause = new Throwable();
+        final EventLoopCheckingFuture<?> future =
+                EventLoopCheckingFuture.exceptionallyCompletedFuture(cause);
+        assertThat(future).isCompletedExceptionally();
+        assertThatThrownBy(future::join).isInstanceOf(CompletionException.class)
+                                        .hasCauseReference(cause);
     }
 }

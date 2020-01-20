@@ -32,7 +32,8 @@ import com.google.common.collect.Lists;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
-import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 /**
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
@@ -48,7 +49,8 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
     private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
     private final Lock endpointsLock = new ReentrantLock();
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture =
-            new EventLoopCheckingCompletableFuture<>();
+            new EventLoopCheckingFuture<>();
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     /**
      * Creates a new empty {@link DynamicEndpointGroup} that uses
@@ -72,7 +74,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
     }
 
     @Override
-    public EndpointSelectionStrategy selectionStrategy() {
+    public final EndpointSelectionStrategy selectionStrategy() {
         return selectionStrategy;
     }
 
@@ -189,10 +191,35 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
         }
     }
 
+    /**
+     * Returns whether {@link #close()} or {@link #closeAsync()} has been called.
+     */
+    protected final boolean isClosing() {
+        return closeable.isClosing();
+    }
+
     @Override
-    public void close() {
+    public final CompletableFuture<?> closeAsync() {
+        return closeable.closeAsync();
+    }
+
+    private void closeAsync(CompletableFuture<?> future) {
         if (!initialEndpointsFuture.isDone()) {
-            initialEndpointsFuture.cancel(true);
+            initialEndpointsFuture.cancel(false);
         }
+        doCloseAsync(future);
+    }
+
+    /**
+     * Override this method to release the resources held by this {@link EndpointGroup} and complete
+     * the specified {@link CompletableFuture}.
+     */
+    protected void doCloseAsync(CompletableFuture<?> future) {
+        future.complete(null);
+    }
+
+    @Override
+    public final void close() {
+        closeable.close();
     }
 }

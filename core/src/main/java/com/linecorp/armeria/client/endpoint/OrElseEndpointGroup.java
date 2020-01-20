@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
+import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 
 final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
     private final EndpointGroup first;
@@ -31,6 +32,8 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
     private final EndpointSelector selector;
+
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     OrElseEndpointGroup(EndpointGroup first, EndpointGroup second) {
         this.first = requireNonNull(first, "first");
@@ -70,10 +73,23 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
     }
 
     @Override
+    public CompletableFuture<?> closeAsync() {
+        return closeable.closeAsync();
+    }
+
+    private void closeAsync(CompletableFuture<?> future) {
+        CompletableFuture.allOf(first.closeAsync(), second.closeAsync()).handle((unused, cause) -> {
+            if (cause != null) {
+                future.completeExceptionally(cause);
+            } else {
+                future.complete(null);
+            }
+            return null;
+        });
+    }
+
+    @Override
     public void close() {
-        try (EndpointGroup first = this.first;
-             EndpointGroup second = this.second) {
-            // Just want to ensure closure.
-        }
+        closeable.close();
     }
 }

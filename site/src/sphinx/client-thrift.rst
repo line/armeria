@@ -39,7 +39,7 @@ the following:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.thrift.ThriftCompletableFuture;
+    import com.linecorp.armeria.common.thrift.ThriftFuture;
     import com.linecorp.armeria.common.util.CompletionActions;
     import com.linecorp.armeria.client.Clients;
 
@@ -47,7 +47,7 @@ the following:
             "tbinary+http://127.0.0.1:8080/hello",
             HelloService.AsyncIface.class);
 
-    ThriftCompletableFuture<String> future = new ThriftCompletableFuture<String>();
+    ThriftFuture<String> future = new ThriftFuture<String>();
     helloService.hello("Armerian World", future);
 
     future.thenAccept(response -> assert response.equals("Hello, Armerian World!"))
@@ -59,9 +59,9 @@ the following:
     // You can also wait until the call is finished.
     String reply = future.get();
 
-The example above introduces a new class called :api:`ThriftCompletableFuture`. It is a subtype of Java 8
+The example above introduces a new class called :api:`ThriftFuture`. It is a subtype of Java 8
 CompletableFuture_ that implements Thrift AsyncMethodCallback_. Once passed as a callback of an asynchronous
-Thrift call, :api:`ThriftCompletableFuture` will complete itself when the reply is received or the call
+Thrift call, :api:`ThriftFuture` will complete itself when the reply is received or the call
 fails. You'll find it way more convenient to consume the reply than AsyncMethodCallback_ thanks to the rich set
 of methods provided by CompletableFuture_.
 

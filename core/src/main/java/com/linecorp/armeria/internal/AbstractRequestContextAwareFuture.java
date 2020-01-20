@@ -39,14 +39,14 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  * A base class for {@link CompletableFuture} which pushing {@link RequestContext} into the thread-local
  * when executes callbacks.
  */
-public abstract class AbstractRequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
+public abstract class AbstractRequestContextAwareFuture<T> extends CompletableFuture<T> {
 
     private static final Logger logger =
-            LoggerFactory.getLogger(AbstractRequestContextAwareCompletableFuture.class);
+            LoggerFactory.getLogger(AbstractRequestContextAwareFuture.class);
 
     private final RequestContext ctx;
 
-    protected AbstractRequestContextAwareCompletableFuture(RequestContext ctx) {
+    protected AbstractRequestContextAwareFuture(RequestContext ctx) {
         this.ctx = ctx;
     }
 
