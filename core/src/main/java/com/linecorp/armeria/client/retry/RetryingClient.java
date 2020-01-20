@@ -233,13 +233,6 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
         rootReqDuplicator.abort(cause);
     }
 
-    private static int maxSignalLength(long maxResponseLength) {
-        if (maxResponseLength == 0 || maxResponseLength > Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
-        }
-        return (int) maxResponseLength;
-    }
-
     private ContentPreviewResponse contentPreviewResponse(HttpResponseDuplicator resDuplicator) {
         return new ContentPreviewResponse(resDuplicator.duplicate(), contentPreviewLength);
     }
