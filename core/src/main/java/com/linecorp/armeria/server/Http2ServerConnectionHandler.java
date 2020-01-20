@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.Http2KeepAliveHandler;
+import com.linecorp.armeria.internal.IdleTimeoutHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -73,5 +74,26 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
             return;
         }
         super.userEventTriggered(ctx, evt);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded(ctx);
+        changeIdleStateHandlerToHttp2(ctx);
+    }
+
+    /**
+     * This is helper method that is used when application level protocol is upgraded. For ex:
+     * http1.1 to http2. In this case, we also leverage http2 ping by setting
+     * {@code idleTimeoutHandler.setHttp2(true)} which will send pings.
+     */
+    private static void changeIdleStateHandlerToHttp2(ChannelHandlerContext ctx) {
+        final IdleTimeoutHandler idleTimeoutHandler = ctx.pipeline().get(
+                IdleTimeoutHandler.class);
+        if (idleTimeoutHandler == null) {
+            // Means that config.idleTimeoutMillis() < 0; So ignore
+            return;
+        }
+        idleTimeoutHandler.setHttp2(true);
     }
 }
