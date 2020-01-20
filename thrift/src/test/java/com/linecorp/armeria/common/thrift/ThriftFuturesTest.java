@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftFutures.failedCompletedFuture;
@@ -22,9 +21,9 @@ import static com.linecorp.armeria.common.thrift.ThriftFutures.successfulComplet
 import static com.linecorp.armeria.common.thrift.ThriftFutures.successfulListenableFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.junit.Assume.assumeFalse;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -57,7 +56,8 @@ public class ThriftFuturesTest {
     }
 
     private static void assumeUnshadedGuava() {
-        assumeFalse("Can't run tests related with ListenableFuture when Guava is shaded.",
-                    ListenableFuture.class.getName().startsWith("com.linecorp.armeria.internal.shaded."));
+        assumeThat(ListenableFuture.class.getName())
+                .withFailMessage("Can't run tests related with ListenableFuture when Guava is shaded.")
+                .doesNotContain(".shaded.");
     }
 }

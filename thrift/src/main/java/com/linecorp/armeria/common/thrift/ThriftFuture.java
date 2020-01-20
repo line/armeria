@@ -18,47 +18,47 @@ package com.linecorp.armeria.common.thrift;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import javax.annotation.Nullable;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 
-import com.google.common.util.concurrent.AbstractFuture;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 /**
- * A {@link ListenableFuture} that can be passed in as an {@link AsyncMethodCallback}
+ * A {@link CompletableFuture} that can be passed in as an {@link AsyncMethodCallback}
  * when making an asynchronous client-side Thrift RPC.
  */
-public final class ThriftListenableFuture<T> extends AbstractFuture<T> implements AsyncMethodCallback<T> {
+public final class ThriftFuture<T> extends EventLoopCheckingFuture<T> implements AsyncMethodCallback<T> {
 
     /**
-     * Returns a new {@link ThriftListenableFuture} instance that has its value set immediately.
+     * Returns a new {@link ThriftFuture} instance that has its value set immediately.
      */
-    public static <T> ThriftListenableFuture<T> completedFuture(@Nullable T value) {
-        final ThriftListenableFuture<T> future = new ThriftListenableFuture<>();
+    public static <T> ThriftFuture<T> completedFuture(@Nullable T value) {
+        final ThriftFuture<T> future = new ThriftFuture<>();
         future.onComplete(value);
         return future;
     }
 
     /**
-     * Returns a new {@link ThriftListenableFuture} instance that has an exception set immediately.
+     * Returns a new {@link ThriftFuture} instance that has an exception set immediately.
      */
-    public static <T> ThriftListenableFuture<T> exceptionallyCompletedFuture(Throwable cause) {
+    public static <T> ThriftFuture<T> exceptionallyCompletedFuture(Throwable cause) {
         requireNonNull(cause, "cause");
-        final ThriftListenableFuture<T> future = new ThriftListenableFuture<>();
+        final ThriftFuture<T> future = new ThriftFuture<>();
         future.onError(cause instanceof Exception ? (Exception) cause : new CompletionException(cause));
         return future;
     }
 
     @Override
     public void onComplete(@Nullable T value) {
-        set(value);
+        complete(value);
     }
 
     @Override
     public void onError(Exception cause) {
-        setException(cause);
+        completeExceptionally(cause);
     }
 }

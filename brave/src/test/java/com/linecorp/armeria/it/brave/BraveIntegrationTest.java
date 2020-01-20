@@ -64,7 +64,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.HelloService.AsyncIface;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.common.thrift.ThriftCompletableFuture;
+import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -121,8 +121,8 @@ class BraveIntegrationTest {
 
             sb.service("/zip", decorate("service/zip", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> {
-                        final ThriftCompletableFuture<String> f1 = new ThriftCompletableFuture<>();
-                        final ThriftCompletableFuture<String> f2 = new ThriftCompletableFuture<>();
+                        final ThriftFuture<String> f1 = new ThriftFuture<>();
+                        final ThriftFuture<String> f2 = new ThriftFuture<>();
                         quxClient.hello(name, f1);
                         quxClient.hello(name, f2);
                         CompletableFuture.allOf(f1, f2).whenCompleteAsync((aVoid, throwable) -> {
