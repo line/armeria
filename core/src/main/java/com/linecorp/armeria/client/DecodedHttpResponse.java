@@ -46,7 +46,7 @@ final class DecodedHttpResponse extends DefaultHttpResponse {
     }
 
     @Override
-    protected EventExecutor defaultSubscriberExecutor() {
+    public EventExecutor defaultSubscriberExecutor() {
         return eventLoop;
     }
 

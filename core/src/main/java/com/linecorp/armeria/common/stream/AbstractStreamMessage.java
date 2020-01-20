@@ -33,8 +33,6 @@ import org.reactivestreams.Subscription;
 import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.PooledObjects;
 import com.linecorp.armeria.common.util.EventLoopCheckingCompletableFuture;
 
@@ -48,27 +46,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     static final CloseEvent ABORTED_CLOSE = new CloseEvent(AbortedStreamException.INSTANCE);
 
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingCompletableFuture<>();
-
-    @Override
-    public final void subscribe(Subscriber<? super T> subscriber) {
-        subscribe(subscriber, defaultSubscriberExecutor());
-    }
-
-    @Override
-    public final void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-        subscribe(subscriber, defaultSubscriberExecutor(), withPooledObjects, false);
-    }
-
-    @Override
-    public final void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
-        subscribe(subscriber, defaultSubscriberExecutor(), options);
-    }
-
-    @Override
-    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
-                                boolean withPooledObjects) {
-        subscribe(subscriber, executor, withPooledObjects, false);
-    }
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
@@ -107,32 +84,20 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      */
     abstract SubscriptionImpl subscribe(SubscriptionImpl subscription);
 
-    /**
-     * Returns the default {@link EventExecutor} which will be used when a user subscribes using
-     * {@link #subscribe(Subscriber)} or {@link #subscribe(Subscriber, SubscriptionOption...)}.
-     */
-    protected EventExecutor defaultSubscriberExecutor() {
-        return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
+    @Override
+    public final CompletableFuture<List<T>> drainAll(EventExecutor executor) {
+        return drainAll(executor, false);
     }
 
     @Override
-    public final CompletableFuture<List<T>> drainAll() {
-        return drainAll(defaultSubscriberExecutor());
+    public final CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(options, "options");
+
+        final boolean withPooledObjects = containsWithPooledObjects(options);
+        return drainAll(executor, withPooledObjects);
     }
 
-    @Override
-    public final CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
-        return drainAll(defaultSubscriberExecutor(), withPooledObjects);
-    }
-
-    @Override
-    public final CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
-        return drainAll(defaultSubscriberExecutor(), options);
-    }
-
-    // TODO(minwoox) Make this method private after the deprecated overriden method is removed.
-    @Override
-    public final CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+    private CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
         requireNonNull(executor, "executor");
         final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
         final SubscriptionImpl subscription = new SubscriptionImpl(this, drainer, executor,
@@ -146,19 +111,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         }
 
         return drainer.future();
-    }
-
-    @Override
-    public final CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-        return drainAll(executor, false);
-    }
-
-    @Override
-    public final CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        requireNonNull(options, "options");
-
-        final boolean withPooledObjects = containsWithPooledObjects(options);
-        return drainAll(executor, withPooledObjects);
     }
 
     @Override

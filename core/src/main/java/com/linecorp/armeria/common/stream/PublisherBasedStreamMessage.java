@@ -84,30 +84,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public final void subscribe(Subscriber<? super T> subscriber) {
-        subscribe(subscriber, defaultSubscriberExecutor());
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-        subscribe0(subscriber, defaultSubscriberExecutor(), false);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
-        requireNonNull(options, "options");
-
-        final boolean notifyCancellation = containsNotifyCancellation(options);
-        subscribe0(subscriber, defaultSubscriberExecutor(), notifyCancellation);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-        subscribe0(subscriber, executor, false);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, boolean withPooledObjects) {
         subscribe0(subscriber, executor, false);
     }
 
@@ -130,14 +107,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             assert oldSubscriber != null;
             failLateSubscriber(executor, subscriber, oldSubscriber.subscriber);
         }
-    }
-
-    /**
-     * Returns the default {@link EventExecutor} which will be used when a user subscribes using
-     * {@link #subscribe(Subscriber, SubscriptionOption...)}.
-     */
-    protected EventExecutor defaultSubscriberExecutor() {
-        return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
     }
 
     private boolean subscribe1(Subscriber<? super T> subscriber, EventExecutor executor,
@@ -163,21 +132,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public CompletableFuture<List<T>> drainAll() {
-        return drainAll(defaultSubscriberExecutor());
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
-        return drainAll(defaultSubscriberExecutor());
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
-        return drainAll(defaultSubscriberExecutor());
-    }
-
-    @Override
     public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
         requireNonNull(executor, "executor");
 
@@ -189,11 +143,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         return drainer.future();
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-        return drainAll(executor);
     }
 
     @Override
