@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 
@@ -173,7 +174,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return isComplete(flags);
     }
 
-    private boolean isComplete(int flags) {
+    private static boolean isComplete(int flags) {
         return flags == RequestLogProperty.FLAGS_ALL_COMPLETE;
     }
 
@@ -1362,7 +1363,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return sanitized != null ? sanitized.toString() : "<sanitized>";
     }
 
-    private static final class RequestLogFuture extends CompletableFuture<RequestLog> {
+    private static final class RequestLogFuture extends EventLoopCheckingFuture<RequestLog> {
+
         final int interestedFlags;
 
         RequestLogFuture(int interestedFlags) {
