@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -354,7 +355,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Nullable
-    private RequestLogFuture[] satisfiedFutures() {
+    @VisibleForTesting
+    RequestLogFuture[] satisfiedFutures() {
         if (futures.isEmpty()) {
             return null;
         }
@@ -374,6 +376,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 satisfied[numSatisfied++] = f;
             }
         } while (i.hasNext());
+
+        if (satisfied != null) {
+            // Make sure the futures are notified in the following order:
+            // - Futures with less properties are notified first.
+            //   - It will be unnatural if whenAvailable() is notified later than whenComplete().
+            // - Request-related futures are notified first.
+            Arrays.sort(satisfied, 0, numSatisfied,
+                        (a, b) -> Integer.compareUnsigned(a.interestedFlags, b.interestedFlags));
+        }
 
         return satisfied;
     }
