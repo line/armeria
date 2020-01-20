@@ -75,16 +75,16 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFut
      */
     public static <U> UnmodifiableFuture<U> wrap(CompletableFuture<U> future) {
         requireNonNull(future, "future");
-        final UnmodifiableFuture<U> unupdatable = new UnmodifiableFuture<>();
+        final UnmodifiableFuture<U> unmodifiable = new UnmodifiableFuture<>();
         future.handle((result, cause) -> {
             if (cause != null) {
-                unupdatable.doCompleteExceptionally(Exceptions.peel(cause));
+                unmodifiable.doCompleteExceptionally(Exceptions.peel(cause));
             } else {
-                unupdatable.doComplete(result);
+                unmodifiable.doComplete(result);
             }
             return null;
         });
-        return unupdatable;
+        return unmodifiable;
     }
 
     private UnmodifiableFuture() {}

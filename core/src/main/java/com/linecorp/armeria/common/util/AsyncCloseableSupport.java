@@ -75,7 +75,7 @@ public final class AsyncCloseableSupport implements ListenableAsyncCloseable {
      * Returns a new {@link AsyncCloseableSupport} which calls the specified {@link Consumer} on
      * {@link #close()} or {@link #closeAsync()}.
      * <pre>{@code
-     * > class MyClass implements AsyncCloseable {
+     * > class MyClass implements ListenableAsyncCloseable {
      * >     final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(f -> {
      * >         // Release resources here.
      * >         ...
@@ -112,7 +112,7 @@ public final class AsyncCloseableSupport implements ListenableAsyncCloseable {
 
     private final Consumer<CompletableFuture<?>> closeAction;
     private final CompletableFuture<?> closeFuture = new CompletableFuture<>();
-    private final UnmodifiableFuture<?> unupdatableCloseFuture =
+    private final UnmodifiableFuture<?> unmodifiableCloseFuture =
             UnmodifiableFuture.wrap(closeFuture);
     private volatile int closing;
 
@@ -190,6 +190,6 @@ public final class AsyncCloseableSupport implements ListenableAsyncCloseable {
 
     @Override
     public CompletableFuture<?> whenClosed() {
-        return unupdatableCloseFuture;
+        return unmodifiableCloseFuture;
     }
 }
