@@ -26,7 +26,7 @@ import java.util.concurrent.TimeoutException;
 /**
  * A {@link CompletableFuture} that warns the user if they call a method that blocks the event loop.
  */
-public final class EventLoopCheckingCompletableFuture<T> extends CompletableFuture<T> {
+public class EventLoopCheckingCompletableFuture<T> extends CompletableFuture<T> {
 
     @Override
     public T get() throws InterruptedException, ExecutionException {

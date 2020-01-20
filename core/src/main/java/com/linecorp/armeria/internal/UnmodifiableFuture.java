@@ -22,11 +22,12 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
 
 /**
  * A {@link CompletableFuture} which prevents the caller from completing it.
  */
-public final class UnmodifiableFuture<T> extends CompletableFuture<T> {
+public final class UnmodifiableFuture<T> extends EventLoopCheckingCompletableFuture<T> {
 
     private static final UnmodifiableFuture<?> NIL;
 
