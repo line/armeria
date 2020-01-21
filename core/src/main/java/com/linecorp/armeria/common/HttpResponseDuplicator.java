@@ -26,13 +26,13 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
  * which publish the same elements.
  *
  * <pre>{@code
- * HttpResponse<String> httpResponse = ...
- * HttpResponseDuplicator<String> duplicator = httpResponse.toDuplicator();
+ * HttpResponse httpResponse = ...
+ * HttpResponseDuplicator duplicator = httpResponse.toDuplicator();
  * // httpResponse.subscribe(...) will throw an exception. You cannot subscribe to httpResponse anymore.
  *
  * // Duplicate the stream as many as you want to subscribe.
- * HttpResponse<String> duplicatedHttpResponse1 = duplicator.duplicate();
- * HttpResponse<String> duplicatedHttpResponse2 = duplicator.duplicate();
+ * HttpResponse duplicatedHttpResponse1 = duplicator.duplicate();
+ * HttpResponse duplicatedHttpResponse2 = duplicator.duplicate();
  * duplicatedHttpResponse1.subscribe(...);
  * duplicatedHttpResponse2.subscribe(...);
  *
