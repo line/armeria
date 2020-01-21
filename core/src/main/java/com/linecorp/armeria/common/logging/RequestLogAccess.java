@@ -134,7 +134,7 @@ public interface RequestLogAccess {
      * {@link RequestLogProperty} is collected. The returned {@link CompletableFuture} is never completed
      * exceptionally. Note that the completion of the returned {@link CompletableFuture} guarantees only
      * the availability of the specified property, which means any attempt to access other properties than
-     * a {@link RequestLogAvailabilityException}.
+     * specified may trigger a {@link RequestLogAvailabilityException}.
      * If in doubt, use {@link #whenComplete()} or {@link #whenRequestComplete()}.
      * <pre>{@code
      * logAccess.whenAvailable(RequestLogProperty.REQUEST_HEADERS)
@@ -161,7 +161,7 @@ public interface RequestLogAccess {
      *          .thenAccept(log -> {
      *              RequestHeaders reqHeaders = log.requestHeaders();
      *              ResponseHeaders resHeaders = log.responseHeaders();
-     *              if (headers.path().startsWith("/foo/") &&
+     *              if (reqHeaders.path().startsWith("/foo/") &&
      *                  resHeaders.status() == HttpStatus.OK) {
      *                  ...
      *              }
@@ -185,7 +185,7 @@ public interface RequestLogAccess {
      *          .thenAccept(log -> {
      *              RequestHeaders reqHeaders = log.requestHeaders();
      *              ResponseHeaders resHeaders = log.responseHeaders();
-     *              if (headers.path().startsWith("/foo/") &&
+     *              if (reqHeaders.path().startsWith("/foo/") &&
      *                  resHeaders.status() == HttpStatus.OK) {
      *                  ...
      *              }

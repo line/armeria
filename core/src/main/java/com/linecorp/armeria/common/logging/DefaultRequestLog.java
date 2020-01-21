@@ -303,7 +303,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final CompletableFuture<RequestLog> future;
 
         final int flags = this.flags;
-        final RequestLog log = partial(flags);
 
         if (isAvailable(flags, interestedFlags)) {
             future = completedFuture(flags);
@@ -315,7 +314,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 satisfiedFutures = removeSatisfiedFutures();
             }
             if (satisfiedFutures != null) {
-                completeSatisfiedFutures(satisfiedFutures, log);
+                completeSatisfiedFutures(satisfiedFutures, partial(flags));
             }
 
             future = newFuture;
@@ -700,6 +699,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void increaseRequestLength(HttpData data) {
+        requireNonNull(data, "data");
         increaseRequestLength(data.length());
         if (requestContentPreviewer.isDone()) {
             return;

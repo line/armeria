@@ -66,7 +66,10 @@ public final class RequestMetricSupport {
         ctx.setAttr(requestMetricsSetKey, true);
 
         ctx.log()
-           .whenAvailable(RequestLogProperty.REQUEST_HEADERS, RequestLogProperty.REQUEST_CONTENT)
+           .whenAvailable(RequestLogProperty.REQUEST_START_TIME,
+                          RequestLogProperty.REQUEST_HEADERS,
+                          RequestLogProperty.REQUEST_CONTENT,
+                          RequestLogProperty.SESSION)
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server));
     }
 

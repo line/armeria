@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 import com.linecorp.armeria.server.Route;
@@ -145,7 +146,14 @@ public interface MeterIdPrefixFunction {
 
     /**
      * Creates a {@link MeterIdPrefix} for the active request counter gauges from the specified
-     * {@link RequestOnlyLog}.
+     * {@link RequestOnlyLog}. Note that the given {@link RequestOnlyLog} might not have all properties
+     * available. However, the following properties' availability is guaranteed:
+     * <ul>
+     *   <li>{@link RequestLogProperty#REQUEST_START_TIME}</li>
+     *   <li>{@link RequestLogProperty#REQUEST_HEADERS}</li>
+     *   <li>{@link RequestLogProperty#REQUEST_CONTENT}</li>
+     *   <li>{@link RequestLogProperty#SESSION}</li>
+     * </ul>
      */
     MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log);
 
@@ -177,6 +185,7 @@ public interface MeterIdPrefixFunction {
      * returned by this function.
      */
     default MeterIdPrefixFunction andThen(BiFunction<MeterRegistry, MeterIdPrefix, MeterIdPrefix> function) {
+        requireNonNull(function, "function");
         return new MeterIdPrefixFunction() {
             @Override
             public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
