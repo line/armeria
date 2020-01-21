@@ -184,8 +184,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
-        log = new DefaultRequestLog(this, cfg.requestContentPreviewerFactory(),
-                                    cfg.responseContentPreviewerFactory());
+        log = new DefaultRequestLog(this);
         if (requestStartTimeSet) {
             log.startRequest(ch, sessionProtocol, sslSession, requestStartTimeNanos, requestStartTimeMicros);
         } else {

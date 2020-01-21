@@ -25,8 +25,6 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.common.logging.ContentPreviewer;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -49,8 +47,6 @@ public final class ServiceConfig {
     private final long maxRequestLength;
     private final boolean verboseResponses;
 
-    private final ContentPreviewerFactory requestContentPreviewerFactory;
-    private final ContentPreviewerFactory responseContentPreviewerFactory;
     private final AccessLogWriter accessLogWriter;
     private final boolean shutdownAccessLogWriterOnStop;
     private final boolean handlesCorsPreflight;
@@ -60,12 +56,10 @@ public final class ServiceConfig {
      */
     ServiceConfig(Route route, HttpService service,
                   long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
-                  ContentPreviewerFactory requestContentPreviewerFactory,
-                  ContentPreviewerFactory responseContentPreviewerFactory, AccessLogWriter accessLogWriter,
+                  AccessLogWriter accessLogWriter,
                   boolean shutdownAccessLogWriterOnStop) {
         this(null, route, service, requestTimeoutMillis, maxRequestLength,
-             verboseResponses, requestContentPreviewerFactory, responseContentPreviewerFactory,
-             accessLogWriter, shutdownAccessLogWriterOnStop);
+             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
     /**
@@ -73,8 +67,6 @@ public final class ServiceConfig {
      */
     private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
                           long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
-                          ContentPreviewerFactory requestContentPreviewerFactory,
-                          ContentPreviewerFactory responseContentPreviewerFactory,
                           AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
@@ -82,10 +74,6 @@ public final class ServiceConfig {
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         this.verboseResponses = verboseResponses;
-        this.requestContentPreviewerFactory = requireNonNull(requestContentPreviewerFactory,
-                                                             "requestContentPreviewerFactory");
-        this.responseContentPreviewerFactory = requireNonNull(responseContentPreviewerFactory,
-                                                              "responseContentPreviewerFactory");
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
 
@@ -111,7 +99,6 @@ public final class ServiceConfig {
         requireNonNull(virtualHost, "virtualHost");
         return new ServiceConfig(virtualHost, route, service,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 requestContentPreviewerFactory, responseContentPreviewerFactory,
                                  accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
@@ -119,7 +106,6 @@ public final class ServiceConfig {
         requireNonNull(decorator, "decorator");
         return new ServiceConfig(virtualHost, route, service.decorate(decorator),
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 requestContentPreviewerFactory, responseContentPreviewerFactory,
                                  accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
@@ -185,26 +171,6 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
-     * which produces the request content preview of this {@link HttpService}.
-     *
-     * @see VirtualHost#requestContentPreviewerFactory()
-     */
-    public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return requestContentPreviewerFactory;
-    }
-
-    /**
-     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
-     * which produces the response content preview of this {@link HttpService}.
-     *
-     * @see VirtualHost#responseContentPreviewerFactory()
-     */
-    public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return responseContentPreviewerFactory;
-    }
-
-    /**
      * Returns the access log writer.
      *
      * @see VirtualHost#accessLogWriter()
@@ -240,8 +206,6 @@ public final class ServiceConfig {
                              .add("requestTimeoutMillis", requestTimeoutMillis)
                              .add("maxRequestLength", maxRequestLength)
                              .add("verboseResponses", verboseResponses)
-                             .add("requestContentPreviewerFactory", requestContentPreviewerFactory)
-                             .add("responseContentPreviewerFactory", responseContentPreviewerFactory)
                              .add("accessLogWriter", accessLogWriter)
                              .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                              .toString();

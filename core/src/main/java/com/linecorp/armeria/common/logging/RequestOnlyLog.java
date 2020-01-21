@@ -21,7 +21,6 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -29,8 +28,6 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.channel.Channel;
 
@@ -199,13 +196,6 @@ public interface RequestOnlyLog extends RequestLogAccess {
      *
      * @throws RequestLogAvailabilityException if the property is not available yet.
      * @see RequestLogProperty#REQUEST_CONTENT_PREVIEW
-     *
-     * @see ServerBuilder#contentPreview(int)
-     * @see ServerBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
-     * @see VirtualHostBuilder#contentPreview(int)
-     * @see VirtualHostBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
-     * @see ClientBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
-     * @see ClientBuilder#contentPreview(int)
      */
     @Nullable
     String requestContentPreview();

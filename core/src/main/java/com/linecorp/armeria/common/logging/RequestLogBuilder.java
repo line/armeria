@@ -169,8 +169,16 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent);
 
     /**
-     * Sets the {@link RequestLog#requestContentPreview()}.
+     * Sets the {@link ContentPreviewer} which produces {@link RequestLog#requestContentPreview()}.
      */
+    void requestContentPreviewer(ContentPreviewer requestContentPreviewer);
+
+    /**
+     * Sets the {@link RequestLog#requestContentPreview()}.
+     *
+     * @deprecated Use {@link #requestContentPreviewer(ContentPreviewer)}.
+     */
+    @Deprecated
     void requestContentPreview(@Nullable String requestContentPreview);
 
     /**
@@ -302,8 +310,16 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent);
 
     /**
-     * Sets the {@link RequestLog#responseContentPreview()}.
+     * Sets the {@link ContentPreviewer} which produces {@link RequestLog#responseContentPreview()}.
      */
+    void responseContentPreviewer(ContentPreviewer responseContentPreviewer);
+
+    /**
+     * Sets the {@link RequestLog#responseContentPreview()}.
+     *
+     * @deprecated Use {@link #responseContentPreviewer(ContentPreviewer)}.
+     */
+    @Deprecated
     void responseContentPreview(@Nullable String responseContentPreview);
 
     /**

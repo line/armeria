@@ -20,14 +20,11 @@ import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -42,10 +39,6 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Long maxRequestLength;
     @Nullable
     private Boolean verboseResponses;
-    @Nullable
-    private ContentPreviewerFactory requestContentPreviewerFactory;
-    @Nullable
-    private ContentPreviewerFactory responseContentPreviewerFactory;
     @Nullable
     private Function<? super HttpService, ? extends HttpService> decorator;
     @Nullable
@@ -72,35 +65,6 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
-        return this;
-    }
-
-    @Override
-    public ServiceConfigSetters requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        requestContentPreviewerFactory = requireNonNull(factory, "factory");
-        return this;
-    }
-
-    @Override
-    public ServiceConfigSetters responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        responseContentPreviewerFactory = requireNonNull(factory, "factory");
-        return this;
-    }
-
-    @Override
-    public ServiceConfigSetters contentPreview(int length) {
-        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
-    @Override
-    public ServiceConfigSetters contentPreview(int length, Charset defaultCharset) {
-        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    @Override
-    public ServiceConfigSetters contentPreviewerFactory(ContentPreviewerFactory factory) {
-        requestContentPreviewerFactory(factory);
-        responseContentPreviewerFactory(factory);
         return this;
     }
 
@@ -153,12 +117,6 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (verboseResponses != null) {
             serviceConfigBuilder.verboseResponses(verboseResponses);
-        }
-        if (requestContentPreviewerFactory != null) {
-            serviceConfigBuilder.requestContentPreviewerFactory(requestContentPreviewerFactory);
-        }
-        if (responseContentPreviewerFactory != null) {
-            serviceConfigBuilder.responseContentPreviewerFactory(responseContentPreviewerFactory);
         }
         if (accessLogWriter != null) {
             serviceConfigBuilder.accessLogWriter(accessLogWriter, shutdownAccessLogWriterOnStop);

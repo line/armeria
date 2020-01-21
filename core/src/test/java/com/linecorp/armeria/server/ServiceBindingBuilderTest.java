@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class ServiceBindingBuilderTest {
@@ -40,11 +39,7 @@ public class ServiceBindingBuilderTest {
     @Test
     public void serviceBindingBuilder() {
         final ServerBuilder sb = Server.builder();
-        final ContentPreviewerFactory requestFactory = mock(ContentPreviewerFactory.class);
-        final ContentPreviewerFactory responseFactory = mock(ContentPreviewerFactory.class);
         final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
-        sb.requestContentPreviewerFactory(requestFactory);
-        sb.responseContentPreviewerFactory(responseFactory);
 
         sb.route().get("/foo/bar")
           .consumes(JSON, PLAIN_TEXT_UTF_8)
@@ -52,7 +47,6 @@ public class ServiceBindingBuilderTest {
           .requestTimeoutMillis(10)
           .maxRequestLength(8192)
           .verboseResponses(true)
-          .requestContentPreviewerFactory(ContentPreviewerFactory.disabled())
           .accessLogWriter(accessLogWriter, true)
           .build((ctx, req) -> HttpResponse.of(OK));
 
@@ -69,8 +63,6 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
-        assertThat(serviceConfig.requestContentPreviewerFactory()).isSameAs(ContentPreviewerFactory.disabled());
-        assertThat(serviceConfig.responseContentPreviewerFactory()).isSameAs(responseFactory);
         assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
         assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isTrue();
     }

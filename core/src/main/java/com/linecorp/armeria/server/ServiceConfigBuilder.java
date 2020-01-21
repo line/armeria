@@ -22,7 +22,6 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder {
@@ -36,10 +35,6 @@ final class ServiceConfigBuilder {
     private Long maxRequestLength;
     @Nullable
     private Boolean verboseResponses;
-    @Nullable
-    private ContentPreviewerFactory requestContentPreviewerFactory;
-    @Nullable
-    private ContentPreviewerFactory responseContentPreviewerFactory;
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
@@ -80,28 +75,6 @@ final class ServiceConfigBuilder {
     }
 
     @Nullable
-    ContentPreviewerFactory requestContentPreviewerFactory() {
-        return requestContentPreviewerFactory;
-    }
-
-    ServiceConfigBuilder requestContentPreviewerFactory(
-            ContentPreviewerFactory requestContentPreviewerFactory) {
-        this.requestContentPreviewerFactory = requestContentPreviewerFactory;
-        return this;
-    }
-
-    @Nullable
-    ContentPreviewerFactory responseContentPreviewerFactory() {
-        return responseContentPreviewerFactory;
-    }
-
-    ServiceConfigBuilder responseContentPreviewerFactory(
-            ContentPreviewerFactory responseContentPreviewerFactory) {
-        this.responseContentPreviewerFactory = responseContentPreviewerFactory;
-        return this;
-    }
-
-    @Nullable
     AccessLogWriter accessLogWriter() {
         return accessLogWriter;
     }
@@ -115,8 +88,6 @@ final class ServiceConfigBuilder {
     ServiceConfig build(long defaultRequestTimeoutMillis,
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
-                        ContentPreviewerFactory defaultRequestContentPreviewerFactory,
-                        ContentPreviewerFactory defaultResponseContentPreviewerFactory,
                         AccessLogWriter defaultAccessLogWriter,
                         boolean defaultShutdownAccessLogWriterOnStop) {
         return new ServiceConfig(
@@ -124,10 +95,6 @@ final class ServiceConfigBuilder {
                 requestTimeoutMillis != null ? requestTimeoutMillis : defaultRequestTimeoutMillis,
                 maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
-                requestContentPreviewerFactory != null ? requestContentPreviewerFactory
-                                                       : defaultRequestContentPreviewerFactory,
-                responseContentPreviewerFactory != null ? responseContentPreviewerFactory
-                                                        : defaultResponseContentPreviewerFactory,
                 accessLogWriter != null ? accessLogWriter : defaultAccessLogWriter,
                 accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop);
     }
@@ -140,8 +107,6 @@ final class ServiceConfigBuilder {
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)
-                          .add("requestContentPreviewerFactory", requestContentPreviewerFactory)
-                          .add("responseContentPreviewerFactory", responseContentPreviewerFactory)
                           .add("accessLogWriter", accessLogWriter)
                           .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                           .toString();

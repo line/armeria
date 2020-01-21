@@ -16,12 +16,9 @@
 
 package com.linecorp.armeria.server;
 
-import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.logging.ContentPreviewer;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 interface ServiceConfigSetters {
@@ -57,57 +54,6 @@ interface ServiceConfigSetters {
      * If not set, the value set via {@link VirtualHostBuilder#verboseResponses(boolean)} is used.
      */
     ServiceConfigSetters verboseResponses(boolean verboseResponses);
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for an HTTP request of an {@link HttpService}.
-     * If not set, the {@link ContentPreviewerFactory} set via
-     * {@link VirtualHost#requestContentPreviewerFactory()} is used.
-     */
-    ServiceConfigSetters requestContentPreviewerFactory(ContentPreviewerFactory factory);
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for an HTTP response of an {@link HttpService}.
-     * If not set, the {@link ContentPreviewerFactory} set via
-     * {@link VirtualHost#responseContentPreviewerFactory()} is used.
-     */
-    ServiceConfigSetters responseContentPreviewerFactory(ContentPreviewerFactory factory);
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
-     * preview with the maximum {@code length} limit for an HTTP request/response of the {@link HttpService}.
-     * The previewer is enabled only if the content type of an HTTP request/response meets
-     * any of the following conditions:
-     * <ul>
-     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
-     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
-     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
-     * </ul>
-     * @param length the maximum length of the preview.
-     */
-    ServiceConfigSetters contentPreview(int length);
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
-     * preview with the maximum {@code length} limit for an HTTP request/response of an {@link HttpService}.
-     * The previewer is enabled only if the content type of an HTTP request/response meets any of
-     * the following conditions:
-     * <ul>
-     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
-     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
-     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
-     * </ul>
-     * @param length the maximum length of the preview
-     * @param defaultCharset the default charset used when a charset is not specified in the
-     *                       {@code "content-type"} header
-     */
-    ServiceConfigSetters contentPreview(int length, Charset defaultCharset);
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of an {@link HttpService}.
-     */
-    ServiceConfigSetters contentPreviewerFactory(ContentPreviewerFactory factory);
 
     /**
      * Sets the format of this {@link HttpService}'s access log. The specified {@code accessLogFormat} would be
