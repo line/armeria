@@ -109,7 +109,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     static final TypeSignature UNKNOWN = TypeSignature.ofBase("unknown");
 
-    private static final JsonFormat.Printer defaultExamplePrinter = JsonFormat.printer().includingDefaultValueFields();
+    private static final JsonFormat.Printer defaultExamplePrinter =
+            JsonFormat.printer().includingDefaultValueFields();
 
     private final GrpcDocStringExtractor docstringExtractor = new GrpcDocStringExtractor();
 
