@@ -186,16 +186,16 @@ final class AccessLogFormats {
         checkArgument(type != null, "Unexpected token character: '%s'", token);
         if (type.variableRequirement() == VariableRequirement.YES) {
             checkArgument(variable != null,
-                          "Token " + type.token() + " requires a variable.");
+                          "Token %s requires a variable.", type.token());
         }
         if (type.isConditionAvailable()) {
             if (condBuilder != null) {
                 checkArgument(!condBuilder.isEmpty(),
-                              "Token " + type.token() + " has an invalid condition.");
+                              "Token %s has an invalid condition.", type.token());
             }
         } else {
             checkArgument(condBuilder == null,
-                          "Token " + type.token() + " does not support a condition.");
+                          "Token %s does not support a condition.", type.token());
         }
 
         if (TextComponent.isSupported(type)) {

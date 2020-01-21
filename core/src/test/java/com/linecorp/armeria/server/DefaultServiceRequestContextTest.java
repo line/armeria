@@ -203,6 +203,17 @@ class DefaultServiceRequestContextTest {
     }
 
     @Test
+    void setRequestTimeoutAtWithNonPositive() throws InterruptedException {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
+        final TimeoutController timeoutController = mock(TimeoutController.class);
+        ctx.setRequestTimeoutController(timeoutController);
+
+        ctx.setRequestTimeoutAt(Instant.now().minusSeconds(1));
+        verify(timeoutController, timeout(Duration.ofSeconds(1))).timeoutNow();
+    }
+
+    @Test
     void clearRequestTimeout() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);

@@ -253,10 +253,10 @@ abstract class HttpResponseDecoder {
         }
 
         private void close(@Nullable Throwable cause,
-                           Consumer<Throwable> actionOnTimeoutCancelled) {
+                           Consumer<Throwable> actionOnNotTimedOut) {
             state = State.DONE;
 
-            cancelTimeoutOrLog(cause, actionOnTimeoutCancelled);
+            cancelTimeoutOrLog(cause, actionOnNotTimedOut);
 
             if (ctx != null) {
                 if (cause == null) {
@@ -294,12 +294,17 @@ abstract class HttpResponseDecoder {
         }
 
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
-                                        Consumer<Throwable> actionOnTimeoutCancelled) {
+                                        Consumer<Throwable> actionOnNotTimedOut) {
 
-            if (cancelTimeout()) {
+            if (!isTimedOut()) {
+                cancelTimeout();
                 // There's no timeout or the response has not been timed out.
-                actionOnTimeoutCancelled.accept(cause);
+                actionOnNotTimedOut.accept(cause);
                 return;
+            }
+
+            if (delegate.isOpen()) {
+                closeAction(cause);
             }
 
             // Response has been timed out already.
@@ -324,7 +329,9 @@ abstract class HttpResponseDecoder {
         }
 
         void initTimeout() {
-            initTimeout(responseTimeoutMillis);
+            if (responseTimeoutMillis > 0) {
+                scheduleTimeout(responseTimeoutMillis);
+            }
         }
 
         private TimeoutTask newTimeoutTask() {
