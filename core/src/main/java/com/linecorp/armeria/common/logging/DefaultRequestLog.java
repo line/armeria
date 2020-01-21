@@ -52,8 +52,6 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.channel.Channel;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 /**
  * Default {@link RequestLog} implementation.
@@ -87,7 +85,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      */
     @SuppressWarnings("unused")
     private volatile int flags;
-    private final Int2ObjectMap<RequestLogFuture> futures = new Int2ObjectOpenHashMap<>(8);
+    private final List<RequestLogFuture> pendingFutures = new ArrayList<>(4);
+    @Nullable
+    private UnmodifiableFuture<RequestLog> partiallyCompletedFuture;
+    @Nullable
+    private UnmodifiableFuture<RequestLog> completedFuture;
+
     private volatile boolean requestContentDeferred;
     private volatile boolean responseContentDeferred;
 
@@ -215,36 +218,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return future(RequestLogProperty.FLAGS_ALL_COMPLETE);
     }
 
-    private <T extends RequestOnlyLog> CompletableFuture<T> future(int interestedFlags) {
-        if (interestedFlags == 0) {
-            throw new IllegalArgumentException("no availability specified");
-        }
-
-        final RequestLogFuture newFuture;
-        synchronized (futures) {
-            final RequestLogFuture oldFuture = futures.get(interestedFlags);
-            if (oldFuture != null) {
-                @SuppressWarnings("unchecked")
-                final CompletableFuture<T> cast = (CompletableFuture<T>) oldFuture;
-                return cast;
-            }
-
-            newFuture = new RequestLogFuture(interestedFlags);
-            futures.put(interestedFlags, newFuture);
-        }
-
-        final int flags = this.flags;
-        if (isAvailable(flags, interestedFlags)) {
-            newFuture.completeLog(partial(flags));
-        }
-
-        // Safe to allow using as CompletableFuture<RequestOnlyLog>
-        // because a user is never allowed to complete.
-        @SuppressWarnings("unchecked")
-        final CompletableFuture<T> cast = (CompletableFuture<T>) newFuture;
-        return cast;
-    }
-
     @Override
     public CompletableFuture<RequestOnlyLog> whenRequestComplete() {
         return future(RequestLogProperty.FLAGS_REQUEST_COMPLETE);
@@ -322,6 +295,51 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     // Methods required for updating availability and notifying listeners.
 
+    private <T extends RequestOnlyLog> CompletableFuture<T> future(int interestedFlags) {
+        if (interestedFlags == 0) {
+            throw new IllegalArgumentException("no availability specified");
+        }
+
+        final CompletableFuture<RequestLog> future;
+
+        final int flags = this.flags;
+        final RequestLog log = partial(flags);
+
+        if (isAvailable(flags, interestedFlags)) {
+            future = completedFuture(flags);
+        } else {
+            final RequestLogFuture[] satisfiedFutures;
+            final RequestLogFuture newFuture = new RequestLogFuture(interestedFlags);
+            synchronized (pendingFutures) {
+                pendingFutures.add(newFuture);
+                satisfiedFutures = removeSatisfiedFutures();
+            }
+            if (satisfiedFutures != null) {
+                completeSatisfiedFutures(satisfiedFutures, log);
+            }
+
+            future = newFuture;
+        }
+
+        @SuppressWarnings("unchecked")
+        final CompletableFuture<T> cast = (CompletableFuture<T>) future;
+        return cast;
+    }
+
+    private UnmodifiableFuture<RequestLog> completedFuture(int flags) {
+        if (isComplete(flags)) {
+            if (completedFuture == null) {
+                completedFuture = UnmodifiableFuture.completedFuture(notCheckingAccessor);
+            }
+            return completedFuture;
+        }
+
+        if (partiallyCompletedFuture == null) {
+            partiallyCompletedFuture = UnmodifiableFuture.completedFuture(this);
+        }
+        return partiallyCompletedFuture;
+    }
+
     private void updateAvailability(RequestLogProperty property) {
         updateAvailability(property.flag());
     }
@@ -336,54 +354,50 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             if (flagsUpdater.compareAndSet(this, oldFlags, newFlags)) {
                 final RequestLogFuture[] satisfiedFutures;
-                synchronized (futures) {
-                    satisfiedFutures = satisfiedFutures();
+                synchronized (pendingFutures) {
+                    satisfiedFutures = removeSatisfiedFutures();
                 }
                 if (satisfiedFutures != null) {
                     final RequestLog log = partial(newFlags);
-                    for (RequestLogFuture f : satisfiedFutures) {
-                        if (f == null) {
-                            break;
-                        }
-                        f.completeLog(log);
-                    }
+                    completeSatisfiedFutures(satisfiedFutures, log);
                 }
                 break;
             }
         }
     }
 
+    private static void completeSatisfiedFutures(RequestLogFuture[] satisfiedFutures, RequestLog log) {
+        for (RequestLogFuture f : satisfiedFutures) {
+            if (f == null) {
+                break;
+            }
+            f.completeLog(log);
+        }
+    }
+
     @Nullable
-    @VisibleForTesting
-    RequestLogFuture[] satisfiedFutures() {
-        if (futures.isEmpty()) {
+    private RequestLogFuture[] removeSatisfiedFutures() {
+        if (pendingFutures.isEmpty()) {
             return null;
         }
 
         final int flags = this.flags;
-        final int maxNumListeners = futures.size();
-        final Iterator<RequestLogFuture> i = futures.values().iterator();
+        final int maxNumListeners = pendingFutures.size();
+        final Iterator<RequestLogFuture> i = pendingFutures.iterator();
         RequestLogFuture[] satisfied = null;
         int numSatisfied = 0;
 
         do {
-            final RequestLogFuture f = i.next();
-            if (!f.isDone() && isAvailable(flags, f.interestedFlags)) {
+            final RequestLogFuture e = i.next();
+            final int interestedFlags = e.interestedFlags;
+            if ((flags & interestedFlags) == interestedFlags) {
+                i.remove();
                 if (satisfied == null) {
                     satisfied = new RequestLogFuture[maxNumListeners];
                 }
-                satisfied[numSatisfied++] = f;
+                satisfied[numSatisfied++] = e;
             }
         } while (i.hasNext());
-
-        if (satisfied != null) {
-            // Make sure the futures are notified in the following order:
-            // - Futures with less properties are notified first.
-            //   - It will be unnatural if whenAvailable() is notified later than whenComplete().
-            // - Request-related futures are notified first.
-            Arrays.sort(satisfied, 0, numSatisfied,
-                        (a, b) -> Integer.compareUnsigned(a.interestedFlags, b.interestedFlags));
-        }
 
         return satisfied;
     }
@@ -1423,9 +1437,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      */
     private final class CompleteRequestLog implements RequestLog {
 
-        @Nullable
-        private UnmodifiableFuture<RequestLog> completeFuture;
-
         @Override
         public boolean isComplete() {
             return true;
@@ -1448,10 +1459,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public CompletableFuture<RequestLog> whenComplete() {
-            if (completeFuture == null) {
-                completeFuture = UnmodifiableFuture.completedFuture(this);
+            if (completedFuture == null) {
+                completedFuture = UnmodifiableFuture.completedFuture(this);
             }
-            return completeFuture;
+            return completedFuture;
         }
 
         @Override

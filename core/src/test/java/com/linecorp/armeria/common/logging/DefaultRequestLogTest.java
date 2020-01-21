@@ -26,9 +26,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -148,45 +145,6 @@ class DefaultRequestLogTest {
         log.endResponse(error2);
         assertThat(log.responseDurationNanos()).isZero();
         assertThat(log.responseCause()).isSameAs(error);
-    }
-
-    /**
-     * The futures must be notified in the following order:
-     * - Futures with less properties are notified first.
-     *   - It will be unnatural if whenAvailable() is notified later than whenComplete().
-     * - Request-related futures are notified first.
-     *
-     * @see DefaultRequestLog#satisfiedFutures()
-     */
-    @Test
-    void notificationOrder() {
-        final List<String> recording = new ArrayList<>();
-        log.whenComplete()
-           .thenAccept(log -> recording.add("COMPLETE"));
-        log.whenAvailable(RequestLogProperty.RESPONSE_TRAILERS)
-           .thenAccept(log -> recording.add("RESPONSE_TRAILERS"));
-        log.whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
-           .thenAccept(log -> recording.add("RESPONSE_HEADERS"));
-        log.whenRequestComplete()
-           .thenAccept(log -> recording.add("REQUEST_COMPLETE"));
-        log.whenAvailable(RequestLogProperty.REQUEST_TRAILERS)
-           .thenAccept(log -> recording.add("REQUEST_TRAILERS"));
-        log.whenAvailable(RequestLogProperty.REQUEST_HEADERS)
-           .thenAccept(log -> recording.add("REQUEST_HEADERS"));
-        log.whenAvailable(RequestLogProperty.SCHEME)
-           .thenAccept(log -> recording.add("SCHEME"));
-
-        log.startRequest(channel, SessionProtocol.H2C, null);
-        log.endRequest();
-        log.endResponse();
-
-        assertThat(recording).containsExactly("SCHEME",
-                                              "REQUEST_HEADERS",
-                                              "REQUEST_TRAILERS",
-                                              "REQUEST_COMPLETE",
-                                              "RESPONSE_HEADERS",
-                                              "RESPONSE_TRAILERS",
-                                              "COMPLETE");
     }
 
     @Test
