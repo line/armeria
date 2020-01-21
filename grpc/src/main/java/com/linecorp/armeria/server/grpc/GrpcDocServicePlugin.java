@@ -218,7 +218,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     public String serializeExampleRequest(String serviceName, String methodName,
                                           Object exampleRequest) {
         try {
-            return JsonFormat.printer().print((MessageOrBuilder) exampleRequest);
+            return defaultExamplePrinter.print((MessageOrBuilder) exampleRequest);
         } catch (InvalidProtocolBufferException e) {
             throw new UncheckedIOException(
                     "Invalid example request protobuf. Is it missing required fields?", e);
