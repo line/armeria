@@ -317,6 +317,17 @@ class DefaultClientRequestContextTest {
     }
 
     @Test
+    void setResponseTimeoutAtWithNonPositive() throws InterruptedException {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
+        final TimeoutController timeoutController = mock(TimeoutController.class);
+        ctx.setResponseTimeoutController(timeoutController);
+
+        ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1));
+        verify(timeoutController, timeout(Duration.ofSeconds(1))).timeoutNow();
+    }
+
+    @Test
     void clearResponseTimeout() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
@@ -324,6 +335,19 @@ class DefaultClientRequestContextTest {
         ctx.setResponseTimeoutController(timeoutController);
 
         ctx.clearResponseTimeout();
+        verify(timeoutController, timeout(Duration.ofSeconds(1)))
+                .cancelTimeout();
+        assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
+    }
+
+    @Test
+    void clearResponseTimeoutWithPendingTask() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
+        ctx.clearResponseTimeout();
+        final TimeoutController timeoutController = mock(TimeoutController.class);
+        ctx.setResponseTimeoutController(timeoutController);
+
         verify(timeoutController, timeout(Duration.ofSeconds(1)))
                 .cancelTimeout();
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);

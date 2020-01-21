@@ -30,7 +30,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -92,7 +91,7 @@ class HttpClientResponseTimeoutHandlerTest {
             assertThat(log.requestCause()).isSameAs(reqCause);
             assertThatThrownBy(() -> response.aggregate().join())
                     .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(ClosedSessionException.class);
+                    .hasCauseReference(reqCause);
         } else {
             assertThat(log.requestCause()).isInstanceOf(ResponseTimeoutException.class);
             assertThatThrownBy(() -> response.aggregate().join())
@@ -121,7 +120,7 @@ class HttpClientResponseTimeoutHandlerTest {
         final RequestLog log = logHolder.get().whenComplete().join();
 
         assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
-                                                             .hasCauseInstanceOf(ClosedSessionException.class);
+                                                             .hasCauseReference(reqCause);
         assertThat(log.requestCause()).isSameAs(reqCause);
         assertThat(log.responseCause()).isSameAs(reqCause);
     }

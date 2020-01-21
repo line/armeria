@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.util;
 
+import javax.annotation.Nullable;
+
 /**
  * A controller that schedules the timeout task with the initial value or reschedule when the timeout
  * setting is changed.
@@ -24,32 +26,66 @@ package com.linecorp.armeria.common.util;
 public interface TimeoutController {
 
     /**
-     * Initializes the timeout scheduler with the specified {@code timeoutMillis}.
+     * Schedules a new timeout with the specified {@code timeoutMillis}.
+     * If a timeout is scheduled already, this method will not start a new timeout.
+     *
+     * @param timeoutMillis a positive time amount value in milliseconds.
+     * @return {@code true} if the timeout is scheduled.
+     *         {@code false} if the timeout has been scheduled, triggered already
+     *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
-    void initTimeout(long timeoutMillis);
+    boolean scheduleTimeout(long timeoutMillis);
 
     /**
      * Extends the current timeout by the specified {@code adjustmentMillis}.
      * Note that a negative {@code adjustmentMillis} reduces the current timeout.
      *
      * @param adjustmentMillis the adjustment of time amount value in milliseconds.
+     * @return {@code true} if the current timeout is extended by the specified {@code adjustmentMillis}.
+     *         {@code false} if no timeout was scheduled previously, the timeout has been triggered already
+     *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
-    void extendTimeout(long adjustmentMillis);
+    boolean extendTimeout(long adjustmentMillis);
 
     /**
      * Sets the amount of time that is after the specified {@code newTimeoutMillis} from now.
      *
      * @param newTimeoutMillis the new timeout value in milliseconds. {@code 0} if disabled.
+     * @return {@code true} if the current timeout is reset by the specified {@code newTimeoutMillis}.
+     *         {@code false} if the timeout has been triggered already
+     *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
      */
-    void resetTimeout(long newTimeoutMillis);
+    boolean resetTimeout(long newTimeoutMillis);
 
     /**
-     * Cancels the current timeout scheduled.
+     * Trigger the current timeout immediately.
+     *
+     * @return {@code true} if the current timeout is triggered successfully.
+     *         {@code false} if the timeout has been triggered already
+     *         or a timeout cannot be scheduled, e.g. request or response has been handled already.
+     */
+    boolean timeoutNow();
+
+    /**
+     * Cancels the current timeout scheduled. You can schedule a new timeout with
+     * {@link #scheduleTimeout(long)} if the current timeout is cancelled successfully.
+     * @return {@code true} if the current timeout is cancelled.
+     *         {@code false} if the timeout has been triggered already or no timeout was scheduled previously.
      */
     boolean cancelTimeout();
 
     /**
-     * Returns the start time of the initial timeout in nanoseconds.
+     * Returns whether the timeout has been triggered or not.
+     *
+     * @return {@code true} if the timeout has been triggered already.
+     *         {@code false} if the timeout is scheduled now or no timeout was scheduled previously.
      */
-    long startTimeNanos();
+    boolean isTimedOut();
+
+    /**
+     * Returns the start time of the initial timeout in nanoseconds
+     * or {@code null} if no timeout was scheduled previously.
+     */
+    @Nullable
+    Long startTimeNanos();
 }

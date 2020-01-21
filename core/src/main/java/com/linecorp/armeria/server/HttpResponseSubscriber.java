@@ -118,7 +118,10 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         this.subscription = subscription;
 
         // Schedule the initial request timeout.
-        initTimeout(reqCtx.requestTimeoutMillis());
+        final long requestTimeoutMillis = reqCtx.requestTimeoutMillis();
+        if (requestTimeoutMillis > 0) {
+            scheduleTimeout(requestTimeoutMillis);
+        }
 
         // Start consuming.
         subscription.request(1);
@@ -257,10 +260,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     @Override
     public void onComplete() {
-        if (!cancelTimeout() && reqCtx.requestTimeoutHandler() == null) {
+        if (isTimedOut() && reqCtx.requestTimeoutHandler() == null) {
             // We have already returned a failed response due to a timeout.
             return;
         }
+
+        cancelTimeout();
 
         if (wroteNothing(state)) {
             logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());

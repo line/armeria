@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -28,9 +29,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -65,6 +68,28 @@ class HttpServerRequestTimeoutTest {
               .service("/timeout-before-writing", (ctx, req) -> {
                   final Flux<Long> publisher = Flux.interval(Duration.ofMillis(300));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
+              })
+              .service("/timeout-immediately", (ctx, req) -> {
+                  ctx.setRequestTimeoutAt(Instant.now().minusSeconds(1));
+                  return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
+              })
+              .serviceUnder("/timeout-by-decorator", (ctx, req) ->
+                      HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1)))
+              .decorator("/timeout-by-decorator/extend", (delegate, ctx, req) -> {
+                  ctx.extendRequestTimeout(Duration.ofSeconds(2));
+                  return delegate.serve(ctx, req);
+              })
+              .decorator("/timeout-by-decorator/deadline", (delegate, ctx, req) -> {
+                  ctx.setRequestTimeoutAt(Instant.now().plusSeconds(2));
+                  return delegate.serve(ctx, req);
+              })
+              .decorator("/timeout-by-decorator/clear", (delegate, ctx, req) -> {
+                  ctx.clearRequestTimeout();
+                  return delegate.serve(ctx, req);
+              })
+              .decorator("/timeout-by-decorator/after", (delegate, ctx, req) -> {
+                  ctx.setRequestTimeoutAfter(Duration.ofSeconds(2));
+                  return delegate.serve(ctx, req);
               });
         }
     };
@@ -79,44 +104,80 @@ class HttpServerRequestTimeoutTest {
                           Flux.interval(Duration.ofMillis(100))
                               .doOnNext(i -> ctx.setRequestTimeoutAfter(Duration.ofMillis(150)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
+              })
+              .serviceUnder("/timeout-by-decorator", (ctx, req) -> HttpResponse.streaming())
+              .decorator("/timeout-by-decorator/deadline", (delegate, ctx, req) -> {
+                  ctx.setRequestTimeoutAt(Instant.now().plusSeconds(1));
+                  return delegate.serve(ctx, req);
+              })
+              .decorator("/timeout-by-decorator/after", (delegate, ctx, req) -> {
+                  ctx.setRequestTimeoutAfter(Duration.ofSeconds(1));
+                  return delegate.serve(ctx, req);
               });
         }
     };
 
-    WebClient client;
+    WebClient clientWithoutTimeout;
 
     @BeforeEach
     void setUp() {
-        client = WebClient.of(server.uri("/"));
+        clientWithoutTimeout = WebClient.builder(server.uri("/"))
+                                        .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                                        .build();
     }
 
+    @ParameterizedTest
     @CsvSource({
             "/extend-timeout-from-now, 200",
             "/extend-timeout-from-start, 200",
     })
-    @ParameterizedTest
     void setRequestTimeoutAfter(String path, int status) {
-        final AggregatedHttpResponse response = client.get(path).aggregate().join();
+        final AggregatedHttpResponse response = clientWithoutTimeout.get(path).aggregate().join();
         assertThat(response.status().code()).isEqualTo(status);
     }
 
     @Test
     void requestTimeout_503() {
-        final AggregatedHttpResponse response = client.get("/timeout-before-writing").aggregate().join();
+        final AggregatedHttpResponse response =
+                clientWithoutTimeout.get("/timeout-before-writing").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Test
     void requestTimeout_reset_stream() {
-        assertThatThrownBy(() -> client.get("/timeout-while-writing").aggregate().join())
+        assertThatThrownBy(() -> clientWithoutTimeout.get("/timeout-while-writing").aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ClosedSessionException.class);
     }
 
     @Test
     void setRequestTimeoutAfterNoTimeout() {
-        final AggregatedHttpResponse response = client.get(
+        final AggregatedHttpResponse response = clientWithoutTimeout.get(
                 serverWithoutTimeout.uri("/") + "/extend-timeout-from-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(200);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/timeout-by-decorator/extend",
+            "/timeout-by-decorator/deadline",
+            "/timeout-by-decorator/clear",
+            "/timeout-by-decorator/after",
+    })
+    void extendRequestTimeoutByDecorator(String path) {
+        final AggregatedHttpResponse response =
+                clientWithoutTimeout.get(server.uri("/") + path).aggregate().join();
+        assertThat(response.status().code()).isEqualTo(200);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/timeout-by-decorator/deadline",
+            "/timeout-by-decorator/after",
+    })
+    void limitRequestTimeoutByDecorator(String path) {
+        final AggregatedHttpResponse response =
+                clientWithoutTimeout.get(serverWithoutTimeout.uri("/") + path).aggregate().join();
+        assertThat(response.status().code()).isEqualTo(503);
     }
 }

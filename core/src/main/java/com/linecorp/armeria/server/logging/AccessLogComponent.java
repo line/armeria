@@ -256,8 +256,7 @@ interface AccessLogComponent {
                         @Nullable String variable) {
             super(condition, addQuote);
             checkArgument(isSupported(requireNonNull(type, "type")),
-                          "Type '" + type + "' is not acceptable by " +
-                          CommonComponent.class.getName());
+                          "Type '%s' is not acceptable by %s", type, CommonComponent.class.getName());
             this.type = type;
             this.variable = variable;
         }
