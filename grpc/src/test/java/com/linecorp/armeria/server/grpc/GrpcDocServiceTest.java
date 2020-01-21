@@ -23,6 +23,7 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -36,6 +37,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
@@ -212,19 +216,29 @@ public class GrpcDocServiceTest {
     }
 
     private static void addExamples(JsonNode json) {
+        final Map<String, Multimap<String, String>> examplesToAdd =
+                ImmutableMap.<String, Multimap<String, String>>builder()
+                        .put(TestServiceGrpc.SERVICE_NAME,
+                             ImmutableMultimap.<String, String>builder()
+                                     .put("UnaryCall", "{\n" +
+                                                       "  \"payload\": {\n" +
+                                                       "    \"body\": \"d29ybGQ=\"\n" +
+                                                       "  }\n" +
+                                                       '}')
+                                     .build())
+                        .build();
+
         json.get("services").forEach(service -> {
             final String serviceName = service.get("name").textValue();
-            // Add the method-specific examples.
+            // Prepend the method-specific examples.
             service.get("methods").forEach(method -> {
                 final String methodName = method.get("name").textValue();
                 final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
-                if (TestServiceGrpc.SERVICE_NAME.equals(serviceName) &&
-                    "UnaryCall".equals(methodName)) {
-                    exampleRequests.add("{\n" +
-                                        "  \"payload\": {\n" +
-                                        "    \"body\": \"d29ybGQ=\"\n" +
-                                        "  }\n" +
-                                        '}');
+
+                int i = 0;
+                for (String str : examplesToAdd.getOrDefault(serviceName, ImmutableMultimap.of())
+                                               .get(methodName)) {
+                    exampleRequests.insert(i++, str);
                 }
             });
         });
