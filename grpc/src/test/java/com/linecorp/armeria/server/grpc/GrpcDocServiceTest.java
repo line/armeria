@@ -221,9 +221,15 @@ public class GrpcDocServiceTest {
                         .put(TestServiceGrpc.SERVICE_NAME,
                              ImmutableMultimap.<String, String>builder()
                                      .put("UnaryCall", "{\n" +
+                                                       "  \"responseType\": \"COMPRESSABLE\",\n" +
+                                                       "  \"responseSize\": 0,\n" +
                                                        "  \"payload\": {\n" +
+                                                       "    \"type\": \"COMPRESSABLE\",\n" +
                                                        "    \"body\": \"d29ybGQ=\"\n" +
-                                                       "  }\n" +
+                                                       "  },\n" +
+                                                       "  \"fillUsername\": false,\n" +
+                                                       "  \"fillOauthScope\": false,\n" +
+                                                       "  \"responseCompression\": \"NONE\"\n" +
                                                        '}')
                                      .build())
                         .build();
