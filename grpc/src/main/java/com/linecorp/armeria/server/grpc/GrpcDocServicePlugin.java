@@ -292,7 +292,12 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     private static List<String> defaultExamples(MethodDescriptor method) {
         try {
             final DynamicMessage defaultInput = DynamicMessage.getDefaultInstance(method.getInputType());
-            return ImmutableList.of(defaultExamplePrinter.print(defaultInput));
+            final String serialized = defaultExamplePrinter.print(defaultInput).trim();
+            if ("{\n}".equals(serialized) || "{}".equals(serialized)) {
+                // Ignore an empty object.
+                return ImmutableList.of();
+            }
+            return ImmutableList.of(serialized);
         } catch (InvalidProtocolBufferException e) {
             return ImmutableList.of();
         }
