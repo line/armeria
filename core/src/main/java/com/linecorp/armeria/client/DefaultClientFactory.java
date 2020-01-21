@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -34,6 +35,7 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -79,6 +81,7 @@ final class DefaultClientFactory implements ClientFactory {
     private final HttpClientFactory httpClientFactory;
     private final Map<Scheme, ClientFactory> clientFactories;
     private final List<ClientFactory> clientFactoriesToClose;
+    private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     DefaultClientFactory(HttpClientFactory httpClientFactory) {
         this.httpClientFactory = httpClientFactory;
@@ -163,19 +166,64 @@ final class DefaultClientFactory implements ClientFactory {
     }
 
     @Override
-    public void close() {
-        // The global default should never be closed.
-        if (this == ClientFactory.ofDefault()) {
-            logger.debug("Refusing to close the default {}; must be closed via closeDefault()",
-                         ClientFactory.class.getSimpleName());
-            return;
-        }
-
-        doClose();
+    public boolean isClosing() {
+        return closeable.isClosing();
     }
 
-    void doClose() {
-        clientFactoriesToClose.forEach(ClientFactory::close);
+    @Override
+    public boolean isClosed() {
+        return closeable.isClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> whenClosed() {
+        return closeable.whenClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return closeAsync(true);
+    }
+
+    CompletableFuture<?> closeAsync(boolean checkDefault) {
+        if (checkDefault && checkDefault()) {
+            return whenClosed();
+        }
+        return closeable.closeAsync();
+    }
+
+    private void closeAsync(CompletableFuture<?> future) {
+        final CompletableFuture<?>[] delegateCloseFutures =
+                clientFactoriesToClose.stream()
+                                      .map(ClientFactory::closeAsync)
+                                      .toArray(CompletableFuture[]::new);
+
+        CompletableFuture.allOf(delegateCloseFutures).handle((unused, cause) -> {
+            if (cause != null) {
+                future.completeExceptionally(cause);
+            } else {
+                future.complete(null);
+            }
+            return null;
+        });
+    }
+
+    @Override
+    public void close() {
+        if (checkDefault()) {
+            return;
+        }
+        closeable.close();
+    }
+
+    private boolean checkDefault() {
+        // The global default should never be closed.
+        if (this == DEFAULT || this == INSECURE) {
+            logger.debug("Refusing to close the default {}; must be closed via closeDefault()",
+                         ClientFactory.class.getSimpleName());
+            return true;
+        }
+        return false;
     }
 
     @VisibleForTesting

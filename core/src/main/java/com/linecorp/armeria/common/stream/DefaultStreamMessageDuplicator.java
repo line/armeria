@@ -45,8 +45,8 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -451,7 +451,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         @SuppressWarnings("unused")
         private volatile DownstreamSubscription<T> subscription;
 
-        private final CompletableFuture<Void> completionFuture = new EventLoopCheckingCompletableFuture<>();
+        private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
         ChildStreamMessage(DefaultStreamMessageDuplicator<T> parent,
                            StreamMessageProcessor<T> processor, boolean lastStream) {

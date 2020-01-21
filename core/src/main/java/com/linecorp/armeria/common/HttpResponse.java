@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.internal.eventloop.EventLoopCheckingCompletableFuture;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
@@ -399,7 +399,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * the trailers of the response are received fully.
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
-        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingCompletableFuture<>();
+        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
         subscribe(aggregator, executor);
         return future;
@@ -425,7 +425,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingCompletableFuture<>();
+        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
         subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;

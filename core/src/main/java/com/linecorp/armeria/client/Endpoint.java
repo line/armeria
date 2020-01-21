@@ -42,6 +42,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.util.NetUtil;
 
@@ -559,6 +560,16 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private static void validateWeight(int weight) {
         checkArgument(weight >= 0, "weight: %s (expected: >= 0)", weight);
     }
+
+    // Methods from Auto/AsyncCloseable
+
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return UnmodifiableFuture.completedFuture(null);
+    }
+
+    @Override
+    public void close() {}
 
     @Override
     public boolean equals(@Nullable Object obj) {

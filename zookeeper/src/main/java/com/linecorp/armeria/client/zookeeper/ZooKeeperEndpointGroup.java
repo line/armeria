@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadFactory;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -31,6 +33,8 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 
+import io.netty.util.concurrent.DefaultThreadFactory;
+
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
  * {@link Endpoint}s from a ZooKeeper using {@link NodeValueCodec} and updates it when the children of the
@@ -39,6 +43,9 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
+
+    private static final ThreadFactory closeCuratorFrameworkThreadFactory =
+            new DefaultThreadFactory("armeria-close-CuratorFramework");
 
     /**
      * Returns a new {@link ZooKeeperEndpointGroup} that retrieves the {@link Endpoint} list from
@@ -128,20 +135,24 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     }
 
     @Override
-    public void close() {
-        super.close();
-
+    protected void doCloseAsync(CompletableFuture<?> future) {
         try {
             pathChildrenCache.close();
         } catch (IOException e) {
             logger.warn("Failed to close PathChildrenCache:", e);
         } finally {
             if (internalClient) {
-                try {
-                    client.close();
-                } catch (Exception e) {
-                    logger.warn("Failed to close CuratorFramework:", e);
-                }
+                closeCuratorFrameworkThreadFactory.newThread(() -> {
+                    try {
+                        client.close();
+                    } catch (Throwable cause) {
+                        logger.warn("Failed to close CuratorFramework:", cause);
+                    } finally {
+                        future.complete(null);
+                    }
+                }).start();
+            } else {
+                future.complete(null);
             }
         }
     }

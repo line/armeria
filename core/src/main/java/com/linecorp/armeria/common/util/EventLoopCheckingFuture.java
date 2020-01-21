@@ -14,19 +14,42 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.eventloop;
+package com.linecorp.armeria.common.util;
 
 import static com.linecorp.armeria.internal.eventloop.EventLoopCheckingUtil.maybeLogIfOnEventLoop;
+import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import javax.annotation.Nullable;
+
 /**
  * A {@link CompletableFuture} that warns the user if they call a method that blocks the event loop.
  */
-public final class EventLoopCheckingCompletableFuture<T> extends CompletableFuture<T> {
+public class EventLoopCheckingFuture<T> extends CompletableFuture<T> {
+
+    /**
+     * Returns an {@link EventLoopCheckingFuture} which has been completed with the specified {@code value}.
+     */
+    public static <U> EventLoopCheckingFuture<U> completedFuture(@Nullable U value) {
+        final EventLoopCheckingFuture<U> future = new EventLoopCheckingFuture<>();
+        future.complete(value);
+        return future;
+    }
+
+    /**
+     * Returns an {@link EventLoopCheckingFuture} which has been completed exceptionally with the specified
+     * {@link Throwable}.
+     */
+    public static <U> EventLoopCheckingFuture<U> exceptionallyCompletedFuture(Throwable cause) {
+        requireNonNull(cause, "cause");
+        final EventLoopCheckingFuture<U> future = new EventLoopCheckingFuture<>();
+        future.completeExceptionally(cause);
+        return future;
+    }
 
     @Override
     public T get() throws InterruptedException, ExecutionException {

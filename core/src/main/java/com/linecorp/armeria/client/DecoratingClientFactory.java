@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -121,6 +122,26 @@ public class DecoratingClientFactory implements ClientFactory {
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
         return delegate().unwrap(client, type);
+    }
+
+    @Override
+    public boolean isClosing() {
+        return delegate().isClosing();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return delegate().isClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> whenClosed() {
+        return delegate().whenClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return delegate().closeAsync();
     }
 
     @Override
