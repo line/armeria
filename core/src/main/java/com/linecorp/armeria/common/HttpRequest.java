@@ -469,8 +469,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpRequestDuplicator} that duplicates multiple {@link HttpRequest}s which publish
-     * the same elements with this {@link HttpRequest}.
+     * Returns a new {@link HttpRequestDuplicator} that duplicates this {@link HttpRequest} into one or
+     * more {@link HttpRequest}s, which publish the same elements.
      * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
      * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
      * {@link HttpRequestDuplicator}.
@@ -481,8 +481,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpRequestDuplicator} that duplicates multiple {@link HttpRequest}s which publish
-     * the same elements with this {@link HttpRequest}.
+     * Returns a new {@link HttpRequestDuplicator} that duplicates this {@link HttpRequest} into one or
+     * more {@link HttpRequest}s, which publish the same elements.
      * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
      * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
      * {@link HttpRequestDuplicator}.
@@ -495,8 +495,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpRequestDuplicator} that duplicates multiple {@link HttpRequest}s which publish
-     * the same elements with this {@link HttpRequest}.
+     * Returns a new {@link HttpRequestDuplicator} that duplicates this {@link HttpRequest} into one or
+     * more {@link HttpRequest}s, which publish the same elements.
      * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
      * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
      * {@link HttpRequestDuplicator}.
@@ -510,8 +510,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpRequestDuplicator} that duplicates multiple {@link HttpRequest}s which publish
-     * the same elements with this {@link HttpRequest}.
+     * Returns a new {@link HttpRequestDuplicator} that duplicates this {@link HttpRequest} into one or
+     * more {@link HttpRequest}s, which publish the same elements.
      * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
      * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
      * {@link HttpRequestDuplicator}.

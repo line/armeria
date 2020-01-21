@@ -22,8 +22,8 @@ import com.linecorp.armeria.common.stream.StreamMessageDuplicator;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 /**
- * A duplicator that duplicates multiple {@link HttpRequest}s which publish the same elements with the
- * {@link HttpRequest} that this duplicator is created from.
+ * A duplicator that duplicates a {@link HttpRequest} into one or more {@link HttpRequest}s,
+ * which publish the same elements.
  *
  * <pre>{@code
  * HttpRequest<String> httpRequest = ...

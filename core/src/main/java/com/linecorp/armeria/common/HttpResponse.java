@@ -432,8 +432,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates multiple {@link HttpResponse}s which publish
-     * the same elements with this {@link HttpResponse}.
+     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
+     * more {@link HttpResponse}s, which publish the same elements.
      * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
      * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
      * {@link HttpResponseDuplicator}.
@@ -444,8 +444,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates multiple {@link HttpResponse}s which publish
-     * the same elements with this {@link HttpResponse}.
+     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
+     * more {@link HttpResponse}s, which publish the same elements.
      * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
      * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
      * {@link HttpResponseDuplicator}.
@@ -458,8 +458,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates multiple {@link HttpResponse}s which publish
-     * the same elements with this {@link HttpResponse}.
+     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
+     * more {@link HttpResponse}s, which publish the same elements.
      * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
      * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
      * {@link HttpResponseDuplicator}.
@@ -473,8 +473,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates multiple {@link HttpResponse}s which publish
-     * the same elements with this {@link HttpResponse}.
+     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
+     * more {@link HttpResponse}s, which publish the same elements.
      * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
      * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
      * {@link HttpResponseDuplicator}.

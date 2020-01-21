@@ -19,8 +19,8 @@ package com.linecorp.armeria.common.stream;
 import org.reactivestreams.Subscriber;
 
 /**
- * A duplicator that duplicates multiple {@link StreamMessage}s which publish the same elements with the
- * {@link StreamMessage} that this duplicator is created from.
+ * A duplicator that duplicates a {@link StreamMessage} into one or more {@link StreamMessage}s,
+ * which publish the same elements.
  *
  * <p>Only one subscriber can subscribe to a {@link StreamMessage}. If you want to subscribe to it
  * multiple times, use {@link StreamMessageDuplicator} which is returned by calling
