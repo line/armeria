@@ -61,7 +61,6 @@ class DefaultTimeoutControllerTest {
         timeoutController =
                 new StatusCheckedTaskTimeoutController(
                         new DefaultTimeoutController(timeoutTask, CommonPools.workerGroup().next()));
-        assertThat(timeoutController.isDisabled()).isTrue();
     }
 
     @Test
@@ -195,7 +194,6 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void cancelTimeoutWhenDisabled() {
-        assertThat(timeoutController.isDisabled()).isTrue();
         assertThat(timeoutController.cancelTimeout()).isFalse();
     }
 
@@ -213,7 +211,6 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void timeoutNowWhenDisabled() {
-        assertThat(timeoutController.isDisabled()).isTrue();
         assertThat(timeoutController.timeoutNow()).isTrue();
     }
 
@@ -281,12 +278,12 @@ class DefaultTimeoutControllerTest {
             final boolean result = delegate.scheduleTimeout(timeoutMillis);
             if (result) {
                 // Previous: DISABLED
-                assertThat(prevState).isIn(State.INIT, State.DISABLED);
+                assertThat(prevState).isIn(State.INIT, State.INACTIVE);
                 // Transition to: SCHEDULE
                 assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
             } else {
                 // Previous: !DISABLED
-                assertThat(prevState).isNotIn(State.INIT, State.DISABLED);
+                assertThat(prevState).isNotIn(State.INIT, State.INACTIVE);
                 // Transition to: No changes
                 assertThat(delegate.state()).isEqualTo(prevState);
             }
@@ -307,7 +304,7 @@ class DefaultTimeoutControllerTest {
                 assertThat(prevState).isNotEqualTo(State.SCHEDULED);
                 // Transition to:
                 if (prevState == State.INIT) {
-                    assertThat(delegate.state()).isEqualTo(State.DISABLED);
+                    assertThat(delegate.state()).isEqualTo(State.INACTIVE);
                 } else {
                     assertThat(delegate.state()).isEqualTo(prevState);
                 }
@@ -326,7 +323,7 @@ class DefaultTimeoutControllerTest {
                 if (newTimeoutMillis > 0) {
                     assertThat(delegate.state()).isEqualTo(State.SCHEDULED);
                 } else {
-                    assertThat(delegate.state()).isEqualTo(State.DISABLED);
+                    assertThat(delegate.state()).isEqualTo(State.INACTIVE);
                 }
             } else {
                 // Previous: TIMED_OUT
@@ -363,7 +360,7 @@ class DefaultTimeoutControllerTest {
                 // Previous: SCHEDULED
                 assertThat(prevState).isNotEqualTo(State.TIMED_OUT);
                 // Transition to: TIMED_OUT
-                assertThat(delegate.state()).isEqualTo(State.DISABLED);
+                assertThat(delegate.state()).isEqualTo(State.INACTIVE);
             } else {
                 // Previous: !SCHEDULED
                 assertThat(prevState).isNotEqualTo(State.SCHEDULED);
@@ -376,11 +373,6 @@ class DefaultTimeoutControllerTest {
         @Override
         public boolean isTimedOut() {
             return delegate.isTimedOut();
-        }
-
-        @Override
-        public boolean isDisabled() {
-            return delegate.isDisabled();
         }
 
         @Override

@@ -38,7 +38,7 @@ public class DefaultTimeoutController implements TimeoutController {
 
     enum State {
         INIT,
-        DISABLED,
+        INACTIVE,
         SCHEDULED,
         TIMED_OUT,
     }
@@ -95,7 +95,7 @@ public class DefaultTimeoutController implements TimeoutController {
         checkArgument(timeoutMillis > 0,
                       "timeoutMillis: %s (expected: > 0)", timeoutMillis);
         ensureInitialized();
-        if (state != State.DISABLED || !timeoutTask.canSchedule()) {
+        if (state != State.INACTIVE || !timeoutTask.canSchedule()) {
             return false;
         }
 
@@ -198,7 +198,7 @@ public class DefaultTimeoutController implements TimeoutController {
             case TIMED_OUT:
                 return false;
             case INIT:
-            case DISABLED:
+            case INACTIVE:
                 invokeTimeoutTask();
                 return true;
             case SCHEDULED:
@@ -217,7 +217,7 @@ public class DefaultTimeoutController implements TimeoutController {
     public boolean cancelTimeout() {
         switch (state) {
             case INIT:
-            case DISABLED:
+            case INACTIVE:
             case TIMED_OUT:
                 return false;
         }
@@ -228,7 +228,7 @@ public class DefaultTimeoutController implements TimeoutController {
         final boolean canceled = timeoutFuture.cancel(false);
         this.timeoutFuture = null;
         if (canceled) {
-            state = State.DISABLED;
+            state = State.INACTIVE;
         }
         return canceled;
     }
@@ -238,16 +238,11 @@ public class DefaultTimeoutController implements TimeoutController {
         return state == State.TIMED_OUT;
     }
 
-    @Override
-    public boolean isDisabled() {
-        return state == State.INIT || state == State.DISABLED;
-    }
-
     private void ensureInitialized() {
         checkState(timeoutTask != null,
                    "setTimeoutTask(timeoutTask) is not called yet.");
         if (state == State.INIT) {
-            state = State.DISABLED;
+            state = State.INACTIVE;
             firstExecutionTimeNanos = lastExecutionTimeNanos = System.nanoTime();
         }
     }

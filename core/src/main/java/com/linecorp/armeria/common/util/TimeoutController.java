@@ -83,11 +83,6 @@ public interface TimeoutController {
     boolean isTimedOut();
 
     /**
-     * Returns {@code true} if no timeout was scheduled previously.
-     */
-    boolean isDisabled();
-
-    /**
      * Returns the start time of the initial timeout in nanoseconds
      * or {@code null} if no timeout was scheduled previously.
      */
