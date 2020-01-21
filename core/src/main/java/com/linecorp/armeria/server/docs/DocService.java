@@ -31,6 +31,7 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -329,7 +330,7 @@ public class DocService extends AbstractCompositeService<HttpService, HttpReques
     }
 
     private static <T> Iterable<T> concatAndDedup(Iterable<T> first, Iterable<T> second) {
-        return Streams.stream(Iterables.concat(first, second)).distinct()::iterator;
+        return Stream.concat(Streams.stream(first), Streams.stream(second)).distinct()::iterator;
     }
 
     private DocServiceVfs vfs(int index) {
