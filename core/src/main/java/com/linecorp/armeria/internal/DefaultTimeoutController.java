@@ -140,7 +140,7 @@ public class DefaultTimeoutController implements TimeoutController {
 
         if (newTimeoutMillis <= 0) {
             invokeTimeoutTask();
-            return false;
+            return true;
         }
 
         state = State.SCHEDULED;
