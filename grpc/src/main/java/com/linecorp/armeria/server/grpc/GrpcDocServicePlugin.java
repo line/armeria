@@ -40,11 +40,12 @@ import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
+import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -107,6 +108,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     static final TypeSignature BYTES = TypeSignature.ofBase("bytes");
     @VisibleForTesting
     static final TypeSignature UNKNOWN = TypeSignature.ofBase("unknown");
+
+    private static final JsonFormat.Printer defaultExamplePrinter = JsonFormat.printer().includingDefaultValueFields();
 
     private final GrpcDocStringExtractor docstringExtractor = new GrpcDocStringExtractor();
 
@@ -208,7 +211,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @Override
     public Set<Class<?>> supportedExampleRequestTypes() {
-        return ImmutableSet.of(Message.class);
+        return ImmutableSet.of(MessageOrBuilder.class);
     }
 
     @Override
@@ -278,7 +281,20 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 ImmutableList.of(FieldInfo.builder("request", namedMessageSignature(method.getInputType()))
                                           .requirement(FieldRequirement.REQUIRED).build()),
                 ImmutableList.of(),
-                methodEndpoints);
+                methodEndpoints,
+                ImmutableList.of(),
+                defaultExamples(method),
+                HttpMethod.POST,
+                null);
+    }
+
+    private static List<String> defaultExamples(MethodDescriptor method) {
+        try {
+            final DynamicMessage defaultInput = DynamicMessage.getDefaultInstance(method.getInputType());
+            return ImmutableList.of(defaultExamplePrinter.print(defaultInput));
+        } catch (InvalidProtocolBufferException e) {
+            return ImmutableList.of();
+        }
     }
 
     @VisibleForTesting
