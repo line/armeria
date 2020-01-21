@@ -353,7 +353,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     default EventExecutor defaultSubscriberExecutor() {
         final EventLoop eventExecutor = RequestContext.mapCurrent(RequestContext::eventLoop,
-                                                                  () -> CommonPools.workerGroup().next());
+                                                                  CommonPools.workerGroup()::next);
         assert eventExecutor != null;
         return eventExecutor;
     }
