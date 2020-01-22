@@ -88,8 +88,8 @@ public class Http2KeepAliveHandler {
         } else {
             // Mostly because the channel is already closed.
             logger.debug("{} Channel PING write failed. Closing channel", channel);
-            channel.close();
             state = State.SHUTDOWN;
+            channel.close();
         }
     };
     private long lastPingPayload;
@@ -106,6 +106,13 @@ public class Http2KeepAliveHandler {
 
     /**
      * Callback for when the channel is idle.
+     * @throws IllegalStateException when subsequent {@link IdleStateEvent} is less than round trip time.
+     *      For ex:
+     *      <ol>
+     *          <li>IdleStateEvent occurred.</li>
+     *          <li>PING is sent to peer.</li>
+     *          <li>IdleStateEvent occurred, before ACK is sent by peer.</li>
+     *      </ol>
      */
     public void onChannelIdle(ChannelHandlerContext ctx, IdleStateEvent event) {
         checkState(state == State.IDLE, "Invalid state. Expecting IDLE but was %s", state);
@@ -145,8 +152,8 @@ public class Http2KeepAliveHandler {
     /**
      * Validates the PING ACK.
      * @param data data received with the PING ACK
-     * @throws Http2Exception when the PING ACK data does not match to PING data or when a PING ACK is
-     *                        received without PING sent.
+     * @throws Http2Exception when the PING ACK data does not match to PING data or
+     *                        when a PING ACK is received without PING sent.
      */
     public void onPingAck(long data) throws Http2Exception {
         final long elapsed = stopwatch.elapsed(TimeUnit.NANOSECONDS);
