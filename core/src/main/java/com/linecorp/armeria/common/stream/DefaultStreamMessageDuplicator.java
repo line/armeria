@@ -75,8 +75,6 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
     //               After the number of duplicates, this duplicator becomes closed atomatically.
     private volatile int unsubscribed;
 
-    private boolean closed;
-
     /**
      * Creates a new instance.
      */
@@ -128,13 +126,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
     static class StreamMessageProcessor<T> implements Subscriber<T> {
 
         private enum State {
-            /**
-             * The initial state. Will enter {@link #CLOSED}.
-             */
             DUPLICABLE,
-            /**
-             * {@link DefaultStreamMessageDuplicator#close()} has been called.
-             */
             CLOSED,
             ABORTED
         }
