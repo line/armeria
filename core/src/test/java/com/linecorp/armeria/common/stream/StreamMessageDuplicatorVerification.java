@@ -22,20 +22,22 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.testng.SkipException;
 
+import io.netty.util.concurrent.ImmediateEventExecutor;
+
 public class StreamMessageDuplicatorVerification extends StreamMessageVerification<Long> {
 
     @Override
     public StreamMessage<Long> createPublisher(long elements) {
         final StreamMessage<Long> source = createStreamMessage(elements, false);
-        final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(source);
-        return duplicator.duplicateStream();
+        final StreamMessageDuplicator<Long> duplicator = source.toDuplicator(ImmediateEventExecutor.INSTANCE);
+        return duplicator.duplicate();
     }
 
     @Override
     public StreamMessage<Long> createFailedPublisher() {
         final StreamMessage<Long> source = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(source);
-        final StreamMessage<Long> duplicate = duplicator.duplicateStream();
+        final StreamMessageDuplicator<Long> duplicator = source.toDuplicator(ImmediateEventExecutor.INSTANCE);
+        final StreamMessage<Long> duplicate = duplicator.duplicate();
         duplicate.subscribe(new NoopSubscriber<>());
         return duplicate;
     }
@@ -43,8 +45,8 @@ public class StreamMessageDuplicatorVerification extends StreamMessageVerificati
     @Override
     public StreamMessage<Long> createAbortedPublisher(long elements) {
         final StreamMessage<Long> source = createStreamMessage(elements + 1, false);
-        final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(source);
-        final StreamMessage<Long> duplicate = duplicator.duplicateStream();
+        final StreamMessageDuplicator<Long> duplicator = source.toDuplicator(ImmediateEventExecutor.INSTANCE);
+        final StreamMessage<Long> duplicate = duplicator.duplicate();
         if (elements == 0) {
             duplicate.abort();
             return duplicate;
@@ -87,12 +89,5 @@ public class StreamMessageDuplicatorVerification extends StreamMessageVerificati
                 "Can't test because duplicator cannot cancel the upstream subscription " +
                 "even if a downstream subscription has been cancelled. Duplicator will " +
                 "end up raising OOME because it has to keep all published signals.");
-    }
-
-    private static class StreamMessageDuplicator
-            extends AbstractStreamMessageDuplicator<Long, StreamMessage<Long>> {
-        StreamMessageDuplicator(StreamMessage<Long> publisher) {
-            super(publisher, l -> 8, null, 0);
-        }
     }
 }

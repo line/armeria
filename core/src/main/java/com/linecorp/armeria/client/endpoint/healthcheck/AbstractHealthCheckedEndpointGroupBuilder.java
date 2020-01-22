@@ -109,7 +109,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     public AbstractHealthCheckedEndpointGroupBuilder retryInterval(Duration retryInterval) {
         requireNonNull(retryInterval, "retryInterval");
         checkArgument(!retryInterval.isNegative() && !retryInterval.isZero(),
-                      "retryInterval: %s (expected > 0)", retryInterval);
+                      "retryInterval: %s (expected: > 0)", retryInterval);
         return retryIntervalMillis(retryInterval.toMillis());
     }
 
@@ -118,7 +118,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      */
     public AbstractHealthCheckedEndpointGroupBuilder retryIntervalMillis(long retryIntervalMillis) {
         checkArgument(retryIntervalMillis > 0,
-                      "retryIntervalMillis: %s (expected > 0)", retryIntervalMillis);
+                      "retryIntervalMillis: %s (expected: > 0)", retryIntervalMillis);
         return retryBackoff(Backoff.fixed(retryIntervalMillis).withJitter(0.2));
     }
 

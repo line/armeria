@@ -611,6 +611,8 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the maximum length of the received {@link Response}.
      * This value is initially set from {@link ClientOption#MAX_RESPONSE_LENGTH}.
      *
+     * @return the maximum length of the response. {@code 0} if unlimited.
+     *
      * @see ContentTooLargeException
      */
     long maxResponseLength();
@@ -618,6 +620,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Sets the maximum length of the received {@link Response}.
      * This value is initially set from {@link ClientOption#MAX_RESPONSE_LENGTH}.
+     * Specify {@code 0} to disable the limit of the length of a response.
      *
      * @see ContentTooLargeException
      */

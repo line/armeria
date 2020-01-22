@@ -35,7 +35,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-class HttpRequestDuplicatorTest {
+class DefaultHttpRequestDuplicatorTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
@@ -65,10 +65,10 @@ class HttpRequestDuplicatorTest {
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
 
         final HttpRequest publisher = aReq.toHttpRequest();
-        final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(publisher);
+        final HttpRequestDuplicator reqDuplicator = publisher.toDuplicator();
 
-        final AggregatedHttpRequest req1 = reqDuplicator.duplicateStream().aggregate().join();
-        final AggregatedHttpRequest req2 = reqDuplicator.duplicateStream().aggregate().join();
+        final AggregatedHttpRequest req1 = reqDuplicator.duplicate().aggregate().join();
+        final AggregatedHttpRequest req2 = reqDuplicator.duplicate().aggregate().join();
 
         assertThat(req1.headers()).isEqualTo(
                 RequestHeaders.of(HttpMethod.PUT, "/foo",

@@ -592,6 +592,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public void setMaxResponseLength(long maxResponseLength) {
+        checkArgument(maxResponseLength >= 0, "maxResponseLength: %s (expected: >= 0)", maxResponseLength);
         this.maxResponseLength = maxResponseLength;
     }
 

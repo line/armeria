@@ -391,10 +391,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * the trailers of the response are received fully.
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate() {
-        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
-        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
-        subscribe(aggregator);
-        return future;
+        return aggregate(defaultSubscriberExecutor());
     }
 
     /**
@@ -415,11 +412,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * use {@link #aggregate()}.
      */
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
-        requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
-        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        subscribe(aggregator, SubscriptionOption.WITH_POOLED_OBJECTS);
-        return future;
+        return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
     }
 
     /**
@@ -436,5 +429,63 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
         subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
+    }
+
+    /**
+     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
+     * more {@link HttpResponse}s, which publish the same elements.
+     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
+     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
+     * {@link HttpResponseDuplicator}.
+     */
+    @Override
+    default HttpResponseDuplicator toDuplicator() {
+        return toDuplicator(Flags.defaultMaxResponseLength());
+    }
+
+    /**
+     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
+     * more {@link HttpResponse}s, which publish the same elements.
+     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
+     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
+     * {@link HttpResponseDuplicator}.
+     *
+     * @param executor the executor to duplicate
+     */
+    @Override
+    default HttpResponseDuplicator toDuplicator(EventExecutor executor) {
+        return toDuplicator(executor, Flags.defaultMaxResponseLength());
+    }
+
+    /**
+     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
+     * more {@link HttpResponse}s, which publish the same elements.
+     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
+     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
+     * {@link HttpResponseDuplicator}.
+     *
+     * @param maxResponseLength the maximum response length that the duplicator can hold in its buffer.
+     *                         {@link ContentTooLargeException} is raised if the length of the buffered
+     *                         {@link HttpData} is greater than this value.
+     */
+    default HttpResponseDuplicator toDuplicator(long maxResponseLength) {
+        return toDuplicator(defaultSubscriberExecutor(), maxResponseLength);
+    }
+
+    /**
+     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
+     * more {@link HttpResponse}s, which publish the same elements.
+     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
+     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
+     * {@link HttpResponseDuplicator}.
+     *
+     * @param executor the executor to duplicate
+     * @param maxResponseLength the maximum response length that the duplicator can hold in its buffer.
+     *                         {@link ContentTooLargeException} is raised if the length of the buffered
+     *                         {@link HttpData} is greater than this value.
+     */
+    default HttpResponseDuplicator toDuplicator(EventExecutor executor, long maxResponseLength) {
+        requireNonNull(executor, "executor");
+        return new DefaultHttpResponseDuplicator(this, executor, maxResponseLength);
     }
 }

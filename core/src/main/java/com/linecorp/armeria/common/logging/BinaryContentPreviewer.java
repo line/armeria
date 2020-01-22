@@ -63,7 +63,7 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
     static ContentPreviewer create(int maxAggregatedLength,
                                    BiFunction<? super HttpHeaders, ? super ByteBuf, String> reproducer) {
         requireNonNull(reproducer, "reproducer");
-        checkArgument(maxAggregatedLength > 0, "maxAggregatedLength: %s (expected > 0)", maxAggregatedLength);
+        checkArgument(maxAggregatedLength > 0, "maxAggregatedLength: %s (expected: > 0)", maxAggregatedLength);
         return new BinaryContentPreviewer(maxAggregatedLength) {
             @Override
             protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
