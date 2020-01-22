@@ -33,18 +33,21 @@ import org.reactivestreams.Subscriber;
  * // Duplicate the stream as many as you want to subscribe.
  * StreamMessage<String> duplicatedStreamMessage1 = duplicator.duplicate();
  * StreamMessage<String> duplicatedStreamMessage2 = duplicator.duplicate();
+ * duplicator.close(); // You should call close if you don't want to duplicate the streams anymore
+ *                     // so that the resources are cleaned up after all subscriptions are done.
+ *
+ * // duplicator.duplicate(); will throw an exception. You cannot duplicate it anymore.
+ *
  * duplicatedStreamMessage1.subscribe(...);
  * duplicatedStreamMessage2.subscribe(...);
- *
- * duplicator.close(); // You should call close to clean up the resources.
  * }</pre>
  *
  * <p>If you subscribe to the {@linkplain #duplicate() duplicated stream message} with the
  * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, the published elements can be shared across
  * {@link Subscriber}s. So do not manipulate the data unless you copy them.
  *
- * <p>To clean up the resources, you have to call one of {@linkplain #duplicate(boolean) duplicate(true)},
- * {@link #close()} or {@link #abort()}. Otherwise, memory leak might happen.</p>
+ * <p>To clean up the resources, you have to call {@link #close()} or {@link #abort()}.
+ * Otherwise, memory leak might happen.</p>
  *
  * @param <T> the type of elements
  */
@@ -53,26 +56,18 @@ public interface StreamMessageDuplicator<T> {
     /**
      * Returns a new {@link StreamMessage} that publishes the same elements with the {@link StreamMessage}
      * that this duplicator is created from.
-     *
-     * @param lastStream whether to prevent further duplication
      */
-    StreamMessage<T> duplicate(boolean lastStream);
-
-    /**
-     * Returns a new {@link StreamMessage} that publishes the same elements with the {@link StreamMessage}
-     * that this duplicator is created from.
-     */
-    default StreamMessage<T> duplicate() {
-        return duplicate(false);
-    }
+    StreamMessage<T> duplicate();
 
     /**
      * Closes this duplicator and prevents it from further duplication. {@link #duplicate()} will raise
      * an {@link IllegalStateException} after this method is invoked.
-     * Note that the previously {@linkplain #duplicate() duplicated streams} will not be closed but will
+     *
+     * <p>Note that the previously {@linkplain #duplicate() duplicated streams} will not be closed but will
      * continue publishing data until the original {@link StreamMessage} is closed.
      * All the data published from the original {@link StreamMessage} are cleaned up when
-     * all {@linkplain #duplicate() duplicated streams} are complete.
+     * all {@linkplain #duplicate() duplicated streams} are complete. If you want to stop publishing and clean
+     * up the resources immediately, call {@link #abort()}.
      */
     void close();
 

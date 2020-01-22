@@ -63,9 +63,19 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicator<T>, SafeCloseable {
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<DefaultStreamMessageDuplicator> unsubscribedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(DefaultStreamMessageDuplicator.class, "unsubscribed");
+
     private final StreamMessageProcessor<T> processor;
 
-    private final EventExecutor duplicatorExecutor;
+    private final EventExecutor executor;
+
+    // TODO(minwoox) add a parameter to the constructor that indicates the number of streams to be duplicated.
+    //               After the number of duplicates, this duplicator becomes closed atomatically.
+    private volatile int unsubscribed;
+
+    private boolean closed;
 
     /**
      * Creates a new instance.
@@ -75,25 +85,19 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
            EventExecutor executor, long maxSignalLength) {
         requireNonNull(upstream, "upstream");
         requireNonNull(signalLengthGetter, "signalLengthGetter");
-        requireNonNull(executor, "executor");
+        this.executor = requireNonNull(executor, "executor");
         checkArgument(maxSignalLength >= 0,
                       "maxSignalLength: %s (expected: >= 0)", maxSignalLength);
-        duplicatorExecutor = executor;
-        processor = new StreamMessageProcessor<>(upstream, signalLengthGetter,
-                                                 duplicatorExecutor, maxSignalLength);
+        processor = new StreamMessageProcessor<>(this, upstream, signalLengthGetter, executor, maxSignalLength);
     }
 
     @Override
     public StreamMessage<T> duplicate() {
-        return duplicate(false);
-    }
-
-    @Override
-    public StreamMessage<T> duplicate(boolean lastStream) {
         if (!processor.isDuplicable()) {
-            throw new IllegalStateException("duplicator is closed or last downstream is added.");
+            throw new IllegalStateException("duplicator is closed.");
         }
-        return new ChildStreamMessage<T>(this, processor, lastStream);
+        unsubscribedUpdater.incrementAndGet(this);
+        return new ChildStreamMessage<T>(this, processor);
     }
 
     /**
@@ -101,7 +105,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
      * stream using {@link StreamMessage#subscribe(Subscriber, SubscriptionOption...)}.
      */
     protected EventExecutor duplicatorExecutor() {
-        return duplicatorExecutor;
+        return executor;
     }
 
     @Override
@@ -111,7 +115,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
     @Override
     public void abort() {
-        processor.abort(AbortedStreamException.get());
+        abort(AbortedStreamException.get());
     }
 
     @Override
@@ -129,20 +133,17 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
              */
             DUPLICABLE,
             /**
-             * {@link DefaultStreamMessageDuplicator#duplicate(boolean)} has been called.
-             * Will enter {@link #CLOSED}.
-             */
-            LAST_DOWNSTREAM_ADDED,
-            /**
              * {@link DefaultStreamMessageDuplicator#close()} has been called.
              */
-            CLOSED
+            CLOSED,
+            ABORTED
         }
 
+        private final DefaultStreamMessageDuplicator<T> duplicator;
         private final StreamMessage<T> upstream;
         private final SignalQueue signals;
         private final SignalLengthGetter<Object> signalLengthGetter;
-        private final EventExecutor processorExecutor;
+        private final EventExecutor executor;
         private final int maxSignalLength;
         private int signalLength;
 
@@ -161,23 +162,29 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         private volatile State state = State.DUPLICABLE;
 
         @SuppressWarnings("unchecked")
-        StreamMessageProcessor(StreamMessage<T> upstream, SignalLengthGetter<?> signalLengthGetter,
+        StreamMessageProcessor(DefaultStreamMessageDuplicator<T> duplicator, StreamMessage<T> upstream,
+                               SignalLengthGetter<?> signalLengthGetter,
                                EventExecutor executor, long maxSignalLength) {
+            this.duplicator = duplicator;
             this.upstream = upstream;
             this.signalLengthGetter = (SignalLengthGetter<Object>) signalLengthGetter;
-            processorExecutor = executor;
+            this.executor = executor;
             if (maxSignalLength == 0 || maxSignalLength > Integer.MAX_VALUE) {
                 this.maxSignalLength = Integer.MAX_VALUE;
             } else {
                 this.maxSignalLength = (int) maxSignalLength;
             }
             signals = new SignalQueue(this.signalLengthGetter);
-            upstream.subscribe(this, processorExecutor,
+            upstream.subscribe(this, executor,
                                WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION);
         }
 
         StreamMessage<T> upstream() {
             return upstream;
+        }
+
+        EventExecutor executor() {
+            return executor;
         }
 
         SignalQueue signals() {
@@ -186,10 +193,10 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         @Override
         public void onSubscribe(Subscription s) {
-            if (processorExecutor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 doOnSubscribe(s);
             } else {
-                processorExecutor.execute(() -> doOnSubscribe(s));
+                executor.execute(() -> doOnSubscribe(s));
             }
         }
 
@@ -221,15 +228,15 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         private void pushSignal(Object obj) {
-            if (processorExecutor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 doPushSignal(obj);
             } else {
-                processorExecutor.execute(() -> doPushSignal(obj));
+                executor.execute(() -> doPushSignal(obj));
             }
         }
 
         private void doPushSignal(Object obj) {
-            if (state == State.CLOSED) {
+            if (state == State.ABORTED) {
                 ReferenceCountUtil.safeRelease(obj);
                 return;
             }
@@ -262,15 +269,15 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         void subscribe(DownstreamSubscription<T> subscription) {
-            if (processorExecutor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 doSubscribe(subscription);
             } else {
-                processorExecutor.execute(() -> doSubscribe(subscription));
+                executor.execute(() -> doSubscribe(subscription));
             }
         }
 
         private void doSubscribe(DownstreamSubscription<T> subscription) {
-            if (state != State.DUPLICABLE) {
+            if (state == State.ABORTED) {
                 final EventExecutor executor = subscription.executor;
                 if (executor.inEventLoop()) {
                     failLateProcessorSubscriber(subscription);
@@ -281,10 +288,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             }
 
             downstreamSubscriptions.add(subscription);
-            if (subscription.lastSubscription) {
-                state = State.LAST_DOWNSTREAM_ADDED;
-            }
-
+            unsubscribedUpdater.decrementAndGet(duplicator);
             if (upstreamSubscription != null) {
                 subscription.invokeOnSubscribe();
             }
@@ -298,10 +302,10 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         void unsubscribe(DownstreamSubscription<T> subscription, @Nullable Throwable cause) {
-            if (processorExecutor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 doUnsubscribe(subscription, cause);
             } else {
-                processorExecutor.execute(() -> doUnsubscribe(subscription, cause));
+                executor.execute(() -> doUnsubscribe(subscription, cause));
             }
         }
 
@@ -335,8 +339,8 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         private void doCleanupIfLastSubscription() {
-            if (isLastDownstreamAdded() && downstreamSubscriptions.isEmpty()) {
-                state = State.CLOSED;
+            if (isClosed() && duplicator.unsubscribed == 0 && downstreamSubscriptions.isEmpty()) {
+                state = State.ABORTED;
                 doCancelUpstreamSubscription();
                 signals.clear();
             }
@@ -351,10 +355,10 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         void requestDemand(long cumulativeDemand) {
-            if (processorExecutor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 doRequestDemand(cumulativeDemand);
             } else {
-                processorExecutor.execute(() -> doRequestDemand(cumulativeDemand));
+                executor.execute(() -> doRequestDemand(cumulativeDemand));
             }
         }
 
@@ -376,42 +380,41 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             return state == State.DUPLICABLE;
         }
 
-        boolean isLastDownstreamAdded() {
-            return state == State.LAST_DOWNSTREAM_ADDED;
+        boolean isClosed() {
+            return state == State.CLOSED;
         }
 
         void close() {
-            if (processorExecutor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 doClose();
             } else {
-                processorExecutor.execute(this::doClose);
+                executor.execute(this::doClose);
             }
         }
 
         void doClose() {
             if (state == State.DUPLICABLE) {
-                if (downstreamSubscriptions.isEmpty()) {
-                    state = State.CLOSED;
-                    // Cancel upstream only when there's no subscriber.
+                if (duplicator.unsubscribed == 0 && downstreamSubscriptions.isEmpty()) {
+                    state = State.ABORTED;
                     doCancelUpstreamSubscription();
                     signals.clear();
                 } else {
-                    state = State.LAST_DOWNSTREAM_ADDED;
+                    state = State.CLOSED;
                 }
             }
         }
 
         void abort(Throwable cause) {
-            if (processorExecutor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 doAbort(cause);
             } else {
-                processorExecutor.execute(() -> doAbort(cause));
+                executor.execute(() -> doAbort(cause));
             }
         }
 
         void doAbort(Throwable cause) {
-            if (state != State.CLOSED) {
-                state = State.CLOSED;
+            if (state != State.ABORTED) {
+                state = State.ABORTED;
                 doCancelUpstreamSubscription();
                 // Do not call 'upstream.abort();', but 'upstream.cancel()' because this is not aborting
                 // the upstream StreamMessage, but aborting duplicator.
@@ -443,9 +446,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
                 ChildStreamMessage.class, DownstreamSubscription.class, "subscription");
 
-        private final DefaultStreamMessageDuplicator<T> parent;
         private final StreamMessageProcessor<T> processor;
-        private final boolean lastStream;
 
         @Nullable
         @SuppressWarnings("unused")
@@ -453,11 +454,9 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
-        ChildStreamMessage(DefaultStreamMessageDuplicator<T> parent,
-                           StreamMessageProcessor<T> processor, boolean lastStream) {
-            this.parent = parent;
+        ChildStreamMessage(DefaultStreamMessageDuplicator<T> duplicator,
+                           StreamMessageProcessor<T> processor) {
             this.processor = processor;
-            this.lastStream = lastStream;
         }
 
         @Override
@@ -499,7 +498,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             requireNonNull(subscriber, "subscriber");
             requireNonNull(executor, "executor");
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
-                    this, subscriber, processor, executor, withPooledObjects, notifyCancellation, lastStream);
+                    this, subscriber, processor, executor, withPooledObjects, notifyCancellation);
 
             if (!subscribe0(subscription)) {
                 final DownstreamSubscription<T> oldSubscription = this.subscription;
@@ -546,8 +545,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
                     this, drainer, processor, executor, withPooledObjects,
-                    false, /* We do not call Subscription.cancel() in StreamMessageDrainer. */
-                    lastStream);
+                    false /* We do not call Subscription.cancel() in StreamMessageDrainer. */);
             if (!subscribe0(subscription)) {
                 final DownstreamSubscription<T> oldSubscription = this.subscription;
                 assert oldSubscription != null;
@@ -560,7 +558,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         @Override
         public EventExecutor defaultSubscriberExecutor() {
-            return parent.duplicatorExecutor();
+            return processor.executor();
         }
 
         @Override
@@ -583,7 +581,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
                     this, AbortingSubscriber.get(cause), processor, ImmediateEventExecutor.INSTANCE,
-                    false, false, false);
+                    false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
                 newSubscription.completionFuture().completeExceptionally(cause);
             } else {
@@ -611,7 +609,6 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         private final EventExecutor executor;
         private final boolean withPooledObjects;
         private final boolean notifyCancellation;
-        final boolean lastSubscription;
 
         @SuppressWarnings("unused")
         private boolean invokedOnSubscribe;
@@ -632,15 +629,13 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         DownstreamSubscription(ChildStreamMessage<T> streamMessage,
                                Subscriber<? super T> subscriber, StreamMessageProcessor<T> processor,
-                               EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation,
-                               boolean lastSubscription) {
+                               EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation) {
             this.streamMessage = streamMessage;
             this.subscriber = subscriber;
             this.processor = processor;
             this.executor = executor;
             this.withPooledObjects = withPooledObjects;
             this.notifyCancellation = notifyCancellation;
-            this.lastSubscription = lastSubscription;
         }
 
         CompletableFuture<Void> completionFuture() {
@@ -798,7 +793,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     return false;
                 }
 
-                if (processor.isLastDownstreamAdded()) {
+                if (processor.isClosed()) {
                     if (++processor.downstreamSignaledCounter >= REQUEST_REMOVAL_THRESHOLD) {
                         // don't need to use AtomicBoolean cause it's used for rough counting
                         processor.downstreamSignaledCounter = 0;

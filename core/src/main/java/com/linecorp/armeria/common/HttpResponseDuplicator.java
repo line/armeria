@@ -33,18 +33,21 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
  * // Duplicate the stream as many as you want to subscribe.
  * HttpResponse duplicatedHttpResponse1 = duplicator.duplicate();
  * HttpResponse duplicatedHttpResponse2 = duplicator.duplicate();
+ * duplicator.close(); // You should call close if you don't want to duplicate the responses anymore
+ *                     // so that the resources are cleaned up after all subscriptions are done.
+ *
+ * // duplicator.duplicate(); will throw an exception. You cannot duplicate it anymore.
+ *
  * duplicatedHttpResponse1.subscribe(...);
  * duplicatedHttpResponse2.subscribe(...);
- *
- * duplicator.close(); // You should call close to clean up the resources.
  * }</pre>
  *
  * <p>If you subscribe to the {@linkplain #duplicate() duplicated http response} with the
  * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, the published elements can be shared across
  * {@link Subscriber}s. So do not manipulate the data unless you copy them.
  *
- * <p>To clean up the resources, you have to call one of {@linkplain #duplicate(boolean) duplicate(true)},
- * {@link #close()} or {@link #abort()}. Otherwise, memory leak might happen.</p>
+ * <p>To clean up the resources, you have to call {@link #close()} or {@link #abort()}.
+ * Otherwise, memory leak might happen.</p>
  */
 
 public interface HttpResponseDuplicator extends StreamMessageDuplicator<HttpObject> {
@@ -52,18 +55,7 @@ public interface HttpResponseDuplicator extends StreamMessageDuplicator<HttpObje
     /**
      * Returns a new {@link HttpResponse} that publishes the same elements with the {@link HttpResponse}
      * that this duplicator is created from.
-     *
-     * @param lastStream whether to prevent further duplication
      */
     @Override
-    HttpResponse duplicate(boolean lastStream);
-
-    /**
-     * Returns a new {@link HttpResponse} that publishes the same elements with the {@link HttpResponse}
-     * that this duplicator is created from.
-     */
-    @Override
-    default HttpResponse duplicate() {
-        return duplicate(false);
-    }
+    HttpResponse duplicate();
 }

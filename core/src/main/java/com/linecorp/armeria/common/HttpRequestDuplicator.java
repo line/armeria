@@ -33,52 +33,34 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
  * // Duplicate the stream as many as you want to subscribe.
  * HttpRequest duplicatedHttpRequest1 = duplicator.duplicate();
  * HttpRequest duplicatedHttpRequest2 = duplicator.duplicate();
+ * duplicator.close(); // You should call close if you don't want to duplicate the requests anymore
+ *                     // so that the resources are cleaned up after all subscriptions are done.
+ *
+ * // duplicator.duplicate(); will throw an exception. You cannot duplicate it anymore.
+ *
  * duplicatedHttpRequest1.subscribe(...);
  * duplicatedHttpRequest2.subscribe(...);
- *
- * duplicator.close(); // You should call close to clean up the resources.
  * }</pre>
  *
  * <p>If you subscribe to the {@linkplain #duplicate() duplicated http request} with the
  * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, the published elements can be shared across
  * {@link Subscriber}s. So do not manipulate the data unless you copy them.
  *
- * <p>To clean up the resources, you have to call one of {@linkplain #duplicate(boolean) duplicate(true)},
- * {@link #close()} or {@link #abort()}. Otherwise, memory leak might happen.</p>
+ * <p>To clean up the resources, you have to call {@link #close()} or {@link #abort()}.
+ * Otherwise, memory leak might happen.</p>
  */
 public interface HttpRequestDuplicator extends StreamMessageDuplicator<HttpObject> {
 
     /**
      * Returns a new {@link HttpRequest} that publishes the same elements with the {@link HttpRequest}
      * that this duplicator is created from.
-     *
-     * @param lastStream whether to prevent further duplication
      */
     @Override
-    HttpRequest duplicate(boolean lastStream);
-
-    /**
-     * Returns a new {@link HttpRequest} that publishes the same elements with the {@link HttpRequest}
-     * that this duplicator is created from.
-     */
-    @Override
-    default HttpRequest duplicate() {
-        return duplicate(false);
-    }
-
-    /**
-     * Returns a new {@link HttpRequest} with the specified {@link RequestHeaders} that publishes the same
-     * elements with the {@link HttpRequest} that this duplicator is created from.
-     *
-     * @param lastStream whether to prevent further duplication
-     */
-    HttpRequest duplicate(RequestHeaders newHeaders, boolean lastStream);
+    HttpRequest duplicate();
 
     /**
      * Returns a new {@link HttpRequest} with the specified {@link RequestHeaders} that publishes the same
      * elements with the {@link HttpRequest} that this duplicator is created from.
      */
-    default HttpRequest duplicate(RequestHeaders newHeaders) {
-        return duplicate(newHeaders, false);
-    }
+    HttpRequest duplicate(RequestHeaders newHeaders);
 }

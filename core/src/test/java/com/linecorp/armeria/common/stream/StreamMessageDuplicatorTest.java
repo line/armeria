@@ -343,16 +343,19 @@ class StreamMessageDuplicatorTest {
     }
 
     @Test
-    void lastDuplicateStream() {
+    void publishedSignalsCleanedUpWhenDuplicatorIsClosed() {
         final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<ByteBuf> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
-        duplicator.duplicate().subscribe(new ByteBufSubscriber(), ImmediateEventExecutor.INSTANCE);
-        duplicator.duplicate(true).subscribe(new ByteBufSubscriber(), ImmediateEventExecutor.INSTANCE);
-
+        final StreamMessage<ByteBuf> duplicated1 = duplicator.duplicate();
+        final StreamMessage<ByteBuf> duplicated2 = duplicator.duplicate();
+        duplicator.close();
         // duplicate() is not allowed anymore.
         assertThatThrownBy(duplicator::duplicate).isInstanceOf(IllegalStateException.class);
+
+        duplicated1.subscribe(new ByteBufSubscriber(), ImmediateEventExecutor.INSTANCE);
+        duplicated2.subscribe(new ByteBufSubscriber(), ImmediateEventExecutor.INSTANCE);
 
         // Only used to read refCnt, not an actual reference.
         final ByteBuf[] bufs = new ByteBuf[30];
@@ -383,7 +386,7 @@ class StreamMessageDuplicatorTest {
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
         final ByteBufSubscriber subscriber = new ByteBufSubscriber();
 
-        duplicator.duplicate(true).subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
+        duplicator.duplicate().subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         duplicator.close();
         // duplicate() is not allowed anymore.
         assertThatThrownBy(duplicator::duplicate).isInstanceOf(IllegalStateException.class);

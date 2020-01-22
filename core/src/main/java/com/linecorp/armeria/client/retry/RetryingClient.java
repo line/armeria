@@ -205,11 +205,15 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
             if (needsContentInStrategy) {
                 final HttpResponseDuplicator resDuplicator =
                         response.toDuplicator(derivedCtx.eventLoop(), derivedCtx.maxResponseLength());
-                retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse(resDuplicator))
+                final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
+                        resDuplicator.duplicate(), contentPreviewLength);
+                final HttpResponse duplicated = resDuplicator.duplicate();
+                resDuplicator.close();
+                retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse)
                                           .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
                                                                 originalReq, returnedRes, future,
-                                                                resDuplicator.duplicate(true),
-                                                                resDuplicator::abort));
+                                                                duplicated, resDuplicator::abort));
+
             } else {
                 final Throwable responseCause =
                         log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;

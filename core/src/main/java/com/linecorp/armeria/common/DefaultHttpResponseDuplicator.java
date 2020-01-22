@@ -43,11 +43,6 @@ final class DefaultHttpResponseDuplicator
         return new DuplicatedHttpResponse(super.duplicate());
     }
 
-    @Override
-    public HttpResponse duplicate(boolean lastStream) {
-        return new DuplicatedHttpResponse(super.duplicate(lastStream));
-    }
-
     private class DuplicatedHttpResponse
             extends StreamMessageWrapper<HttpObject> implements HttpResponse {
 

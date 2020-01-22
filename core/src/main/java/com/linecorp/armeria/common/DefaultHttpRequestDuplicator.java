@@ -47,19 +47,9 @@ final class DefaultHttpRequestDuplicator
     }
 
     @Override
-    public HttpRequest duplicate(boolean lastStream) {
-        return duplicate(headers, lastStream);
-    }
-
-    @Override
     public HttpRequest duplicate(RequestHeaders newHeaders) {
-        return duplicate(newHeaders, false);
-    }
-
-    @Override
-    public HttpRequest duplicate(RequestHeaders newHeaders, boolean lastStream) {
         requireNonNull(newHeaders, "newHeaders");
-        return new DuplicatedHttpRequest(super.duplicate(lastStream), newHeaders);
+        return new DuplicatedHttpRequest(super.duplicate(), newHeaders);
     }
 
     private class DuplicatedHttpRequest
@@ -67,8 +57,7 @@ final class DefaultHttpRequestDuplicator
 
         private final RequestHeaders headers;
 
-        DuplicatedHttpRequest(StreamMessage<? extends HttpObject> delegate,
-                              RequestHeaders headers) {
+        DuplicatedHttpRequest(StreamMessage<? extends HttpObject> delegate, RequestHeaders headers) {
             super(delegate);
             this.headers = headers;
         }
