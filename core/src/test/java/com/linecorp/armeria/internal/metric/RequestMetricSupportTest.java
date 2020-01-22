@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.metric;
 
 import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import java.util.Map;
 
@@ -31,10 +30,7 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -42,7 +38,6 @@ import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
 
 class RequestMetricSupportTest {
@@ -56,18 +51,21 @@ class RequestMetricSupportTest {
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         setConnectionTimings(ctx);
-        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
-        ctx.logBuilder().requestFirstBytesTransferred();
-        ctx.logBuilder().requestContent(null, null);
-        ctx.logBuilder().requestLength(123);
+        // FIXME(trustin): In reality, most HTTP requests will not have any name.
+        //                 As a result, `activeRequestMeterId()` will be invoked only after
+        //                 a request is completed, i.e. active request count will be inaccurate,
+        //                 especially for streaming requests.
+        ctx.logBuilder().name("POST");
 
         Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements).containsEntry("foo.active.requests#value{method=POST}", 1.0);
 
+        ctx.logBuilder().requestFirstBytesTransferred();
+        ctx.logBuilder().requestLength(123);
+        ctx.logBuilder().endRequest();
+
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         ctx.logBuilder().responseLength(456);
-
-        ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
 
         measurements = measureAll(registry);
@@ -105,7 +103,6 @@ class RequestMetricSupportTest {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
-        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(500));
         ctx.logBuilder().responseFirstBytesTransferred();
@@ -162,7 +159,6 @@ class RequestMetricSupportTest {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
-        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse(ResponseTimeoutException.get());
@@ -209,8 +205,6 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-
-        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
         return ctx;
     }
@@ -222,7 +216,6 @@ class RequestMetricSupportTest {
         ctx.logBuilder().addChild(derivedCtx.log());
 
         setConnectionTimings(derivedCtx);
-        derivedCtx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         derivedCtx.logBuilder().requestFirstBytesTransferred();
         derivedCtx.logBuilder().requestContent(null, null);
         derivedCtx.logBuilder().requestLength(123);
@@ -245,7 +238,6 @@ class RequestMetricSupportTest {
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
 
-        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
         ctx.logBuilder().responseFirstBytesTransferred();
@@ -281,13 +273,9 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
-
-        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
 
-        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/bar"));
-        ctx.logBuilder().requestFirstBytesTransferred();
-        ctx.logBuilder().requestContent(RpcRequest.of(Object.class, "baz"), null);
+        ctx.logBuilder().name("baz");
 
         assertThat(measureAll(registry)).containsEntry("bar.active.requests#value{method=baz}", 1.0);
     }
@@ -301,7 +289,6 @@ class RequestMetricSupportTest {
                                      .build();
 
         RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET, MeterIdPrefixFunction.ofDefault("foo"), true);
-        sctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         sctx.logBuilder().endRequest();
         try (SafeCloseable ignored = sctx.push()) {
             final ClientRequestContext cctx =
@@ -309,10 +296,8 @@ class RequestMetricSupportTest {
                                         .meterRegistry(registry)
                                         .endpoint(Endpoint.of("example.com", 8080))
                                         .build();
-            cctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
                                        MeterIdPrefixFunction.ofDefault("bar"), false);
-            cctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
             cctx.logBuilder().endRequest();
             cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
             cctx.logBuilder().endResponse();

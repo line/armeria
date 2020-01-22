@@ -602,6 +602,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
+            ctx.logBuilder().name(header.name);
 
             // Decode the invocation parameters.
             try {

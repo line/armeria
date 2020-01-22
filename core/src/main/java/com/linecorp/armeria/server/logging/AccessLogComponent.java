@@ -37,14 +37,15 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.net.UrlEscapers;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -290,21 +291,19 @@ interface AccessLogComponent {
                     return null;
 
                 case REQUEST_LINE:
-                    final StringBuilder requestLine = new StringBuilder();
+                    final String httpMethodName = log.requestHeaders().method().name();
+                    final String path = log.requestHeaders().path();
+                    final String logName = log.name();
+                    final String protocol = firstNonNull(log.sessionProtocol(),
+                                                         log.context().sessionProtocol()).uriText();
 
-                    requestLine.append(log.requestHeaders().method())
-                               .append(' ')
-                               .append(log.requestHeaders().path());
-
-                    final Object requestContent = log.requestContent();
-                    if (requestContent instanceof RpcRequest) {
+                    final StringBuilder requestLine = TemporaryThreadLocals.get().stringBuilder();
+                    requestLine.append(httpMethodName).append(' ').append(path);
+                    if (logName != null) {
                         requestLine.append('#')
-                                   .append(((RpcRequest) requestContent).method());
+                                   .append(UrlEscapers.urlFragmentEscaper().escape(logName));
                     }
-
-                    requestLine.append(' ')
-                               .append(firstNonNull(log.sessionProtocol(),
-                                                    log.context().sessionProtocol()).uriText());
+                    requestLine.append(' ').append(protocol);
                     return requestLine.toString();
 
                 case RESPONSE_STATUS_CODE:

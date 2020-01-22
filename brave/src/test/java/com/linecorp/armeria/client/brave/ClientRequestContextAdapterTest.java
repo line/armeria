@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -108,22 +107,6 @@ class ClientRequestContextAdapterTest {
         ctx2.logBuilder().endRequest();
         ctx2.logBuilder().endResponse();
         assertThat(ClientRequestContextAdapter.serializationFormat(ctx2.log().ensureComplete())).isNull();
-    }
-
-    @Test
-    void rpcMethod() {
-        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        ctx1.logBuilder().requestContent(RpcRequest.of(Object.class, "foo"), null);
-        ctx1.logBuilder().endRequest();
-        ctx1.logBuilder().endResponse();
-
-        assertThat(ClientRequestContextAdapter.rpcMethod(ctx1.log().ensureComplete()))
-                .isEqualTo("foo");
-
-        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        ctx2.logBuilder().endRequest();
-        ctx2.logBuilder().endResponse();
-        assertThat(ClientRequestContextAdapter.rpcMethod(ctx2.log().ensureComplete())).isNull();
     }
 
     @Test

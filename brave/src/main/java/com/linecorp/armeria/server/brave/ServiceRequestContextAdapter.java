@@ -169,8 +169,7 @@ final class ServiceRequestContextAdapter {
      */
     @Nullable
     static String rpcMethod(RequestLog requestLog) {
-        final Object requestContent = requestLog.requestContent();
-        return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
+        return requestLog.name();
     }
 
     private ServiceRequestContextAdapter() {}
