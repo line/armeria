@@ -41,8 +41,8 @@ public abstract class IdleTimeoutHandler extends IdleStateHandler {
     }
 
     /**
-     * If the channel is serving http2 the we will leverage sending PING's using {@link Http2KeepAliveHandler}
-     * but if it is http1.1 channel then we will close the channel
+     * If the channel is serving HTTP/2 the we will leverage sending PING's using {@link Http2KeepAliveHandler}
+     * but if it is HTTP/1.1 channel then we will close the channel
      */
     @Override
     protected final void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
