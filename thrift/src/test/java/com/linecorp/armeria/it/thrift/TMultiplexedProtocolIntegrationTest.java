@@ -28,11 +28,9 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
@@ -51,16 +49,19 @@ public class TMultiplexedProtocolIntegrationTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(
                     "/",
-                    THttpService.of(ImmutableMap.of("", (Iface) name -> "none:" + name,
-                                                    "foo", name -> "foo:" + name,
-                                                    "bar", name -> "bar:" + name))
+                    THttpService.builder()
+                                .addService((Iface) name -> "none:" + name)
+                                .addService("foo", (Iface) name -> "foo:" + name)
+                                .addService("bar", (Iface) name -> "bar:" + name)
+                                .build()
                                 .decorate((delegate, ctx, req) -> {
-                                    ctx.log().addListener(log -> {
-                                        final RpcRequest call = (RpcRequest) log.requestContent();
-                                        if (call != null) {
-                                            methodNames.add(call.method());
-                                        }
-                                    }, RequestLogAvailability.REQUEST_CONTENT);
+                                    ctx.log().whenAvailable(RequestLogProperty.REQUEST_CONTENT)
+                                       .thenAccept(log -> {
+                                           final RpcRequest call = (RpcRequest) log.requestContent();
+                                           if (call != null) {
+                                               methodNames.add(call.method());
+                                           }
+                                       });
                                     return delegate.serve(ctx, req);
                                 }));
         }

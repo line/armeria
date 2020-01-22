@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -65,7 +65,7 @@ class HttpClientResponseTimeoutHandlerTest {
             "H2C, true", "H2C, false"
     })
     void testResponseTimeoutHandler(SessionProtocol protocol, boolean useResponseTimeoutHandler) {
-        final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
+        final AtomicReference<RequestLogAccess> logHolder = new AtomicReference<>();
         final IllegalStateException reqCause = new IllegalStateException("abort request");
         final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
         final WebClient client = WebClient.builder(server.uri(protocol, "/"))
@@ -84,18 +84,16 @@ class HttpClientResponseTimeoutHandlerTest {
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
-        await().untilAsserted(() -> {
-            assertThat(logHolder.get().isAvailable(RequestLogAvailability.COMPLETE)).isTrue();
-        });
+        final RequestLog log = logHolder.get().whenComplete().join();
 
         if (useResponseTimeoutHandler) {
             await().untilTrue(invokeResponseTimeoutHandler);
-            assertThat(logHolder.get().requestCause()).isSameAs(reqCause);
+            assertThat(log.requestCause()).isSameAs(reqCause);
             assertThatThrownBy(() -> response.aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseReference(reqCause);
         } else {
-            assertThat(logHolder.get().requestCause()).isInstanceOf(ResponseTimeoutException.class);
+            assertThat(log.requestCause()).isInstanceOf(ResponseTimeoutException.class);
             assertThatThrownBy(() -> response.aggregate().join())
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
         }
@@ -104,7 +102,7 @@ class HttpClientResponseTimeoutHandlerTest {
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
     void testResponseTimeoutHandlerRequestAbort(SessionProtocol protocol) {
-        final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
+        final AtomicReference<RequestLogAccess> logHolder = new AtomicReference<>();
         final IllegalStateException reqCause = new IllegalStateException("abort request");
         final WebClient client = WebClient.builder(server.uri(protocol, "/"))
                                           .responseTimeout(Duration.ofSeconds(2))
@@ -119,19 +117,18 @@ class HttpClientResponseTimeoutHandlerTest {
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
-        await().untilAsserted(() -> {
-            assertThat(logHolder.get().isAvailable(RequestLogAvailability.COMPLETE)).isTrue();
-        });
+        final RequestLog log = logHolder.get().whenComplete().join();
+
         assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
                                                              .hasCauseReference(reqCause);
-        assertThat(logHolder.get().requestCause()).isSameAs(reqCause);
-        assertThat(logHolder.get().responseCause()).isSameAs(reqCause);
+        assertThat(log.requestCause()).isSameAs(reqCause);
+        assertThat(log.responseCause()).isSameAs(reqCause);
     }
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
     void testResponseTimeoutHandlerResponseAbort(SessionProtocol protocol) {
-        final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
+        final AtomicReference<RequestLogAccess> logHolder = new AtomicReference<>();
         final IllegalStateException resCause = new IllegalStateException("abort response");
         final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
         final WebClient client = WebClient
@@ -150,13 +147,12 @@ class HttpClientResponseTimeoutHandlerTest {
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
-        await().untilAsserted(() -> {
-            assertThat(logHolder.get().isAvailable(RequestLogAvailability.COMPLETE)).isTrue();
-        });
+        final RequestLog log = logHolder.get().whenComplete().join();
+
         assertThat(invokeResponseTimeoutHandler).isTrue();
         assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
                                                              .hasCause(resCause);
-        assertThat(logHolder.get().requestCause()).isSameAs(resCause);
-        assertThat(logHolder.get().responseCause()).isSameAs(resCause);
+        assertThat(log.requestCause()).isSameAs(resCause);
+        assertThat(log.responseCause()).isSameAs(resCause);
     }
 }

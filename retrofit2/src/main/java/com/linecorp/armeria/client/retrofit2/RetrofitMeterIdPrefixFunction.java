@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.metric.RequestMetricSupport;
@@ -94,21 +95,21 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
     }
 
     @Override
-    public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
+    public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
         final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(2);
         buildTags(tagListBuilder, log);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
     @Override
-    public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
+    public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
         final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
         buildTags(tagListBuilder, log);
         RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
-    private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
+    private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestOnlyLog log) {
         final Invocation invocation = InvocationUtil.getInvocation(log);
         if (invocation != null) {
             if (serviceTagName != null) {
@@ -121,7 +122,7 @@ public class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
             if (serviceTagName != null) {
                 tagListBuilder.add(Tag.of(serviceTagName, firstNonNull(serviceName, defaultServiceName)));
             }
-            tagListBuilder.add(Tag.of("method", log.method().name()));
+            tagListBuilder.add(Tag.of("method", log.requestHeaders().method().name()));
         }
     }
 }

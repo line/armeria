@@ -44,11 +44,13 @@ public final class SpanTags {
     public static final String TAG_ADDRESS_LOCAL = "address.local";
 
     public static void logWireSend(Span span, long wireSendTimeNanos, RequestLog requestLog) {
-        span.annotate(SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos), WIRE_SEND_ANNOTATION);
+        span.annotate(SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos),
+                      WIRE_SEND_ANNOTATION);
     }
 
-    public static void logWireReceive(Span span, long wireSendTimeNanos, RequestLog requestLog) {
-        span.annotate(SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos), WIRE_RECEIVE_ANNOTATION);
+    public static void logWireReceive(Span span, long wireReceiveTimeNanos, RequestLog requestLog) {
+        span.annotate(SpanContextUtil.wallTimeMicros(requestLog, wireReceiveTimeNanos),
+                      WIRE_RECEIVE_ANNOTATION);
     }
 
     public static boolean updateRemoteEndpoint(Span span, RequestContext ctx) {

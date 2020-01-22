@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 final class HttpStatusBasedCircuitBreakerStrategy implements CircuitBreakerStrategy {
 
@@ -43,8 +43,8 @@ final class HttpStatusBasedCircuitBreakerStrategy implements CircuitBreakerStrat
             return CompletableFuture.completedFuture(null); // Neither success nor failure.
         }
         final HttpStatus status;
-        if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-            status = ctx.log().responseHeaders().status();
+        if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            status = ctx.log().partial().responseHeaders().status();
         } else {
             status = null;
         }

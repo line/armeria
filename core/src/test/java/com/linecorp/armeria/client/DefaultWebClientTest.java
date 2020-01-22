@@ -31,7 +31,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 class DefaultWebClientTest {
@@ -110,9 +109,8 @@ class DefaultWebClientTest {
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.get("/").drainAll();
-            final RequestLog log = ctxCaptor.get().log();
+            final ClientRequestContext cctx = ctxCaptor.get();
             await().untilAsserted(() -> {
-                final ClientRequestContext cctx = (ClientRequestContext) log.context();
                 assertThat(cctx.endpointGroup()).isSameAs(group);
                 assertThat(cctx.endpoint()).isEqualTo(Endpoint.of("127.0.0.1", 1));
                 assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");
@@ -136,9 +134,8 @@ class DefaultWebClientTest {
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.get("http://group").drainAll();
-            final RequestLog log = ctxCaptor.get().log();
+            final ClientRequestContext cctx = ctxCaptor.get();
             await().untilAsserted(() -> {
-                final ClientRequestContext cctx = (ClientRequestContext) log.context();
                 assertThat(cctx.endpointGroup()).isSameAs(group);
                 assertThat(cctx.endpoint()).isEqualTo(Endpoint.of("127.0.0.1", 1));
                 assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");

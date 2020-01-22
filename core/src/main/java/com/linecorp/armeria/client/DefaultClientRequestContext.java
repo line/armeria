@@ -50,8 +50,9 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -211,7 +212,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 final ReleasableHolder<EventLoop> releasableEventLoop =
                         options().factory().acquireEventLoop(endpoint, sessionProtocol());
                 eventLoop = releasableEventLoop.get();
-                log.addListener(unused -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
+                log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
             }
 
             return true;
@@ -352,7 +353,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     @Nullable
     protected Channel channel() {
-        if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
+        if (log.isAvailable(RequestLogProperty.SESSION)) {
             return log.channel();
         } else {
             return null;
@@ -368,7 +369,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Nullable
     @Override
     public SSLSession sslSession() {
-        if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
+        if (log.isAvailable(RequestLogProperty.SESSION)) {
             return log.sslSession();
         } else {
             return null;
@@ -652,7 +653,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public RequestLog log() {
+    public RequestLogAccess log() {
         return log;
     }
 

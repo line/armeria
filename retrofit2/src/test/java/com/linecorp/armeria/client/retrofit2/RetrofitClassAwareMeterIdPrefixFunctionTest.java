@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
@@ -94,7 +95,7 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/foo", ((ctx, req) -> HttpResponse.of(HttpStatus.OK)));
+            sb.service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
         }
     };
 
@@ -175,8 +176,8 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
         final MeterIdPrefixFunction f1 = RetrofitMeterIdPrefixFunction.of("foo");
         final MeterIdPrefixFunction f2 = MeterIdPrefixFunction.ofDefault("foo");
 
-        final ClientRequestContext ctx = newContext();
-        assertThat(f1.apply(registry, ctx.log())).isEqualTo(f2.apply(registry, ctx.log()));
+        final RequestLog log = newContext().log().ensureComplete();
+        assertThat(f1.completeRequestPrefix(registry, log)).isEqualTo(f2.completeRequestPrefix(registry, log));
     }
 
     @ParameterizedTest
@@ -217,6 +218,7 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
     private static ClientRequestContext newContext() {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
         return ctx;
     }
 }

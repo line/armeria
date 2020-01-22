@@ -41,7 +41,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Version;
@@ -280,7 +279,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             if (!additionalTrailers.isEmpty()) {
                 write(additionalTrailers, true);
             } else {
-                write(HttpData.EMPTY_DATA, true);
+                write(HttpData.empty(), true);
             }
         }
     }
@@ -328,7 +327,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
-                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
+                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                 }
 
                 subscription.request(1);
@@ -339,7 +338,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 setDone();
                 logBuilder().endResponse(f.cause());
                 subscription.cancel();
-                reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
+                reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
             }
             HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
         });
@@ -408,7 +407,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
                     logBuilder().endResponse(cause);
-                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
+                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                 }
             });
         }

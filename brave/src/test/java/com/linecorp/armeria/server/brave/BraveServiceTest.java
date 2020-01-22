@@ -191,7 +191,7 @@ class BraveServiceTest {
         logBuilder.responseFirstBytesTransferred();
         logBuilder.responseContent(rpcRes, res);
         logBuilder.endResponse();
-        return ctx.log();
+        return ctx.log().ensureComplete();
     }
 
     private static void assertTags(Span span) {

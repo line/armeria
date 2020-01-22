@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
@@ -162,11 +162,11 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
             return resDuplicator.duplicateStream(true);
         }
 
-        ctx.log().addListener(log -> {
+        ctx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             final Throwable cause =
-                    log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;
+                    log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             reportSuccessOrFailure(circuitBreaker, strategy().shouldReportAsSuccess(ctx, cause));
-        }, RequestLogAvailability.RESPONSE_HEADERS);
+        });
         return response;
     }
 

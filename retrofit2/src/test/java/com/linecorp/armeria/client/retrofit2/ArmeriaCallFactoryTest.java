@@ -17,7 +17,6 @@ package com.linecorp.armeria.client.retrofit2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
-import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -453,11 +452,9 @@ class ArmeriaCallFactoryTest {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             final Response<Pojo> response = service.postForm("Cony", 26).get();
 
-            await().untilAsserted(() -> {
-                final RequestLog log = ctxCaptor.get().log();
-                assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
-                assertThat(log.authority()).isEqualTo("127.0.0.1:" + server.httpPort());
-            });
+            final RequestLog log = ctxCaptor.get().log().whenComplete().join();
+            assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
+            assertThat(log.requestHeaders().authority()).isEqualTo("127.0.0.1:" + server.httpPort());
 
             // TODO(ide) Use the actual `host:port`. See https://github.com/line/armeria/issues/379
             final HttpUrl url = response.raw().request().url();
@@ -534,10 +531,8 @@ class ArmeriaCallFactoryTest {
             final Pojo pojo = service.pojo().get();
             assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
 
-            await().untilAsserted(() -> {
-                final RequestLog log = ctxCaptor.get().log();
-                assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H1C);
-            });
+            final RequestLog log = ctxCaptor.get().log().whenComplete().join();
+            assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H1C);
         }
     }
 

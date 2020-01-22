@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -78,12 +77,12 @@ public abstract class StructuredLoggingService<L> extends SimpleDecoratingHttpSe
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        ctx.log().addListener(log -> {
+        ctx.log().whenComplete().thenAccept(log -> {
             final L structuredLog = logBuilder.build(log);
             if (structuredLog != null) {
                 writeLog(log, structuredLog);
             }
-        }, RequestLogAvailability.COMPLETE);
+        });
         return delegate().serve(ctx, req);
     }
 

@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -330,14 +331,14 @@ public class PrometheusMetricsIntegrationTest {
         }
 
         @Override
-        public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
+        public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
             return MeterIdPrefixFunction.ofDefault(name)
                                         .withTags("handler", serviceName)
-                                        .apply(registry, log);
+                                        .completeRequestPrefix(registry, log);
         }
 
         @Override
-        public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
+        public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
             return MeterIdPrefixFunction.ofDefault(name)
                                         .withTags("handler", serviceName)
                                         .activeRequestPrefix(registry, log);

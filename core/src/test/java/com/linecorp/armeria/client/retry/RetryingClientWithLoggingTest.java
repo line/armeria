@@ -23,6 +23,7 @@ import static org.awaitility.Awaitility.await;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.junit.Before;
@@ -39,9 +40,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogAvailabilityException;
-import com.linecorp.armeria.common.logging.RequestLogListener;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -70,9 +69,9 @@ public class RetryingClientWithLoggingTest {
         }
     };
 
-    private final RequestLogListener listener = new RequestLogListener() {
+    private final Consumer<RequestLog> listener = new Consumer<RequestLog>() {
         @Override
-        public void onRequestLog(RequestLog log) throws Exception {
+        public void accept(RequestLog log) {
             logResult.add(log);
             final int index = logIndex.getAndIncrement();
             if (index % 2 == 0) {
@@ -139,8 +138,8 @@ public class RetryingClientWithLoggingTest {
         return delegate -> new SimpleDecoratingHttpClient(delegate) {
             @Override
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-                ctx.log().addListener(listener, RequestLogAvailability.REQUEST_END);
-                ctx.log().addListener(listener, RequestLogAvailability.COMPLETE);
+                ctx.log().whenRequestComplete().thenAccept(log -> listener.accept(log.partial()));
+                ctx.log().whenComplete().thenAccept(listener);
                 return delegate().execute(ctx, req);
             }
         };

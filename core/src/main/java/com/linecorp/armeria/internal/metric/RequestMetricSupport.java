@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.RequestTimeoutException;
@@ -65,9 +65,12 @@ public final class RequestMetricSupport {
         }
         ctx.setAttr(requestMetricsSetKey, true);
 
-        ctx.log().addListener(log -> onRequest(log, meterIdPrefixFunction, server),
-                              RequestLogAvailability.REQUEST_HEADERS,
-                              RequestLogAvailability.REQUEST_CONTENT);
+        ctx.log()
+           .whenAvailable(RequestLogProperty.REQUEST_START_TIME,
+                          RequestLogProperty.REQUEST_HEADERS,
+                          RequestLogProperty.REQUEST_CONTENT,
+                          RequestLogProperty.SESSION)
+           .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server));
     }
 
     /**
@@ -78,8 +81,8 @@ public final class RequestMetricSupport {
         requireNonNull(log, "log");
         // Add the 'httpStatus' tag.
         final HttpStatus status;
-        if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-            status = log.status();
+        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            status = log.responseHeaders().status();
         } else {
             status = HttpStatus.UNKNOWN;
         }
@@ -101,18 +104,17 @@ public final class RequestMetricSupport {
                         reg.gauge(prefix.name(), prefix.tags(),
                                   new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
         activeRequestMetrics.increment();
-        ctx.log().addListener(requestLog -> {
-                                  onResponse(requestLog, meterIdPrefixFunction, server);
-                                  activeRequestMetrics.decrement();
-                              },
-                              RequestLogAvailability.COMPLETE);
+        ctx.log().whenComplete().thenAccept(requestLog -> {
+            onResponse(requestLog, meterIdPrefixFunction, server);
+            activeRequestMetrics.decrement();
+        });
     }
 
     private static void onResponse(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction,
                                    boolean server) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
-        final MeterIdPrefix idPrefix = meterIdPrefixFunction.apply(registry, log);
+        final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
 
         if (server) {
             final ServiceRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
@@ -188,7 +190,7 @@ public final class RequestMetricSupport {
             return false;
         }
 
-        final int statusCode = log.statusCode();
+        final int statusCode = log.responseHeaders().status().code();
         if (statusCode < 100 || statusCode >= 400) {
             return false;
         }

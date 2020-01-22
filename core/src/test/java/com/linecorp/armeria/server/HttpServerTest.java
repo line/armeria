@@ -22,12 +22,9 @@ import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
@@ -84,9 +81,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -141,7 +136,7 @@ class HttpServerTest {
                 }
             });
 
-            sb.service("/delay-deferred/{delay}", (HttpService) (ctx, req) -> {
+            sb.service("/delay-deferred/{delay}", (ctx, req) -> {
                 final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                 final HttpResponse res = HttpResponse.from(responseFuture);
                 final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
@@ -165,7 +160,7 @@ class HttpServerTest {
                 }
             });
 
-            sb.service("/delay-custom-deferred/{delay}", (HttpService) (ctx, req) -> {
+            sb.service("/delay-custom-deferred/{delay}", (ctx, req) -> {
                 final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                 final HttpResponse res = HttpResponse.from(responseFuture);
                 ctx.setRequestTimeoutHandler(
@@ -341,9 +336,9 @@ class HttpServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     if (ctx.sessionProtocol().isTls()) {
-                        assertNotNull(ctx.sslSession());
+                        assertThat(ctx.sslSession()).isNotNull();
                     } else {
-                        assertNull(ctx.sslSession());
+                        assertThat(ctx.sslSession()).isNull();
                     }
                     return HttpResponse.of(HttpStatus.OK);
                 }
@@ -422,10 +417,10 @@ class HttpServerTest {
                                 ctx.setRequestTimeoutAfterMillis(serverRequestTimeoutMillis);
                             }
                             ctx.setMaxRequestLength(serverMaxRequestLength);
-                            ctx.log().addListener(log -> {
+                            ctx.log().whenComplete().thenAccept(log -> {
                                 pendingRequestLogs.decrementAndGet();
                                 requestLogs.add(log);
-                            }, RequestLogAvailability.COMPLETE);
+                            });
                             return delegate().serve(ctx, req);
                         }
                     };
@@ -506,7 +501,7 @@ class HttpServerTest {
             assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
             assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
             assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
-            assertThat(requestLogs.take().statusCode()).isEqualTo(503);
+            assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         });
     }
 
@@ -519,7 +514,7 @@ class HttpServerTest {
             assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
             assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
             assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
-            assertThat(requestLogs.take().statusCode()).isEqualTo(503);
+            assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         });
     }
 
@@ -532,7 +527,7 @@ class HttpServerTest {
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
             assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
             assertThat(res.contentUtf8()).isEqualTo("timed out");
-            assertThat(requestLogs.take().statusCode()).isEqualTo(200);
+            assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.OK);
         });
     }
 
@@ -545,7 +540,7 @@ class HttpServerTest {
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
             assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
             assertThat(res.contentUtf8()).isEqualTo("timed out");
-            assertThat(requestLogs.take().statusCode()).isEqualTo(200);
+            assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.OK);
         });
     }
 
@@ -564,7 +559,7 @@ class HttpServerTest {
             assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
             assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
             assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
-            assertThat(requestLogs.take().statusCode()).isEqualTo(503);
+            assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         });
     }
 
@@ -577,12 +572,8 @@ class HttpServerTest {
 
             // Because the service has written out the content partially, there's no way for the service
             // to reply with '503 Service Unavailable', so it will just close the stream.
-            try {
-                f.get();
-                fail();
-            } catch (ExecutionException e) {
-                assertThat(Exceptions.peel(e)).isInstanceOf(ClosedSessionException.class);
-            }
+            assertThatThrownBy(f::get).isInstanceOf(ExecutionException.class)
+                                      .hasCauseInstanceOf(ClosedSessionException.class);
         });
     }
 
@@ -600,12 +591,8 @@ class HttpServerTest {
 
             // Because the service has written out the content partially, there's no way for the service
             // to reply with '503 Service Unavailable', so it will just close the stream.
-            try {
-                f.get();
-                fail();
-            } catch (ExecutionException e) {
-                assertThat(Exceptions.peel(e)).isInstanceOf(ClosedSessionException.class);
-            }
+            assertThatThrownBy(f::get).isInstanceOf(ExecutionException.class)
+                                      .hasCauseInstanceOf(ClosedSessionException.class);
         });
     }
 
@@ -889,7 +876,7 @@ class HttpServerTest {
             // Verify all header names are in lowercase
             for (AsciiString headerName : res.headers().names()) {
                 headerName.chars().filter(Character::isAlphabetic)
-                          .forEach(c -> assertTrue(Character.isLowerCase(c)));
+                          .forEach(c -> assertThat(Character.isLowerCase(c)).isTrue());
             }
 
             assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header1"))).isEqualTo("custom1");

@@ -42,7 +42,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
-    private Function<? super RequestLog, LogLevel> requestLogLevelMapper =
+    private Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper =
             log -> requestLogLevel();
     private Function<? super RequestLog, LogLevel> responseLogLevelMapper =
             log -> log.responseCause() == null ? successfulResponseLogLevel() : failedResponseLogLevel();
@@ -149,7 +149,8 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Sets the {@link Function} to use when mapping the log level of request logs.
      */
-    public T requestLogLevelMapper(Function<? super RequestLog, LogLevel> requestLogLevelMapper) {
+    public T requestLogLevelMapper(
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
         if (isRequestLogLevelSet) {
             throw new IllegalStateException("requestLogLevel has been set already.");
         }
@@ -161,7 +162,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Returns the {@link LogLevel} to use when logging request logs.
      */
-    protected Function<? super RequestLog, LogLevel> requestLogLevelMapper() {
+    protected Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper() {
         return requestLogLevelMapper;
     }
 
@@ -368,7 +369,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failureResponseLogLevel,
-            Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             boolean isRequestLogLevelMapperSet,
             boolean isResponseLogLevelMapperSet,

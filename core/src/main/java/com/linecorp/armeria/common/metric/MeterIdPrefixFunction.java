@@ -13,7 +13,6 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
-
 package com.linecorp.armeria.common.metric;
 
 import static java.util.Objects.requireNonNull;
@@ -30,6 +29,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -46,7 +47,6 @@ import io.micrometer.core.instrument.Tags;
  * @see MetricCollectingClient
  * @see MetricCollectingService
  */
-@FunctionalInterface
 public interface MeterIdPrefixFunction {
 
     /**
@@ -71,25 +71,26 @@ public interface MeterIdPrefixFunction {
         requireNonNull(name, "name");
         return new MeterIdPrefixFunction() {
             @Override
-            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
+            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
                 // hostNamePattern, method, route
                 final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
-                // For optimal performance, add tags in order.
-                buildTags(tagListBuilder, log, false);
+                buildTags(tagListBuilder, log);
                 return new MeterIdPrefix(name, tagListBuilder.build());
             }
 
             @Override
-            public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
+            public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
                 // hostNamePattern, httpStatus, method, route
                 final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
-                // For optimal performance, add tags in order.
-                buildTags(tagListBuilder, log, true);
+                buildTags(tagListBuilder, log);
+                RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
                 return new MeterIdPrefix(name, tagListBuilder.build());
             }
 
-            private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log,
-                                   boolean addStatus) {
+            /**
+             * Appends the tags in lexicographical order for better sort performance.
+             */
+            private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestOnlyLog log) {
                 final RequestContext ctx = log.context();
                 final Object requestContent = log.requestContent();
 
@@ -110,10 +111,6 @@ public interface MeterIdPrefixFunction {
                                               sCtx.virtualHost().hostnamePattern()));
                 }
 
-                if (addStatus) {
-                    RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
-                }
-
                 tagListBuilder.add(Tag.of("method", methodName));
 
                 if (ctx instanceof ServiceRequestContext) {
@@ -125,20 +122,45 @@ public interface MeterIdPrefixFunction {
     }
 
     /**
-     * Creates a {@link MeterIdPrefix} from the specified {@link RequestLog}.
+     * Returns a {@link MeterIdPrefixFunction} which generates a {@link MeterIdPrefix} from the given
+     * {@link MeterRegistry} and {@link RequestOnlyLog}.
+     * Both {@link #activeRequestPrefix(MeterRegistry, RequestOnlyLog)}
+     * and {@link #completeRequestPrefix(MeterRegistry, RequestLog)} will return the same {@link MeterIdPrefix}
+     * for the same input.
      */
-    MeterIdPrefix apply(MeterRegistry registry, RequestLog log);
+    static MeterIdPrefixFunction of(
+            BiFunction<? super MeterRegistry, ? super RequestOnlyLog, MeterIdPrefix> function) {
+        requireNonNull(function, "function");
+        return new MeterIdPrefixFunction() {
+            @Override
+            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
+                return function.apply(registry, log);
+            }
+
+            @Override
+            public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
+                return function.apply(registry, log);
+            }
+        };
+    }
 
     /**
      * Creates a {@link MeterIdPrefix} for the active request counter gauges from the specified
-     * {@link RequestLog}. This method by default delegates to {@link #apply(MeterRegistry, RequestLog)}.
-     * You must override this method if your {@link #apply(MeterRegistry, RequestLog)} implementation builds
-     * a {@link MeterIdPrefix} using response properties that's not always available when the active request
-     * counter is increased, such as HTTP status.
+     * {@link RequestOnlyLog}. Note that the given {@link RequestOnlyLog} might not have all properties
+     * available. However, the following properties' availability is guaranteed:
+     * <ul>
+     *   <li>{@link RequestLogProperty#REQUEST_START_TIME}</li>
+     *   <li>{@link RequestLogProperty#REQUEST_HEADERS}</li>
+     *   <li>{@link RequestLogProperty#REQUEST_CONTENT}</li>
+     *   <li>{@link RequestLogProperty#SESSION}</li>
+     * </ul>
      */
-    default MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
-        return apply(registry, log);
-    }
+    MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log);
+
+    /**
+     * Creates a {@link MeterIdPrefix} from the specified complete {@link RequestLog}.
+     */
+    MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log);
 
     /**
      * Returns a {@link MeterIdPrefixFunction} that returns a newly created {@link MeterIdPrefix} which has
@@ -163,15 +185,17 @@ public interface MeterIdPrefixFunction {
      * returned by this function.
      */
     default MeterIdPrefixFunction andThen(BiFunction<MeterRegistry, MeterIdPrefix, MeterIdPrefix> function) {
+        requireNonNull(function, "function");
         return new MeterIdPrefixFunction() {
             @Override
-            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
+            public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
                 return function.apply(registry, MeterIdPrefixFunction.this.activeRequestPrefix(registry, log));
             }
 
             @Override
-            public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
-                return function.apply(registry, MeterIdPrefixFunction.this.apply(registry, log));
+            public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
+                return function.apply(
+                        registry, MeterIdPrefixFunction.this.completeRequestPrefix(registry, log));
             }
         };
     }

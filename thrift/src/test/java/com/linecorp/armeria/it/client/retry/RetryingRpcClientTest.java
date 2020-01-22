@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINA
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -52,7 +51,6 @@ import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -161,7 +159,7 @@ public class RetryingRpcClientTest {
                                                      .maxTotalAttempts(maxAttempts)
                                                      .newDecorator())
                       .rpcDecorator((delegate, ctx, req) -> {
-                          ctx.log().addListener(logQueue::add, RequestLogAvailability.COMPLETE);
+                          ctx.log().whenComplete().thenAccept(logQueue::add);
                           return delegate.execute(ctx, req);
                       })
                       .build(HelloService.Iface.class);
@@ -244,8 +242,7 @@ public class RetryingRpcClientTest {
 
         assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
 
-        final RequestLog log = context.get().log();
-        await().untilAsserted(() -> assertThat(log.isAvailable(RequestLogAvailability.COMPLETE)).isTrue());
+        final RequestLog log = context.get().log().whenComplete().join();
         verify(serviceHandler, only()).hello("hello");
         assertThat(log.requestCause()).isNull();
         assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);

@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -76,17 +76,17 @@ class HttpResponseDecoderTest {
                                         .newDecorator());
         builder.decorator((delegate, ctx, req) -> {
             final AtomicReference<Thread> responseStartedThread = new AtomicReference<>();
-            ctx.log().addListener(log -> {
+            ctx.log().whenAvailable(RequestLogProperty.RESPONSE_START_TIME).thenAccept(log -> {
                 responseStartedThread.set(Thread.currentThread());
-            }, RequestLogAvailability.RESPONSE_START);
-            ctx.log().addListener(log -> {
+            });
+            ctx.log().whenComplete().thenAccept(log -> {
                 final Thread thread = responseStartedThread.get();
                 if (thread != null && thread != Thread.currentThread()) {
                     logger.error("{} Response ended in another thread: {} != {}",
                                  ctx, thread, Thread.currentThread());
                     failed.set(true);
                 }
-            }, RequestLogAvailability.RESPONSE_END);
+            });
             return delegate.execute(ctx, req);
         });
 

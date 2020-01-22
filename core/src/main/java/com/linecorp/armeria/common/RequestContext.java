@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -248,9 +249,10 @@ public interface RequestContext {
     String query();
 
     /**
-     * Returns the {@link RequestLog} that contains the information about the current {@link Request}.
+     * Returns the {@link RequestLogAccess} that provides the access to the {@link RequestLog}, which
+     * contains the information collected while processing the current {@link Request}.
      */
-    RequestLog log();
+    RequestLogAccess log();
 
     /**
      * Returns the {@link RequestLogBuilder} that collects the information about the current {@link Request}.

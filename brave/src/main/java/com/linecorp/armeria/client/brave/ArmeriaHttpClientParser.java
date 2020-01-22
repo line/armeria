@@ -78,7 +78,7 @@ final class ArmeriaHttpClientParser extends HttpClientParser {
         }
 
         final ClientRequestContext ctx = (ClientRequestContext) res;
-        final RequestLog log = ctx.log();
+        final RequestLog log = ctx.log().ensureComplete();
         customizer.tag(SpanTags.TAG_HTTP_PROTOCOL, ClientRequestContextAdapter.protocol(log));
 
         final String serFmt = ClientRequestContextAdapter.serializationFormat(log);

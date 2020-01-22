@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -142,8 +141,7 @@ public abstract class AbstractThriftOverHttpTest {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                             if (recordMessageLogs) {
-                                ctx.log().addListener(requestLogs::add,
-                                                      RequestLogAvailability.COMPLETE);
+                                ctx.log().whenComplete().thenAccept(requestLogs::add);
                             }
                             return delegate().serve(ctx, req);
                         }
@@ -451,7 +449,7 @@ public abstract class AbstractThriftOverHttpTest {
     private static RequestLog takeLog() throws InterruptedException {
         for (;;) {
             final RequestLog log = requestLogs.take();
-            if (log.method() == HttpMethod.HEAD) {
+            if (log.requestHeaders().method() == HttpMethod.HEAD) {
                 // Skip the upgrade request.
                 continue;
             }

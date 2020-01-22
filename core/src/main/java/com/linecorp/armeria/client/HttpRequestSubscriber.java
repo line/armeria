@@ -117,6 +117,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             }
 
             if (state == State.DONE) {
+                logBuilder.endRequest();
                 // Successfully sent the request; schedule the response timeout.
                 response.initTimeout();
             }
@@ -273,7 +274,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         cancelTimeout();
 
         if (state != State.DONE) {
-            write(HttpData.EMPTY_DATA, true, true);
+            write(HttpData.empty(), true, true);
         }
     }
 
@@ -297,10 +298,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream);
         } else {
             future = encoder.writeData(id, streamId(), (HttpData) o, endOfStream);
-        }
-
-        if (endOfStream) {
-            logBuilder.endRequest();
         }
 
         future.addListener(this);

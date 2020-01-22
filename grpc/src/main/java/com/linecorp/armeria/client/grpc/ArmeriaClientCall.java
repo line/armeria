@@ -47,8 +47,8 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
@@ -155,7 +155,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         executor = callOptions.getExecutor();
 
         req.completionFuture().handle((unused1, unused2) -> {
-            if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+            if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 // Can reach here if the request stream was empty.
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
             }
@@ -282,14 +282,14 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void doSendMessage(I message) {
-        final RequestLog log = ctx.log();
-        if (log.isAvailable(RequestLogAvailability.COMPLETE)) {
+        final RequestLogAccess log = ctx.log();
+        if (log.isComplete()) {
             // Completed already; no need to send anymore.
             return;
         }
 
         try {
-            if (!log.isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+            if (!log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, message), null);
             }
             final ByteBuf serialized = marshaller.serializeRequest(message);

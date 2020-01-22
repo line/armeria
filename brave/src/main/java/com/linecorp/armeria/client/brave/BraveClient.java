@@ -33,8 +33,6 @@ import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.Span;
@@ -118,18 +116,24 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             }
         }
 
-        ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
-                              RequestLogAvailability.REQUEST_START);
+        ctx.log().whenComplete().thenAccept(log -> {
+            span.start(log.requestStartTimeMicros());
 
-        ctx.log().addListener(log -> {
-            // The request might have failed even before it's sent, e.g. validation failure, connection error.
-            if (log.isAvailable(RequestLogAvailability.REQUEST_FIRST_BYTES_TRANSFERRED)) {
-                SpanTags.logWireSend(span, log.requestFirstBytesTransferredTimeNanos(), log);
+            final Long wireSendTimeNanos = log.requestFirstBytesTransferredTimeNanos();
+            if (wireSendTimeNanos != null) {
+                SpanTags.logWireSend(span, wireSendTimeNanos, log);
+            } else {
+                // The request might have failed even before it's sent,
+                // e.g. validation failure, connection error.
             }
-            // If the client timed-out the request, we will have never received any response data at all.
-            if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
-                SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
+
+            final Long wireReceiveTimeNanos = log.responseFirstBytesTransferredTimeNanos();
+            if (wireReceiveTimeNanos != null) {
+                SpanTags.logWireReceive(span, wireReceiveTimeNanos, log);
+            } else {
+                // If the client timed-out the request, we will have never received any response data at all.
             }
+
             SpanTags.updateRemoteEndpoint(span, ctx);
 
             final ClientConnectionTimings timings = ClientConnectionTimings.get(ctx);
@@ -154,17 +158,17 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                 }
             }
 
-            final HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(ctx);
+            final HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(log);
             handler.handleReceive(response, log.responseCause(), span);
-        }, RequestLogAvailability.COMPLETE);
+        });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().execute(ctx, req);
         }
     }
 
-    private void logTiming(Span span, String startName, String endName, long startTimeMicros,
-                           long durationNanos) {
+    private static void logTiming(Span span, String startName, String endName, long startTimeMicros,
+                                  long durationNanos) {
         span.annotate(startTimeMicros, startName);
         span.annotate(startTimeMicros + TimeUnit.NANOSECONDS.toMicros(durationNanos), endName);
     }

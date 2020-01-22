@@ -22,8 +22,6 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -85,18 +83,23 @@ public final class BraveService extends SimpleDecoratingHttpService {
             }
         }
 
-        ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
-                              RequestLogAvailability.REQUEST_START);
+        ctx.log().whenComplete().thenAccept(log -> {
+            span.start(log.requestStartTimeMicros());
 
-        ctx.log().addListener(log -> {
-            SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log);
-            // If the client timed-out the request, we will have never sent any response data at all.
-            if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
-                SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);
+            final Long wireReceiveTimeNanos = log.requestFirstBytesTransferredTimeNanos();
+            assert wireReceiveTimeNanos != null;
+            SpanTags.logWireReceive(span, wireReceiveTimeNanos, log);
+
+            final Long wireSendTimeNanos = log.responseFirstBytesTransferredTimeNanos();
+            if (wireSendTimeNanos != null) {
+                SpanTags.logWireSend(span, wireSendTimeNanos, log);
+            } else {
+                // If the client timed-out the request, we will have never sent any response data at all.
             }
-            final HttpServerResponse response = ServiceRequestContextAdapter.asHttpServerResponse(ctx);
+
+            final HttpServerResponse response = ServiceRequestContextAdapter.asHttpServerResponse(log);
             handler.handleSend(response, log.responseCause(), span);
-        }, RequestLogAvailability.COMPLETE);
+        });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().serve(ctx, req);

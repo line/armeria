@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 
 /**
  * Utilities for logging decorators.
@@ -41,8 +42,8 @@ public final class LoggingDecorators {
      * Logs a stringified request of {@link RequestLog}.
      */
     public static void logRequest(
-            Logger logger, RequestLog log,
-            Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+            Logger logger, RequestOnlyLog log,
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestHeaders, ?> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ?> requestTrailersSanitizer) {

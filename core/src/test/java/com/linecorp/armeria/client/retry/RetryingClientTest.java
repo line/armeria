@@ -68,7 +68,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -478,8 +477,7 @@ public class RetryingClientTest {
                 httpResponse.abort(abortCause);
             }
 
-            final RequestLog log = context.get().log();
-            await().untilAsserted(() -> assertThat(log.isAvailable(RequestLogAvailability.COMPLETE)).isTrue());
+            final RequestLog log = context.get().log().whenComplete().join();
             assertThat(responseAbortServiceCallCounter.get()).isOne();
             assertThat(log.requestCause()).isNull();
             if (abortCause == null) {
@@ -545,7 +543,7 @@ public class RetryingClientTest {
             TimeUnit.SECONDS.sleep(1);
             // No request is made.
             assertThat(responseAbortServiceCallCounter.get()).isZero();
-            final RequestLog log = context.get().log();
+            final RequestLog log = context.get().log().whenComplete().join();
             if (abortCause == null) {
                 assertThat(log.requestCause()).isExactlyInstanceOf(AbortedStreamException.class);
                 assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);

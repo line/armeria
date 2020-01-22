@@ -30,7 +30,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
@@ -75,9 +75,9 @@ class ThriftClientRequestContextInitFailureTest {
 
         assertThat(rpcDecoratorRan).isTrue();
         assertThat(capturedCtx.get()).satisfies(ctx -> {
-            ctx.log().ensureAvailability(RequestLogAvailability.COMPLETE);
-            assertThat(ctx.log().requestCause()).isSameAs(actualCause);
-            assertThat(ctx.log().responseCause()).isSameAs(actualCause);
+            final RequestLog log = ctx.log().ensureComplete();
+            assertThat(log.requestCause()).isSameAs(actualCause);
+            assertThat(log.responseCause()).isSameAs(actualCause);
         });
     }
 }

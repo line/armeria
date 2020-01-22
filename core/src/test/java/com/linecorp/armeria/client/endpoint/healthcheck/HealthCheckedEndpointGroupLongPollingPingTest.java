@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.Queue;
@@ -43,6 +42,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -96,7 +96,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
                                  "RECEIVED_HEADERS");
 
     @Nullable
-    private volatile BlockingQueue<RequestLog> healthCheckRequestLogs;
+    private volatile BlockingQueue<RequestLogAccess> healthCheckRequestLogs;
 
     @BeforeEach
     void startServer() {
@@ -105,7 +105,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
 
     @Test
     void ping() throws Exception {
-        final BlockingQueue<RequestLog> healthCheckRequestLogs = new LinkedTransferQueue<>();
+        final BlockingQueue<RequestLogAccess> healthCheckRequestLogs = new LinkedTransferQueue<>();
         this.healthCheckRequestLogs = healthCheckRequestLogs;
 
         final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
@@ -117,7 +117,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
             assertFirstRequest(healthCheckRequestLogs);
 
             // The second request must be long-polling with informationals.
-            final RequestLog longPollingRequestLog = healthCheckRequestLogs.take();
+            final RequestLogAccess longPollingRequestLog = healthCheckRequestLogs.take();
 
             // There must be two or more '102 Processing' and nothing else.
             final BlockingQueue<ResponseHeaders> receivedInformationals =
@@ -138,7 +138,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
 
     @Test
     void noPingAfterInitialPing() throws Exception {
-        final BlockingQueue<RequestLog> healthCheckRequestLogs = new LinkedTransferQueue<>();
+        final BlockingQueue<RequestLogAccess> healthCheckRequestLogs = new LinkedTransferQueue<>();
         this.healthCheckRequestLogs = healthCheckRequestLogs;
 
         final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
@@ -150,11 +150,8 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
             assertFirstRequest(healthCheckRequestLogs);
 
             // The second request must time out while long-polling.
-            final RequestLog longPollingRequestLog = healthCheckRequestLogs.take();
-            await().untilAsserted(() -> {
-                assertThat(longPollingRequestLog.responseCause())
-                        .isInstanceOf(ResponseTimeoutException.class);
-            });
+            final RequestLog longPollingRequestLog = healthCheckRequestLogs.take().whenComplete().join();
+            assertThat(longPollingRequestLog.responseCause()).isInstanceOf(ResponseTimeoutException.class);
 
             // There must be only one '102 Processing' header received.
             final BlockingQueue<ResponseHeaders> receivedInformationals =
@@ -172,7 +169,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
 
     @Test
     void noPingAtAll() throws Exception {
-        final BlockingQueue<RequestLog> healthCheckRequestLogs = new LinkedTransferQueue<>();
+        final BlockingQueue<RequestLogAccess> healthCheckRequestLogs = new LinkedTransferQueue<>();
         this.healthCheckRequestLogs = healthCheckRequestLogs;
 
         final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
@@ -184,11 +181,8 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
             assertFirstRequest(healthCheckRequestLogs);
 
             // The second request must time out while long-polling.
-            final RequestLog longPollingRequestLog = healthCheckRequestLogs.take();
-            await().untilAsserted(() -> {
-                assertThat(longPollingRequestLog.responseCause())
-                        .isInstanceOf(ResponseTimeoutException.class);
-            });
+            final RequestLog longPollingRequestLog = healthCheckRequestLogs.take().whenComplete().join();
+            assertThat(longPollingRequestLog.responseCause()).isInstanceOf(ResponseTimeoutException.class);
 
             // There must be no '102 Processing' headers received.
             final BlockingQueue<ResponseHeaders> receivedInformationals =
@@ -201,10 +195,10 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
     }
 
     private static void assertFirstRequest(
-            BlockingQueue<RequestLog> healthCheckRequestLogs) throws InterruptedException {
+            BlockingQueue<RequestLogAccess> healthCheckRequestLogs) throws InterruptedException {
         // The first request is always non-long-polling, so there has to be no informationals.
-        final RequestLog firstNonLongPollingRequestLog = healthCheckRequestLogs.take();
-        assertThat(firstNonLongPollingRequestLog.status()).isEqualTo(HttpStatus.OK);
+        final RequestLog firstNonLongPollingRequestLog = healthCheckRequestLogs.take().whenComplete().join();
+        assertThat(firstNonLongPollingRequestLog.responseHeaders().status()).isEqualTo(HttpStatus.OK);
         assertThat(firstNonLongPollingRequestLog.context().attr(RECEIVED_INFORMATIONALS)).isEmpty();
     }
 
@@ -214,7 +208,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
         builder.withClientOptions(b -> {
             b.decorator(LoggingClient.newDecorator());
             b.decorator((delegate, ctx, req) -> {
-                final Queue<RequestLog> healthCheckRequestLogs = this.healthCheckRequestLogs;
+                final Queue<RequestLogAccess> healthCheckRequestLogs = this.healthCheckRequestLogs;
                 if (healthCheckRequestLogs == null) {
                     return delegate.execute(ctx, req);
                 }

@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.logging.LoggingDecorators.logRequest
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -35,8 +36,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.logging.RequestLogListener;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -69,11 +69,11 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         return new LoggingServiceBuilder();
     }
 
-    private final RequestLogListener requestLogger = new RequestLogger();
-    private final RequestLogListener responseLogger = new ResponseLogger();
+    private final RequestLogger requestLogger = new RequestLogger();
+    private final ResponseLogger responseLogger = new ResponseLogger();
 
     private final Logger logger;
-    private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
+    private final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
     private final Function<? super RequestHeaders, ?> requestHeadersSanitizer;
     private final Function<Object, ?> requestContentSanitizer;
@@ -92,7 +92,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     LoggingService(
             HttpService delegate,
             @Nullable Logger logger,
-            Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             Function<? super RequestHeaders, ?> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
@@ -122,15 +122,15 @@ public final class LoggingService extends SimpleDecoratingHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(requestLogger, RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(responseLogger, RequestLogAvailability.COMPLETE);
+            ctx.log().whenRequestComplete().thenAccept(requestLogger);
+            ctx.log().whenComplete().thenAccept(responseLogger);
         }
         return delegate().serve(ctx, req);
     }
 
-    private class RequestLogger implements RequestLogListener {
+    private class RequestLogger implements Consumer<RequestOnlyLog> {
         @Override
-        public void onRequestLog(RequestLog log) throws Exception {
+        public void accept(RequestOnlyLog log) {
             logRequest(logger, log,
                        requestLogLevelMapper,
                        requestHeadersSanitizer,
@@ -138,9 +138,9 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         }
     }
 
-    private class ResponseLogger implements RequestLogListener {
+    private class ResponseLogger implements Consumer<RequestLog> {
         @Override
-        public void onRequestLog(RequestLog log) throws Exception {
+        public void accept(RequestLog log) {
             logResponse(logger, log,
                         requestLogLevelMapper,
                         responseLogLevelMapper,

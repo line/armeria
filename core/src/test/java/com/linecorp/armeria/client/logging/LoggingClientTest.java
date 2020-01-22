@@ -79,7 +79,7 @@ class LoggingClientTest {
 
         // verify response log
         verify(logger).info(eq("{} Response: {}"), eq(context),
-                            argThat((String actLog) -> actLog.endsWith("duration=0ns, headers=[:status=0]}")));
+                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")));
 
         verifyNoMoreInteractions(logger);
         clearInvocations(logger);

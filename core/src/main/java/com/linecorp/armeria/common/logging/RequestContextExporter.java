@@ -140,6 +140,9 @@ public final class RequestContextExporter {
      */
     public boolean containsAttribute(AttributeKey<?> key) {
         requireNonNull(key, "key");
+        if (attrs == null) {
+            return false;
+        }
         return Arrays.stream(attrs).anyMatch(e -> e.key.equals(key));
     }
 
@@ -148,6 +151,9 @@ public final class RequestContextExporter {
      */
     public boolean containsHttpRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
+        if (httpReqHeaders == null) {
+            return false;
+        }
         return Arrays.stream(httpReqHeaders).anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
     }
 
@@ -156,6 +162,9 @@ public final class RequestContextExporter {
      */
     public boolean containsHttpResponseHeader(CharSequence name) {
         requireNonNull(name, "name");
+        if (httpResHeaders == null) {
+            return false;
+        }
         return Arrays.stream(httpResHeaders).anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
     }
 
@@ -179,6 +188,9 @@ public final class RequestContextExporter {
      * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
      */
     public Map<String, AttributeKey<?>> attributes() {
+        if (attrs == null) {
+            return ImmutableMap.of();
+        }
         return Arrays.stream(attrs).collect(
                 toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key));
     }
@@ -187,6 +199,9 @@ public final class RequestContextExporter {
      * Returns all HTTP request header names in the export list.
      */
     public Set<AsciiString> httpRequestHeaders() {
+        if (httpReqHeaders == null) {
+            return ImmutableSet.of();
+        }
         return Arrays.stream(httpReqHeaders).map(e -> e.key).collect(toImmutableSet());
     }
 
@@ -194,6 +209,9 @@ public final class RequestContextExporter {
      * Returns all HTTP response header names in the export list.
      */
     public Set<AsciiString> httpResponseHeaders() {
+        if (httpResHeaders == null) {
+            return ImmutableSet.of();
+        }
         return Arrays.stream(httpResHeaders).map(e -> e.key).collect(toImmutableSet());
     }
 
@@ -215,12 +233,9 @@ public final class RequestContextExporter {
         requireNonNull(ctx, "ctx");
 
         final State state = state(ctx);
-        final RequestLog log = ctx.log();
-        final Set<RequestLogAvailability> availabilities = log.availabilities();
-
-        // Note: This equality check is extremely fast.
-        //       See RequestLogAvailabilitySet for more information.
-        if (!availabilities.equals(state.availabilities)) {
+        final RequestLog log = ctx.log().partial();
+        final int availabilities = log.availabilityStamp();
+        if (availabilities != state.availabilities) {
             state.availabilities = availabilities;
             export(state, ctx, log);
         }
@@ -323,7 +338,7 @@ public final class RequestContextExporter {
     }
 
     private static void exportScheme(Map<String, String> out, RequestContext ctx, RequestLog log) {
-        if (log.isAvailable(RequestLogAvailability.SCHEME)) {
+        if (log.isAvailable(RequestLogProperty.SCHEME)) {
             out.put(SCHEME.key, log.scheme().uriText());
         } else {
             out.put(SCHEME.key, "unknown+" + ctx.sessionProtocol().uriText());
@@ -343,8 +358,7 @@ public final class RequestContextExporter {
     }
 
     private static void exportAuthority(Map<String, String> out, RequestContext ctx, RequestLog log) {
-        final Set<RequestLogAvailability> availabilities = log.availabilities();
-        if (availabilities.contains(RequestLogAvailability.REQUEST_HEADERS)) {
+        if (log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
             final String authority = getAuthority(ctx, log.requestHeaders());
             if (authority != null) {
                 out.put(REQ_AUTHORITY.key, authority);
@@ -356,14 +370,6 @@ public final class RequestContextExporter {
         if (origReq != null) {
             final String authority = getAuthority(ctx, origReq.headers());
             if (authority != null) {
-                out.put(REQ_AUTHORITY.key, authority);
-                return;
-            }
-        }
-
-        if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
-            final String authority = log.authority();
-            if (!"?".equals(authority)) {
                 out.put(REQ_AUTHORITY.key, authority);
                 return;
             }
@@ -426,25 +432,25 @@ public final class RequestContextExporter {
     }
 
     private static void exportRequestContentLength(Map<String, String> out, RequestLog log) {
-        if (log.isAvailable(RequestLogAvailability.REQUEST_END)) {
+        if (log.isAvailable(RequestLogProperty.REQUEST_LENGTH)) {
             out.put(REQ_CONTENT_LENGTH.key, String.valueOf(log.requestLength()));
         }
     }
 
     private static void exportStatusCode(Map<String, String> out, RequestLog log) {
-        if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-            out.put(RES_STATUS_CODE.key, log.status().codeAsText());
+        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            out.put(RES_STATUS_CODE.key, log.responseHeaders().status().codeAsText());
         }
     }
 
     private static void exportResponseContentLength(Map<String, String> out, RequestLog log) {
-        if (log.isAvailable(RequestLogAvailability.RESPONSE_END)) {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_LENGTH)) {
             out.put(RES_CONTENT_LENGTH.key, String.valueOf(log.responseLength()));
         }
     }
 
     private static void exportElapsedNanos(Map<String, String> out, RequestLog log) {
-        if (log.isAvailable(RequestLogAvailability.COMPLETE)) {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
             out.put(ELAPSED_NANOS.key, String.valueOf(log.totalDurationNanos()));
         }
     }
@@ -474,7 +480,7 @@ public final class RequestContextExporter {
     }
 
     private void exportRpcRequest(Map<String, String> out, RequestLog log) {
-        if (!log.isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+        if (!log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
             return;
         }
 
@@ -491,7 +497,7 @@ public final class RequestContextExporter {
     }
 
     private void exportRpcResponse(Map<String, String> out, RequestLog log) {
-        if (!log.isAvailable(RequestLogAvailability.RESPONSE_CONTENT)) {
+        if (!log.isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
             return;
         }
 
@@ -526,7 +532,7 @@ public final class RequestContextExporter {
     }
 
     private void exportHttpRequestHeaders(Map<String, String> out, RequestLog log) {
-        if (httpReqHeaders == null || !log.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+        if (httpReqHeaders == null || !log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
             return;
         }
 
@@ -534,7 +540,7 @@ public final class RequestContextExporter {
     }
 
     private void exportHttpResponseHeaders(Map<String, String> out, RequestLog log) {
-        if (httpResHeaders == null || !log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+        if (httpResHeaders == null || !log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
             return;
         }
 
@@ -618,7 +624,6 @@ public final class RequestContextExporter {
     private static final class State extends Object2ObjectOpenHashMap<String, String> {
         private static final long serialVersionUID = -7084248226635055988L;
 
-        @Nullable
-        Set<RequestLogAvailability> availabilities;
+        int availabilities = -1;
     }
 }

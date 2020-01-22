@@ -66,7 +66,6 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -227,7 +226,7 @@ class ThriftOverHttpClientTest {
         final ClientDecorationBuilder decoBuilder = ClientDecoration.builder();
         decoBuilder.addRpc((delegate, ctx, req) -> {
             if (recordMessageLogs) {
-                ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
+                ctx.log().whenComplete().thenAccept(requestLogs::add);
             }
             return delegate.execute(ctx, req);
         });

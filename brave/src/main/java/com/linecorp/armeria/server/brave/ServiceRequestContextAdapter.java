@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.Route;
@@ -72,8 +72,8 @@ final class ServiceRequestContextAdapter {
 
         /**
          * Original implementation is calling {@link HttpServerAdapter#url(Object)} which needs {@link
-         * RequestLog#scheme()} is not available at {@link RequestLogAvailability#REQUEST_START}. We
-         * need to use {@link RequestLog#path()} directly.
+         * RequestLog#scheme()}, but because {@link RequestLog#scheme()} is not always available, we need to
+         * use {@link RequestContext#path()} directly.
          *
          * @see brave.http.HttpServerRequest#path()
          */
@@ -91,55 +91,50 @@ final class ServiceRequestContextAdapter {
         @Override
         @Nullable
         public String header(String name) {
-            if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
-                return null;
-            }
-            return ctx.log().requestHeaders().get(name);
+            return ctx.request().headers().get(name);
         }
 
         @Override
         public long startTimestamp() {
-            if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
-                return 0L;
-            }
-            return ctx.log().requestStartTimeMicros();
+            return ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME).requestStartTimeMicros();
         }
     }
 
-    static brave.http.HttpServerResponse asHttpServerResponse(ServiceRequestContext ctx) {
-        return new HttpServerResponse(ctx);
+    static brave.http.HttpServerResponse asHttpServerResponse(RequestLog log) {
+        return new HttpServerResponse(log);
     }
 
+    /**
+     * Note that this class is used only after {@link RequestLog} is complete.
+     */
     @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpServerResponse extends brave.http.HttpServerResponse {
-        private final ServiceRequestContext ctx;
+        private final RequestLog log;
 
-        HttpServerResponse(ServiceRequestContext ctx) {
-            this.ctx = ctx;
+        HttpServerResponse(RequestLog log) {
+            assert log.isComplete() : log;
+            this.log = log;
         }
 
         @Override
         public ServiceRequestContext unwrap() {
-            return ctx;
+            return (ServiceRequestContext) log.context();
         }
 
         @Override
         public int statusCode() {
-            if (!ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-                return 0;
-            }
-            return ctx.log().status().code();
+            return log.responseHeaders().status().code();
         }
 
         @Override
         public String method() {
-            return ctx.method().name();
+            return log.requestHeaders().method().name();
         }
 
         @Override
         @Nullable
         public String route() {
-            final Route route = ctx.route();
+            final Route route = ((ServiceRequestContext) log.context()).route();
             final List<String> paths = route.paths();
             switch (route.pathType()) {
                 case EXACT:
@@ -156,10 +151,7 @@ final class ServiceRequestContextAdapter {
 
         @Override
         public long finishTimestamp() {
-            if (!ctx.log().isAvailable(RequestLogAvailability.RESPONSE_END)) {
-                return 0L;
-            }
-            return SpanContextUtil.wallTimeMicros(ctx.log(), ctx.log().responseEndTimeNanos());
+            return SpanContextUtil.wallTimeMicros(log, log.responseEndTimeNanos());
         }
     }
 
@@ -168,9 +160,6 @@ final class ServiceRequestContextAdapter {
      */
     @Nullable
     static String serializationFormat(RequestLog requestLog) {
-        if (!requestLog.isAvailable(RequestLogAvailability.SCHEME)) {
-            return null;
-        }
         final SerializationFormat serFmt = requestLog.scheme().serializationFormat();
         return serFmt == SerializationFormat.NONE ? null : serFmt.uriText();
     }
@@ -180,9 +169,6 @@ final class ServiceRequestContextAdapter {
      */
     @Nullable
     static String rpcMethod(RequestLog requestLog) {
-        if (!requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
-            return null;
-        }
         final Object requestContent = requestLog.requestContent();
         return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
     }

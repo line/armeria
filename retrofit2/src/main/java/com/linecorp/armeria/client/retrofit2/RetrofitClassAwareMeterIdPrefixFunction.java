@@ -30,7 +30,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 
@@ -58,7 +60,7 @@ import retrofit2.http.PUT;
  *     <li>{@code method} - Retrofit service interface method
  *                          or {@code UNKNOWN} if Retrofit service interface method available</li>
  *     <li>{@code http.method} - HTTP method name from Retrofit service interface method annotation
- *                               or from {@link RequestLog#method()} if Retrofit service interface
+ *                               or from {@link RequestHeaders#method()} if Retrofit service interface
  *                               method not available</li>
  *     <li>{@code http.status} - {@link HttpStatus#code()}</li>
  * </ul>
@@ -94,21 +96,21 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
     }
 
     @Override
-    public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
+    public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
         final ImmutableList.Builder<Tag> tagsListBuilder = ImmutableList.builderWithExpectedSize(4);
         buildTags(tagsListBuilder, log);
         return new MeterIdPrefix(name, tagsListBuilder.build());
     }
 
     @Override
-    public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
+    public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
         final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(5);
         buildTags(tagListBuilder, log);
         RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
-    private void buildTags(ImmutableList.Builder<Tag> tagsBuilder, RequestLog log) {
+    private void buildTags(ImmutableList.Builder<Tag> tagsBuilder, RequestOnlyLog log) {
         final Invocation invocation = InvocationUtil.getInvocation(log);
 
         tagsBuilder.add(Tag.of(serviceTagName, serviceName));
@@ -121,7 +123,7 @@ final class RetrofitClassAwareMeterIdPrefixFunction extends RetrofitMeterIdPrefi
             }
         }
 
-        tagsBuilder.add(Tag.of(HTTP_METHOD_TAG_NAME, log.method().name()));
+        tagsBuilder.add(Tag.of(HTTP_METHOD_TAG_NAME, log.requestHeaders().method().name()));
         tagsBuilder.addAll(DEFAULT_METHOD_TAGS);
     }
 

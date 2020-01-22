@@ -26,12 +26,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -48,12 +45,11 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 import io.netty.channel.Channel;
 
-public class DefaultRequestLogTest {
+class DefaultRequestLogTest {
 
     private static final String VERY_LONG_STRING =
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut " +
@@ -61,9 +57,6 @@ public class DefaultRequestLogTest {
             "laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in " +
             "voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat " +
             "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
-
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
 
     @Mock
     private RequestContext ctx;
@@ -73,13 +66,13 @@ public class DefaultRequestLogTest {
 
     private DefaultRequestLog log;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         log = new DefaultRequestLog(ctx);
     }
 
     @Test
-    public void endRequestSuccess() {
+    void endRequestSuccess() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
         log.endRequest();
         assertThat(log.requestDurationNanos()).isZero();
@@ -87,7 +80,7 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void endRequestWithoutHeaders() {
+    void endRequestWithoutHeaders() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
         log.endRequest();
         final RequestHeaders headers = log.requestHeaders();
@@ -98,15 +91,14 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void endResponseSuccess() {
-        when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+    void endResponseSuccess() {
         log.endResponse();
         assertThat(log.responseDurationNanos()).isZero();
         assertThat(log.responseCause()).isNull();
     }
 
     @Test
-    public void endResponseFailure() {
+    void endResponseFailure() {
         final Throwable error = new Throwable("response failed");
         log.endResponse(error);
         assertThat(log.responseDurationNanos()).isZero();
@@ -114,13 +106,13 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void endResponseWithoutHeaders() {
+    void endResponseWithoutHeaders() {
         log.endResponse();
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.UNKNOWN);
     }
 
     @Test
-    public void rpcRequestIsPropagatedToContext() {
+    void rpcRequestIsPropagatedToContext() {
         final RpcRequest req = RpcRequest.of(Object.class, "foo");
         when(ctx.rpcRequest()).thenReturn(null);
         log.requestContent(req, null);
@@ -128,7 +120,7 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void rpcRequestIsNotPropagatedToContext() {
+    void rpcRequestIsNotPropagatedToContext() {
         final RpcRequest req = RpcRequest.of(Object.class, "foo");
         when(ctx.rpcRequest()).thenReturn(RpcRequest.of(Object.class, "bar"));
         log.requestContent(req, null);
@@ -136,7 +128,7 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void rpcFailure_endResponseWithoutCause() {
+    void rpcFailure_endResponseWithoutCause() {
         final Throwable error = new Throwable("response failed");
         log.responseContent(RpcResponse.ofFailure(error), null);
         // If user code doesn't call endResponse, the framework automatically does with no cause.
@@ -146,7 +138,7 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void rpcFailure_endResponseDifferentCause() {
+    void rpcFailure_endResponseDifferentCause() {
         final Throwable error = new Throwable("response failed one way");
         final Throwable error2 = new Throwable("response failed a different way?");
         log.responseContent(RpcResponse.ofFailure(error), null);
@@ -156,7 +148,7 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void addChild() {
+    void addChild() {
         final DefaultRequestLog child = new DefaultRequestLog(ctx);
         log.addChild(child);
         child.startRequest(channel, SessionProtocol.H2C);
@@ -165,7 +157,7 @@ public class DefaultRequestLogTest {
         assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
 
         child.serializationFormat(SerializationFormat.NONE);
-        assertThat(log.serializationFormat()).isSameAs(SerializationFormat.NONE);
+        assertThat(log.scheme().serializationFormat()).isSameAs(SerializationFormat.NONE);
 
         child.requestFirstBytesTransferred();
         assertThat(log.requestFirstBytesTransferredTimeNanos())
@@ -218,7 +210,7 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void toStringRequestBuilderCapacity() {
+    void toStringRequestBuilderCapacity() {
         final RequestHeaders reqHeaders =
                 RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
@@ -236,7 +228,7 @@ public class DefaultRequestLogTest {
         final IllegalArgumentException cause = new IllegalArgumentException(VERY_LONG_STRING);
         logBuilder.endRequest(cause);
 
-        assertThat(ctx.log().toStringRequestOnly().length()).isLessThanOrEqualTo(
+        assertThat(ctx.log().ensureRequestComplete().toStringRequestOnly().length()).isLessThanOrEqualTo(
                 REQUEST_STRING_BUILDER_CAPACITY +
                 reqHeaders.toString().length() +
                 VERY_LONG_STRING.length() +
@@ -245,7 +237,7 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void toStringResponseBuilderCapacity() {
+    void toStringResponseBuilderCapacity() {
         final RequestHeaders reqHeaders =
                 RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
@@ -267,27 +259,11 @@ public class DefaultRequestLogTest {
         final IllegalArgumentException cause = new IllegalArgumentException(VERY_LONG_STRING);
         logBuilder.endResponse(cause);
 
-        assertThat(ctx.log().toStringResponseOnly().length()).isLessThanOrEqualTo(
+        assertThat(ctx.log().ensureComplete().toStringResponseOnly().length()).isLessThanOrEqualTo(
                 RESPONSE_STRING_BUILDER_CAPACITY +
                 resHeaders.toString().length() +
                 VERY_LONG_STRING.length() +
                 responseTrailers.toString().length() +
                 cause.toString().length());
-    }
-
-    @Test
-    public void testId_Assign() {
-        final RequestHeaders reqHeaders =
-                RequestHeaders.of(HttpMethod.POST, "/armeria/id",
-                                  HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
-        final HttpRequest req = AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING))
-                                                     .toHttpRequest();
-        final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
-        assertThat(cctx.log().id()).isNotNull();
-        assertThat(cctx.log().id()).isEqualTo(cctx.id());
-
-        final ServiceRequestContext sctx = ServiceRequestContext.of(req);
-        assertThat(sctx.log().id()).isNotNull();
-        assertThat(sctx.log().id()).isEqualTo(sctx.id());
     }
 }

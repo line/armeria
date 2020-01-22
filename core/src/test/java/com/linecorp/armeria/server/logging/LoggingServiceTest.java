@@ -19,15 +19,14 @@ package com.linecorp.armeria.server.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import org.junit.Before;
@@ -45,8 +44,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.logging.RequestLogListener;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
@@ -90,30 +87,25 @@ public class LoggingServiceTest {
         when(logger.isWarnEnabled()).thenReturn(true);
 
         when(ctx.log()).thenReturn(log);
-        doAnswer(invocation -> {
-            final RequestLogListener listener = invocation.getArgument(0);
-            listener.onRequestLog(log);
-            return null;
-        }).when(log).addListener(isA(RequestLogListener.class), isA(RequestLogAvailability.class));
+        when(log.whenRequestComplete()).thenReturn(CompletableFuture.completedFuture(log));
+        when(log.whenComplete()).thenReturn(CompletableFuture.completedFuture(log));
 
-        when(log.toStringRequestOnly(any(), any(), any())).thenAnswer(
-                invocation -> {
-                    final Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
-                    final Function<Object, Object> contentSanitizer = invocation.getArgument(1);
-                    final Function<HttpHeaders, HttpHeaders> trailersSanitizer = invocation.getArgument(2);
-                    return "headers: " + headersSanitizer.apply(REQUEST_HEADERS) +
-                           ", content: " + contentSanitizer.apply(REQUEST_CONTENT) +
-                           ", trailers: " + trailersSanitizer.apply(REQUEST_TRAILERS);
-                });
-        when(log.toStringResponseOnly(any(), any(), any())).thenAnswer(
-                invocation -> {
-                    final Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
-                    final Function<Object, Object> contentSanitizer = invocation.getArgument(1);
-                    final Function<HttpHeaders, HttpHeaders> trailersSanitizer = invocation.getArgument(2);
-                    return "headers: " + headersSanitizer.apply(RESPONSE_HEADERS) +
-                           ", content: " + contentSanitizer.apply(RESPONSE_CONTENT) +
-                           ", trailers: " + trailersSanitizer.apply(RESPONSE_TRAILERS);
-                });
+        when(log.toStringRequestOnly(any(), any(), any())).thenAnswer(invocation -> {
+            final Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
+            final Function<Object, Object> contentSanitizer = invocation.getArgument(1);
+            final Function<HttpHeaders, HttpHeaders> trailersSanitizer = invocation.getArgument(2);
+            return "headers: " + headersSanitizer.apply(REQUEST_HEADERS) +
+                   ", content: " + contentSanitizer.apply(REQUEST_CONTENT) +
+                   ", trailers: " + trailersSanitizer.apply(REQUEST_TRAILERS);
+        });
+        when(log.toStringResponseOnly(any(), any(), any())).thenAnswer(invocation -> {
+            final Function<HttpHeaders, HttpHeaders> headersSanitizer = invocation.getArgument(0);
+            final Function<Object, Object> contentSanitizer = invocation.getArgument(1);
+            final Function<HttpHeaders, HttpHeaders> trailersSanitizer = invocation.getArgument(2);
+            return "headers: " + headersSanitizer.apply(RESPONSE_HEADERS) +
+                   ", content: " + contentSanitizer.apply(RESPONSE_CONTENT) +
+                   ", trailers: " + trailersSanitizer.apply(RESPONSE_TRAILERS);
+        });
         when(log.context()).thenReturn(ctx);
     }
 
