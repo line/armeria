@@ -22,7 +22,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -150,14 +149,6 @@ final class ClientRequestContextAdapter {
     static String serializationFormat(RequestLog requestLog) {
         final SerializationFormat serFmt = requestLog.scheme().serializationFormat();
         return serFmt == SerializationFormat.NONE ? null : serFmt.uriText();
-    }
-
-    /**
-     * Returns the method name if {@link RequestLog#requestContent()} is {@link RpcRequest}.
-     */
-    @Nullable
-    static String rpcMethod(RequestLog requestLog) {
-        return requestLog.name();
     }
 
     private ClientRequestContextAdapter() {}
