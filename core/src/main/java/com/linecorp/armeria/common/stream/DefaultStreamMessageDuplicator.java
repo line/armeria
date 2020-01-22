@@ -72,7 +72,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
     private final EventExecutor executor;
 
     // TODO(minwoox) add a parameter to the constructor that indicates the number of streams to be duplicated.
-    //               After the number of duplicates, this duplicator becomes closed atomatically.
+    //               After the number of duplicates, this duplicator becomes closed automatically.
     private volatile int unsubscribed;
 
     /**
