@@ -41,7 +41,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.gracefulShutdownSupport = gracefulShutdownSupport;
         keepAlive = new Http2KeepAliveHandler(channel, encoder().frameWriter(),
-                                              Flags.defaultHttp2PingTimeoutNanos());
+                                              Flags.defaultHttp2PingTimeoutMillis());
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAlive);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);

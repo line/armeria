@@ -64,7 +64,7 @@ public class Http2KeepAliveHandler {
     private ChannelFuture pingWriteFuture;
     @Nullable
     private Future<?> shutdownFuture;
-    private long pingTimeoutInNanos;
+    private long pingTimeoutInMs;
     private State state = State.IDLE;
     private Channel channel;
     private final Runnable shutdownRunnable = () -> {
@@ -81,7 +81,7 @@ public class Http2KeepAliveHandler {
         final Channel ch = future.channel();
         if (future.isSuccess()) {
             final EventLoop el = ch.eventLoop();
-            shutdownFuture = el.schedule(shutdownRunnable, pingTimeoutInNanos, TimeUnit.NANOSECONDS);
+            shutdownFuture = el.schedule(shutdownRunnable, pingTimeoutInMs, TimeUnit.MILLISECONDS);
             state = State.PENDING_PING_ACK;
             stopwatch.reset().start();
         } else {
@@ -92,10 +92,10 @@ public class Http2KeepAliveHandler {
     };
     private long lastPingPayload;
 
-    public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, long pingTimeoutInNanos) {
+    public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, long pingTimeoutInMs) {
         this.channel = channel;
         this.frameWriter = frameWriter;
-        this.pingTimeoutInNanos = pingTimeoutInNanos;
+        this.pingTimeoutInMs = pingTimeoutInMs;
     }
 
     private static void throwProtocolErrorException(String msg, Object... args) throws Http2Exception {
