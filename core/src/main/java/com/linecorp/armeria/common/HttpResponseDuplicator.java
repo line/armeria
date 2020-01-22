@@ -51,8 +51,8 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 public interface HttpResponseDuplicator extends StreamMessageDuplicator<HttpObject> {
 
     /**
-     * Returns a new {@link HttpResponse} that publishes the same elements with the {@link HttpResponse}
-     * that this duplicator is created from.
+     * Returns a new {@link HttpResponse} that publishes the same {@link ResponseHeaders}, {@link HttpData}s
+     * and {@linkplain HttpHeaders trailers} as the {@link HttpResponse} that this duplicator is created from.
      */
     @Override
     HttpResponse duplicate();

@@ -332,6 +332,8 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private void doCleanupIfLastSubscription() {
             if (isClosed() && duplicator.unsubscribed == 0 && downstreamSubscriptions.isEmpty()) {
+                // Because the duplicator is closed, we know that unsubscribed will not be incremented
+                // anymore and are guaranteed that the last unsubscribed downstream will run this cleanup logic.
                 state = State.ABORTED;
                 doCancelUpstreamSubscription();
                 signals.clear();
