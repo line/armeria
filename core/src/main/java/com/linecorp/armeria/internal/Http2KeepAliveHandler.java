@@ -28,6 +28,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 
 import io.netty.channel.Channel;
@@ -75,19 +76,20 @@ public class Http2KeepAliveHandler {
             } else {
                 logger.debug("{} Channel cannot be closed", channel, future.cause());
             }
+            state = State.SHUTDOWN;
         });
     };
     private final ChannelFutureListener pingWriteListener = future -> {
-        final Channel ch = future.channel();
         if (future.isSuccess()) {
-            final EventLoop el = ch.eventLoop();
+            final EventLoop el = channel.eventLoop();
             shutdownFuture = el.schedule(shutdownRunnable, pingTimeoutInMs, TimeUnit.MILLISECONDS);
             state = State.PENDING_PING_ACK;
             stopwatch.reset().start();
         } else {
-            if (ch.isActive()) {
-                logger.debug("{} PING write failed", channel, future.cause());
-            }
+            // Mostly because the channel is already closed.
+            logger.debug("{} Channel PING write failed. Closing channel", channel);
+            channel.close();
+            state = State.SHUTDOWN;
         }
     };
     private long lastPingPayload;
@@ -166,11 +168,21 @@ public class Http2KeepAliveHandler {
         state = State.IDLE;
     }
 
+    @VisibleForTesting
+    State getState() {
+        return state;
+    }
+
+    @VisibleForTesting
+    long getLastPingPayload() {
+        return lastPingPayload;
+    }
+
     /**
      * State changes from IDLE -> PING_SCHEDULED -> PENDING_PING_ACK - IDLE and so on.
      * When the channel is inactive then the state changes to SHUTDOWN.
      */
-    private enum State {
+    enum State {
         /* Nothing happening, but waiting for IdleStateEvent */
         IDLE,
 

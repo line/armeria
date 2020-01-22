@@ -83,15 +83,14 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     /**
-     * This is helper method that is used when application level protocol is upgraded. For ex:
-     * http1.1 to http2. In this case, we also leverage http2 ping by setting
-     * {@code idleTimeoutHandler.setHttp2(true)} which will send pings.
+     * When a client upgrades the connection from HTTP/1.1 to HTTP/2, then change the
+     * {@link IdleTimeoutHandler#setHttp2(boolean)} to true so we can send PING's.
      */
     private static void changeIdleStateHandlerToHttp2(ChannelHandlerContext ctx) {
         final IdleTimeoutHandler idleTimeoutHandler = ctx.pipeline().get(
                 IdleTimeoutHandler.class);
         if (idleTimeoutHandler == null) {
-            // Means that config.idleTimeoutMillis() < 0; So ignore
+            // Means that config.idleTimeoutMillis() < 0; So ignore.
             return;
         }
         idleTimeoutHandler.setHttp2(true);
