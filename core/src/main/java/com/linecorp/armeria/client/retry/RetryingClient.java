@@ -203,17 +203,16 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
 
         derivedCtx.log().addListener(log -> {
             if (needsContentInStrategy) {
-                final HttpResponseDuplicator duplicator =
-                        response.toDuplicator(derivedCtx.eventLoop(), derivedCtx.maxResponseLength());
-                final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
-                        duplicator.duplicate(), contentPreviewLength);
-                final HttpResponse duplicated = duplicator.duplicate();
-                duplicator.close();
-                retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse)
-                                          .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                                originalReq, returnedRes, future,
-                                                                duplicated, duplicator::abort));
-
+                try (HttpResponseDuplicator duplicator =
+                             response.toDuplicator(derivedCtx.eventLoop(), derivedCtx.maxResponseLength())) {
+                    final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
+                            duplicator.duplicate(), contentPreviewLength);
+                    final HttpResponse duplicated = duplicator.duplicate();
+                    retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse)
+                                              .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                                    originalReq, returnedRes, future,
+                                                                    duplicated, duplicator::abort));
+                }
             } else {
                 final Throwable responseCause =
                         log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;

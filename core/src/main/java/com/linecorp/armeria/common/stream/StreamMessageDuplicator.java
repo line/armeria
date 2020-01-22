@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.stream;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.util.SafeCloseable;
+
 /**
  * A duplicator that duplicates a {@link StreamMessage} into one or more {@link StreamMessage}s,
  * which publish the same elements.
@@ -27,31 +29,29 @@ import org.reactivestreams.Subscriber;
  * {@link StreamMessage#toDuplicator()}.
  * <pre>{@code
  * StreamMessage<String> streamMessage = ...
- * StreamMessageDuplicator<String> duplicator = streamMessage.toDuplicator();
- * // streamMessage.subscribe(...) will throw an exception. You cannot subscribe to streamMessage anymore.
+ * try (StreamMessageDuplicator<String> duplicator = streamMessage.toDuplicator()) {
+ *     // streamMessage.subscribe(...) will throw an exception. You cannot subscribe to streamMessage anymore.
  *
- * // Duplicate the stream as many as you want to subscribe.
- * StreamMessage<String> duplicatedStreamMessage1 = duplicator.duplicate();
- * StreamMessage<String> duplicatedStreamMessage2 = duplicator.duplicate();
- * duplicator.close(); // You should call close if you don't want to duplicate the streams anymore
- *                     // so that the resources are cleaned up after all subscriptions are done.
+ *     // Duplicate the stream as many as you want to subscribe.
+ *     StreamMessage<String> duplicatedStreamMessage1 = duplicator.duplicate();
+ *     StreamMessage<String> duplicatedStreamMessage2 = duplicator.duplicate();
  *
- * // duplicator.duplicate(); will throw an exception. You cannot duplicate it anymore.
- *
- * duplicatedStreamMessage1.subscribe(...);
- * duplicatedStreamMessage2.subscribe(...);
+ *     duplicatedStreamMessage1.subscribe(...);
+ *     duplicatedStreamMessage2.subscribe(...);
+ * }
  * }</pre>
+ *
+ * <p>Use the {@code try-with-resources} block or call {@link #close()} manually to clean up the resources
+ * after all subscriptions are done. If you want to stop publishing and clean up the resources immediately,
+ * call {@link #abort()}. If you do none of these, memory leak might happen.</p>
  *
  * <p>If you subscribe to the {@linkplain #duplicate() duplicated stream message} with the
  * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, the published elements can be shared across
  * {@link Subscriber}s. So do not manipulate the data unless you copy them.
  *
- * <p>To clean up the resources, you have to call {@link #close()} or {@link #abort()}.
- * Otherwise, memory leak might happen.</p>
- *
  * @param <T> the type of elements
  */
-public interface StreamMessageDuplicator<T> {
+public interface StreamMessageDuplicator<T> extends SafeCloseable {
 
     /**
      * Returns a new {@link StreamMessage} that publishes the same elements with the {@link StreamMessage}
@@ -69,6 +69,7 @@ public interface StreamMessageDuplicator<T> {
      * all {@linkplain #duplicate() duplicated streams} are complete. If you want to stop publishing and clean
      * up the resources immediately, call {@link #abort()}.
      */
+    @Override
     void close();
 
     /**

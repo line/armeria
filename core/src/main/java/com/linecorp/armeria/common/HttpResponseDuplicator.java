@@ -26,28 +26,26 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
  * which publish the same elements.
  *
  * <pre>{@code
- * HttpResponse httpResponse = ...
- * HttpResponseDuplicator duplicator = httpResponse.toDuplicator();
- * // httpResponse.subscribe(...) will throw an exception. You cannot subscribe to httpResponse anymore.
+ * HttpResponse res = ...
+ * try (HttpResponseDuplicator duplicator = res.toDuplicator()) {
+ *     // res.subscribe(...) will throw an exception. You cannot subscribe to res anymore.
  *
- * // Duplicate the stream as many as you want to subscribe.
- * HttpResponse duplicatedHttpResponse1 = duplicator.duplicate();
- * HttpResponse duplicatedHttpResponse2 = duplicator.duplicate();
- * duplicator.close(); // You should call close if you don't want to duplicate the responses anymore
- *                     // so that the resources are cleaned up after all subscriptions are done.
+ *     // Duplicate the response as many as you want to subscribe.
+ *     HttpResponse duplicatedResponse1 = duplicator.duplicate();
+ *     HttpResponse duplicatedResponse2 = duplicator.duplicate();
  *
- * // duplicator.duplicate(); will throw an exception. You cannot duplicate it anymore.
- *
- * duplicatedHttpResponse1.subscribe(...);
- * duplicatedHttpResponse2.subscribe(...);
+ *     duplicatedResponse1.subscribe(...);
+ *     duplicatedResponse2.subscribe(...);
+ * }
  * }</pre>
+ *
+ * <p>Use the {@code try-with-resources} block or call {@link #close()} manually to clean up the resources
+ * after all subscriptions are done. If you want to stop publishing and clean up the resources immediately,
+ * call {@link #abort()}. If you do none of these, memory leak might happen.</p>
  *
  * <p>If you subscribe to the {@linkplain #duplicate() duplicated http response} with the
  * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, the published elements can be shared across
  * {@link Subscriber}s. So do not manipulate the data unless you copy them.
- *
- * <p>To clean up the resources, you have to call {@link #close()} or {@link #abort()}.
- * Otherwise, memory leak might happen.</p>
  */
 
 public interface HttpResponseDuplicator extends StreamMessageDuplicator<HttpObject> {

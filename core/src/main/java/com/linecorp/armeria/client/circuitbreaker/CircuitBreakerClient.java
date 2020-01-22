@@ -155,14 +155,12 @@ public class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpReque
         }
 
         if (needsContentInStrategy) {
-            final HttpResponseDuplicator duplicator =
-                    response.toDuplicator(ctx.eventLoop(), ctx.maxResponseLength());
-            reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(
-                    ctx, duplicator.duplicate()));
-
-            final HttpResponse duplicated = duplicator.duplicate();
-            duplicator.close();
-            return duplicated;
+            try (HttpResponseDuplicator duplicator =
+                         response.toDuplicator(ctx.eventLoop(), ctx.maxResponseLength())) {
+                reportSuccessOrFailure(circuitBreaker, strategyWithContent().shouldReportAsSuccess(
+                        ctx, duplicator.duplicate()));
+                return duplicator.duplicate();
+            }
         }
 
         ctx.log().addListener(log -> {
