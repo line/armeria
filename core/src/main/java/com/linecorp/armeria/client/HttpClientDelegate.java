@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.netty.channel.Channel;
@@ -203,10 +204,15 @@ final class HttpClientDelegate implements HttpClient {
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
-        req.abort(cause);
-        final RequestLogBuilder logBuilder = ctx.logBuilder();
-        logBuilder.endRequest(cause);
-        logBuilder.endResponse(cause);
+        // This can be executed by the same eventloop which is holding a different context
+        // because the future can be complete while the eventloop is dealing another request.
+        // So we should set the reqCtx explicitly.
+        try (SafeCloseable ignored = ctx.replace()) {
+            req.abort(cause);
+            final RequestLogBuilder logBuilder = ctx.logBuilder();
+            logBuilder.endRequest(cause);
+            logBuilder.endResponse(cause);
+        }
     }
 
     private void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,

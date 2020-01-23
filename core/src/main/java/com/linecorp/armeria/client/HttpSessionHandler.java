@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
@@ -189,25 +190,30 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         // The response has been closed even before its request is sent.
         assert protocol != null;
 
-        req.abort(CancelledSubscriptionException.get());
-        ctx.logBuilder().startRequest(channel, protocol);
-        ctx.logBuilder().requestHeaders(req.headers());
-        req.completionFuture().handle((unused, cause) -> {
-            if (cause == null) {
-                ctx.logBuilder().endRequest();
-            } else {
-                ctx.logBuilder().endRequest(cause);
-            }
-            return null;
-        });
-        res.completionFuture().handle((unused, cause) -> {
-            if (cause == null) {
-                ctx.logBuilder().endResponse();
-            } else {
-                ctx.logBuilder().endResponse(cause);
-            }
-            return null;
-        });
+        // This can be executed by the same eventloop which is holding a different context
+        // because the future can be complete while the eventloop is dealing another request.
+        // So we should set the reqCtx explicitly.
+        try (SafeCloseable ignored = ctx.replace()) {
+            req.abort(CancelledSubscriptionException.get());
+            ctx.logBuilder().startRequest(channel, protocol);
+            ctx.logBuilder().requestHeaders(req.headers());
+            req.completionFuture().handle((unused, cause) -> {
+                if (cause == null) {
+                    ctx.logBuilder().endRequest();
+                } else {
+                    ctx.logBuilder().endRequest(cause);
+                }
+                return null;
+            });
+            res.completionFuture().handle((unused, cause) -> {
+                if (cause == null) {
+                    ctx.logBuilder().endResponse();
+                } else {
+                    ctx.logBuilder().endResponse(cause);
+                }
+                return null;
+            });
+        }
 
         return true;
     }

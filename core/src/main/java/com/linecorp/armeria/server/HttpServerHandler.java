@@ -546,13 +546,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         future.addListener(f -> {
-            if (cause == null && f.isSuccess()) {
-                logBuilder.endResponse();
-            } else {
-                // Respect the first specified cause.
-                logBuilder.endResponse(firstNonNull(cause, f.cause()));
+            // This can be executed by the same eventloop which is holding a different context
+            // because the future can be complete while the eventloop is dealing another request.
+            // So we should set the reqCtx explicitly.
+            try (SafeCloseable ignored = reqCtx.replace()) {
+                if (cause == null && f.isSuccess()) {
+                    logBuilder.endResponse();
+                } else {
+                    // Respect the first specified cause.
+                    logBuilder.endResponse(firstNonNull(cause, f.cause()));
+                }
+                reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
             }
-            reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
         });
         return future;
     }

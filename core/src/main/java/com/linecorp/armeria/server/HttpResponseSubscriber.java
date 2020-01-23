@@ -306,6 +306,9 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         }
 
         future.addListener((ChannelFuture f) -> {
+            // This can be executed by the same eventloop which is holding a different context
+            // because the future can be complete while the eventloop is dealing another request.
+            // So we should set the reqCtx explicitly.
             try (SafeCloseable unused = reqCtx.replace()) {
                 final boolean isSuccess;
                 if (f.isSuccess()) {
@@ -314,8 +317,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     // If 1) the last chunk we attempted to send was empty,
                     //    2) the connection has been closed,
                     //    3) and the protocol is HTTP/1,
-                    // it is very likely that a client closed the connection after receiving the complete content,
-                    // which is not really a problem.
+                    // it is very likely that a client closed the connection after receiving the
+                    // complete content, which is not really a problem.
                     isSuccess = endOfStream && wroteEmptyData &&
                                 f.cause() instanceof ClosedChannelException &&
                                 responseEncoder instanceof Http1ObjectEncoder;
@@ -409,8 +412,13 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             future.addListener(unused -> {
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
-                    logBuilder().endResponse(cause);
-                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                    // This can be executed by the same eventloop which is holding a different context
+                    // because the future can be complete while the eventloop is dealing another request.
+                    // So we should set the reqCtx explicitly.
+                    try (SafeCloseable ignored = reqCtx.replace()) {
+                        logBuilder().endResponse(cause);
+                        reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                    }
                 }
             });
         }
@@ -427,7 +435,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private void maybeLogFirstResponseBytesTransferred() {
         if (!loggedResponseHeadersFirstBytesTransferred) {
-            logBuilder().responseFirstBytesTransferred();
+            // This can be executed by the same eventloop which is holding a different context
+            // because the future can be complete while the eventloop is dealing another request.
+            // So we should set the reqCtx explicitly.
+            try (SafeCloseable ignored = reqCtx.replace()) {
+                logBuilder().responseFirstBytesTransferred();
+            }
             loggedResponseHeadersFirstBytesTransferred = true;
         }
     }
