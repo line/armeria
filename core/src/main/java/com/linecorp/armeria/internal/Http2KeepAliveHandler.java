@@ -186,7 +186,7 @@ public class Http2KeepAliveHandler {
     }
 
     /**
-     * State changes from IDLE -> PING_SCHEDULED -> PENDING_PING_ACK - IDLE and so on.
+     * State changes from IDLE -> PING_SCHEDULED -> PENDING_PING_ACK -> IDLE and so on.
      * When the channel is inactive then the state changes to SHUTDOWN.
      */
     enum State {
