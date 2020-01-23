@@ -192,7 +192,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
         // This can be executed by the same eventloop which is holding a different context
         // because the future can be complete while the eventloop is dealing another request.
-        // So we should set the reqCtx explicitly.
+        // So we should set the ctx explicitly.
         try (SafeCloseable ignored = ctx.replace()) {
             req.abort(CancelledSubscriptionException.get());
             ctx.logBuilder().startRequest(channel, protocol);
