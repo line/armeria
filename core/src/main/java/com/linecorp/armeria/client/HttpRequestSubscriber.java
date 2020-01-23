@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
+import com.linecorp.armeria.internal.RequestContextUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -111,8 +112,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         // This can be executed by the same eventloop which is holding a different context
         // because the future can be complete while the eventloop is dealing another request.
-        // So we should set the reqCtx explicitly.
-        try (SafeCloseable ignored = reqCtx.replace()) {
+        // So we should pop the ctx temporarily.
+        try (SafeCloseable ignored = RequestContextUtil.pop()) {
             if (future.isSuccess()) {
                 // The first write is always the first headers, so log that we finished our first transfer
                 // over the wire.

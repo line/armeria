@@ -62,6 +62,7 @@ import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.RequestContextUtil;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -548,8 +549,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         future.addListener(f -> {
             // This can be executed by the same eventloop which is holding a different context
             // because the future can be complete while the eventloop is dealing another request.
-            // So we should set the reqCtx explicitly.
-            try (SafeCloseable ignored = reqCtx.replace()) {
+            // So we should pop the ctx temporarily.
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 if (cause == null && f.isSuccess()) {
                     logBuilder.endResponse();
                 } else {

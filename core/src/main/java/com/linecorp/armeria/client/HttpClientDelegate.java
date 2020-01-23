@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.RequestContextUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -206,8 +207,8 @@ final class HttpClientDelegate implements HttpClient {
                                                     HttpRequest req, Throwable cause) {
         // This can be executed by the same eventloop which is holding a different context
         // because the future can be complete while the eventloop is dealing another request.
-        // So we should set the ctx explicitly.
-        try (SafeCloseable ignored = ctx.replace()) {
+        // So we should pop the ctx temporarily.
+        try (SafeCloseable ignored = RequestContextUtil.pop()) {
             req.abort(cause);
             final RequestLogBuilder logBuilder = ctx.logBuilder();
             logBuilder.endRequest(cause);

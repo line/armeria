@@ -49,6 +49,7 @@ import com.linecorp.armeria.internal.DefaultTimeoutController;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.HttpTimestampSupplier;
+import com.linecorp.armeria.internal.RequestContextUtil;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -308,8 +309,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         future.addListener((ChannelFuture f) -> {
             // This can be executed by the same eventloop which is holding a different context
             // because the future can be complete while the eventloop is dealing another request.
-            // So we should set the reqCtx explicitly.
-            try (SafeCloseable unused = reqCtx.replace()) {
+            // So we should pop the ctx temporarily.
+            try (SafeCloseable unused = RequestContextUtil.pop()) {
                 final boolean isSuccess;
                 if (f.isSuccess()) {
                     isSuccess = true;
@@ -414,8 +415,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 if (tryComplete()) {
                     // This can be executed by the same eventloop which is holding a different context
                     // because the future can be complete while the eventloop is dealing another request.
-                    // So we should set the reqCtx explicitly.
-                    try (SafeCloseable ignored = reqCtx.replace()) {
+                    // So we should pop the ctx temporarily.
+                    try (SafeCloseable ignored = RequestContextUtil.pop()) {
                         logBuilder().endResponse(cause);
                         reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                     }
@@ -437,8 +438,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         if (!loggedResponseHeadersFirstBytesTransferred) {
             // This can be executed by the same eventloop which is holding a different context
             // because the future can be complete while the eventloop is dealing another request.
-            // So we should set the reqCtx explicitly.
-            try (SafeCloseable ignored = reqCtx.replace()) {
+            // So we should pop the ctx temporarily.
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 logBuilder().responseFirstBytesTransferred();
             }
             loggedResponseHeadersFirstBytesTransferred = true;

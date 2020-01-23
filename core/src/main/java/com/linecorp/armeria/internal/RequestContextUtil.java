@@ -49,5 +49,18 @@ public final class RequestContextUtil {
                 "unexpected thread or forgetting to close previous context.");
     }
 
+    /**
+     * Removes the {@link RequestContext} in the thread-local if exists and returns {@link SafeCloseable} which
+     * pushes it back to the thread-local.
+     */
+    public static SafeCloseable pop() {
+        final RequestContext oldCtx = RequestContextThreadLocal.getAndRemove();
+        if (oldCtx == null) {
+            return noopSafeCloseable();
+        }
+
+        return () -> RequestContextThreadLocal.set(oldCtx);
+    }
+
     private RequestContextUtil() {}
 }
