@@ -43,11 +43,13 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.DefaultTimeoutController;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.HttpTimestampSupplier;
+import com.linecorp.armeria.internal.RequestContextUtil;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -305,42 +307,44 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         }
 
         future.addListener((ChannelFuture f) -> {
-            final boolean isSuccess;
-            if (f.isSuccess()) {
-                isSuccess = true;
-            } else {
-                // If 1) the last chunk we attempted to send was empty,
-                //    2) the connection has been closed,
-                //    3) and the protocol is HTTP/1,
-                // it is very likely that a client closed the connection after receiving the complete content,
-                // which is not really a problem.
-                isSuccess = endOfStream && wroteEmptyData &&
-                            f.cause() instanceof ClosedChannelException &&
-                            responseEncoder instanceof Http1ObjectEncoder;
-            }
-
-            // Write an access log if:
-            // - every message has been sent successfully.
-            // - any write operation is failed with a cause.
-            if (isSuccess) {
-                maybeLogFirstResponseBytesTransferred();
-
-                if (endOfStream && tryComplete()) {
-                    logBuilder().endResponse();
-                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                final boolean isSuccess;
+                if (f.isSuccess()) {
+                    isSuccess = true;
+                } else {
+                    // If 1) the last chunk we attempted to send was empty,
+                    //    2) the connection has been closed,
+                    //    3) and the protocol is HTTP/1,
+                    // it is very likely that a client closed the connection after receiving the
+                    // complete content, which is not really a problem.
+                    isSuccess = endOfStream && wroteEmptyData &&
+                                f.cause() instanceof ClosedChannelException &&
+                                responseEncoder instanceof Http1ObjectEncoder;
                 }
 
-                subscription.request(1);
-                return;
-            }
+                // Write an access log if:
+                // - every message has been sent successfully.
+                // - any write operation is failed with a cause.
+                if (isSuccess) {
+                    maybeLogFirstResponseBytesTransferred();
 
-            if (tryComplete()) {
-                setDone();
-                logBuilder().endResponse(f.cause());
-                subscription.cancel();
-                reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                    if (endOfStream && tryComplete()) {
+                        logBuilder().endResponse();
+                        reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                    }
+
+                    subscription.request(1);
+                    return;
+                }
+
+                if (tryComplete()) {
+                    setDone();
+                    logBuilder().endResponse(f.cause());
+                    subscription.cancel();
+                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                }
+                HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
             }
-            HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
         });
 
         ctx.flush();
@@ -406,8 +410,10 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             future.addListener(unused -> {
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
-                    logBuilder().endResponse(cause);
-                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                    try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                        logBuilder().endResponse(cause);
+                        reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+                    }
                 }
             });
         }
@@ -424,7 +430,9 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private void maybeLogFirstResponseBytesTransferred() {
         if (!loggedResponseHeadersFirstBytesTransferred) {
-            logBuilder().responseFirstBytesTransferred();
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                logBuilder().responseFirstBytesTransferred();
+            }
             loggedResponseHeadersFirstBytesTransferred = true;
         }
     }

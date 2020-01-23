@@ -31,7 +31,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.RequestContextUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -203,10 +205,12 @@ final class HttpClientDelegate implements HttpClient {
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
-        req.abort(cause);
-        final RequestLogBuilder logBuilder = ctx.logBuilder();
-        logBuilder.endRequest(cause);
-        logBuilder.endResponse(cause);
+        try (SafeCloseable ignored = RequestContextUtil.pop()) {
+            req.abort(cause);
+            final RequestLogBuilder logBuilder = ctx.logBuilder();
+            logBuilder.endRequest(cause);
+            logBuilder.endResponse(cause);
+        }
     }
 
     private void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,

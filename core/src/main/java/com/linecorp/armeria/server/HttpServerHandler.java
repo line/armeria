@@ -62,6 +62,7 @@ import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.RequestContextUtil;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -546,13 +547,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         future.addListener(f -> {
-            if (cause == null && f.isSuccess()) {
-                logBuilder.endResponse();
-            } else {
-                // Respect the first specified cause.
-                logBuilder.endResponse(firstNonNull(cause, f.cause()));
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                if (cause == null && f.isSuccess()) {
+                    logBuilder.endResponse();
+                } else {
+                    // Respect the first specified cause.
+                    logBuilder.endResponse(firstNonNull(cause, f.cause()));
+                }
+                reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
             }
-            reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
         });
         return future;
     }
