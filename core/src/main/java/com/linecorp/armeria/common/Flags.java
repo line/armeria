@@ -686,8 +686,8 @@ public final class Flags {
      * Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
      * {@link #defaultClientIdleTimeoutMillis()} for client are greater than 0.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultHttp2PingTimeoutMillis=<integer>} JVM option to override
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS} milliseconds.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2PingTimeoutMillis=<integer>} JVM option to override
      * the default value.
      */
     public static long defaultHttp2PingTimeoutMillis() {

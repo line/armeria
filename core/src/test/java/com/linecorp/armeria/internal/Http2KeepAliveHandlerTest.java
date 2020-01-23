@@ -26,7 +26,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -42,7 +41,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 
 class Http2KeepAliveHandlerTest {
 
-    private static final long pingTimeout = 10;
+    private static final long pingTimeout = 100;
     @Mock
     private Http2FrameWriter frameWriter;
     private EmbeddedChannel ch;
@@ -53,8 +52,8 @@ class Http2KeepAliveHandlerTest {
     @BeforeEach
     public void setup() throws Exception {
         ch = new EmbeddedChannel();
-        keepAlive = new Http2KeepAliveHandler(ch, frameWriter, pingTimeout);
         promise = ch.newPromise();
+        keepAlive = new Http2KeepAliveHandler(ch, frameWriter, pingTimeout);
 
         ch.pipeline().addLast(new TestIdleStateHandler(keepAlive));
 
@@ -63,7 +62,7 @@ class Http2KeepAliveHandlerTest {
 
     @AfterEach
     public void after() {
-        Assertions.assertFalse(ch.finish());
+        assertThat(ch.finish()).isFalse();
     }
 
     @Test
@@ -98,7 +97,6 @@ class Http2KeepAliveHandlerTest {
 
         ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
         promise.setSuccess();
-        //ch.runPendingTasks();
         keepAlive.onPingAck(keepAlive.getLastPingPayload());
 
         verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
