@@ -110,9 +110,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         // If a message has been sent out, cancel the timeout for starting a request.
         cancelTimeout();
 
-        // This can be executed by the same eventloop which is holding a different context
-        // because the future can be complete while the eventloop is dealing another request.
-        // So we should pop the ctx temporarily.
         try (SafeCloseable ignored = RequestContextUtil.pop()) {
             if (future.isSuccess()) {
                 // The first write is always the first headers, so log that we finished our first transfer

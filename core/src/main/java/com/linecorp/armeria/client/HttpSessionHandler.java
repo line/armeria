@@ -191,9 +191,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         // The response has been closed even before its request is sent.
         assert protocol != null;
 
-        // This can be executed by the same eventloop which is holding a different context
-        // because the future can be complete while the eventloop is dealing another request.
-        // So we should pop the ctx temporarily.
         try (SafeCloseable ignored = RequestContextUtil.pop()) {
             req.abort(CancelledSubscriptionException.get());
             ctx.logBuilder().startRequest(channel, protocol);

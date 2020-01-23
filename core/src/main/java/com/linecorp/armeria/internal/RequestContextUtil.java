@@ -21,6 +21,9 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+
 /**
  * Utilities for {@link RequestContext}.
  */
@@ -51,7 +54,12 @@ public final class RequestContextUtil {
 
     /**
      * Removes the {@link RequestContext} in the thread-local if exists and returns {@link SafeCloseable} which
-     * pushes it back to the thread-local.
+     * pushes the {@link RequestContext} back to the thread-local.
+     *
+     * <p>Because this method pops the {@link RequestContext} arbitrarily, it shouldn't be used in
+     * most cases. One of the examples this can be used is in {@link ChannelFutureListener}.
+     * The {@link ChannelFuture} can be complete when the eventloop handles the different request. The
+     * eventloop might have the wrong {@link RequestContext} in the thread-local, so we should pop it.
      */
     public static SafeCloseable pop() {
         final RequestContext oldCtx = RequestContextThreadLocal.getAndRemove();

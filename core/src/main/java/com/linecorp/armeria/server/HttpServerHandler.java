@@ -547,9 +547,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         future.addListener(f -> {
-            // This can be executed by the same eventloop which is holding a different context
-            // because the future can be complete while the eventloop is dealing another request.
-            // So we should pop the ctx temporarily.
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 if (cause == null && f.isSuccess()) {
                     logBuilder.endResponse();

@@ -205,9 +205,6 @@ final class HttpClientDelegate implements HttpClient {
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
-        // This can be executed by the same eventloop which is holding a different context
-        // because the future can be complete while the eventloop is dealing another request.
-        // So we should pop the ctx temporarily.
         try (SafeCloseable ignored = RequestContextUtil.pop()) {
             req.abort(cause);
             final RequestLogBuilder logBuilder = ctx.logBuilder();

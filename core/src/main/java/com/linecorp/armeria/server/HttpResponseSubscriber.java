@@ -307,10 +307,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         }
 
         future.addListener((ChannelFuture f) -> {
-            // This can be executed by the same eventloop which is holding a different context
-            // because the future can be complete while the eventloop is dealing another request.
-            // So we should pop the ctx temporarily.
-            try (SafeCloseable unused = RequestContextUtil.pop()) {
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 final boolean isSuccess;
                 if (f.isSuccess()) {
                     isSuccess = true;
@@ -413,9 +410,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             future.addListener(unused -> {
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
-                    // This can be executed by the same eventloop which is holding a different context
-                    // because the future can be complete while the eventloop is dealing another request.
-                    // So we should pop the ctx temporarily.
                     try (SafeCloseable ignored = RequestContextUtil.pop()) {
                         logBuilder().endResponse(cause);
                         reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
@@ -436,9 +430,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private void maybeLogFirstResponseBytesTransferred() {
         if (!loggedResponseHeadersFirstBytesTransferred) {
-            // This can be executed by the same eventloop which is holding a different context
-            // because the future can be complete while the eventloop is dealing another request.
-            // So we should pop the ctx temporarily.
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 logBuilder().responseFirstBytesTransferred();
             }
