@@ -61,6 +61,7 @@ class FlagsTest {
 
     @Test
     void dumpOpenSslInfoDoNotThrowStackOverFlowError() {
+        assumeTrue(OpenSsl.isAvailable());
         assertThat(Flags.dumpOpenSslInfo()).isTrue();
     }
 }

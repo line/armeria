@@ -453,18 +453,6 @@ public final class Flags {
         logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getBoolean("dumpOpenSslInfo", false);
-        if (dumpOpenSslInfo) {
-            final SSLEngine engine = SslContextUtil.createSslContext(
-                    SslContextBuilder.forClient(),
-                    false,
-                    ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
-            logger.info("All available SSL protocols: {}",
-                        ImmutableList.copyOf(engine.getSupportedProtocols()));
-            logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
-            ReferenceCountUtil.release(engine);
-            logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
-            logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
-        }
     }
 
     /**
@@ -482,6 +470,18 @@ public final class Flags {
             return dumpOpenSslInfo;
         }
         setUseOpenSslAndDumpOpenSslInfo();
+        if (dumpOpenSslInfo) {
+            final SSLEngine engine = SslContextUtil.createSslContext(
+                    SslContextBuilder.forClient(),
+                    false,
+                    ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
+            logger.info("All available SSL protocols: {}",
+                        ImmutableList.copyOf(engine.getSupportedProtocols()));
+            logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
+            ReferenceCountUtil.release(engine);
+            logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
+            logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
+        }
         return dumpOpenSslInfo;
     }
 
