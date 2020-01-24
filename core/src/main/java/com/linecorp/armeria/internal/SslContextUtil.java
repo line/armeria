@@ -88,20 +88,6 @@ public final class SslContextUtil {
             SslContextBuilder builder, boolean forceHttp1,
             Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers) {
         final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
-        return createSslContext(builder, forceHttp1, userCustomizers, provider);
-    }
-
-    /**
-     * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
-     * TLSv1.3 (if supported), and TLSv1.2.
-     */
-    public static SslContext createSslContext(
-            SslContextBuilder builder, boolean forceHttp1,
-            Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers,
-            SslProvider provider) {
-        requireNonNull(builder, "builder");
-        requireNonNull(userCustomizers, "userCustomizers");
-        requireNonNull(provider, "provider");
         builder.sslProvider(provider);
 
         final Set<String> supportedProtocols = supportedProtocols(builder);

@@ -27,6 +27,7 @@ import com.google.common.base.Ascii;
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
 
+@SetSystemProperty(key = "com.linecorp.armeria.dumpOpenSslInfo", value = "true")
 class FlagsTest {
 
     private static final String osName = Ascii.toLowerCase(System.getProperty("os.name"));
@@ -59,11 +60,7 @@ class FlagsTest {
     }
 
     @Test
-    @SetSystemProperty(key = "com.linecorp.armeria.dumpOpenSslInfo", value = "true")
-    @SetSystemProperty(key = "com.linecorp.armeria.useOpenSsl", value = "true")
     void dumpOpenSslInfoDoNotThrowStackOverFlowError() {
-        // Flags.useOpenSsl() can be false when OpenSsl.isAvailable() returns false.
-        // So we just check dumpOpenSslInfo.
         assertThat(Flags.dumpOpenSslInfo()).isTrue();
     }
 }
