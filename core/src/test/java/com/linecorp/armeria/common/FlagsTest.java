@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.base.Ascii;
 
@@ -58,11 +59,11 @@ class FlagsTest {
     }
 
     @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.dumpOpenSslInfo", value = "true")
+    @SetSystemProperty(key = "com.linecorp.armeria.useOpenSsl", value = "true")
     void dumpOpenSslInfoDoNotThrowStackOverFlowError() {
-        System.setProperty("com.linecorp.armeria.dumpOpenSslInfo", "true");
-        System.setProperty("com.linecorp.armeria.useOpenSsl", "true");
         // Flags.useOpenSsl() can be false when OpenSsl.isAvailable() returns false.
-        // So we don't check it.
+        // So we just check dumpOpenSslInfo.
         assertThat(Flags.dumpOpenSslInfo()).isTrue();
     }
 }

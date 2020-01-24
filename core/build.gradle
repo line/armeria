@@ -131,6 +131,9 @@ dependencies {
 
     // Jetty, for testing interoperability with other servers.
     testCompile 'org.eclipse.jetty:jetty-webapp'
+
+    // JUnit Pioneer which provides additional JUnit 5 extenstions.
+    testCompile 'org.junit-pioneer:junit-pioneer'
 }
 
 if (!rootProject.hasProperty('noWeb')) {
