@@ -63,6 +63,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
@@ -446,7 +447,8 @@ public final class Flags {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder.forClient(),
                     false,
-                    ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
+                    ImmutableList.of(),
+                    SslProvider.OPENSSL).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);

@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Set;
@@ -86,8 +87,21 @@ public final class SslContextUtil {
     public static SslContext createSslContext(
             SslContextBuilder builder, boolean forceHttp1,
             Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers) {
-
         final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
+        return createSslContext(builder, forceHttp1, userCustomizers, provider);
+    }
+
+    /**
+     * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
+     * TLSv1.3 (if supported), and TLSv1.2.
+     */
+    public static SslContext createSslContext(
+            SslContextBuilder builder, boolean forceHttp1,
+            Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers,
+            SslProvider provider) {
+        requireNonNull(builder, "builder");
+        requireNonNull(userCustomizers, "userCustomizers");
+        requireNonNull(provider, "provider");
         builder.sslProvider(provider);
 
         final Set<String> supportedProtocols = supportedProtocols(builder);

@@ -16,17 +16,17 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Ascii;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
 
-public class FlagsTest {
+class FlagsTest {
 
     private static final String osName = Ascii.toLowerCase(System.getProperty("os.name"));
 
@@ -34,7 +34,7 @@ public class FlagsTest {
      * Makes sure /dev/epoll is used while running tests on Linux.
      */
     @Test
-    public void epollAvailableOnLinux() {
+    void epollAvailableOnLinux() {
         assumeTrue(osName.startsWith("linux"));
         assumeTrue(System.getenv("WSLENV") == null);
         assumeFalse("false".equals(System.getProperty("com.linecorp.armeria.useEpoll")));
@@ -48,12 +48,21 @@ public class FlagsTest {
      * on Linux, Windows and OS X.
      */
     @Test
-    public void openSslAvailable() {
+    void openSslAvailable() {
         assumeTrue(osName.startsWith("linux") || osName.startsWith("windows") ||
                    osName.startsWith("macosx") || osName.startsWith("osx"));
         assumeFalse("false".equals(System.getProperty("com.linecorp.armeria.useOpenSsl")));
 
         assertThat(Flags.useOpenSsl()).isTrue();
         assertThat(OpenSsl.isAvailable()).isTrue();
+    }
+
+    @Test
+    void dumpOpenSslInfoDoNotThrowStackOverFlowError() {
+        System.setProperty("com.linecorp.armeria.dumpOpenSslInfo", "true");
+        System.setProperty("com.linecorp.armeria.useOpenSsl", "true");
+        // Flags.useOpenSsl() can be false when OpenSsl.isAvailable() returns false.
+        // So we don't check it.
+        assertThat(Flags.dumpOpenSslInfo()).isTrue();
     }
 }
