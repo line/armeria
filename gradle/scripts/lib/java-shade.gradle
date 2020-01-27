@@ -121,7 +121,7 @@ configure(relocatedProjects) {
                 //     See ProGuardTask.libraryjar() for more information.
                 if (!p.hasFlags('no_aggregation')) {
                     doFirst {
-                        p.configurations.testRuntime.collect().each { File file ->
+                        p.configurations.testRuntimeClasspath.collect().each { File file ->
                             if (!file.path.startsWith("${rootProject.projectDir}")) {
                                 dependencyJars.add(file)
                             }
@@ -229,7 +229,7 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
             exclude '**/*.jar'
         }
 
-        configurations = [project.configurations[isMain ? 'compile' : 'testCompile']]
+        configurations = [project.configurations[isMain ? 'compileClasspath' : 'testCompileClasspath']]
 
         relocations.each { props ->
             task.relocate props['from'], props['to']
@@ -248,7 +248,7 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
                         return false
                     } else {
                         // Do not shade the dependencies which is already shaded for 'main'.
-                        return project.configurations.compile.allDependencies.find { compileDep ->
+                        return project.configurations.compileClasspath.allDependencies.find { compileDep ->
                             compileDep.group == dep.moduleGroup && compileDep.name == dep.moduleName
                         }
                     }
@@ -288,9 +288,9 @@ private Configuration createShadedTestRuntimeConfiguration(
     def shadedDependencyNames = project.ext.relocations.collect { it['name'] }
     def targetConfigurationNames
     if (project == recursedProject) {
-        targetConfigurationNames = ['compile', 'runtime', 'testCompile', 'testRuntime']
+        targetConfigurationNames = ['compileClasspath', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
     }  else {
-        targetConfigurationNames = ['compile', 'runtime']
+        targetConfigurationNames = ['compileClasspath', 'runtimeClasspath']
     }
     def projectDependencies = []
     recursedProject.configurations.findAll { cfg ->

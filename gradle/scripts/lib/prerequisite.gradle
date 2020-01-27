@@ -1,17 +1,10 @@
 try {
     rootProject.apply plugin: 'com.google.osdetector'
-    rootProject.apply plugin: 'io.spring.dependency-management'
 } catch (UnknownPluginException e) {
     throw new IllegalStateException('''Add the following to the top-level build.gradle file:
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.google.gradle:osdetector-gradle-plugin:1.6.2'
-        classpath 'io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE'
-    }
+plugins {
+    id 'com.google.osdetector' version '1.6.2' apply false
 }
 ''')
 }

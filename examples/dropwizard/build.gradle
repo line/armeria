@@ -7,10 +7,10 @@ application {
 }
 
 dependencies {
-    compile project(':dropwizard')
+    implementation project(':dropwizard')
 
-    testCompile 'io.dropwizard:dropwizard-testing'
-    testCompile 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'io.dropwizard:dropwizard-testing'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
 }
 
 task runDropwizardExample(type: JavaExec) {

@@ -3,8 +3,8 @@ plugins {
 }
 
 dependencies {
-    compile project(':core')
-    runtime 'org.slf4j:slf4j-simple'
+    implementation project(':core')
+    runtimeOnly 'org.slf4j:slf4j-simple'
 }
 
 application {

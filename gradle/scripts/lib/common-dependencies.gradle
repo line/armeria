@@ -25,45 +25,90 @@ rootProject.ext {
     }
 }
 
-allprojects {
-    apply plugin: 'io.spring.dependency-management'
-
-    dependencyManagement {
-        generatedPomCustomization {
-            enabled = false
-        }
-
-        imports {
-            if (rootProject.ext.dependenciesYaml.containsKey('boms')) {
-                dependenciesYaml['boms'].each {
-                    mavenBom "${it}"
+def managedDependencyVersions = [:]
+def managedDependencyExclusions = [:].withDefault { [] }
+rootProject.ext.dependenciesYaml.forEach { String key, value ->
+    if (key != 'boms') {
+        def groupId = key
+        def artifact = value as Map
+        artifact.forEach { String artifactId, Map props ->
+            if (props.containsKey('version')) {
+                managedDependencyVersions["${groupId}:${artifactId}"] = "${props['version']}"
+            }
+            if (props.containsKey('exclusions')) {
+                props['exclusions'].each { String spec ->
+                    def parsed = spec.split(':')
+                    managedDependencyExclusions["${groupId}:${artifactId}"].add([
+                            group: parsed[0],
+                            module: parsed[1],
+                    ])
                 }
             }
         }
+    }
+}
 
-        dependencies {
+configure(projectsWithFlags('dependencies')) {
+    apply plugin: 'java-platform'
+
+    javaPlatform {
+        allowDependencies()
+    }
+
+    dependencies {
+        if (rootProject.ext.dependenciesYaml.containsKey('boms')) {
+            dependenciesYaml['boms'].each {
+                api platform("${it}")
+            }
+        }
+
+        constraints {
             rootProject.ext.dependenciesYaml.forEach { String key, value ->
                 if (key != 'boms') {
                     def groupId = key
                     def artifact = value as Map
                     artifact.forEach { String artifactId, Map props ->
                         if (props.containsKey('version')) {
-                            dependency("${groupId}:${artifactId}:${props['version']}") {
-                                if (props.containsKey('exclusions')) {
-                                    props['exclusions'].each { String spec ->
-                                        exclude spec
-                                    }
-                                }
-                            }
+                            api "${groupId}:${artifactId}:${props['version']}"
                         }
                     }
                 }
             }
         }
     }
+}
 
+def dependencyProjects = projectsWithFlags('dependencies')
+allprojects {
     ext {
-        managedVersions = dependencyManagement.managedVersions
+        managedVersions = managedDependencyVersions
+    }
+
+    if (!dependencyProjects.isEmpty()) {
+        def dependencyProject = dependencyProjects[0]
+        plugins.withId('java-library') {
+            evaluationDependsOn(dependencyProject.path)
+
+            dependencies {
+                configurations.each { configuration ->
+                    // Add to root configurations
+                    if (configuration.extendsFrom.isEmpty() &&
+                            // Gradle bug prevents managing jacoco versions through platform.
+                            // https://github.com/gradle/gradle/issues/11209
+                            configuration.name != 'jacocoAnt' && configuration.name != 'jacocoAgent') {
+                        add(configuration.name, platform(dependencyProject))
+                    }
+
+                    configuration.dependencies.whenObjectAdded { dep ->
+                        if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
+                            managedDependencyExclusions["${dep.group}:${dep.name}"].each {
+                                exclude it
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -116,7 +161,7 @@ rootProject.ext {
             def groupId = entry.key
             entry.value.forEach { String artifactId, Map props ->
                 if (props.containsKey('javadocs')) {
-                    def version = String.valueOf(managedVersions["${groupId}:${artifactId}"])
+                    def version = String.valueOf(managedDependencyVersions["${groupId}:${artifactId}"])
                     props['javadocs'].each { url ->
                         list.add([
                                 groupId: groupId,
@@ -144,12 +189,12 @@ configure(rootProject) {
     task managedVersions(
             group: 'Build',
             description: 'Generates the file that contains dependency versions.') {
-        inputs.properties dependencyManagement.managedVersions
+        inputs.properties managedDependencyVersions
         doLast {
             def f = file("${project.buildDir}/managed_versions.yml")
             f.parentFile.mkdir()
             f.withWriter('UTF-8') {
-                new Yaml().dump(dependencyManagement.managedVersions, it)
+                new Yaml().dump(managedDependencyVersions, it)
             }
         }
     }
