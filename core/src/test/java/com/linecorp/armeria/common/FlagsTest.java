@@ -19,15 +19,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
+import java.lang.invoke.MethodType;
+import java.net.URL;
+import java.net.URLConnection;
+
 import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.base.Ascii;
 
+import com.linecorp.armeria.common.util.Exceptions;
+
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
 
-@SetSystemProperty(key = "com.linecorp.armeria.dumpOpenSslInfo", value = "true")
 class FlagsTest {
 
     private static final String osName = Ascii.toLowerCase(System.getProperty("os.name"));
@@ -60,8 +72,59 @@ class FlagsTest {
     }
 
     @Test
-    void dumpOpenSslInfoDoNotThrowStackOverFlowError() {
+    @SetSystemProperty(key = "com.linecorp.armeria.dumpOpenSslInfo", value = "true")
+    void dumpOpenSslInfoDoNotThrowStackOverFlowError() throws Throwable {
         assumeTrue(OpenSsl.isAvailable());
-        assertThat(Flags.dumpOpenSslInfo()).isTrue();
+
+        // There's a chance that Flags.useOpenSsl() is already called by other test cases, which means that
+        // we cannot set dumpOpenSslInfo. So we use our own class loader to load the Flags class.
+        final FlagsClassLoader classLoader = new FlagsClassLoader();
+        final Class<?> flags = classLoader.loadClass("com.linecorp.armeria.common.Flags");
+        final Lookup lookup = MethodHandles.publicLookup();
+        final MethodHandle useOpenSslMethodHandle = lookup.findStatic(flags, "useOpenSsl",
+                                                                      MethodType.methodType(boolean.class));
+        useOpenSslMethodHandle.invoke(); // Call Flags.useOpenSsl();
+
+        final MethodHandle dumpOpenSslInfoMethodHandle =
+                lookup.findStatic(flags, "dumpOpenSslInfo", MethodType.methodType(boolean.class));
+        // // Call Flags.dumpOpenSslInfo();
+        assertThat(dumpOpenSslInfoMethodHandle.invoke()).isSameAs(Boolean.TRUE);
+    }
+
+    private static class FlagsClassLoader extends ClassLoader {
+        FlagsClassLoader() {
+            super(getSystemClassLoader());
+        }
+
+        @Override
+        public Class<?> loadClass(String name) throws ClassNotFoundException {
+            if (!name.startsWith("com.linecorp.armeria.common")) {
+                return super.loadClass(name);
+            }
+
+            // Reload every class in common package.
+            try {
+                // Classes do not have an inner class.
+                final String replaced = name.replace('.', File.separatorChar) + ".class";
+                final URL url = getClass().getClassLoader().getResource(replaced);
+                final URLConnection connection = url.openConnection();
+                final InputStream input = connection.getInputStream();
+                final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                int data = input.read();
+
+                while (data != -1) {
+                    buffer.write(data);
+                    data = input.read();
+                }
+
+                input.close();
+                final byte[] classData = buffer.toByteArray();
+
+                return defineClass(name, classData, 0, classData.length);
+            } catch (IOException e) {
+                Exceptions.throwUnsafely(e);
+            }
+            return null;
+        }
     }
 }

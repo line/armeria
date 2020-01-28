@@ -453,23 +453,6 @@ public final class Flags {
         logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getBoolean("dumpOpenSslInfo", false);
-    }
-
-    /**
-     * Returns whether information about the OpenSSL environment should be dumped when first starting the
-     * application, including supported ciphers.
-     *
-     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
-     * option to enable it.
-     *
-     * <p>If {@link #useOpenSsl()} returns {@code false}, this returns {@code false} as well no matter you
-     * specified the JVM option.
-     */
-    public static boolean dumpOpenSslInfo() {
-        if (dumpOpenSslInfo != null) {
-            return dumpOpenSslInfo;
-        }
-        setUseOpenSslAndDumpOpenSslInfo();
         if (dumpOpenSslInfo) {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder.forClient(),
@@ -482,6 +465,23 @@ public final class Flags {
             logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
             logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
         }
+    }
+
+    /**
+     * Returns whether information about the OpenSSL environment should be dumped when first starting the
+     * application, including supported ciphers.
+     *
+     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
+     * option to enable it.
+     *
+     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
+     * specified the JVM option.
+     */
+    public static boolean dumpOpenSslInfo() {
+        if (dumpOpenSslInfo != null) {
+            return dumpOpenSslInfo;
+        }
+        setUseOpenSslAndDumpOpenSslInfo();
         return dumpOpenSslInfo;
     }
 
