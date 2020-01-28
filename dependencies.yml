@@ -281,8 +281,6 @@ org.junit.platform:
     version: &JUNIT_PLATFORM_VERSION '1.5.2'
   junit-platform-launcher:
     version: *JUNIT_PLATFORM_VERSION
-org.junit-pioneer:
-  junit-pioneer: { version: '0.5.2' }
 
 kr.motd.gradle:
   sphinx-gradle-plugin: { version: '2.6.1' }

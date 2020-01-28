@@ -31,7 +31,6 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import org.junit.jupiter.api.Test;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.base.Ascii;
 
@@ -72,9 +71,9 @@ class FlagsTest {
     }
 
     @Test
-    @SetSystemProperty(key = "com.linecorp.armeria.dumpOpenSslInfo", value = "true")
     void dumpOpenSslInfoDoNotThrowStackOverFlowError() throws Throwable {
         assumeTrue(OpenSsl.isAvailable());
+        System.setProperty("com.linecorp.armeria.dumpOpenSslInfo", "true");
 
         // There's a chance that Flags.useOpenSsl() is already called by other test cases, which means that
         // we cannot set dumpOpenSslInfo. So we use our own class loader to load the Flags class.
