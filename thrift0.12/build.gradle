@@ -18,10 +18,6 @@ dependencies {
             // Will fail the build if the override doesn't work
             strictly THRIFT_VERSION
         }
-
-        exclude group: 'javax.annotation',          module: 'javax.annotation-api'
-        exclude group: 'org.apache.httpcomponents', module: 'httpcore'
-        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
 
     // Jetty, for testing TServlet interoperability.
