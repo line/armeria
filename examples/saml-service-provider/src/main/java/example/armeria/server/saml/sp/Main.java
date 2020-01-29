@@ -6,7 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
-import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
+import org.opensaml.security.credential.CredentialResolver;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
