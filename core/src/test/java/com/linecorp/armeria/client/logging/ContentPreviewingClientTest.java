@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -73,7 +74,7 @@ class ContentPreviewingClientTest {
         }
     };
 
-    @Test
+    @RepeatedTest(100)
     void decodedContentPreview() {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .decorator(DecodingClient.newDecorator())

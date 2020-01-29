@@ -103,7 +103,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private ContentPreviewer requestContentPreviewer;
     @Nullable
-    private String requestContentPreview;
+    private volatile String requestContentPreview;
     @Nullable
     private Throwable requestCause;
 
@@ -116,7 +116,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private ContentPreviewer responseContentPreviewer;
     @Nullable
-    private String responseContentPreview;
+    private volatile String responseContentPreview;
     @Nullable
     private Throwable responseCause;
 
