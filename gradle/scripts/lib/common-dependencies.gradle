@@ -28,7 +28,12 @@ rootProject.ext {
 def managedDependencyVersions = [:]
 def managedDependencyExclusions = [:].withDefault { [] }
 rootProject.ext.dependenciesYaml.forEach { String key, value ->
-    if (key != 'boms') {
+    if (key == 'boms') {
+        value.each {
+            def parsed = it.split(':')
+            managedDependencyVersions["${parsed[0]}:${parsed[1]}"] = parsed[2]
+        }
+    } else {
         def groupId = key
         def artifact = value as Map
         artifact.forEach { String artifactId, Map props ->
@@ -78,14 +83,13 @@ configure(projectsWithFlags('dependencies')) {
     }
 }
 
-def dependencyProjects = projectsWithFlags('dependencies')
 allprojects {
     ext {
         managedVersions = managedDependencyVersions
     }
 }
 
-
+def dependencyProjects = projectsWithFlags('dependencies')
 if (!dependencyProjects.isEmpty()) {
     def dependencyProject = dependencyProjects[0]
     configure(projectsWithFlags('java')) {
