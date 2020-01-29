@@ -9,15 +9,6 @@ buildscript {
 
 apply plugin: 'me.champeau.gradle.jmh'
 
-// gradle-jmh-plugin doesn't yet set resolution flags for the configurations it creates so we go ahead and do
-// it here.
-configurations {
-    jmhCompileClasspath {
-        canBeResolved = true
-        canBeConsumed = false
-    }
-}
-
 def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
 
 dependencies {
