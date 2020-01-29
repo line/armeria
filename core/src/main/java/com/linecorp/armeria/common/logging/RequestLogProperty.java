@@ -58,6 +58,11 @@ public enum RequestLogProperty {
     SCHEME(true),
 
     /**
+     * {@link RequestLog#name()}.
+     */
+    NAME(true),
+
+    /**
      * {@link RequestLog#requestHeaders()}.
      */
     REQUEST_HEADERS(true),

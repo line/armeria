@@ -71,8 +71,8 @@ public enum BuiltInProperty {
      */
     CLIENT_IP("client.ip"),
     /**
-     * {@code "scheme"} - the scheme of the request, represented by {@link Scheme#uriText()}.
-     * e.g. {@code "tbinary+h2"}
+     * {@code "scheme"} - the scheme of the request, represented by {@link Scheme#uriText()}, such as
+     * {@code "tbinary+h2"}.
      */
     SCHEME("scheme"),
     /**
@@ -99,9 +99,14 @@ public enum BuiltInProperty {
      */
     REQ_QUERY("req.query"),
     /**
-     * {@code "req.method"} - the method name of the request. e.g. {@code "GET"} and {@code "POST"}
+     * {@code "req.method"} - the method name of the request, such as {@code "GET"} and {@code "POST"}.
      */
     REQ_METHOD("req.method"),
+    /**
+     * {@code "req.name"} - the human-readable name of the request, such as RPC method name or annotated
+     * service method name. This property is often used as a meter tag or distributed trace's span name.
+     */
+    REQ_NAME("req.name"),
     /**
      * {@code "req.rpc_method"} - the RPC method name of the request. Unavailable if the current request is not
      * an RPC request or is not decoded yet.
@@ -140,14 +145,14 @@ public enum BuiltInProperty {
     TLS_SESSION_ID("tls.session_id"),
     /**
      * {@code "tls.cipher"} - the current {@linkplain SSLSession#getCipherSuite() TLS cipher suite}.
-     * Unavailable if TLS handshake is not finished or the connection is not a TLS connection.
-     * e.g. {@code "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"}
+     * Unavailable if TLS handshake is not finished or the connection is not a TLS connection, such as
+     * {@code "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"}.
      */
     TLS_CIPHER("tls.cipher"),
     /**
      * {@code "tls.proto"} - the current {@linkplain SSLSession#getProtocol()} TLS protocol}.
-     * Unavailable if TLS handshake is not finished or the connection is not a TLS connection.
-     * e.g. {@code "TLSv1.2"}
+     * Unavailable if TLS handshake is not finished or the connection is not a TLS connection, such as
+     * {@code "TLSv1.2"}.
      */
     TLS_PROTO("tls.proto");
 

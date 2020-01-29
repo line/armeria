@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.it.brave;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -126,7 +125,7 @@ class BraveIntegrationTest {
                         quxClient.hello(name, f1);
                         quxClient.hello(name, f2);
                         CompletableFuture.allOf(f1, f2).whenCompleteAsync((aVoid, throwable) -> {
-                            resultHandler.onComplete(f1.join() + ", and " + f2.join());
+                            resultHandler.onComplete(f1.getNow(null) + ", and " + f2.getNow(null));
                         }, RequestContext.current().contextAwareExecutor());
                     })));
 

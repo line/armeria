@@ -30,6 +30,7 @@ import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_AUTHORITY;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_CONTENT_LENGTH;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_DIRECTION;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_METHOD;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_NAME;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_PATH;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_QUERY;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_RPC_METHOD;
@@ -268,6 +269,9 @@ public final class RequestContextExporter {
         if (builtInProperties.contains(REQ_METHOD)) {
             exportMethod(out, ctx);
         }
+        if (builtInProperties.contains(REQ_NAME)) {
+            exportName(out, log);
+        }
         if (builtInProperties.contains(REQ_CONTENT_LENGTH)) {
             exportRequestContentLength(out, log);
         }
@@ -429,6 +433,15 @@ public final class RequestContextExporter {
 
     private static void exportMethod(Map<String, String> out, RequestContext ctx) {
         out.put(REQ_METHOD.key, ctx.method().name());
+    }
+
+    private static void exportName(Map<String, String> out, RequestLog log) {
+        if (log.isAvailable(RequestLogProperty.NAME)) {
+            final String name = log.name();
+            if (name != null) {
+                out.put(REQ_NAME.key, name);
+            }
+        }
     }
 
     private static void exportRequestContentLength(Map<String, String> out, RequestLog log) {

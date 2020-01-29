@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -92,13 +91,8 @@ public interface MeterIdPrefixFunction {
              */
             private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestOnlyLog log) {
                 final RequestContext ctx = log.context();
-                final Object requestContent = log.requestContent();
 
-                String methodName = null;
-                if (requestContent instanceof RpcRequest) {
-                    methodName = ((RpcRequest) requestContent).method();
-                }
-
+                String methodName = log.name();
                 if (methodName == null) {
                     final RequestHeaders requestHeaders = log.requestHeaders();
                     methodName = requestHeaders.method().name();
@@ -151,8 +145,8 @@ public interface MeterIdPrefixFunction {
      * <ul>
      *   <li>{@link RequestLogProperty#REQUEST_START_TIME}</li>
      *   <li>{@link RequestLogProperty#REQUEST_HEADERS}</li>
-     *   <li>{@link RequestLogProperty#REQUEST_CONTENT}</li>
      *   <li>{@link RequestLogProperty#SESSION}</li>
+     *   <li>{@link RequestLogProperty#NAME}</li>
      * </ul>
      */
     MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log);
