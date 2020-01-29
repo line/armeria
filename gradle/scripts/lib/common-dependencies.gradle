@@ -85,6 +85,7 @@ allprojects {
     }
 }
 
+
 if (!dependencyProjects.isEmpty()) {
     def dependencyProject = dependencyProjects[0]
     // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
@@ -96,10 +97,11 @@ if (!dependencyProjects.isEmpty()) {
             dependencies {
                 configurations.configureEach { configuration ->
                     // Add to resolvable configurations
-                    if (configuration.canBeResolved && !configuration.canBeConsumed &&
-                            // Gradle bug prevents managing jacoco versions through platform.
+                    if (configuration.canBeResolved &&
+                            // Gradle bug prevents managing jacoco / checkstyle versions through platform.
                             // https://github.com/gradle/gradle/issues/11209
-                            configuration.name != 'jacocoAnt' && configuration.name != 'jacocoAgent') {
+                            configuration.name != 'jacocoAnt' && configuration.name != 'jacocoAgent' &&
+                            configuration.name != 'checkstyle') {
                         add(configuration.name, platform(dependencyProject))
                     }
 
