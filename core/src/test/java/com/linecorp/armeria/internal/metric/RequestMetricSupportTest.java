@@ -52,7 +52,7 @@ class RequestMetricSupportTest {
 
         setConnectionTimings(ctx);
         // FIXME(trustin): In reality, most HTTP requests will not have any name.
-        //                 As a result, `activeRequestMeterId()` will be invoked only after
+        //                 As a result, `activeRequestPrefix()` will be invoked only after
         //                 a request is completed, i.e. active request count will be inaccurate,
         //                 especially for streaming requests.
         ctx.logBuilder().name("POST");
