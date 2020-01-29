@@ -15,6 +15,7 @@ dependencies {
             // Will fail the build if the override doesn't work
             strictly SPRING_BOOT_VERSION
         }
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }
 
     [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {
