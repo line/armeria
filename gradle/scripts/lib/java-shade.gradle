@@ -292,15 +292,15 @@ private Configuration configureShadedTestRuntimeConfiguration(
     }
 
     def shadedDependencyNames = project.ext.relocations.collect { it['name'] }
-    def targetConfigurationNames
+    def targetConfigurationName
     if (project == recursedProject) {
-        targetConfigurationNames = ['compileClasspath', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
+        targetConfigurationName = 'testRuntimeClasspath'
     }  else {
-        targetConfigurationNames = ['compileClasspath', 'runtimeClasspath']
+        targetConfigurationName = 'runtimeClasspath'
     }
     def projectDependencies = []
     recursedProject.configurations.findAll { cfg ->
-        cfg.name in targetConfigurationNames
+        cfg.name == targetConfigurationName
     }.each { cfg ->
         cfg.allDependencies.each { dep ->
             if (dep instanceof ProjectDependency) {
