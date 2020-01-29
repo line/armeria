@@ -70,7 +70,7 @@ class ContentPreviewingClientTest {
         }
     };
 
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
     void decodedContentPreview() {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .decorator(DecodingClient.newDecorator())

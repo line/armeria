@@ -88,9 +88,9 @@ public interface ContentPreviewer {
 
     /**
      * Returns whether this {@link ContentPreviewer} is {@link #disabled()} or not.
-      */
+     */
     default boolean isDisabled() {
-        return this == ContentPreviewerAdapter.NOOP;
+        return false;
     }
 
     /**

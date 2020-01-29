@@ -52,10 +52,8 @@ public final class ContentPreviewerConfigurator {
     public ContentPreviewerConfigurator(@Nullable ContentPreviewerFactory requestContentPreviewerFactory,
                                         @Nullable ContentPreviewerFactory responseContentPreviewerFactory) {
         assert requestContentPreviewerFactory != null || responseContentPreviewerFactory != null;
-        this.requestContentPreviewerFactory =
-                requireNonNull(requestContentPreviewerFactory, "requestContentPreviewerFactory");
-        this.responseContentPreviewerFactory =
-                requireNonNull(responseContentPreviewerFactory, "responseContentPreviewerFactory");
+        this.requestContentPreviewerFactory = requestContentPreviewerFactory;
+        this.responseContentPreviewerFactory = responseContentPreviewerFactory;
     }
 
     /**
@@ -114,12 +112,16 @@ public final class ContentPreviewerConfigurator {
                     if (ArmeriaHttpUtil.isInformational(status)) {
                         return obj;
                     }
-                    responseContentPreviewer = responseContentPreviewerFactory.get(ctx, headers);
-                    ctx.logBuilder().responseContentPreviewer(responseContentPreviewer);
-                    responseContentPreviewer.onHeaders(headers);
+                    final ContentPreviewer contentPreviewer = responseContentPreviewerFactory.get(ctx, headers);
+                    if (!contentPreviewer.isDisabled()) {
+                        contentPreviewer.onHeaders(headers);
+                        ctx.logBuilder().responseContentPreviewer(contentPreviewer);
+                        responseContentPreviewer = contentPreviewer;
+                    }
                 } else if (obj instanceof HttpData) {
-                    assert responseContentPreviewer != null;
-                    responseContentPreviewer.onData((HttpData) obj);
+                    if (responseContentPreviewer != null) {
+                        responseContentPreviewer.onData((HttpData) obj);
+                    }
                 }
                 return obj;
             }
