@@ -1,12 +1,12 @@
 #!/bin/bash
 set -eo pipefail
 
-JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u222-b10/OpenJDK8U-jre_x64_linux_hotspot_8u222b10.tar.gz'
-JRE8_VERSION='AdoptOpenJDK-8u222b10'
-JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.4%2B11/OpenJDK11U-jre_x64_linux_hotspot_11.0.4_11.tar.gz'
-JRE11_VERSION='AdoptOpenJDK-11.0.4_11'
-JRE13_URL='https://github.com/AdoptOpenJDK/openjdk13-binaries/releases/download/jdk-13%2B33/OpenJDK13U-jre_x64_linux_hotspot_13_33.tar.gz'
-JRE13_VERSION='AdoptOpenJDK-13_33'
+JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jre_x64_linux_hotspot_8u242b08.tar.gz'
+JRE8_VERSION='AdoptOpenJDK-8u242b08'
+JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.6%2B10/OpenJDK11U-jre_x64_linux_hotspot_11.0.6_10.tar.gz'
+JRE11_VERSION='AdoptOpenJDK-11.0.6_10'
+JRE13_URL='https://github.com/AdoptOpenJDK/openjdk13-binaries/releases/download/jdk-13.0.2%2B8/OpenJDK13U-jdk_x64_linux_hotspot_13.0.2_8.tar.gz'
+JRE13_VERSION='AdoptOpenJDK-13.0.2_8'
 BUILD_JDK_URL="$JRE13_URL"
 BUILD_JDK_VERSION="$JRE13_VERSION"
 
