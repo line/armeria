@@ -6,7 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
-import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
+import org.opensaml.security.credential.CredentialResolver;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ public class Main {
 
         // Specify information about your keystore.
         // The keystore contains two key pairs, which are identified as 'signing' and 'encryption'.
-        final KeyStoreCredentialResolver credentialResolver =
+        final CredentialResolver credentialResolver =
                 new KeyStoreCredentialResolverBuilder(Main.class.getClassLoader(), "sample.jks")
                         .type("PKCS12")
                         .password("N5^X[hvG")

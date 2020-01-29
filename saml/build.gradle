@@ -1,5 +1,5 @@
 dependencies {
-    implementation 'com.auth0:java-jwt'
+    api 'com.auth0:java-jwt'
     implementation 'net.shibboleth.utilities:java-support'
     api 'org.opensaml:opensaml-core'
     api 'org.opensaml:opensaml-saml-api'
