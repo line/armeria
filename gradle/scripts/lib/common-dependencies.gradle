@@ -83,16 +83,20 @@ allprojects {
     ext {
         managedVersions = managedDependencyVersions
     }
+}
 
-    if (!dependencyProjects.isEmpty()) {
-        def dependencyProject = dependencyProjects[0]
-        plugins.withId('java-library') {
+if (!dependencyProjects.isEmpty()) {
+    def dependencyProject = dependencyProjects[0]
+    // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
+    // canBeConsumed are set otherwise.
+    afterEvaluate {
+        configure(projectsWithFlags('java')) {
             evaluationDependsOn(dependencyProject.path)
 
             dependencies {
-                configurations.each { configuration ->
-                    // Add to root configurations
-                    if (configuration.extendsFrom.isEmpty() &&
+                configurations.configureEach { configuration ->
+                    // Add to resolvable configurations
+                    if (configuration.canBeResolved && !configuration.canBeConsumed &&
                             // Gradle bug prevents managing jacoco versions through platform.
                             // https://github.com/gradle/gradle/issues/11209
                             configuration.name != 'jacocoAnt' && configuration.name != 'jacocoAgent') {

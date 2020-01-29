@@ -13,6 +13,7 @@ def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
 
 dependencies {
     implementation project(':grpc')
+    implementation project(':grpc-protocol')
     implementation project(':retrofit2')
     implementation project(':thrift')
 
