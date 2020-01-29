@@ -55,8 +55,6 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class ContentPreviewingClientTest {
 
-    private static final AtomicReference<RequestContext> contextCaptor = new AtomicReference<>();
-
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
@@ -74,7 +72,7 @@ class ContentPreviewingClientTest {
         }
     };
 
-    @RepeatedTest(100)
+    @RepeatedTest(1000)
     void decodedContentPreview() {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .decorator(DecodingClient.newDecorator())

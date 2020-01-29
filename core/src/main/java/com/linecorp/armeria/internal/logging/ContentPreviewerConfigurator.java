@@ -114,7 +114,6 @@ public final class ContentPreviewerConfigurator {
                     if (ArmeriaHttpUtil.isInformational(status)) {
                         return obj;
                     }
-
                     responseContentPreviewer = responseContentPreviewerFactory.get(ctx, headers);
                     ctx.logBuilder().responseContentPreviewer(responseContentPreviewer);
                     responseContentPreviewer.onHeaders(headers);

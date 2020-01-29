@@ -101,7 +101,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestEndTimeNanos;
     private long requestLength;
     @Nullable
-    private ContentPreviewer requestContentPreviewer;
+    private volatile ContentPreviewer requestContentPreviewer;
     @Nullable
     private volatile String requestContentPreview;
     @Nullable
@@ -114,7 +114,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long responseEndTimeNanos;
     private long responseLength;
     @Nullable
-    private ContentPreviewer responseContentPreviewer;
+    private volatile ContentPreviewer responseContentPreviewer;
     @Nullable
     private volatile String responseContentPreview;
     @Nullable
@@ -752,7 +752,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public void requestContentPreviewer(ContentPreviewer requestContentPreviewer) {
         requireNonNull(requestContentPreviewer, "requestContentPreviewer");
-        if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+        if (this.requestContentPreviewer != null || isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
             return;
         }
         this.requestContentPreviewer = requestContentPreviewer;
@@ -1037,7 +1037,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public void responseContentPreviewer(ContentPreviewer responseContentPreviewer) {
         requireNonNull(responseContentPreviewer, "responseContentPreviewer");
-        if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+        if (this.responseContentPreviewer != null || isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
             return;
         }
         this.responseContentPreviewer = responseContentPreviewer;
