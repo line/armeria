@@ -16,8 +16,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -48,9 +47,9 @@ class FlagsTest {
      */
     @Test
     void epollAvailableOnLinux() {
-        assumeTrue(osName.startsWith("linux"));
-        assumeTrue(System.getenv("WSLENV") == null);
-        assumeFalse("false".equals(System.getProperty("com.linecorp.armeria.useEpoll")));
+        assumeThat(osName).startsWith("linux");
+        assumeThat(System.getenv("WSLENV")).isNull();
+        assumeThat(System.getProperty("com.linecorp.armeria.useEpoll")).isEqualTo("false");
 
         assertThat(Flags.useEpoll()).isTrue();
         assertThat(Epoll.isAvailable()).isTrue();
@@ -62,9 +61,9 @@ class FlagsTest {
      */
     @Test
     void openSslAvailable() {
-        assumeTrue(osName.startsWith("linux") || osName.startsWith("windows") ||
-                   osName.startsWith("macosx") || osName.startsWith("osx"));
-        assumeFalse("false".equals(System.getProperty("com.linecorp.armeria.useOpenSsl")));
+        assumeThat(osName.startsWith("linux") || osName.startsWith("windows") ||
+                   osName.startsWith("macosx") || osName.startsWith("osx")).isTrue();
+        assumeThat(System.getProperty("com.linecorp.armeria.useOpenSsl")).isEqualTo("false");
 
         assertThat(Flags.useOpenSsl()).isTrue();
         assertThat(OpenSsl.isAvailable()).isTrue();
@@ -72,7 +71,7 @@ class FlagsTest {
 
     @Test
     void dumpOpenSslInfoDoNotThrowStackOverFlowError() throws Throwable {
-        assumeTrue(OpenSsl.isAvailable());
+        assumeThat(OpenSsl.isAvailable()).isTrue();
         System.setProperty("com.linecorp.armeria.dumpOpenSslInfo", "true");
 
         // There's a chance that Flags.useOpenSsl() is already called by other test cases, which means that
