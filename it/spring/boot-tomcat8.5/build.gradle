@@ -3,7 +3,7 @@ final def TOMCAT_VERSION = '8.5.49'
 
 dependencies {
     implementation project(':spring:boot-starter')
-    implementation project(':tomcat')
+    implementation project(':tomcat8.5')
     implementation("org.springframework.boot:spring-boot-starter") {
         version {
             // Will fail the build if the override doesn't work

@@ -212,6 +212,11 @@ configure(relocatedProjects) {
             relocatedProjects.each { p ->
                 def testTask = p.tasks.shadedTest
                 testTask.classpath += p.files(p.configurations.getByName('shadedTestRuntime').resolve())
+                if (p.name == 'boot-tomcat8.5') {
+                    testTask.classpath.each {
+                        println it
+                    }
+                }
             }
         }
     }
