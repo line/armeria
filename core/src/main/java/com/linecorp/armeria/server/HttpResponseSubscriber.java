@@ -343,7 +343,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 }
 
                 ChannelFuture failedFuture = f;
-                if (!isWritable) {
+                if (isSuccess && !isWritable) {
                     if (reqCtx.sessionProtocol().isMultiplex()) {
                         failedFuture = f.channel().newFailedFuture(ClosedPublisherException.get());
                     } else {
