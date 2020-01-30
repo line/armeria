@@ -71,7 +71,7 @@ class HttpResponseDecoderTest {
         // which means that we have more chance to reproduce the bug if two threads are racing
         // for notifying RESPONSE_END to listeners.
         builder.decorator(ContentPreviewingClient.builder().contentPreview(100).newDecorator());
-        // In order to use a different thread to to subscribe to the response.
+        // In order to use a different thread to subscribe to the response.
         builder.decorator(RetryingClient.builder(strategy)
                                         .maxTotalAttempts(2)
                                         .newDecorator());

@@ -40,9 +40,10 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  *
  * <pre>{@code
  * RequestLogAccess logAccess = ctx.log();
- * logAccess.whenAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW,
- *                         RequestLogProperty.RESPONSE_CONTENT_PREVIEW).thenApply(...);
- *
+ * logAccess.whenComplete().thenApply(log -> {
+ *     // Call log.requestContentPreview() and log.responseContentPreview() to use them.
+ *     ...
+ * });
  * }</pre>
  */
 public final class ContentPreviewingService extends SimpleDecoratingHttpService {

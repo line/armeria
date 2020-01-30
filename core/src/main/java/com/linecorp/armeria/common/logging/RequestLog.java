@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
 
 /**
@@ -164,8 +164,8 @@ public interface RequestLog extends RequestOnlyLog {
 
     /**
      * Returns the preview of response content of the {@link Response}.
-     * Note that the content preview needs to be enabled when configuring a {@link Server} or a {@link Client}
-     * by {@link ContentPreviewingService} or {@link ContentPreviewingClient} decorators respectively.
+     * Note that a {@link Service} or a {@link Client} must be decorated with {@link ContentPreviewingService}
+     * or {@link ContentPreviewingClient} decorators respectively to enable the content preview.
      *
      * @return the preview, or {@code null} if preview is disabled.
      *

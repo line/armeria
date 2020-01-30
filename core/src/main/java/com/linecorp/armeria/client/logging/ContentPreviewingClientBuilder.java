@@ -34,7 +34,7 @@ public final class ContentPreviewingClientBuilder
      */
     public ContentPreviewingClient build(HttpClient delegate) {
         checkState(requestContentPreviewerFactory() != null || responseContentPreviewerFactory() != null,
-                   "requestContentPreviewerFactory or responseContentPreviewerFactory must be set");
+                   "requestContentPreviewerFactory or responseContentPreviewerFactory must be set.");
         return new ContentPreviewingClient(delegate, requestContentPreviewerFactory(),
                                            responseContentPreviewerFactory());
     }
