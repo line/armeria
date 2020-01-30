@@ -105,6 +105,11 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
         return ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
     }
 
+    @Override
+    public boolean isWritable(int id, int streamId) {
+        return isStreamPresentAndWritable(streamId);
+    }
+
     /**
      * Returns {@code true} if the stream with the given {@code streamId} has been created and is writable.
      * Note that this method will return {@code false} for the stream which was not created yet.

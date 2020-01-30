@@ -96,7 +96,7 @@ class HttpResponseSubscriberTest {
 
     private static class ImmediateWriteEmulator extends HttpObjectEncoder {
 
-        private Channel channel;
+        private final Channel channel;
 
         ImmediateWriteEmulator(Channel channel) {
             this.channel = channel;
@@ -121,6 +121,11 @@ class HttpResponseSubscriberTest {
         @Override
         protected ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
             return successChannelFuture();
+        }
+
+        @Override
+        public boolean isWritable(int id, int streamId) {
+            return true;
         }
 
         private ChannelFuture successChannelFuture() {

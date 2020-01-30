@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Version;
@@ -321,6 +323,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                                 f.cause() instanceof ClosedChannelException &&
                                 responseEncoder instanceof Http1ObjectEncoder;
                 }
+                final boolean isWritable = responseEncoder.isWritable(req.id(), req.streamId());
 
                 // Write an access log if:
                 // - every message has been sent successfully.
@@ -333,17 +336,28 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                         reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                     }
 
-                    subscription.request(1);
-                    return;
+                    if (isWritable) {
+                        subscription.request(1);
+                        return;
+                    }
+                }
+
+                ChannelFuture failedFuture = f;
+                if (!isWritable) {
+                    if (reqCtx.sessionProtocol().isMultiplex()) {
+                        failedFuture = f.channel().newFailedFuture(ClosedPublisherException.get());
+                    } else {
+                        failedFuture = f.channel().newFailedFuture(ClosedSessionException.get());
+                    }
                 }
 
                 if (tryComplete()) {
                     setDone();
-                    logBuilder().endResponse(f.cause());
+                    logBuilder().endResponse(failedFuture.cause());
                     subscription.cancel();
                     reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                 }
-                HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
+                HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(failedFuture);
             }
         });
 
