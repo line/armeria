@@ -30,11 +30,14 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 
 /**
  * An {@link EndpointGroup} that merges the result of any number of other {@link EndpointGroup}s.
  */
-final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
+final class CompositeEndpointGroup
+        extends AbstractListenable<List<Endpoint>>
+        implements EndpointGroup, ListenableAsyncCloseable {
 
     private final List<EndpointGroup> endpointGroups;
 
@@ -107,6 +110,21 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
     @Override
     public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
         return initialEndpointsFuture;
+    }
+
+    @Override
+    public boolean isClosing() {
+        return closeable.isClosing();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closeable.isClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> whenClosed() {
+        return closeable.whenClosed();
     }
 
     @Override
