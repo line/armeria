@@ -182,8 +182,6 @@ for a specific service, you can use fluent API:
       .requestTimeoutMillis(5000)
       .maxRequestLength(8192)
       .verboseResponses(true)
-      .requestContentPreview(500)
-      .responseContentPreview(1000)
       .build((ctx, req) -> HttpResponse.of(OK)); // Should call to finish and return to the ServerBuilder.
 
 Or use a ``Consumer``:

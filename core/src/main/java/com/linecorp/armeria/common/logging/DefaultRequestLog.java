@@ -98,7 +98,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestEndTimeNanos;
     private long requestLength;
     @Nullable
-    private volatile String requestContentPreview;
+    private String requestContentPreview;
     @Nullable
     private Throwable requestCause;
 
@@ -109,7 +109,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long responseEndTimeNanos;
     private long responseLength;
     @Nullable
-    private volatile String responseContentPreview;
+    private String responseContentPreview;
     @Nullable
     private Throwable responseCause;
 
