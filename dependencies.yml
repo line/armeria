@@ -279,7 +279,7 @@ org.junit.jupiter:
     - https://junit.org/junit5/docs/5.5.2/api/
 org.junit.platform:
   junit-platform-commons:
-    version: &JUNIT_PLATFORM_VERSION '1.5.2'
+    version: &JUNIT_PLATFORM_VERSION '1.6.0'
   junit-platform-launcher:
     version: *JUNIT_PLATFORM_VERSION
 
