@@ -354,6 +354,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.direction", "INBOUND")
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
+                           .containsEntry("req.name", "hello")
                            .containsEntry("req.path", "/foo")
                            .containsEntry("req.query", "bar=baz")
                            .containsEntry("scheme", "tbinary+h2")
@@ -370,7 +371,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsEntry("attrs.my_attr", "some-attr")
                            .containsKey("elapsed_nanos")
-                           .hasSize(26);
+                           .hasSize(27);
         }
     }
 
@@ -488,6 +489,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.path", "/bar")
                            .containsEntry("req.query", null)
                            .containsEntry("scheme", "tbinary+h2")
+                           .containsEntry("req.name", "hello")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.rpc_method", "hello")
                            .containsEntry("req.rpc_params", "[world]")
@@ -501,7 +503,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsEntry("attrs.my_attr", "some-attr")
                            .containsKey("elapsed_nanos")
-                           .hasSize(25);
+                           .hasSize(26);
         }
     }
 

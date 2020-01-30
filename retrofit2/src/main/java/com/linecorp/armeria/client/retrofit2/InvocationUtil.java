@@ -17,8 +17,10 @@ package com.linecorp.armeria.client.retrofit2;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 import io.netty.util.AttributeKey;
 import retrofit2.Invocation;
@@ -40,13 +42,15 @@ public final class InvocationUtil {
     }
 
     /**
-     * Put {@code Invocation} to {@code RequestLog} if not null.
+     * Associates the specified {@link Invocation} with the specified {@link ClientRequestContext} and sets
+     * the {@link Invocation}'s method name to {@link RequestLogProperty#NAME}.
      */
-    static void setInvocation(RequestLogAccess log, @Nullable Invocation invocation) {
+    static void setInvocation(ClientRequestContext ctx, @Nullable Invocation invocation) {
         if (invocation == null) {
             return;
         }
-        log.context().setAttr(RETROFIT_INVOCATION, invocation);
+        ctx.setAttr(RETROFIT_INVOCATION, invocation);
+        ctx.logBuilder().name(invocation.method().getName());
     }
 
     private InvocationUtil() {}

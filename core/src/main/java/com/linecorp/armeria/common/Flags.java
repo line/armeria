@@ -125,8 +125,8 @@ public final class Flags {
                                                         value -> isEpollAvailable() || !value);
     @Nullable
     private static Boolean useOpenSsl;
-
-    private static final boolean DUMP_OPENSSL_INFO = getBoolean("dumpOpenSslInfo", false);
+    @Nullable
+    private static Boolean dumpOpenSslInfo;
 
     private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
     private static final int MAX_NUM_CONNECTIONS =
@@ -430,19 +430,30 @@ public final class Flags {
         if (useOpenSsl != null) {
             return useOpenSsl;
         }
+        setUseOpenSslAndDumpOpenSslInfo();
+        return useOpenSsl;
+    }
+
+    private static void setUseOpenSslAndDumpOpenSslInfo() {
         final boolean useOpenSsl = getBoolean("useOpenSsl", true);
         if (!useOpenSsl) {
             // OpenSSL explicitly disabled
-            return Flags.useOpenSsl = false;
+            Flags.useOpenSsl = false;
+            dumpOpenSslInfo = false;
+            return;
         }
         if (!OpenSsl.isAvailable()) {
             final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
             logger.info("OpenSSL not available: {}", cause.toString());
-            return Flags.useOpenSsl = false;
+            Flags.useOpenSsl = false;
+            dumpOpenSslInfo = false;
+            return;
         }
+        Flags.useOpenSsl = true;
         logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
-        if (dumpOpenSslInfo()) {
+        dumpOpenSslInfo = getBoolean("dumpOpenSslInfo", false);
+        if (dumpOpenSslInfo) {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder.forClient(),
                     false,
@@ -454,7 +465,6 @@ public final class Flags {
             logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
             logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
         }
-        return Flags.useOpenSsl = true;
     }
 
     /**
@@ -463,9 +473,16 @@ public final class Flags {
      *
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
      * option to enable it.
+     *
+     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
+     * specified the JVM option.
      */
     public static boolean dumpOpenSslInfo() {
-        return DUMP_OPENSSL_INFO;
+        if (dumpOpenSslInfo != null) {
+            return dumpOpenSslInfo;
+        }
+        setUseOpenSslAndDumpOpenSslInfo();
+        return dumpOpenSslInfo;
     }
 
     /**

@@ -163,7 +163,7 @@ allprojects {
     }
 }
 
-// Require to use JDK 12 when releasing.
+// Require to use JDK 13 when releasing.
 tasks.release.doFirst {
     if (JavaVersion.current() != JavaVersion.VERSION_13) {
         throw new IllegalStateException("You must release using JDK 13.");

@@ -79,9 +79,9 @@ final class ArmeriaHttpServerParser extends HttpServerParser {
             customizer.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
         }
 
-        final String rpcMethod = ServiceRequestContextAdapter.rpcMethod(requestLog);
-        if (rpcMethod != null) {
-            customizer.name(rpcMethod);
+        final String name = requestLog.name();
+        if (name != null) {
+            customizer.name(name);
         }
     }
 }
