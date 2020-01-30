@@ -38,12 +38,6 @@ configure(projectsWithFlags('publish', 'java')) {
                 // Clean up the POM.
                 pom {
                     withXml {
-                        // We publish resolved versions so don't need to publish our dependencyManagement too.
-                        def dependencyManagement = asNode().get('dependencyManagement')
-                        if (dependencyManagement != null) {
-                            asNode().remove(dependencyManagement)
-                        }
-                        
                         // Strip out shaded dependencies. We manually create shading tasks instead of applying
                         // the shadow plugin itself so need to do it ourselves.
                         def dependencies = asNode().get('dependencies')[0]
@@ -64,7 +58,7 @@ configure(projectsWithFlags('publish', 'java')) {
 
 configure(projectsWithFlags('publish')) {
     publishing {
-        publications.each {publication->
+        publications.each { publication ->
             // Shared configuration for all publications, including BOM
             def currentArtifactId = project.ext.artifactId
             publication.artifactId currentArtifactId

@@ -3,10 +3,10 @@ dependencies {
     implementation 'net.shibboleth.utilities:java-support'
     api 'org.opensaml:opensaml-core'
     api 'org.opensaml:opensaml-saml-api'
-    api 'org.opensaml:opensaml-saml-impl'
+    implementation 'org.opensaml:opensaml-saml-impl'
     api 'org.opensaml:opensaml-messaging-api'
-    api 'org.opensaml:opensaml-messaging-impl'
+    implementation 'org.opensaml:opensaml-messaging-impl'
     api 'org.opensaml:opensaml-soap-api'
-    api 'org.opensaml:opensaml-soap-impl'
+    implementation 'org.opensaml:opensaml-soap-impl'
     testImplementation 'org.jsoup:jsoup'
 }

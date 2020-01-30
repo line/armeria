@@ -9,7 +9,6 @@ buildscript {
     dependencies {
         // These should be the only dependencies that need hard-coded versions.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.27.0'
-        classpath 'io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE'
         classpath 'org.yaml:snakeyaml:1.25'
     }
 }
@@ -53,7 +52,17 @@ rootProject.ext.dependenciesYaml.forEach { String key, value ->
     }
 }
 
-configure(projectsWithFlags('dependencies')) {
+allprojects {
+    ext {
+        managedVersions = managedDependencyVersions
+    }
+}
+
+def dependencyManagementProjects = projectsWithFlags('dependencyManagement')
+assert !dependencyManagementProjects.isEmpty() // Guaranteed by settings-flags.gradle
+def dependencyManagementProject = dependencyManagementProjects[0]
+
+configure(dependencyManagementProject) {
     apply plugin: 'java-platform'
 
     javaPlatform {
@@ -83,33 +92,23 @@ configure(projectsWithFlags('dependencies')) {
     }
 }
 
-allprojects {
-    ext {
-        managedVersions = managedDependencyVersions
-    }
-}
+configure(projectsWithFlags('java')) {
+    evaluationDependsOn(dependencyManagementProject.path)
 
-def dependencyProjects = projectsWithFlags('dependencies')
-if (!dependencyProjects.isEmpty()) {
-    def dependencyProject = dependencyProjects[0]
-    configure(projectsWithFlags('java')) {
-        // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
-        // canBeConsumed are set otherwise.
-        afterEvaluate {
-            evaluationDependsOn(dependencyProject.path)
+    // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
+    // canBeConsumed are set otherwise.
+    afterEvaluate {
+        dependencies {
+            configurations.configureEach { configuration ->
+                // Add to resolvable configurations
+                if (configuration.canBeResolved && !configuration.canBeConsumed) {
+                    add(configuration.name, platform(dependencyManagementProject))
+                }
 
-            dependencies {
-                configurations.configureEach { configuration ->
-                    // Add to resolvable configurations
-                    if (configuration.canBeResolved && !configuration.canBeConsumed) {
-                        add(configuration.name, platform(dependencyProject))
-                    }
-
-                    configuration.dependencies.whenObjectAdded { dep ->
-                        if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
-                            managedDependencyExclusions["${dep.group}:${dep.name}"].each {
-                                exclude it
-                            }
+                configuration.dependencies.whenObjectAdded { dep ->
+                    if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
+                        managedDependencyExclusions["${dep.group}:${dep.name}"].each {
+                            exclude it
                         }
                     }
                 }

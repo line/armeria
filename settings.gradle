@@ -45,8 +45,6 @@ includeWithFlags ':thrift0.12',               'java', 'relocate'
 // Unpublished non-Java projects
 includeWithFlags ':docs-client'
 
-// Unpublished dependency management project to create a virtual platform.
-includeWithFlags ':dependencies', 'dependencies'
 
 // Site generation project
 includeWithFlags ':site'
