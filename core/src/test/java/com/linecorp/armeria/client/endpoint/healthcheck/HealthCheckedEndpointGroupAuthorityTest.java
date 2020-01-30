@@ -22,7 +22,6 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -56,7 +55,6 @@ class HealthCheckedEndpointGroupAuthorityTest {
             "[::1]:1, [::1]:1",
             "[::1]:80, [::1]"
     })
-    @Timeout(10)
     void hostOnlyOrIpAddrOnly(String endpoint, String expectedAuthority) throws Exception {
         try (HealthCheckedEndpointGroup ignored = build(Endpoint.parse(endpoint))) {
             final RequestHeaders log = logs.take();
@@ -73,7 +71,6 @@ class HealthCheckedEndpointGroupAuthorityTest {
             "foo:1, ::1, foo:1",
             "foo:80, ::1, foo"
     })
-    @Timeout(10)
     void hostAndIpAddr(String endpoint, String ipAddr, String expectedAuthority) throws Exception {
         try (HealthCheckedEndpointGroup ignored = build(Endpoint.parse(endpoint).withIpAddr(ipAddr))) {
             final RequestHeaders log = logs.take();
@@ -90,7 +87,6 @@ class HealthCheckedEndpointGroupAuthorityTest {
             "127.0.0.1:8080, 80, 127.0.0.1",
             "127.0.0.1:8080, 8080, 127.0.0.1:8080"
     })
-    @Timeout(10)
     void alternativePort(String endpoint, int altPort, String expectedAuthority) throws Exception {
         try (HealthCheckedEndpointGroup ignored = build(Endpoint.parse(endpoint),
                                                         builder -> builder.port(altPort))) {

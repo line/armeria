@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Clients;
@@ -127,7 +126,6 @@ class GracefulShutdownIntegrationTest {
         return baselineNanos = stopTime - startTime;
     }
 
-    @Timeout(20)
     @Test
     void testBaseline() throws Exception {
         final long baselineNanos = baselineNanos();
@@ -145,7 +143,6 @@ class GracefulShutdownIntegrationTest {
                                                    baselineNanos + MILLISECONDS.toNanos(400));
     }
 
-    @Timeout(20)
     @Test
     void waitsForRequestToComplete() throws Exception {
         final long baselineNanos = baselineNanos();
@@ -174,7 +171,6 @@ class GracefulShutdownIntegrationTest {
                                                    baselineNanos + MILLISECONDS.toNanos(900));
     }
 
-    @Timeout(20)
     @Test
     void interruptsSlowRequests() throws Exception {
         final long baselineNanos = baselineNanos();
@@ -212,7 +208,6 @@ class GracefulShutdownIntegrationTest {
                                                    baselineNanos + MILLISECONDS.toNanos(1400));
     }
 
-    @Timeout(20)
     @Test
     void testHardTimeout() throws Exception {
         final long baselineNanos = baselineNanos();
