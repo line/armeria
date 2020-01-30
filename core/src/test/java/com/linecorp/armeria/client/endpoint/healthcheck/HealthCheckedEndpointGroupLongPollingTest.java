@@ -28,7 +28,6 @@ import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Stopwatch;
@@ -103,7 +102,6 @@ class HealthCheckedEndpointGroupLongPollingTest {
     }
 
     @Test
-    @Timeout(15)
     void longPollingDisabledOnStop() throws Exception {
         final BlockingQueue<RequestLog> healthCheckRequestLogs = new LinkedTransferQueue<>();
         this.healthCheckRequestLogs = healthCheckRequestLogs;
@@ -146,7 +144,6 @@ class HealthCheckedEndpointGroupLongPollingTest {
     }
 
     @Test
-    @Timeout(15)
     void periodicCheckWhenConnectionRefused() throws Exception {
         final BlockingQueue<RequestLog> healthCheckRequestLogs = new LinkedTransferQueue<>();
         this.healthCheckRequestLogs = healthCheckRequestLogs;
@@ -173,7 +170,6 @@ class HealthCheckedEndpointGroupLongPollingTest {
     }
 
     @Test
-    @Timeout(15)
     void keepEndpointHealthinessWhenLongPollingTimeout() throws Exception {
         final BlockingQueue<RequestLog> healthCheckRequestLogs = new LinkedTransferQueue<>();
         this.healthCheckRequestLogs = healthCheckRequestLogs;

@@ -25,7 +25,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,7 +42,6 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-@Timeout(10)
 class HttpServerHeaderValidationTest {
 
     @RegisterExtension

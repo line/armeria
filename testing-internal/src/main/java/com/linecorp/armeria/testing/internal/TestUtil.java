@@ -16,15 +16,6 @@
 
 package com.linecorp.armeria.testing.internal;
 
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
-
-import java.lang.management.ManagementFactory;
-import java.time.Duration;
-
-import org.junit.jupiter.api.function.Executable;
-
-import com.linecorp.armeria.common.util.Exceptions;
-
 public final class TestUtil {
 
     private static final boolean isDocServiceDemoMode = "true".equals(System.getenv("DOC_SERVICE_DEMO"));
@@ -34,34 +25,6 @@ public final class TestUtil {
      */
     public static boolean isDocServiceDemoMode() {
         return isDocServiceDemoMode;
-    }
-
-    /**
-     * Executes {@code r}, timing it out if not done within 10 seconds. The timeout is not enabled if in an IDE
-     * debug mode.
-     */
-    public static void withTimeout(Executable r) {
-        withTimeout(r, Duration.ofSeconds(10));
-    }
-
-    /**
-     * Executes {@code r}, timing it out if not done by the passing of {@code timeout}. The timeout
-     * is not enabled if in an IDE debug mode.
-     */
-    public static void withTimeout(Executable r, Duration timeout) {
-        if (isDebugging()) {
-            try {
-                r.execute();
-            } catch (Throwable t) {
-                Exceptions.throwUnsafely(t);
-            }
-        } else {
-            assertTimeoutPreemptively(timeout, r);
-        }
-    }
-
-    private static boolean isDebugging() {
-        return ManagementFactory.getRuntimeMXBean().getInputArguments().contains("-Xdebug");
     }
 
     private TestUtil() {}

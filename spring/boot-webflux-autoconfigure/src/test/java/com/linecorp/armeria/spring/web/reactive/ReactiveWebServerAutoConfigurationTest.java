@@ -17,7 +17,6 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
-import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -123,51 +122,45 @@ class ReactiveWebServerAutoConfigurationTest {
     @ParameterizedTest
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetHelloFromRestController(String scheme) throws Exception {
-        withTimeout(() -> {
-            final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
-                                              .factory(clientFactory)
-                                              .build();
-            final AggregatedHttpResponse response = client.get("/hello").aggregate().join();
-            assertThat(response.contentUtf8()).isEqualTo("hello");
-        });
+        final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
+                                          .factory(clientFactory)
+                                          .build();
+        final AggregatedHttpResponse response = client.get("/hello").aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo("hello");
     }
 
     @ParameterizedTest
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetHelloFromRouter(String scheme) throws Exception {
-        withTimeout(() -> {
-            final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
-                                              .factory(clientFactory)
-                                              .build();
+        final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
+                                          .factory(clientFactory)
+                                          .build();
 
-            final AggregatedHttpResponse res = client.get("/route").aggregate().join();
-            assertThat(res.contentUtf8()).isEqualTo("route");
+        final AggregatedHttpResponse res = client.get("/route").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("route");
 
-            final AggregatedHttpResponse res2 =
-                    client.execute(RequestHeaders.of(HttpMethod.POST, "/route2",
-                                                     HttpHeaderNames.CONTENT_TYPE, JSON_UTF_8),
-                                   HttpData.wrap("{\"a\":1}".getBytes())).aggregate().join();
-            assertThatJson(res2.contentUtf8()).isArray()
-                                              .ofLength(1)
-                                              .thatContains("route");
-        });
+        final AggregatedHttpResponse res2 =
+                client.execute(RequestHeaders.of(HttpMethod.POST, "/route2",
+                                                 HttpHeaderNames.CONTENT_TYPE, JSON_UTF_8),
+                               HttpData.wrap("{\"a\":1}".getBytes())).aggregate().join();
+        assertThatJson(res2.contentUtf8()).isArray()
+                                          .ofLength(1)
+                                          .thatContains("route");
     }
 
     @ParameterizedTest
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetNotFound(String scheme) {
-        withTimeout(() -> {
-            final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
-                                              .factory(clientFactory)
-                                              .build();
-            assertThat(client.get("/route2").aggregate().join().status()).isEqualTo(HttpStatus.NOT_FOUND);
+        final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
+                                          .factory(clientFactory)
+                                          .build();
+        assertThat(client.get("/route2").aggregate().join().status()).isEqualTo(HttpStatus.NOT_FOUND);
 
-            assertThat(client.execute(
-                    RequestHeaders.of(HttpMethod.POST, "/route2",
-                                      HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8),
-                    HttpData.wrap("text".getBytes())).aggregate().join().status())
-                    .isEqualTo(HttpStatus.NOT_FOUND);
-        });
+        assertThat(client.execute(
+                RequestHeaders.of(HttpMethod.POST, "/route2",
+                                  HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8),
+                HttpData.wrap("text".getBytes())).aggregate().join().status())
+                .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     private static class SchemesProvider implements ArgumentsProvider {
