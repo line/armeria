@@ -1,10 +1,14 @@
 #!/bin/bash
 set -eo pipefail
 
-BUILD_JDK_URL='https://github.com/AdoptOpenJDK/openjdk12-binaries/releases/download/jdk-12.0.2%2B10/OpenJDK12U-jdk_x64_linux_hotspot_12.0.2_10.tar.gz'
-JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u222-b10/OpenJDK8U-jre_x64_linux_hotspot_8u222b10.tar.gz'
-JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.4%2B11/OpenJDK11U-jre_x64_linux_hotspot_11.0.4_11.tar.gz'
-JRE13_URL='https://github.com/AdoptOpenJDK/openjdk13-binaries/releases/download/jdk-13%2B33/OpenJDK13U-jre_x64_linux_hotspot_13_33.tar.gz'
+JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jre_x64_linux_hotspot_8u242b08.tar.gz'
+JRE8_VERSION='AdoptOpenJDK-8u242b08'
+JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.6%2B10/OpenJDK11U-jre_x64_linux_hotspot_11.0.6_10.tar.gz'
+JRE11_VERSION='AdoptOpenJDK-11.0.6_10'
+JRE13_URL='https://github.com/AdoptOpenJDK/openjdk13-binaries/releases/download/jdk-13.0.2%2B8/OpenJDK13U-jdk_x64_linux_hotspot_13.0.2_8.tar.gz'
+JRE13_VERSION='AdoptOpenJDK-13.0.2_8'
+BUILD_JDK_URL="$JRE13_URL"
+BUILD_JDK_VERSION="$JRE13_VERSION"
 
 function msg() {
   echo -ne "\033[1;32m"
@@ -29,16 +33,19 @@ PROFILE="$1"
 case "$PROFILE" in
 java8)
   TEST_JRE_URL="$JRE8_URL"
+  TEST_JRE_VERSION="$JRE8_VERSION"
   TEST_JAVA_VERSION='8'
   COVERAGE=0
   ;;
 java11)
   TEST_JRE_URL="$JRE11_URL"
+  TEST_JRE_VERSION="$JRE11_VERSION"
   TEST_JAVA_VERSION='11'
   COVERAGE=1
   ;;
 java13)
   TEST_JRE_URL="$JRE13_URL"
+  TEST_JRE_VERSION="$JRE13_VERSION"
   TEST_JAVA_VERSION='13'
   COVERAGE=0
   ;;
@@ -49,8 +56,8 @@ java13)
 esac
 
 export TEST_JAVA_VERSION
-export JAVA_HOME="$HOME/jdk/build"
-export JAVA_TEST_HOME="$HOME/jdk/test-$TEST_JAVA_VERSION"
+export JAVA_HOME="$HOME/jdk/build-$BUILD_JDK_VERSION"
+export JAVA_TEST_HOME="$HOME/jdk/test-$TEST_JAVA_VERSION-$TEST_JRE_VERSION"
 export PATH="$JAVA_HOME/bin:$PATH"
 
 # Restore the home directory from the cache if necessary.
