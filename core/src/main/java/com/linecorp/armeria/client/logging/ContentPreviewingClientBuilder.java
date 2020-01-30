@@ -18,16 +18,46 @@ package com.linecorp.armeria.client.logging;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.nio.charset.Charset;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.ContentPreviewingDecoratorBuilder;
 
 /**
  * Builds a new {@link ContentPreviewingClient} or its decorator function.
  */
-public final class ContentPreviewingClientBuilder
-        extends ContentPreviewingDecoratorBuilder<ContentPreviewingClientBuilder> {
+public final class ContentPreviewingClientBuilder extends ContentPreviewingDecoratorBuilder {
+
+    @Override
+    public ContentPreviewingClientBuilder contentPreview(int length) {
+        return (ContentPreviewingClientBuilder) super.contentPreview(length);
+    }
+
+    @Override
+    public ContentPreviewingClientBuilder contentPreview(int length, Charset defaultCharset) {
+        return (ContentPreviewingClientBuilder) super.contentPreview(length, defaultCharset);
+    }
+
+    @Override
+    public ContentPreviewingClientBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+        return (ContentPreviewingClientBuilder) super.contentPreviewerFactory(factory);
+    }
+
+    @Override
+    public ContentPreviewingClientBuilder requestContentPreviewerFactory(
+            ContentPreviewerFactory requestContentPreviewerFactory) {
+        return (ContentPreviewingClientBuilder)
+                super.requestContentPreviewerFactory(requestContentPreviewerFactory);
+    }
+
+    @Override
+    public ContentPreviewingClientBuilder responseContentPreviewerFactory(
+            ContentPreviewerFactory responseContentPreviewerFactory) {
+        return (ContentPreviewingClientBuilder)
+                super.responseContentPreviewerFactory(responseContentPreviewerFactory);
+    }
 
     /**
      * Returns a newly-created {@link ContentPreviewingClient} based on the properties of this builder.

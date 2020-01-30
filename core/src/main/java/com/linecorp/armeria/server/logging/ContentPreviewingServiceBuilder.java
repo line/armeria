@@ -18,16 +18,46 @@ package com.linecorp.armeria.server.logging;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.nio.charset.Charset;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.ContentPreviewingDecoratorBuilder;
 import com.linecorp.armeria.server.HttpService;
 
 /**
  * Builds a new {@link ContentPreviewingService} or its decorator function.
  */
-public final class ContentPreviewingServiceBuilder
-        extends ContentPreviewingDecoratorBuilder<ContentPreviewingServiceBuilder> {
+public final class ContentPreviewingServiceBuilder extends ContentPreviewingDecoratorBuilder {
+
+    @Override
+    public ContentPreviewingServiceBuilder contentPreview(int length) {
+        return (ContentPreviewingServiceBuilder) super.contentPreview(length);
+    }
+
+    @Override
+    public ContentPreviewingServiceBuilder contentPreview(int length, Charset defaultCharset) {
+        return (ContentPreviewingServiceBuilder) super.contentPreview(length, defaultCharset);
+    }
+
+    @Override
+    public ContentPreviewingServiceBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+        return (ContentPreviewingServiceBuilder) super.contentPreviewerFactory(factory);
+    }
+
+    @Override
+    public ContentPreviewingServiceBuilder requestContentPreviewerFactory(
+            ContentPreviewerFactory requestContentPreviewerFactory) {
+        return (ContentPreviewingServiceBuilder)
+                super.requestContentPreviewerFactory(requestContentPreviewerFactory);
+    }
+
+    @Override
+    public ContentPreviewingServiceBuilder responseContentPreviewerFactory(
+            ContentPreviewerFactory responseContentPreviewerFactory) {
+        return (ContentPreviewingServiceBuilder)
+                super.responseContentPreviewerFactory(responseContentPreviewerFactory);
+    }
 
     /**
      * Returns a newly-created {@link ContentPreviewingService} based on the properties of this builder.

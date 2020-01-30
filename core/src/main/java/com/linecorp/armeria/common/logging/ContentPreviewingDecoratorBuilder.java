@@ -26,10 +26,8 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
  * Builds a new content previewing decorator or its decorator function.
- *
- * @param <T> the type of this builder
  */
-public abstract class ContentPreviewingDecoratorBuilder<T extends ContentPreviewingDecoratorBuilder<T>> {
+public abstract class ContentPreviewingDecoratorBuilder {
 
     @Nullable
     private ContentPreviewerFactory requestContentPreviewerFactory;
@@ -41,11 +39,6 @@ public abstract class ContentPreviewingDecoratorBuilder<T extends ContentPreview
      * Creates a new instance.
      */
     protected ContentPreviewingDecoratorBuilder() {}
-
-    @SuppressWarnings("unchecked")
-    private T self() {
-        return (T) this;
-    }
 
     /**
      * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
@@ -60,7 +53,7 @@ public abstract class ContentPreviewingDecoratorBuilder<T extends ContentPreview
      * </ul>
      * @param length the maximum length of the preview.
      */
-    public T contentPreview(int length) {
+    public ContentPreviewingDecoratorBuilder contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
@@ -79,30 +72,30 @@ public abstract class ContentPreviewingDecoratorBuilder<T extends ContentPreview
      * @param defaultCharset the default charset used when a charset is not specified in the
      *                       {@code "content-type"} header
      */
-    public T contentPreview(int length, Charset defaultCharset) {
+    public ContentPreviewingDecoratorBuilder contentPreview(int length, Charset defaultCharset) {
         return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     /**
      * Sets the {@link ContentPreviewerFactory} for a request and a response.
      */
-    public T contentPreviewerFactory(ContentPreviewerFactory factory) {
+    public ContentPreviewingDecoratorBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
         requireNonNull(factory, "factory");
         checkState(requestContentPreviewerFactory == null, "requestContentPreviewerFactory is already set.");
         checkState(responseContentPreviewerFactory == null, "responseContentPreviewerFactory is already set.");
         requestContentPreviewerFactory = factory;
         responseContentPreviewerFactory = factory;
-        return self();
+        return this;
     }
 
     /**
      * Sets the {@link ContentPreviewerFactory} for a request.
      */
-    public T requestContentPreviewerFactory(
+    public ContentPreviewingDecoratorBuilder requestContentPreviewerFactory(
             ContentPreviewerFactory requestContentPreviewerFactory) {
         requireNonNull(requestContentPreviewerFactory, "requestContentPreviewerFactory");
         this.requestContentPreviewerFactory = requestContentPreviewerFactory;
-        return self();
+        return this;
     }
 
     @Nullable
@@ -113,11 +106,11 @@ public abstract class ContentPreviewingDecoratorBuilder<T extends ContentPreview
     /**
      * Sets the {@link ContentPreviewerFactory} for a response.
      */
-    public T responseContentPreviewerFactory(
+    public ContentPreviewingDecoratorBuilder responseContentPreviewerFactory(
             ContentPreviewerFactory responseContentPreviewerFactory) {
         requireNonNull(responseContentPreviewerFactory, "responseContentPreviewerFactory");
         this.responseContentPreviewerFactory = responseContentPreviewerFactory;
-        return self();
+        return this;
     }
 
     @Nullable
