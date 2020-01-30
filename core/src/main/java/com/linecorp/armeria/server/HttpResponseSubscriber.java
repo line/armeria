@@ -311,6 +311,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         future.addListener((ChannelFuture f) -> {
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 final boolean isSuccess;
+                final boolean isWritable = responseEncoder.isWritable(req.id(), req.streamId());
                 if (f.isSuccess()) {
                     isSuccess = true;
                 } else {
@@ -323,11 +324,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                                 f.cause() instanceof ClosedChannelException &&
                                 responseEncoder instanceof Http1ObjectEncoder;
                 }
-                final boolean isWritable = responseEncoder.isWritable(req.id(), req.streamId());
 
                 // Write an access log if:
                 // - every message has been sent successfully.
                 // - any write operation is failed with a cause.
+                final ChannelFuture failedFuture;
                 if (isSuccess) {
                     maybeLogFirstResponseBytesTransferred();
 
@@ -340,15 +341,14 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                         subscription.request(1);
                         return;
                     }
-                }
 
-                ChannelFuture failedFuture = f;
-                if (isSuccess && !isWritable) {
                     if (reqCtx.sessionProtocol().isMultiplex()) {
                         failedFuture = f.channel().newFailedFuture(ClosedPublisherException.get());
                     } else {
                         failedFuture = f.channel().newFailedFuture(ClosedSessionException.get());
                     }
+                } else {
+                   failedFuture = f;
                 }
 
                 if (tryComplete()) {
