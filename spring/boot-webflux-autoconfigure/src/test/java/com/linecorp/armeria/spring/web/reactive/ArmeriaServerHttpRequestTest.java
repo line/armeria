@@ -70,7 +70,7 @@ class ArmeriaServerHttpRequestTest {
         assertThat(req.getMethodValue()).isEqualTo(HttpMethod.POST.name());
         assertThat(req.<Object>getNativeRequest()).isInstanceOf(HttpRequest.class).isEqualTo(httpRequest);
 
-        assertThat(httpRequest.completionFuture().isDone()).isFalse();
+        assertThat(httpRequest.whenComplete().isDone()).isFalse();
 
         final Flux<String> body = req.getBody().map(TestUtil::bufferToString);
         StepVerifier.create(body, 1)
@@ -82,7 +82,7 @@ class ArmeriaServerHttpRequestTest {
                     .expectComplete()
                     .verify();
 
-        await().until(() -> httpRequest.completionFuture().isDone());
+        await().until(() -> httpRequest.whenComplete().isDone());
     }
 
     @Test
@@ -116,7 +116,7 @@ class ArmeriaServerHttpRequestTest {
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
         final ArmeriaServerHttpRequest req = request(ctx);
 
-        assertThat(httpRequest.completionFuture().isDone()).isFalse();
+        assertThat(httpRequest.whenComplete().isDone()).isFalse();
 
         final Flux<String> body = req.getBody().map(TestUtil::bufferToString);
         StepVerifier.create(body, 1)
@@ -125,7 +125,7 @@ class ArmeriaServerHttpRequestTest {
                     .thenCancel()
                     .verify();
 
-        final CompletableFuture<Void> f = httpRequest.completionFuture();
+        final CompletableFuture<Void> f = httpRequest.whenComplete();
         assertThat(f.isDone()).isTrue();
         assertThat(f.isCompletedExceptionally()).isTrue();
         assertThatThrownBy(f::get).isInstanceOf(ExecutionException.class)

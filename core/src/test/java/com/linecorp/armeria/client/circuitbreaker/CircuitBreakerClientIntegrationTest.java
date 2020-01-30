@@ -69,8 +69,8 @@ class CircuitBreakerClientIntegrationTest {
                                                             .hasCauseInstanceOf(ConnectException.class);
                             });
                     await().untilAsserted(() -> {
-                        assertThat(req.completionFuture()).hasFailedWithThrowableThat()
-                                                          .isInstanceOf(UnprocessedRequestException.class);
+                        assertThat(req.whenComplete()).hasFailedWithThrowableThat()
+                                                      .isInstanceOf(UnprocessedRequestException.class);
                     });
                     break;
                 default:
@@ -80,8 +80,8 @@ class CircuitBreakerClientIntegrationTest {
                             .hasCauseInstanceOf(FailFastException.class);
 
                     await().untilAsserted(() -> {
-                        assertThat(req.completionFuture()).hasFailedWithThrowableThat()
-                                                          .isInstanceOf(FailFastException.class);
+                        assertThat(req.whenComplete()).hasFailedWithThrowableThat()
+                                                      .isInstanceOf(FailFastException.class);
                     });
             }
 

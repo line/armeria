@@ -188,7 +188,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     @Override
-    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+    public CompletableFuture<List<Endpoint>> whenReady() {
         return CompletableFuture.completedFuture(endpoints);
     }
 

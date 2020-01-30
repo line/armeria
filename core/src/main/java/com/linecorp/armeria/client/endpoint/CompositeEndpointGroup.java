@@ -66,7 +66,7 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
 
         initialEndpointsFuture =
                 CompletableFuture.anyOf(this.endpointGroups.stream()
-                                                           .map(EndpointGroup::initialEndpointsFuture)
+                                                           .map(EndpointGroup::whenReady)
                                                            .toArray(CompletableFuture[]::new))
                                  .thenApply(unused -> endpoints());
 
@@ -105,7 +105,7 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
     }
 
     @Override
-    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+    public CompletableFuture<List<Endpoint>> whenReady() {
         return initialEndpointsFuture;
     }
 

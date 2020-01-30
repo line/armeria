@@ -42,7 +42,7 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
         second.addListener(unused -> notifyListeners(endpoints()));
 
         initialEndpointsFuture = CompletableFuture
-                .anyOf(first.initialEndpointsFuture(), second.initialEndpointsFuture())
+                .anyOf(first.whenReady(), second.whenReady())
                 .thenApply(unused -> endpoints());
 
         selector = first.selectionStrategy().newSelector(this);
@@ -68,7 +68,7 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
     }
 
     @Override
-    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+    public CompletableFuture<List<Endpoint>> whenReady() {
         return initialEndpointsFuture;
     }
 

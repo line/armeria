@@ -65,14 +65,14 @@ public final class AnimationService extends AbstractHttpService {
         final HttpResponseWriter res = HttpResponse.streaming();
         res.write(ResponseHeaders.of(HttpStatus.OK,
                                      HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
-        res.onDemand(() -> streamData(ctx.eventLoop(), res, 0));
+        res.whenConsumed().thenRun(() -> streamData(ctx.eventLoop(), res, 0));
         return res;
     }
 
     private void streamData(EventLoop executor, HttpResponseWriter writer, int frameIndex) {
         final int index = frameIndex % frames.size();
         writer.write(HttpData.ofUtf8(frames.get(index)));
-        writer.onDemand(() -> executor.schedule(() -> streamData(executor, writer, index + 1),
-                                                frameIntervalMillis, TimeUnit.MILLISECONDS));
+        writer.whenConsumed().thenRun(() -> executor.schedule(() -> streamData(executor, writer, index + 1),
+                                                              frameIntervalMillis, TimeUnit.MILLISECONDS));
     }
 }

@@ -52,7 +52,7 @@ class HealthCheckedEndpointGroupTest {
     @Test
     void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
         final MockEndpointGroup delegate = new MockEndpointGroup();
-        final CompletableFuture<List<Endpoint>> future = delegate.initialEndpointsFuture();
+        final CompletableFuture<List<Endpoint>> future = delegate.whenReady();
         future.complete(ImmutableList.of(Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081)));
 
         final CountDownLatch latch = new CountDownLatch(1);

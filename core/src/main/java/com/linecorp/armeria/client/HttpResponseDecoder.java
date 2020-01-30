@@ -154,8 +154,8 @@ abstract class HttpResponseDecoder {
             setTimeoutTask(newTimeoutTask());
         }
 
-        CompletableFuture<Void> completionFuture() {
-            return delegate.completionFuture();
+        CompletableFuture<Void> whenComplete() {
+            return delegate.whenComplete();
         }
 
         long maxContentLength() {
@@ -234,8 +234,8 @@ abstract class HttpResponseDecoder {
         }
 
         @Override
-        public CompletableFuture<Void> onDemand(Runnable task) {
-            return delegate.onDemand(task);
+        public CompletableFuture<Void> whenConsumed() {
+            return delegate.whenConsumed();
         }
 
         void onSubscriptionCancelled(@Nullable Throwable cause) {

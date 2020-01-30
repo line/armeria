@@ -164,15 +164,15 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
         final boolean initialAttempt = totalAttempts <= 1;
         // The request or response has been aborted by the client before it receives a response,
         // so stop retrying.
-        if (originalReq.completionFuture().isCompletedExceptionally()) {
-            originalReq.completionFuture().handle((unused, cause) -> {
+        if (originalReq.whenComplete().isCompletedExceptionally()) {
+            originalReq.whenComplete().handle((unused, cause) -> {
                 handleException(ctx, rootReqDuplicator, future, cause, initialAttempt);
                 return null;
             });
             return;
         }
         if (returnedRes.isComplete()) {
-            returnedRes.completionFuture().handle((result, cause) -> {
+            returnedRes.whenComplete().handle((result, cause) -> {
                 final Throwable abortCause = firstNonNull(cause, AbortedStreamException.get());
                 handleException(ctx, rootReqDuplicator, future, abortCause, initialAttempt);
                 return null;

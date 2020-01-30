@@ -186,7 +186,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
                     new HttpResponseProcessor(ctx.eventLoop(), armeriaHeaders.build(),
                                               publisher.map(factoryWrapper::toHttpData)));
             future.complete(response);
-            return Mono.fromFuture(response.completionFuture())
+            return Mono.fromFuture(response.whenComplete())
                        .onErrorResume(cause -> cause instanceof CancelledSubscriptionException ||
                                                cause instanceof AbortedStreamException,
                                       cause -> Mono.empty());
@@ -264,7 +264,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
         final HttpResponse response = HttpResponse.of(armeriaHeaders.build());
         future.complete(response);
         logger.debug("{} Response future has been completed with an HttpResponse", ctx);
-        return Mono.fromFuture(response.completionFuture());
+        return Mono.fromFuture(response.whenComplete());
     }
 
     @Override

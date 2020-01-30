@@ -219,7 +219,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
         if (call != null) {
             ctx.setRequestTimeoutHandler(() -> call.close(Status.CANCELLED, new Metadata()));
             req.subscribe(call.messageReader(), ctx.eventLoop(), WITH_POOLED_OBJECTS);
-            req.completionFuture().handleAsync(call.messageReader(), ctx.eventLoop());
+            req.whenComplete().handleAsync(call.messageReader(), ctx.eventLoop());
         }
         return res;
     }

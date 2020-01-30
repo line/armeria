@@ -138,7 +138,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
             return;
         }
 
-        res.onDemand(() -> {
+        res.whenConsumed().thenRun(() -> {
             try {
                 fileReadExecutor.execute(() -> doRead(res, in, nextOffset, end, fileReadExecutor, alloc));
             } catch (Exception e) {

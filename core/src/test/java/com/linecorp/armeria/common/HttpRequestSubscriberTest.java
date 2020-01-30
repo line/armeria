@@ -76,7 +76,7 @@ public class HttpRequestSubscriberTest {
         final AggregatedHttpResponse response = client.execute(request).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        final CompletableFuture<Void> f = request.completionFuture();
+        final CompletableFuture<Void> f = request.whenComplete();
         assertThat(f.isDone()).isTrue();
         f.get();
         assertThat(f.isCompletedExceptionally()).isFalse();

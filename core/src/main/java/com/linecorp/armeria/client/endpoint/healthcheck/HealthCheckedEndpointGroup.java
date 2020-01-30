@@ -124,7 +124,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
 
         delegate.addListener(this::updateCandidates);
-        updateCandidates(delegate.initialEndpointsFuture().join());
+        updateCandidates(delegate.whenReady().join());
 
         // Wait until the initial health of all endpoints are determined.
         final List<DefaultHealthCheckerContext> snapshot;

@@ -116,7 +116,7 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
 
     private static HttpResponse respond(CompletableFuture<HttpResponse> future, Disposable disposable) {
         final HttpResponse response = HttpResponse.from(future);
-        response.completionFuture().exceptionally(cause -> {
+        response.whenComplete().exceptionally(cause -> {
             disposable.dispose();
             return null;
         });
