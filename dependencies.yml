@@ -277,11 +277,6 @@ org.junit.jupiter:
     javadocs:
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     - https://junit.org/junit5/docs/5.5.2/api/
-org.junit.platform:
-  junit-platform-commons:
-    version: &JUNIT_PLATFORM_VERSION '1.6.0'
-  junit-platform-launcher:
-    version: *JUNIT_PLATFORM_VERSION
 
 kr.motd.gradle:
   sphinx-gradle-plugin: { version: '2.6.1' }
