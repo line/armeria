@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Subscriber;
+
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -33,6 +35,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
@@ -74,7 +77,8 @@ public final class ContentPreviewerConfigurator {
             return req;
         }
 
-        ctx.logBuilder().requestContentPreviewer(requestContentPreviewer);
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.deferRequestContentPreview();
         requestContentPreviewer.onHeaders(headers);
         return new FilteredHttpRequest(req) {
             @Override
@@ -83,6 +87,19 @@ public final class ContentPreviewerConfigurator {
                     requestContentPreviewer.onData((HttpData) obj);
                 }
                 return obj;
+            }
+
+            @Override
+            protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+                logBuilder.requestContentPreview(requestContentPreviewer.produce());
+            }
+
+            @Override
+            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber,
+                                            Throwable cause) {
+                // Set the preview to make it sure the log is complete even though an exception is raised.
+                logBuilder.requestContentPreview(requestContentPreviewer.produce());
+                return cause;
             }
         };
     }
@@ -115,7 +132,6 @@ public final class ContentPreviewerConfigurator {
                     final ContentPreviewer contentPreviewer = responseContentPreviewerFactory.get(ctx, headers);
                     if (!contentPreviewer.isDisabled()) {
                         contentPreviewer.onHeaders(headers);
-                        ctx.logBuilder().responseContentPreviewer(contentPreviewer);
                         responseContentPreviewer = contentPreviewer;
                     }
                 } else if (obj instanceof HttpData) {
@@ -124,6 +140,22 @@ public final class ContentPreviewerConfigurator {
                     }
                 }
                 return obj;
+            }
+
+            @Override
+            protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+                if (responseContentPreviewer != null) {
+                    ctx.logBuilder().responseContentPreview(responseContentPreviewer.produce());
+                }
+            }
+
+            @Override
+            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+                if (responseContentPreviewer != null) {
+                    // Set the preview to make it sure the log is complete even though an exception is raised.
+                    ctx.logBuilder().responseContentPreview(responseContentPreviewer.produce());
+                }
+                return cause;
             }
         };
     }

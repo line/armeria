@@ -169,31 +169,25 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent);
 
     /**
-     * Sets the {@link ContentPreviewer} which produces {@link RequestLog#requestContentPreview()}.
-     */
-    void requestContentPreviewer(ContentPreviewer requestContentPreviewer);
-
-    /**
      * Sets the {@link RequestLog#requestContentPreview()}.
-     *
-     * @deprecated Use {@link #requestContentPreviewer(ContentPreviewer)}.
      */
-    @Deprecated
     void requestContentPreview(@Nullable String requestContentPreview);
 
     /**
-     * Allows the {@link #requestContent(Object, Object)} called after {@link #endRequest()}.
-     * By default, if {@link #requestContent(Object, Object)} was not called yet, {@link #endRequest()} will
-     * call {@code requestContent(null, null)} automatically. This method turns off this default behavior.
-     * Note, however, this method will not prevent {@link #endRequest(Throwable)} from calling
-     * {@code requestContent(null, null)} automatically.
+     * Allows setting the request content using {@link #requestContent(Object, Object)} even after
+     * {@link #endRequest()} is called.
+     *
+     * <p>Note, however, the request content is not set if {@link #endRequest(Throwable)} was called.
      */
     void deferRequestContent();
 
     /**
-     * Returns {@code true} if {@link #deferRequestContent()} was ever called.
+     * Allows setting the request content preview using {@link #requestContentPreview(String)} even after
+     * {@link #endRequest()} is called.
+     *
+     * <p>Note, however, the request content preview is not set if {@link #endRequest(Throwable)} was called.
      */
-    boolean isRequestContentDeferred();
+    void deferRequestContentPreview();
 
     /**
      * Sets the {@link RequestLog#requestTrailers()}.
@@ -310,31 +304,25 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent);
 
     /**
-     * Sets the {@link ContentPreviewer} which produces {@link RequestLog#responseContentPreview()}.
-     */
-    void responseContentPreviewer(ContentPreviewer responseContentPreviewer);
-
-    /**
      * Sets the {@link RequestLog#responseContentPreview()}.
-     *
-     * @deprecated Use {@link #responseContentPreviewer(ContentPreviewer)}.
      */
-    @Deprecated
     void responseContentPreview(@Nullable String responseContentPreview);
 
     /**
-     * Allows the {@link #responseContent(Object, Object)} called after {@link #endResponse()}.
-     * By default, if {@link #responseContent(Object, Object)} was not called yet, {@link #endResponse()} will
-     * call {@code responseContent(null, null)} automatically. This method turns off this default behavior.
-     * Note, however, this method will not prevent {@link #endResponse(Throwable)} from calling
-     * {@code responseContent(null, null)} automatically.
+     * Allows setting the response content using {@link #responseContent(Object, Object)} even after
+     * {@link #endResponse()} is called.
+     *
+     * <p>Note, however, the response content is not set if {@link #endResponse(Throwable)} was called.
      */
     void deferResponseContent();
 
     /**
-     * Returns {@code true} if {@link #deferResponseContent()} was ever called.
+     * Allows setting the response content preview using {@link #responseContentPreview(String)} even after
+     * {@link #endResponse()} is called.
+     *
+     * <p>Note, however, the response content preview is not set if {@link #endResponse(Throwable)} was called.
      */
-    boolean isResponseContentDeferred();
+    void deferResponseContentPreview();
 
     /**
      * Sets the {@link RequestLog#responseTrailers()}.

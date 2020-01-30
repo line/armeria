@@ -87,13 +87,6 @@ public abstract class AbstractHttpService implements HttpService {
             }
         } finally {
             final RequestLogBuilder logBuilder = ctx.logBuilder();
-            if (!logBuilder.isRequestContentDeferred()) {
-                // Set the requestContent to null by default.
-                // An implementation can override this behavior by setting the requestContent in do*()
-                // implementation or by calling deferRequestContent().
-                logBuilder.requestContent(null, null);
-            }
-
             // do*() methods are expected to set the serialization format before returning.
             logBuilder.serializationFormat(SerializationFormat.NONE);
         }

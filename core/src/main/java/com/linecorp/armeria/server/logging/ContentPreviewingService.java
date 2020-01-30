@@ -25,6 +25,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.internal.logging.ContentPreviewerConfigurator;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -32,6 +34,16 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
  * Decorates an {@link HttpService} to preview the content of {@link Request}s and {@link Response}s.
+ *
+ * <p>Note that this decorator just sets {@link RequestLog#requestContentPreview()} and
+ * {@link RequestLog#responseContentPreview()}. You can get the previews using {@link RequestLogAccess}.
+ *
+ * <pre>{@code
+ * RequestLogAccess logAccess = ctx.log();
+ * logAccess.whenAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW,
+ *                         RequestLogProperty.RESPONSE_CONTENT_PREVIEW).thenApply(...);
+ *
+ * }</pre>
  */
 public final class ContentPreviewingService extends SimpleDecoratingHttpService {
 
@@ -54,6 +66,8 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
                         .newDecorator();
     }
 
+    @Nullable
+    private final ContentPreviewerFactory responseContentPreviewerFactory;
     private final ContentPreviewerConfigurator configurator;
 
     /**
@@ -63,6 +77,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
                              @Nullable ContentPreviewerFactory requestContentPreviewerFactory,
                              @Nullable ContentPreviewerFactory responseContentPreviewerFactory) {
         super(delegate);
+        this.responseContentPreviewerFactory = responseContentPreviewerFactory;
         configurator = new ContentPreviewerConfigurator(
                 requestContentPreviewerFactory, responseContentPreviewerFactory);
     }
@@ -70,6 +85,10 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         req = configurator.maybeSetUpRequestContentPreviewer(ctx, req);
+        if (responseContentPreviewerFactory == null) {
+            return delegate().serve(ctx, req);
+        }
+        ctx.logBuilder().deferResponseContentPreview();
         final HttpResponse res = delegate().serve(ctx, req);
         return configurator.maybeSetUpResponseContentPreviewer(ctx, res);
     }

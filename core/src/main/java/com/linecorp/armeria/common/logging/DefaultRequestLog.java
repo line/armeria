@@ -61,6 +61,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private static final AtomicIntegerFieldUpdater<DefaultRequestLog> flagsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "flags");
 
+    private static final AtomicIntegerFieldUpdater<DefaultRequestLog> deferredFlagsUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "deferredFlags");
+
     @VisibleForTesting
     static final int REQUEST_STRING_BUILDER_CAPACITY = 190;
 
@@ -91,8 +94,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private UnmodifiableFuture<RequestLog> completedFuture;
 
-    private volatile boolean requestContentDeferred;
-    private volatile boolean responseContentDeferred;
+    private volatile int deferredFlags;
 
     private long requestStartTimeMicros;
     private long requestStartTimeNanos;
@@ -100,8 +102,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestFirstBytesTransferredTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
-    @Nullable
-    private volatile ContentPreviewer requestContentPreviewer;
     @Nullable
     private volatile String requestContentPreview;
     @Nullable
@@ -113,8 +113,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long responseFirstBytesTransferredTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
-    @Nullable
-    private volatile ContentPreviewer responseContentPreviewer;
     @Nullable
     private volatile String responseContentPreview;
     @Nullable
@@ -325,6 +323,21 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             partiallyCompletedFuture = UnmodifiableFuture.completedFuture(this);
         }
         return partiallyCompletedFuture;
+    }
+
+    private void updateDeferredFlags(RequestLogProperty property) {
+        final int flag = property.flag();
+        for (;;) {
+            final int oldFlags = deferredFlags;
+            final int newFlags = oldFlags | flag;
+            if (oldFlags == newFlags) {
+                break;
+            }
+
+            if (deferredFlagsUpdater.compareAndSet(this, oldFlags, newFlags)) {
+                break;
+            }
+        }
     }
 
     private void updateAvailability(RequestLogProperty property) {
@@ -750,25 +763,19 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void requestContentPreviewer(ContentPreviewer requestContentPreviewer) {
-        requireNonNull(requestContentPreviewer, "requestContentPreviewer");
-        if (this.requestContentPreviewer != null || isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
-            return;
-        }
-        this.requestContentPreviewer = requestContentPreviewer;
-    }
-
-    @Override
     public void deferRequestContent() {
         if (isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
             return;
         }
-        requestContentDeferred = true;
+        updateDeferredFlags(RequestLogProperty.REQUEST_CONTENT);
     }
 
     @Override
-    public boolean isRequestContentDeferred() {
-        return requestContentDeferred;
+    public void deferRequestContentPreview() {
+        if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+            return;
+        }
+        updateDeferredFlags(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
     }
 
     @Override
@@ -813,8 +820,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void endRequest0(@Nullable Throwable requestCause, long requestEndTimeNanos) {
         final int flags;
-        if (requestCause == null && requestContentDeferred) {
-            flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE_WITHOUT_CONTENT;
+        if (requestCause == null && deferredFlags > 0) {
+            flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
         } else {
             flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE;
         }
@@ -831,10 +838,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (scheme == null) {
             assert sessionProtocol != null;
             scheme = Scheme.of(serializationFormat, sessionProtocol);
-        }
-        if (requestContentPreview == null &&
-            requestContentPreviewer != null) {
-            requestContentPreview(requestContentPreviewer.produce());
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;
@@ -1032,15 +1035,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
         this.responseContentPreview = responseContentPreview;
-    }
-
-    @Override
-    public void responseContentPreviewer(ContentPreviewer responseContentPreviewer) {
-        requireNonNull(responseContentPreviewer, "responseContentPreviewer");
-        if (this.responseContentPreviewer != null || isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
-            return;
-        }
-        this.responseContentPreviewer = responseContentPreviewer;
+        updateAvailability(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
     }
 
     @Override
@@ -1054,12 +1049,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
             return;
         }
-        responseContentDeferred = true;
+        updateDeferredFlags(RequestLogProperty.RESPONSE_CONTENT);
     }
 
     @Override
-    public boolean isResponseContentDeferred() {
-        return responseContentDeferred;
+    public void deferResponseContentPreview() {
+        if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+            return;
+        }
+        updateDeferredFlags(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
     }
 
     @Override
@@ -1105,8 +1103,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void endResponse0(@Nullable Throwable responseCause, long responseEndTimeNanos) {
         final int flags;
-        if (responseCause == null && responseContentDeferred) {
-            flags = RequestLogProperty.FLAGS_RESPONSE_COMPLETE_WITHOUT_CONTENT;
+        if (responseCause == null && deferredFlags > 0) {
+            flags = RequestLogProperty.FLAGS_RESPONSE_COMPLETE & ~deferredFlags;
         } else {
             flags = RequestLogProperty.FLAGS_RESPONSE_COMPLETE;
         }
@@ -1115,10 +1113,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
-        if (responseContentPreview == null &&
-            responseContentPreviewer != null) {
-            responseContentPreview(responseContentPreviewer.produce());
-        }
         // if the response is not started yet, call startResponse() with responseEndTimeNanos so that
         // totalResponseDuration will be 0
         startResponse0(responseEndTimeNanos, SystemInfo.currentTimeMicros(), false);

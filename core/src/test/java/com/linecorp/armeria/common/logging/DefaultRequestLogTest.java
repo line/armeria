@@ -220,12 +220,7 @@ class DefaultRequestLogTest {
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.requestLength(1000000000);
-        logBuilder.requestContentPreviewer(new ContentPreviewerAdapter() {
-            @Override
-            public String produce() {
-                return VERY_LONG_STRING;
-            }
-        });
+        logBuilder.requestContentPreview(VERY_LONG_STRING);
 
         final HttpHeaders requestTrailers = HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, VERY_LONG_STRING);
         logBuilder.requestTrailers(requestTrailers);
@@ -256,12 +251,7 @@ class DefaultRequestLogTest {
         logBuilder.responseHeaders(resHeaders);
 
         logBuilder.responseLength(1000000000);
-        logBuilder.responseContentPreviewer(new ContentPreviewerAdapter() {
-            @Override
-            public String produce() {
-                return VERY_LONG_STRING;
-            }
-        });
+        logBuilder.responseContentPreview(VERY_LONG_STRING);
 
         final HttpHeaders responseTrailers = HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, VERY_LONG_STRING);
         logBuilder.responseTrailers(responseTrailers);
