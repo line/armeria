@@ -21,12 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-class HttpResponseDuplicatorTest {
+class DefaultHttpResponseDuplicatorTest {
 
     @Test
     void aggregateTwice() {
         final HttpResponseWriter publisher = HttpResponse.streaming();
-        final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(publisher);
+        final HttpResponseDuplicator resDuplicator = publisher.toDuplicator();
 
         publisher.write(ResponseHeaders.of(HttpStatus.OK,
                                            HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
@@ -35,8 +35,8 @@ class HttpResponseDuplicatorTest {
         publisher.write(HttpData.ofUtf8("awesome!"));
         publisher.close();
 
-        final AggregatedHttpResponse res1 = resDuplicator.duplicateStream().aggregate().join();
-        final AggregatedHttpResponse res2 = resDuplicator.duplicateStream().aggregate().join();
+        final AggregatedHttpResponse res1 = resDuplicator.duplicate().aggregate().join();
+        final AggregatedHttpResponse res2 = resDuplicator.duplicate().aggregate().join();
 
         assertThat(res1.status()).isEqualTo(HttpStatus.OK);
         assertThat(res1.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);

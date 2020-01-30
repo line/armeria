@@ -68,7 +68,7 @@ public final class RequestMetricSupport {
         ctx.log()
            .whenAvailable(RequestLogProperty.REQUEST_START_TIME,
                           RequestLogProperty.REQUEST_HEADERS,
-                          RequestLogProperty.REQUEST_CONTENT,
+                          RequestLogProperty.NAME,
                           RequestLogProperty.SESSION)
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server));
     }

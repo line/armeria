@@ -209,6 +209,7 @@ public final class GrpcService extends AbstractHttpService implements HttpServic
             }
         }
 
+        ctx.logBuilder().name(methodName);
         ctx.logBuilder().deferRequestContent();
         ctx.logBuilder().deferResponseContent();
 

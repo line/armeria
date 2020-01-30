@@ -96,9 +96,9 @@ final class ArmeriaHttpClientParser extends HttpClientParser {
             customizer.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
         }
 
-        final String rpcMethod = ClientRequestContextAdapter.rpcMethod(log);
-        if (rpcMethod != null) {
-            customizer.name(rpcMethod);
+        final String name = log.name();
+        if (name != null) {
+            customizer.name(name);
         }
     }
 }

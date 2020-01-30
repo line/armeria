@@ -21,7 +21,6 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -162,15 +161,6 @@ final class ServiceRequestContextAdapter {
     static String serializationFormat(RequestLog requestLog) {
         final SerializationFormat serFmt = requestLog.scheme().serializationFormat();
         return serFmt == SerializationFormat.NONE ? null : serFmt.uriText();
-    }
-
-    /**
-     * Returns the method name if {@link RequestLog#requestContent()} is {@link RpcRequest}.
-     */
-    @Nullable
-    static String rpcMethod(RequestLog requestLog) {
-        final Object requestContent = requestLog.requestContent();
-        return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
     }
 
     private ServiceRequestContextAdapter() {}

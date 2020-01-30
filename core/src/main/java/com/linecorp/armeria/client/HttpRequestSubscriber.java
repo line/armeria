@@ -44,7 +44,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
+import com.linecorp.armeria.internal.RequestContextUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -108,31 +110,33 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         // If a message has been sent out, cancel the timeout for starting a request.
         cancelTimeout();
 
-        if (future.isSuccess()) {
-            // The first write is always the first headers, so log that we finished our first transfer over the
-            // wire.
-            if (!loggedRequestFirstBytesTransferred) {
-                logBuilder.requestFirstBytesTransferred();
-                loggedRequestFirstBytesTransferred = true;
+        try (SafeCloseable ignored = RequestContextUtil.pop()) {
+            if (future.isSuccess()) {
+                // The first write is always the first headers, so log that we finished our first transfer
+                // over the wire.
+                if (!loggedRequestFirstBytesTransferred) {
+                    logBuilder.requestFirstBytesTransferred();
+                    loggedRequestFirstBytesTransferred = true;
+                }
+
+                if (state == State.DONE) {
+                    logBuilder.endRequest();
+                    // Successfully sent the request; schedule the response timeout.
+                    response.initTimeout();
+                }
+
+                // Request more messages regardless whether the state is DONE. It makes the producer have
+                // a chance to produce the last call such as 'onComplete' and 'onError' when there are
+                // no more messages it can produce.
+                if (!isSubscriptionCompleted) {
+                    assert subscription != null;
+                    subscription.request(1);
+                }
+                return;
             }
 
-            if (state == State.DONE) {
-                logBuilder.endRequest();
-                // Successfully sent the request; schedule the response timeout.
-                response.initTimeout();
-            }
-
-            // Request more messages regardless whether the state is DONE. It makes the producer have
-            // a chance to produce the last call such as 'onComplete' and 'onError' when there are
-            // no more messages it can produce.
-            if (!isSubscriptionCompleted) {
-                assert subscription != null;
-                subscription.request(1);
-            }
-            return;
+            fail(future.cause());
         }
-
-        fail(future.cause());
 
         final Throwable cause = future.cause();
         if (!(cause instanceof ClosedPublisherException)) {

@@ -22,6 +22,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -98,7 +99,9 @@ public final class BraveService extends SimpleDecoratingHttpService {
             }
 
             final HttpServerResponse response = ServiceRequestContextAdapter.asHttpServerResponse(log);
-            handler.handleSend(response, log.responseCause(), span);
+            try (SafeCloseable ignored = ctx.push()) {
+                handler.handleSend(response, log.responseCause(), span);
+            }
         });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {

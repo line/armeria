@@ -54,7 +54,7 @@ public final class AnimationService extends AbstractHttpService {
     public AnimationService(int frameIntervalMillis) {
         if (frameIntervalMillis < 0) {
             throw new IllegalArgumentException("frameIntervalMillis: " + frameIntervalMillis +
-                                               " (expected >= 0)");
+                                               " (expected: >= 0)");
         }
         this.frameIntervalMillis = frameIntervalMillis;
     }

@@ -31,6 +31,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import org.opensaml.security.credential.CredentialResolver;
 import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
 
 /**
@@ -135,7 +136,7 @@ public final class KeyStoreCredentialResolverBuilder {
     /**
      * Creates a new {@link KeyStoreCredentialResolver}.
      */
-    public KeyStoreCredentialResolver build() throws IOException, GeneralSecurityException {
+    public CredentialResolver build() throws IOException, GeneralSecurityException {
         final KeyStore ks = KeyStore.getInstance(type);
         try (InputStream is = open()) {
             ks.load(is, password != null ? password.toCharArray() : null);

@@ -21,8 +21,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
 /**
  * A skeletal {@link HttpService} for easier HTTP service implementation.
@@ -64,31 +62,25 @@ public abstract class AbstractHttpService implements HttpService {
      */
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        try {
-            switch (req.method()) {
-                case OPTIONS:
-                    return doOptions(ctx, req);
-                case GET:
-                    return doGet(ctx, req);
-                case HEAD:
-                    return doHead(ctx, req);
-                case POST:
-                    return doPost(ctx, req);
-                case PUT:
-                    return doPut(ctx, req);
-                case PATCH:
-                    return doPatch(ctx, req);
-                case DELETE:
-                    return doDelete(ctx, req);
-                case TRACE:
-                    return doTrace(ctx, req);
-                default:
-                    return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
-            }
-        } finally {
-            final RequestLogBuilder logBuilder = ctx.logBuilder();
-            // do*() methods are expected to set the serialization format before returning.
-            logBuilder.serializationFormat(SerializationFormat.NONE);
+        switch (req.method()) {
+            case OPTIONS:
+                return doOptions(ctx, req);
+            case GET:
+                return doGet(ctx, req);
+            case HEAD:
+                return doHead(ctx, req);
+            case POST:
+                return doPost(ctx, req);
+            case PUT:
+                return doPut(ctx, req);
+            case PATCH:
+                return doPatch(ctx, req);
+            case DELETE:
+                return doDelete(ctx, req);
+            case TRACE:
+                return doTrace(ctx, req);
+            default:
+                return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
 

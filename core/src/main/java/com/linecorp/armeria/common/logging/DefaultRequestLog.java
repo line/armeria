@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -30,7 +31,6 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientConnectionTimings;
@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 import io.netty.channel.Channel;
 
@@ -63,12 +64,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private static final AtomicIntegerFieldUpdater<DefaultRequestLog> deferredFlagsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "deferredFlags");
-
-    @VisibleForTesting
-    static final int REQUEST_STRING_BUILDER_CAPACITY = 190;
-
-    @VisibleForTesting
-    static final int RESPONSE_STRING_BUILDER_CAPACITY = 203;
 
     private static final RequestHeaders DUMMY_REQUEST_HEADERS_HTTP =
             RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("http").authority("?").build();
@@ -127,6 +122,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
     @Nullable
     private Scheme scheme;
+    @Nullable
+    private String name;
 
     private RequestHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
     private HttpHeaders requestTrailers = HttpHeaders.of();
@@ -430,6 +427,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              });
         child.whenAvailable(RequestLogProperty.SCHEME)
              .thenAccept(log -> serializationFormat(log.scheme().serializationFormat()));
+        child.whenAvailable(RequestLogProperty.NAME)
+             .thenAccept(log -> {
+                 final String name = log.name();
+                 if (name != null) {
+                     name(name);
+                 }
+             });
         child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
              .thenAccept(log -> {
                  final Long timeNanos = log.requestFirstBytesTransferredTimeNanos();
@@ -644,6 +648,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    @Nullable
+    public String name() {
+        ensureAvailable(RequestLogProperty.NAME);
+        return name;
+    }
+
+    @Override
+    public void name(String name) {
+        requireNonNull(name, "name");
+        checkArgument(!name.isEmpty(), "name is empty.");
+        if (isAvailable(RequestLogProperty.NAME)) {
+            return;
+        }
+
+        this.name = name;
+        updateAvailability(RequestLogProperty.NAME);
+    }
+
+    @Override
     public long requestLength() {
         ensureAvailable(RequestLogProperty.REQUEST_LENGTH);
         return requestLength;
@@ -838,6 +861,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (scheme == null) {
             assert sessionProtocol != null;
             scheme = Scheme.of(serializationFormat, sessionProtocol);
+        }
+
+        if (name == null) {
+            final RpcRequest rpcReq = ctx.rpcRequest();
+            if (rpcReq != null) {
+                name = rpcReq.method();
+            } else if (requestContent instanceof RpcRequest) {
+                name = ((RpcRequest) requestContent).method();
+            }
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;
@@ -1174,12 +1206,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return requestStr;
         }
 
-        int additionalCapacity = 0;
-
         final String requestCauseString;
         if (isAvailable(flags, RequestLogProperty.REQUEST_CAUSE) && requestCause != null) {
             requestCauseString = String.valueOf(requestCause);
-            additionalCapacity += requestCauseString.length();
         } else {
             requestCauseString = null;
         }
@@ -1187,7 +1216,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final String sanitizedHeaders;
         if (isAvailable(flags, RequestLogProperty.REQUEST_HEADERS)) {
             sanitizedHeaders = sanitize(headersSanitizer, requestHeaders);
-            additionalCapacity += sanitizedHeaders.length();
         } else {
             sanitizedHeaders = null;
         }
@@ -1195,55 +1223,53 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final String sanitizedContent;
         if (isAvailable(flags, RequestLogProperty.REQUEST_CONTENT) && requestContent != null) {
             sanitizedContent = sanitize(contentSanitizer, requestContent);
-            additionalCapacity += sanitizedContent.length();
         } else {
             sanitizedContent = null;
-            if (isAvailable(flags, RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                requestContentPreview != null) {
-                additionalCapacity += requestContentPreview.length();
-            }
         }
 
         final String sanitizedTrailers;
         if (!requestTrailers.isEmpty()) {
             sanitizedTrailers = sanitize(trailersSanitizer, requestTrailers);
-            additionalCapacity += sanitizedTrailers.length();
         } else {
             sanitizedTrailers = null;
         }
 
-        final StringBuilder buf = new StringBuilder(REQUEST_STRING_BUILDER_CAPACITY + additionalCapacity);
-        buf.append("{startTime=");                                            // 11
-        TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());       // 45
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("{startTime=");
+        TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());
 
         if (isAvailable(flags, RequestLogProperty.REQUEST_LENGTH)) {
-            buf.append(", length=");                                          // 9
-            TextFormatter.appendSize(buf, requestLength);                     // 20 (When it's under 10GiB)
+            buf.append(", length=");
+            TextFormatter.appendSize(buf, requestLength);
         }
 
         if (isAvailable(flags, RequestLogProperty.REQUEST_END_TIME)) {
-            buf.append(", duration=");                                        // 11
-            TextFormatter.appendElapsed(buf, requestDurationNanos());         // 22 (When it's under 30 minutes)
+            buf.append(", duration=");
+            TextFormatter.appendElapsed(buf, requestDurationNanos());
         }
 
         if (requestCauseString != null) {
-            buf.append(", cause=").append(requestCauseString);                // 8
+            buf.append(", cause=").append(requestCauseString);
         }
 
-        buf.append(", scheme=");                                              // 9
+        buf.append(", scheme=");
         if (isAvailable(flags, RequestLogProperty.SCHEME)) {
-            buf.append(scheme().uriText());                                   // 16 (ex. gproto-web+https)
+            buf.append(scheme().uriText());
         } else {
             buf.append(SerializationFormat.UNKNOWN.uriText())
                .append('+')
                .append(sessionProtocol != null ? sessionProtocol.uriText() : "unknown");
         }
 
-        if (isAvailable(flags, RequestLogProperty.REQUEST_HEADERS)) {
-            buf.append(", headers=").append(sanitizedHeaders);                // 10
+        if (name != null) {
+            buf.append(", name=").append(name);
         }
 
-        if (sanitizedContent != null) {                                       // 17
+        if (isAvailable(flags, RequestLogProperty.REQUEST_HEADERS)) {
+            buf.append(", headers=").append(sanitizedHeaders);
+        }
+
+        if (sanitizedContent != null) {
             buf.append(", content=").append(sanitizedContent);
         } else if (isAvailable(flags, RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
                    requestContentPreview != null) {
@@ -1251,9 +1277,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (sanitizedTrailers != null) {
-            buf.append(", trailers=").append(sanitizedTrailers);              // 11
+            buf.append(", trailers=").append(sanitizedTrailers);
         }
-        buf.append('}');                                                      // 1
+        buf.append('}');
 
         requestStr = buf.toString();
         requestStrFlags = flags;
@@ -1283,12 +1309,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return responseStr;
         }
 
-        int additionalCapacity = 0;
-
         final String responseCauseString;
         if (isAvailable(flags, RequestLogProperty.RESPONSE_CAUSE) && responseCause != null) {
             responseCauseString = String.valueOf(responseCause);
-            additionalCapacity += responseCauseString.length();
         } else {
             responseCauseString = null;
         }
@@ -1296,7 +1319,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final String sanitizedHeaders;
         if (isAvailable(flags, RequestLogProperty.RESPONSE_HEADERS)) {
             sanitizedHeaders = sanitize(headersSanitizer, responseHeaders);
-            additionalCapacity += sanitizedHeaders.length();
         } else {
             sanitizedHeaders = null;
         }
@@ -1304,53 +1326,42 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final String sanitizedContent;
         if (isAvailable(flags, RequestLogProperty.RESPONSE_CONTENT) && responseContent != null) {
             sanitizedContent = sanitize(contentSanitizer, responseContent);
-            additionalCapacity += sanitizedContent.length();
         } else {
             sanitizedContent = null;
-            if (isAvailable(flags, RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
-                responseContentPreview != null) {
-                additionalCapacity += responseContentPreview.length();
-            }
         }
 
         final String sanitizedTrailers;
         if (!responseTrailers.isEmpty()) {
             sanitizedTrailers = sanitize(trailersSanitizer, responseTrailers);
-            additionalCapacity += sanitizedTrailers.length();
         } else {
             sanitizedTrailers = null;
         }
 
-        final int numChildren = children != null ? children.size() : 0;
-        if (numChildren > 1) {
-            additionalCapacity += 21;
-        }
-
-        final StringBuilder buf = new StringBuilder(RESPONSE_STRING_BUILDER_CAPACITY + additionalCapacity);
-        buf.append("{startTime=");                                            // 11
-        TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());      // 45
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("{startTime=");
+        TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());
 
         if (isAvailable(flags, RequestLogProperty.RESPONSE_LENGTH)) {
-            buf.append(", length=");                                          // 9
-            TextFormatter.appendSize(buf, responseLength);                    // 20 (When it's under 10GiB)
+            buf.append(", length=");
+            TextFormatter.appendSize(buf, responseLength);
         }
 
         if (isAvailable(flags, RequestLogProperty.RESPONSE_END_TIME)) {
-            buf.append(", duration=");                                        // 11
-            TextFormatter.appendElapsed(buf, responseDurationNanos());        // 22 (When it's under 30 minutes)
-            buf.append(", totalDuration=");                                   // 16
-            TextFormatter.appendElapsed(buf, totalDurationNanos());           // 22 (When it's under 30 minutes)
+            buf.append(", duration=");
+            TextFormatter.appendElapsed(buf, responseDurationNanos());
+            buf.append(", totalDuration=");
+            TextFormatter.appendElapsed(buf, totalDurationNanos());
         }
 
         if (responseCauseString != null) {
-            buf.append(", cause=").append(responseCauseString);               // 8
+            buf.append(", cause=").append(responseCauseString);
         }
 
         if (sanitizedHeaders != null) {
-            buf.append(", headers=").append(sanitizedHeaders);                // 10
+            buf.append(", headers=").append(sanitizedHeaders);
         }
 
-        if (sanitizedContent != null) {                                       // 17
+        if (sanitizedContent != null) {
             buf.append(", content=").append(sanitizedContent);
         } else if (isAvailable(flags, RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
                    responseContentPreview != null) {
@@ -1358,10 +1369,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (sanitizedTrailers != null) {
-            buf.append(", trailers=").append(sanitizedTrailers);              // 11
+            buf.append(", trailers=").append(sanitizedTrailers);
         }
-        buf.append('}');                                                      // 1
+        buf.append('}');
 
+        final int numChildren = children != null ? children.size() : 0;
         if (numChildren > 1) {
             // Append only when there were retries which the numChildren is greater than 1.
             buf.append(", {totalAttempts=");
@@ -1578,6 +1590,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         public Scheme scheme() {
             assert scheme != null;
             return scheme;
+        }
+
+        @Nullable
+        @Override
+        public String name() {
+            return name;
         }
 
         @Override

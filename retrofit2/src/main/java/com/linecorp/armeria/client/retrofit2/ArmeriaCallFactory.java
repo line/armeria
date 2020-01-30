@@ -143,7 +143,7 @@ final class ArmeriaCallFactory implements Factory {
             if (body == null) {
                 // Without a body.
                 try (SafeCloseable ignored = withContextCustomizer(
-                        ctx -> InvocationUtil.setInvocation(ctx.log(), invocation))) {
+                        ctx -> InvocationUtil.setInvocation(ctx, invocation))) {
                     return webClient.execute(headers.build());
                 }
             }
@@ -158,7 +158,7 @@ final class ArmeriaCallFactory implements Factory {
                 body.writeTo(contentBuffer);
 
                 try (SafeCloseable ignored = withContextCustomizer(
-                        ctx -> InvocationUtil.setInvocation(ctx.log(), invocation))) {
+                        ctx -> InvocationUtil.setInvocation(ctx, invocation))) {
                     return webClient.execute(headers.build(), contentBuffer.readByteArray());
                 }
             } catch (IOException e) {

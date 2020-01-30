@@ -52,6 +52,18 @@ public final class RequestContextThreadLocal {
     }
 
     /**
+     * Removes the {@link RequestContext} in the thread-local and returns it.
+     */
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public static <T extends RequestContext> T getAndRemove() {
+        final InternalThreadLocalMap map = InternalThreadLocalMap.get();
+        final RequestContext oldCtx = context.get(map);
+        context.remove();
+        return (T) oldCtx;
+    }
+
+    /**
      * Sets the specified {@link RequestContext} in the thread-local.
      */
     public static void set(RequestContext ctx) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,100 +16,44 @@
 
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull;
+import org.reactivestreams.Subscriber;
 
-import javax.annotation.Nullable;
-
-import com.google.common.base.MoreObjects;
-
-import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator;
-import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.StreamMessageWrapper;
-
-import io.netty.util.concurrent.EventExecutor;
+import com.linecorp.armeria.common.stream.StreamMessageDuplicator;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 /**
- * Allows subscribing to an {@link HttpResponse} multiple times by duplicating the stream.
+ * A duplicator that duplicates a {@link HttpResponse} into one or more {@link HttpResponse}s,
+ * which publish the same elements.
  *
  * <pre>{@code
- * > final HttpResponse originalRes = ...
- * > final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(originalRes);
- * >
- * > final HttpResponse dupRes1 = resDuplicator.duplicateStream();
- * > final HttpResponse dupRes2 = resDuplicator.duplicateStream(true); // the last stream
- * >
- * > dupRes1.subscribe(new FooHeaderSubscriber() {
- * >     @Override
- * >     public void onNext(Object o) {
- * >     ...
- * >     // Do something according to the header's status.
- * >     }
- * > });
- * >
- * > dupRes2.aggregate().handle((aRes, cause) -> {
- * >     // Do something with the message.
- * > });
+ * HttpResponse res = ...
+ * try (HttpResponseDuplicator duplicator = res.toDuplicator()) {
+ *     // res.subscribe(...) will throw an exception. You cannot subscribe to res anymore.
+ *
+ *     // Duplicate the response as many as you want to subscribe.
+ *     HttpResponse duplicatedResponse1 = duplicator.duplicate();
+ *     HttpResponse duplicatedResponse2 = duplicator.duplicate();
+ *
+ *     duplicatedResponse1.subscribe(...);
+ *     duplicatedResponse2.subscribe(...);
+ * }
  * }</pre>
+ *
+ * <p>Use the {@code try-with-resources} block or call {@link #close()} manually to clean up the resources
+ * after all subscriptions are done. If you want to stop publishing and clean up the resources immediately,
+ * call {@link #abort()}. If you do none of these, memory leak might happen.</p>
+ *
+ * <p>If you subscribe to the {@linkplain #duplicate() duplicated http response} with the
+ * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, the published elements can be shared across
+ * {@link Subscriber}s. So do not manipulate the data unless you copy them.
  */
-public class HttpResponseDuplicator
-        extends AbstractStreamMessageDuplicator<HttpObject, HttpResponse> {
+
+public interface HttpResponseDuplicator extends StreamMessageDuplicator<HttpObject> {
 
     /**
-     * Creates a new instance wrapping an {@link HttpResponse} and publishing to multiple subscribers.
-     * The length of response is limited by default with the client-side parameter which is
-     * {@link Flags#defaultMaxResponseLength()}. If you are at server-side, you need to use
-     * {@link #HttpResponseDuplicator(HttpResponse, long)} and the {@code long} value should be greater than
-     * the length of response or {@code 0} which disables the limit.
-     * @param res the response that will publish data to subscribers
+     * Returns a new {@link HttpResponse} that publishes the same {@link ResponseHeaders}, {@link HttpData}s
+     * and {@linkplain HttpHeaders trailers} as the {@link HttpResponse} that this duplicator is created from.
      */
-    public HttpResponseDuplicator(HttpResponse res) {
-        this(res, Flags.defaultMaxResponseLength());
-    }
-
-    /**
-     * Creates a new instance wrapping an {@link HttpResponse} and publishing to multiple subscribers.
-     * @param res the response that will publish data to subscribers
-     * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
-     */
-    public HttpResponseDuplicator(HttpResponse res, long maxSignalLength) {
-        this(res, maxSignalLength, null);
-    }
-
-    /**
-     * Creates a new instance wrapping an {@link HttpResponse} and publishing to multiple subscribers.
-     * @param res the response that will publish data to subscribers
-     * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
-     * @param executor the executor to use for upstream signals.
-     */
-    public HttpResponseDuplicator(HttpResponse res, long maxSignalLength, @Nullable EventExecutor executor) {
-        super(requireNonNull(res, "res"), obj -> {
-            if (obj instanceof HttpData) {
-                return ((HttpData) obj).length();
-            }
-            return 0;
-        }, executor, maxSignalLength);
-    }
-
     @Override
-    public HttpResponse duplicateStream() {
-        return new DuplicateHttpResponse(super.duplicateStream());
-    }
-
-    @Override
-    public HttpResponse duplicateStream(boolean lastStream) {
-        return new DuplicateHttpResponse(super.duplicateStream(lastStream));
-    }
-
-    private static class DuplicateHttpResponse
-            extends StreamMessageWrapper<HttpObject> implements HttpResponse {
-
-        DuplicateHttpResponse(StreamMessage<? extends HttpObject> delegate) {
-            super(delegate);
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this).toString();
-        }
-    }
+    HttpResponse duplicate();
 }

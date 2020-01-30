@@ -98,6 +98,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         final List<Object> args = call.params();
         final DefaultRpcResponse reply = new DefaultRpcResponse();
 
+        ctx.logBuilder().name(call.method());
         ctx.logBuilder().serializationFormat(serializationFormat);
 
         final ThriftFunction func;

@@ -156,6 +156,13 @@ public interface RequestOnlyLog extends RequestLogAccess {
     Scheme scheme();
 
     /**
+     * Returns the human-readable simple name of the {@link Request}, such as RPC method name or annotated
+     * service method name. This property is often used as a meter tag or distributed trace's span name.
+     */
+    @Nullable
+    String name();
+
+    /**
      * Returns the {@link RequestHeaders}. If the {@link Request} was not received or sent at all,
      * it will return a dummy {@link RequestHeaders} whose {@code :authority} and {@code :path} are
      * set to {@code "?"}, {@code :scheme} is set to {@code "http"} or {@code "https"}, and {@code :method} is

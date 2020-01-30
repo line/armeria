@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.logging.DefaultRequestLog.REQUEST_STRING_BUILDER_CAPACITY;
-import static com.linecorp.armeria.common.logging.DefaultRequestLog.RESPONSE_STRING_BUILDER_CAPACITY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,17 +24,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.AggregatedHttpRequest;
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -50,13 +44,6 @@ import com.linecorp.armeria.testing.internal.AnticipatedException;
 import io.netty.channel.Channel;
 
 class DefaultRequestLogTest {
-
-    private static final String VERY_LONG_STRING =
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut " +
-            "labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco " +
-            "laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in " +
-            "voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat " +
-            "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
     @Mock
     private RequestContext ctx;
@@ -210,60 +197,47 @@ class DefaultRequestLogTest {
     }
 
     @Test
-    void toStringRequestBuilderCapacity() {
-        final RequestHeaders reqHeaders =
-                RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
-                                  HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
-        final HttpRequest req = AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING))
-                                                     .toHttpRequest();
-        final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
+    void deferContent_setContentAfterEndResponse() {
+        when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
+        assertThat(completeFuture.isDone()).isFalse();
 
-        final RequestLogBuilder logBuilder = ctx.logBuilder();
-        logBuilder.requestLength(1000000000);
-        logBuilder.requestContentPreview(VERY_LONG_STRING);
+        log.deferRequestContent();
+        log.deferRequestContentPreview();
+        log.endRequest();
 
-        final HttpHeaders requestTrailers = HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, VERY_LONG_STRING);
-        logBuilder.requestTrailers(requestTrailers);
+        log.deferResponseContent();
+        log.deferResponseContentPreview();
+        log.endResponse();
 
-        final IllegalArgumentException cause = new IllegalArgumentException(VERY_LONG_STRING);
-        logBuilder.endRequest(cause);
-
-        assertThat(ctx.log().ensureRequestComplete().toStringRequestOnly().length()).isLessThanOrEqualTo(
-                REQUEST_STRING_BUILDER_CAPACITY +
-                reqHeaders.toString().length() +
-                VERY_LONG_STRING.length() +
-                requestTrailers.toString().length() +
-                cause.toString().length());
+        assertThat(completeFuture.isDone()).isFalse();
+        log.requestContent(null, null);
+        log.requestContentPreview(null);
+        log.responseContent(null, null);
+        assertThat(completeFuture.isDone()).isFalse();
+        log.responseContentPreview(null);
+        assertThat(completeFuture.isDone()).isTrue();
     }
 
     @Test
-    void toStringResponseBuilderCapacity() {
-        final RequestHeaders reqHeaders =
-                RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
-                                  HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
-        final HttpRequest req = AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING))
-                                                     .toHttpRequest();
-        final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
-        final RequestLogBuilder logBuilder = ctx.logBuilder();
-        logBuilder.endRequest();
+    void deferContent_setContentBeforeEndResponse() {
+        when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
+        assertThat(completeFuture.isDone()).isFalse();
 
-        final ResponseHeaders resHeaders = ResponseHeaders.of(200);
-        logBuilder.responseHeaders(resHeaders);
+        log.deferRequestContent();
+        log.deferRequestContentPreview();
+        log.requestContent(null, null);
+        log.requestContentPreview(null);
+        log.endRequest();
 
-        logBuilder.responseLength(1000000000);
-        logBuilder.responseContentPreview(VERY_LONG_STRING);
+        log.deferResponseContent();
+        log.deferResponseContentPreview();
+        log.responseContent(null, null);
+        log.responseContentPreview(null);
+        assertThat(completeFuture.isDone()).isFalse();
 
-        final HttpHeaders responseTrailers = HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, VERY_LONG_STRING);
-        logBuilder.responseTrailers(responseTrailers);
-
-        final IllegalArgumentException cause = new IllegalArgumentException(VERY_LONG_STRING);
-        logBuilder.endResponse(cause);
-
-        assertThat(ctx.log().ensureComplete().toStringResponseOnly().length()).isLessThanOrEqualTo(
-                RESPONSE_STRING_BUILDER_CAPACITY +
-                resHeaders.toString().length() +
-                VERY_LONG_STRING.length() +
-                responseTrailers.toString().length() +
-                cause.toString().length());
+        log.endResponse();
+        assertThat(completeFuture.isDone()).isTrue();
     }
 }
