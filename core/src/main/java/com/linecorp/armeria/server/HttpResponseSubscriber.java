@@ -332,6 +332,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 if (isSuccess) {
                     maybeLogFirstResponseBytesTransferred();
 
+                    if (state == State.DONE && !endOfStream) {
+                        // if state is DONE, the response should be ended with endOfStream.
+                        return;
+                    }
+
                     if (endOfStream && tryComplete()) {
                         logBuilder().endResponse();
                         subscription.cancel();
