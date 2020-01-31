@@ -70,7 +70,7 @@ class ContentPreviewingClientTest {
         }
     };
 
-    @RepeatedTest(10)
+    @Test
     void decodedContentPreview() {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .decorator(DecodingClient.newDecorator())
@@ -94,6 +94,10 @@ class ContentPreviewingClientTest {
         assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
+    /**
+     * Unlike {@link #decodedContentPreview()}, the content preview of this test is encoded data because
+     * the previewing decorator is inserted before {@link DecodingClient}.
+     */
     @Test
     void contentPreviewIsDecodedInPreviewer() {
         final WebClient client = WebClient.builder(server.uri("/"))

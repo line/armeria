@@ -123,6 +123,10 @@ class ContentPreviewingServiceTest {
         assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
+    /**
+     * Unlike {@link #contentPreviewBeforeEncoding()}, the content preview of this test is encoded data
+     * because the previewing decorator is inserted after {@link EncodingService}.
+     */
     @Test
     void encodedContentPreviewIsDecodedInPreviewer() {
         final WebClient client = WebClient.builder(server.uri("/"))
