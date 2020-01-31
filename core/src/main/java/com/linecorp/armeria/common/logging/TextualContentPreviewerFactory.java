@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.common.logging;
 
+import java.nio.charset.Charset;
 import java.util.List;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
@@ -26,13 +27,17 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 
 final class TextualContentPreviewerFactory implements ContentPreviewerFactory {
+
     private static final List<String> subTypeEquals = ImmutableList.of("json", "xml");
     private static final List<String> subTypeEndsWith = ImmutableList.of("+json", "+xml");
 
-    private final Supplier<ContentPreviewer> supplier;
+    private final Function<? super Charset, ? extends ContentPreviewer> function;
+    private final Charset defaultCharset;
 
-    TextualContentPreviewerFactory(Supplier<ContentPreviewer> supplier) {
-        this.supplier = supplier;
+    TextualContentPreviewerFactory(Function<? super Charset, ? extends ContentPreviewer> function,
+                                   Charset defaultCharset) {
+        this.function = function;
+        this.defaultCharset = defaultCharset;
     }
 
     @Override
@@ -41,12 +46,16 @@ final class TextualContentPreviewerFactory implements ContentPreviewerFactory {
         if (contentType == null) {
             return ContentPreviewer.disabled();
         }
-        if (contentType.charset() != null ||
-            "text".equals(contentType.type()) ||
+        final Charset charset = contentType.charset();
+        if (charset != null) {
+            return function.apply(charset);
+        }
+
+        if ("text".equals(contentType.type()) ||
             subTypeEquals.contains(contentType.subtype()) ||
             subTypeEndsWith.stream().anyMatch(contentType.subtype()::endsWith) ||
             contentType.is(MediaType.FORM_DATA)) {
-            return supplier.get();
+            return function.apply(defaultCharset);
         }
         return ContentPreviewer.disabled();
     }

@@ -13,19 +13,38 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.common.logging;
 
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.RequestContext;
+import javax.annotation.Nullable;
 
-final class NoopContentPreviewerFactory implements ContentPreviewerFactory {
+import com.linecorp.armeria.common.HttpData;
 
-    static final ContentPreviewerFactory INSTANCE = new NoopContentPreviewerFactory();
+import io.netty.util.ReferenceCountUtil;
 
-    private NoopContentPreviewerFactory() {}
+/**
+ * A skeletal {@link ContentPreviewer} implementation in order for a user to implement only the methods
+ * what he or she really needs.
+ */
+final class NoopContentPreviewer implements ContentPreviewer {
+
+    static final ContentPreviewer NOOP = new NoopContentPreviewer();
 
     @Override
-    public ContentPreviewer get(RequestContext ctx, HttpHeaders headers) {
-        return ContentPreviewer.disabled();
+    public void onData(HttpData data) {
+        ReferenceCountUtil.safeRelease(data);
     }
+
+    @Nullable
+    @Override
+    public String produce() {
+        return null;
+    }
+
+    @Override
+    public boolean isDisabled() {
+        return true;
+    }
+
+    private NoopContentPreviewer() {}
 }

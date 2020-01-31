@@ -22,8 +22,6 @@ import java.nio.charset.Charset;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
-
 /**
  * Builds a new content previewing decorator or its decorator function.
  */
@@ -54,7 +52,7 @@ public abstract class ContentPreviewingDecoratorBuilder {
      * @param length the maximum length of the preview.
      */
     public ContentPreviewingDecoratorBuilder contentPreview(int length) {
-        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+        return contentPreview(length, ContentPreviewerFactory.defaultCharset());
     }
 
     /**

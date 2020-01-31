@@ -16,13 +16,14 @@
 package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Supplier;
+import java.util.Set;
+import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
@@ -31,14 +32,12 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 
 final class MappedContentPreviewerFactory implements ContentPreviewerFactory {
-    final List<Entry<MediaType, Supplier<ContentPreviewer>>> entries;
+    final List<Entry<MediaType, Function<? super Charset, ? extends ContentPreviewer>>> entries;
 
-    MappedContentPreviewerFactory(Map<MediaType, Supplier<ContentPreviewer>> map) {
-        this(requireNonNull(map, "map").entrySet());
-    }
-
-    MappedContentPreviewerFactory(
-            Iterable<Entry<MediaType,Supplier<ContentPreviewer>>> entries) {
+    MappedContentPreviewerFactory(Map<MediaType, Function<? super Charset, ? extends ContentPreviewer>> map) {
+        requireNonNull(map, "map");
+        final Set<Entry<MediaType, Function<? super Charset, ? extends ContentPreviewer>>> entries =
+                map.entrySet();
         entries.forEach(entry -> {
             checkArgument(entry != null, "entry should not be null.");
             checkArgument(entry.getKey() != null, "entry.getKey() should not be null.");
@@ -53,11 +52,9 @@ final class MappedContentPreviewerFactory implements ContentPreviewerFactory {
         if (contentType == null) {
             return ContentPreviewer.disabled();
         }
-        for (Entry<MediaType, Supplier<ContentPreviewer>> entry : entries) {
+        for (Entry<MediaType, Function<? super Charset, ? extends ContentPreviewer>> entry : entries) {
             if (contentType.is(entry.getKey())) {
-                final ContentPreviewer previewer = entry.getValue().get();
-                checkState(previewer != null, "supplier.get() returned null.");
-                return previewer;
+                return entry.getValue().apply(contentType.charset());
             }
         }
         return ContentPreviewer.disabled();

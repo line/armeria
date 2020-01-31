@@ -79,7 +79,6 @@ public final class ContentPreviewerConfigurator {
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.deferRequestContentPreview();
-        requestContentPreviewer.onHeaders(headers);
         req.whenComplete().handle((unused, unused1) -> {
             // The HttpRequest cannot be subscribed so call requestContentPreview(null) to make sure that the
             // log is complete.
@@ -140,7 +139,6 @@ public final class ContentPreviewerConfigurator {
                     }
                     final ContentPreviewer contentPreviewer = responseContentPreviewerFactory.get(ctx, headers);
                     if (!contentPreviewer.isDisabled()) {
-                        contentPreviewer.onHeaders(headers);
                         responseContentPreviewer = contentPreviewer;
                     }
                 } else if (obj instanceof HttpData) {

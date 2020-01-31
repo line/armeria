@@ -42,7 +42,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.HttpService;
@@ -87,19 +86,18 @@ class ContentPreviewingServiceTest {
             final ContentPreviewingServiceBuilder builder = ContentPreviewingService.builder();
             return builder.requestContentPreviewerFactory(ContentPreviewerFactory.ofText(100))
                           .responseContentPreviewerFactory(
-                                  ContentPreviewerFactory.of(
-                                          () -> ContentPreviewer.ofBinary(100, data -> {
-                                              final byte[] bytes = new byte[data.readableBytes()];
-                                              data.getBytes(0, bytes);
-                                              final byte[] decoded;
-                                              try (GZIPInputStream unzipper = new GZIPInputStream(
-                                                      new ByteArrayInputStream(bytes))) {
-                                                  decoded = ByteStreams.toByteArray(unzipper);
-                                              } catch (Exception e) {
-                                                  throw new IllegalArgumentException(e);
-                                              }
-                                              return new String(decoded, StandardCharsets.UTF_8);
-                                          }), "text/plain"))
+                                  ContentPreviewerFactory.ofBinary(100, data -> {
+                                      final byte[] bytes = new byte[data.readableBytes()];
+                                      data.getBytes(0, bytes);
+                                      final byte[] decoded;
+                                      try (GZIPInputStream unzipper = new GZIPInputStream(
+                                              new ByteArrayInputStream(bytes))) {
+                                          decoded = ByteStreams.toByteArray(unzipper);
+                                      } catch (Exception e) {
+                                          throw new IllegalArgumentException(e);
+                                      }
+                                      return new String(decoded, StandardCharsets.UTF_8);
+                                  }))
                           .newDecorator();
         }
     };

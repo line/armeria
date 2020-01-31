@@ -16,53 +16,44 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-
 import java.nio.charset.Charset;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.HttpHeaders;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 
-final class StringContentPreviewer extends BinaryContentPreviewer {
-    private final Charset defaultCharset;
-    private Charset charset;
-    private final int length;
+final class StringContentPreviewer extends AbstractContentPreviewer {
 
-    StringContentPreviewer(int length, Charset defaultCharset) {
-        super(0);
-        checkArgument(length >= 0, "length: %d (expected: >= 0)", length);
-        this.defaultCharset = requireNonNull(defaultCharset, "defaultCharset");
-        this.length = length;
+    private final Charset charset;
+    private final int maxLength;
+
+    StringContentPreviewer(int maxLength, Charset charset) {
+        this(maxLength, charset, inflateMaxLength(maxLength, charset));
+    }
+
+    private StringContentPreviewer(int maxLength, Charset charset, int inflatedMaxLength) {
+        super(inflatedMaxLength);
+        this.maxLength = maxLength;
+        this.charset = charset;
+    }
+
+    private static int inflateMaxLength(int maxLength, Charset charset) {
+        final long maxBytesPerChar = (long) Math.ceil(CharsetUtil.encoder(charset).maxBytesPerChar());
+        return (int) Long.min(Integer.MAX_VALUE, maxBytesPerChar * maxLength);
     }
 
     @VisibleForTesting
-    int length() {
-        return length;
+    int maxLength() {
+        return maxLength;
     }
 
     @Override
-    public void onHeaders(HttpHeaders headers) {
-        super.onHeaders(headers);
-        if (headers.contentType() != null) {
-            charset = headers.contentType().charset(defaultCharset);
-        } else {
-            charset = defaultCharset;
-        }
-        final long maxBytesPerChar = (long) Math.ceil(CharsetUtil.encoder(charset).maxBytesPerChar());
-        maxAggregatedLength((int) Long.min(Integer.MAX_VALUE, maxBytesPerChar * (long) length));
-    }
-
-    @Override
-    protected String reproduce(HttpHeaders headers, ByteBuf wrappedBuffer) {
+    String produce(ByteBuf wrappedBuffer) {
         final String produced = wrappedBuffer.toString(wrappedBuffer.readerIndex(),
                                                        wrappedBuffer.readableBytes(), charset);
-        if (produced.length() > length) {
-            return produced.substring(0, length);
+        if (produced.length() > maxLength) {
+            return produced.substring(0, maxLength);
         } else {
             return produced;
         }

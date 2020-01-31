@@ -16,26 +16,26 @@
 package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+
+import io.netty.buffer.ByteBuf;
 
 /**
  * A factory creating a {@link ContentPreviewer}.
@@ -44,143 +44,97 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 public interface ContentPreviewerFactory {
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through {@code supplier} for the request/response with the {@code contentType}.
+     * The default HTTP content-type charset.
+     * See https://tools.ietf.org/html/rfc2616#section-3.7.1
      */
-    static ContentPreviewerFactory of(MediaType contentType, Supplier<? extends ContentPreviewer> supplier) {
-        return of(ImmutableMap.of(contentType, supplier));
+    static Charset defaultCharset() {
+        return ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET;
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through {@code supplier} for the request/response with the {@code contentType}.
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer} when the
+     * content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the specified
+     * {@code contentTypes}. {@link ContentPreviewer#disabled()} otherwise.
+     *
+     * @param function the {@link Function} to create a {@link ContentPreviewer}. The {@link Charset} which
+     *                 is the argument of the {@link Function} will be retrieved from
+     *                 {@link MediaType#charset()} or {@code null} if the charset parameter is
+     *                 not specified in the {@code "content-type"} header.
+     * @param contentTypes the content types
      */
-    static ContentPreviewerFactory of(String contentType, Supplier<? extends ContentPreviewer> supplier) {
-        return of(MediaType.parse(contentType), supplier);
-    }
-
-    /**
-     * Creates a new instance of {@link ContentPreviewerFactory}
-     * which wraps a list of {@link ContentPreviewerFactory}s.
-     */
-    static ContentPreviewerFactory of(ContentPreviewerFactory... factories) {
-        return of(Arrays.asList(requireNonNull(factories, "factories")));
-    }
-
-    /**
-     * Creates a new instance of {@link ContentPreviewerFactory}
-     * which wraps a list of {@link ContentPreviewerFactory}s.
-     */
-    static ContentPreviewerFactory of(Iterable<? extends ContentPreviewerFactory> factories) {
-        requireNonNull(factories, "factories");
-        final List<ContentPreviewerFactory> factoryList = new ArrayList<>();
-        final Set<Entry<MediaType, Supplier<ContentPreviewer>>> typeSet = new LinkedHashSet<>();
-        for (ContentPreviewerFactory factory : factories) {
-            if (factory == disabled()) {
-                continue;
-            }
-            if (factory instanceof CompositeContentPreviewerFactory) {
-                factoryList.addAll(((CompositeContentPreviewerFactory) factory).factoryList);
-            } else if (factory instanceof MappedContentPreviewerFactory) {
-                typeSet.addAll(((MappedContentPreviewerFactory) factory).entries);
-            } else {
-                if (!typeSet.isEmpty()) {
-                    factoryList.add(new MappedContentPreviewerFactory(typeSet));
-                    typeSet.clear();
-                }
-                factoryList.add(factory);
-            }
-        }
-        if (!typeSet.isEmpty()) {
-            factoryList.add(new MappedContentPreviewerFactory(typeSet));
-        }
-        switch (factoryList.size()) {
-            case 0:
-                return disabled();
-            case 1:
-                return factoryList.get(0);
-            default:
-                return new CompositeContentPreviewerFactory(factoryList);
-        }
-    }
-
-    /**
-     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through the supplier that matches with {@code "content-type"} header.
-     */
-    @SuppressWarnings("unchecked")
-    static ContentPreviewerFactory of(Map<MediaType, ? extends Supplier<? extends ContentPreviewer>> map) {
-        return new MappedContentPreviewerFactory((Map<MediaType, Supplier<ContentPreviewer>>) map);
-    }
-
-    /**
-     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through {@code supplier} if a request/response matches any of {@code contentTypes}.
-     */
-    static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier,
-                                      Iterable<MediaType> contentTypes) {
-        requireNonNull(contentTypes, "contentTypes");
-        final Map<MediaType, Supplier<? extends ContentPreviewer>> maps = new HashMap<>();
-        for (MediaType type : contentTypes) {
-            maps.put(type, supplier);
-        }
-        return of(maps);
-    }
-
-    /**
-     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through {@code supplier} if a request/response matches any of {@code contentTypes}.
-     */
-    static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier,
+    static ContentPreviewerFactory of(Function<? super Charset, ? extends ContentPreviewer> function,
                                       MediaType... contentTypes) {
-        return of(supplier, Arrays.asList(contentTypes));
+        return of(function, ImmutableList.copyOf(requireNonNull(contentTypes, "contentTypes")));
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through {@code supplier} if the content type of a request/response matches any of {@code contentTypes}.
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer} when the
+     * content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the specified
+     * {@code contentTypes}. {@link ContentPreviewer#disabled()} otherwise.
+     *
+     * @param function the {@link Function} to create a {@link ContentPreviewer}. The {@link Charset} which
+     *                 is the argument of the {@link Function} will be retrieved from
+     *                 {@link MediaType#charset()} or {@code null} if the charset parameter is
+     *                 not specified in the {@code "content-type"} header.
+     * @param contentTypes the content types
      */
-    static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier, String... contentTypes) {
-        return of(supplier, Arrays.stream(contentTypes).map(MediaType::parse).collect(Collectors.toList()));
+    static ContentPreviewerFactory of(Function<? super Charset, ? extends ContentPreviewer> function,
+                                      String... contentTypes) {
+        return of(function, Arrays.stream(requireNonNull(contentTypes, "contentTypes"))
+                                  .map(MediaType::parse)
+                                  .collect(toImmutableList()));
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}
-     * which produces the text with the maximum {@code length}
-     * if the content type of a request/response matches any of {@code contentTypes}.
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer} when the
+     * content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the specified
+     * {@code contentTypes}. {@link ContentPreviewer#disabled()} otherwise.
+     *
+     * @param function the {@link Function} to create a {@link ContentPreviewer}. The {@link Charset} which
+     *                 is the argument of the {@link Function} will be retrieved from
+     *                 {@link MediaType#charset()} or {@code null} if the charset parameter is
+     *                 not specified in the {@code "content-type"} header.
+     * @param contentTypes the content types
      */
-    static ContentPreviewerFactory ofText(int length, Charset defaultCharset,
-                                          Iterable<MediaType> contentTypes) {
-        checkArgument(length >= 0, "length : %d (expected: >= 0)", length);
-        if (length == 0) {
-            return disabled();
-        }
-        return of(() -> ContentPreviewer.ofText(length, defaultCharset), contentTypes);
+    static ContentPreviewerFactory of(Function<? super Charset, ? extends ContentPreviewer> function,
+                                      Iterable<MediaType> contentTypes) {
+        requireNonNull(function, "function");
+        final List<MediaType> candidates = ImmutableList.copyOf(requireNonNull(contentTypes, "contentTypes"));
+        checkArgument(!candidates.isEmpty(), "contentTypes is empty.");
+        candidates.forEach(
+                contentType -> checkArgument(contentType != null, "contentType should not be null."));
+        return (ctx, headers) -> {
+            final MediaType contentType = headers.contentType();
+            if (contentType == null) {
+                return ContentPreviewer.disabled();
+            }
+            for (MediaType candidate : candidates) {
+                if (contentType.is(candidate)) {
+                    return function.apply(contentType.charset());
+                }
+            }
+
+            return ContentPreviewer.disabled();
+        };
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}
-     * which produces the text with the maximum {@code length}
-     * if the content type of a request/response matches any of {@code contentTypes}.
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer} when the
+     * content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link Map#keySet()}
+     * in the {@link Map}. The corresponding value {@link Function} will be used to create a
+     * {@link ContentPreviewer}. The {@link Charset} which is the argument of the {@link Function} will be
+     * retrieved from {@link MediaType#charset()} or {@code null} if the charset parameter is
+     * not specified in the {@code "content-type"} header.
      */
-    static ContentPreviewerFactory ofText(int length, Charset defaultCharset, MediaType... contentTypes) {
-        return ofText(length, defaultCharset, Arrays.asList(contentTypes));
+    static ContentPreviewerFactory of(
+            Map<MediaType, Function<? super Charset, ? extends ContentPreviewer>> map) {
+        return new MappedContentPreviewerFactory(map);
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}
-     * which produces the text with the maximum {@code length} limit
-     * if the content type of a request/response matches any of {@code contentTypes}.
-     */
-    static ContentPreviewerFactory ofText(int length, Charset defaultCharset, String... contentTypes) {
-        return ofText(length, defaultCharset, Arrays.stream(contentTypes).map(MediaType::parse).collect(
-                Collectors.toList()));
-    }
-
-    /**
-     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}.
-     * The previewer produces the text with the maximum {@code length} limit
-     * if the content type of a request/response meets
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}.
+     * The {@link ContentPreviewer} produces the text with the {@code maxLength} limit
+     * if the content type of the {@link RequestHeaders} or {@link ResponseHeaders} meets
      * any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
@@ -189,21 +143,19 @@ public interface ContentPreviewerFactory {
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
      *
-     * @param length the maximum length of the preview
-     * @param defaultCharset the default charset used when a charset is not specified in the
-     *                       {@code "content-type"} header
+     * <p>Note that {@link #defaultCharset()} is used when a charset is not specified in the
+     * {@code "content-type"} header.
+     *
+     * @param maxLength the maximum length of the preview
      */
-    static ContentPreviewerFactory ofText(int length, Charset defaultCharset) {
-        if (length == 0) {
-            return disabled();
-        }
-        return new TextualContentPreviewerFactory(() -> ContentPreviewer.ofText(length, defaultCharset));
+    static ContentPreviewerFactory ofText(int maxLength) {
+        return ofText(maxLength, defaultCharset());
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}.
-     * The previewer produces the text with the maximum {@code length} limit
-     * if the content type of a request/response meets
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}.
+     * The {@link ContentPreviewer} produces the text with the {@code maxLength} limit
+     * if the content type of the {@link RequestHeaders} or {@link ResponseHeaders} meets
      * any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
@@ -211,21 +163,115 @@ public interface ContentPreviewerFactory {
      *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
-     * @param length the maximum length of the preview.
+     *
+     * @param maxLength the maximum length of the preview
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
      */
-    static ContentPreviewerFactory ofText(int length) {
-        return ofText(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+    static ContentPreviewerFactory ofText(int maxLength, Charset defaultCharset) {
+        checkArgument(maxLength > 0, "maxLength : %d (expected: > 0)", maxLength);
+        requireNonNull(defaultCharset, "defaultCharset");
+
+        return new TextualContentPreviewerFactory(charset -> ContentPreviewer.ofText(maxLength, charset),
+                                                  defaultCharset);
     }
 
     /**
-     * A dummy {@link ContentPreviewerFactory} which returns {@link ContentPreviewer#disabled()}.
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}.
+     * The {@link ContentPreviewer} produces the text with the {@code maxLength} limit
+     * if the content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the specified
+     * {@code contentTypes}.
+     *
+     * @param maxLength the maximum length of the preview
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
+     * @param contentTypes the content types
      */
-    static ContentPreviewerFactory disabled() {
-        return NoopContentPreviewerFactory.INSTANCE;
+    static ContentPreviewerFactory ofText(int maxLength, Charset defaultCharset, MediaType... contentTypes) {
+        return ofText(maxLength, defaultCharset,
+                      ImmutableList.copyOf(requireNonNull(contentTypes, "contentTypes")));
     }
 
     /**
-     * Returns a {@link ContentPreviewer}, given {@link RequestContext} and {@link HttpHeaders}.
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}.
+     * The {@link ContentPreviewer} produces the text with the {@code maxLength} limit
+     * if the content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the specified
+     * {@code contentTypes}.
+     *
+     * @param maxLength the maximum length of the preview
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
+     * @param contentTypes the content types
+     */
+    static ContentPreviewerFactory ofText(int maxLength, Charset defaultCharset, String... contentTypes) {
+        return ofText(maxLength, defaultCharset, Arrays.stream(requireNonNull(contentTypes, "contentTypes"))
+                                                    .map(MediaType::parse)
+                                                    .collect(toImmutableList()));
+    }
+
+    /**
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}.
+     * The {@link ContentPreviewer} produces the text with the {@code maxLength} limit
+     * if the content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the specified
+     * {@code contentTypes}.
+     *
+     * @param maxLength the maximum length of the preview
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
+     * @param contentTypes the content types
+     */
+    static ContentPreviewerFactory ofText(int maxLength, Charset defaultCharset,
+                                          Iterable<MediaType> contentTypes) {
+        checkArgument(maxLength > 0, "maxLength : %d (expected: > 0)", maxLength);
+        requireNonNull(defaultCharset, "defaultCharset");
+        final List<MediaType> candidates = ImmutableList.copyOf(requireNonNull(contentTypes, "contentTypes"));
+        checkArgument(!candidates.isEmpty(), "contentTypes is empty.");
+        candidates.forEach(
+                contentType -> checkArgument(contentType != null, "contentType should not be null."));
+
+        return (ctx, headers) -> {
+            final MediaType contentType = headers.contentType();
+            if (contentType != null) {
+                for (MediaType candidate : candidates) {
+                    if (contentType.is(candidate)) {
+                        return ContentPreviewer.ofText(maxLength, contentType.charset(defaultCharset));
+                    }
+                }
+            }
+            return ContentPreviewer.disabled();
+        };
+    }
+
+    /**
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer} using the
+     * specified {@link Function}.
+     *
+     * @param maxLength the maximum length of the preview
+     * @param producer the {@link Function} to produce the preview
+     */
+    static ContentPreviewerFactory ofBinary(int maxLength, Function<? super ByteBuf, String> producer) {
+        requireNonNull(producer, "producer");
+        return ofBinary(maxLength, (headers, byteBuf) -> producer.apply(byteBuf));
+    }
+
+    /**
+     * Returns a new {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer} using the
+     * specified {@link Function}.
+     *
+     * @param maxLength the maximum length of the preview
+     * @param producer the {@link Function} to produce the preview
+     */
+    static ContentPreviewerFactory ofBinary(int maxLength,
+                                            BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
+        checkArgument(maxLength > 0, "maxLength : %d (expected: > 0)", maxLength);
+        requireNonNull(producer, "producer");
+        return (ctx, headers) -> ContentPreviewer.ofBinary(maxLength, producer, headers);
+    }
+
+    /**
+     * Returns a newly-created {@link ContentPreviewer} with the given {@link RequestContext} and
+     * {@link HttpHeaders}. Note that the returned {@link ContentPreviewer} can be
+     * {@link ContentPreviewer#disabled()}.
      */
     ContentPreviewer get(RequestContext ctx, HttpHeaders headers);
 }

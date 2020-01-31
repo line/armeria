@@ -24,12 +24,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Strings;
 import com.google.common.io.BaseEncoding;
@@ -50,14 +49,14 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 
-public class ContentPreviewerTest {
+class ContentPreviewerTest {
 
     static class MyHttpClient {
         private final WebClient client;
@@ -65,7 +64,7 @@ public class ContentPreviewerTest {
         private volatile CompletableFuture<RequestLog> waitingFuture;
 
         MyHttpClient(String uri, int reqLength, int resLength) {
-            final WebClientBuilder builder = WebClient.builder(serverRule.uri(uri));
+            final WebClientBuilder builder = WebClient.builder(serverExtension.uri(uri));
             final ContentPreviewerFactory reqPreviewerFactory =
                     ContentPreviewerFactory.ofText(reqLength, StandardCharsets.UTF_8);
             final ContentPreviewerFactory resPreviewerFactory =
@@ -88,7 +87,7 @@ public class ContentPreviewerTest {
                             }).build();
         }
 
-        public RequestLog get(String path) throws Exception {
+        RequestLog get(String path) throws Exception {
             waitingFuture = new CompletableFuture<>();
             getBody(path).aggregate().join();
             final RequestLog log = waitingFuture.get();
@@ -96,19 +95,19 @@ public class ContentPreviewerTest {
             return log;
         }
 
-        public HttpResponse getBody(String path) throws Exception {
+        HttpResponse getBody(String path) throws Exception {
             return client.execute(RequestHeaders.of(HttpMethod.GET, path,
                                                     HttpHeaderNames.ACCEPT, "utf-8",
                                                     HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_TEXT_TYPE));
         }
 
-        public HttpResponse postBody(String path, byte[] content, MediaType contentType) {
+        HttpResponse postBody(String path, byte[] content, MediaType contentType) {
             return client.execute(RequestHeaders.of(HttpMethod.POST, path,
                                                     HttpHeaderNames.CONTENT_TYPE, contentType,
                                                     HttpHeaderNames.ACCEPT, "utf-8"), content);
         }
 
-        public RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
+        RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
             waitingFuture = new CompletableFuture<>();
             postBody(path, content, contentType).aggregate().join();
             final RequestLog log = waitingFuture.get();
@@ -116,20 +115,20 @@ public class ContentPreviewerTest {
             return log;
         }
 
-        public RequestLog post(String path, String content, Charset charset, MediaType contentType)
+        RequestLog post(String path, String content, Charset charset, MediaType contentType)
                 throws Exception {
             return post(path, content.getBytes(charset), contentType);
         }
 
-        public RequestLog post(String path, String content, MediaType contentType) throws Exception {
+        RequestLog post(String path, String content, MediaType contentType) throws Exception {
             return post(path, content.getBytes(), contentType);
         }
 
-        public RequestLog post(String path, String content) throws Exception {
+        RequestLog post(String path, String content) throws Exception {
             return post(path, content.getBytes(), MediaType.ANY_TEXT_TYPE);
         }
 
-        public RequestLog post(String path) throws Exception {
+        RequestLog post(String path) throws Exception {
             return post(path, "");
         }
     }
@@ -146,10 +145,10 @@ public class ContentPreviewerTest {
             private final WebClient client;
 
             Client(String path) {
-                client = WebClient.of(serverRule.uri(path));
+                client = WebClient.of(serverExtension.uri(path));
             }
 
-            public RequestLog get(String path) throws Exception {
+            RequestLog get(String path) throws Exception {
                 waitingFuture = new CompletableFuture<>();
                 getBody(path).aggregate().join();
                 final RequestLog log = waitingFuture.get();
@@ -157,13 +156,13 @@ public class ContentPreviewerTest {
                 return log;
             }
 
-            public HttpResponse getBody(String path) throws Exception {
+            HttpResponse getBody(String path) throws Exception {
                 return client.execute(RequestHeaders.of(HttpMethod.GET, path,
                                                         HttpHeaderNames.ACCEPT, "utf-8",
                                                         HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_TEXT_TYPE));
             }
 
-            public RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
+            RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
                 waitingFuture = new CompletableFuture<>();
                 client.execute(RequestHeaders.of(HttpMethod.POST, path,
                                                  HttpHeaderNames.CONTENT_TYPE, contentType,
@@ -175,20 +174,20 @@ public class ContentPreviewerTest {
                 return log;
             }
 
-            public RequestLog post(String path, String content, Charset charset, MediaType contentType)
+            RequestLog post(String path, String content, Charset charset, MediaType contentType)
                     throws Exception {
                 return post(path, content.getBytes(charset), contentType);
             }
 
-            public RequestLog post(String path, String content, MediaType contentType) throws Exception {
+            RequestLog post(String path, String content, MediaType contentType) throws Exception {
                 return post(path, content.getBytes(), contentType);
             }
 
-            public RequestLog post(String path, String content) throws Exception {
+            RequestLog post(String path, String content) throws Exception {
                 return post(path, content.getBytes(), MediaType.ANY_TEXT_TYPE);
             }
 
-            public RequestLog post(String path) throws Exception {
+            RequestLog post(String path) throws Exception {
                 return post(path, "");
             }
         }
@@ -244,21 +243,10 @@ public class ContentPreviewerTest {
         private String preview;
 
         @Override
-        public void onHeaders(HttpHeaders headers) {
-            // Invoked when headers of a request or response is received.
-        }
-
-        @Override
         public void onData(HttpData data) {
             // Invoked when a new content is received.
             assert builder != null;
             builder.append(ByteBufUtil.hexDump(data.array()));
-        }
-
-        @Override
-        public boolean isDone() {
-            // If it returns true, no further event is invoked but produce().
-            return preview != null;
         }
 
         @Override
@@ -275,8 +263,8 @@ public class ContentPreviewerTest {
 
     private static final MyHttpServer server = new MyHttpServer();
 
-    @ClassRule
-    public static final ServerRule serverRule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension serverExtension = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             server.build(sb);
@@ -291,39 +279,30 @@ public class ContentPreviewerTest {
         return buffers;
     }
 
-    private static Consumer<ByteBuf> plainText(ContentPreviewer writer, Charset charset) {
-        writer.onHeaders(HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE,
-                                        MediaType.PLAIN_TEXT_UTF_8.withCharset(charset)));
-        return b -> {
-            if (!writer.isDone()) {
-                writer.onData(new ByteBufHttpData(b, false));
-            }
-        };
-    }
-
     private static final String TEST_STR = "abcdefghijkmnopqrstuvwyxzABCDEFGHIJKMNOPQRSTUVWXYZ" +
                                            "가갸거겨고교구규그기가나다라마바사아자차카타파하";
 
     private static void testSlice(String str, Charset charset, int maxLength, int sliceLength) {
-        final ContentPreviewer writer = ContentPreviewer.ofText(maxLength);
+        final ContentPreviewer writer = ContentPreviewer.ofText(maxLength, charset);
         final String expected = str.substring(0, Math.min(str.length(), maxLength));
-        sliceBytes(str.getBytes(charset), sliceLength).forEach(plainText(writer, charset));
+        sliceBytes(str.getBytes(charset), sliceLength).forEach(
+                b -> writer.onData(new ByteBufHttpData(b, false)));
         assertThat(writer.produce()).isEqualTo(expected);
     }
 
     private static void testSliceBytes(byte[] bytes, int maxLength, int sliceLength) {
-        final ContentPreviewer writer = ContentPreviewer.ofBinary(maxLength, byteBuf -> {
+        final ContentPreviewer writer = ContentPreviewer.ofBinary(maxLength, (headers, byteBuf) -> {
             final byte[] b = new byte[maxLength];
             assertThat(byteBuf.readableBytes()).isLessThanOrEqualTo(maxLength);
             byteBuf.readBytes(b, 0, Math.min(byteBuf.readableBytes(), maxLength));
             return BaseEncoding.base16().encode(b);
-        });
-        sliceBytes(bytes, sliceLength).forEach(plainText(writer, Charset.defaultCharset()));
+        }, HttpHeaders.of());
+        sliceBytes(bytes, sliceLength).forEach(b -> writer.onData(new ByteBufHttpData(b, false)));
         assertThat(writer.produce()).isEqualTo(BaseEncoding.base16().encode(Arrays.copyOf(bytes, maxLength)));
     }
 
     @Test
-    public void testAggreagted() {
+    void testAggreagted() {
         for (int sliceLength : new int[] { 1, 3, 6, 10, 200 }) {
             for (int maxLength : new int[] { 1, 3, 6, 10, 12, 15, 25, 35, 200 }) {
                 testSlice(TEST_STR, StandardCharsets.UTF_8, maxLength, sliceLength);
@@ -333,15 +312,7 @@ public class ContentPreviewerTest {
     }
 
     @Test
-    public void testProduce() {
-        assertThat(ContentPreviewer.ofText(0)).isEqualTo(ContentPreviewer.disabled());
-        assertThat(ContentPreviewer.ofBinary(0, a -> "")).isEqualTo(ContentPreviewer.disabled());
-        assertThat(ContentPreviewer.ofText(10)).isInstanceOf(StringContentPreviewer.class);
-        assertThat(ContentPreviewer.ofBinary(1, a -> "")).isInstanceOf(BinaryContentPreviewer.class);
-    }
-
-    @Test
-    public void testClientLog() throws Exception {
+    void testClientLog() throws Exception {
         final MyHttpClient client = new MyHttpClient("/example", 10, 10);
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
         assertThat(client.getBody("/get").aggregate().get()
@@ -361,7 +332,7 @@ public class ContentPreviewerTest {
     }
 
     @Test
-    public void testServerLog() throws Exception {
+    void testServerLog() throws Exception {
         final MyHttpServer.Client client = server.newClient("/example");
 
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
@@ -382,14 +353,12 @@ public class ContentPreviewerTest {
     }
 
     @Test
-    public void testCustomPreviewer() throws Exception {
+    void testCustomPreviewer() throws Exception {
         ContentPreviewer previewer = new HexDumpContentPreviewer();
-        previewer.onHeaders(HttpHeaders.of());
         previewer.onData(HttpData.wrap(new byte[] { 1, 2, 3, 4 }));
         assertThat(previewer.produce()).isEqualTo("01020304");
 
         previewer = new HexDumpContentPreviewer();
-        previewer.onHeaders(HttpHeaders.of());
         previewer.onData(HttpData.wrap(new byte[] { 1, 2, 3 }));
         previewer.onData(HttpData.wrap(new byte[] { 4, 5 }));
         assertThat(previewer.produce()).isEqualTo("0102030405");
