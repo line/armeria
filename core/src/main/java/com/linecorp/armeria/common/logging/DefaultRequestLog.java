@@ -76,6 +76,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("https").authority("?").build();
     private static final ResponseHeaders DUMMY_RESPONSE_HEADERS = ResponseHeaders.of(HttpStatus.UNKNOWN);
 
+    private static boolean warnedSettingContentPreviewTwice;
+
     private final RequestContext ctx;
     private final CompleteRequestLog notCheckingAccessor = new CompleteRequestLog();
 
@@ -785,9 +787,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public void requestContentPreview(@Nullable String requestContentPreview) {
         if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
-            if (requestContentPreview != null) {
-                logger.warn("You try to set the request content preview twice: {}. " +
-                            " Do you configure content previewing decorator more than once?",
+            if (!warnedSettingContentPreviewTwice && requestContentPreview != null) {
+                warnedSettingContentPreviewTwice = true;
+                logger.warn("You tried to set the content preview twice: {} " +
+                            " Did you apply content previewing decorator more than once?",
                             requestContentPreview);
             }
             return;
@@ -1075,9 +1078,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public void responseContentPreview(@Nullable String responseContentPreview) {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
-            if (responseContentPreview != null) {
-                logger.warn("You try to set the response content preview twice: {}. " +
-                            " Do you configure content previewing decorator more than once?",
+            if (!warnedSettingContentPreviewTwice && responseContentPreview != null) {
+                warnedSettingContentPreviewTwice = true;
+                logger.warn("You tried to set the content preview twice: {} " +
+                            " Did you apply content previewing decorator more than once?",
                             responseContentPreview);
             }
             return;
