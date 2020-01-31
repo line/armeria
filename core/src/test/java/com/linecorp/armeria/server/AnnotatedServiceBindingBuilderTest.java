@@ -36,8 +36,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.logging.ContentPreviewer;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
@@ -112,7 +110,6 @@ class AnnotatedServiceBindingBuilderTest {
         final long maxRequestLength = 2 * 1024;
         final AccessLogWriter accessLogWriter = AccessLogWriter.common();
         final Duration requestTimeoutDuration = Duration.ofMillis(1000);
-        final ContentPreviewerFactory factory = (ctx, headers) -> ContentPreviewer.ofText(1024);
 
         final Server server = Server.builder()
                                     .annotatedService()
@@ -121,7 +118,6 @@ class AnnotatedServiceBindingBuilderTest {
                                     .exceptionHandlers((ctx, request, cause) -> HttpResponse.of(400))
                                     .pathPrefix("/home")
                                     .accessLogWriter(accessLogWriter, shutdownOnStop)
-                                    .contentPreviewerFactory(factory)
                                     .verboseResponses(verboseResponse)
                                     .build(new TestService())
                                     .build();
@@ -132,14 +128,12 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.maxRequestLength()).isEqualTo(maxRequestLength);
         assertThat(homeFoo.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeFoo.shutdownAccessLogWriterOnStop()).isTrue();
-        assertThat(homeFoo.requestContentPreviewerFactory()).isEqualTo(factory);
         assertThat(homeFoo.verboseResponses()).isTrue();
         final ServiceConfig homeBar = server.config().serviceConfigs().get(1);
         assertThat(homeBar.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
         assertThat(homeBar.maxRequestLength()).isEqualTo(maxRequestLength);
         assertThat(homeBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeBar.shutdownAccessLogWriterOnStop()).isTrue();
-        assertThat(homeBar.requestContentPreviewerFactory()).isEqualTo(factory);
         assertThat(homeBar.verboseResponses()).isTrue();
     }
 

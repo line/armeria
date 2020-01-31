@@ -21,16 +21,15 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.logging.ContentPreviewingService;
 
 /**
  * A set of informational properties collected while processing a {@link Request} and {@link Response}.
@@ -165,20 +164,13 @@ public interface RequestLog extends RequestOnlyLog {
 
     /**
      * Returns the preview of response content of the {@link Response}.
-     * Note that the content preview needs to be enabled when configuring a {@link Server} or a {@link Client}
-     * to use this functionality.
+     * Note that a {@link Service} or a {@link Client} must be decorated with {@link ContentPreviewingService}
+     * or {@link ContentPreviewingClient} decorators respectively to enable the content preview.
      *
      * @return the preview, or {@code null} if preview is disabled.
      *
      * @throws RequestLogAvailabilityException if the property is not available yet.
      * @see RequestLogProperty#RESPONSE_CONTENT_PREVIEW
-     *
-     * @see ServerBuilder#contentPreview(int)
-     * @see ServerBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
-     * @see VirtualHostBuilder#contentPreview(int)
-     * @see VirtualHostBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
-     * @see ClientBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
-     * @see ClientBuilder#contentPreview(int)
      */
     @Nullable
     String responseContentPreview();

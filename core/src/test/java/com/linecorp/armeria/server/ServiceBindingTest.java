@@ -36,8 +36,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.logging.ContentPreviewerAdapter;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class ServiceBindingTest {
@@ -49,37 +47,18 @@ class ServiceBindingTest {
     static final ServerExtension server = new ServerExtension(true) {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final ContentPreviewerFactory requestContentPreviewerFactory = (ctx, headers) ->
-                    new ContentPreviewerAdapter() {
-                        @Override
-                        public String produce() {
-                            return "request content";
-                        }
-                    };
-            final ContentPreviewerFactory responseContentPreviewerFactory = (ctx, headers) ->
-                    new ContentPreviewerAdapter() {
-                        @Override
-                        public String produce() {
-                            return "response content";
-                        }
-                    };
-
             sb.route().get("/greet/{name}")
               .post("/greet")
               .produces(MediaType.PLAIN_TEXT_UTF_8)
               .requestTimeoutMillis(1000)
               .maxRequestLength(8192)
               .verboseResponses(true)
-              .requestContentPreviewerFactory(requestContentPreviewerFactory)
-              .responseContentPreviewerFactory(responseContentPreviewerFactory)
               .accessLogWriter(log -> accessLogWriterCheckLatch.countDown(), true)
               .decorator(delegate -> (ctx, req) -> {
                   ctx.log().whenComplete().thenAccept(log -> {
                       assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
                       assertThat(ctx.maxRequestLength()).isEqualTo(8192);
                       assertThat(ctx.verboseResponses()).isTrue();
-                      assertThat(log.requestContentPreview()).isEqualTo("request content");
-                      assertThat(log.responseContentPreview()).isEqualTo("response content");
 
                       propertyCheckLatch.countDown();
                   });
