@@ -95,6 +95,16 @@ configure(dependencyManagementProject) {
 configure(projectsWithFlags('java')) {
     evaluationDependsOn(dependencyManagementProject.path)
 
+    configurations.configureEach { configuration ->
+        configuration.dependencies.whenObjectAdded { dep ->
+            if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
+                managedDependencyExclusions["${dep.group}:${dep.name}"].each {
+                    exclude it
+                }
+            }
+        }
+    }
+
     // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
     // canBeConsumed are set otherwise.
     afterEvaluate {
@@ -103,14 +113,6 @@ configure(projectsWithFlags('java')) {
                 // Add to resolvable configurations
                 if (configuration.canBeResolved && !configuration.canBeConsumed) {
                     add(configuration.name, platform(dependencyManagementProject))
-                }
-
-                configuration.dependencies.whenObjectAdded { dep ->
-                    if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
-                        managedDependencyExclusions["${dep.group}:${dep.name}"].each {
-                            exclude it
-                        }
-                    }
                 }
             }
         }
