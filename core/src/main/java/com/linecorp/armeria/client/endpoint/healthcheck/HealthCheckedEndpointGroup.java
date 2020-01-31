@@ -123,6 +123,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         this.checkerFactory = requireNonNull(checkerFactory, "checkerFactory");
         this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
 
+        clientOptions.factory().whenClosed().thenRun(this::closeAsync);
         delegate.addListener(this::updateCandidates);
         updateCandidates(delegate.whenReady().join());
 
