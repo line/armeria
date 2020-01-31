@@ -170,8 +170,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         this.fragment = fragment;
         this.root = root;
 
-        log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
-                                    options.responseContentPreviewerFactory());
+        log = new DefaultRequestLog(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
         writeTimeoutMillis = options.writeTimeoutMillis();
@@ -308,8 +307,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         fragment = ctx.fragment();
         root = ctx.root();
 
-        log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
-                                    options.responseContentPreviewerFactory());
+        log = new DefaultRequestLog(this);
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         responseTimeoutMillis = ctx.responseTimeoutMillis();

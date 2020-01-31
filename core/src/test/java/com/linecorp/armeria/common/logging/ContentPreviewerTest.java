@@ -36,6 +36,7 @@ import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -48,6 +49,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.logging.ContentPreviewingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -68,8 +70,12 @@ public class ContentPreviewerTest {
                     ContentPreviewerFactory.ofText(reqLength, StandardCharsets.UTF_8);
             final ContentPreviewerFactory resPreviewerFactory =
                     ContentPreviewerFactory.ofText(resLength, StandardCharsets.UTF_8);
-            client = builder.requestContentPreviewerFactory(reqPreviewerFactory)
-                            .responseContentPreviewerFactory(resPreviewerFactory)
+            client = builder.decorator(ContentPreviewingClient.builder()
+                                                              .requestContentPreviewerFactory(
+                                                                      reqPreviewerFactory)
+                                                              .responseContentPreviewerFactory(
+                                                                      resPreviewerFactory)
+                                                              .newDecorator())
                             .decorator(LoggingClient.builder()
                                                     .requestLogLevel(LogLevel.INFO)
                                                     .successfulResponseLogLevel(LogLevel.INFO)
@@ -188,7 +194,9 @@ public class ContentPreviewerTest {
         }
 
         void build(ServerBuilder sb) {
-            sb.contentPreview(10, StandardCharsets.UTF_8);
+            sb.decorator(ContentPreviewingService.builder()
+                                                 .contentPreview(10, StandardCharsets.UTF_8)
+                                                 .newDecorator());
             sb.decorator(delegate -> (ctx, req) -> {
                 if (waitingFuture != null) {
                     ctx.log().whenComplete().thenAccept(waitingFuture::complete);

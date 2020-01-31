@@ -37,8 +37,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.ContentPreviewer;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
@@ -85,7 +83,6 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         final long maxRequestLength = 2 * 1024;
         final AccessLogWriter accessLogWriter = AccessLogWriter.common();
         final Duration requestTimeoutDuration = Duration.ofMillis(1000);
-        final ContentPreviewerFactory factory = (ctx, headers) -> ContentPreviewer.ofText(1024);
 
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), false)
                 .annotatedService()
@@ -94,7 +91,6 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .exceptionHandlers((ctx, request, cause) -> HttpResponse.of(400))
                 .pathPrefix("/path")
                 .accessLogWriter(accessLogWriter, shutdownOnStop)
-                .contentPreviewerFactory(factory)
                 .verboseResponses(verboseResponse)
                 .build(new TestService())
                 .build(template);
@@ -106,7 +102,6 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathBar.maxRequestLength()).isEqualTo(maxRequestLength);
         assertThat(pathBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(pathBar.shutdownAccessLogWriterOnStop()).isTrue();
-        assertThat(pathBar.requestContentPreviewerFactory()).isEqualTo(factory);
         assertThat(pathBar.verboseResponses()).isTrue();
         final ServiceConfig pathFoo = virtualHost.serviceConfigs().get(1);
         assertThat(pathFoo.route().paths()).allMatch("/path/foo"::equals);
@@ -114,7 +109,6 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathFoo.maxRequestLength()).isEqualTo(maxRequestLength);
         assertThat(pathFoo.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(pathFoo.shutdownAccessLogWriterOnStop()).isTrue();
-        assertThat(pathFoo.requestContentPreviewerFactory()).isEqualTo(factory);
         assertThat(pathFoo.verboseResponses()).isTrue();
     }
 

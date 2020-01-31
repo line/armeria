@@ -22,8 +22,6 @@ import java.util.List;
 
 import org.junit.ClassRule;
 import org.junit.Test;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -31,15 +29,9 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.ReferenceCountUtil;
 
 public class DecodedHttpRequestTest {
 
@@ -101,29 +93,6 @@ public class DecodedHttpRequestTest {
                                             HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
-    @Test
-    public void contentPreview() {
-        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
-                                                         HttpHeaderNames.CONTENT_TYPE,
-                                                         MediaType.PLAIN_TEXT_UTF_8);
-        final ServiceRequestContext sctx =
-                ServiceRequestContext.builder(HttpRequest.of(headers))
-                                     .serverConfigurator(sb -> sb.contentPreview(100))
-                                     .build();
-        final DecodedHttpRequest req = decodedHttpRequest(headers, sctx);
-        req.whenComplete().handle((ret, cause) -> {
-            sctx.logBuilder().endRequest();
-            return null;
-        });
-
-        req.subscribe(new ImmediateReleaseSubscriber());
-
-        assertThat(req.tryWrite(new ByteBufHttpData(newBuffer("hello"), false))).isTrue();
-        req.close();
-
-        assertThat(sctx.log().whenRequestComplete().join().requestContentPreview()).isEqualTo("hello");
-    }
-
     private static DecodedHttpRequest decodedHttpRequest() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final ServiceRequestContext sctx = ServiceRequestContext.of(HttpRequest.of(headers));
@@ -136,28 +105,5 @@ public class DecodedHttpRequestTest {
                                                                   sctx.maxRequestLength());
         request.init(sctx);
         return request;
-    }
-
-    private static ByteBuf newBuffer(String content) {
-        return ByteBufAllocator.DEFAULT.buffer().writeBytes(content.getBytes());
-    }
-
-    private static class ImmediateReleaseSubscriber implements Subscriber<HttpObject> {
-
-        @Override
-        public void onSubscribe(Subscription s) {
-            s.request(Integer.MAX_VALUE);
-        }
-
-        @Override
-        public void onNext(HttpObject obj) {
-            ReferenceCountUtil.safeRelease(obj);
-        }
-
-        @Override
-        public void onError(Throwable t) {}
-
-        @Override
-        public void onComplete() {}
     }
 }

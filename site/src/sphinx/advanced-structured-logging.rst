@@ -234,31 +234,30 @@ Enabling content previews
 -------------------------
 Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`
 to retrieve the textual representation of the first N bytes of the request and response content.
-However, the properties are disabled by default due to performance overhead and thus they always return ``null``.
-You can enable it when you configure :api:`Server`, :api:`VirtualHost` or client.
+However, the properties are disabled by default due to performance overhead and thus they return ``null``
+by default. You can enable it using :api:`ContentPreviewingClient` and :api:`ContentPreviewingService`
+decorators.
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.logging.ContentPreviewingService;
     import com.linecorp.armeria.server.ServerBuilder;
 
     ServerBuilder sb = Server.builder();
     ...
     // Enable previewing the content with the maximum length of 100 for textual content.
-    sb.contentPreview(100);
-    ...
-    sb.virtualHost("http://example.com")
-      // In this case, the property of virtual host takes precedence over that of server.
-      .contentPreview(150);
+    sb.decorator(ContentPreviewingService.builder().contentPreview(100).newDecorator());
     ...
     sb.build();
 
 .. code-block:: java
 
+    import com.linecorp.armeria.client.logging.ContentPreviewingClient;
     import com.linecorp.armeria.client.WebClientBuilder;
 
     WebClientBuilder cb = WebClient.builder();
     ...
-    cb.contentPreview(100);
+    cb.decorator(ContentPreviewingClient.builder().contentPreview(100).newDecorator());
 
 Note that the ``contentPreview()`` method enables the previews only for textual content
 which meets one of the following cases:
@@ -280,7 +279,7 @@ and the hex dump preview of first 100 bytes for other types:
 
     ServerBuilder sb = Server.builder();
 
-    sb.contentPreviewerFactory((ctx, headers) -> {
+    sb.decorator(ContentPreviewingClient.builder().contentPreviewerFactory((ctx, headers) -> {
         MediaType contentType = headers.contentType();
         if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
             // Produces the textual preview of the first 100 characters.
@@ -291,13 +290,13 @@ and the hex dump preview of first 100 bytes for other types:
             // byteBuf has no more than 100 bytes.
             return ByteBufUtil.hexDump(byteBuf);
         });
-    });
+    }).newDecorator());
 
 You can write your own :api:`ContentPreviewer` to change the way to make the preview, e.g.
 
 .. code-block:: java
 
-    class HexDumpContentPreviewer implements ContentPreviewer {
+    class HexContentPreviewer implements ContentPreviewer {
         @Nullable
         private StringBuilder builder = new StringBuilder();
         @Nullable
@@ -335,7 +334,9 @@ You can write your own :api:`ContentPreviewer` to change the way to make the pre
     ...
     ServerBuilder sb = Server.builder();
     ...
-    sb.contentPreviewerFactory((ctx, headers) -> new HexDumpContentPreviewer());
+    sb.decorator(ContentPreviewingService.builder()
+                                         .contentPreviewerFactory((ctx, headers) -> new HexContentPreviewer())
+                                         .newDecorator());
 
 .. _nested-log:
 
