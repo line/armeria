@@ -32,7 +32,7 @@ function addBadges(parent) {
     'https://search.maven.org/search?q=g:com.linecorp.armeria%20AND%20a:armeria');
   addBadge(div, 'https://img.shields.io/github/commit-activity/m/line/armeria.svg?style=flat-square',
     'https://github.com/line/armeria/pulse');
-  addBadge(div, 'https://img.shields.io/github/issues/line/armeria/good-first-issue.svg?label=good%20first%20issues&style=flat-square');
+  addBadge(div, 'https://img.shields.io/github/issues/line/armeria/good%20first%20issue.svg?label=good%20first%20issues&style=flat-square');
   addBadge(div, 'https://img.shields.io/codecov/c/github/line/armeria/master.svg?style=flat-square',
     'https://codecov.io/gh/line/armeria');
   li.appendChild(div);
