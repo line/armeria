@@ -80,7 +80,7 @@ public final class ContentPreviewerConfigurator {
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.deferRequestContentPreview();
         requestContentPreviewer.onHeaders(headers);
-        req.completionFuture().handle((unused, unused1) -> {
+        req.whenComplete().handle((unused, unused1) -> {
             // The HttpRequest cannot be subscribed so call requestContentPreview(null) to make sure that the
             // log is complete.
             logBuilder.requestContentPreview(null);

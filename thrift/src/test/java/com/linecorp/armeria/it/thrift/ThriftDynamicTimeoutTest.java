@@ -16,7 +16,6 @@
 package com.linecorp.armeria.it.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
-import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -97,19 +96,17 @@ class ThriftDynamicTimeoutTest {
     @ArgumentsSource(ClientDecoratorProvider.class)
     void testDisabledTimeout(Function<? super RpcClient, ? extends RpcClient> clientDecorator)
             throws Exception {
-        withTimeout(() -> {
-            final SleepService.Iface client =
-                    Clients.builder(server.uri(BINARY, "/fakeSleep"))
-                           .rpcDecorator(clientDecorator)
-                           .responseTimeout(Duration.ofSeconds(1))
-                           .build(SleepService.Iface.class);
+        final SleepService.Iface client =
+                Clients.builder(server.uri(BINARY, "/fakeSleep"))
+                       .rpcDecorator(clientDecorator)
+                       .responseTimeout(Duration.ofSeconds(1))
+                       .build(SleepService.Iface.class);
 
-            final long delay = 30000;
-            final Stopwatch sw = Stopwatch.createStarted();
-            // This call should take very short amount of time because the fakeSleep service does not sleep.
-            client.sleep(delay);
-            assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isLessThan(delay);
-        });
+        final long delay = 30000;
+        final Stopwatch sw = Stopwatch.createStarted();
+        // This call should take very short amount of time because the fakeSleep service does not sleep.
+        client.sleep(delay);
+        assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isLessThan(delay);
     }
 
     /**

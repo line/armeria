@@ -64,7 +64,7 @@ public class RetryingRpcClientTest {
             (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(500));
 
     private static final RetryStrategyWithContent<RpcResponse> retryOnException =
-            (ctx, response) -> response.completionFuture().handle((unused, cause) -> {
+            (ctx, response) -> response.whenComplete().handle((unused, cause) -> {
                 if (cause != null) {
                     return Backoff.withoutDelay();
                 }

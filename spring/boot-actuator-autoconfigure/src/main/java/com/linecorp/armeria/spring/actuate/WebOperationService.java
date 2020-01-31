@@ -289,7 +289,7 @@ final class WebOperationService implements HttpService {
             return;
         }
 
-        res.onDemand(() -> {
+        res.whenConsumed().thenRun(() -> {
             try {
                 ctx.blockingTaskExecutor().execute(() -> streamResource(ctx, res, in, nextRemainingBytes));
             } catch (Exception e) {

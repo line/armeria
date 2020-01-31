@@ -395,7 +395,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 });
             }
 
-            req.completionFuture().handle((ret, cause) -> {
+            req.whenComplete().handle((ret, cause) -> {
                 if (cause == null) {
                     logBuilder.endRequest();
                 } else {
@@ -405,7 +405,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 return null;
             }).exceptionally(CompletionActions::log);
 
-            res.completionFuture().handleAsync((ret, cause) -> {
+            res.whenComplete().handleAsync((ret, cause) -> {
                 if (cause == null) {
                     req.abort();
                 } else {

@@ -76,9 +76,7 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
     }
 
     @Override
-    public CompletableFuture<Void> onDemand(Runnable task) {
-        requireNonNull(task, "task");
-
+    public CompletableFuture<Void> whenConsumed() {
         final AwaitDemandFuture f = new AwaitDemandFuture();
         if (!isOpen()) {
             f.completeExceptionally(ClosedPublisherException.get());
@@ -86,7 +84,7 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
         }
 
         addObjectOrEvent(f);
-        return f.thenRun(task);
+        return f;
     }
 
     /**

@@ -154,7 +154,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 this);
         executor = callOptions.getExecutor();
 
-        req.completionFuture().handle((unused1, unused2) -> {
+        req.whenComplete().handle((unused1, unused2) -> {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 // Can reach here if the request stream was empty.
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
@@ -211,7 +211,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .asRuntimeException()));
 
         res.subscribe(responseReader, ctx.eventLoop(), WITH_POOLED_OBJECTS);
-        res.completionFuture().handleAsync(responseReader, ctx.eventLoop());
+        res.whenComplete().handleAsync(responseReader, ctx.eventLoop());
         responseListener.onReady();
     }
 
@@ -294,7 +294,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             }
             final ByteBuf serialized = marshaller.serializeRequest(message);
             req.write(messageFramer.writePayload(serialized));
-            req.onDemand(() -> {
+            req.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     try (SafeCloseable ignored = ctx.push()) {
                         assert listener != null;

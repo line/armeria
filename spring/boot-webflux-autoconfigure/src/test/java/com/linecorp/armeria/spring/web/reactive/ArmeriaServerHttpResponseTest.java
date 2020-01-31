@@ -84,7 +84,7 @@ class ArmeriaServerHttpResponseTest {
         final HttpResponse httpResponse = future.get();
 
         // Every message has not been consumed yet.
-        assertThat(httpResponse.completionFuture().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete().isDone()).isFalse();
 
         StepVerifier.create(httpResponse)
                     .assertNext(o -> {
@@ -107,7 +107,7 @@ class ArmeriaServerHttpResponseTest {
                     .expectComplete()
                     .verify();
 
-        await().until(() -> httpResponse.completionFuture().isDone());
+        await().until(() -> httpResponse.whenComplete().isDone());
     }
 
     @Test
@@ -139,7 +139,7 @@ class ArmeriaServerHttpResponseTest {
         final HttpResponse httpResponse = future.get();
 
         // Every message has not been consumed yet.
-        assertThat(httpResponse.completionFuture().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete().isDone()).isFalse();
 
         StepVerifier.create(httpResponse)
                     .assertNext(o -> {
@@ -168,7 +168,7 @@ class ArmeriaServerHttpResponseTest {
                     .expectComplete()
                     .verify();
 
-        await().until(() -> httpResponse.completionFuture().isDone());
+        await().until(() -> httpResponse.whenComplete().isDone());
     }
 
     @Test
@@ -192,7 +192,7 @@ class ArmeriaServerHttpResponseTest {
         final HttpResponse httpResponse = future.get();
 
         // Every message has not been consumed yet.
-        assertThat(httpResponse.completionFuture().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete().isDone()).isFalse();
 
         StepVerifier.create(httpResponse, 1)
                     .assertNext(o -> {
@@ -214,7 +214,7 @@ class ArmeriaServerHttpResponseTest {
                     .expectComplete()
                     .verify();
 
-        await().until(() -> httpResponse.completionFuture().isDone());
+        await().until(() -> httpResponse.whenComplete().isDone());
     }
 
     @Test
@@ -241,7 +241,7 @@ class ArmeriaServerHttpResponseTest {
         final HttpResponse httpResponse = future.get();
 
         // Every message has not been consumed yet.
-        assertThat(httpResponse.completionFuture().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete().isDone()).isFalse();
 
         StepVerifier.create(httpResponse, 1)
                     .assertNext(o -> {
@@ -262,7 +262,7 @@ class ArmeriaServerHttpResponseTest {
                     .expectComplete()
                     .verify();
 
-        await().until(() -> httpResponse.completionFuture().isDone());
+        await().until(() -> httpResponse.whenComplete().isDone());
     }
 
     @Test

@@ -98,7 +98,7 @@ public class ArmeriaServerCallTest {
     @Before
     public void setUp() {
         completionFuture = new CompletableFuture<>();
-        when(res.completionFuture()).thenReturn(completionFuture);
+        when(res.whenComplete()).thenReturn(completionFuture);
 
         ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/"))
                                    .eventLoop(eventLoop.get())

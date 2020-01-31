@@ -287,7 +287,7 @@ class HealthCheckedEndpointGroupIntegrationTest {
                                                })
                                                .build()) {
 
-            assertThat(endpointGroup.initialEndpointsFuture().get(10, TimeUnit.SECONDS)).hasSize(1);
+            assertThat(endpointGroup.whenReady().get(10, TimeUnit.SECONDS)).hasSize(1);
         }
     }
 

@@ -130,7 +130,7 @@ class PublisherBasedStreamMessageTest {
         });
 
         // We do call onError(t) first before completing the future.
-        await().untilAsserted(() -> assertThat(p.completionFuture().isCompletedExceptionally()));
+        await().untilAsserted(() -> assertThat(p.whenComplete().isCompletedExceptionally()));
     }
 
     private static final class AbortTest {
@@ -182,10 +182,10 @@ class PublisherBasedStreamMessageTest {
 
         void awaitAbort(@Nullable Throwable cause) {
             if (cause == null) {
-                assertThatThrownBy(() -> publisher.completionFuture().join())
+                assertThatThrownBy(() -> publisher.whenComplete().join())
                         .hasCauseInstanceOf(AbortedStreamException.class);
             } else {
-                assertThatThrownBy(() -> publisher.completionFuture().join())
+                assertThatThrownBy(() -> publisher.whenComplete().join())
                         .hasCauseInstanceOf(cause.getClass());
             }
         }
@@ -195,12 +195,12 @@ class PublisherBasedStreamMessageTest {
             Mockito.verify(subscription).cancel();
 
             // Ensure completionFuture is complete exceptionally.
-            assertThat(publisher.completionFuture()).isCompletedExceptionally();
+            assertThat(publisher.whenComplete()).isCompletedExceptionally();
             if (cause == null) {
-                assertThatThrownBy(() -> publisher.completionFuture().get())
+                assertThatThrownBy(() -> publisher.whenComplete().get())
                         .hasCauseExactlyInstanceOf(AbortedStreamException.class);
             } else {
-                assertThatThrownBy(() -> publisher.completionFuture().get())
+                assertThatThrownBy(() -> publisher.whenComplete().get())
                         .hasCauseExactlyInstanceOf(cause.getClass());
             }
         }

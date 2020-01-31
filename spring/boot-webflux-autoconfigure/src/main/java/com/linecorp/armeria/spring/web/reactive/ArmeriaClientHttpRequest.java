@@ -141,7 +141,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
             assert request == null : request;
             request = supplier.get();
             future.complete(client.execute(request));
-            return Mono.fromFuture(request.completionFuture());
+            return Mono.fromFuture(request.whenComplete());
         });
     }
 

@@ -350,7 +350,7 @@ public final class HealthCheckService implements TransientHttpService {
 
                     // Cancel the scheduled timeout task if the response is closed,
                     // so that it's removed from the event loop's task queue quickly.
-                    res.completionFuture().exceptionally(cause -> {
+                    res.whenComplete().exceptionally(cause -> {
                         pendingResponse.cancelAllScheduledFutures();
                         return null;
                     });
@@ -550,7 +550,7 @@ public final class HealthCheckService implements TransientHttpService {
             if (pendingPings < 5) {
                 if (res.tryWrite(ping)) {
                     ++pendingPings;
-                    res.onDemand(() -> pendingPings--);
+                    res.whenConsumed().thenRun(() -> pendingPings--);
                 }
             } else {
                 // Do not send a ping if the client is not reading it.

@@ -123,7 +123,7 @@ final class HttpHealthChecker implements AsyncCloseable {
             future.complete(null);
         } else {
             lastResponse.abort();
-            lastResponse.completionFuture().handle((unused1, unused2) -> future.complete(null));
+            lastResponse.whenComplete().handle((unused1, unused2) -> future.complete(null));
         }
     }
 
