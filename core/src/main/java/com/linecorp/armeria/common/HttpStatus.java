@@ -491,6 +491,31 @@ public final class HttpStatus implements Comparable<HttpStatus> {
         return isContentAlwaysEmpty(code);
     }
 
+    /** Returns whether the {@link HttpStatus} is an information, with a status code of 1XX. */
+    public boolean isInformation() {
+        return codeClass().equals(HttpStatusClass.INFORMATIONAL);
+    }
+
+    /** Returns whether the {@link HttpStatus} is a success, with a status code of 2XX. */
+    public boolean isSuccess() {
+        return codeClass().equals(HttpStatusClass.SUCCESS);
+    }
+
+    /** Returns whether the {@link HttpStatus} is a redirection, with a status code of 3XX. */
+    public boolean isRedirection() {
+        return codeClass().equals(HttpStatusClass.REDIRECTION);
+    }
+
+    /** Returns whether the {@link HttpStatus} is a client error, with a status code of 4XX. */
+    public boolean isClientError() {
+        return codeClass().equals(HttpStatusClass.CLIENT_ERROR);
+    }
+
+    /** Returns whether the {@link HttpStatus} is a server error, with a status code of 5XX. */
+    public boolean isServerError() {
+        return codeClass().equals(HttpStatusClass.SERVER_ERROR);
+    }
+
     @Override
     public int hashCode() {
         return code();
