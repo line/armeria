@@ -26,13 +26,13 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.brave.SpanTags;
 
@@ -137,7 +137,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
 
             SpanTags.updateRemoteEndpoint(span, ctx);
 
-            final ClientConnectionTimings timings = ClientConnectionTimings.get(ctx);
+            final ClientConnectionTimings timings = log.connectionTimings();
             if (timings != null) {
                 logTiming(span, "connection-acquire.start", "connection-acquire.end",
                           timings.connectionAcquisitionStartTimeMicros(),

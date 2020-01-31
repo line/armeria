@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import static java.util.Objects.requireNonNull;
-
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
@@ -30,7 +28,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.ChannelUtil;
+import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.netty.channel.Channel;
 
@@ -47,18 +45,10 @@ public interface RequestLogBuilder extends RequestLogAccess {
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
      *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
-     *   <li>{@link RequestLog#channel()}</li>
-     *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
-     *
-     * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} of the connection.
      */
-    default void startRequest(Channel channel, SessionProtocol sessionProtocol) {
-        requireNonNull(channel, "channel");
-        requireNonNull(sessionProtocol, "sessionProtocol");
-        startRequest(channel, sessionProtocol, ChannelUtil.findSslSession(channel, sessionProtocol));
+    default void startRequest() {
+        startRequest(System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 
     /**
@@ -67,6 +57,31 @@ public interface RequestLogBuilder extends RequestLogAccess {
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
      *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
+     * </ul>
+     *
+     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
+     * @param requestStartTimeMicros the number of microseconds since the epoch,
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     */
+    void startRequest(long requestStartTimeNanos, long requestStartTimeMicros);
+
+    /**
+     * Sets the properties related with socket connection. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#channel()}</li>
+     *   <li>{@link RequestLog#sessionProtocol()}</li>
+     *   <li>{@link RequestLog#sslSession()}</li>
+     * </ul>
+     *
+     * @param channel the {@link Channel} which handled the {@link Request}.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
+     */
+    void session(@Nullable Channel channel, SessionProtocol sessionProtocol,
+                 @Nullable ClientConnectionTimings connectionTimings);
+
+    /**
+     * Sets the properties related with socket connection. This method sets the following properties:
+     * <ul>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
@@ -76,53 +91,8 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * @param sessionProtocol the {@link SessionProtocol} of the connection.
      * @param sslSession the {@link SSLSession} of the connection, or {@code null}.
      */
-    void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession);
-
-    /**
-     * Starts the collection of the {@link Request} information. This method sets the following properties:
-     * <ul>
-     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
-     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
-     *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
-     *   <li>{@link RequestLog#channel()}</li>
-     *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#sslSession()}</li>
-     * </ul>
-     *
-     * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} of the connection.
-     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
-     * @param requestStartTimeMicros the number of microseconds since the epoch,
-     *                               e.g. {@code System.currentTimeMillis() * 1000}.
-     */
-    default void startRequest(Channel channel, SessionProtocol sessionProtocol,
-                              long requestStartTimeNanos, long requestStartTimeMicros) {
-        requireNonNull(channel, "channel");
-        requireNonNull(sessionProtocol, "sessionProtocol");
-        startRequest(channel, sessionProtocol, ChannelUtil.findSslSession(channel, sessionProtocol),
-                     requestStartTimeNanos, requestStartTimeMicros);
-    }
-
-    /**
-     * Starts the collection of the {@link Request} information. This method sets the following properties:
-     * <ul>
-     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
-     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
-     *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
-     *   <li>{@link RequestLog#channel()}</li>
-     *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#sslSession()}</li>
-     * </ul>
-     *
-     * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} of the connection.
-     * @param sslSession the {@link SSLSession} of the connection, or {@code null}.
-     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
-     * @param requestStartTimeMicros the number of microseconds since the epoch,
-     *                               e.g. {@code System.currentTimeMillis() * 1000}.
-     */
-    void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
-                      long requestStartTimeNanos, long requestStartTimeMicros);
+    void session(@Nullable Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
+                 @Nullable ClientConnectionTimings connectionTimings);
 
     /**
      * Sets the {@link SerializationFormat}.

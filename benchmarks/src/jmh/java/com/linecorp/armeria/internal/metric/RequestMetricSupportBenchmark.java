@@ -16,22 +16,17 @@
 
 package com.linecorp.armeria.internal.metric;
 
-import static org.mockito.Mockito.mock;
-
 import org.openjdk.jmh.annotations.Benchmark;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.ServiceRequestContext;
-
-import io.netty.channel.Channel;
 
 public class RequestMetricSupportBenchmark {
 
@@ -43,7 +38,7 @@ public class RequestMetricSupportBenchmark {
                 ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"))
                                      .logBuilder();
 
-        builder.startRequest(mock(Channel.class), SessionProtocol.H2C);
+        builder.startRequest();
         builder.requestContent(RpcRequest.of(RequestMetricSupportBenchmark.class, "benchmark"), null);
         builder.endRequest();
         builder.endResponse();

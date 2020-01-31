@@ -48,7 +48,8 @@ public enum RequestLogProperty {
     REQUEST_FIRST_BYTES_TRANSFERRED_TIME(true),
 
     /**
-     * {@link RequestLog#channel()}, {@link RequestLog#sessionProtocol()}, {@link RequestLog#sslSession()}.
+     * {@link RequestLog#channel()}, {@link RequestLog#sessionProtocol()}, {@link RequestLog#sslSession()},
+     * {@link RequestLog#connectionTimings()}.
      */
     SESSION(true),
 
@@ -142,12 +143,12 @@ public enum RequestLogProperty {
     RESPONSE_CAUSE(false);
 
     private static final Set<RequestLogProperty> REQUEST_PROPERTIES =
-            Arrays.stream(RequestLogProperty.values())
+            Arrays.stream(values())
                   .filter(p -> p.isRequestProperty)
                   .collect(Sets.toImmutableEnumSet());
 
     private static final Set<RequestLogProperty> RESPONSE_PROPERTIES =
-            Arrays.stream(RequestLogProperty.values())
+            Arrays.stream(values())
                   .filter(p -> !p.isRequestProperty)
                   .collect(Sets.toImmutableEnumSet());
 

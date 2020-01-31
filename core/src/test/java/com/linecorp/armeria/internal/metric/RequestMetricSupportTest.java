@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.metric;
 
 import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
@@ -23,7 +22,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -31,6 +29,7 @@ import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -50,7 +49,6 @@ class RequestMetricSupportTest {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
-        setConnectionTimings(ctx);
         // FIXME(trustin): In reality, most HTTP requests will not have any name.
         //                 As a result, `activeRequestPrefix()` will be invoked only after
         //                 a request is completed, i.e. active request count will be inaccurate,
@@ -87,15 +85,14 @@ class RequestMetricSupportTest {
                 .doesNotContainKey("foo.actual.requests#count{http.status=200,method=POST}");
     }
 
-    private static void setConnectionTimings(ClientRequestContext ctx) {
-        ClientConnectionTimings.builder()
-                               .dnsResolutionEnd()
-                               .socketConnectStart()
-                               .socketConnectEnd()
-                               .pendingAcquisitionStart()
-                               .pendingAcquisitionEnd()
-                               .build()
-                               .setTo(ctx);
+    private static ClientConnectionTimings newConnectionTimings() {
+        return ClientConnectionTimings.builder()
+                                      .dnsResolutionEnd()
+                                      .socketConnectStart()
+                                      .socketConnectEnd()
+                                      .pendingAcquisitionStart()
+                                      .pendingAcquisitionEnd()
+                                      .build();
     }
 
     @Test
@@ -202,6 +199,7 @@ class RequestMetricSupportTest {
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                     .meterRegistry(registry)
                                     .endpoint(Endpoint.of("example.com", 8080))
+                                    .connectionTimings(newConnectionTimings())
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
@@ -214,8 +212,7 @@ class RequestMetricSupportTest {
                 ctx.newDerivedContext(ctx.id(), ctx.request(), ctx.rpcRequest());
 
         ctx.logBuilder().addChild(derivedCtx.log());
-
-        setConnectionTimings(derivedCtx);
+        derivedCtx.logBuilder().session(null, ctx.sessionProtocol(), newConnectionTimings());
         derivedCtx.logBuilder().requestFirstBytesTransferred();
         derivedCtx.logBuilder().requestContent(null, null);
         derivedCtx.logBuilder().requestLength(123);

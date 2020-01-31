@@ -33,7 +33,6 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -50,6 +49,7 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 import io.netty.channel.Channel;
@@ -121,6 +121,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private SSLSession sslSession;
     @Nullable
     private SessionProtocol sessionProtocol;
+    @Nullable
+    private ClientConnectionTimings connectionTimings;
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
     @Nullable
     private Scheme scheme;
@@ -415,15 +417,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void propagateRequestSideLog(RequestLogAccess child) {
         // Update the available properties always by adding a callback,
         // because the child's properties will never be available immediately.
-        child.whenAvailable(RequestLogProperty.SESSION, RequestLogProperty.REQUEST_START_TIME)
-             .thenAccept(log -> {
-                 final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
-                 if (timings != null) {
-                     timings.setTo(this);
-                 }
-                 startRequest0(log.channel(), log.sessionProtocol(), null,
-                               log.requestStartTimeNanos(), log.requestStartTimeMicros(), true);
-             });
+        child.whenAvailable(RequestLogProperty.REQUEST_START_TIME)
+             .thenAccept(log -> startRequest(log.requestStartTimeNanos(), log.requestStartTimeMicros()));
+        child.whenAvailable(RequestLogProperty.SESSION)
+             .thenAccept(log -> session(log.channel(), log.sessionProtocol(),
+                                        log.sslSession(), log.connectionTimings()));
         child.whenAvailable(RequestLogProperty.SCHEME)
              .thenAccept(log -> serializationFormat(log.scheme().serializationFormat()));
         child.whenAvailable(RequestLogProperty.NAME)
@@ -517,53 +515,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     // Request-side methods.
 
     @Override
-    public void startRequest(Channel channel, SessionProtocol sessionProtocol,
-                             @Nullable SSLSession sslSession) {
-        requireNonNull(channel, "channel");
-        requireNonNull(sessionProtocol, "sessionProtocol");
-        startRequest0(channel, sessionProtocol, sslSession, true);
-    }
-
-    @Override
-    public void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
-                             long requestStartTimeNanos, long requestStartTimeMicros) {
-        requireNonNull(channel, "channel");
-        requireNonNull(sessionProtocol, "sessionProtocol");
-        startRequest0(channel, sessionProtocol, sslSession,
-                      requestStartTimeNanos, requestStartTimeMicros, true);
-    }
-
-    private void startRequest0(Channel channel, SessionProtocol sessionProtocol,
-                               @Nullable SSLSession sslSession, boolean updateAvailability) {
-        startRequest0(channel, sessionProtocol, sslSession,
-                      System.nanoTime(), SystemInfo.currentTimeMicros(),
-                      updateAvailability);
-    }
-
-    private void startRequest0(@Nullable Channel channel, SessionProtocol sessionProtocol,
-                               @Nullable SSLSession sslSession, long requestStartTimeNanos,
-                               long requestStartTimeMicros, boolean updateAvailability) {
+    public void startRequest(long requestStartTimeNanos, long requestStartTimeMicros) {
         if (!isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
             this.requestStartTimeNanos = requestStartTimeNanos;
             this.requestStartTimeMicros = requestStartTimeMicros;
         }
 
-        if (!isAvailable(RequestLogProperty.SESSION)) {
-            this.channel = channel;
-            this.sslSession = sslSession;
-            this.sessionProtocol = sessionProtocol;
-            if (sessionProtocol.isTls()) {
-                // Switch to the dummy headers with ':scheme=https' if the connection is TLS.
-                if (requestHeaders == DUMMY_REQUEST_HEADERS_HTTP) {
-                    requestHeaders = DUMMY_REQUEST_HEADERS_HTTPS;
-                }
-            }
-        }
-
-        if (updateAvailability) {
-            updateAvailability(RequestLogProperty.REQUEST_START_TIME.flag() |
-                               RequestLogProperty.SESSION.flag());
-        }
+        updateAvailability(RequestLogProperty.REQUEST_START_TIME);
     }
 
     @Override
@@ -608,6 +566,46 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void session(@Nullable Channel channel, SessionProtocol sessionProtocol,
+                        @Nullable ClientConnectionTimings connectionTimings) {
+        if (isAvailable(RequestLogProperty.SESSION)) {
+            return;
+        }
+
+        session0(channel, requireNonNull(sessionProtocol, "sessionProtocol"),
+                 ChannelUtil.findSslSession(channel, sessionProtocol),
+                 connectionTimings);
+    }
+
+    @Override
+    public void session(@Nullable Channel channel, SessionProtocol sessionProtocol,
+                        @Nullable SSLSession sslSession, @Nullable ClientConnectionTimings connectionTimings) {
+        if (isAvailable(RequestLogProperty.SESSION)) {
+            return;
+        }
+
+        session0(channel, requireNonNull(sessionProtocol, "sessionProtocol"), sslSession, connectionTimings);
+    }
+
+    private void session0(@Nullable Channel channel, SessionProtocol sessionProtocol,
+                          @Nullable SSLSession sslSession,
+                          @Nullable ClientConnectionTimings connectionTimings) {
+
+        this.channel = channel;
+        this.sslSession = sslSession;
+        this.sessionProtocol = sessionProtocol;
+        this.connectionTimings = connectionTimings;
+        if (sessionProtocol.isTls()) {
+            // Switch to the dummy headers with ':scheme=https' if the connection is TLS.
+            if (requestHeaders == DUMMY_REQUEST_HEADERS_HTTP) {
+                requestHeaders = DUMMY_REQUEST_HEADERS_HTTPS;
+            }
+        }
+
+        updateAvailability(RequestLogProperty.SESSION);
+    }
+
+    @Override
     public Channel channel() {
         ensureAvailable(RequestLogProperty.SESSION);
         return channel;
@@ -624,6 +622,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         ensureAvailable(RequestLogProperty.SESSION);
         assert sessionProtocol != null;
         return sessionProtocol;
+    }
+
+    @Nullable
+    @Override
+    public ClientConnectionTimings connectionTimings() {
+        ensureAvailable(RequestLogProperty.SESSION);
+        return connectionTimings;
     }
 
     @Override
@@ -857,8 +862,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
         // totalRequestDuration will be 0
-        startRequest0(null, context().sessionProtocol(), null,
-                      requestEndTimeNanos, SystemInfo.currentTimeMicros(), false);
+        startRequest(requestEndTimeNanos, SystemInfo.currentTimeMicros());
+        session(null, context().sessionProtocol(), null, null);
 
         if (scheme == null) {
             assert sessionProtocol != null;
@@ -1592,6 +1597,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         public SessionProtocol sessionProtocol() {
             assert sessionProtocol != null;
             return sessionProtocol;
+        }
+
+        @Nullable
+        @Override
+        public ClientConnectionTimings connectionTimings() {
+            return connectionTimings;
         }
 
         @Override
