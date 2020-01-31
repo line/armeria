@@ -103,8 +103,11 @@ public final class ContentPreviewerConfigurator {
             @Override
             protected Throwable beforeError(Subscriber<? super HttpObject> subscriber,
                                             Throwable cause) {
-                // Set the preview to make it sure the log is complete even though an exception is raised.
-                logBuilder.requestContentPreview(requestContentPreviewer.produce());
+                // Call produce() to release the resources in the previewer. Consider adding close() method.
+                requestContentPreviewer.produce();
+
+                // Set null to make it sure the log is complete.
+                logBuilder.requestContentPreview(null);
                 return cause;
             }
         };
@@ -161,12 +164,11 @@ public final class ContentPreviewerConfigurator {
             @Override
             protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
                 if (responseContentPreviewer != null) {
-                    // Set the preview to make it sure the log is complete even though an exception is raised.
-                    ctx.logBuilder().responseContentPreview(responseContentPreviewer.produce());
-                } else {
-                    // Call requestContentPreview(null) to make sure that the log is complete.
-                    ctx.logBuilder().responseContentPreview(null);
+                    // Call produce() to release the resources in the previewer. Consider adding close() method.
+                    responseContentPreviewer.produce();
                 }
+                // Set null to make it sure the log is complete.
+                ctx.logBuilder().responseContentPreview(null);
                 return cause;
             }
         };

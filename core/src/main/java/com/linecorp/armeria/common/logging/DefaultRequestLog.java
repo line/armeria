@@ -31,6 +31,9 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientConnectionTimings;
@@ -58,6 +61,8 @@ import io.netty.channel.Channel;
  * Default {@link RequestLog} implementation.
  */
 public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(DefaultRequestLog.class);
 
     private static final AtomicIntegerFieldUpdater<DefaultRequestLog> flagsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "flags");
@@ -780,6 +785,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public void requestContentPreview(@Nullable String requestContentPreview) {
         if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+            if (requestContentPreview != null) {
+                logger.warn("You try to set the request content preview twice: {}. " +
+                            " Do you configure content previewing decorator more than once?",
+                            requestContentPreview);
+            }
             return;
         }
         this.requestContentPreview = requestContentPreview;
@@ -844,11 +854,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void endRequest0(@Nullable Throwable requestCause, long requestEndTimeNanos) {
         final int flags;
-        final int deferredFlags = this.deferredFlags;
-        if (requestCause == null && deferredFlags != 0) {
-            flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
-        } else {
+        if (requestCause != null) {
             flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE;
+        } else {
+            flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
         }
 
         if (isAvailable(flags)) {
@@ -1066,6 +1075,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public void responseContentPreview(@Nullable String responseContentPreview) {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+            if (responseContentPreview != null) {
+                logger.warn("You try to set the response content preview twice: {}. " +
+                            " Do you configure content previewing decorator more than once?",
+                            responseContentPreview);
+            }
             return;
         }
         this.responseContentPreview = responseContentPreview;
@@ -1137,11 +1151,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void endResponse0(@Nullable Throwable responseCause, long responseEndTimeNanos) {
         final int flags;
-        final int deferredFlags = this.deferredFlags;
-        if (responseCause == null && deferredFlags != 0) {
-            flags = RequestLogProperty.FLAGS_RESPONSE_COMPLETE & ~deferredFlags;
-        } else {
+        if (responseCause != null) {
             flags = RequestLogProperty.FLAGS_RESPONSE_COMPLETE;
+        } else {
+            flags = RequestLogProperty.FLAGS_RESPONSE_COMPLETE & ~deferredFlags;
         }
 
         if (isAvailable(flags)) {
