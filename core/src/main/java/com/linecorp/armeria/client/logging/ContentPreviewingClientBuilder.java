@@ -30,6 +30,11 @@ import com.linecorp.armeria.common.logging.ContentPreviewingDecoratorBuilder;
  */
 public final class ContentPreviewingClientBuilder extends ContentPreviewingDecoratorBuilder {
 
+    /**
+     * Creates a new instance.
+     */
+    ContentPreviewingClientBuilder() {}
+
     @Override
     public ContentPreviewingClientBuilder contentPreview(int length) {
         return (ContentPreviewingClientBuilder) super.contentPreview(length);

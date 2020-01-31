@@ -30,6 +30,11 @@ import com.linecorp.armeria.server.HttpService;
  */
 public final class ContentPreviewingServiceBuilder extends ContentPreviewingDecoratorBuilder {
 
+    /**
+     * Creates a new instance.
+     */
+    ContentPreviewingServiceBuilder() {}
+
     @Override
     public ContentPreviewingServiceBuilder contentPreview(int length) {
         return (ContentPreviewingServiceBuilder) super.contentPreview(length);

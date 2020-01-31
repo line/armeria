@@ -73,6 +73,7 @@ public abstract class ContentPreviewingDecoratorBuilder {
      *                       {@code "content-type"} header
      */
     public ContentPreviewingDecoratorBuilder contentPreview(int length, Charset defaultCharset) {
+        requireNonNull(defaultCharset, "defaultCharset");
         return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 

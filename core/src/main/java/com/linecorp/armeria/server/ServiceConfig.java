@@ -56,8 +56,7 @@ public final class ServiceConfig {
      */
     ServiceConfig(Route route, HttpService service,
                   long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
-                  AccessLogWriter accessLogWriter,
-                  boolean shutdownAccessLogWriterOnStop) {
+                  AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
         this(null, route, service, requestTimeoutMillis, maxRequestLength,
              verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
     }
