@@ -379,12 +379,19 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     @Override
+    @Deprecated
     default CompletableFuture<Void> closeFuture() {
-        return completionFuture();
+        return whenComplete();
     }
 
     @Override
-    CompletableFuture<Void> completionFuture();
+    @Deprecated
+    default CompletableFuture<Void> completionFuture() {
+        return whenComplete();
+    }
+
+    @Override
+    CompletableFuture<Void> whenComplete();
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and

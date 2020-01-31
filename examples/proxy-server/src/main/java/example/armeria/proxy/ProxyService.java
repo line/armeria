@@ -2,6 +2,7 @@ package example.armeria.proxy;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.concurrent.ExecutionException;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
@@ -46,13 +47,13 @@ public final class ProxyService extends AbstractHttpService {
     private final boolean addForwardedToRequestHeaders;
     private final boolean addViaToResponseHeaders;
 
-    public ProxyService() throws InterruptedException {
+    public ProxyService() throws ExecutionException, InterruptedException {
         loadBalancingClient = newLoadBalancingClient();
         addForwardedToRequestHeaders = true;
         addViaToResponseHeaders = true;
     }
 
-    private static WebClient newLoadBalancingClient() throws InterruptedException {
+    private static WebClient newLoadBalancingClient() throws ExecutionException, InterruptedException {
         // Send HTTP health check requests to '/internal/l7check' every 10 seconds.
         final HealthCheckedEndpointGroup healthCheckedGroup =
                 HealthCheckedEndpointGroup.builder(animationGroup, "/internal/l7check")
@@ -61,7 +62,7 @@ public final class ProxyService extends AbstractHttpService {
                                           .build();
 
         // Wait until the initial health check is finished.
-        healthCheckedGroup.awaitInitialEndpoints();
+        healthCheckedGroup.whenReady().get();
 
         return WebClient.builder(SessionProtocol.HTTP, healthCheckedGroup)
                         // Disable timeout to serve infinite streaming response.

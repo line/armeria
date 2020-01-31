@@ -252,7 +252,7 @@ class HttpServerStreamingTest {
 
         res.subscribe(consumer);
 
-        res.completionFuture().get();
+        res.whenComplete().get();
         assertThat(status.get()).isEqualTo(HttpStatus.OK);
         assertThat(consumer.numReceivedBytes()).isEqualTo(STREAMING_CONTENT_LENGTH);
     }

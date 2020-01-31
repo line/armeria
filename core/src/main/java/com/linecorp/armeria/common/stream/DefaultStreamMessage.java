@@ -198,7 +198,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
         // Always called from the subscriber thread.
         try {
-            event.notifySubscriber(subscription, completionFuture());
+            event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
             cleanup();

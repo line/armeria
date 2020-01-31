@@ -94,7 +94,7 @@ class EndpointGroupTest {
             final DynamicEndpointGroup group1 = new DynamicEndpointGroup();
             final DynamicEndpointGroup group2 = new DynamicEndpointGroup();
             final EndpointGroup composite = EndpointGroup.of(group1, group2);
-            final CompletableFuture<List<Endpoint>> initialEndpoints = composite.initialEndpointsFuture();
+            final CompletableFuture<List<Endpoint>> initialEndpoints = composite.whenReady();
             assertThat(initialEndpoints).isNotCompleted();
 
             group1.setEndpoints(ImmutableList.of(FOO, BAR));
@@ -108,7 +108,7 @@ class EndpointGroupTest {
             final DynamicEndpointGroup group1 = new DynamicEndpointGroup();
             final DynamicEndpointGroup group2 = new DynamicEndpointGroup();
             final EndpointGroup composite = EndpointGroup.of(group1, group2);
-            final CompletableFuture<List<Endpoint>> initialEndpoints = composite.initialEndpointsFuture();
+            final CompletableFuture<List<Endpoint>> initialEndpoints = composite.whenReady();
             assertThat(initialEndpoints).isNotCompleted();
 
             group2.setEndpoints(ImmutableList.of(CAT, DOG));

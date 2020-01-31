@@ -63,7 +63,7 @@ final class StaticEndpointGroup implements EndpointGroup {
     }
 
     @Override
-    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+    public CompletableFuture<List<Endpoint>> whenReady() {
         return initialEndpointsFuture;
     }
 

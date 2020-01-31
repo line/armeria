@@ -22,9 +22,7 @@ import static com.linecorp.armeria.client.ClientOption.FACTORY;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
 import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
 import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
-import static com.linecorp.armeria.client.ClientOption.REQ_CONTENT_PREVIEWER_FACTORY;
 import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_MILLIS;
-import static com.linecorp.armeria.client.ClientOption.RES_CONTENT_PREVIEWER_FACTORY;
 import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_MILLIS;
 import static java.util.Objects.requireNonNull;
 
@@ -46,7 +44,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
@@ -84,8 +81,6 @@ public final class ClientOptions extends AbstractOptions {
             MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
             DECORATION.newValue(ClientDecoration.of()),
             HTTP_HEADERS.newValue(HttpHeaders.of()),
-            REQ_CONTENT_PREVIEWER_FACTORY.newValue(ContentPreviewerFactory.disabled()),
-            RES_CONTENT_PREVIEWER_FACTORY.newValue(ContentPreviewerFactory.disabled()),
             REQUEST_ID_GENERATOR.newValue(RequestId::random),
             ENDPOINT_REMAPPER.newValue(Function.identity())
     };
@@ -322,20 +317,6 @@ public final class ClientOptions extends AbstractOptions {
      */
     public HttpHeaders httpHeaders() {
         return get(HTTP_HEADERS);
-    }
-
-    /**
-     * Returns the request {@link ContentPreviewerFactory}.
-     */
-    public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return get(REQ_CONTENT_PREVIEWER_FACTORY);
-    }
-
-    /**
-     * Returns the response {@link ContentPreviewerFactory}.
-     */
-    public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return get(RES_CONTENT_PREVIEWER_FACTORY);
     }
 
     /**

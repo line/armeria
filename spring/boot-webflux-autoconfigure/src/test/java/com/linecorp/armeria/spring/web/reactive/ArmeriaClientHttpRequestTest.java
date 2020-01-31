@@ -69,12 +69,12 @@ public class ArmeriaClientHttpRequestTest {
         // Consume from Armeria HttpRequest.
         final HttpRequest httpRequest = request.request();
         assertThat(httpRequest).isNotNull();
-        assertThat(httpRequest.completionFuture().isDone()).isFalse();
+        assertThat(httpRequest.whenComplete().isDone()).isFalse();
 
         // Completed when a subscriber subscribed.
         StepVerifier.create(httpRequest).expectComplete().verify();
 
-        await().until(() -> httpRequest.completionFuture().isDone());
+        await().until(() -> httpRequest.whenComplete().isDone());
     }
 
     @Test
@@ -107,7 +107,7 @@ public class ArmeriaClientHttpRequestTest {
         assertThat(headers.get(HttpHeaderNames.USER_AGENT)).isEqualTo("spring/armeria");
         assertThat(headers.get(HttpHeaderNames.COOKIE)).isEqualTo("a=1");
 
-        assertThat(httpRequest.completionFuture().isDone()).isFalse();
+        assertThat(httpRequest.whenComplete().isDone()).isFalse();
 
         // Armeria HttpRequest produces http body only.
         final Flux<String> requestBody =
@@ -121,7 +121,7 @@ public class ArmeriaClientHttpRequestTest {
                     .expectComplete()
                     .verify();
 
-        await().until(() -> httpRequest.completionFuture().isDone());
+        await().until(() -> httpRequest.whenComplete().isDone());
     }
 
     @Test
@@ -168,6 +168,6 @@ public class ArmeriaClientHttpRequestTest {
                     .expectComplete()
                     .verify();
 
-        await().until(() -> httpRequest.completionFuture().isDone());
+        await().until(() -> httpRequest.whenComplete().isDone());
     }
 }

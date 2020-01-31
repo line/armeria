@@ -27,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -34,9 +35,11 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
@@ -52,7 +55,7 @@ class HealthCheckedEndpointGroupTest {
     @Test
     void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
         final MockEndpointGroup delegate = new MockEndpointGroup();
-        final CompletableFuture<List<Endpoint>> future = delegate.initialEndpointsFuture();
+        final CompletableFuture<List<Endpoint>> future = delegate.whenReady();
         future.complete(ImmutableList.of(Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081)));
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -182,6 +185,36 @@ class HealthCheckedEndpointGroupTest {
             firstSelectedCandidates.get().updateHealth(UNHEALTHY);
             assertThat(group.healthyEndpoints).containsOnly(candidate2);
         }
+    }
+
+    @Test
+    void closesWhenClientFactoryCloses() {
+        final ClientFactory factory = ClientFactory.builder().build();
+        final EndpointGroup delegate = Endpoint.of("foo");
+        final AsyncCloseableSupport checkerCloseable = AsyncCloseableSupport.of();
+        final AtomicInteger newCheckerCount = new AtomicInteger();
+        final HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
+                    ctx.updateHealth(1);
+                    newCheckerCount.incrementAndGet();
+                    return checkerCloseable;
+                };
+            }
+        }.clientFactory(factory).build();
+
+        // When the ClientFactory is closed, the health checkers must be closed as well.
+        factory.close();
+        await().untilAsserted(() -> {
+            assertThat(group.isClosed()).isTrue();
+            assertThat(group.isClosing()).isTrue();
+            assertThat(checkerCloseable.isClosing()).isTrue();
+            assertThat(checkerCloseable.isClosed()).isTrue();
+        });
+
+        // No more than one checker must be created.
+        assertThat(newCheckerCount).hasValue(1);
     }
 
     private static final class MockEndpointGroup extends DynamicEndpointGroup {

@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
@@ -29,7 +28,6 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.internal.annotation.AnnotatedServiceFactory;
@@ -52,7 +50,6 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  *   .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
  *   .pathPrefix("/foo")
  *   .verboseResponses(true)
- *   .contentPreview(500)
  *   .build(new Service())                     // Return to the ServerBuilder.
  *   .build();
  * }</pre>
@@ -208,36 +205,6 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     @Override
     public AnnotatedServiceBindingBuilder verboseResponses(boolean verboseResponses) {
         defaultServiceConfigSetters.verboseResponses(verboseResponses);
-        return this;
-    }
-
-    @Override
-    public AnnotatedServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        defaultServiceConfigSetters.requestContentPreviewerFactory(factory);
-        return this;
-    }
-
-    @Override
-    public AnnotatedServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        defaultServiceConfigSetters.responseContentPreviewerFactory(factory);
-        return this;
-    }
-
-    @Override
-    public AnnotatedServiceBindingBuilder contentPreview(int length) {
-        defaultServiceConfigSetters.contentPreview(length);
-        return this;
-    }
-
-    @Override
-    public AnnotatedServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
-        defaultServiceConfigSetters.contentPreview(length, defaultCharset);
-        return this;
-    }
-
-    @Override
-    public AnnotatedServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
-        defaultServiceConfigSetters.contentPreviewerFactory(factory);
         return this;
     }
 

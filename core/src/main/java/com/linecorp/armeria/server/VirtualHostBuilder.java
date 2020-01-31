@@ -29,7 +29,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -51,11 +50,8 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.common.logging.ContentPreviewer;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedService;
 import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
@@ -114,10 +110,6 @@ public final class VirtualHostBuilder {
     private Long maxRequestLength;
     @Nullable
     private Boolean verboseResponses;
-    @Nullable
-    private ContentPreviewerFactory requestContentPreviewerFactory;
-    @Nullable
-    private ContentPreviewerFactory responseContentPreviewerFactory;
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
@@ -832,71 +824,6 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the {@link ContentPreviewerFactory} for a request of this {@link VirtualHost}. If not set,
-     * the {@link ContentPreviewerFactory} ser via
-     * {@link ServerBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)} is used.
-     */
-    public VirtualHostBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        requestContentPreviewerFactory = requireNonNull(factory, "factory");
-        return this;
-    }
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for a response of this {@link VirtualHost}. If not set,
-     * the {@link ContentPreviewerFactory} set via
-     * {@link ServerBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)} is used.
-     */
-    public VirtualHostBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        responseContentPreviewerFactory = requireNonNull(factory, "factory");
-        return this;
-    }
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
-     * preview with the maximum {@code length} limit for a request and a response of this {@link VirtualHost}.
-     * The previewer is enabled only if the content type of a request/response meets
-     * any of the following conditions:
-     * <ul>
-     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
-     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
-     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
-     * </ul>
-     * @param length the maximum length of the preview.
-     */
-    public VirtualHostBuilder contentPreview(int length) {
-        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
-    }
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
-     * preview with the maximum {@code length} limit for a request and a response of this {@link VirtualHost}.
-     * The previewer is enabled only if the content type of a request/response meets
-     * any of the following conditions:
-     * <ul>
-     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
-     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
-     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
-     * </ul>
-     * @param length the maximum length of the preview
-     * @param defaultCharset the default charset used when a charset is not specified in the
-     *                       {@code "content-type"} header
-     */
-    public VirtualHostBuilder contentPreview(int length, Charset defaultCharset) {
-        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for a request and a response of this {@link VirtualHost}.
-     */
-    public VirtualHostBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
-        requestContentPreviewerFactory(factory);
-        responseContentPreviewerFactory(factory);
-        return this;
-    }
-
-    /**
      * Sets the access log writer of this {@link VirtualHost}. If not set, the {@link AccessLogWriter} set via
      * {@link ServerBuilder#accessLogWriter(AccessLogWriter, boolean)} is used.
      *
@@ -964,12 +891,6 @@ public final class VirtualHostBuilder {
         final boolean verboseResponses =
                 this.verboseResponses != null ?
                 this.verboseResponses : template.verboseResponses;
-        final ContentPreviewerFactory requestContentPreviewerFactory =
-                this.requestContentPreviewerFactory != null ?
-                this.requestContentPreviewerFactory : template.requestContentPreviewerFactory;
-        final ContentPreviewerFactory responseContentPreviewerFactory =
-                this.responseContentPreviewerFactory != null ?
-                this.responseContentPreviewerFactory : template.responseContentPreviewerFactory;
         final RejectedRouteHandler rejectedRouteHandler =
                 this.rejectedRouteHandler != null ?
                 this.rejectedRouteHandler : template.rejectedRouteHandler;
@@ -992,8 +913,6 @@ public final class VirtualHostBuilder {
                 annotatedServiceExtensions != null ?
                 annotatedServiceExtensions : template.annotatedServiceExtensions;
 
-        assert requestContentPreviewerFactory != null;
-        assert responseContentPreviewerFactory != null;
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
@@ -1008,14 +927,12 @@ public final class VirtualHostBuilder {
                 getServiceConfigBuilders(template);
         final List<ServiceConfig> serviceConfigs = serviceConfigBuilders.stream().map(cfgBuilder -> {
             return cfgBuilder.build(requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                    requestContentPreviewerFactory, responseContentPreviewerFactory,
                                     accessLogWriter, shutdownAccessLogWriterOnStop);
         }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(Route.ofCatchAll(), FallbackService.INSTANCE)
                         .build(requestTimeoutMillis, maxRequestLength, verboseResponses,
-                               requestContentPreviewerFactory, responseContentPreviewerFactory,
                                accessLogWriter, shutdownAccessLogWriterOnStop);
 
         SslContext sslContext = null;
@@ -1079,9 +996,7 @@ public final class VirtualHostBuilder {
                     new VirtualHost(defaultHostname, hostnamePattern, sslContext,
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                     accessLoggerMapper, requestTimeoutMillis, maxRequestLength,
-                                    verboseResponses, requestContentPreviewerFactory,
-                                    responseContentPreviewerFactory, accessLogWriter,
-                                    shutdownAccessLogWriterOnStop);
+                                    verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);
@@ -1170,8 +1085,6 @@ public final class VirtualHostBuilder {
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)
-                          .add("requestContentPreviewerFactory", requestContentPreviewerFactory)
-                          .add("responseContentPreviewerFactory", responseContentPreviewerFactory)
                           .add("accessLogWriter", accessLogWriter)
                           .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                           .toString();

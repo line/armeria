@@ -18,12 +18,10 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -56,36 +54,6 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder verboseResponses(boolean verboseResponses) {
         defaultServiceConfigSetters.verboseResponses(verboseResponses);
-        return this;
-    }
-
-    @Override
-    public AbstractServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        defaultServiceConfigSetters.requestContentPreviewerFactory(factory);
-        return this;
-    }
-
-    @Override
-    public AbstractServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        defaultServiceConfigSetters.responseContentPreviewerFactory(factory);
-        return this;
-    }
-
-    @Override
-    public AbstractServiceBindingBuilder contentPreview(int length) {
-        defaultServiceConfigSetters.contentPreview(length);
-        return this;
-    }
-
-    @Override
-    public AbstractServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
-        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    @Override
-    public AbstractServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
-        requestContentPreviewerFactory(factory);
-        responseContentPreviewerFactory(factory);
         return this;
     }
 

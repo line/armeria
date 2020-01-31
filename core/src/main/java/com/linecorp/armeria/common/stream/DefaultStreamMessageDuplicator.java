@@ -309,7 +309,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             final Subscriber<? super T> subscriber = subscription.subscriber();
             subscription.clearSubscriber();
 
-            final CompletableFuture<Void> completionFuture = subscription.completionFuture();
+            final CompletableFuture<Void> completionFuture = subscription.whenComplete();
             if (cause == null) {
                 try {
                     subscriber.onComplete();
@@ -421,7 +421,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     new ArrayList<>(downstreamSubscriptions.size());
             downstreamSubscriptions.forEach(s -> {
                 s.abort(cause);
-                final CompletableFuture<Void> future = s.completionFuture();
+                final CompletableFuture<Void> future = s.whenComplete();
                 completionFutures.add(future);
             });
             downstreamSubscriptions.clear();
@@ -468,7 +468,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         @Override
-        public CompletableFuture<Void> completionFuture() {
+        public CompletableFuture<Void> whenComplete() {
             return completionFuture;
         }
 
@@ -577,7 +577,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     this, AbortingSubscriber.get(cause), processor, ImmediateEventExecutor.INSTANCE,
                     false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
-                newSubscription.completionFuture().completeExceptionally(cause);
+                newSubscription.whenComplete().completeExceptionally(cause);
             } else {
                 subscription.abort(cause);
             }
@@ -632,8 +632,8 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             this.notifyCancellation = notifyCancellation;
         }
 
-        CompletableFuture<Void> completionFuture() {
-            return streamMessage.completionFuture();
+        CompletableFuture<Void> whenComplete() {
+            return streamMessage.whenComplete();
         }
 
         Subscriber<? super T> subscriber() {

@@ -195,7 +195,7 @@ public final class ResponseConversionUtil {
         public void onSubscribe(Subscription s) {
             assert subscription == null;
             subscription = s;
-            writer.closeFuture().handle((unused, cause) -> {
+            writer.whenComplete().handle((unused, cause) -> {
                 if (cause != null) {
                     s.cancel();
                 }
@@ -218,7 +218,7 @@ public final class ResponseConversionUtil {
                     headersSent = true;
                 }
                 writer.write(content);
-                writer.onDemand(() -> {
+                writer.whenConsumed().thenRun(() -> {
                     assert subscription != null;
                     subscription.request(1);
                 });

@@ -181,7 +181,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         blockingExecutor = useBlockingTaskExecutor ?
                            MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
 
-        res.completionFuture().handleAsync((unused, t) -> {
+        res.whenComplete().handleAsync((unused, t) -> {
             if (!closeCalled) {
                 // Closed by client, not by server.
                 cancelled = true;
@@ -262,7 +262,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         try {
             res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
-            res.onDemand(() -> {
+            res.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     if (blockingExecutor != null) {
                         blockingExecutor.execute(this::invokeOnReady);

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -117,8 +119,23 @@ public interface StreamWriter<T> {
      *
      * @return the future that completes successfully when the {@code task} finishes or
      *         exceptionally when the {@link StreamMessage} is closed unexpectedly.
+     *
+     * @deprecated Use {@link #whenConsumed()} and {@link CompletableFuture#thenRun(Runnable)}.
      */
-    CompletableFuture<Void> onDemand(Runnable task);
+    @Deprecated
+    default CompletableFuture<Void> onDemand(Runnable task) {
+        requireNonNull(task, "task");
+        return whenConsumed().thenRun(task);
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed when all elements written so far have been
+     * consumed by the {@link Subscriber}.
+     *
+     * @return the future which completes successfully when all elements written so far have been consumed,
+     *         or exceptionally when the {@link StreamMessage} has been closed unexpectedly.
+     */
+    CompletableFuture<Void> whenConsumed();
 
     /**
      * Closes the {@link StreamMessage} successfully. {@link Subscriber#onComplete()} will be invoked to
