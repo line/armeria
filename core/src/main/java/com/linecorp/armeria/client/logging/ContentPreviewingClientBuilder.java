@@ -74,6 +74,8 @@ public final class ContentPreviewingClientBuilder extends ContentPreviewingDecor
      * {@link ContentPreviewingClient} based on the properties of this builder.
      */
     public Function<? super HttpClient, ContentPreviewingClient> newDecorator() {
+        checkState(requestContentPreviewerFactory() != null || responseContentPreviewerFactory() != null,
+                   "requestContentPreviewerFactory or responseContentPreviewerFactory must be set.");
         return this::build;
     }
 }

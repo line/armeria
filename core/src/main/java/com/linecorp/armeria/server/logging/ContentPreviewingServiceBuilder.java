@@ -64,7 +64,7 @@ public final class ContentPreviewingServiceBuilder extends ContentPreviewingDeco
      */
     public ContentPreviewingService build(HttpService delegate) {
         checkState(requestContentPreviewerFactory() != null || responseContentPreviewerFactory() != null,
-                   "requestContentPreviewerFactory or responseContentPreviewerFactory must be set");
+                   "requestContentPreviewerFactory or responseContentPreviewerFactory must be set.");
         return new ContentPreviewingService(delegate, requestContentPreviewerFactory(),
                                             responseContentPreviewerFactory());
     }
@@ -74,6 +74,8 @@ public final class ContentPreviewingServiceBuilder extends ContentPreviewingDeco
      * {@link ContentPreviewingService} based on the properties of this builder.
      */
     public Function<? super HttpService, ContentPreviewingService> newDecorator() {
+        checkState(requestContentPreviewerFactory() != null || responseContentPreviewerFactory() != null,
+                   "requestContentPreviewerFactory or responseContentPreviewerFactory must be set.");
         return this::build;
     }
 }
