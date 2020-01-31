@@ -73,7 +73,7 @@ class HttpServerAbortingInfiniteStreamTest {
                         writer.onDemand(this);
                     }
                 });
-                writer.completionFuture().whenComplete((unused, cause) -> {
+                writer.whenComplete().whenComplete((unused, cause) -> {
                     // We are not expecting that this stream is successfully finished.
                     if (cause != null) {
                         if (ctx.sessionProtocol() == H1C) {

@@ -139,7 +139,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         boolean success = false;
         try {
             final O res = delegate().execute(ctx, req);
-            res.completionFuture().handle((unused, cause) -> {
+            res.whenComplete().handle((unused, cause) -> {
                 numActiveRequests.decrementAndGet();
                 return null;
             });
@@ -244,7 +244,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
             try (SafeCloseable ignored = ctx.push()) {
                 try {
                     final O actualRes = delegate().execute(ctx, req);
-                    actualRes.completionFuture().handleAsync((unused, cause) -> {
+                    actualRes.whenComplete().handleAsync((unused, cause) -> {
                         numActiveRequests.decrementAndGet();
                         drain();
                         return null;

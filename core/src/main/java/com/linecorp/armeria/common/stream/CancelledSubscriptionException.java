@@ -22,7 +22,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.Flags;
 
 /**
- * A {@link RuntimeException} that is raised to notify {@link StreamMessage#completionFuture()} when a
+ * A {@link RuntimeException} that is raised to notify {@link StreamMessage#whenComplete()} when a
  * {@link Subscriber} has cancelled its {@link Subscription}.
  */
 public final class CancelledSubscriptionException extends RuntimeException {

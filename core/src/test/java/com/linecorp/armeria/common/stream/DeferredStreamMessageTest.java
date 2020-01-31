@@ -46,7 +46,7 @@ class DeferredStreamMessageTest {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         assertThat(m.isOpen()).isTrue();
         assertThat(m.isEmpty()).isFalse();
-        assertThat(m.completionFuture()).isNotDone();
+        assertThat(m.whenComplete()).isNotDone();
     }
 
     @Test
@@ -173,8 +173,8 @@ class DeferredStreamMessageTest {
                                                                    : AbortedStreamException.class;
         assertThat(m.isOpen()).isFalse();
         assertThat(m.isEmpty()).isTrue();
-        assertThat(m.completionFuture()).isCompletedExceptionally();
-        assertThatThrownBy(() -> m.completionFuture().get())
+        assertThat(m.whenComplete()).isCompletedExceptionally();
+        assertThatThrownBy(() -> m.whenComplete().get())
                 .hasCauseInstanceOf(causeType);
     }
 
@@ -204,11 +204,11 @@ class DeferredStreamMessageTest {
 
         assertThat(m.isOpen()).isFalse();
         assertThat(m.isEmpty()).isFalse();
-        assertThat(m.completionFuture()).isCompletedWithValue(null);
+        assertThat(m.whenComplete()).isCompletedWithValue(null);
 
         assertThat(d.isOpen()).isFalse();
         assertThat(d.isEmpty()).isFalse();
-        assertThat(d.completionFuture()).isCompletedWithValue(null);
+        assertThat(d.whenComplete()).isCompletedWithValue(null);
     }
 
     @Test
@@ -232,11 +232,11 @@ class DeferredStreamMessageTest {
 
         assertThat(m.isOpen()).isFalse();
         assertThat(m.isEmpty()).isFalse();
-        assertThat(m.completionFuture()).hasFailedWithThrowableThat().isSameAs(exception);
+        assertThat(m.whenComplete()).hasFailedWithThrowableThat().isSameAs(exception);
 
         assertThat(d.isOpen()).isFalse();
         assertThat(d.isEmpty()).isFalse();
-        assertThat(d.completionFuture()).hasFailedWithThrowableThat().isSameAs(exception);
+        assertThat(d.whenComplete()).hasFailedWithThrowableThat().isSameAs(exception);
     }
 
     private static class RecordingSubscriber implements Subscriber<String> {

@@ -195,7 +195,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             req.abort(CancelledSubscriptionException.get());
             ctx.logBuilder().startRequest(channel, protocol);
             ctx.logBuilder().requestHeaders(req.headers());
-            req.completionFuture().handle((unused, cause) -> {
+            req.whenComplete().handle((unused, cause) -> {
                 if (cause == null) {
                     ctx.logBuilder().endRequest();
                 } else {
@@ -203,7 +203,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 }
                 return null;
             });
-            res.completionFuture().handle((unused, cause) -> {
+            res.whenComplete().handle((unused, cause) -> {
                 if (cause == null) {
                     ctx.logBuilder().endResponse();
                 } else {

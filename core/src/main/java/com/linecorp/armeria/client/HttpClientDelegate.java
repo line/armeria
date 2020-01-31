@@ -244,7 +244,7 @@ final class HttpClientDelegate implements HttpClient {
                     // If pipelining is enabled, return as soon as the request is fully sent.
                     // If pipelining is disabled, return after the response is fully received.
                     final CompletableFuture<Void> completionFuture =
-                            factory.useHttp1Pipelining() ? req.completionFuture() : res.completionFuture();
+                            factory.useHttp1Pipelining() ? req.whenComplete() : res.whenComplete();
                     completionFuture.handle((ret, cause) -> {
                         pooledChannel.release();
                         return null;

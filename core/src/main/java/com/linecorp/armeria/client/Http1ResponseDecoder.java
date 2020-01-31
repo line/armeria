@@ -72,7 +72,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         final HttpResponseWrapper resWrapper =
                 super.addResponse(id, res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
 
-        resWrapper.completionFuture().handle((unused, cause) -> {
+        resWrapper.whenComplete().handle((unused, cause) -> {
             if (eventLoop.inEventLoop()) {
                 onWrapperCompleted(resWrapper, cause);
             } else {

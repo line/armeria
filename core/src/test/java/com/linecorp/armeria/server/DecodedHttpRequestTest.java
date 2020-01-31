@@ -111,7 +111,7 @@ public class DecodedHttpRequestTest {
                                      .serverConfigurator(sb -> sb.contentPreview(100))
                                      .build();
         final DecodedHttpRequest req = decodedHttpRequest(headers, sctx);
-        req.completionFuture().handle((ret, cause) -> {
+        req.whenComplete().handle((ret, cause) -> {
             sctx.logBuilder().endRequest();
             return null;
         });

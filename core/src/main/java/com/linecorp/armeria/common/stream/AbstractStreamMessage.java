@@ -114,7 +114,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public final CompletableFuture<Void> completionFuture() {
+    public final CompletableFuture<Void> whenComplete() {
         return completionFuture;
     }
 

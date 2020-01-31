@@ -181,7 +181,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public CompletableFuture<Void> completionFuture() {
+    public CompletableFuture<Void> whenComplete() {
         return completionFuture;
     }
 
@@ -240,7 +240,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         private void cancelOrAbort0(boolean cancel) {
-            final CompletableFuture<Void> completionFuture = parent.completionFuture();
+            final CompletableFuture<Void> completionFuture = parent.whenComplete();
             if (completionFuture.isDone()) {
                 return;
             }
@@ -309,7 +309,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             try {
                 subscriber.onError(cause);
             } finally {
-                parent.completionFuture().completeExceptionally(cause);
+                parent.whenComplete().completeExceptionally(cause);
             }
         }
 
@@ -326,7 +326,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             try {
                 subscriber.onComplete();
             } finally {
-                parent.completionFuture().complete(null);
+                parent.whenComplete().complete(null);
             }
         }
     }

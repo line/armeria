@@ -139,7 +139,7 @@ class ConcurrencyLimitingClientTest {
         // Let req2 time out.
         Thread.sleep(1000);
         res2.subscribe(NoopSubscriber.get());
-        assertThatThrownBy(() -> res2.completionFuture().join())
+        assertThatThrownBy(() -> res2.whenComplete().join())
                 .hasCauseInstanceOf(UnprocessedRequestException.class)
                 .hasRootCauseInstanceOf(RequestTimeoutException.class);
         assertThat(res2.isOpen()).isFalse();
@@ -147,7 +147,7 @@ class ConcurrencyLimitingClientTest {
         // req1 should not time out because it's been delegated already.
         res1.subscribe(NoopSubscriber.get());
         assertThat(res1.isOpen()).isTrue();
-        assertThat(res1.completionFuture()).isNotDone();
+        assertThat(res1.whenComplete()).isNotDone();
 
         // Close req1 and make sure req2 does not affect numActiveRequests.
         actualRes1.close();
@@ -173,7 +173,7 @@ class ConcurrencyLimitingClientTest {
         res.subscribe(NoopSubscriber.get());
 
         assertThat(res.isOpen()).isFalse();
-        assertThatThrownBy(() -> res.completionFuture().get()).hasCauseInstanceOf(Exception.class);
+        assertThatThrownBy(() -> res.whenComplete().get()).hasCauseInstanceOf(Exception.class);
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
 
@@ -229,7 +229,7 @@ class ConcurrencyLimitingClientTest {
     private static void closeAndDrain(HttpResponseWriter actualRes, HttpResponse deferredRes) {
         actualRes.close();
         deferredRes.subscribe(NoopSubscriber.get());
-        deferredRes.completionFuture().join();
+        deferredRes.whenComplete().join();
         waitForEventLoop();
     }
 

@@ -105,7 +105,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
      * Returns the {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.
      */
     @Override
-    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+    public CompletableFuture<List<Endpoint>> whenReady() {
         return initialEndpointsFuture;
     }
 
