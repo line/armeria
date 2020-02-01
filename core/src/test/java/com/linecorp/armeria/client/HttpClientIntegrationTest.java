@@ -61,7 +61,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
 import com.linecorp.armeria.client.encoding.DecodingClient;
-import com.linecorp.armeria.client.encoding.DeflateStreamDecoderFactory;
+import com.linecorp.armeria.client.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -485,7 +485,7 @@ class HttpClientIntegrationTest {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .factory(clientFactory)
                                           .decorator(DecodingClient.newDecorator(
-                                                  new DeflateStreamDecoderFactory()))
+                                                  StreamDecoderFactory.deflate()))
                                           .build();
 
         final AggregatedHttpResponse response =
@@ -500,7 +500,7 @@ class HttpClientIntegrationTest {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .factory(clientFactory)
                                           .decorator(DecodingClient.newDecorator(
-                                                  new DeflateStreamDecoderFactory()))
+                                                  StreamDecoderFactory.deflate()))
                                           .build();
 
         final AggregatedHttpResponse response =

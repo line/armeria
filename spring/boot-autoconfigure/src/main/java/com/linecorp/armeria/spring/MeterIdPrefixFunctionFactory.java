@@ -27,10 +27,20 @@ public interface MeterIdPrefixFunctionFactory {
 
     /**
      * The default {@link MeterIdPrefixFunctionFactory} instance.
+     *
+     * @deprecated Use {@link #ofDefault()}.
      */
-    MeterIdPrefixFunctionFactory DEFAULT = (type, serviceName) ->
-            MeterIdPrefixFunction.ofDefault("armeria." + requireNonNull(type, "type"))
-                                 .withTags("service", requireNonNull(serviceName, "serviceName"));
+    @Deprecated
+    MeterIdPrefixFunctionFactory DEFAULT = ofDefault();
+
+    /**
+     * Returns the default {@link MeterIdPrefixFunctionFactory} instance.
+     */
+    static MeterIdPrefixFunctionFactory ofDefault() {
+        return (type, serviceName) ->
+                MeterIdPrefixFunction.ofDefault("armeria." + requireNonNull(type, "type"))
+                                     .withTags("service", requireNonNull(serviceName, "serviceName"));
+    }
 
     /**
      * Returns the {@link MeterIdPrefixFunction} for the specified service name.

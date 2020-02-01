@@ -22,7 +22,11 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 /**
  * A {@link StreamDecoderFactory} which supports the 'gzip' encoding.
  */
-public class GzipStreamDecoderFactory implements StreamDecoderFactory {
+final class GzipStreamDecoderFactory implements StreamDecoderFactory {
+
+    static final GzipStreamDecoderFactory INSTANCE = new GzipStreamDecoderFactory();
+
+    private GzipStreamDecoderFactory() {}
 
     @Override
     public String encodingHeaderValue() {

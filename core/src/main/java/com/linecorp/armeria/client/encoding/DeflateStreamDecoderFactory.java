@@ -22,7 +22,11 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 /**
  * A {@link StreamDecoderFactory} which supports the 'deflate' encoding.
  */
-public class DeflateStreamDecoderFactory implements StreamDecoderFactory {
+final class DeflateStreamDecoderFactory implements StreamDecoderFactory {
+
+    static final DeflateStreamDecoderFactory INSTANCE = new DeflateStreamDecoderFactory();
+
+    private DeflateStreamDecoderFactory() {}
 
     @Override
     public String encodingHeaderValue() {
