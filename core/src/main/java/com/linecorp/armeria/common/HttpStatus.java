@@ -526,6 +526,13 @@ public final class HttpStatus implements Comparable<HttpStatus> {
         return codeClass().equals(HttpStatusClass.SERVER_ERROR);
     }
 
+    /**
+     * Returns whether the {@link HttpStatus} is an error
+     */
+    public boolean isError(){
+        return isClientError() || isClientError();
+    }
+
     @Override
     public int hashCode() {
         return code();
