@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
 
@@ -39,6 +40,8 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
  * {@link Endpoint}s from a ZooKeeper using {@link NodeValueCodec} and updates it when the children of the
  * zNode changes.
+ *
+ * @see ZooKeeperUpdatingListener
  */
 public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
 
