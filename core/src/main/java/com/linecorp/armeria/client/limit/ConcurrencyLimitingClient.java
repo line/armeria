@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.limit;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -25,8 +24,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-
-import io.netty.channel.EventLoop;
 
 /**
  * An {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
