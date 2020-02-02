@@ -16,37 +16,71 @@
 
 package com.linecorp.armeria.common;
 
+import static java.lang.reflect.Modifier.isFinal;
+import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertNotNull;
+
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.FluentIterable;
+
 /**
- * Test sync with MediaType and MediaTypeNames
+ * Test sync with MediaType and MediaTypeNames.
  */
 class MediaTypeNamesTest {
 
+    // reflection
     @Test
     void matchMediaTypeToMediaTypeNames() throws Exception {
-        // ANY Type
-        assertEquals(MediaTypeNames.ANY_TYPE, MediaType.ANY_TYPE.toString());
+        final FluentIterable<Field> mediaTypeFields = getConstantFields(MediaType.class);
+        final FluentIterable<Field> mediaTypeNamesFields = getConstantFields(MediaTypeNames.class);
 
-        // text type
-        assertEquals(MediaTypeNames.EVENT_STREAM, MediaType.EVENT_STREAM.toString());
-        assertEquals(MediaTypeNames.HTML_UTF_8, MediaType.HTML_UTF_8.toString());
+        final Map<String, MediaType> mediaTypeConstantsMap =
+                getConstantFieldMap(mediaTypeFields, MediaType.class);
+        final Map<String, String> mediaTypeNamesConstantsMap =
+                getConstantFieldMap(mediaTypeNamesFields, String.class);
 
-        // image type
-        assertEquals(MediaTypeNames.ICO, MediaType.ICO.toString());
-        assertEquals(MediaTypeNames.SVG_UTF_8, MediaType.SVG_UTF_8.toString());
+        for (Entry<String, MediaType> mediaTypeEntry : mediaTypeConstantsMap.entrySet()) {
+            final String mediaTypeName = mediaTypeNamesConstantsMap.get(mediaTypeEntry.getKey());
+            assertNotNull("MediaTypeName should be defined in MediaType constants", mediaTypeName);
+            assertEquals(mediaTypeName, mediaTypeEntry.getValue().toString());
+        }
+    }
 
-        // audio type
-        assertEquals(MediaTypeNames.MP4_AUDIO, MediaType.MP4_AUDIO.toString());
+    // reflection
+    @SuppressWarnings("Guava")
+    private static <T> FluentIterable<Field> getConstantFields(Class<T> clazz) {
+        return FluentIterable.from(asList(clazz.getDeclaredFields())).filter(input -> {
+            final int modifiers = input.getModifiers();
+            return isPublic(modifiers) &&
+                   isStatic(modifiers) &&
+                   isFinal(modifiers) &&
+                   String.class.equals(input.getType());
+        });
+    }
 
-        // video type
-        assertEquals(MediaTypeNames.WMV, MediaType.WMV.toString());
-
-        // application type
-        assertEquals(MediaTypeNames.JOSE_JSON, MediaType.JOSE_JSON.toString());
-        assertEquals(MediaTypeNames.JSON_UTF_8, MediaType.JSON_UTF_8.toString());
+    // reflection
+    @SuppressWarnings("Guava")
+    private static <T> Map<String, T> getConstantFieldMap(FluentIterable<Field> iterable, Class<T> clazz) {
+        final Map<String, T> constantFieldMap = new HashMap<String, T>();
+        iterable.stream().forEach(field -> {
+            final String fieldName = field.getName();
+            final T fieldValue;
+            try {
+                fieldValue = (T) field.get(null);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            constantFieldMap.put(fieldName, fieldValue);
+        });
+        return constantFieldMap;
     }
 }
