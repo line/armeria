@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 /**
  * An {@link InvalidResponseException} raised when a client received a response with invalid headers.
  */
-public class InvalidResponseHeadersException extends InvalidResponseException {
+public final class InvalidResponseHeadersException extends InvalidResponseException {
 
     private static final long serialVersionUID = -1349209911680323202L;
 
@@ -43,17 +43,6 @@ public class InvalidResponseHeadersException extends InvalidResponseException {
      */
     public InvalidResponseHeadersException(ResponseHeaders headers, @Nullable Throwable cause) {
         super(requireNonNull(headers, "headers").toString(), cause);
-        this.headers = headers;
-    }
-
-    /**
-     * Creates a new instance with the specified {@link ResponseHeaders}, {@code cause},
-     * suppression enabled or disabled, and writable stack trace enabled or disabled.
-     */
-    protected InvalidResponseHeadersException(ResponseHeaders headers, @Nullable Throwable cause,
-                                              boolean enableSuppression, boolean writableStackTrace) {
-        super(requireNonNull(headers, "headers").toString(), cause,
-              enableSuppression, writableStackTrace);
         this.headers = headers;
     }
 

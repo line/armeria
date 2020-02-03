@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 /**
  * A builder for creating a new {@link HealthCheckedEndpointGroup} that sends HTTP health check requests.
  */
-public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndpointGroupBuilder {
+public final class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndpointGroupBuilder {
 
     private final String path;
     private boolean useGet;

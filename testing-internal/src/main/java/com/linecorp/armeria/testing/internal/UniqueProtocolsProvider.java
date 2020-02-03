@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.SessionProtocol;
  * An {@link ArgumentsProvider} that provides all the unique {@link SessionProtocol} Armeria supports, which is
  * a common test parameter.
  */
-public class UniqueProtocolsProvider implements ArgumentsProvider {
+public final class UniqueProtocolsProvider implements ArgumentsProvider {
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
         return Stream.of(SessionProtocol.H1C, SessionProtocol.H1, SessionProtocol.H2C, SessionProtocol.H2)

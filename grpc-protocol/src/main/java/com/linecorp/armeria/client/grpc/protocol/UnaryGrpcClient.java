@@ -57,7 +57,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  * <p>This client does not support compression. If you need support for compression, please consider using
  * normal gRPC stubs or file a feature request.
  */
-public class UnaryGrpcClient {
+public final class UnaryGrpcClient {
 
     private final WebClient webClient;
 

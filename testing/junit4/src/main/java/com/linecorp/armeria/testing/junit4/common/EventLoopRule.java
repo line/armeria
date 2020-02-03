@@ -37,7 +37,7 @@ import io.netty.channel.EventLoopGroup;
  *
  * @see EventLoopGroupRule
  */
-public class EventLoopRule extends AbstractEventLoopGroupRule {
+public final class EventLoopRule extends AbstractEventLoopGroupRule {
 
     /**
      * Creates a new {@link TestRule} that provides an {@link EventLoop}.

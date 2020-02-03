@@ -27,7 +27,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * A default implementation of a {@link RequestConverterFunction} which converts a text body of
  * the {@link AggregatedHttpRequest} to a {@link String}.
  */
-public class StringRequestConverterFunction implements RequestConverterFunction {
+public final class StringRequestConverterFunction implements RequestConverterFunction {
     /**
      * Converts the specified {@link AggregatedHttpRequest} to a {@link String}.
      */

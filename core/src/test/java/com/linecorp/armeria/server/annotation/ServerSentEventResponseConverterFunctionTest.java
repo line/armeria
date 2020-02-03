@@ -108,7 +108,7 @@ public class ServerSentEventResponseConverterFunctionTest {
                           ServerSentEvent.ofData("")));
         StepVerifier.create(response)
                     .expectNext(EVENT_STREAM_HEADER)
-                    .expectNext(HttpData.EMPTY_DATA)
+                    .expectNext(HttpData.empty())
                     .expectNext(HttpData.ofUtf8("id\n\n"))
                     .expectNext(HttpData.ofUtf8("event\n\n"))
                     .expectNext(HttpData.ofUtf8("data\n\n"))

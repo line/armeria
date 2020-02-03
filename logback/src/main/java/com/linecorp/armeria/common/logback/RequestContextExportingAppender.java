@@ -52,8 +52,10 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory;
  * <p>Read '<a href="https://line.github.io/armeria/advanced-logging.html">Logging contextual information</a>'
  * for more information.
  */
-public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<ILoggingEvent>
-                                             implements AppenderAttachable<ILoggingEvent> {
+public final class RequestContextExportingAppender
+        extends UnsynchronizedAppenderBase<ILoggingEvent>
+        implements AppenderAttachable<ILoggingEvent> {
+
     static {
         if (InternalLoggerFactory.getDefaultFactory() == null) {
             // Can happen due to initialization order.

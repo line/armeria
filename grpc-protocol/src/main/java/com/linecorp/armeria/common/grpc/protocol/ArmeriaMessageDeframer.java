@@ -94,7 +94,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * as is in {@code buf} to optimize parsing. For compressed messages, we will parse incrementally
      * and thus return a {@link InputStream} in {@code stream}.
      */
-    public static class DeframedMessage {
+    public static final class DeframedMessage {
         private final int type;
 
         @Nullable
