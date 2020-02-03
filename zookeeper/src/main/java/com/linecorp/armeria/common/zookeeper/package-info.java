@@ -14,7 +14,7 @@
  * under the License.
  */
 /**
- * Common classes will be used by Server and Client implementations.
+ * <a href="https://zookeeper.apache.org/">ZooKeeper</a>-related common classes.
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.zookeeper;

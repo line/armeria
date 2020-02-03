@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.zip.GZIPOutputStream;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -44,10 +44,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
 
-public class HttpDecodedResponseTest {
+class HttpDecodedResponseTest {
 
     private static final Map<String, StreamDecoderFactory> DECODERS =
-            ImmutableMap.of("gzip", new GzipStreamDecoderFactory());
+            ImmutableMap.of("gzip", StreamDecoderFactory.gzip());
 
     private static final ResponseHeaders RESPONSE_HEADERS =
             ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_ENCODING, "gzip");
@@ -65,7 +65,7 @@ public class HttpDecodedResponseTest {
     }
 
     @Test
-    public void unpooledPayload_unpooledDrain() {
+    void unpooledPayload_unpooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
@@ -75,7 +75,7 @@ public class HttpDecodedResponseTest {
     }
 
     @Test
-    public void pooledPayload_unpooledDrain() {
+    void pooledPayload_unpooledDrain() {
         final ByteBufHttpData payload = new ByteBufHttpData(
                 ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
@@ -88,7 +88,7 @@ public class HttpDecodedResponseTest {
 
     // Users that request pooled objects still always need to be ok with unpooled ones.
     @Test
-    public void unpooledPayload_pooledDrain() {
+    void unpooledPayload_pooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
@@ -98,7 +98,7 @@ public class HttpDecodedResponseTest {
     }
 
     @Test
-    public void pooledPayload_pooledDrain() {
+    void pooledPayload_pooledDrain() {
         final ByteBufHttpData payload = new ByteBufHttpData(
                 ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);

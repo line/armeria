@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.limit;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -24,8 +24,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-
-import io.netty.channel.EventLoop;
 
 /**
  * An {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
@@ -69,26 +67,8 @@ public class ConcurrencyLimitingClient
     }
 
     @Override
-    protected Deferred<HttpResponse> defer(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final EventLoop eventLoop = ctx.eventLoop();
-        return new Deferred<HttpResponse>() {
-            private final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            private final HttpResponse res = HttpResponse.from(responseFuture, eventLoop);
-
-            @Override
-            public HttpResponse response() {
-                return res;
-            }
-
-            @Override
-            public void delegate(HttpResponse response) {
-                responseFuture.complete(response);
-            }
-
-            @Override
-            public void close(Throwable cause) {
-                responseFuture.completeExceptionally(cause);
-            }
-        };
+    protected HttpResponse newDeferredResponse(ClientRequestContext ctx,
+                                               CompletionStage<HttpResponse> resFuture) throws Exception {
+        return HttpResponse.from(resFuture, ctx.eventLoop());
     }
 }

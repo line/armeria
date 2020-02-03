@@ -14,7 +14,7 @@
  * under the License.
  */
 /**
- * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
+ * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} for automatic service discovery.
  */
 @NonNullByDefault
 package com.linecorp.armeria.client.zookeeper;

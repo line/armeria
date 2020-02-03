@@ -33,7 +33,8 @@ import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
 
 /**
- * Default {@link RequestContext} implementation.
+ * A skeletal {@link RequestContext} implementation that helps to implement a non-wrapping
+ * {@link RequestContext}.
  */
 public abstract class NonWrappingRequestContext implements RequestContext {
 

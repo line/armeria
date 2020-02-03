@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common.thrift;
 
 import static java.util.Objects.requireNonNull;
@@ -24,6 +23,7 @@ import org.apache.thrift.TBase;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
  * A container of a Thrift one-way or two-way call object ({@link TBase}) and its header ({@link TMessage}).
  * It is exported to {@link RequestLog#requestContent()} when a Thrift call is processed.
  */
+@JsonSerialize(using = ThriftJacksonSerializers.ThriftCallJsonSerializer.class)
 public final class ThriftCall extends ThriftMessage {
 
     private final TBase<?, ?> args;

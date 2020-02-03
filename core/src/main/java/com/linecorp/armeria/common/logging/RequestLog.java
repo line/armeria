@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -24,6 +26,7 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
@@ -39,6 +42,14 @@ import com.linecorp.armeria.server.logging.ContentPreviewingService;
  * @see RequestLogAccess#ensureComplete()
  */
 public interface RequestLog extends RequestOnlyLog {
+
+    /**
+     * Returns a newly created {@link RequestLogBuilder}.
+     */
+    static RequestLogBuilder builder(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        return new DefaultRequestLog(ctx);
+    }
 
     /**
      * Returns the time when the processing of the response started, in microseconds since the epoch.

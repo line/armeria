@@ -42,8 +42,7 @@ public class DecodingClient extends SimpleDecoratingHttpClient {
      * Creates a new {@link DecodingClient} decorator with the default encodings of 'gzip' and 'deflate'.
      */
     public static Function<? super HttpClient, DecodingClient> newDecorator() {
-        return newDecorator(
-                ImmutableList.of(new GzipStreamDecoderFactory(), new DeflateStreamDecoderFactory()));
+        return newDecorator(ImmutableList.of(StreamDecoderFactory.gzip(), StreamDecoderFactory.deflate()));
     }
 
     /**

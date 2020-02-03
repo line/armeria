@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,24 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.spring;
 
-package com.linecorp.armeria.client.encoding;
+import static java.util.Objects.requireNonNull;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.compression.ZlibWrapper;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
-/**
- * A {@link StreamDecoderFactory} which supports the 'deflate' encoding.
- */
-public class DeflateStreamDecoderFactory implements StreamDecoderFactory {
-
-    @Override
-    public String encodingHeaderValue() {
-        return "deflate";
-    }
-
-    @Override
-    public StreamDecoder newDecoder(ByteBufAllocator alloc) {
-        return new ZlibStreamDecoder(ZlibWrapper.ZLIB, alloc);
+enum DefaultMeterIdPrefixFunctionFactory implements MeterIdPrefixFunctionFactory {
+    INSTANCE {
+        @Override
+        public MeterIdPrefixFunction get(String type, String serviceName) {
+            return MeterIdPrefixFunction.ofDefault("armeria." + requireNonNull(type, "type"))
+                                        .withTags("service", requireNonNull(serviceName, "serviceName"));
+        }
     }
 }
