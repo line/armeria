@@ -58,7 +58,7 @@ public interface ContentPreviewerFactory {
      *
      * @param function the {@link Function} to create a {@link ContentPreviewer}. The {@link Charset} which
      *                 is the argument of the {@link Function} will be retrieved from
-     *                 {@link MediaType#charset()} or {@code null} if the charset parameter is
+     *                 {@link MediaType#charset()} or {@link #defaultCharset()} if the charset parameter is
      *                 not specified in the {@code "content-type"} header.
      * @param contentTypes the content types
      */
@@ -74,7 +74,7 @@ public interface ContentPreviewerFactory {
      *
      * @param function the {@link Function} to create a {@link ContentPreviewer}. The {@link Charset} which
      *                 is the argument of the {@link Function} will be retrieved from
-     *                 {@link MediaType#charset()} or {@code null} if the charset parameter is
+     *                 {@link MediaType#charset()} or {@link #defaultCharset()} if the charset parameter is
      *                 not specified in the {@code "content-type"} header.
      * @param contentTypes the content types
      */
@@ -92,7 +92,7 @@ public interface ContentPreviewerFactory {
      *
      * @param function the {@link Function} to create a {@link ContentPreviewer}. The {@link Charset} which
      *                 is the argument of the {@link Function} will be retrieved from
-     *                 {@link MediaType#charset()} or {@code null} if the charset parameter is
+     *                 {@link MediaType#charset()} or {@link #defaultCharset()} if the charset parameter is
      *                 not specified in the {@code "content-type"} header.
      * @param contentTypes the content types
      */
@@ -110,7 +110,7 @@ public interface ContentPreviewerFactory {
             }
             for (MediaType candidate : candidates) {
                 if (contentType.is(candidate)) {
-                    return function.apply(contentType.charset());
+                    return function.apply(contentType.charset(defaultCharset()));
                 }
             }
 
@@ -123,7 +123,7 @@ public interface ContentPreviewerFactory {
      * content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link Map#keySet()}
      * in the {@link Map}. The corresponding value {@link Function} will be used to create a
      * {@link ContentPreviewer}. The {@link Charset} which is the argument of the {@link Function} will be
-     * retrieved from {@link MediaType#charset()} or {@code null} if the charset parameter is
+     * retrieved from {@link MediaType#charset()} or {@link #defaultCharset()} if the charset parameter is
      * not specified in the {@code "content-type"} header.
      */
     static ContentPreviewerFactory of(

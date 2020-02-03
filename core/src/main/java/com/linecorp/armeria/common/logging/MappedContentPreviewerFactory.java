@@ -54,7 +54,7 @@ final class MappedContentPreviewerFactory implements ContentPreviewerFactory {
         }
         for (Entry<MediaType, Function<? super Charset, ? extends ContentPreviewer>> entry : entries) {
             if (contentType.is(entry.getKey())) {
-                return entry.getValue().apply(contentType.charset());
+                return entry.getValue().apply(contentType.charset(ContentPreviewerFactory.defaultCharset()));
             }
         }
         return ContentPreviewer.disabled();

@@ -50,11 +50,11 @@ public interface ContentPreviewer {
      * Returns a new {@link ContentPreviewer} which produces the text with the {@code maxLength} limit.
      *
      * @param maxLength the maximum length of the preview
-     * @param charset the default charset used when a charset is not specified in the
-     *                       {@code "content-type"} header
+     * @param charset the charset used to produce the preview
      */
     static ContentPreviewer ofText(int maxLength, Charset charset) {
         checkArgument(maxLength > 0, "maxLength : %d (expected: > 0)", maxLength);
+        requireNonNull(charset, "charset");
         return new StringContentPreviewer(maxLength, charset);
     }
 
