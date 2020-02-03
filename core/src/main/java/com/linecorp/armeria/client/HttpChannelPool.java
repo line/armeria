@@ -285,7 +285,6 @@ final class HttpChannelPool implements AsyncCloseable {
                     } else {
                         promise.complete(pch);
                     }
-
                 } else {
                     // Try to acquire again because the connection was not HTTP/2.
                     // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
