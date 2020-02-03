@@ -62,6 +62,7 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -79,6 +80,7 @@ import io.netty.buffer.Unpooled;
  * abstraction in favor of using {@link ByteBuf} directly, and allowing the delivery of uncompressed frames as
  * a {@link ByteBuf} to optimize message parsing.
  */
+@UnstableApi
 public class ArmeriaMessageDeframer implements AutoCloseable {
 
     private static final String DEBUG_STRING = ArmeriaMessageDeframer.class.getName();

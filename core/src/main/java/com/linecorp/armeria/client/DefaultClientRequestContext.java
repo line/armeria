@@ -48,13 +48,13 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -67,6 +67,7 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ClientRequestContext} implementation.
  */
+@UnstableApi
 public class DefaultClientRequestContext extends NonWrappingRequestContext implements ClientRequestContext {
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
@@ -86,7 +87,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Nullable
     private final ServiceRequestContext root;
 
-    private final DefaultRequestLog log;
+    private final RequestLogBuilder log;
 
     private long writeTimeoutMillis;
     private long responseTimeoutMillis;
@@ -170,7 +171,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         this.fragment = fragment;
         this.root = root;
 
-        log = new DefaultRequestLog(this);
+        log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
         writeTimeoutMillis = options.writeTimeoutMillis();
@@ -307,7 +308,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         fragment = ctx.fragment();
         root = ctx.root();
 
-        log = new DefaultRequestLog(this);
+        log = RequestLog.builder(this);
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         responseTimeoutMillis = ctx.responseTimeoutMillis();
@@ -364,7 +365,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Nullable
     protected Channel channel() {
         if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.channel();
+            return log.partial().channel();
         } else {
             return null;
         }
@@ -380,7 +381,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public SSLSession sslSession() {
         if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.sslSession();
+            return log.partial().sslSession();
         } else {
             return null;
         }

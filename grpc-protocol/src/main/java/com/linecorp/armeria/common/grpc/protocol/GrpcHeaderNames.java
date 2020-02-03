@@ -17,12 +17,14 @@
 package com.linecorp.armeria.common.grpc.protocol;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.netty.util.AsciiString;
 
 /**
  * gRPC-related HTTP header names.
  */
+@UnstableApi
 public final class GrpcHeaderNames {
     /**
      * {@code "grpc-status"}.

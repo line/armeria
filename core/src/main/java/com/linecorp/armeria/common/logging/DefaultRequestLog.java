@@ -59,11 +59,8 @@ import io.netty.channel.Channel;
 
 /**
  * Default {@link RequestLog} implementation.
- *
- * @deprecated Use {@link RequestLog#builder(RequestContext)}.
  */
-@Deprecated
-public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
+final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultRequestLog.class);
 
@@ -160,13 +157,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private String responseStr;
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link RequestLog#builder(RequestContext)}.
-     */
-    @Deprecated
-    public DefaultRequestLog(RequestContext ctx) {
+    DefaultRequestLog(RequestContext ctx) {
         this.ctx = requireNonNull(ctx, "ctx");
     }
 

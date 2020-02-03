@@ -17,10 +17,12 @@
 package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
  * Creates a new {@link ClientFactory} dynamically via Java SPI (Service Provider Interface).
  */
+@UnstableApi
 @FunctionalInterface
 public interface ClientFactoryProvider {
     /**

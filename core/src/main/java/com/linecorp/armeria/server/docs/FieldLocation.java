@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.server.docs;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * The location of a field.
  */
+@UnstableApi
 public enum FieldLocation {
 
     /**

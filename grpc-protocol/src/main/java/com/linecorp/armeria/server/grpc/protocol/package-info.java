@@ -25,7 +25,9 @@
  * <p>The classes in this package, unlike other packages, are not guaranteed to be backward compatible since
  * it's an advanced API.</p>
  */
+@UnstableApi
 @NonNullByDefault
 package com.linecorp.armeria.server.grpc.protocol;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.util.UnstableApi;

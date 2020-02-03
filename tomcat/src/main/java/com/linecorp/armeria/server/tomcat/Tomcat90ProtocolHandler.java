@@ -28,10 +28,13 @@ import org.apache.coyote.ProtocolHandler;
 import org.apache.coyote.UpgradeProtocol;
 import org.apache.tomcat.util.net.SSLHostConfig;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * A {@link ProtocolHandler} for Tomcat 8.5 and above.
  * Do not use; loaded and instantiated by Tomcat via reflection.
  */
+@UnstableApi
 public final class Tomcat90ProtocolHandler implements ProtocolHandler {
 
     private static final AtomicInteger nextId = new AtomicInteger();

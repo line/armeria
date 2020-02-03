@@ -52,6 +52,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.RouteUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.Route;
@@ -80,6 +81,7 @@ import com.linecorp.armeria.server.docs.TypeSignature;
 /**
  * A {@link DocServicePlugin} implementation that supports the {@link AnnotatedService}.
  */
+@UnstableApi
 public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting

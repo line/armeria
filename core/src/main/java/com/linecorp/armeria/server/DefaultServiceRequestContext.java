@@ -50,11 +50,12 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -66,6 +67,7 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ServiceRequestContext} implementation.
  */
+@UnstableApi
 public class DefaultServiceRequestContext extends NonWrappingRequestContext implements ServiceRequestContext {
 
     private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders>
@@ -89,7 +91,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final InetAddress clientAddress;
 
-    private final DefaultRequestLog log;
+    private final RequestLogBuilder log;
 
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
@@ -150,7 +152,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
-        log = new DefaultRequestLog(this);
+        log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
         log.session(ch, sessionProtocol, sslSession, null);
         log.requestHeaders(req.headers());

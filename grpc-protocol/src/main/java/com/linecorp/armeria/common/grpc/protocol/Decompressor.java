@@ -34,9 +34,12 @@ package com.linecorp.armeria.common.grpc.protocol;
 import java.io.IOException;
 import java.io.InputStream;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * Represents a message decompressor.
  */
+@UnstableApi
 public interface Decompressor {
 
     // Copied from `io.grpc.Decompressor` at:

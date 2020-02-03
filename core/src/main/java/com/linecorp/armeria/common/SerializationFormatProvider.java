@@ -26,9 +26,12 @@ import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * Registers the {@link SerializationFormat}s dynamically via Java SPI (Service Provider Interface).
  */
+@UnstableApi
 public abstract class SerializationFormatProvider {
 
     /**
