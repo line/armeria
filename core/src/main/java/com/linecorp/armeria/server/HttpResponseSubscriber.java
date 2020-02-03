@@ -289,6 +289,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     }
 
     private void write(HttpObject o, boolean endOfStream) {
+        // if the first bytes transferred, the stream must be open
         if (loggedResponseHeadersFirstBytesTransferred &&
             !responseEncoder.isWritable(req.id(), req.streamId())) {
             if (reqCtx.sessionProtocol().isMultiplex()) {
