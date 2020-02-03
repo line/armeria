@@ -21,15 +21,11 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 /**
  * Jackson {@link JsonDeserializer} for {@link ResponseHeaders}.
  */
-public final class ResponseHeadersJsonDeserializer
-        extends AbstractHttpHeadersJsonDeserializer<ResponseHeaders> {
+final class ResponseHeadersJsonDeserializer extends AbstractHttpHeadersJsonDeserializer<ResponseHeaders> {
 
     private static final long serialVersionUID = 6980263543152792445L;
 
-    /**
-     * Creates a new instance.
-     */
-    public ResponseHeadersJsonDeserializer() {
+    ResponseHeadersJsonDeserializer() {
         super(ResponseHeaders.class);
     }
 

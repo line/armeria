@@ -21,14 +21,14 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 /**
  * Jackson {@link JsonDeserializer} for {@link HttpHeaders}.
  */
-public final class HttpHeadersJsonDeserializer extends AbstractHttpHeadersJsonDeserializer<HttpHeaders> {
+final class HttpHeadersJsonDeserializer extends AbstractHttpHeadersJsonDeserializer<HttpHeaders> {
 
     private static final long serialVersionUID = -4704864616526248652L;
 
     /**
      * Creates a new instance.
      */
-    public HttpHeadersJsonDeserializer() {
+    HttpHeadersJsonDeserializer() {
         super(HttpHeaders.class);
     }
 

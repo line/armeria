@@ -28,14 +28,14 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 /**
  * Jackson {@link JsonDeserializer} for {@link MediaType}.
  */
-public final class MediaTypeJsonDeserializer extends StdDeserializer<MediaType> {
+final class MediaTypeJsonDeserializer extends StdDeserializer<MediaType> {
 
     private static final long serialVersionUID = 2081299438299133097L;
 
     /**
      * Creates a new instance.
      */
-    public MediaTypeJsonDeserializer() {
+    MediaTypeJsonDeserializer() {
         super(MediaType.class);
     }
 
