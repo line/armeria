@@ -84,7 +84,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
     private boolean isSubscriptionCompleted;
-
     private boolean loggedRequestFirstBytesTransferred;
 
     HttpRequestSubscriber(Channel ch, SocketAddress remoteAddress, HttpObjectEncoder encoder,
@@ -132,11 +131,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                     assert subscription != null;
                     subscription.request(1);
                 }
-                    return;
-                }
+                return;
+            }
 
             fail(future.cause());
-            }
+        }
 
         final Throwable cause = future.cause();
         if (!(cause instanceof ClosedPublisherException)) {

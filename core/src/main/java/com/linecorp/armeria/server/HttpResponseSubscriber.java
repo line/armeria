@@ -349,7 +349,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     return;
                 }
 
-                fail(f);
+                fail(f.cause());
+                HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
             }
         });
 
@@ -364,21 +365,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     }
 
     private void fail(Throwable cause) {
-        fail(reqCtx.channel().newFailedFuture(cause));
-    }
-
-    private void fail(ChannelFuture failedFuture) {
         if (tryComplete()) {
             setDone();
-            logBuilder().endResponse(failedFuture.cause());
+            logBuilder().endResponse(cause);
             subscription.cancel();
             reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
-        }
-
-        try {
-            HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(failedFuture);
-        } catch (Exception e) {
-            logger.warn("{} Unexpected exception:", failedFuture.channel(), e);
         }
     }
 
