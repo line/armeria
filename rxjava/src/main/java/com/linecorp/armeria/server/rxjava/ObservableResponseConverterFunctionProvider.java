@@ -32,7 +32,7 @@ import io.reactivex.Single;
 /**
  * Provides an {@link ObservableResponseConverterFunction} to annotated services.
  */
-public class ObservableResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
+public final class ObservableResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
     @Nullable
     @Override

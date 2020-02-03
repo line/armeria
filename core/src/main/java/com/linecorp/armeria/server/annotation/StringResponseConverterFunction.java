@@ -36,7 +36,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * A response converter implementation which creates an {@link HttpResponse} with
  * {@code content-type: text/plain}.
  */
-public class StringResponseConverterFunction implements ResponseConverterFunction {
+public final class StringResponseConverterFunction implements ResponseConverterFunction {
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
@@ -72,7 +72,7 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
     private static HttpData toHttpData(@Nullable Object value, Charset charset) {
         if (value == null) {
             // To prevent to convert null value to 'null' string.
-            return HttpData.EMPTY_DATA;
+            return HttpData.empty();
         }
 
         if (value instanceof Iterable) {

@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 
 import io.grpc.DecompressorRegistry;
@@ -55,7 +56,7 @@ public class HttpStreamReaderTest {
     private TransportStatusListener transportStatusListener;
 
     @Mock
-    private com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer deframer;
+    private ArmeriaMessageDeframer deframer;
 
     @Mock
     private Subscription subscription;
@@ -152,7 +153,7 @@ public class HttpStreamReaderTest {
     @Test
     public void clientDone() throws Exception {
         reader.apply(null, null);
-        verify(deframer).deframe(HttpData.EMPTY_DATA, true);
+        verify(deframer).deframe(HttpData.empty(), true);
         verify(deframer).closeWhenComplete();
     }
 

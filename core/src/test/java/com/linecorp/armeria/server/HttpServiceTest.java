@@ -165,7 +165,7 @@ public class HttpServiceTest {
         AggregatedHttpResponse res = client.get("/trailersWithoutData").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
         assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
-        assertThat(res.content()).isSameAs(HttpData.EMPTY_DATA);
+        assertThat(res.content()).isSameAs(HttpData.empty());
 
         res = client.get("/dataAndTrailers").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();

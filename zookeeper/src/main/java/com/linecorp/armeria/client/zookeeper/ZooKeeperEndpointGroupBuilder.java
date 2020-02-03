@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 /**
  * Builds a {@link ZooKeeperEndpointGroup}.
  */
-public class ZooKeeperEndpointGroupBuilder {
+public final class ZooKeeperEndpointGroupBuilder {
 
     @Nullable
     private final CuratorFramework client;

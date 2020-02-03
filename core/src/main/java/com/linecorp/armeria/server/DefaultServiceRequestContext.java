@@ -68,7 +68,9 @@ import io.netty.util.AttributeKey;
  * Default {@link ServiceRequestContext} implementation.
  */
 @UnstableApi
-public class DefaultServiceRequestContext extends NonWrappingRequestContext implements ServiceRequestContext {
+public final class DefaultServiceRequestContext
+        extends NonWrappingRequestContext
+        implements ServiceRequestContext {
 
     private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders>
             additionalResponseHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(

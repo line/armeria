@@ -25,7 +25,7 @@ import io.netty.channel.EventLoopGroup;
 /**
  * A delegate that has common testing methods of {@link EventLoopGroup}.
  */
-public class EventLoopGroupRuleDelegate {
+public final class EventLoopGroupRuleDelegate {
 
     private final int numThreads;
     private final String threadNamePrefix;

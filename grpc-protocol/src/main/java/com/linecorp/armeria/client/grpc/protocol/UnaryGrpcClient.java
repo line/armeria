@@ -59,7 +59,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  * normal gRPC stubs or file a feature request.
  */
 @UnstableApi
-public class UnaryGrpcClient {
+public final class UnaryGrpcClient {
 
     private final WebClient webClient;
 

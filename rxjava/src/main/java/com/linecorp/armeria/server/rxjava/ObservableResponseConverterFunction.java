@@ -42,7 +42,7 @@ import io.reactivex.disposables.Disposable;
  * The types, which publish 0 or 1 object such as {@link Single}, {@link Maybe} and {@link Completable},
  * would not be converted into a {@link Flowable}.
  */
-public class ObservableResponseConverterFunction implements ResponseConverterFunction {
+public final class ObservableResponseConverterFunction implements ResponseConverterFunction {
 
     private final ResponseConverterFunction responseConverter;
     private final ExceptionHandlerFunction exceptionHandler;

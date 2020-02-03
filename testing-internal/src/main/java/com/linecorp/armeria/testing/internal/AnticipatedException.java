@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
 /**
  * A {@link RuntimeException} which is expected to be raised during a test.
  */
-public class AnticipatedException extends RuntimeException {
+public final class AnticipatedException extends RuntimeException {
 
     private static final long serialVersionUID = -3303479723421632825L;
 

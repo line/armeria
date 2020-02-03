@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
 /**
  * A {@link RuntimeException} raised when accessing a {@link RequestLog} property that's not available yet.
  */
-public class RequestLogAvailabilityException extends RuntimeException {
+public final class RequestLogAvailabilityException extends RuntimeException {
 
     private static final long serialVersionUID = 565184697223252595L;
 
@@ -49,14 +49,5 @@ public class RequestLogAvailabilityException extends RuntimeException {
      */
     public RequestLogAvailabilityException(@Nullable Throwable cause) {
         super(cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
-     * disabled, and writable stack trace enabled or disabled.
-     */
-    protected RequestLogAvailabilityException(@Nullable String message, @Nullable Throwable cause,
-                                              boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

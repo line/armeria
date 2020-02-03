@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.util.AbstractOptionValue;
@@ -23,7 +22,7 @@ import com.linecorp.armeria.common.util.AbstractOptionValue;
  *
  * @param <T> the type of the option value
  */
-public class ClientFactoryOptionValue<T> extends AbstractOptionValue<ClientFactoryOption<T>, T> {
+public final class ClientFactoryOptionValue<T> extends AbstractOptionValue<ClientFactoryOption<T>, T> {
     ClientFactoryOptionValue(ClientFactoryOption<T> option, T value) {
         super(option, value);
     }

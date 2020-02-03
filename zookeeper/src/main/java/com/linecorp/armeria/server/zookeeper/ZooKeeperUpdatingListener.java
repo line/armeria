@@ -40,7 +40,7 @@ import com.linecorp.armeria.server.ServerPort;
  * removed. As a result, the clients that use a {@link ZooKeeperEndpointGroup} will be notified, and they will
  * update their endpoint list automatically so that they do not attempt to connect to the unreachable servers.
  */
-public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
+public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     /**
      * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode

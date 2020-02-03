@@ -38,7 +38,7 @@ import io.netty.buffer.Unpooled;
  * general use.
  */
 @UnstableApi
-public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
+public final class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
 
     private final ByteBuf buf;
     private final boolean endOfStream;
