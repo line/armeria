@@ -119,13 +119,18 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      *           and {@link Response} pair.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
+     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
+     * @param requestStartTimeMicros the number of microseconds since the epoch,
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
-    public DefaultClientRequestContext(
+    DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
-            ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+            ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext());
+             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
+             requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -137,13 +142,18 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      *           and {@link Response} pair.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
+     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
+     * @param requestStartTimeMicros the number of microseconds since the epoch,
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
-            ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+            ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext());
+             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
+             requestStartTimeNanos, requestStartTimeMicros);
     }
 
     private DefaultClientRequestContext(
@@ -151,7 +161,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable ServiceRequestContext root) {
+            @Nullable ServiceRequestContext root,
+            long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
 
         this.eventLoop = eventLoop;
@@ -160,6 +171,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         this.root = root;
 
         log = new DefaultRequestLog(this);
+        log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
         writeTimeoutMillis = options.writeTimeoutMillis();
         responseTimeoutMillis = options.responseTimeoutMillis();

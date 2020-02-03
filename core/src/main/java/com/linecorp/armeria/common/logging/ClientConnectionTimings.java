@@ -14,31 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
-
-import static java.util.Objects.requireNonNull;
+package com.linecorp.armeria.common.logging;
 
 import java.util.concurrent.TimeUnit;
-
-import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.TextFormatter;
-
-import io.netty.util.AttributeKey;
 
 /**
  * A holder class which has the timing information about a connection attempt before a client
  * sends a {@link Request}.
+ *
+ * @see RequestLog#connectionTimings()
  */
 public final class ClientConnectionTimings {
-
-    private static final AttributeKey<ClientConnectionTimings> TIMINGS =
-            AttributeKey.valueOf(ClientConnectionTimings.class, "TIMINGS");
 
     @VisibleForTesting
     static final int TO_STRING_BUILDER_CAPACITY = 466;
@@ -52,28 +43,6 @@ public final class ClientConnectionTimings {
     private final long socketConnectDurationNanos;
     private final long pendingAcquisitionStartTimeMicros;
     private final long pendingAcquisitionDurationNanos;
-
-    /**
-     * Returns {@link ClientConnectionTimings} from the specified {@link RequestContext} if exists.
-     *
-     * @see #setTo(RequestContext)
-     */
-    @Nullable
-    public static ClientConnectionTimings get(RequestContext ctx) {
-        requireNonNull(ctx, "ctx");
-        return ctx.attr(TIMINGS);
-    }
-
-    /**
-     * Returns {@link ClientConnectionTimings} from the specified {@link RequestLog} if exists.
-     *
-     * @see #setTo(RequestLog)
-     */
-    @Nullable
-    public static ClientConnectionTimings get(RequestLog log) {
-        requireNonNull(log, "log");
-        return get(log.context());
-    }
 
     /**
      * Returns a newly created {@link ClientConnectionTimingsBuilder}.
@@ -94,28 +63,6 @@ public final class ClientConnectionTimings {
         this.socketConnectDurationNanos = socketConnectDurationNanos;
         this.pendingAcquisitionStartTimeMicros = pendingAcquisitionStartTimeMicros;
         this.pendingAcquisitionDurationNanos = pendingAcquisitionDurationNanos;
-    }
-
-    /**
-     * Sets this {@link ClientConnectionTimings} to the specified {@link RequestContext}.
-     * Note that this method is intended for internal use. Do not use unless you really need to.
-     *
-     * @see #get(RequestContext)
-     */
-    public void setTo(RequestContext ctx) {
-        requireNonNull(ctx, "ctx");
-        ctx.setAttr(TIMINGS, this);
-    }
-
-    /**
-     * Sets this {@link ClientConnectionTimings} to the specified {@link RequestLog}.
-     * Note that this method is intended for internal use. Do not use unless you really need to.
-     *
-     * @see #get(RequestLog)
-     */
-    public void setTo(RequestLog log) {
-        requireNonNull(log, "log");
-        setTo(log.context());
     }
 
     /**

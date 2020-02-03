@@ -14,9 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.client.ClientConnectionTimings.TO_STRING_BUILDER_CAPACITY;
+import static com.linecorp.armeria.common.logging.ClientConnectionTimings.TO_STRING_BUILDER_CAPACITY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;

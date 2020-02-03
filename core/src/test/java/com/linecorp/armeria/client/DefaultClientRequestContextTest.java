@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -214,7 +215,7 @@ class DefaultClientRequestContextTest {
                         HttpMethod.POST, "/foo",
                         HttpHeaderNames.SCHEME, "http",
                         HttpHeaderNames.AUTHORITY, "example.com:8080")),
-                null);
+                null, System.nanoTime(), SystemInfo.currentTimeMicros());
         ctx.init(Endpoint.of("example.com", 8080));
         return ctx;
     }
