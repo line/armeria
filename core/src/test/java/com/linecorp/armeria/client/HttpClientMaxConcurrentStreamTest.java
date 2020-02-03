@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
@@ -24,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,7 +34,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -173,7 +170,7 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @Test
-    public void reproduceViolationOfMaxStreams() throws Exception {
+    public void succeedWhenExceedMaxStreams() throws Exception {
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
                                           .build();
@@ -186,17 +183,8 @@ public class HttpClientMaxConcurrentStreamTest {
             }
         });
 
-        await().untilAsserted(() -> assertThat(responses).hasSize(MAX_CONCURRENT_STREAMS));
+        await().untilAsserted(() -> assertThat(responses).hasSize(MAX_CONCURRENT_STREAMS + 1));
         responses.forEach(response -> response.complete(HttpResponse.of(200)));
         await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
-
-        final CompletableFuture<AggregatedHttpResponse> thrownFuture =
-                receivedResponses.stream().filter(CompletableFuture::isCompletedExceptionally)
-                                 .findFirst().get();
-
-        // TODO: find a better way to validate this.
-        assertThatThrownBy(thrownFuture::join)
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(ClosedSessionException.class);
     }
 }
