@@ -16,3 +16,9 @@ dependencies {
     testCompile 'io.grpc:grpc-okhttp'
     testCompile 'io.grpc:grpc-testing'
 }
+
+tasks {
+    javadoc {
+        exclude '**/com/linecorp/armeria/common/grpc/InternalExceptionMessages**'
+    }
+}
