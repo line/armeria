@@ -425,10 +425,11 @@ public final class HttpStatus implements Comparable<HttpStatus> {
             final char c = reasonPhrase.charAt(i);
             // Check prohibited characters.
             switch (c) {
-                case '\n': case '\r':
+                case '\n':
+                case '\r':
                     throw new IllegalArgumentException(
                             "reasonPhrase contains one of the following prohibited characters: " +
-                                    "\\r\\n: " + reasonPhrase);
+                            "\\r\\n: " + reasonPhrase);
             }
         }
 
@@ -529,8 +530,8 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     /**
      * Returns whether the {@link HttpStatus} is an error
      */
-    public boolean isError(){
-        return isClientError() || isClientError();
+    public boolean isError() {
+        return isClientError() || isServerError();
     }
 
     @Override
