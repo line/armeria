@@ -16,17 +16,14 @@
 
 package com.linecorp.armeria.common;
 
-import static java.lang.reflect.Modifier.isFinal;
-import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.common.MediaTypeTest.getConstantFields;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Field;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.Test;
 
@@ -41,46 +38,30 @@ class MediaTypeNamesTest {
     @Test
     void matchMediaTypeToMediaTypeNames() throws Exception {
         final FluentIterable<Field> mediaTypeFields = getConstantFields(MediaType.class);
-        final FluentIterable<Field> mediaTypeNamesFields = getConstantFields(MediaTypeNames.class);
+        final FluentIterable<Field> mediaTypeNamesFields = getConstantFields(MediaTypeNames.class,
+                                                                             String.class);
 
-        final Map<String, MediaType> mediaTypeConstantsMap =
-                getConstantFieldMap(mediaTypeFields, MediaType.class);
-        final Map<String, String> mediaTypeNamesConstantsMap =
-                getConstantFieldMap(mediaTypeNamesFields, String.class);
+        final Map<String, MediaType> mediaTypeConstantsMap = getConstantFieldMap(mediaTypeFields);
+        final Map<String, String> mediaTypeNamesConstantsMap = getConstantFieldMap(mediaTypeNamesFields);
 
         for (Entry<String, MediaType> mediaTypeEntry : mediaTypeConstantsMap.entrySet()) {
             final String mediaTypeName = mediaTypeNamesConstantsMap.get(mediaTypeEntry.getKey());
-            assertNotNull("MediaTypeName should be defined in MediaType constants", mediaTypeName);
-            assertEquals(mediaTypeName, mediaTypeEntry.getValue().toString());
+            assertThat(mediaTypeName).isNotNull();
+            assertThat(mediaTypeName).isEqualTo(mediaTypeEntry.getValue().toString());
         }
     }
 
-    // reflection
-    @SuppressWarnings("Guava")
-    private static <T> FluentIterable<Field> getConstantFields(Class<T> clazz) {
-        return FluentIterable.from(asList(clazz.getDeclaredFields())).filter(input -> {
-            final int modifiers = input.getModifiers();
-            return isPublic(modifiers) &&
-                   isStatic(modifiers) &&
-                   isFinal(modifiers) &&
-                   String.class.equals(input.getType());
-        });
-    }
-
-    // reflection
-    @SuppressWarnings("Guava")
-    private static <T> Map<String, T> getConstantFieldMap(FluentIterable<Field> iterable, Class<T> clazz) {
-        final Map<String, T> constantFieldMap = new HashMap<String, T>();
-        iterable.stream().forEach(field -> {
-            final String fieldName = field.getName();
-            final T fieldValue;
-            try {
-                fieldValue = (T) field.get(null);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            constantFieldMap.put(fieldName, fieldValue);
-        });
-        return constantFieldMap;
+    private static <T> Map<String, T> getConstantFieldMap(Iterable<Field> iterable) {
+        return StreamSupport
+                .stream(iterable.spliterator(), false)
+                .collect(toImmutableMap(Field::getName, field -> {
+                    try {
+                        @SuppressWarnings("unchecked")
+                        final T cast = (T) field.get(null);
+                        return cast;
+                    } catch (Exception ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }));
     }
 }
