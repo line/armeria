@@ -276,7 +276,16 @@ final class HttpChannelPool implements AsyncCloseable {
             if (cause == null) {
                 final SessionProtocol actualProtocol = pch.protocol();
                 if (actualProtocol.isMultiplex()) {
-                    promise.complete(pch);
+                    final HttpSession session = HttpSession.get(pch.get());
+                    logger.info("session.unfinishedResponses(): {}, session.maxUnfinishedResponses(): {}",
+                                session.unfinishedResponses(), session.maxUnfinishedResponses());
+                    // Need to subtract 1 since the current pending request may also be unfinished
+                    if (session.unfinishedResponses() >= session.maxUnfinishedResponses() - 1) {
+                        connect(actualProtocol, key, promise, timingsBuilder);
+                    } else {
+                        promise.complete(pch);
+                    }
+
                 } else {
                     // Try to acquire again because the connection was not HTTP/2.
                     // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
