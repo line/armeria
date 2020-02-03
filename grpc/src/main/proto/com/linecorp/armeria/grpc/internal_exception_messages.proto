@@ -13,6 +13,7 @@
 // under the License.
 
 // Messages used for transporting debug information between server and client.
+
 syntax = "proto3";
 
 package armeria.grpc;
