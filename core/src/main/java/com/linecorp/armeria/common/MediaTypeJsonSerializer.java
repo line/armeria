@@ -25,14 +25,14 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 /**
  * Jackson {@link JsonSerializer} for {@link MediaType}.
  */
-public final class MediaTypeJsonSerializer extends StdSerializer<MediaType> {
+final class MediaTypeJsonSerializer extends StdSerializer<MediaType> {
 
     private static final long serialVersionUID = 5186823627317402798L;
 
     /**
      * Creates a new instance.
      */
-    public MediaTypeJsonSerializer() {
+    MediaTypeJsonSerializer() {
         super(MediaType.class);
     }
 
