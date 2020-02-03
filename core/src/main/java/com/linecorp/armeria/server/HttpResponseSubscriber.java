@@ -289,6 +289,16 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     }
 
     private void write(HttpObject o, boolean endOfStream) {
+        if (loggedResponseHeadersFirstBytesTransferred &&
+            !responseEncoder.isWritable(req.id(), req.streamId())) {
+            if (reqCtx.sessionProtocol().isMultiplex()) {
+                fail(ClosedPublisherException.get());
+            } else {
+                fail(ClosedSessionException.get());
+            }
+            return;
+        }
+
         if (endOfStream) {
             setDone();
         }
@@ -311,7 +321,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         future.addListener((ChannelFuture f) -> {
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 final boolean isSuccess;
-                final boolean isWritable = responseEncoder.isWritable(req.id(), req.streamId());
                 if (f.isSuccess()) {
                     isSuccess = true;
                 } else {
@@ -328,41 +337,19 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 // Write an access log if:
                 // - every message has been sent successfully.
                 // - any write operation is failed with a cause.
-                final ChannelFuture failedFuture;
                 if (isSuccess) {
                     maybeLogFirstResponseBytesTransferred();
-
-                    if (state == State.DONE && !endOfStream) {
-                        // if state is DONE, the response should be ended with endOfStream.
-                        return;
-                    }
 
                     if (endOfStream && tryComplete()) {
                         logBuilder().endResponse();
                         reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
                     }
 
-                    if (isWritable) {
-                        subscription.request(1);
-                        return;
-                    }
-
-                    if (reqCtx.sessionProtocol().isMultiplex()) {
-                        failedFuture = f.channel().newFailedFuture(ClosedPublisherException.get());
-                    } else {
-                        failedFuture = f.channel().newFailedFuture(ClosedSessionException.get());
-                    }
-                } else {
-                   failedFuture = f;
+                    subscription.request(1);
+                    return;
                 }
 
-                if (tryComplete()) {
-                    setDone();
-                    logBuilder().endResponse(failedFuture.cause());
-                    subscription.cancel();
-                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
-                }
-                HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(failedFuture);
+                fail(f);
             }
         });
 
@@ -374,6 +361,25 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         final State oldState = state;
         state = State.DONE;
         return oldState;
+    }
+
+    private void fail(Throwable cause) {
+        fail(reqCtx.channel().newFailedFuture(cause));
+    }
+
+    private void fail(ChannelFuture failedFuture) {
+        if (tryComplete()) {
+            setDone();
+            logBuilder().endResponse(failedFuture.cause());
+            subscription.cancel();
+            reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+        }
+
+        try {
+            HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(failedFuture);
+        } catch (Exception e) {
+            logger.warn("{} Unexpected exception:", failedFuture.channel(), e);
+        }
     }
 
     private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error) {

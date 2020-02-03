@@ -132,11 +132,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                     assert subscription != null;
                     subscription.request(1);
                 }
-                return;
-            }
+                    return;
+                }
 
             fail(future.cause());
-        }
+            }
 
         final Throwable cause = future.cause();
         if (!(cause instanceof ClosedPublisherException)) {
@@ -298,6 +298,16 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private void write0(HttpObject o, boolean endOfStream, boolean flush) {
         final ChannelFuture future;
+        // if the first bytes transferred, the stream must be open
+        if (loggedRequestFirstBytesTransferred && !encoder.isWritable(id, streamId())) {
+            if (reqCtx.sessionProtocol().isMultiplex()) {
+                fail(ClosedPublisherException.get());
+            } else {
+                fail(ClosedSessionException.get());
+            }
+            return;
+        }
+
         if (o instanceof HttpHeaders) {
             future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream);
         } else {
