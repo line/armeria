@@ -24,7 +24,7 @@ import org.apache.thrift.protocol.TJSONProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.thrift.text.TTextProtocol;
+import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
 
 /**
  * Provides a set of the known {@link TProtocolFactory} instances.
@@ -70,14 +70,7 @@ public final class ThriftProtocolFactories {
     /**
      * {@link TProtocolFactory} for the Thrift TText protocol.
      */
-    public static final TProtocolFactory TEXT = new TTextProtocol.Factory() {
-        private static final long serialVersionUID = 4430306676070073610L;
-
-        @Override
-        public String toString() {
-            return "TProtocolFactory(TTEXT)";
-        }
-    };
+    public static final TProtocolFactory TEXT = TTextProtocolFactory.get();
 
     /**
      * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
@@ -120,7 +113,7 @@ public final class ThriftProtocolFactories {
             return ThriftSerializationFormats.COMPACT;
         } else if (protoFactory instanceof TJSONProtocol.Factory) {
             return ThriftSerializationFormats.JSON;
-        } else if (protoFactory instanceof TTextProtocol.Factory) {
+        } else if (protoFactory instanceof TTextProtocolFactory) {
             return ThriftSerializationFormats.TEXT;
         } else {
             throw new IllegalArgumentException(

@@ -46,7 +46,6 @@ import org.apache.thrift.protocol.TMap;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.protocol.TSet;
 import org.apache.thrift.protocol.TStruct;
 import org.apache.thrift.protocol.TType;
@@ -754,18 +753,6 @@ public final class TTextProtocol extends TProtocol {
         private WriterByteArrayOutputStream(JsonGenerator writer, ByteArrayOutputStream baos) {
             this.writer = writer;
             this.baos = baos;
-        }
-    }
-
-    /**
-     * Factory.
-     */
-    public static final class Factory implements TProtocolFactory {
-        private static final long serialVersionUID = -5607714914895109618L;
-
-        @Override
-        public TProtocol getProtocol(TTransport trans) {
-            return new TTextProtocol(trans);
         }
     }
 

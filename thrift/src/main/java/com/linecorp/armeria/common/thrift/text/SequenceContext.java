@@ -42,7 +42,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  *
  * @author Alex Roetter
  */
-class SequenceContext extends BaseContext {
+final class SequenceContext extends BaseContext {
 
     @Nullable
     private final Iterator<JsonNode> children;

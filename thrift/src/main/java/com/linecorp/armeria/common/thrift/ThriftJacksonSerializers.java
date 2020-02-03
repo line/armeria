@@ -37,7 +37,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.Serializers;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
-import com.linecorp.armeria.common.thrift.text.TTextProtocol;
+import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
 
 final class ThriftJacksonSerializers extends Serializers.Base implements Serializable {
 
@@ -110,7 +110,7 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
 
     private static String serializeTBaseLike(Consumer<TProtocol> writer) {
         final TMemoryBuffer buffer = new TMemoryBuffer(1024);
-        final TProtocol protocol = new TTextProtocol.Factory().getProtocol(buffer);
+        final TProtocol protocol = new TTextProtocolFactory().getProtocol(buffer);
         writer.accept(protocol);
         return new String(buffer.getArray(), 0, buffer.length());
     }
