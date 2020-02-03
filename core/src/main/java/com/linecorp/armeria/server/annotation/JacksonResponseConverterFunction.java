@@ -46,7 +46,7 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  *
  * @see <a href="https://tools.ietf.org/html/rfc7464">JavaScript Object Notation (JSON) Text Sequences</a>
  */
-public class JacksonResponseConverterFunction implements ResponseConverterFunction {
+public final class JacksonResponseConverterFunction implements ResponseConverterFunction {
 
     private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
 

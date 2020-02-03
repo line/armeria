@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 /**
  * Jackson {@link JsonSerializer} for {@link TypeSignature}.
  */
-public class TypeSignatureJsonSerializer extends StdSerializer<TypeSignature> {
+public final class TypeSignatureJsonSerializer extends StdSerializer<TypeSignature> {
 
     private static final long serialVersionUID = 5186823627317402798L;
 

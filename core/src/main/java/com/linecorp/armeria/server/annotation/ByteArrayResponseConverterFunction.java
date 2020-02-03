@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * A response converter implementation which creates an {@link HttpResponse} with
  * {@code content-type: application/binary} or {@code content-type: application/octet-stream}.
  */
-public class ByteArrayResponseConverterFunction implements ResponseConverterFunction {
+public final class ByteArrayResponseConverterFunction implements ResponseConverterFunction {
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,

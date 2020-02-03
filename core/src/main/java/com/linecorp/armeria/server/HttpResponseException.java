@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.HttpStatus;
  *
  * @see HttpStatusException
  */
-public class HttpResponseException extends RuntimeException {
+public final class HttpResponseException extends RuntimeException {
 
     /**
      * Returns a new {@link HttpResponseException} instance with the specified HTTP status code.
@@ -67,7 +67,7 @@ public class HttpResponseException extends RuntimeException {
     /**
      * Creates a new instance with the specified {@link HttpResponse}.
      */
-    protected HttpResponseException(HttpResponse httpResponse) {
+    private HttpResponseException(HttpResponse httpResponse) {
         this.httpResponse = requireNonNull(httpResponse, "httpResponse");
     }
 

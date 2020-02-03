@@ -113,7 +113,7 @@ import com.linecorp.armeria.internal.TemporaryThreadLocals;
  *
  * <p>TODO: Support string values for enums that have been typedef'd.
  */
-public class TTextProtocol extends TProtocol {
+public final class TTextProtocol extends TProtocol {
 
     private static final String SEQUENCE_AS_KEY_ILLEGAL =
             "Can't have a sequence (list or set) as a key in a map!";
@@ -760,7 +760,7 @@ public class TTextProtocol extends TProtocol {
     /**
      * Factory.
      */
-    public static class Factory implements TProtocolFactory {
+    public static final class Factory implements TProtocolFactory {
         private static final long serialVersionUID = -5607714914895109618L;
 
         @Override

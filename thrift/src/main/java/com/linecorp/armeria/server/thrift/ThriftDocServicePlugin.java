@@ -77,7 +77,7 @@ import com.linecorp.armeria.server.docs.TypeSignature;
 /**
  * {@link DocServicePlugin} implementation that supports {@link THttpService}s.
  */
-public class ThriftDocServicePlugin implements DocServicePlugin {
+public final class ThriftDocServicePlugin implements DocServicePlugin {
 
     private static final String REQUEST_STRUCT_SUFFIX = "_args";
 

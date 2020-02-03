@@ -35,7 +35,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 /**
  * A delegate that has common testing methods of {@link SelfSignedCertificate}.
  */
-public class SelfSignedCertificateRuleDelegate {
+public final class SelfSignedCertificateRuleDelegate {
 
     @Nullable
     private final String fqdn;

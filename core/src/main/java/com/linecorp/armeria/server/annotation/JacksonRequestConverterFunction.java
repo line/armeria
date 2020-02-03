@@ -37,7 +37,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * A default implementation of a {@link RequestConverterFunction} which converts a JSON body of
  * the {@link AggregatedHttpRequest} to an object by {@link ObjectMapper}.
  */
-public class JacksonRequestConverterFunction implements RequestConverterFunction {
+public final class JacksonRequestConverterFunction implements RequestConverterFunction {
 
     private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
 
