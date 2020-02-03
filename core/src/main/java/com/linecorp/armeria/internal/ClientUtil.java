@@ -106,7 +106,7 @@ public final class ClientUtil {
             Throwable cause) {
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
-        if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
+        if (!ctx.log().isAvailable(RequestLogProperty.SESSION)) {
             // An exception is raised even before sending a request,
             // so end the request with the exception.
             logBuilder.endRequest(cause);

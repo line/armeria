@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -177,16 +178,11 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                                                 .getAddress();
 
         // Build the context with the properties set by a user and the fake objects.
-        if (isRequestStartTimeSet()) {
-            return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
-                    routingResult, req, sslSession(), proxiedAddresses, clientAddress,
-                    requestStartTimeNanos(), requestStartTimeMicros());
-        } else {
-            return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
-                    routingResult, req, sslSession(), proxiedAddresses, clientAddress);
-        }
+        return new DefaultServiceRequestContext(
+                serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
+                routingResult, req, sslSession(), proxiedAddresses, clientAddress,
+                isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
+                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {

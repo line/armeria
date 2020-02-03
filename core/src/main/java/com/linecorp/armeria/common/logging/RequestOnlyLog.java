@@ -150,6 +150,18 @@ public interface RequestOnlyLog extends RequestLogAccess {
     SessionProtocol sessionProtocol();
 
     /**
+     * Returns the {@link ClientConnectionTimings} of the {@link Request}.
+     *
+     * @return the {@link ClientConnectionTimings} if the {@link Request} involved a new connection attempt,
+     *         or {@code null} otherwise.
+     *
+     * @throws RequestLogAvailabilityException if the property is not available yet.
+     * @see RequestLogProperty#SESSION
+     */
+    @Nullable
+    ClientConnectionTimings connectionTimings();
+
+    /**
      * Returns the {@link Scheme} of the {@link Request}.
      *
      * @throws RequestLogAvailabilityException if the property is not available yet.

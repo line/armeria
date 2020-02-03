@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
@@ -349,7 +350,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(), routingCtx, routingResult,
-                req, sslSession, proxiedAddresses, clientAddress);
+                req, sslSession, proxiedAddresses, clientAddress,
+                System.nanoTime(), SystemInfo.currentTimeMicros());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
@@ -636,7 +638,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 virtualHost.fallbackServiceConfig(),
                 channel, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(), routingCtx, routingResult,
-                req, sslSession, proxiedAddresses, clientAddress);
+                req, sslSession, proxiedAddresses, clientAddress,
+                System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 
     private RequestId nextRequestId() {

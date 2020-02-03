@@ -29,6 +29,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -77,6 +79,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     @Nullable
     private Endpoint endpoint;
     private ClientOptions options = ClientOptions.of();
+    @Nullable
+    private ClientConnectionTimings connectionTimings;
 
     ClientRequestContextBuilder(HttpRequest request) {
         super(false, request);
@@ -111,6 +115,14 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     /**
+     * Sets the {@link ClientConnectionTimings} of the request.
+     */
+    public ClientRequestContextBuilder connectionTimings(ClientConnectionTimings connectionTimings) {
+        this.connectionTimings = requireNonNull(connectionTimings, "connectionTimings");
+        return this;
+    }
+
+    /**
      * Returns a new {@link ClientRequestContext} created with the properties of this builder.
      */
     public ClientRequestContext build() {
@@ -123,15 +135,12 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
-                id(), method(), path(), query(), fragment, options, request(), rpcRequest());
-        ctx.init(endpoint);
+                id(), method(), path(), query(), fragment, options, request(), rpcRequest(),
+                isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
+                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 
-        if (isRequestStartTimeSet()) {
-            ctx.logBuilder().startRequest(fakeChannel(), sessionProtocol(), sslSession(),
-                                          requestStartTimeNanos(), requestStartTimeMicros());
-        } else {
-            ctx.logBuilder().startRequest(fakeChannel(), sessionProtocol(), sslSession());
-        }
+        ctx.init(endpoint);
+        ctx.logBuilder().session(fakeChannel(), sessionProtocol(), sslSession(), connectionTimings);
 
         if (request() != null) {
             ctx.logBuilder().requestHeaders(request().headers());

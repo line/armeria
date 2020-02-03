@@ -170,7 +170,7 @@ function isFullscreenEnabled() {
   } else if (e.mozFullScreenEnabled) {
     enabled = e.mozFullScreenEnabled;
   } else if (e.webkitFullscreenEnabled) {
-    enabled = webkitFullscreenEnabled;
+    enabled = e.webkitFullscreenEnabled;
   } else if (e.msFullscreenEnabled) {
     enabled = e.msFullscreenEnabled;
   }
