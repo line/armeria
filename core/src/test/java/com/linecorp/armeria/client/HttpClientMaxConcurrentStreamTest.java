@@ -187,4 +187,41 @@ public class HttpClientMaxConcurrentStreamTest {
         responses.forEach(response -> response.complete(HttpResponse.of(200)));
         await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
     }
+
+    @Test
+    public void maxConcurrentStreamExceeded_minimalConnectionsOpened() throws Exception {
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+                                          .factory(clientFactory)
+                                          .build();
+        final AtomicInteger opens = new AtomicInteger();
+        final AtomicInteger closes = new AtomicInteger();
+        connectionPoolListener = new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                opens.incrementAndGet();
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                closes.incrementAndGet();
+            }
+        };
+        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
+
+        // running inside event loop ensures requests are queued before initial connect completes.
+        clientFactory.eventLoopGroup().execute(() -> {
+            for (int j = 0; j < MAX_CONCURRENT_STREAMS * 2; j++) {
+                receivedResponses.add(client.get(PATH).aggregate());
+            }
+        });
+
+        await().untilAsserted(() -> assertThat(responses).hasSize(MAX_CONCURRENT_STREAMS * 2));
+        // Currently 6 requests - 3 (1 connection * 3 requests) + 3 connections = 4 connections
+        // This could be optimized
+        assertThat(opens).hasValue(2);
+        responses.forEach(response -> response.complete(HttpResponse.of(200)));
+        await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
+    }
 }
