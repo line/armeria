@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.spring;
 
-import static java.util.Objects.requireNonNull;
-
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 /**
@@ -31,15 +29,13 @@ public interface MeterIdPrefixFunctionFactory {
      * @deprecated Use {@link #ofDefault()}.
      */
     @Deprecated
-    MeterIdPrefixFunctionFactory DEFAULT = ofDefault();
+    MeterIdPrefixFunctionFactory DEFAULT = DefaultMeterIdPrefixFunctionFactory.INSTANCE;
 
     /**
      * Returns the default {@link MeterIdPrefixFunctionFactory} instance.
      */
     static MeterIdPrefixFunctionFactory ofDefault() {
-        return (type, serviceName) ->
-                MeterIdPrefixFunction.ofDefault("armeria." + requireNonNull(type, "type"))
-                                     .withTags("service", requireNonNull(serviceName, "serviceName"));
+        return DefaultMeterIdPrefixFunctionFactory.INSTANCE;
     }
 
     /**

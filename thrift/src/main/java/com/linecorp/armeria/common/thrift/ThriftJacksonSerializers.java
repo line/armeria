@@ -108,7 +108,7 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
         }));
     }
 
-    static String serializeTBaseLike(Consumer<TProtocol> writer) {
+    private static String serializeTBaseLike(Consumer<TProtocol> writer) {
         final TMemoryBuffer buffer = new TMemoryBuffer(1024);
         final TProtocol protocol = new TTextProtocol.Factory().getProtocol(buffer);
         writer.accept(protocol);

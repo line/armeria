@@ -30,14 +30,14 @@ public interface StreamDecoderFactory {
      * Returns the {@link StreamDecoderFactory} for {@code "deflate"} content encoding.
      */
     static StreamDecoderFactory deflate() {
-        return DeflateStreamDecoderFactory.INSTANCE;
+        return StreamDecoderFactories.DEFLATE;
     }
 
     /**
      * Returns the {@link StreamDecoderFactory} for {@code "gzip"} content encoding.
      */
     static StreamDecoderFactory gzip() {
-        return GzipStreamDecoderFactory.INSTANCE;
+        return StreamDecoderFactories.GZIP;
     }
 
     /**

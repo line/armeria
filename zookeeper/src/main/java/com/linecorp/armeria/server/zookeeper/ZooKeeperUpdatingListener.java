@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServerPort;
 
 /**
- * A {@link ServerListener} which (de)registers the current {@link Server} to
+ * A {@link ServerListener} which registers the current {@link Server} to
  * <a href="https://zookeeper.apache.org/">ZooKeeper</a> as an ephemeral node. When server stops, or a network
  * partition occurs, the underlying ZooKeeper session will be closed, and the node will be automatically
  * removed. As a result, the clients that use a {@link ZooKeeperEndpointGroup} will be notified, and they will
