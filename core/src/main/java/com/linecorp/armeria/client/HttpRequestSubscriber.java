@@ -296,7 +296,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private void write0(HttpObject o, boolean endOfStream, boolean flush) {
-        final ChannelFuture future;
         // if the first bytes transferred, the stream must be open
         if (loggedRequestFirstBytesTransferred && !encoder.isWritable(id, streamId())) {
             if (reqCtx.sessionProtocol().isMultiplex()) {
@@ -307,6 +306,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             return;
         }
 
+        final ChannelFuture future;
         if (o instanceof HttpHeaders) {
             future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream);
         } else {
