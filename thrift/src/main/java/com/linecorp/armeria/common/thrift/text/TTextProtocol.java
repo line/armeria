@@ -152,7 +152,7 @@ public final class TTextProtocol extends TProtocol {
     }
 
     @Override
-    public final void reset() {
+    public void reset() {
         root = null;
 
         writers.clear();
@@ -273,7 +273,7 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public void writeListBegin(TList list) throws TException {
-        writeSequenceBegin(list.size);
+        writeSequenceBegin();
     }
 
     @Override
@@ -283,7 +283,7 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public void writeSetBegin(TSet set) throws TException {
-        writeSequenceBegin(set.size);
+        writeSequenceBegin();
     }
 
     @Override
@@ -294,7 +294,7 @@ public final class TTextProtocol extends TProtocol {
     /**
      * Helper shared by write{List/Set}Begin.
      */
-    private void writeSequenceBegin(int size) throws TException {
+    private void writeSequenceBegin() throws TException {
         getCurrentContext().write();
         if (getCurrentContext().isMapKey()) {
             throw new TException(SEQUENCE_AS_KEY_ILLEGAL);
