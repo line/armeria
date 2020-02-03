@@ -108,11 +108,11 @@ final class SamlMetadataServiceFunction implements SamlServiceFunction {
                 return newMetadata;
             } catch (Throwable cause) {
                 logger.warn("{} Unexpected metadata request.", ctx, cause);
-                return HttpData.EMPTY_DATA;
+                return HttpData.empty();
             }
         });
 
-        if (metadata != HttpData.EMPTY_DATA) {
+        if (metadata != HttpData.empty()) {
             return HttpResponse.of(HTTP_HEADERS, metadata);
         } else {
             return HttpResponse.of(HttpStatus.NOT_FOUND);

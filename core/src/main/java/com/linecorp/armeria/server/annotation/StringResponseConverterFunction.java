@@ -72,7 +72,7 @@ public final class StringResponseConverterFunction implements ResponseConverterF
     private static HttpData toHttpData(@Nullable Object value, Charset charset) {
         if (value == null) {
             // To prevent to convert null value to 'null' string.
-            return HttpData.EMPTY_DATA;
+            return HttpData.empty();
         }
 
         if (value instanceof Iterable) {

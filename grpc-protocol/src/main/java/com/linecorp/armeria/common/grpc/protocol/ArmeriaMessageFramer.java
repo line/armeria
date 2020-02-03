@@ -73,7 +73,7 @@ import io.netty.buffer.CompositeByteBuf;
  * abstraction in favor of using {@link ByteBuf} directly. The code has been vastly simplified due to the lack
  * of support for arbitrary {@link InputStream}s.
  */
-public final class ArmeriaMessageFramer implements AutoCloseable {
+public class ArmeriaMessageFramer implements AutoCloseable {
 
     public static final int NO_MAX_OUTBOUND_MESSAGE_SIZE = -1;
 

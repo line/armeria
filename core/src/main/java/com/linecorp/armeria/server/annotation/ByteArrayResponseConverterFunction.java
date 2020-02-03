@@ -92,7 +92,7 @@ public final class ByteArrayResponseConverterFunction implements ResponseConvert
             return HttpData.wrap((byte[]) value);
         }
         if (value == null) {
-            return HttpData.EMPTY_DATA;
+            return HttpData.empty();
         }
         throw new IllegalStateException("Failed to convert an object to an HttpData: " +
                                         value.getClass().getName());
