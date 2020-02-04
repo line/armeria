@@ -6,7 +6,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
-    testImplementation 'io.prometheus:simpleclient_common'
+    testImplementation 'io.micrometer:micrometer-registry-prometheus'
     testRuntimeOnly project(':spring:boot-starter')
 }
 
