@@ -270,7 +270,8 @@ class HttpServerStreamingTest {
             return;
         }
 
-        writer.onDemand(() -> stream(writer, remaining, (int) Math.min(remaining, chunkSize)))
+        writer.whenConsumed()
+              .thenRun(() -> stream(writer, remaining, (int) Math.min(remaining, chunkSize)))
               .exceptionally(cause -> {
                   logger.warn("Unexpected exception:", cause);
                   writer.close(cause);
