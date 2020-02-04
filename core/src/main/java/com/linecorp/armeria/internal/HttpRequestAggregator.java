@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,22 +14,27 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal;
 
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpRequestAggregator extends HttpMessageAggregator<AggregatedHttpRequest> {
+public final class HttpRequestAggregator extends HttpMessageAggregator<AggregatedHttpRequest> {
 
     private final HttpRequest request;
     private HttpHeaders trailers;
 
-    HttpRequestAggregator(HttpRequest request, CompletableFuture<AggregatedHttpRequest> future,
-                          @Nullable ByteBufAllocator alloc) {
+    public HttpRequestAggregator(HttpRequest request, CompletableFuture<AggregatedHttpRequest> future,
+                                 @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
         this.request = request;
         trailers = HttpHeaders.of();

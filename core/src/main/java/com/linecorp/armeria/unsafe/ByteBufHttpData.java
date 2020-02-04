@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import com.google.common.base.MoreObjects;
 
@@ -27,7 +28,6 @@ import com.linecorp.armeria.common.AbstractHttpData;
 import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -35,12 +35,21 @@ import io.netty.buffer.Unpooled;
 /**
  * An {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
  * general use.
+ *
+ * @deprecated Use {@link PooledHttpData}.
  */
-public final class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
+@Deprecated
+public final class ByteBufHttpData extends AbstractHttpData implements PooledHttpData {
+
+    private static final AtomicIntegerFieldUpdater<ByteBufHttpData>
+            closedUpdater = AtomicIntegerFieldUpdater.newUpdater(ByteBufHttpData.class, "closed");
 
     private final ByteBuf buf;
     private final boolean endOfStream;
     private final int length;
+
+    @SuppressWarnings("FieldMayBeFinal") // Updated via `closedUpdater`
+    private volatile int closed;
 
     /**
      * Constructs a new {@link ByteBufHttpData}. Ownership of {@code buf} is taken by this
@@ -167,11 +176,19 @@ public final class ByteBufHttpData extends AbstractHttpData implements ByteBufHo
 
     @Override
     public InputStream toInputStream() {
-        return new ByteBufInputStream(buf.retainedDuplicate(), true);
+        return new ByteBufInputStream(buf.duplicate(), false);
     }
 
     @Override
     public ByteBufHttpData withEndOfStream() {
         return new ByteBufHttpData(buf, true);
+    }
+
+    @Override
+    public void close() {
+        if (!closedUpdater.compareAndSet(this, 0, 1)) {
+            return;
+        }
+        release();
     }
 }
