@@ -2,168 +2,95 @@ configure(projectsWithFlags('publish', 'java')) {
     publishing {
         publications {
             jar(MavenPublication) {
-                def currentArtifactId = project.ext.artifactId
-                artifactId currentArtifactId
+                from components.java
 
-                // Generate the POM.
-                pom.withXml {
-                    asNode().children().last() + {
-                        resolveStrategy = Closure.DELEGATE_FIRST
+                // We don't publish Gradle metadata yet so don't need to worry about these variants.
+                suppressPomMetadataWarningsFor('optionalApiElements')
+                suppressPomMetadataWarningsFor('optionalRuntimeElements')
 
-                        // Write the elements required by OSSRH.
-                        name "${project.ext.projectName} (${currentArtifactId})"
-                        description "${project.ext.projectDescription} (${currentArtifactId})"
-                        url "${project.ext.projectUrl}"
-                        inceptionYear "${project.ext.inceptionYear}"
-
-                        licenses {
-                            license {
-                                name "${project.ext.licenseName}"
-                                url "${project.ext.licenseUrl}"
-                                distribution 'repo'
-                            }
-                        }
-
-                        developers {
-                            developer {
-                                name "${project.ext.authorName}"
-                                email "${project.ext.authorEmail}"
-                                url "${project.ext.authorUrl}"
-                            }
-                        }
-
-                        scm {
-                            url "${project.ext.scmUrl}"
-                            connection "${project.ext.scmConnection}"
-                            developerConnection "${project.ext.scmDeveloperConnection}"
-                        }
-
-                        dependencies {
-                            def writeExclusionRules = { Set<ExcludeRule> excludeRules ->
-                                if (!excludeRules.empty) {
-                                    exclusions {
-                                        excludeRules.each { rule ->
-                                            exclusion {
-                                                groupId rule.group
-                                                artifactId rule.module
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Write compile-time project dependencies.
-                            configurations.compile.dependencies.findAll {
-                                it instanceof ProjectDependency
-                            }.collect {
-                                (ProjectDependency) it
-                            }.toSorted({
-                                "${it.group}:${it.dependencyProject.ext.artifactId}"
-                            }).each { dep ->
-                                dependency {
-                                    groupId dep.group
-                                    artifactId dep.dependencyProject.ext.artifactId
-                                    version dep.version ?: dep.dependencyProject.version
-                                    if (dep.hasProperty('optional') && dep.optional) {
-                                        optional true
-                                    }
-                                    writeExclusionRules(dep.excludeRules)
-                                }
-                            }
-
-                            // Write runtime project dependencies.
-                            configurations.runtime.dependencies.findAll {
-                                it instanceof ProjectDependency &&
-                                !configurations.compile.dependencies.contains(it)
-                            }.collect {
-                                (ProjectDependency) it
-                            }.toSorted({
-                                "${it.group}:${it.dependencyProject.ext.artifactId}"
-                            }).each { dep ->
-                                dependency {
-                                    groupId dep.group
-                                    artifactId dep.dependencyProject.ext.artifactId
-                                    version dep.version ?: dep.dependencyProject.version
-                                    scope 'runtime'
-                                    if (dep.hasProperty('optional') && dep.optional) {
-                                        optional true
-                                    }
-                                    writeExclusionRules(dep.excludeRules)
-                                }
-                            }
-
-                            // Write module dependencies.
-                            Set<ResolvedDependency> compileDeps =
-                                    configurations.compile.resolvedConfiguration.firstLevelModuleDependencies
-                            Set<ResolvedDependency> runtimeDeps =
-                                    configurations.runtime.resolvedConfiguration.firstLevelModuleDependencies
-                            Set<Dependency> unresolvedDeps =
-                                    configurations.runtime.dependencies + configurations.compile.dependencies
-
-                            runtimeDeps.toSorted({ "${it.moduleGroup}:${it.moduleName}" }).each { dep ->
-                                def unresolvedDep = unresolvedDeps.find {
-                                    it.group == dep.moduleGroup && it.name == dep.moduleName
-                                }
-
-                                if (unresolvedDep instanceof ExternalModuleDependency) {
-                                    if (project.hasFlags('relocate') && project.ext.relocations.find({
-                                        it.name == "${dep.moduleGroup}:${dep.moduleName}"
-                                    })) {
-                                        // Shaded dependency
-                                        return
-                                    }
-
-                                    dependency {
-                                        groupId dep.moduleGroup
-                                        artifactId dep.moduleName
-                                        version dep.moduleVersion
-
-                                        // Write classifier if exists.
-                                        if (dep.moduleArtifacts.find()?.classifier) {
-                                            classifier dep.moduleArtifacts.find().classifier
-                                        }
-
-                                        if (!compileDeps.contains(dep)) {
-                                            scope 'runtime'
-                                        }
-
-                                        if (unresolvedDep.hasProperty('optional') && unresolvedDep.optional) {
-                                            optional true
-                                        }
-
-                                        writeExclusionRules(unresolvedDep.excludeRules)
-                                    }
-                                }
-                            }
-                        }
+                // Publish resolved versions
+                versionMapping {
+                    allVariants {
+                        fromResolutionResult()
                     }
                 }
 
-                // Find the main JAR and the task that generates it.
-                File mainJarFile
-                Task mainJarTask
+                // Replace published jar with shaded when available. We manually create shading tasks instead of
+                // applying the shadow plugin itself so need to do it ourselves.
+                def jarOverrideFile = null
+                def jarOverrideTask = null
                 if (tasks.findByName('trimShadedJar')) {
-                    mainJarFile = tasks.trimShadedJar.outJarFiles.find() as File
-                    mainJarTask = tasks.trimShadedJar
+                    jarOverrideFile = tasks.trimShadedJar.outJarFiles.find() as File
+                    jarOverrideTask = tasks.trimShadedJar
                 } else if (tasks.findByName('shadedJar')) {
-                    mainJarFile = tasks.shadedJar.archivePath
-                    mainJarTask = tasks.shadedJar
-                } else {
-                    mainJarFile = tasks.jar.archivePath
-                    mainJarTask = tasks.jar
+                    jarOverrideFile = tasks.shadedJar.archivePath
+                    jarOverrideTask = tasks.shadedJar
+                }
+                if (jarOverrideFile != null) {
+                    // For some reason this needs to be in afterEvaluate or dependencies are lost from the POM.
+                    afterEvaluate {
+                        def unshaded = artifacts.find { it.classifier == null && it.extension == 'jar' }
+                        artifacts.remove(unshaded)
+                        artifact(jarOverrideFile).builtBy(jarOverrideTask)
+                    }
                 }
 
-                // Add the main JAR.
-                artifact(mainJarFile).builtBy(mainJarTask)
+                // Clean up the POM.
+                pom {
+                    withXml {
+                        // Strip out shaded dependencies. We manually create shading tasks instead of applying
+                        // the shadow plugin itself so need to do it ourselves.
+                        def dependencies = asNode().get('dependencies')[0]
+                        def shaded = dependencies.findAll {
+                            def groupId = it.get('groupId')[0]
+                            def artifactId = it.get('artifactId')[0]
+                            return project.ext.relocations.find {
+                                it.name == "${groupId.text()}:${artifactId.text()}"
+                            }
+                        }
+                        shaded.each { dependencies.remove(it) }
+                    }
+                }
+            }
+        }
+    }
+}
 
-                // Add the sources JAR.
-                artifact(tasks.sourceJar) {
-                    classifier = 'sources'
+configure(projectsWithFlags('publish')) {
+    publishing {
+        publications.each { publication ->
+            // Shared configuration for all publications, including BOM
+            def currentArtifactId = project.ext.artifactId
+            publication.artifactId currentArtifactId
+
+            // Generate the POM.
+            publication.pom {
+                // Write the elements required by OSSRH.
+                name = "${project.ext.projectName} (${currentArtifactId})"
+                description = "${project.ext.projectDescription} (${currentArtifactId})"
+                url = "${project.ext.projectUrl}"
+                inceptionYear = "${project.ext.inceptionYear}"
+
+                licenses {
+                    license {
+                        name = "${project.ext.licenseName}"
+                        url = "${project.ext.licenseUrl}"
+                        distribution = 'repo'
+                    }
                 }
 
-                // Add the Javadoc JAR.
-                artifact(tasks.javadocJar) {
-                    classifier = 'javadoc'
+                developers {
+                    developer {
+                        name = "${project.ext.authorName}"
+                        email = "${project.ext.authorEmail}"
+                        url = "${project.ext.authorUrl}"
+                    }
+                }
+
+                scm {
+                    url = "${project.ext.scmUrl}"
+                    connection = "${project.ext.scmConnection}"
+                    developerConnection = "${project.ext.scmDeveloperConnection}"
                 }
             }
         }
@@ -173,5 +100,10 @@ configure(projectsWithFlags('publish', 'java')) {
         signing {
             sign publishing.publications
         }
+    }
+
+    // For now, disable Gradle metadata generation until verifying it is correctly generated.
+    tasks.withType(GenerateModuleMetadata) {
+        enabled = false
     }
 }

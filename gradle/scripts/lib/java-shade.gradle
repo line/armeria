@@ -121,7 +121,7 @@ configure(relocatedProjects) {
                 //     See ProGuardTask.libraryjar() for more information.
                 if (!p.hasFlags('no_aggregation')) {
                     doFirst {
-                        p.configurations.testRuntime.collect().each { File file ->
+                        p.configurations.testRuntimeClasspath.collect().each { File file ->
                             if (!file.path.startsWith("${rootProject.projectDir}")) {
                                 dependencyJars.add(file)
                             }
@@ -196,16 +196,22 @@ configure(relocatedProjects) {
     }
     tasks.check.dependsOn tasks.shadedTest
 
+    // Configurations shouldn't be created in afterEvaluate so create it eagerly here before configuring it.
+    it.configurations.create("shadedTestRuntime") {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+
     // Update the classpath of the 'shadedTest' task after all shaded projects are evaluated
     // so that we get the complete dependency list.
     project.afterEvaluate {
         if (numConfiguredRelocatedProjects.incrementAndGet() == relocatedProjects.size()) {
             relocatedProjects.each { p ->
-                def shadedTestRuntime = createShadedTestRuntimeConfiguration(p)
+                configureShadedTestRuntimeConfiguration(p)
+            }
+            relocatedProjects.each { p ->
                 def testTask = p.tasks.shadedTest
-                testTask.doFirst {
-                    testTask.classpath += p.files(shadedTestRuntime.resolve())
-                }
+                testTask.classpath += p.files(p.configurations.getByName('shadedTestRuntime').resolve())
             }
         }
     }
@@ -229,7 +235,7 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
             exclude '**/*.jar'
         }
 
-        configurations = [project.configurations[isMain ? 'compile' : 'testCompile']]
+        configurations = [project.configurations[isMain ? 'compileClasspath' : 'testCompileClasspath']]
 
         relocations.each { props ->
             task.relocate props['from'], props['to']
@@ -248,7 +254,7 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
                         return false
                     } else {
                         // Do not shade the dependencies which is already shaded for 'main'.
-                        return project.configurations.compile.allDependencies.find { compileDep ->
+                        return project.configurations.compileClasspath.allDependencies.find { compileDep ->
                             compileDep.group == dep.moduleGroup && compileDep.name == dep.moduleName
                         }
                     }
@@ -266,12 +272,12 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
  * Finds the dependencies of {@code project} recursively and adds the found dependencies to
  * the configuration named as {@code 'shadedTestRuntime'}.
  */
-private Configuration createShadedTestRuntimeConfiguration(
+private Configuration configureShadedTestRuntimeConfiguration(
         Project project, Project recursedProject = project,
         Set<ExcludeRule> excludeRules = new HashSet<>(),
         Set<Project> visitedProjects = new HashSet<>()) {
 
-    def shadedTestRuntime = project.configurations.maybeCreate("shadedTestRuntime")
+    def shadedTestRuntime = project.configurations.getByName('shadedTestRuntime')
 
     if (visitedProjects.contains(recursedProject)) {
         return shadedTestRuntime
@@ -286,17 +292,17 @@ private Configuration createShadedTestRuntimeConfiguration(
     }
 
     def shadedDependencyNames = project.ext.relocations.collect { it['name'] }
-    def targetConfigurationNames
+    def targetConfigurationName
     if (project == recursedProject) {
-        targetConfigurationNames = ['compile', 'runtime', 'testCompile', 'testRuntime']
+        targetConfigurationName = 'testRuntimeClasspath'
     }  else {
-        targetConfigurationNames = ['compile', 'runtime']
+        targetConfigurationName = 'runtimeClasspath'
     }
     def projectDependencies = []
     recursedProject.configurations.findAll { cfg ->
-        cfg.name in targetConfigurationNames
+        cfg.name == targetConfigurationName
     }.each { cfg ->
-        cfg.dependencies.each { dep ->
+        cfg.allDependencies.each { dep ->
             if (dep instanceof ProjectDependency) {
                 // Project dependency - recurse later.
                 // Note that we recurse later to have immediate module dependencies higher precedence.
@@ -322,7 +328,7 @@ private Configuration createShadedTestRuntimeConfiguration(
 
     // Recurse into the project dependencies.
     projectDependencies.each { ProjectDependency dep ->
-        createShadedTestRuntimeConfiguration(
+        configureShadedTestRuntimeConfiguration(
                 project, dep.dependencyProject,
                 excludeRules + dep.excludeRules, visitedProjects)
     }

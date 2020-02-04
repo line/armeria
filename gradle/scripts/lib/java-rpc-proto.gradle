@@ -20,10 +20,11 @@ configure(projectsWithFlags('java')) {
                 }
             }
 
-            if (managedVersions.containsKey('io.grpc:grpc-core')) {
+            def grpcVersion = managedVersions['io.grpc:grpc-bom'] ?: managedVersions['io.grpc:grpc-core']
+            if (grpcVersion != null) {
                 plugins {
                     grpc {
-                        artifact = "io.grpc:protoc-gen-grpc-java:${managedVersions['io.grpc:grpc-core']}"
+                        artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
                     }
                     if (project.ext.hasFlag('reactor-grpc') && managedVersions.containsKey('com.salesforce.servicelibs:reactor-grpc')) {
                         reactorGrpc {
