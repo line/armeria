@@ -27,8 +27,6 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.util.TimeoutController;
-
 import io.netty.channel.EventLoop;
 
 /**

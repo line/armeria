@@ -54,8 +54,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.TimeoutController;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -617,7 +617,7 @@ public final class DefaultServiceRequestContext
      * <p>Note: This method is meant for internal use by server-side protocol implementation to reschedule
      * a timeout task when a user updates the request timeout configuration.
      */
-    public void setRequestTimeoutController(TimeoutController requestTimeoutController) {
+    void setRequestTimeoutController(TimeoutController requestTimeoutController) {
         requireNonNull(requestTimeoutController, "requestTimeoutController");
         checkState(this.requestTimeoutController == null, "requestTimeoutController is set already.");
         this.requestTimeoutController = requestTimeoutController;

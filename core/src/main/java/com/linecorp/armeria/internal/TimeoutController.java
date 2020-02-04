@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.internal;
 
 import javax.annotation.Nullable;
 
@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
  *
  * <p>Note: This interface is meant for internal use only.
  */
-@UnstableApi
 public interface TimeoutController {
 
     /**
