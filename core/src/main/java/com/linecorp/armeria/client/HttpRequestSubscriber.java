@@ -296,7 +296,12 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private void write0(HttpObject o, boolean endOfStream, boolean flush) {
-        // if the first bytes transferred, the stream must be open
+        // Make sure that a stream exists before writing data if first bytes were transferred.
+        // The following situation may cause the data to be written to a closed stream.
+        // 1. A connection that has pending outbound buffers receives GOAWAY frame.
+        // 2. AbstractHttp2ConnectionHandler.close() clears and flushes all active streams.
+        // 3. After successfully flushing, operationComplete() requests next data and
+        //    the subscriber attempts to write the next data to the stream closed at 2).
         if (loggedRequestFirstBytesTransferred && !encoder.isWritable(id, streamId())) {
             if (reqCtx.sessionProtocol().isMultiplex()) {
                 fail(ClosedPublisherException.get());

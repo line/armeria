@@ -289,7 +289,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     }
 
     private void write(HttpObject o, boolean endOfStream) {
-        // if the first bytes transferred, the stream must be open
+        // Make sure that a stream exists before writing data if first bytes were transferred.
+        // The following situation may cause the data to be written to a closed stream.
+        // 1. A connection that has pending outbound buffers receives GOAWAY frame.
+        // 2. AbstractHttp2ConnectionHandler.close() clears and flushes all active streams.
+        // 3. After successfully flushing, the listener requests next data and
+        //    the subscriber attempts to write the next data to the stream closed at 2).
         if (loggedResponseHeadersFirstBytesTransferred &&
             !responseEncoder.isWritable(req.id(), req.streamId())) {
             if (reqCtx.sessionProtocol().isMultiplex()) {
