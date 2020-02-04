@@ -528,7 +528,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     }
 
     /**
-     * Returns whether the {@link HttpStatus} is an error
+     * Returns whether the {@link HttpStatus} is an error.
      */
     public boolean isError() {
         return isClientError() || isServerError();
