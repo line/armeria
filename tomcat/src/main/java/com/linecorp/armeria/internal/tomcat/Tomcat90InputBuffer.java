@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.tomcat;
+package com.linecorp.armeria.internal.tomcat;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -24,11 +24,11 @@ import org.apache.tomcat.util.net.ApplicationBufferHandler;
 
 import com.linecorp.armeria.common.HttpData;
 
-class Tomcat90InputBuffer implements InputBuffer {
+public final class Tomcat90InputBuffer implements InputBuffer {
     private final HttpData content;
     private boolean read;
 
-    Tomcat90InputBuffer(HttpData content) {
+    public Tomcat90InputBuffer(HttpData content) {
         this.content = content;
     }
 
