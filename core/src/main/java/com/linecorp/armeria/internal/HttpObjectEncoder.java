@@ -104,6 +104,11 @@ public abstract class HttpObjectEncoder {
         doClose();
     }
 
+    /**
+     * Returns {@code true} if the specified {@code id} and {@code streamId} is writable.
+     */
+    public abstract boolean isWritable(int id, int streamId);
+
     protected abstract void doClose();
 
     protected final ChannelFuture newClosedSessionFuture() {

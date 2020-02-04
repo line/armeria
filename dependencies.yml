@@ -457,6 +457,10 @@ org.reactivestreams:
 org.reflections:
   reflections:
     version: '0.9.11'
+    exclusions:
+      - com.google.errorprone:error_prone_annotations
+      - com.google.j2objc:j2objc-annotations
+      - org.codehaus.mojo:animal-sniffer-annotations
     relocations:
     - from: org.reflections
       to: com.linecorp.armeria.internal.shaded.reflections

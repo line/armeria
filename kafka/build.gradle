@@ -1,4 +1,4 @@
 dependencies {
     // Kafka
-    compile 'org.apache.kafka:kafka-clients'
+    api 'org.apache.kafka:kafka-clients'
 }

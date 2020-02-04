@@ -12,17 +12,15 @@ apply plugin: 'me.champeau.gradle.jmh'
 def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
 
 dependencies {
-    compile 'io.grpc:grpc-okhttp'
-    compile 'io.grpc:grpc-netty-shaded'
-}
+    implementation project(':grpc')
+    implementation project(':grpc-protocol')
+    implementation project(':retrofit2')
+    implementation project(':thrift')
 
-dependencies {
-    compile project(':grpc')
-    compile project(':retrofit2')
-    compile project(':thrift')
-
-    compile 'com.squareup.retrofit2:converter-jackson'
-    compile 'org.awaitility:awaitility'
+    implementation 'com.squareup.retrofit2:converter-jackson'
+    implementation 'io.grpc:grpc-okhttp'
+    implementation 'io.grpc:grpc-netty-shaded'
+    implementation 'org.awaitility:awaitility'
 
     jmh 'pl.project13.scala:sbt-jmh-extras'
 }
