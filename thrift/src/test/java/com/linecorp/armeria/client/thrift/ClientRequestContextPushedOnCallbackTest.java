@@ -53,7 +53,7 @@ class ClientRequestContextPushedOnCallbackTest {
     @Test
     void pushedContextOnAsyncMethodCallback() throws Exception {
         final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
-        final AsyncIface client = Clients.builder(server.uri(BINARY, "/hello")).build(AsyncIface.class);
+        final AsyncIface client = Clients.newClient(server.httpUri(BINARY) + "/hello", AsyncIface.class);
 
         final ClientRequestContext ctx;
         final CountDownLatch latch = new CountDownLatch(1);
@@ -78,7 +78,7 @@ class ClientRequestContextPushedOnCallbackTest {
 
     @Test
     void pushedContextOnAsyncMethodCallback_onError() throws Exception {
-        final AsyncIface client = Clients.builder(server.uri(BINARY, "/exception")).build(AsyncIface.class);
+        final AsyncIface client = Clients.newClient(server.httpUri(BINARY) + "/exception", AsyncIface.class);
         checkContextOnAsyncMethodCallbackOnError(client);
     }
 
@@ -106,7 +106,7 @@ class ClientRequestContextPushedOnCallbackTest {
 
     @Test
     void pushedContextOnAsyncMethodCallback_exceptionInDecorator() throws Exception {
-        final AsyncIface client = Clients.builder(server.uri(BINARY, "/exception"))
+        final AsyncIface client = Clients.builder(server.httpUri(BINARY) + "/exception")
                                          .rpcDecorator((delegate, ctx, req) -> {
                                              throw new AnticipatedException();
                                          }).build(AsyncIface.class);

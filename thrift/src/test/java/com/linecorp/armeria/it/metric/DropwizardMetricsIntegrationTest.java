@@ -162,7 +162,7 @@ public class DropwizardMetricsIntegrationTest {
     }
 
     private static void makeRequest(String name) {
-        final Iface client = Clients.builder(server.uri(BINARY, "/helloservice"))
+        final Iface client = Clients.builder(server.httpUri(BINARY) + "/helloservice")
                                     .factory(clientFactory)
                                     .rpcDecorator(MetricCollectingRpcClient.newDecorator(
                                             MeterIdPrefixFunction.ofDefault("armeria.client.hello.service")))

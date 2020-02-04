@@ -41,7 +41,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -202,9 +201,8 @@ public class GrpcMetricsIntegrationTest {
     }
 
     private static void makeRequest(String name) throws Exception {
-        final String uri = server.uri(GrpcSerializationFormats.PROTO, "/");
         final TestServiceBlockingStub client =
-                Clients.builder(uri)
+                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
                        .factory(clientFactory)
                        .decorator(MetricCollectingClient.newDecorator(
                                MeterIdPrefixFunction.ofDefault("client")))
@@ -224,7 +222,7 @@ public class GrpcMetricsIntegrationTest {
 
     private static void makeUnframedRequest(String name) throws Exception {
         final WebClient client =
-                Clients.builder(server.uri(SerializationFormat.NONE, "/"))
+                Clients.builder(server.httpUri())
                        .factory(clientFactory)
                        .addHttpHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
                        .build(WebClient.class);

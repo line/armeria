@@ -857,7 +857,7 @@ class AnnotatedServiceTest {
 
     @Test
     void testAdvancedAnnotatedService() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final String path = "/8/same/path";
 
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
@@ -1149,32 +1149,32 @@ class AnnotatedServiceTest {
         }
     }
 
-    static HttpRequestBase get(String uri) {
-        return request(HttpMethod.GET, uri, null, null);
+    static HttpRequestBase get(String path) {
+        return request(HttpMethod.GET, path, null, null);
     }
 
-    static HttpRequestBase get(String uri, @Nullable String accept) {
-        return request(HttpMethod.GET, uri, null, accept);
+    static HttpRequestBase get(String path, @Nullable String accept) {
+        return request(HttpMethod.GET, path, null, accept);
     }
 
-    static HttpRequestBase post(String uri) {
-        return request(HttpMethod.POST, uri, null, null);
+    static HttpRequestBase post(String path) {
+        return request(HttpMethod.POST, path, null, null);
     }
 
-    static HttpRequestBase post(String uri, @Nullable String contentType) {
-        return request(HttpMethod.POST, uri, contentType, null);
+    static HttpRequestBase post(String path, @Nullable String contentType) {
+        return request(HttpMethod.POST, path, contentType, null);
     }
 
-    static HttpRequestBase post(String uri, @Nullable String contentType, @Nullable String accept) {
-        return request(HttpMethod.POST, uri, contentType, accept);
+    static HttpRequestBase post(String path, @Nullable String contentType, @Nullable String accept) {
+        return request(HttpMethod.POST, path, contentType, accept);
     }
 
-    static HttpPost form(String uri) {
-        return form(uri, null, "armeria", "armeria");
+    static HttpPost form(String path) {
+        return form(path, null, "armeria", "armeria");
     }
 
-    static HttpPost form(String uri, @Nullable Charset charset, String... kv) {
-        final HttpPost req = (HttpPost) request(HttpMethod.POST, uri, MediaType.FORM_DATA.toString());
+    static HttpPost form(String path, @Nullable Charset charset, String... kv) {
+        final HttpPost req = (HttpPost) request(HttpMethod.POST, path, MediaType.FORM_DATA.toString());
 
         final List<NameValuePair> params = new ArrayList<>();
         for (int i = 0; i < kv.length; i += 2) {
@@ -1187,19 +1187,19 @@ class AnnotatedServiceTest {
         return req;
     }
 
-    static HttpRequestBase request(HttpMethod method, String uri, @Nullable String contentType) {
-        return request(method, uri, contentType, null);
+    static HttpRequestBase request(HttpMethod method, String path, @Nullable String contentType) {
+        return request(method, path, contentType, null);
     }
 
-    static HttpRequestBase request(HttpMethod method, String uri,
+    static HttpRequestBase request(HttpMethod method, String path,
                                    @Nullable String contentType, @Nullable String accept) {
         final HttpRequestBase req;
         switch (method) {
             case GET:
-                req = new HttpGet(server.httpUri(uri));
+                req = new HttpGet(server.httpUri().resolve(path));
                 break;
             case POST:
-                req = new HttpPost(server.httpUri(uri));
+                req = new HttpPost(server.httpUri().resolve(path));
                 break;
             default:
                 throw new Error("Unexpected method: " + method);

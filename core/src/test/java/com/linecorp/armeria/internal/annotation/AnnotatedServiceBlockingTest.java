@@ -132,7 +132,7 @@ class AnnotatedServiceBlockingTest {
             "/myEvenLoop/completionStage, 0"
     })
     void testOnlyEventLoopWithoutBlockingAnnotation(String path, Integer count) throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
         final AggregatedHttpResponse res = client.execute(headers).aggregate().join();
@@ -148,7 +148,7 @@ class AnnotatedServiceBlockingTest {
             "/myBlocking/completionStage, 1"
     })
     void testOnlyBlockingWithBlockingAnnotation(String path, Integer count) throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
         final AggregatedHttpResponse res = client.execute(headers).aggregate().join();

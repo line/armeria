@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.DateTimeException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -81,7 +80,7 @@ class HttpServerDefaultHeadersTest {
 
     @Test
     void testServerNameAndDateHeaderIncludedByDefault() {
-        final WebClient client = WebClient.of(serverWithDefaults.httpUri("/"));
+        final WebClient client = WebClient.of(serverWithDefaults.httpUri());
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -95,7 +94,7 @@ class HttpServerDefaultHeadersTest {
 
     @Test
     void testServerNameHeaderShouldBeExcludedByOption() {
-        final WebClient client = WebClient.of(serverWithoutServerHeader.httpUri("/"));
+        final WebClient client = WebClient.of(serverWithoutServerHeader.httpUri());
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -108,7 +107,7 @@ class HttpServerDefaultHeadersTest {
 
     @Test
     void testDateHeaderShouldBeExcludedByOption() {
-        final WebClient client = WebClient.of(serverWithoutDateHeader.httpUri("/"));
+        final WebClient client = WebClient.of(serverWithoutDateHeader.httpUri());
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -121,7 +120,7 @@ class HttpServerDefaultHeadersTest {
 
     @Test
     void testServerNameHeaderOverride() {
-        final WebClient client = WebClient.of(serverWithServerNameOverridden.httpUri("/"));
+        final WebClient client = WebClient.of(serverWithServerNameOverridden.httpUri());
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -130,19 +129,14 @@ class HttpServerDefaultHeadersTest {
         assertThat(res.headers().get(HttpHeaderNames.SERVER)).isEqualTo("name-set-by-user");
     }
 
-    private boolean isValidDateTimeFormat(String dateTimeString) {
-        ZonedDateTime parsedDateTime = null;
-
+    private static boolean isValidDateTimeFormat(String dateTimeString) {
         try {
-            parsedDateTime = ZonedDateTime.parse(dateTimeString, DateTimeFormatter.RFC_1123_DATE_TIME);
+            final ZonedDateTime parsedDateTime =
+                    ZonedDateTime.parse(dateTimeString, DateTimeFormatter.RFC_1123_DATE_TIME);
             final String parsedDateTimeString = parsedDateTime.format(DateTimeFormatter.RFC_1123_DATE_TIME);
             return parsedDateTimeString.equals(dateTimeString);
-        } catch (DateTimeParseException e) {
-            return false;
         } catch (DateTimeException e) {
             return false;
-        } catch (Exception e) {
-            throw e;
         }
     }
 }

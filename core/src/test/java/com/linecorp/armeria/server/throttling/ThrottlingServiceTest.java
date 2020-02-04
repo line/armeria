@@ -53,13 +53,13 @@ public class ThrottlingServiceTest {
 
     @Test
     public void serve() throws Exception {
-        final WebClient client = WebClient.of(serverRule.uri("/"));
+        final WebClient client = WebClient.of(serverRule.httpUri());
         assertThat(client.get("/http-always").aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
     public void throttle() throws Exception {
-        final WebClient client = WebClient.of(serverRule.uri("/"));
+        final WebClient client = WebClient.of(serverRule.httpUri());
         assertThat(client.get("/http-never").aggregate().get().status())
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }

@@ -160,7 +160,7 @@ public class AnnotatedServiceDecorationTest {
 
     @Test
     public void testDecoratingAnnotatedService() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
 
         AggregatedHttpResponse response;
 

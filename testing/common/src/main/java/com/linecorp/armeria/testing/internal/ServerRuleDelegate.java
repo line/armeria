@@ -16,16 +16,19 @@
 
 package com.linecorp.armeria.testing.internal;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
@@ -178,55 +181,59 @@ public abstract class ServerRuleDelegate {
     }
 
     /**
-     * Returns the HTTP or HTTPS URI for the {@link Server}.
+     * Returns the {@link Endpoint} of the specified {@link SessionProtocol} for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it opened neither HTTP nor HTTPS port
+     *                               it did not open the port for the specified {@link SessionProtocol}.
      */
-    public String uri(String path) {
-        // This will ensure that the server has started.
-        server();
-
-        if (hasHttp()) {
-            return httpUri(path);
-        }
-
-        if (hasHttps()) {
-            return httpsUri(path);
-        }
-
-        throw new IllegalStateException("can't find a useful active port");
+    public Endpoint endpoint(SessionProtocol protocol) {
+        ensureStarted();
+        return Endpoint.of("127.0.0.1", port(protocol));
     }
 
     /**
-     * Returns the URI for the {@link Server} of the specified protocol and format.
+     * Returns the HTTP {@link Endpoint} for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it did not open a port of the protocol.
+     *                               it did not open an HTTP port.
      */
-    public String uri(SessionProtocol protocol, SerializationFormat format, String path) {
+    public Endpoint httpEndpoint() {
+        return endpoint(HTTP);
+    }
+
+    /**
+     * Returns the HTTPS {@link Endpoint} for the {@link Server}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTPS port.
+     */
+    public Endpoint httpsEndpoint() {
+        return endpoint(HTTPS);
+    }
+
+    /**
+     * Returns the {@link URI} for the {@link Server} of the specified {@link SessionProtocol}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open the port for the specified {@link SessionProtocol}.
+     */
+    public URI uri(SessionProtocol protocol) {
+        return uri(protocol, SerializationFormat.NONE);
+    }
+
+    /**
+     * Returns the {@link URI} for the {@link Server} of the specified {@link SessionProtocol} and
+     * {@link SerializationFormat}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open the port for the specified {@link SessionProtocol}.
+     */
+    public URI uri(SessionProtocol protocol, SerializationFormat format) {
         requireNonNull(protocol, "protocol");
         requireNonNull(format, "format");
-        requireNonNull(path, "path");
 
-        // This will ensure that the server has started.
-        server();
-
-        return format.uriText() + '+' + uri(protocol, path);
-    }
-
-    /**
-     * Returns the URI for the {@link Server} of the specified protocol.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it did not open a port of the protocol.
-     */
-    public String uri(SessionProtocol protocol, String path) {
-        requireNonNull(protocol, "protocol");
-        requireNonNull(path, "path");
-
-        // This will ensure that the server has started.
-        server();
+        ensureStarted();
 
         final int port;
         if (!protocol.isTls() && hasHttp()) {
@@ -237,7 +244,12 @@ public abstract class ServerRuleDelegate {
             throw new IllegalStateException("can't find the specified port");
         }
 
-        return protocol.uriText() + "://127.0.0.1:" + port + path;
+        final String uriStr = protocol.uriText() + "://127.0.0.1:" + port;
+        if (format == SerializationFormat.NONE) {
+            return URI.create(uriStr);
+        } else {
+            return URI.create(format.uriText() + '+' + uriStr);
+        }
     }
 
     /**
@@ -245,74 +257,205 @@ public abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started or
      *                               it opened neither HTTP nor HTTPS port
+     *
+     * @deprecated Use {@link #httpUri()} or {@link #httpsUri()} and {@link URI#resolve(String)}.
      */
-    public String uri(SerializationFormat serializationFormat, String path) {
-        requireNonNull(serializationFormat, "serializationFormat");
-        return serializationFormat.uriText() + '+' + uri(path);
+    @Deprecated
+    public String uri(String path) {
+        ensureStarted();
+
+        if (hasHttp()) {
+            return httpUri() + validatePath(path);
+        }
+
+        if (hasHttps()) {
+            return httpsUri() + validatePath(path);
+        }
+
+        throw new IllegalStateException("can't find a useful active port");
+    }
+
+    /**
+     * Returns the URI for the {@link Server} of the specified protocol and format.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open a port of the protocol.
+     *
+     * @deprecated Use {@link #uri(SessionProtocol, SerializationFormat)} and {@link URI#resolve(String)}.
+     */
+    @Deprecated
+    public String uri(SessionProtocol protocol, SerializationFormat format, String path) {
+        return uri(protocol, format) + validatePath(path);
+    }
+
+    /**
+     * Returns the URI for the {@link Server} of the specified protocol.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open a port of the protocol.
+     *
+     * @deprecated Use {@link #uri(SessionProtocol)} and {@link URI#resolve(String)}.
+     */
+    @Deprecated
+    public String uri(SessionProtocol protocol, String path) {
+        return uri(protocol) + validatePath(path);
+    }
+
+    /**
+     * Returns the HTTP or HTTPS URI for the {@link Server}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it opened neither HTTP nor HTTPS port
+     *
+     * @deprecated Use {@link #httpUri(SerializationFormat)} or {@link #httpsUri(SerializationFormat)}
+     *             and {@link URI#resolve(String)}.
+     */
+    @Deprecated
+    public String uri(SerializationFormat format, String path) {
+        ensureStarted();
+
+        if (hasHttp()) {
+            return httpUri(format) + validatePath(path);
+        }
+
+        if (hasHttps()) {
+            return httpsUri(format) + validatePath(path);
+        }
+
+        throw new IllegalStateException("can't find a useful active port");
+    }
+
+    /**
+     * Returns the HTTP {@link URI} for the {@link Server}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTP port.
+     */
+    public URI httpUri() {
+        return uri(HTTP);
+    }
+
+    /**
+     * Returns the HTTP {@link URI} for the {@link Server}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTP port.
+     */
+    public URI httpUri(SerializationFormat format) {
+        return uri(HTTP, format);
     }
 
     /**
      * Returns the HTTP URI for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
+     *
+     * @deprecated Use {@link #httpUri()} and {@link URI#resolve(String)}.
      */
+    @Deprecated
     public String httpUri(String path) {
-        validatePath(path);
-        return "http://127.0.0.1:" + httpPort() + path;
+        return httpUri() + validatePath(path);
     }
 
     /**
      * Returns the HTTP URI for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
+     *
+     * @deprecated Use {@link #httpUri(SerializationFormat)} and {@link URI#resolve(String)}.
      */
-    public String httpUri(SerializationFormat serializationFormat, String path) {
-        requireNonNull(serializationFormat, "serializationFormat");
-        return serializationFormat.uriText() + '+' + httpUri(path);
+    @Deprecated
+    public String httpUri(SerializationFormat format, String path) {
+        return httpUri(format) + validatePath(path);
+    }
+
+    /**
+     * Returns the HTTPS {@link URI} for the {@link Server}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTPS port.
+     */
+    public URI httpsUri() {
+        return uri(HTTPS);
+    }
+
+    /**
+     * Returns the HTTPS {@link URI} for the {@link Server}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTPS port.
+     */
+    public URI httpsUri(SerializationFormat format) {
+        return uri(HTTPS, format);
     }
 
     /**
      * Returns the HTTPS URI for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
+     *
+     * @deprecated Use {@link #httpsUri()} and {@link URI#resolve(String)}.
      */
+    @Deprecated
     public String httpsUri(String path) {
-        validatePath(path);
-        return "https://127.0.0.1:" + httpsPort() + path;
+        return httpsUri() + validatePath(path);
     }
 
     /**
      * Returns the HTTPS URI for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
+     *
+     * @deprecated Use {@link #httpsUri(SerializationFormat)} and {@link URI#resolve(String)}.
      */
-    public String httpsUri(SerializationFormat serializationFormat, String path) {
-        requireNonNull(serializationFormat, "serializationFormat");
-        return serializationFormat.uriText() + '+' + httpsUri(path);
+    @Deprecated
+    public String httpsUri(SerializationFormat format, String path) {
+        return httpsUri(format) + validatePath(path);
     }
 
     /**
-     * Returns the HTTP {@link InetSocketAddress} for the {@link Server}.
+     * Returns the {@link InetSocketAddress} of the specified {@link SessionProtocol} for the {@link Server}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open a port for the specified {@link SessionProtocol}.
+     */
+    public InetSocketAddress socketAddress(SessionProtocol protocol) {
+        requireNonNull(protocol, "protocol");
+        ensureStarted();
+        return new InetSocketAddress("127.0.0.1", port(protocol));
+    }
+
+    /**
+     * Returns the HTTP {@link InetSocketAddress} of the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
      */
     public InetSocketAddress httpSocketAddress() {
-        return new InetSocketAddress("127.0.0.1", httpPort());
+        return socketAddress(HTTP);
     }
 
     /**
-     * Returns the HTTPS {@link InetSocketAddress} for the {@link Server}.
+     * Returns the HTTPS {@link InetSocketAddress} of the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
      */
     public InetSocketAddress httpsSocketAddress() {
-        return new InetSocketAddress("127.0.0.1", httpsPort());
+        return socketAddress(HTTPS);
     }
 
-    private static void validatePath(String path) {
-        if (!requireNonNull(path, "path").startsWith("/")) {
-            throw new IllegalArgumentException("path: " + path +
-                                               " (expected: an absolute path starting with '/')");
-        }
+    private void ensureStarted() {
+        // This will ensure that the server has started.
+        server();
+    }
+
+    private static String validatePath(String path) {
+        requireNonNull(path, "path");
+        checkArgument(path.startsWith("/"),
+                      "path: %s (expected: an absolute path starting with '/')", path);
+        return path;
     }
 }

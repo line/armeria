@@ -37,14 +37,15 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 
@@ -87,15 +88,15 @@ public abstract class WebAppContainerTest {
     }
 
     /**
-     * Returns the {@link ServerRule} that provides the {@link Server} that serves the {@link Service}s this
-     * test runs against.
+     * Returns the {@link ServerExtension} that provides the {@link Server} that serves the {@link Service}s
+     * this test runs against.
      */
-    protected abstract ServerRule server();
+    protected abstract ServerExtension server();
 
     @Test
     public void jsp() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server().uri("/jsp/index.jsp")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server().httpUri() + "/jsp/index.jsp"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");
@@ -117,7 +118,7 @@ public abstract class WebAppContainerTest {
     public void japanesePath() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(
-                    server().uri("/jsp/" + URLEncoder.encode("日本語", "UTF-8") + "/index.jsp")))) {
+                    server().httpUri() + "/jsp/" + URLEncoder.encode("日本語", "UTF-8") + "/index.jsp"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");
@@ -137,7 +138,7 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void https() throws Exception {
-        final WebClient client = WebClient.builder(server().httpsUri("/"))
+        final WebClient client = WebClient.builder(server().uri(SessionProtocol.HTTPS))
                                           .factory(ClientFactory.insecure())
                                           .build();
         final AggregatedHttpResponse response = client.get("/jsp/index.jsp").aggregate().get();
@@ -157,7 +158,7 @@ public abstract class WebAppContainerTest {
     public void getWithQueryString() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(server().uri("/jsp/query_string.jsp?foo=%31&bar=%32")))) {
+                    new HttpGet(server().httpUri() + "/jsp/query_string.jsp?foo=%31&bar=%32"))) {
 
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
@@ -173,7 +174,7 @@ public abstract class WebAppContainerTest {
 
             // Send a query again with different values to make sure the query strings are not cached.
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(server().uri("/jsp/query_string.jsp?foo=%33&bar=%34")))) {
+                    new HttpGet(server().httpUri() + "/jsp/query_string.jsp?foo=%33&bar=%34"))) {
 
                 final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
                                                      .replaceAll("");
@@ -189,7 +190,7 @@ public abstract class WebAppContainerTest {
     @Test
     public void postWithQueryString() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost post = new HttpPost(server().uri("/jsp/query_string.jsp?foo=3"));
+            final HttpPost post = new HttpPost(server().httpUri() + "/jsp/query_string.jsp?foo=3");
             post.setEntity(new UrlEncodedFormEntity(
                     Collections.singletonList(new BasicNameValuePair("bar", "4")), StandardCharsets.UTF_8));
 
@@ -207,7 +208,7 @@ public abstract class WebAppContainerTest {
             }
 
             // Send a query again with different values to make sure the query strings are not cached.
-            final HttpPost post2 = new HttpPost(server().uri("/jsp/query_string.jsp?foo=5"));
+            final HttpPost post2 = new HttpPost(server().httpUri() + "/jsp/query_string.jsp?foo=5");
             post2.setEntity(new UrlEncodedFormEntity(
                     Collections.singletonList(new BasicNameValuePair("bar", "6")), StandardCharsets.UTF_8));
 
@@ -226,7 +227,7 @@ public abstract class WebAppContainerTest {
     @Test
     public void echoPost() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost post = new HttpPost(server().uri("/jsp/echo_post.jsp"));
+            final HttpPost post = new HttpPost(server().httpUri() + "/jsp/echo_post.jsp");
             post.setEntity(new StringEntity("test"));
 
             try (CloseableHttpResponse res = hc.execute(post)) {
@@ -247,7 +248,7 @@ public abstract class WebAppContainerTest {
     @Test
     public void echoPostWithEmptyBody() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost post = new HttpPost(server().uri("/jsp/echo_post.jsp"));
+            final HttpPost post = new HttpPost(server().httpUri() + "/jsp/echo_post.jsp");
 
             try (CloseableHttpResponse res = hc.execute(post)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
@@ -268,7 +269,7 @@ public abstract class WebAppContainerTest {
     public void addressesAndPorts_127001() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(server().uri("/jsp/addrs_and_ports.jsp")))) {
+                    new HttpGet(server().httpUri() + "/jsp/addrs_and_ports.jsp"))) {
 
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
@@ -294,7 +295,7 @@ public abstract class WebAppContainerTest {
     @Test
     public void addressesAndPorts_localhost() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpGet request = new HttpGet(server().uri("/jsp/addrs_and_ports.jsp"));
+            final HttpGet request = new HttpGet(server().httpUri() + "/jsp/addrs_and_ports.jsp");
             request.setHeader("Host", "localhost:1111");
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
@@ -330,7 +331,7 @@ public abstract class WebAppContainerTest {
 
     protected void testLarge(String path) throws IOException {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server().uri(path)))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server().httpUri().resolve(path)))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/plain");

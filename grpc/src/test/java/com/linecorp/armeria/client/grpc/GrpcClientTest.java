@@ -72,6 +72,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -206,13 +207,13 @@ public class GrpcClientTest {
             return delegate.execute(ctx, req);
         };
 
-        final URI uri = URI.create(server.httpUri("/"));
-        blockingStub = Clients.builder("gproto+" + uri)
+        final URI uri = server.httpUri(GrpcSerializationFormats.PROTO);
+        blockingStub = Clients.builder(uri)
                               .maxResponseLength(MAX_MESSAGE_SIZE)
                               .decorator(LoggingClient.builder().newDecorator())
                               .decorator(requestLogRecorder)
                               .build(TestServiceBlockingStub.class);
-        asyncStub = Clients.builder("gproto+" + uri.getScheme(), Endpoint.of(uri.getHost(), uri.getPort()))
+        asyncStub = Clients.builder(uri.getScheme(), server.httpEndpoint())
                            .decorator(LoggingClient.builder().newDecorator())
                            .decorator(requestLogRecorder)
                            .build(TestServiceStub.class);
@@ -235,8 +236,9 @@ public class GrpcClientTest {
 
     @Test
     public void emptyUnary_grpcWeb() throws Exception {
-        final TestServiceBlockingStub stub = Clients.newClient("gproto-web+" + server.httpUri("/"),
-                                                               TestServiceBlockingStub.class);
+        final TestServiceBlockingStub stub =
+                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB),
+                                  TestServiceBlockingStub.class);
         assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
     }
 
@@ -298,7 +300,7 @@ public class GrpcClientTest {
                               .build();
 
         final TestServiceStub stub =
-                Clients.builder("gproto+" + server.httpUri("/"))
+                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
                        .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
                        .decorator(LoggingClient.builder().newDecorator())
                        .build(TestServiceStub.class);

@@ -303,7 +303,7 @@ public class AnnotatedServiceHandlersOrderTest {
     }
 
     private static AggregatedHttpResponse executeRequest(AggregatedHttpRequest req) {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         return client.execute(req).aggregate().join();
     }
 }

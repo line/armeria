@@ -43,8 +43,8 @@ class MockWebServiceExtensionTest {
 
     @Test
     void normal() {
-        final WebClient webClient = WebClient.of(server.httpUri("/"));
-        final WebClient httpsClient = WebClient.builder(server.httpsUri("/"))
+        final WebClient webClient = WebClient.of(server.httpUri());
+        final WebClient httpsClient = WebClient.builder(server.httpsUri())
                                                .factory(ClientFactory.insecure())
                                                .build();
 
@@ -104,7 +104,7 @@ class MockWebServiceExtensionTest {
         server.enqueue(HttpResponse.delayed(AggregatedHttpResponse.of(HttpStatus.OK), Duration.ofSeconds(1)));
 
         final WebClient client =
-                WebClient.builder(server.httpUri("/"))
+                WebClient.builder(server.httpUri())
                          .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(50L))
                          .build();
 
@@ -122,7 +122,7 @@ class MockWebServiceExtensionTest {
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThat(WebClient.of(server.httpUri("/")).get("/whoami").aggregate().join().status())
+        assertThat(WebClient.of(server.httpUri()).get("/whoami").aggregate().join().status())
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -132,7 +132,7 @@ class MockWebServiceExtensionTest {
         // leavesState left two INTERNAL_SERVER_ERROR responses in the queue, but they should be gone now.
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK));
 
-        assertThat(WebClient.of(server.httpUri("/")).get("/").aggregate().join().status())
+        assertThat(WebClient.of(server.httpUri()).get("/").aggregate().join().status())
                 .isEqualTo(HttpStatus.OK);
 
         // leavesState did not take the /whoami request, but it's gone now.

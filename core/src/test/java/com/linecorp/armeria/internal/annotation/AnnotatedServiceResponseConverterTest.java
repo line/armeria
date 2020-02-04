@@ -485,7 +485,7 @@ public class AnnotatedServiceResponseConverterTest {
 
     @Test
     public void customizedClassLevelResponse() {
-        final WebClient client = WebClient.of(rule.uri("/custom-classlevel"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/custom-classlevel");
         AggregatedHttpResponse res;
 
         res = aggregated(client.get("/expect-class"));
@@ -530,12 +530,12 @@ public class AnnotatedServiceResponseConverterTest {
 
     @Test
     public void typeBasedDefaultResponseConverter() throws Exception {
-        shouldBeConvertedByDefaultResponseConverter(WebClient.of(rule.uri("/type")));
+        shouldBeConvertedByDefaultResponseConverter(WebClient.of(rule.httpUri() + "/type"));
     }
 
     @Test
     public void publisherBasedResponseConverter() throws Exception {
-        shouldBeConvertedByDefaultResponseConverter(WebClient.of(rule.uri("/publish/single")));
+        shouldBeConvertedByDefaultResponseConverter(WebClient.of(rule.httpUri() + "/publish/single"));
     }
 
     private static void shouldBeConvertedByDefaultResponseConverter(WebClient client) throws Exception {
@@ -561,7 +561,7 @@ public class AnnotatedServiceResponseConverterTest {
 
     @Test
     public void multipleObjectPublisherBasedResponseConverter() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/publish/multi"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/publish/multi");
 
         AggregatedHttpResponse res;
 
@@ -579,7 +579,7 @@ public class AnnotatedServiceResponseConverterTest {
 
     @Test
     public void publisherBasedResponseConversionFailure() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/publish/failure"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/publish/failure");
 
         AggregatedHttpResponse res;
 
@@ -592,7 +592,7 @@ public class AnnotatedServiceResponseConverterTest {
 
     @Test
     public void produceTypeAnnotationBasedDefaultResponseConverter() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/produce"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/produce");
 
         AggregatedHttpResponse res;
 
@@ -631,7 +631,7 @@ public class AnnotatedServiceResponseConverterTest {
 
     @Test
     public void customizedHttpResponse() {
-        final WebClient client = WebClient.of(rule.uri("/custom-response"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/custom-response");
 
         AggregatedHttpResponse res;
 
@@ -698,7 +698,7 @@ public class AnnotatedServiceResponseConverterTest {
 
     @Test
     public void httpResultWithPublisher() {
-        final WebClient client = WebClient.of(rule.uri("/publish/http-result"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/publish/http-result");
 
         AggregatedHttpResponse res;
 
@@ -760,7 +760,7 @@ public class AnnotatedServiceResponseConverterTest {
             }
         };
 
-        StepVerifier.create(WebClient.of(rule.uri("/json-seq")).get(path))
+        StepVerifier.create(WebClient.of(rule.httpUri() + "/json-seq").get(path))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "foo"))
@@ -783,7 +783,7 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     private static void testEventStream(String path) {
-        StepVerifier.create(WebClient.of(rule.uri("/event-stream")).get(path))
+        StepVerifier.create(WebClient.of(rule.httpUri() + "/event-stream").get(path))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM))
                     .expectNext(HttpData.ofUtf8("data:foo\n\n"))

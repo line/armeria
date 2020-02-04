@@ -115,7 +115,7 @@ public class ThriftHttpHeaderTest {
     @Test
     public void testSimpleManipulationAsync() throws Exception {
         final HelloService.AsyncIface client = Clients.newClient(
-                server.uri(BINARY, "/hello"), HelloService.AsyncIface.class);
+                server.httpUri(BINARY) + "/hello", HelloService.AsyncIface.class);
 
         final BlockingQueue<Object> result = new ArrayBlockingQueue<>(1);
         final Callback callback = new Callback(result);
@@ -142,7 +142,7 @@ public class ThriftHttpHeaderTest {
     @Test
     public void httpResponseHeaderContainsFoo() throws TException {
         final Iface client =
-                Clients.builder(server.uri(BINARY, "/hello"))
+                Clients.builder(server.httpUri(BINARY) + "/hello")
                        .decorator((delegate, ctx, req) -> {
                            final HttpResponse res = delegate.execute(ctx, req);
                            return new FilteredHttpResponse(res) {
@@ -163,7 +163,7 @@ public class ThriftHttpHeaderTest {
     }
 
     private static Iface newClient() {
-        return Clients.newClient(server.uri(BINARY, "/hello"), HelloService.Iface.class);
+        return Clients.newClient(server.httpUri(BINARY) + "/hello", HelloService.Iface.class);
     }
 
     private static void assertAuthorizationFailure(Iface client, String expectedSecret) {

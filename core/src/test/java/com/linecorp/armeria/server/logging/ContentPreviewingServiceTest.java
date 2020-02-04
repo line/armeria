@@ -111,7 +111,7 @@ class ContentPreviewingServiceTest {
 
     @Test
     void contentPreviewBeforeEncoding() {
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(DecodingClient.newDecorator())
                                           .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/beforeEncoding",
@@ -129,7 +129,7 @@ class ContentPreviewingServiceTest {
      */
     @Test
     void encodedContentPreviewIsDecodedInPreviewer() {
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(DecodingClient.newDecorator())
                                           .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/encoded",

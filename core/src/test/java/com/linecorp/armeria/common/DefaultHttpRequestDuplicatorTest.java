@@ -91,7 +91,7 @@ class DefaultHttpRequestDuplicatorTest {
     @Test
     void longLivedRequest() {
         final WebClient client =
-                WebClient.builder(server.uri("/"))
+                WebClient.builder(server.httpUri())
                          .decorator(RetryingClient.newDecorator(
                                  RetryStrategy.onServerErrorStatus(Backoff.withoutDelay())))
                          .build();

@@ -96,7 +96,7 @@ class HttpServerAbortingInfiniteStreamTest {
     void shouldCancelInfiniteStreamImmediately(SessionProtocol protocol) {
         expectedProtocol.set(protocol);
 
-        final WebClient client = WebClient.of(server.uri(protocol, "/"));
+        final WebClient client = WebClient.of(server.uri(protocol));
         final HttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/infinity"));
 
         response.subscribe(new Subscriber<HttpObject>() {

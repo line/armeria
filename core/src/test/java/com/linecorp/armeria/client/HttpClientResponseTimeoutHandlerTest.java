@@ -68,7 +68,7 @@ class HttpClientResponseTimeoutHandlerTest {
         final AtomicReference<RequestLogAccess> logHolder = new AtomicReference<>();
         final IllegalStateException reqCause = new IllegalStateException("abort request");
         final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
-        final WebClient client = WebClient.builder(server.uri(protocol, "/"))
+        final WebClient client = WebClient.builder(server.uri(protocol))
                                           .responseTimeout(Duration.ofSeconds(2))
                                           .decorator((delegate, ctx, req) -> {
                                               if (useResponseTimeoutHandler) {
@@ -104,7 +104,7 @@ class HttpClientResponseTimeoutHandlerTest {
     void testResponseTimeoutHandlerRequestAbort(SessionProtocol protocol) {
         final AtomicReference<RequestLogAccess> logHolder = new AtomicReference<>();
         final IllegalStateException reqCause = new IllegalStateException("abort request");
-        final WebClient client = WebClient.builder(server.uri(protocol, "/"))
+        final WebClient client = WebClient.builder(server.uri(protocol))
                                           .responseTimeout(Duration.ofSeconds(2))
                                           .decorator((delegate, ctx, req) -> {
                                               ctx.setResponseTimeoutHandler(() -> {
@@ -132,7 +132,7 @@ class HttpClientResponseTimeoutHandlerTest {
         final IllegalStateException resCause = new IllegalStateException("abort response");
         final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
         final WebClient client = WebClient
-                .builder(server.uri(protocol, "/"))
+                .builder(server.uri(protocol))
                 .responseTimeout(Duration.ofSeconds(2))
                 .decorator((delegate, ctx, req) -> {
                     final HttpResponse response = delegate.execute(ctx, req);

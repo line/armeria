@@ -59,7 +59,7 @@ public class ServerSentEventsTest {
 
     @Test
     public void fromPublisherOrStream() {
-        final WebClient client = WebClient.of(rule.uri("/sse"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/sse");
         for (final String path : ImmutableList.of("/publisher", "/stream")) {
             final AggregatedHttpResponse response = client.get(path).aggregate().join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
@@ -70,7 +70,7 @@ public class ServerSentEventsTest {
 
     @Test
     public void withConverter() {
-        final WebClient client = WebClient.of(rule.uri("/converter"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/converter");
         for (final String path : ImmutableList.of("/publisher", "/stream")) {
             final AggregatedHttpResponse response = client.get(path).aggregate().join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
@@ -82,7 +82,7 @@ public class ServerSentEventsTest {
     @Test
     public void singleEvent() {
         final AggregatedHttpResponse response =
-                WebClient.of(rule.uri("/single")).get("/sse").aggregate().join();
+                WebClient.of(rule.httpUri() + "/single").get("/sse").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().contentType()).isEqualTo(MediaType.EVENT_STREAM);
         assertThat(response.content().toStringUtf8()).isEqualTo("event:add\n\n");
