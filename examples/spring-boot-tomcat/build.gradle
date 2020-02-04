@@ -14,17 +14,16 @@ springBoot {
 }
 
 dependencies {
-    compile project(':core')
-    compile project(':spring:boot-starter')
-    compile project(':tomcat')
+    implementation project(':core')
+    implementation project(':spring:boot-starter')
+    implementation project(':tomcat')
 
-    compile 'org.springframework.boot:spring-boot-starter-web'
-    compileOnly 'org.springframework.boot:spring-boot-configuration-processor'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    runtime project(':spring:boot-actuator-starter')
+    runtimeOnly project(':spring:boot-actuator-starter')
 
-    testCompile 'org.assertj:assertj-core'
-    testCompile 'org.junit.jupiter:junit-jupiter-api'
-    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

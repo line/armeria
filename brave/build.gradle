@@ -1,7 +1,7 @@
 dependencies {
-    compile 'io.zipkin.brave:brave'
-    compile 'io.zipkin.brave:brave-instrumentation-http'
+    api 'io.zipkin.brave:brave'
+    api 'io.zipkin.brave:brave-instrumentation-http'
 
-    testCompile project(':thrift')
-    testCompile 'io.zipkin.brave:brave-instrumentation-http-tests'
+    testImplementation project(':thrift')
+    testImplementation 'io.zipkin.brave:brave-instrumentation-http-tests'
 }

@@ -42,11 +42,10 @@ import org.junit.Test;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
-
-import io.netty.handler.codec.http.HttpHeaderNames;
 
 /**
  * Tests a web application container {@link Service}.

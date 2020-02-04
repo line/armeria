@@ -3,17 +3,17 @@ plugins {
 }
 
 dependencies {
-    compile project(':core')
-    compile project(':grpc')
-    compile 'io.projectreactor:reactor-core'
+    implementation project(':core')
+    implementation project(':grpc')
+    implementation 'io.projectreactor:reactor-core'
     compileOnly 'jakarta.annotation:jakarta.annotation-api'
-    runtime 'org.slf4j:slf4j-simple'
+    runtimeOnly 'org.slf4j:slf4j-simple'
 
-    testCompile 'jakarta.annotation:jakarta.annotation-api'
-    testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
-    testCompile 'org.assertj:assertj-core'
-    testCompile 'org.awaitility:awaitility'
-    testCompile 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'jakarta.annotation:jakarta.annotation-api'
+    testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.awaitility:awaitility'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
 }
 
 application {

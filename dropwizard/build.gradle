@@ -8,15 +8,15 @@ buildscript {
 }
 
 dependencies {
-    compile project(':jetty')
+    implementation project(':jetty')
     // Dropwizard
     ['core', 'util', 'lifecycle', 'jackson', 'validation', 'jetty', 'jersey'].each {
-        compile "io.dropwizard:dropwizard-$it"
+        api "io.dropwizard:dropwizard-$it"
     }
     // Dropwizard Metrics
-    compile 'io.dropwizard.metrics:metrics-core'
+    implementation 'io.dropwizard.metrics:metrics-core'
 
-    testCompile 'io.dropwizard:dropwizard-testing'
+    testImplementation 'io.dropwizard:dropwizard-testing'
 }
 
 // Do not relocate Guava because it's part of Dropwizard's public API.
