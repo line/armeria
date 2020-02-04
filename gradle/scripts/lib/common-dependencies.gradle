@@ -37,7 +37,7 @@ rootProject.ext.dependenciesYaml.forEach { String key, value ->
         def artifact = value as Map
         artifact.forEach { String artifactId, Map props ->
             if (props.containsKey('version')) {
-                managedDependencyVersions["${groupId}:${artifactId}"] = "${props['version']}"
+                managedDependencyVersions["${groupId}:${artifactId}"] = String.valueOf(props['version'])
             }
             if (props.containsKey('exclusions')) {
                 props['exclusions'].each { String spec ->
