@@ -34,11 +34,14 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 
 /**
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
  */
-public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
+public class DynamicEndpointGroup
+        extends AbstractListenable<List<Endpoint>>
+        implements EndpointGroup, ListenableAsyncCloseable {
 
     // An empty list of endpoints we also use as a marker that we have not initialized endpoints yet.
     private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
@@ -105,7 +108,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
      * Returns the {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.
      */
     @Override
-    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+    public CompletableFuture<List<Endpoint>> whenReady() {
         return initialEndpointsFuture;
     }
 
@@ -191,11 +194,19 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
         }
     }
 
-    /**
-     * Returns whether {@link #close()} or {@link #closeAsync()} has been called.
-     */
-    protected final boolean isClosing() {
+    @Override
+    public final boolean isClosing() {
         return closeable.isClosing();
+    }
+
+    @Override
+    public final boolean isClosed() {
+        return closeable.isClosed();
+    }
+
+    @Override
+    public final CompletableFuture<?> whenClosed() {
+        return closeable.whenClosed();
     }
 
     @Override

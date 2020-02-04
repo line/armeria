@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.BufferedReader;
@@ -40,26 +39,24 @@ class Http1EmptyRequestTest {
     @ParameterizedTest
     @EnumSource(value = HttpMethod.class, mode = Mode.EXCLUDE, names = "UNKNOWN")
     void emptyRequest(HttpMethod method) throws Exception {
-        withTimeout(() -> {
-            try (ServerSocket ss = new ServerSocket(0);) {
-                final int port = ss.getLocalPort();
+        try (ServerSocket ss = new ServerSocket(0)) {
+            final int port = ss.getLocalPort();
 
-                final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
-                client.execute(HttpRequest.of(method, "/")).aggregate();
+            final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
+            client.execute(HttpRequest.of(method, "/")).aggregate();
 
-                try (Socket s = ss.accept()) {
-                    final BufferedReader in = new BufferedReader(
-                            new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
-                    assertThat(in.readLine()).isEqualTo(method.name() + " / HTTP/1.1");
-                    assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
-                    assertThat(in.readLine()).startsWith("user-agent: armeria/");
-                    if (hasContent(method)) {
-                        assertThat(in.readLine()).isEqualTo("content-length: 0");
-                    }
-                    assertThat(in.readLine()).isEmpty();
+            try (Socket s = ss.accept()) {
+                final BufferedReader in = new BufferedReader(
+                        new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
+                assertThat(in.readLine()).isEqualTo(method.name() + " / HTTP/1.1");
+                assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
+                assertThat(in.readLine()).startsWith("user-agent: armeria/");
+                if (hasContent(method)) {
+                    assertThat(in.readLine()).isEqualTo("content-length: 0");
                 }
+                assertThat(in.readLine()).isEmpty();
             }
-        });
+        }
     }
 
     private static boolean hasContent(HttpMethod method) {

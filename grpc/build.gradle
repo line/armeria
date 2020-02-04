@@ -17,3 +17,9 @@ dependencies {
     testImplementation 'io.grpc:grpc-testing'
     testImplementation 'io.micrometer:micrometer-registry-prometheus'
 }
+
+tasks {
+    javadoc {
+        exclude '**/com/linecorp/armeria/common/grpc/InternalExceptionMessages**'
+    }
+}

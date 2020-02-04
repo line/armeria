@@ -25,8 +25,12 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 
-final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
+final class OrElseEndpointGroup
+        extends AbstractListenable<List<Endpoint>>
+        implements EndpointGroup, ListenableAsyncCloseable {
+
     private final EndpointGroup first;
     private final EndpointGroup second;
 
@@ -42,7 +46,7 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
         second.addListener(unused -> notifyListeners(endpoints()));
 
         initialEndpointsFuture = CompletableFuture
-                .anyOf(first.initialEndpointsFuture(), second.initialEndpointsFuture())
+                .anyOf(first.whenReady(), second.whenReady())
                 .thenApply(unused -> endpoints());
 
         selector = first.selectionStrategy().newSelector(this);
@@ -68,8 +72,23 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
     }
 
     @Override
-    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+    public CompletableFuture<List<Endpoint>> whenReady() {
         return initialEndpointsFuture;
+    }
+
+    @Override
+    public boolean isClosing() {
+        return closeable.isClosing();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closeable.isClosed();
+    }
+
+    @Override
+    public CompletableFuture<?> whenClosed() {
+        return closeable.whenClosed();
     }
 
     @Override

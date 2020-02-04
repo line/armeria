@@ -65,7 +65,7 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
     private volatile Throwable completedCause;
 
     ArmeriaHttpClientResponseSubscriber(HttpResponse httpResponse) {
-        completionFuture = httpResponse.completionFuture();
+        completionFuture = httpResponse.whenComplete();
         httpResponse.subscribe(this, eventLoop, SubscriptionOption.NOTIFY_CANCELLATION);
     }
 

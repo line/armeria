@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import static java.util.Objects.requireNonNull;
-
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
@@ -30,7 +28,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.ChannelUtil;
+import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.netty.channel.Channel;
 
@@ -47,18 +45,10 @@ public interface RequestLogBuilder extends RequestLogAccess {
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
      *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
-     *   <li>{@link RequestLog#channel()}</li>
-     *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#sslSession()}</li>
      * </ul>
-     *
-     * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} of the connection.
      */
-    default void startRequest(Channel channel, SessionProtocol sessionProtocol) {
-        requireNonNull(channel, "channel");
-        requireNonNull(sessionProtocol, "sessionProtocol");
-        startRequest(channel, sessionProtocol, ChannelUtil.findSslSession(channel, sessionProtocol));
+    default void startRequest() {
+        startRequest(System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 
     /**
@@ -67,6 +57,31 @@ public interface RequestLogBuilder extends RequestLogAccess {
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
      *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
      *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
+     * </ul>
+     *
+     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
+     * @param requestStartTimeMicros the number of microseconds since the epoch,
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     */
+    void startRequest(long requestStartTimeNanos, long requestStartTimeMicros);
+
+    /**
+     * Sets the properties related with socket connection. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#channel()}</li>
+     *   <li>{@link RequestLog#sessionProtocol()}</li>
+     *   <li>{@link RequestLog#sslSession()}</li>
+     * </ul>
+     *
+     * @param channel the {@link Channel} which handled the {@link Request}.
+     * @param sessionProtocol the {@link SessionProtocol} of the connection.
+     */
+    void session(@Nullable Channel channel, SessionProtocol sessionProtocol,
+                 @Nullable ClientConnectionTimings connectionTimings);
+
+    /**
+     * Sets the properties related with socket connection. This method sets the following properties:
+     * <ul>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
      *   <li>{@link RequestLog#sslSession()}</li>
@@ -76,53 +91,8 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * @param sessionProtocol the {@link SessionProtocol} of the connection.
      * @param sslSession the {@link SSLSession} of the connection, or {@code null}.
      */
-    void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession);
-
-    /**
-     * Starts the collection of the {@link Request} information. This method sets the following properties:
-     * <ul>
-     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
-     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
-     *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
-     *   <li>{@link RequestLog#channel()}</li>
-     *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#sslSession()}</li>
-     * </ul>
-     *
-     * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} of the connection.
-     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
-     * @param requestStartTimeMicros the number of microseconds since the epoch,
-     *                               e.g. {@code System.currentTimeMillis() * 1000}.
-     */
-    default void startRequest(Channel channel, SessionProtocol sessionProtocol,
-                              long requestStartTimeNanos, long requestStartTimeMicros) {
-        requireNonNull(channel, "channel");
-        requireNonNull(sessionProtocol, "sessionProtocol");
-        startRequest(channel, sessionProtocol, ChannelUtil.findSslSession(channel, sessionProtocol),
-                     requestStartTimeNanos, requestStartTimeMicros);
-    }
-
-    /**
-     * Starts the collection of the {@link Request} information. This method sets the following properties:
-     * <ul>
-     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
-     *   <li>{@link RequestLog#requestStartTimeMicros()}</li>
-     *   <li>{@link RequestLog#requestStartTimeNanos()}</li>
-     *   <li>{@link RequestLog#channel()}</li>
-     *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#sslSession()}</li>
-     * </ul>
-     *
-     * @param channel the {@link Channel} which handled the {@link Request}.
-     * @param sessionProtocol the {@link SessionProtocol} of the connection.
-     * @param sslSession the {@link SSLSession} of the connection, or {@code null}.
-     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
-     * @param requestStartTimeMicros the number of microseconds since the epoch,
-     *                               e.g. {@code System.currentTimeMillis() * 1000}.
-     */
-    void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
-                      long requestStartTimeNanos, long requestStartTimeMicros);
+    void session(@Nullable Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
+                 @Nullable ClientConnectionTimings connectionTimings);
 
     /**
      * Sets the {@link SerializationFormat}.
@@ -180,18 +150,20 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void requestContentPreview(@Nullable String requestContentPreview);
 
     /**
-     * Allows the {@link #requestContent(Object, Object)} called after {@link #endRequest()}.
-     * By default, if {@link #requestContent(Object, Object)} was not called yet, {@link #endRequest()} will
-     * call {@code requestContent(null, null)} automatically. This method turns off this default behavior.
-     * Note, however, this method will not prevent {@link #endRequest(Throwable)} from calling
-     * {@code requestContent(null, null)} automatically.
+     * Allows setting the request content using {@link #requestContent(Object, Object)} even after
+     * {@link #endRequest()} is called.
+     *
+     * <p>Note, however, the request content is not set if {@link #endRequest(Throwable)} was called.
      */
     void deferRequestContent();
 
     /**
-     * Returns {@code true} if {@link #deferRequestContent()} was ever called.
+     * Allows setting the request content preview using {@link #requestContentPreview(String)} even after
+     * {@link #endRequest()} is called.
+     *
+     * <p>Note, however, the request content preview is not set if {@link #endRequest(Throwable)} was called.
      */
-    boolean isRequestContentDeferred();
+    void deferRequestContentPreview();
 
     /**
      * Sets the {@link RequestLog#requestTrailers()}.
@@ -313,18 +285,20 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void responseContentPreview(@Nullable String responseContentPreview);
 
     /**
-     * Allows the {@link #responseContent(Object, Object)} called after {@link #endResponse()}.
-     * By default, if {@link #responseContent(Object, Object)} was not called yet, {@link #endResponse()} will
-     * call {@code responseContent(null, null)} automatically. This method turns off this default behavior.
-     * Note, however, this method will not prevent {@link #endResponse(Throwable)} from calling
-     * {@code responseContent(null, null)} automatically.
+     * Allows setting the response content using {@link #responseContent(Object, Object)} even after
+     * {@link #endResponse()} is called.
+     *
+     * <p>Note, however, the response content is not set if {@link #endResponse(Throwable)} was called.
      */
     void deferResponseContent();
 
     /**
-     * Returns {@code true} if {@link #deferResponseContent()} was ever called.
+     * Allows setting the response content preview using {@link #responseContentPreview(String)} even after
+     * {@link #endResponse()} is called.
+     *
+     * <p>Note, however, the response content preview is not set if {@link #endResponse(Throwable)} was called.
      */
-    boolean isResponseContentDeferred();
+    void deferResponseContentPreview();
 
     /**
      * Sets the {@link RequestLog#responseTrailers()}.

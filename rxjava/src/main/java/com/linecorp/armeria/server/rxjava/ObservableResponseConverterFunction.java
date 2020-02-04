@@ -42,7 +42,7 @@ import io.reactivex.disposables.Disposable;
  * The types, which publish 0 or 1 object such as {@link Single}, {@link Maybe} and {@link Completable},
  * would not be converted into a {@link Flowable}.
  */
-public class ObservableResponseConverterFunction implements ResponseConverterFunction {
+public final class ObservableResponseConverterFunction implements ResponseConverterFunction {
 
     private final ResponseConverterFunction responseConverter;
     private final ExceptionHandlerFunction exceptionHandler;
@@ -116,7 +116,7 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
 
     private static HttpResponse respond(CompletableFuture<HttpResponse> future, Disposable disposable) {
         final HttpResponse response = HttpResponse.from(future);
-        response.completionFuture().exceptionally(cause -> {
+        response.whenComplete().exceptionally(cause -> {
             disposable.dispose();
             return null;
         });

@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.MediaType.JSON;
 import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import java.util.List;
 
@@ -29,15 +28,12 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
 class VirtualHostServiceBindingBuilderTest {
 
     @Test
     void serviceBindingBuilder() {
         final ServerBuilder sb = Server.builder();
-        final ContentPreviewerFactory requestFactory = mock(ContentPreviewerFactory.class);
-        final ContentPreviewerFactory responseFactory = mock(ContentPreviewerFactory.class);
 
         sb.virtualHost("example.com")
           .route().pathPrefix("/foo/bar")
@@ -47,8 +43,6 @@ class VirtualHostServiceBindingBuilderTest {
           .requestTimeoutMillis(10)
           .maxRequestLength(8192)
           .verboseResponses(true)
-          .requestContentPreviewerFactory(requestFactory)
-          .responseContentPreviewerFactory(responseFactory)
           .build((ctx, req) -> HttpResponse.of(OK));
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
@@ -64,8 +58,6 @@ class VirtualHostServiceBindingBuilderTest {
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
-        assertThat(serviceConfig.requestContentPreviewerFactory()).isSameAs(requestFactory);
-        assertThat(serviceConfig.responseContentPreviewerFactory()).isSameAs(responseFactory);
     }
 
     @Test

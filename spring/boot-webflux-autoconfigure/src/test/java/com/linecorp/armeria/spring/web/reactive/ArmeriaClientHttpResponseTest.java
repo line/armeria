@@ -52,7 +52,7 @@ public class ArmeriaClientHttpResponseTest {
 
         assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
 
-        assertThat(httpResponse.completionFuture().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete().isDone()).isFalse();
 
         final Flux<String> body = response.getBody().map(TestUtil::bufferToString);
         StepVerifier.create(body, 1)
@@ -64,7 +64,7 @@ public class ArmeriaClientHttpResponseTest {
                     .expectComplete()
                     .verify();
 
-        await().until(() -> httpResponse.completionFuture().isDone());
+        await().until(() -> httpResponse.whenComplete().isDone());
     }
 
     @Test
@@ -77,7 +77,7 @@ public class ArmeriaClientHttpResponseTest {
                 response(new ArmeriaHttpClientResponseSubscriber(httpResponse), httpHeaders);
 
         // HttpResponse would be completed after ResponseHeader is completed, because there's no body.
-        assertThat(httpResponse.completionFuture().isDone()).isTrue();
+        assertThat(httpResponse.whenComplete().isDone()).isTrue();
 
         assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
         assertThat(response.getHeaders().getFirst("blahblah")).isEqualTo("armeria");
@@ -101,7 +101,7 @@ public class ArmeriaClientHttpResponseTest {
 
         assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
 
-        assertThat(httpResponse.completionFuture().isDone()).isFalse();
+        assertThat(httpResponse.whenComplete().isDone()).isFalse();
 
         final Flux<String> body = response.getBody().map(TestUtil::bufferToString);
         StepVerifier.create(body, 1)
@@ -110,7 +110,7 @@ public class ArmeriaClientHttpResponseTest {
                     .thenCancel()
                     .verify();
 
-        final CompletableFuture<Void> f = httpResponse.completionFuture();
+        final CompletableFuture<Void> f = httpResponse.whenComplete();
         await().until(f::isDone);
         assertThat(f.isCompletedExceptionally()).isTrue();
         assertThatThrownBy(f::get).isInstanceOf(ExecutionException.class)

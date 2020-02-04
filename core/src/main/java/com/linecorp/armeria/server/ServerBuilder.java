@@ -32,7 +32,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -66,10 +65,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.ContentPreviewer;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -204,8 +200,6 @@ public final class ServerBuilder {
         virtualHostTemplate.requestTimeoutMillis(Flags.defaultRequestTimeoutMillis());
         virtualHostTemplate.maxRequestLength(Flags.defaultMaxRequestLength());
         virtualHostTemplate.verboseResponses(Flags.verboseResponses());
-        virtualHostTemplate.requestContentPreviewerFactory(ContentPreviewerFactory.disabled());
-        virtualHostTemplate.responseContentPreviewerFactory(ContentPreviewerFactory.disabled());
         virtualHostTemplate.accessLogger(
                     host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
@@ -1524,67 +1518,6 @@ public final class ServerBuilder {
     public ServerBuilder verboseResponses(boolean verboseResponses) {
         virtualHostTemplate.verboseResponses(verboseResponses);
         return this;
-    }
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for a request of this {@link Server}.
-     */
-    public ServerBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        virtualHostTemplate.requestContentPreviewerFactory(factory);
-        return this;
-    }
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for a response of this {@link Server}.
-     */
-    public ServerBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        virtualHostTemplate.responseContentPreviewerFactory(factory);
-        return this;
-    }
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for a request and a response of this {@link Server}.
-     */
-    public ServerBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
-        requestContentPreviewerFactory(factory);
-        responseContentPreviewerFactory(factory);
-        return this;
-    }
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
-     * preview with the maximum {@code length} limit for a request and a response of this {@link Server}.
-     * The previewer is enabled only if the content type of a request/response meets
-     * any of the following conditions:
-     * <ul>
-     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
-     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
-     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
-     * </ul>
-     * @param length the maximum length of the preview
-     * @param defaultCharset the default charset used when a charset is not specified in the
-     *                       {@code "content-type"} header
-     */
-    public ServerBuilder contentPreview(int length, Charset defaultCharset) {
-        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
-    }
-
-    /**
-     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
-     * preview with the maximum {@code length} limit for a request and a response of this {@link Server}.
-     * The previewer is enabled only if the content type of a request/response meets
-     * any of the following conditions:
-     * <ul>
-     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
-     *     <li>when its charset has been specified</li>
-     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
-     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
-     * </ul>
-     * @param length the maximum length of the preview.
-     */
-    public ServerBuilder contentPreview(int length) {
-        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     /**

@@ -22,7 +22,6 @@ import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.conf
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureThriftServices;
-import static com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory.DEFAULT;
 
 import java.util.Collections;
 import java.util.List;
@@ -93,9 +92,13 @@ public class ArmeriaAutoConfiguration {
             return null;
         }
 
-        final MeterIdPrefixFunctionFactory meterIdPrefixFuncFactory =
-                armeriaSettings.isEnableMetrics() ? meterIdPrefixFunctionFactory.orElse(DEFAULT)
-                                                  : null;
+        final MeterIdPrefixFunctionFactory meterIdPrefixFuncFactory;
+        if (armeriaSettings.isEnableMetrics()) {
+            meterIdPrefixFuncFactory = meterIdPrefixFunctionFactory.orElse(
+                    MeterIdPrefixFunctionFactory.ofDefault());
+        } else {
+            meterIdPrefixFuncFactory = null;
+        }
 
         final ServerBuilder serverBuilder = Server.builder();
 

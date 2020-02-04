@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal;
 
-import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -96,65 +95,61 @@ class DefaultHttpResponseTest {
     @ParameterizedTest
     @ArgumentsSource(ParametersProvider.class)
     void abortedAggregation(boolean executorSpecified, boolean withPooledObjects) {
-        withTimeout(() -> {
-            final Thread mainThread = Thread.currentThread();
-            final HttpResponseWriter res = HttpResponse.streaming();
-            final CompletableFuture<AggregatedHttpResponse> future;
+        final Thread mainThread = Thread.currentThread();
+        final HttpResponseWriter res = HttpResponse.streaming();
+        final CompletableFuture<AggregatedHttpResponse> future;
 
-            // Practically same execution, but we need to test the both case due to code duplication.
-            if (executorSpecified) {
-                if (withPooledObjects) {
-                    future = res.aggregateWithPooledObjects(
-                            CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
-                } else {
-                    future = res.aggregate(CommonPools.workerGroup().next());
-                }
+        // Practically same execution, but we need to test the both case due to code duplication.
+        if (executorSpecified) {
+            if (withPooledObjects) {
+                future = res.aggregateWithPooledObjects(
+                        CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
             } else {
-                if (withPooledObjects) {
-                    future = res.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
-                } else {
-                    future = res.aggregate();
-                }
+                future = res.aggregate(CommonPools.workerGroup().next());
             }
+        } else {
+            if (withPooledObjects) {
+                future = res.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
+            } else {
+                future = res.aggregate();
+            }
+        }
 
-            final AtomicReference<Thread> callbackThread = new AtomicReference<>();
+        final AtomicReference<Thread> callbackThread = new AtomicReference<>();
 
-            assertThatThrownBy(() -> {
-                final CompletableFuture<AggregatedHttpResponse> f =
-                        future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
-                res.abort();
-                f.join();
-            }).hasCauseInstanceOf(AbortedStreamException.class);
+        assertThatThrownBy(() -> {
+            final CompletableFuture<AggregatedHttpResponse> f =
+                    future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
+            res.abort();
+            f.join();
+        }).hasCauseInstanceOf(AbortedStreamException.class);
 
-            assertThat(callbackThread.get()).isNotSameAs(mainThread);
-        });
+        assertThat(callbackThread.get()).isNotSameAs(mainThread);
     }
 
     @Test
     void ignoresAfterTrailersIsWritten() {
-        withTimeout(() -> {
-            final HttpResponseWriter res = HttpResponse.streaming();
-            res.write(ResponseHeaders.of(100));
-            res.write(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
-            res.write(ResponseHeaders.of(200));
-            res.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d")); // Split headers is trailers.
+        final HttpResponseWriter res = HttpResponse.streaming();
+        res.write(ResponseHeaders.of(100));
+        res.write(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
+        res.write(ResponseHeaders.of(200));
+        res.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d")); // Split headers is trailers.
 
-            // Ignored after trailers is written.
-            res.write(HttpData.ofUtf8("foo"));
-            res.write(HttpHeaders.of(HttpHeaderNames.of("e"), "f"));
-            res.write(HttpHeaders.of(HttpHeaderNames.of("g"), "h"));
-            res.close();
+        // Ignored after trailers is written.
+        res.write(HttpData.ofUtf8("foo"));
+        res.write(HttpHeaders.of(HttpHeaderNames.of("e"), "f"));
+        res.write(HttpHeaders.of(HttpHeaderNames.of("g"), "h"));
+        res.close();
 
-            final AggregatedHttpResponse aggregated = res.aggregate().join();
-            // Informational headers
-            assertThat(aggregated.informationals()).containsExactly(
-                    ResponseHeaders.of(HttpStatus.CONTINUE, HttpHeaderNames.of("a"), "b"));
-            // Non-informational header
-            assertThat(aggregated.headers()).isEqualTo(ResponseHeaders.of(200));
+        final AggregatedHttpResponse aggregated = res.aggregate().join();
+        // Informational headers
+        assertThat(aggregated.informationals()).containsExactly(
+                ResponseHeaders.of(HttpStatus.CONTINUE, HttpHeaderNames.of("a"), "b"));
+        // Non-informational header
+        assertThat(aggregated.headers()).isEqualTo(ResponseHeaders.of(200));
 
-            assertThat(aggregated.contentUtf8()).isEmpty();
-            assertThat(aggregated.trailers()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
-        });
+        assertThat(aggregated.contentUtf8()).isEmpty();
+        assertThat(aggregated.trailers()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
     }
 
     private static class ParametersProvider implements ArgumentsProvider {

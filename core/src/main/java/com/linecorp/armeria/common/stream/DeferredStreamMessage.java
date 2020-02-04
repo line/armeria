@@ -103,12 +103,12 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             delegate.abort(abortCause);
         }
 
-        if (!completionFuture().isDone()) {
-            delegate.completionFuture().handle((unused, cause) -> {
+        if (!whenComplete().isDone()) {
+            delegate.whenComplete().handle((unused, cause) -> {
                 if (cause == null) {
-                    completionFuture().complete(null);
+                    whenComplete().complete(null);
                 } else {
-                    completionFuture().completeExceptionally(cause);
+                    whenComplete().completeExceptionally(cause);
                 }
                 return null;
             }).exceptionally(CompletionActions::log);
@@ -149,7 +149,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return delegate.isOpen();
         }
 
-        return !completionFuture().isDone();
+        return !whenComplete().isDone();
     }
 
     @Override
@@ -213,7 +213,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
                 if (delegate.isComplete()) {
                     subscription.clearSubscriber();
                 } else {
-                    delegate.completionFuture().handle((u1, u2) -> {
+                    delegate.whenComplete().handle((u1, u2) -> {
                         subscription.clearSubscriber();
                         return null;
                     });
@@ -301,10 +301,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
         final CloseEvent closeEvent = newCloseEvent(cause);
         if (subscription.needsDirectInvocation()) {
-            closeEvent.notifySubscriber(subscription, completionFuture());
+            closeEvent.notifySubscriber(subscription, whenComplete());
         } else {
             subscription.executor().execute(
-                    () -> closeEvent.notifySubscriber(subscription, completionFuture()));
+                    () -> closeEvent.notifySubscriber(subscription, whenComplete()));
         }
     }
 

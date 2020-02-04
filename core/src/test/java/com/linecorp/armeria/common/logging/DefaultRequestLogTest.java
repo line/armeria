@@ -24,6 +24,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -136,7 +138,8 @@ class DefaultRequestLogTest {
     void addChild() {
         final DefaultRequestLog child = new DefaultRequestLog(ctx);
         log.addChild(child);
-        child.startRequest(channel, SessionProtocol.H2C);
+        child.startRequest();
+        child.session(channel, SessionProtocol.H2C, null, null);
         assertThat(log.requestStartTimeMicros()).isEqualTo(child.requestStartTimeMicros());
         assertThat(log.channel()).isSameAs(channel);
         assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
@@ -192,5 +195,50 @@ class DefaultRequestLogTest {
         child.endResponse(new AnticipatedException("Oops!"));
         assertThat(log.responseDurationNanos()).isEqualTo(child.responseDurationNanos());
         assertThat(log.totalDurationNanos()).isEqualTo(child.totalDurationNanos());
+    }
+
+    @Test
+    void deferContent_setContentAfterEndResponse() {
+        when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
+        assertThat(completeFuture.isDone()).isFalse();
+
+        log.deferRequestContent();
+        log.deferRequestContentPreview();
+        log.endRequest();
+
+        log.deferResponseContent();
+        log.deferResponseContentPreview();
+        log.endResponse();
+
+        assertThat(completeFuture.isDone()).isFalse();
+        log.requestContent(null, null);
+        log.requestContentPreview(null);
+        log.responseContent(null, null);
+        assertThat(completeFuture.isDone()).isFalse();
+        log.responseContentPreview(null);
+        assertThat(completeFuture.isDone()).isTrue();
+    }
+
+    @Test
+    void deferContent_setContentBeforeEndResponse() {
+        when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
+        assertThat(completeFuture.isDone()).isFalse();
+
+        log.deferRequestContent();
+        log.deferRequestContentPreview();
+        log.requestContent(null, null);
+        log.requestContentPreview(null);
+        log.endRequest();
+
+        log.deferResponseContent();
+        log.deferResponseContentPreview();
+        log.responseContent(null, null);
+        log.responseContentPreview(null);
+        assertThat(completeFuture.isDone()).isFalse();
+
+        log.endResponse();
+        assertThat(completeFuture.isDone()).isTrue();
     }
 }

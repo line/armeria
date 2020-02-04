@@ -21,16 +21,15 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.logging.ContentPreviewingService;
 
 import io.netty.channel.Channel;
 
@@ -151,6 +150,18 @@ public interface RequestOnlyLog extends RequestLogAccess {
     SessionProtocol sessionProtocol();
 
     /**
+     * Returns the {@link ClientConnectionTimings} of the {@link Request}.
+     *
+     * @return the {@link ClientConnectionTimings} if the {@link Request} involved a new connection attempt,
+     *         or {@code null} otherwise.
+     *
+     * @throws RequestLogAvailabilityException if the property is not available yet.
+     * @see RequestLogProperty#SESSION
+     */
+    @Nullable
+    ClientConnectionTimings connectionTimings();
+
+    /**
      * Returns the {@link Scheme} of the {@link Request}.
      *
      * @throws RequestLogAvailabilityException if the property is not available yet.
@@ -198,21 +209,14 @@ public interface RequestOnlyLog extends RequestLogAccess {
     Object rawRequestContent();
 
     /**
-     * Returns the preview of response content of the {@link Request}.
-     * Note that the content preview needs to be enabled when configuring a {@link Server} or a {@link Client}
-     * to use this functionality.
+     * Returns the preview of request content of the {@link Request}.
+     * Note that a {@link Service} or a {@link Client} must be decorated with {@link ContentPreviewingService}
+     * or {@link ContentPreviewingClient} decorators respectively to enable the content preview.
      *
      * @return the preview, or {@code null} if the preview is disabled.
      *
      * @throws RequestLogAvailabilityException if the property is not available yet.
      * @see RequestLogProperty#REQUEST_CONTENT_PREVIEW
-     *
-     * @see ServerBuilder#contentPreview(int)
-     * @see ServerBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
-     * @see VirtualHostBuilder#contentPreview(int)
-     * @see VirtualHostBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
-     * @see ClientBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
-     * @see ClientBuilder#contentPreview(int)
      */
     @Nullable
     String requestContentPreview();

@@ -32,11 +32,23 @@ public interface Response {
      * 1) the response stream has been closed (the {@link StreamMessage} has been completed) or
      * 2) the result value is set (the {@link CompletionStage} has completed.)
      *
-     * @deprecated Use {@link #completionFuture()}.
+     * @deprecated Use {@link #whenComplete()}.
      */
     @Deprecated
     default CompletableFuture<?> closeFuture() {
-        return completionFuture();
+        return whenComplete();
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which completes when
+     * 1) the response stream has been closed (the {@link StreamMessage} has been completed) or
+     * 2) the result value is set (the {@link CompletionStage} has completed.)
+     *
+     * @deprecated Use {@link #whenComplete()}.
+     */
+    @Deprecated
+    default CompletableFuture<?> completionFuture() {
+        return whenComplete();
     }
 
     /**
@@ -44,9 +56,9 @@ public interface Response {
      * 1) the response stream has been closed (the {@link StreamMessage} has been completed) or
      * 2) the result value is set (the {@link CompletionStage} has completed.)
      */
-    default CompletableFuture<?> completionFuture() {
+    default CompletableFuture<?> whenComplete() {
         if (this instanceof StreamMessage) {
-            return ((StreamMessage<?>) this).completionFuture();
+            return ((StreamMessage<?>) this).whenComplete();
         }
 
         if (this instanceof CompletionStage) {

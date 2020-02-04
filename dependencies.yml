@@ -11,7 +11,7 @@ boms:
   - io.netty:netty-bom:4.1.43.Final
   - io.zipkin.brave:brave-bom:5.9.1
   - org.eclipse.jetty:jetty-bom:9.4.24.v20191120
-  - org.junit:junit-bom:5.5.2
+  - org.junit:junit-bom:5.6.0
 
 cglib:
   cglib: { version: '3.3.0' }
@@ -268,19 +268,15 @@ org.testng:
 
 junit:
   junit:
-    version: '4.12'
+    version: '4.13'
     javadocs:
-    - https://junit.org/junit4/javadoc/4.12/
+    - https://junit.org/junit4/javadoc/4.13/
 
 org.junit.jupiter:
   junit-jupiter-api:
     javadocs:
+    # ':site:javadoc' fails when we use a newer version of Javadoc.
     - https://junit.org/junit5/docs/5.5.2/api/
-org.junit.platform:
-  junit-platform-commons:
-    version: &JUNIT_PLATFORM_VERSION '1.5.2'
-  junit-platform-launcher:
-    version: *JUNIT_PLATFORM_VERSION
 
 kr.motd.gradle:
   sphinx-gradle-plugin: { version: '2.6.1' }

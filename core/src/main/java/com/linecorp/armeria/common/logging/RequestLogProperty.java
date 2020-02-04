@@ -48,7 +48,8 @@ public enum RequestLogProperty {
     REQUEST_FIRST_BYTES_TRANSFERRED_TIME(true),
 
     /**
-     * {@link RequestLog#channel()}, {@link RequestLog#sessionProtocol()}, {@link RequestLog#sslSession()}.
+     * {@link RequestLog#channel()}, {@link RequestLog#sessionProtocol()}, {@link RequestLog#sslSession()},
+     * {@link RequestLog#connectionTimings()}.
      */
     SESSION(true),
 
@@ -142,28 +143,22 @@ public enum RequestLogProperty {
     RESPONSE_CAUSE(false);
 
     private static final Set<RequestLogProperty> REQUEST_PROPERTIES =
-            Arrays.stream(RequestLogProperty.values())
+            Arrays.stream(values())
                   .filter(p -> p.isRequestProperty)
                   .collect(Sets.toImmutableEnumSet());
 
     private static final Set<RequestLogProperty> RESPONSE_PROPERTIES =
-            Arrays.stream(RequestLogProperty.values())
+            Arrays.stream(values())
                   .filter(p -> !p.isRequestProperty)
                   .collect(Sets.toImmutableEnumSet());
 
     static final int FLAGS_REQUEST_COMPLETE;
-    static final int FLAGS_REQUEST_COMPLETE_WITHOUT_CONTENT;
     static final int FLAGS_RESPONSE_COMPLETE;
-    static final int FLAGS_RESPONSE_COMPLETE_WITHOUT_CONTENT;
     static final int FLAGS_ALL_COMPLETE;
 
     static {
         FLAGS_REQUEST_COMPLETE = flags(REQUEST_PROPERTIES);
-        FLAGS_REQUEST_COMPLETE_WITHOUT_CONTENT = FLAGS_REQUEST_COMPLETE & ~REQUEST_CONTENT.flag;
-
         FLAGS_RESPONSE_COMPLETE = flags(RESPONSE_PROPERTIES);
-        FLAGS_RESPONSE_COMPLETE_WITHOUT_CONTENT = FLAGS_RESPONSE_COMPLETE & ~RESPONSE_CONTENT.flag;
-
         FLAGS_ALL_COMPLETE = FLAGS_REQUEST_COMPLETE | FLAGS_RESPONSE_COMPLETE;
     }
 

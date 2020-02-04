@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal;
 
-import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -54,68 +53,64 @@ class DefaultHttpRequestTest {
     @ParameterizedTest
     @ArgumentsSource(ParametersProvider.class)
     void abortedAggregation(boolean executorSpecified, boolean withPooledObjects, Throwable abortCause) {
-        withTimeout(() -> {
-            final Thread mainThread = Thread.currentThread();
-            final DefaultHttpRequest req = new DefaultHttpRequest(RequestHeaders.of(HttpMethod.GET, "/foo"));
-            final CompletableFuture<AggregatedHttpRequest> future;
+        final Thread mainThread = Thread.currentThread();
+        final DefaultHttpRequest req = new DefaultHttpRequest(RequestHeaders.of(HttpMethod.GET, "/foo"));
+        final CompletableFuture<AggregatedHttpRequest> future;
 
-            // Practically same execution, but we need to test the both case due to code duplication.
-            if (executorSpecified) {
-                if (withPooledObjects) {
-                    future = req.aggregateWithPooledObjects(
-                            CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
-                } else {
-                    future = req.aggregate(CommonPools.workerGroup().next());
-                }
+        // Practically same execution, but we need to test the both case due to code duplication.
+        if (executorSpecified) {
+            if (withPooledObjects) {
+                future = req.aggregateWithPooledObjects(
+                        CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
             } else {
-                if (withPooledObjects) {
-                    future = req.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
-                } else {
-                    future = req.aggregate();
-                }
+                future = req.aggregate(CommonPools.workerGroup().next());
             }
-
-            final AtomicReference<Thread> callbackThread = new AtomicReference<>();
-
-            if (abortCause == null) {
-                assertThatThrownBy(() -> {
-                    final CompletableFuture<AggregatedHttpRequest> f =
-                            future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
-                    req.abort();
-                    f.join();
-                }).hasCauseInstanceOf(AbortedStreamException.class);
+        } else {
+            if (withPooledObjects) {
+                future = req.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
             } else {
-                assertThatThrownBy(() -> {
-                    final CompletableFuture<AggregatedHttpRequest> f =
-                            future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
-                    req.abort(abortCause);
-                    f.join();
-                }).hasCauseInstanceOf(abortCause.getClass());
+                future = req.aggregate();
             }
+        }
 
-            assertThat(callbackThread.get()).isNotSameAs(mainThread);
-        });
+        final AtomicReference<Thread> callbackThread = new AtomicReference<>();
+
+        if (abortCause == null) {
+            assertThatThrownBy(() -> {
+                final CompletableFuture<AggregatedHttpRequest> f =
+                        future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
+                req.abort();
+                f.join();
+            }).hasCauseInstanceOf(AbortedStreamException.class);
+        } else {
+            assertThatThrownBy(() -> {
+                final CompletableFuture<AggregatedHttpRequest> f =
+                        future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
+                req.abort(abortCause);
+                f.join();
+            }).hasCauseInstanceOf(abortCause.getClass());
+        }
+
+        assertThat(callbackThread.get()).isNotSameAs(mainThread);
     }
 
     @Test
     void ignoresAfterTrailersIsWritten() {
-        withTimeout(() -> {
-            final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/foo");
-            req.write(HttpData.ofUtf8("foo"));
-            req.write(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
-            req.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d")); // Ignored.
-            req.close();
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/foo");
+        req.write(HttpData.ofUtf8("foo"));
+        req.write(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
+        req.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d")); // Ignored.
+        req.close();
 
-            final AggregatedHttpRequest aggregated = req.aggregate().join();
-            // Request headers
-            assertThat(aggregated.headers()).isEqualTo(
-                    RequestHeaders.of(HttpMethod.GET, "/foo",
-                                      HttpHeaderNames.CONTENT_LENGTH, "3"));
-            // Content
-            assertThat(aggregated.contentUtf8()).isEqualTo("foo");
-            // Trailers
-            assertThat(aggregated.trailers()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
-        });
+        final AggregatedHttpRequest aggregated = req.aggregate().join();
+        // Request headers
+        assertThat(aggregated.headers()).isEqualTo(
+                RequestHeaders.of(HttpMethod.GET, "/foo",
+                                  HttpHeaderNames.CONTENT_LENGTH, "3"));
+        // Content
+        assertThat(aggregated.contentUtf8()).isEqualTo("foo");
+        // Trailers
+        assertThat(aggregated.trailers()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
     }
 
     private static class ParametersProvider implements ArgumentsProvider {

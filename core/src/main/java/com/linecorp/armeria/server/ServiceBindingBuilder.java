@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -26,7 +25,6 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -46,7 +44,6 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  *   .requestTimeoutMillis(5000)
  *   .maxRequestLength(8192)
  *   .verboseResponses(true)
- *   .contentPreview(500)
  *   .build((ctx, req) -> HttpResponse.of(OK));    // Return to the ServerBuilder.
  *
  * // Configure the second service with Consumer.
@@ -209,31 +206,6 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder verboseResponses(boolean verboseResponses) {
         return (ServiceBindingBuilder) super.verboseResponses(verboseResponses);
-    }
-
-    @Override
-    public ServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        return (ServiceBindingBuilder) super.requestContentPreviewerFactory(factory);
-    }
-
-    @Override
-    public ServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        return (ServiceBindingBuilder) super.responseContentPreviewerFactory(factory);
-    }
-
-    @Override
-    public ServiceBindingBuilder contentPreview(int length) {
-        return (ServiceBindingBuilder) super.contentPreview(length);
-    }
-
-    @Override
-    public ServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
-        return (ServiceBindingBuilder) super.contentPreview(length, defaultCharset);
-    }
-
-    @Override
-    public ServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
-        return (ServiceBindingBuilder) super.contentPreviewerFactory(factory);
     }
 
     @Override

@@ -35,7 +35,7 @@ import io.prometheus.client.exporter.common.TextFormat;
  * Exposes Prometheus metrics in <a href="https://prometheus.io/docs/instrumenting/exposition_formats/">text
  * format 0.0.4</a>.
  */
-public class PrometheusExpositionService extends AbstractHttpService {
+public final class PrometheusExpositionService extends AbstractHttpService {
 
     private static final MediaType CONTENT_TYPE_004 = MediaType.parse(TextFormat.CONTENT_TYPE_004);
 

@@ -18,14 +18,12 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -46,7 +44,6 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  *   .requestTimeoutMillis(5000)
  *   .maxRequestLength(8192)
  *   .verboseResponses(true)
- *   .contentPreview(500)
  *   .build((ctx, req) -> HttpResponse.of(OK));    // Return to the VirtualHostBuilder.
  *
  * sb.virtualHost("example2.com")                  // Configure the second service "example2.com".
@@ -178,31 +175,6 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder verboseResponses(boolean verboseResponses) {
         return (VirtualHostServiceBindingBuilder) super.verboseResponses(verboseResponses);
-    }
-
-    @Override
-    public VirtualHostServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        return (VirtualHostServiceBindingBuilder) super.requestContentPreviewerFactory(factory);
-    }
-
-    @Override
-    public VirtualHostServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        return (VirtualHostServiceBindingBuilder) super.responseContentPreviewerFactory(factory);
-    }
-
-    @Override
-    public VirtualHostServiceBindingBuilder contentPreview(int length) {
-        return (VirtualHostServiceBindingBuilder) super.contentPreview(length);
-    }
-
-    @Override
-    public VirtualHostServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
-        return (VirtualHostServiceBindingBuilder) super.contentPreview(length, defaultCharset);
-    }
-
-    @Override
-    public VirtualHostServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
-        return (VirtualHostServiceBindingBuilder) super.contentPreviewerFactory(factory);
     }
 
     @Override

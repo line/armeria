@@ -40,8 +40,7 @@ public final class HttpDecodingClient extends DecodingClient {
      */
     @Deprecated
     public static Function<? super HttpClient, DecodingClient> newDecorator() {
-        return newDecorator(
-                ImmutableList.of(new GzipStreamDecoderFactory(), new DeflateStreamDecoderFactory()));
+        return newDecorator(ImmutableList.of(StreamDecoderFactory.gzip(), StreamDecoderFactory.deflate()));
     }
 
     /**

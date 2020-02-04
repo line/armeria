@@ -34,7 +34,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 /**
  * A {@link TestRule} that provides a temporary self-signed certificate.
  */
-public class SelfSignedCertificateRule extends ExternalResource {
+public final class SelfSignedCertificateRule extends ExternalResource {
+
     private final SelfSignedCertificateRuleDelegate delegate;
 
     /**

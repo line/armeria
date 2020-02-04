@@ -87,6 +87,13 @@ public interface ContentPreviewer {
     }
 
     /**
+     * Returns whether this {@link ContentPreviewer} is {@link #disabled()} or not.
+     */
+    default boolean isDisabled() {
+        return false;
+    }
+
+    /**
      * Invoked after request/response headers is received.
      */
     void onHeaders(HttpHeaders headers);

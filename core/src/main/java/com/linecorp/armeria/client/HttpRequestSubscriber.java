@@ -176,7 +176,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        logBuilder.startRequest(ch, protocol);
         logBuilder.requestHeaders(firstHeaders);
 
         if (request.isEmpty()) {

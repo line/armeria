@@ -368,14 +368,14 @@ public final class ServerSentEvents {
             sb.append("retry:").append(retry.toMillis()).append(LINE_FEED);
         }
 
-        return sb.length() == 0 ? HttpData.EMPTY_DATA
+        return sb.length() == 0 ? HttpData.empty()
                                 : HttpData.ofUtf8(sb.append(LINE_FEED).toString());
     }
 
     private static <T> HttpData toHttpData(
             Function<? super T, ? extends ServerSentEvent> converter, T content) {
         final ServerSentEvent sse = converter.apply(content);
-        return sse == null ? HttpData.EMPTY_DATA : toHttpData(sse);
+        return sse == null ? HttpData.empty() : toHttpData(sse);
     }
 
     private static void appendField(StringBuilder sb, String name, String value,

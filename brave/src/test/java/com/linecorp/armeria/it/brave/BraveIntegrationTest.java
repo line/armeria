@@ -41,7 +41,6 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -83,7 +82,6 @@ import zipkin2.Annotation;
 import zipkin2.Span;
 import zipkin2.reporter.Reporter;
 
-@Timeout(10)
 class BraveIntegrationTest {
 
     private static final ReporterImpl spanReporter = new ReporterImpl();

@@ -27,7 +27,12 @@ import com.linecorp.armeria.common.HttpHeaders;
  */
 public class ContentPreviewerAdapter implements ContentPreviewer {
 
-    static final ContentPreviewer NOOP = new ContentPreviewerAdapter();
+    static final ContentPreviewer NOOP = new ContentPreviewerAdapter() {
+        @Override
+        public boolean isDisabled() {
+            return true;
+        }
+    };
 
     protected ContentPreviewerAdapter() {}
 

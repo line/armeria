@@ -164,7 +164,7 @@ class ArmeriaMessageDeframerTest {
     @Test
     void deframe_endOfStream() throws Exception {
         deframer.request(1);
-        deframer.deframe(HttpData.EMPTY_DATA, true);
+        deframer.deframe(HttpData.empty(), true);
         deframer.closeWhenComplete();
         verify(listener).endOfStream();
         verifyNoMoreInteractions(listener);

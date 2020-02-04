@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkState;
 

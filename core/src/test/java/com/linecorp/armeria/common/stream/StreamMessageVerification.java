@@ -71,10 +71,10 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
                 assertThat(stream.isEmpty()).isTrue();
             }
 
-            assertThat(stream.completionFuture()).isNotDone();
+            assertThat(stream.whenComplete()).isNotDone();
             sub.requestEndOfStream();
 
-            await().untilAsserted(() -> assertThat(stream.completionFuture()).isCompleted());
+            await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompleted());
             assertThat(stream.isOpen()).isFalse();
             assertThat(stream.isEmpty()).isTrue();
             sub.expectNone();
@@ -91,12 +91,12 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
                 assertThat(stream.isOpen()).isTrue();
             }
             assertThat(stream.isEmpty()).isFalse();
-            assertThat(stream.completionFuture()).isNotDone();
+            assertThat(stream.whenComplete()).isNotDone();
 
             sub.requestNextElement();
             sub.requestEndOfStream();
 
-            stream.completionFuture().join();
+            stream.whenComplete().join();
             sub.expectNone();
         });
     }
@@ -107,14 +107,14 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
 
-            assertThat(stream.completionFuture()).isNotDone();
+            assertThat(stream.whenComplete()).isNotDone();
             sub.requestNextElement();
-            assertThat(stream.completionFuture()).isNotDone();
+            assertThat(stream.whenComplete()).isNotDone();
             sub.cancel();
             sub.expectNone();
 
-            await().untilAsserted(() -> assertThat(stream.completionFuture()).isCompletedExceptionally());
-            assertThatThrownBy(() -> stream.completionFuture().join())
+            await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompletedExceptionally());
+            assertThatThrownBy(() -> stream.whenComplete().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(CancelledSubscriptionException.class);
         });
@@ -131,7 +131,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         }
         assumeAbortedPublisherAvailable(pub);
         assertThat(pub.isOpen()).isFalse();
-        assertThatThrownBy(() -> pub.completionFuture().join())
+        assertThatThrownBy(() -> pub.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(AbortedStreamException.class);
 
@@ -204,7 +204,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         }
 
         env.verifyNoAsyncErrorsNoDelay();
-        assertThatThrownBy(() -> pub.completionFuture().join())
+        assertThatThrownBy(() -> pub.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(AbortedStreamException.class);
     }

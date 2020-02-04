@@ -31,9 +31,11 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientConnectionTimings;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -50,23 +52,34 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.TemporaryThreadLocals;
 
 import io.netty.channel.Channel;
 
 /**
  * Default {@link RequestLog} implementation.
+ *
+ * @deprecated Use {@link RequestLog#builder(RequestContext)}.
  */
+@Deprecated
 public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(DefaultRequestLog.class);
 
     private static final AtomicIntegerFieldUpdater<DefaultRequestLog> flagsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "flags");
+
+    private static final AtomicIntegerFieldUpdater<DefaultRequestLog> deferredFlagsUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "deferredFlags");
 
     private static final RequestHeaders DUMMY_REQUEST_HEADERS_HTTP =
             RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("http").authority("?").build();
     private static final RequestHeaders DUMMY_REQUEST_HEADERS_HTTPS =
             RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("https").authority("?").build();
     private static final ResponseHeaders DUMMY_RESPONSE_HEADERS = ResponseHeaders.of(HttpStatus.UNKNOWN);
+
+    private static boolean warnedSettingContentPreviewTwice;
 
     private final RequestContext ctx;
     private final CompleteRequestLog notCheckingAccessor = new CompleteRequestLog();
@@ -78,16 +91,16 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     /**
      * Updated by {@link #flagsUpdater}.
      */
-    @SuppressWarnings("unused")
     private volatile int flags;
+    /**
+     * Updated by {@link #deferredFlagsUpdater}.
+     */
+    private volatile int deferredFlags;
     private final List<RequestLogFuture> pendingFutures = new ArrayList<>(4);
     @Nullable
     private UnmodifiableFuture<RequestLog> partiallyCompletedFuture;
     @Nullable
     private UnmodifiableFuture<RequestLog> completedFuture;
-
-    private volatile boolean requestContentDeferred;
-    private volatile boolean responseContentDeferred;
 
     private long requestStartTimeMicros;
     private long requestStartTimeNanos;
@@ -95,8 +108,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestFirstBytesTransferredTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
-    private ContentPreviewer requestContentPreviewer = ContentPreviewer.disabled();
-    private final ContentPreviewerFactory requestContentPreviewerFactory;
     @Nullable
     private String requestContentPreview;
     @Nullable
@@ -108,8 +119,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long responseFirstBytesTransferredTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
-    private ContentPreviewer responseContentPreviewer = ContentPreviewer.disabled();
-    private final ContentPreviewerFactory responseContentPreviewerFactory;
     @Nullable
     private String responseContentPreview;
     @Nullable
@@ -121,6 +130,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private SSLSession sslSession;
     @Nullable
     private SessionProtocol sessionProtocol;
+    @Nullable
+    private ClientConnectionTimings connectionTimings;
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
     @Nullable
     private Scheme scheme;
@@ -151,21 +162,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link RequestLog#builder(RequestContext)}.
      */
+    @Deprecated
     public DefaultRequestLog(RequestContext ctx) {
-        this(ctx, ContentPreviewerFactory.disabled(), ContentPreviewerFactory.disabled());
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public DefaultRequestLog(RequestContext ctx, ContentPreviewerFactory requestContentPreviewerFactory,
-                             ContentPreviewerFactory responseContentPreviewerFactory) {
         this.ctx = requireNonNull(ctx, "ctx");
-        this.requestContentPreviewerFactory = requireNonNull(requestContentPreviewerFactory,
-                                                             "requestContentPreviewerFactory");
-        this.responseContentPreviewerFactory = requireNonNull(responseContentPreviewerFactory,
-                                                              "responseContentPreviewerFactory");
     }
 
     // Methods from RequestLogAccess
@@ -336,11 +338,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return partiallyCompletedFuture;
     }
 
-    private void updateAvailability(RequestLogProperty property) {
-        updateAvailability(property.flag());
+    private void updateFlags(RequestLogProperty property) {
+        updateFlags(property.flag());
     }
 
-    private void updateAvailability(int flags) {
+    private void updateFlags(int flags) {
         for (;;) {
             final int oldFlags = this.flags;
             final int newFlags = oldFlags | flags;
@@ -398,6 +400,21 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return satisfied;
     }
 
+    private void updateDeferredFlags(RequestLogProperty property) {
+        final int flag = property.flag();
+        for (;;) {
+            final int oldFlags = deferredFlags;
+            final int newFlags = oldFlags | flag;
+            if (oldFlags == newFlags) {
+                break;
+            }
+
+            if (deferredFlagsUpdater.compareAndSet(this, oldFlags, newFlags)) {
+                break;
+            }
+        }
+    }
+
     // Methods required for adding children.
 
     @Override
@@ -415,15 +432,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void propagateRequestSideLog(RequestLogAccess child) {
         // Update the available properties always by adding a callback,
         // because the child's properties will never be available immediately.
-        child.whenAvailable(RequestLogProperty.SESSION, RequestLogProperty.REQUEST_START_TIME)
-             .thenAccept(log -> {
-                 final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
-                 if (timings != null) {
-                     timings.setTo(this);
-                 }
-                 startRequest0(log.channel(), log.sessionProtocol(), null,
-                               log.requestStartTimeNanos(), log.requestStartTimeMicros(), true);
-             });
+        child.whenAvailable(RequestLogProperty.REQUEST_START_TIME)
+             .thenAccept(log -> startRequest(log.requestStartTimeNanos(), log.requestStartTimeMicros()));
+        child.whenAvailable(RequestLogProperty.SESSION)
+             .thenAccept(log -> session(log.channel(), log.sessionProtocol(),
+                                        log.sslSession(), log.connectionTimings()));
         child.whenAvailable(RequestLogProperty.SCHEME)
              .thenAccept(log -> serializationFormat(log.scheme().serializationFormat()));
         child.whenAvailable(RequestLogProperty.NAME)
@@ -517,53 +530,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     // Request-side methods.
 
     @Override
-    public void startRequest(Channel channel, SessionProtocol sessionProtocol,
-                             @Nullable SSLSession sslSession) {
-        requireNonNull(channel, "channel");
-        requireNonNull(sessionProtocol, "sessionProtocol");
-        startRequest0(channel, sessionProtocol, sslSession, true);
-    }
-
-    @Override
-    public void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
-                             long requestStartTimeNanos, long requestStartTimeMicros) {
-        requireNonNull(channel, "channel");
-        requireNonNull(sessionProtocol, "sessionProtocol");
-        startRequest0(channel, sessionProtocol, sslSession,
-                      requestStartTimeNanos, requestStartTimeMicros, true);
-    }
-
-    private void startRequest0(Channel channel, SessionProtocol sessionProtocol,
-                               @Nullable SSLSession sslSession, boolean updateAvailability) {
-        startRequest0(channel, sessionProtocol, sslSession,
-                      System.nanoTime(), SystemInfo.currentTimeMicros(),
-                      updateAvailability);
-    }
-
-    private void startRequest0(@Nullable Channel channel, SessionProtocol sessionProtocol,
-                               @Nullable SSLSession sslSession, long requestStartTimeNanos,
-                               long requestStartTimeMicros, boolean updateAvailability) {
+    public void startRequest(long requestStartTimeNanos, long requestStartTimeMicros) {
         if (!isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
             this.requestStartTimeNanos = requestStartTimeNanos;
             this.requestStartTimeMicros = requestStartTimeMicros;
         }
 
-        if (!isAvailable(RequestLogProperty.SESSION)) {
-            this.channel = channel;
-            this.sslSession = sslSession;
-            this.sessionProtocol = sessionProtocol;
-            if (sessionProtocol.isTls()) {
-                // Switch to the dummy headers with ':scheme=https' if the connection is TLS.
-                if (requestHeaders == DUMMY_REQUEST_HEADERS_HTTP) {
-                    requestHeaders = DUMMY_REQUEST_HEADERS_HTTPS;
-                }
-            }
-        }
-
-        if (updateAvailability) {
-            updateAvailability(RequestLogProperty.REQUEST_START_TIME.flag() |
-                               RequestLogProperty.SESSION.flag());
-        }
+        updateFlags(RequestLogProperty.REQUEST_START_TIME);
     }
 
     @Override
@@ -608,6 +581,46 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void session(@Nullable Channel channel, SessionProtocol sessionProtocol,
+                        @Nullable ClientConnectionTimings connectionTimings) {
+        if (isAvailable(RequestLogProperty.SESSION)) {
+            return;
+        }
+
+        session0(channel, requireNonNull(sessionProtocol, "sessionProtocol"),
+                 ChannelUtil.findSslSession(channel, sessionProtocol),
+                 connectionTimings);
+    }
+
+    @Override
+    public void session(@Nullable Channel channel, SessionProtocol sessionProtocol,
+                        @Nullable SSLSession sslSession, @Nullable ClientConnectionTimings connectionTimings) {
+        if (isAvailable(RequestLogProperty.SESSION)) {
+            return;
+        }
+
+        session0(channel, requireNonNull(sessionProtocol, "sessionProtocol"), sslSession, connectionTimings);
+    }
+
+    private void session0(@Nullable Channel channel, SessionProtocol sessionProtocol,
+                          @Nullable SSLSession sslSession,
+                          @Nullable ClientConnectionTimings connectionTimings) {
+
+        this.channel = channel;
+        this.sslSession = sslSession;
+        this.sessionProtocol = sessionProtocol;
+        this.connectionTimings = connectionTimings;
+        if (sessionProtocol.isTls()) {
+            // Switch to the dummy headers with ':scheme=https' if the connection is TLS.
+            if (requestHeaders == DUMMY_REQUEST_HEADERS_HTTP) {
+                requestHeaders = DUMMY_REQUEST_HEADERS_HTTPS;
+            }
+        }
+
+        updateFlags(RequestLogProperty.SESSION);
+    }
+
+    @Override
     public Channel channel() {
         ensureAvailable(RequestLogProperty.SESSION);
         return channel;
@@ -626,6 +639,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return sessionProtocol;
     }
 
+    @Nullable
+    @Override
+    public ClientConnectionTimings connectionTimings() {
+        ensureAvailable(RequestLogProperty.SESSION);
+        return connectionTimings;
+    }
+
     @Override
     public void serializationFormat(SerializationFormat serializationFormat) {
         if (isAvailable(RequestLogProperty.SCHEME) || this.serializationFormat != SerializationFormat.NONE) {
@@ -635,7 +655,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         if (sessionProtocol != null) {
             scheme = Scheme.of(serializationFormat, sessionProtocol);
-            updateAvailability(RequestLogProperty.SCHEME);
+            updateFlags(RequestLogProperty.SCHEME);
         }
     }
 
@@ -662,7 +682,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.name = name;
-        updateAvailability(RequestLogProperty.NAME);
+        updateFlags(RequestLogProperty.NAME);
     }
 
     @Override
@@ -682,7 +702,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.requestLength = requestLength;
-        updateAvailability(RequestLogProperty.REQUEST_LENGTH);
+        updateFlags(RequestLogProperty.REQUEST_LENGTH);
     }
 
     @Override
@@ -704,7 +724,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void requestFirstBytesTransferred0(long requestFirstBytesTransferredTimeNanos) {
         this.requestFirstBytesTransferredTimeNanos = requestFirstBytesTransferredTimeNanos;
         requestFirstBytesTransferredTimeNanosSet = true;
-        updateAvailability(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME);
+        updateFlags(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME);
     }
 
     @Override
@@ -724,10 +744,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public void increaseRequestLength(HttpData data) {
         requireNonNull(data, "data");
         increaseRequestLength(data.length());
-        if (requestContentPreviewer.isDone()) {
-            return;
-        }
-        requestContentPreviewer.onData(data);
     }
 
     @Override
@@ -743,9 +759,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.requestHeaders = requireNonNull(requestHeaders, "requestHeaders");
-        requestContentPreviewer = requestContentPreviewerFactory.get(ctx, this.requestHeaders);
-        requestContentPreviewer.onHeaders(requestHeaders);
-        updateAvailability(RequestLogProperty.REQUEST_HEADERS);
+        updateFlags(RequestLogProperty.REQUEST_HEADERS);
     }
 
     @Override
@@ -762,7 +776,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
-        updateAvailability(RequestLogProperty.REQUEST_CONTENT);
+        updateFlags(RequestLogProperty.REQUEST_CONTENT);
 
         if (requestContent instanceof RpcRequest && ctx.rpcRequest() == null) {
             ctx.updateRpcRequest((RpcRequest) requestContent);
@@ -784,10 +798,16 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public void requestContentPreview(@Nullable String requestContentPreview) {
         if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+            if (!warnedSettingContentPreviewTwice && requestContentPreview != null) {
+                warnedSettingContentPreviewTwice = true;
+                logger.warn("You tried to set the content preview twice: {} " +
+                            " Did you apply content previewing decorator more than once?",
+                            requestContentPreview);
+            }
             return;
         }
         this.requestContentPreview = requestContentPreview;
-        updateAvailability(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
+        updateFlags(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
     }
 
     @Override
@@ -795,12 +815,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
             return;
         }
-        requestContentDeferred = true;
+        updateDeferredFlags(RequestLogProperty.REQUEST_CONTENT);
     }
 
     @Override
-    public boolean isRequestContentDeferred() {
-        return requestContentDeferred;
+    public void deferRequestContentPreview() {
+        if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+            return;
+        }
+        updateDeferredFlags(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
     }
 
     @Override
@@ -816,7 +839,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
         requireNonNull(requestTrailers, "requestTrailers");
         this.requestTrailers = requestTrailers;
-        updateAvailability(RequestLogProperty.REQUEST_TRAILERS);
+        updateFlags(RequestLogProperty.REQUEST_TRAILERS);
     }
 
     @Override
@@ -845,10 +868,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void endRequest0(@Nullable Throwable requestCause, long requestEndTimeNanos) {
         final int flags;
-        if (requestCause == null && requestContentDeferred) {
-            flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE_WITHOUT_CONTENT;
-        } else {
+        if (requestCause != null) {
             flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE;
+        } else {
+            flags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
         }
 
         if (isAvailable(flags)) {
@@ -857,13 +880,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
         // totalRequestDuration will be 0
-        startRequest0(null, context().sessionProtocol(), null,
-                      requestEndTimeNanos, SystemInfo.currentTimeMicros(), false);
+        startRequest(requestEndTimeNanos, SystemInfo.currentTimeMicros());
+        session(null, context().sessionProtocol(), null, null);
 
         if (scheme == null) {
             assert sessionProtocol != null;
             scheme = Scheme.of(serializationFormat, sessionProtocol);
         }
+
         if (name == null) {
             final RpcRequest rpcReq = ctx.rpcRequest();
             if (rpcReq != null) {
@@ -872,12 +896,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 name = ((RpcRequest) requestContent).method();
             }
         }
-        if (requestContentPreview == null) {
-            requestContentPreview(requestContentPreviewer.produce());
-        }
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;
-        updateAvailability(flags);
+        updateFlags(flags);
     }
 
     // Response-side methods.
@@ -892,20 +913,20 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         startResponse0(responseStartTimeNanos, responseStartTimeMicros, true);
     }
 
-    private void startResponse0(boolean updateAvailability) {
-        startResponse0(System.nanoTime(), SystemInfo.currentTimeMicros(), updateAvailability);
+    private void startResponse0(boolean updateFlags) {
+        startResponse0(System.nanoTime(), SystemInfo.currentTimeMicros(), updateFlags);
     }
 
     private void startResponse0(long responseStartTimeNanos, long responseStartTimeMicros,
-                                boolean updateAvailability) {
+                                boolean updateFlags) {
         if (isAvailable(RequestLogProperty.RESPONSE_START_TIME)) {
             return;
         }
 
         this.responseStartTimeNanos = responseStartTimeNanos;
         this.responseStartTimeMicros = responseStartTimeMicros;
-        if (updateAvailability) {
-            updateAvailability(RequestLogProperty.RESPONSE_START_TIME);
+        if (updateFlags) {
+            updateFlags(RequestLogProperty.RESPONSE_START_TIME);
         }
     }
 
@@ -994,7 +1015,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void responseFirstBytesTransferred0(long responseFirstBytesTransferredTimeNanos) {
         this.responseFirstBytesTransferredTimeNanos = responseFirstBytesTransferredTimeNanos;
         responseFirstBytesTransferredTimeNanosSet = true;
-        updateAvailability(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME);
+        updateFlags(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME);
     }
 
     @Override
@@ -1012,11 +1033,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void increaseResponseLength(HttpData data) {
+        requireNonNull(data, "data");
         increaseResponseLength(data.length());
-        if (responseContentPreviewer.isDone()) {
-            return;
-        }
-        responseContentPreviewer.onData(data);
     }
 
     @Override
@@ -1032,9 +1050,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         this.responseHeaders = requireNonNull(responseHeaders, "responseHeaders");
-        responseContentPreviewer = responseContentPreviewerFactory.get(ctx, this.responseHeaders);
-        responseContentPreviewer.onHeaders(responseHeaders);
-        updateAvailability(RequestLogProperty.RESPONSE_HEADERS);
+        updateFlags(RequestLogProperty.RESPONSE_HEADERS);
     }
 
     @Override
@@ -1061,7 +1077,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.responseContent = responseContent;
         this.rawResponseContent = rawResponseContent;
-        updateAvailability(RequestLogProperty.RESPONSE_CONTENT);
+        updateFlags(RequestLogProperty.RESPONSE_CONTENT);
     }
 
     @Override
@@ -1073,9 +1089,16 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public void responseContentPreview(@Nullable String responseContentPreview) {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+            if (!warnedSettingContentPreviewTwice && responseContentPreview != null) {
+                warnedSettingContentPreviewTwice = true;
+                logger.warn("You tried to set the content preview twice: {} " +
+                            " Did you apply content previewing decorator more than once?",
+                            responseContentPreview);
+            }
             return;
         }
         this.responseContentPreview = responseContentPreview;
+        updateFlags(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
     }
 
     @Override
@@ -1089,12 +1112,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
             return;
         }
-        responseContentDeferred = true;
+        updateDeferredFlags(RequestLogProperty.RESPONSE_CONTENT);
     }
 
     @Override
-    public boolean isResponseContentDeferred() {
-        return responseContentDeferred;
+    public void deferResponseContentPreview() {
+        if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+            return;
+        }
+        updateDeferredFlags(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
     }
 
     @Override
@@ -1111,7 +1137,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         requireNonNull(responseTrailers, "responseTrailers");
         this.responseTrailers = responseTrailers;
-        updateAvailability(RequestLogProperty.RESPONSE_TRAILERS);
+        updateFlags(RequestLogProperty.RESPONSE_TRAILERS);
     }
 
     @Override
@@ -1140,19 +1166,16 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void endResponse0(@Nullable Throwable responseCause, long responseEndTimeNanos) {
         final int flags;
-        if (responseCause == null && responseContentDeferred) {
-            flags = RequestLogProperty.FLAGS_RESPONSE_COMPLETE_WITHOUT_CONTENT;
-        } else {
+        if (responseCause != null) {
             flags = RequestLogProperty.FLAGS_RESPONSE_COMPLETE;
+        } else {
+            flags = RequestLogProperty.FLAGS_RESPONSE_COMPLETE & ~deferredFlags;
         }
 
         if (isAvailable(flags)) {
             return;
         }
 
-        if (responseContentPreview == null) {
-            responseContentPreview(responseContentPreviewer.produce());
-        }
         // if the response is not started yet, call startResponse() with responseEndTimeNanos so that
         // totalResponseDuration will be 0
         startResponse0(responseEndTimeNanos, SystemInfo.currentTimeMicros(), false);
@@ -1161,7 +1184,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (this.responseCause == null) {
             this.responseCause = responseCause;
         }
-        updateAvailability(flags);
+        updateFlags(flags);
     }
 
     @Override
@@ -1592,6 +1615,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         public SessionProtocol sessionProtocol() {
             assert sessionProtocol != null;
             return sessionProtocol;
+        }
+
+        @Nullable
+        @Override
+        public ClientConnectionTimings connectionTimings() {
+            return connectionTimings;
         }
 
         @Override

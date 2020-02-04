@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
 import javax.annotation.Nullable;
@@ -21,7 +20,8 @@ import javax.annotation.Nullable;
 /**
  * A {@link RuntimeException} raised when a remote peer violated the current {@link SessionProtocol}.
  */
-public class ProtocolViolationException extends RuntimeException {
+public final class ProtocolViolationException extends RuntimeException {
+
     private static final long serialVersionUID = 4674394621849790490L;
 
     /**
@@ -48,15 +48,6 @@ public class ProtocolViolationException extends RuntimeException {
      */
     public ProtocolViolationException(@Nullable Throwable cause) {
         super(cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
-     * disabled, and writable stack trace enabled or disabled.
-     */
-    protected ProtocolViolationException(@Nullable String message, @Nullable Throwable cause,
-                                         boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
     }
 
     @Override

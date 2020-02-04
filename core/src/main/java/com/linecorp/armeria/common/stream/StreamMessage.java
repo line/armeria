@@ -41,7 +41,7 @@ import io.netty.util.concurrent.EventExecutor;
  * <ul>
  *   <li>{@link #isOpen()}</li>
  *   <li>{@link #isEmpty()}</li>
- *   <li>{@link #completionFuture()}</li>
+ *   <li>{@link #whenComplete()}</li>
  *   <li>{@link #abort()}</li>
  * </ul>
  *
@@ -55,7 +55,7 @@ import io.netty.util.concurrent.EventExecutor;
  *   <li>{@link #abort()} has been requested.</li>
  * </ul>
  *
- * <p>When fully consumed, the {@link CompletableFuture} returned by {@link StreamMessage#completionFuture()}
+ * <p>When fully consumed, the {@link CompletableFuture} returned by {@link StreamMessage#whenComplete()}
  * will complete, which you may find useful because {@link Subscriber} does not notify you when a stream is
  * {@linkplain Subscription#cancel() cancelled}.
  *
@@ -132,7 +132,7 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
-     * {@linkplain #completionFuture() complete} even if it's closed; a stream is complete when it's fully
+     * {@linkplain #whenComplete() complete} even if it's closed; a stream is complete when it's fully
      * consumed by a {@link Subscriber}.
      */
     boolean isOpen();
@@ -157,7 +157,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * </ul>
      */
     default boolean isComplete() {
-        return completionFuture().isDone();
+        return whenComplete().isDone();
     }
 
     /**
@@ -173,17 +173,37 @@ public interface StreamMessage<T> extends Publisher<T> {
      *   <li>{@link #abort()} has been requested.</li>
      * </ul>
      */
-    CompletableFuture<Void> completionFuture();
+    CompletableFuture<Void> whenComplete();
 
     /**
      * Returns a {@link CompletableFuture} that completes when this stream is complete,
      * either successfully or exceptionally, including cancellation and abortion.
      *
-     * @deprecated Use {@link #completionFuture()} instead.
+     * <p>A {@link StreamMessage} is <em>complete</em>
+     * (or 'fully consumed') when:
+     * <ul>
+     *   <li>the {@link Subscriber} consumes all elements and {@link Subscriber#onComplete()} is invoked,</li>
+     *   <li>an error occurred and {@link Subscriber#onError(Throwable)} is invoked,</li>
+     *   <li>the {@link Subscription} has been cancelled or</li>
+     *   <li>{@link #abort()} has been requested.</li>
+     * </ul>
+     *
+     * @deprecated Use {@link #whenComplete()}.
+     */
+    @Deprecated
+    default CompletableFuture<Void> completionFuture() {
+        return whenComplete();
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} that completes when this stream is complete,
+     * either successfully or exceptionally, including cancellation and abortion.
+     *
+     * @deprecated Use {@link #whenComplete()} instead.
      */
     @Deprecated
     default CompletableFuture<Void> closeFuture() {
-        return completionFuture();
+        return whenComplete();
     }
 
     /**

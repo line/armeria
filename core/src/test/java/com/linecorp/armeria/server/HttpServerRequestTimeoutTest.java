@@ -46,27 +46,27 @@ class HttpServerRequestTimeoutTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.requestTimeoutMillis(200)
+            sb.requestTimeoutMillis(400)
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
-                          Flux.interval(Duration.ofMillis(100))
-                              .doOnNext(i -> ctx.setRequestTimeoutAfter(Duration.ofMillis(150)));
+                          Flux.interval(Duration.ofMillis(200))
+                              .doOnNext(i -> ctx.setRequestTimeoutAfter(Duration.ofMillis(300)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/extend-timeout-from-start", (ctx, req) -> {
                   final Flux<Long> publisher =
-                          Flux.interval(Duration.ofMillis(100))
+                          Flux.interval(Duration.ofMillis(200))
                               .doOnNext(i -> {
-                                  ctx.extendRequestTimeout(Duration.ofMillis(100));
+                                  ctx.extendRequestTimeout(Duration.ofMillis(200));
                               });
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-while-writing", (ctx, req) -> {
-                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(100));
+                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(200));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-before-writing", (ctx, req) -> {
-                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(300));
+                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(800));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-immediately", (ctx, req) -> {

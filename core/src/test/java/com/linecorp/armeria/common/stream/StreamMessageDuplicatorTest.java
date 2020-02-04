@@ -129,7 +129,7 @@ class StreamMessageDuplicatorTest {
     private static CompletableFuture<String> subscribe(StreamMessage<String> streamMessage, long demand) {
         final CompletableFuture<String> future = new CompletableFuture<>();
         final StringSubscriber subscriber = new StringSubscriber(future, demand);
-        streamMessage.completionFuture().whenComplete(subscriber);
+        streamMessage.whenComplete().whenComplete(subscriber);
         streamMessage.subscribe(subscriber);
         return future;
     }
@@ -178,7 +178,7 @@ class StreamMessageDuplicatorTest {
         final CompletableFuture<String> future1 = new CompletableFuture<>();
         final StringSubscriber subscriber = new StringSubscriber(future1, 2);
         final StreamMessage<String> sm = duplicator.duplicate();
-        sm.completionFuture().whenComplete(subscriber);
+        sm.whenComplete().whenComplete(subscriber);
         sm.subscribe(subscriber);
 
         final CompletableFuture<String> future2 = subscribe(duplicator.duplicate(), 3);

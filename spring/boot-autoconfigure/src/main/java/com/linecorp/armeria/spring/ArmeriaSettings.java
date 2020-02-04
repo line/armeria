@@ -39,7 +39,7 @@ import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 
 /**
- * Settings for armeria servers, e.g.,
+ * Settings for armeria servers. For example:
  * <pre>{@code
  * armeria:
  *   ports:
