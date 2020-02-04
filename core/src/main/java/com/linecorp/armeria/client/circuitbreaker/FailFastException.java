@@ -18,8 +18,6 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nonnull;
-
 import com.linecorp.armeria.common.Flags;
 
 /**
@@ -32,9 +30,9 @@ public final class FailFastException extends RuntimeException {
     private final CircuitBreaker circuitBreaker;
 
     /**
-     * Construct an {@link FailFastException} that a request has been failed by {@code circuitBreaker}.
+     * Creates a new instance with the specified {@link CircuitBreaker}.
      */
-    public FailFastException(@Nonnull CircuitBreaker circuitBreaker) {
+    public FailFastException(CircuitBreaker circuitBreaker) {
         requireNonNull(circuitBreaker, "circuitBreaker");
         this.circuitBreaker = circuitBreaker;
     }
