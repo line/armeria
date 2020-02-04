@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Version;
@@ -287,6 +289,22 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     }
 
     private void write(HttpObject o, boolean endOfStream) {
+        // Make sure that a stream exists before writing data if first bytes were transferred.
+        // The following situation may cause the data to be written to a closed stream.
+        // 1. A connection that has pending outbound buffers receives GOAWAY frame.
+        // 2. AbstractHttp2ConnectionHandler.close() clears and flushes all active streams.
+        // 3. After successfully flushing, the listener requests next data and
+        //    the subscriber attempts to write the next data to the stream closed at 2).
+        if (loggedResponseHeadersFirstBytesTransferred &&
+            !responseEncoder.isWritable(req.id(), req.streamId())) {
+            if (reqCtx.sessionProtocol().isMultiplex()) {
+                fail(ClosedPublisherException.get());
+            } else {
+                fail(ClosedSessionException.get());
+            }
+            return;
+        }
+
         if (endOfStream) {
             setDone();
         }
@@ -337,12 +355,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     return;
                 }
 
-                if (tryComplete()) {
-                    setDone();
-                    logBuilder().endResponse(f.cause());
-                    subscription.cancel();
-                    reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
-                }
+                fail(f.cause());
                 HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
             }
         });
@@ -355,6 +368,15 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         final State oldState = state;
         state = State.DONE;
         return oldState;
+    }
+
+    private void fail(Throwable cause) {
+        if (tryComplete()) {
+            setDone();
+            logBuilder().endResponse(cause);
+            subscription.cancel();
+            reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
+        }
     }
 
     private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error) {

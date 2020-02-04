@@ -117,7 +117,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
     @Override
     protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream) {
-        if (id >= minClosedId) {
+        if (!isWritable(id)) {
             return newClosedSessionFuture();
         }
 
@@ -313,7 +313,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
     @Override
     protected ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
-        if (id >= minClosedId) {
+        if (!isWritable(id)) {
             ReferenceCountUtil.safeRelease(data);
             return newClosedSessionFuture();
         }
@@ -486,11 +486,20 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         }
 
         final ChannelFuture f = ch.write(Unpooled.EMPTY_BUFFER);
-        if (currentId >= minClosedId) {
+        if (!isWritable(currentId)) {
             f.addListener(ChannelFutureListener.CLOSE);
         }
 
         return f;
+    }
+
+    @Override
+    public boolean isWritable(int id, int streamId) {
+        return isWritable(id);
+    }
+
+    private boolean isWritable(int id) {
+        return id < minClosedId;
     }
 
     @Override

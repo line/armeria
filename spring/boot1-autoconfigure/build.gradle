@@ -2,37 +2,41 @@ final def SPRING_BOOT_VERSION = '1.5.22.RELEASE'
 
 evaluationDependsOn ':spring:boot-autoconfigure'
 
-dependencyManagement {
-    // Override Spring Boot versions.
-    dependencies {
-        dependencySet(group: 'org.springframework.boot', version: SPRING_BOOT_VERSION) {
-            entry 'spring-boot-starter'
-            entry 'spring-boot-configuration-processor'
-            entry 'spring-boot-starter-test'
-        }
-    }
-}
 
 dependencies {
-    compile(project(':thrift')) {
-        ext.optional = true // To let a user choose between thrift and thrift0.9.
-    }
-    compile project(':logback')
+    // To let a user choose between thrift and thrift0.9.
+    compileOnly project(':thrift')
+    implementation project(':logback')
 
-    compile 'io.micrometer:micrometer-spring-legacy'
-    compile('io.micrometer:micrometer-registry-prometheus') {
-        ext.optional = true
-    }
-    compile('io.dropwizard.metrics:metrics-json') {
-        ext.optional = true
-    }
-    compile 'javax.inject:javax.inject'
+    implementation 'io.micrometer:micrometer-spring-legacy'
+
+    // TODO(anuraaga): Consider removing these since this module does not have related functionality.
+    optionalApi 'io.micrometer:micrometer-registry-prometheus'
+    optionalApi 'io.dropwizard.metrics:metrics-json'
+
+    api 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
-    compile 'org.springframework.boot:spring-boot-starter'
-    compileOnly 'org.springframework.boot:spring-boot-configuration-processor'
+    api("org.springframework.boot:spring-boot-starter") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly SPRING_BOOT_VERSION
+        }
+    }
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly SPRING_BOOT_VERSION
+        }
+    }
 
-    testCompile project(':grpc')
-    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation project(':grpc')
+    testImplementation project(':thrift')
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly SPRING_BOOT_VERSION
+        }
+    }
 }
 
 // Use the sources from ':spring:boot-autoconfigure'.
@@ -46,8 +50,8 @@ tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java",
         "${autoconfigureProjectDir}/gen-src/test/grpc",
         "${autoconfigureProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
-tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/java"
-tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/resources"
+tasks.sourcesJar.from "${autoconfigureProjectDir}/src/main/java"
+tasks.sourcesJar.from "${autoconfigureProjectDir}/src/main/resources"
 tasks.javadoc.source "${autoconfigureProjectDir}/src/main/java"
 
 tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.compileTestThrift)
@@ -56,19 +60,4 @@ tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.gene
 // Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
-}
-
-// Make sure the correct Spring Boot versions are used.
-afterEvaluate {
-    [configurations.runtime, configurations.testRuntime].each { cfg ->
-        cfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
-            def group = artifact.moduleVersion.id.group
-            def version = artifact.moduleVersion.id.version
-            switch (group) {
-                case 'org.springframework.boot':
-                    assert version == SPRING_BOOT_VERSION
-                    break
-            }
-        }
-    }
 }
