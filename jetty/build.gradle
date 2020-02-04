@@ -2,6 +2,6 @@ dependencies {
     // Jetty
     api 'org.eclipse.jetty:jetty-server'
     ['jetty-webapp', 'jetty-annotations', 'apache-jsp', 'apache-jstl'].each {
-        api "org.eclipse.jetty:$it"
+        testImplementation "org.eclipse.jetty:$it"
     }
 }
