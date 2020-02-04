@@ -91,7 +91,8 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
         // Cannot start a new stream with a DATA frame. It must start with a HEADERS frame.
         ReferenceCountUtil.safeRelease(data);
         return newFailedFuture(new IllegalStateException(
-                "cannot start a new stream " + streamId + " with a DATA frame"));
+                "Trying to write data to the closed stream " + streamId +
+                " or start a new stream with a DATA frame"));
     }
 
     @Override
