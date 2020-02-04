@@ -46,7 +46,6 @@ class MediaTypeNamesTest {
 
         for (Entry<String, MediaType> mediaTypeEntry : mediaTypeConstantsMap.entrySet()) {
             final String mediaTypeName = mediaTypeNamesConstantsMap.get(mediaTypeEntry.getKey());
-            assertThat(mediaTypeName).isNotNull();
             assertThat(mediaTypeName).isEqualTo(mediaTypeEntry.getValue().toString());
         }
     }

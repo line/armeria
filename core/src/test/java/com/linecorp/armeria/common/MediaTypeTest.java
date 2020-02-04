@@ -123,7 +123,7 @@ public class MediaTypeTest {
                    isStatic(modifiers) &&
                    isFinal(modifiers) &&
                    filterClazz.length == 1 ?
-                   filterClazz.equals(input.getType()) : clazz.equals(input.getType());
+                   filterClazz[0].equals(input.getType()) : clazz.equals(input.getType());
         });
     }
 
