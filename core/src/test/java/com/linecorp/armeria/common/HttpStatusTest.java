@@ -15,86 +15,56 @@
  */
 package com.linecorp.armeria.common;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
-
-import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class HttpStatusTest {
-
-    @RegisterExtension
-    public static final ServerExtension server = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/success", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-            });
-            sb.service("/redirect", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.TEMPORARY_REDIRECT);
-                }
-            });
-            sb.service("/client", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.NOT_FOUND);
-                }
-            });
-            sb.service("/server", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-            });
-        }
-    };
-
-    static WebClient client;
-
-    @BeforeAll
-    static void setUp() {
-        server.start();
-        client = WebClient.of(server.httpUri("/"));
-    }
-
-    @AfterAll
-    static void tearDown() {
-        server.stop();
+    @Test
+    void statusIsInformationIfStatusCode2XX() {
+        assertThat(HttpStatus.valueOf(100).isInformational()).isTrue();
+        assertThat(HttpStatus.valueOf(199).isInformational()).isTrue();
+        assertThat(HttpStatus.valueOf(200).isInformational()).isFalse();
+        assertThat(HttpStatus.valueOf(300).isInformational()).isFalse();
+        assertThat(HttpStatus.valueOf(400).isInformational()).isFalse();
+        assertThat(HttpStatus.valueOf(500).isInformational()).isFalse();
     }
 
     @Test
     void statusIsSuccessIfStatusCode2XX() {
-        final AggregatedHttpResponse join = client.get("/success").aggregate().join();
-        assertTrue(join.status().isSuccess());
+        assertThat(HttpStatus.valueOf(100).isSuccess()).isFalse();
+        assertThat(HttpStatus.valueOf(200).isSuccess()).isTrue();
+        assertThat(HttpStatus.valueOf(299).isSuccess()).isTrue();
+        assertThat(HttpStatus.valueOf(300).isSuccess()).isFalse();
+        assertThat(HttpStatus.valueOf(400).isSuccess()).isFalse();
+        assertThat(HttpStatus.valueOf(500).isSuccess()).isFalse();
     }
 
     @Test
     void statusIsRedirectionIfStatusCode3XX() {
-        final AggregatedHttpResponse join = client.get("/redirect").aggregate().join();
-        assertTrue(join.status().isRedirection());
+        assertThat(HttpStatus.valueOf(100).isRedirection()).isFalse();
+        assertThat(HttpStatus.valueOf(200).isRedirection()).isFalse();
+        assertThat(HttpStatus.valueOf(300).isRedirection()).isTrue();
+        assertThat(HttpStatus.valueOf(399).isRedirection()).isTrue();
+        assertThat(HttpStatus.valueOf(400).isRedirection()).isFalse();
+        assertThat(HttpStatus.valueOf(500).isRedirection()).isFalse();
     }
 
     @Test
     void statusIsErrorIfStatusCode4XX() {
-        final AggregatedHttpResponse join = client.get("/client").aggregate().join();
-        assertTrue(join.status().isError());
+        assertThat(HttpStatus.valueOf(100).isError()).isFalse();
+        assertThat(HttpStatus.valueOf(200).isError()).isFalse();
+        assertThat(HttpStatus.valueOf(300).isError()).isFalse();
+        assertThat(HttpStatus.valueOf(400).isError()).isTrue();
+        assertThat(HttpStatus.valueOf(499).isError()).isTrue();
     }
 
     @Test
     void statusIsErrorIfStatusCode5XX() {
-        final AggregatedHttpResponse join = client.get("/server").aggregate().join();
-        assertTrue(join.status().isError());
+        assertThat(HttpStatus.valueOf(100).isError()).isFalse();
+        assertThat(HttpStatus.valueOf(200).isError()).isFalse();
+        assertThat(HttpStatus.valueOf(300).isError()).isFalse();
+        assertThat(HttpStatus.valueOf(500).isError()).isTrue();
+        assertThat(HttpStatus.valueOf(599).isError()).isTrue();
     }
 }
