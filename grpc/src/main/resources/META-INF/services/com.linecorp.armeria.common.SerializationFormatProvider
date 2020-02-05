@@ -1,1 +1,1 @@
-com.linecorp.armeria.common.grpc.GrpcSerializationFormatProvider
+com.linecorp.armeria.internal.common.grpc.GrpcSerializationFormatProvider

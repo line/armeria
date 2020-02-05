@@ -1,1 +1,1 @@
-com.linecorp.armeria.client.grpc.GrpcClientFactoryProvider
+com.linecorp.armeria.internal.client.grpc.GrpcClientFactoryProvider
