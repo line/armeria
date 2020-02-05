@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,31 +16,14 @@
 
 package com.linecorp.armeria.common.logging;
 
-import javax.annotation.Nullable;
+import java.util.function.BiPredicate;
 
-import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 
 /**
- * A skeletal {@link ContentPreviewer} implementation in order for a user to implement only the methods
- * what he or she really needs.
+ * Predicate.
  */
-final class NoopContentPreviewer implements ContentPreviewer {
-
-    static final ContentPreviewer NOOP = new NoopContentPreviewer();
-
-    @Override
-    public void onData(HttpData data) {}
-
-    @Nullable
-    @Override
-    public String produce() {
-        return null;
-    }
-
-    @Override
-    public boolean isDisabled() {
-        return true;
-    }
-
-    private NoopContentPreviewer() {}
+@FunctionalInterface
+public interface PreviewableRequestPredicate extends BiPredicate<RequestContext, RequestHeaders> {
 }

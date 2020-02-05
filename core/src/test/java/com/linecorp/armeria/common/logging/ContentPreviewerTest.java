@@ -20,9 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -31,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Strings;
-import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
@@ -39,7 +35,6 @@ import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -50,11 +45,8 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 
 class ContentPreviewerTest {
 
@@ -63,18 +55,9 @@ class ContentPreviewerTest {
         @Nullable
         private volatile CompletableFuture<RequestLog> waitingFuture;
 
-        MyHttpClient(String uri, int reqLength, int resLength) {
+        MyHttpClient(String uri, int maxLength) {
             final WebClientBuilder builder = WebClient.builder(serverExtension.uri(uri));
-            final ContentPreviewerFactory reqPreviewerFactory =
-                    ContentPreviewerFactory.ofText(reqLength, StandardCharsets.UTF_8);
-            final ContentPreviewerFactory resPreviewerFactory =
-                    ContentPreviewerFactory.ofText(resLength, StandardCharsets.UTF_8);
-            client = builder.decorator(ContentPreviewingClient.builder()
-                                                              .requestContentPreviewerFactory(
-                                                                      reqPreviewerFactory)
-                                                              .responseContentPreviewerFactory(
-                                                                      resPreviewerFactory)
-                                                              .newDecorator())
+            client = builder.decorator(ContentPreviewingClient.newDecorator(maxLength, StandardCharsets.UTF_8))
                             .decorator(LoggingClient.builder()
                                                     .requestLogLevel(LogLevel.INFO)
                                                     .successfulResponseLogLevel(LogLevel.INFO)
@@ -193,9 +176,7 @@ class ContentPreviewerTest {
         }
 
         void build(ServerBuilder sb) {
-            sb.decorator(ContentPreviewingService.builder()
-                                                 .contentPreview(10, StandardCharsets.UTF_8)
-                                                 .newDecorator());
+            sb.decorator(ContentPreviewingService.newDecorator(10, StandardCharsets.UTF_8));
             sb.decorator(delegate -> (ctx, req) -> {
                 if (waitingFuture != null) {
                     ctx.log().whenComplete().thenAccept(waitingFuture::complete);
@@ -271,49 +252,9 @@ class ContentPreviewerTest {
         }
     };
 
-    private static List<ByteBuf> sliceBytes(byte[] bytes, int length) {
-        final List<ByteBuf> buffers = new ArrayList<>();
-        for (int i = 0; i < bytes.length; i += length) {
-            buffers.add(Unpooled.wrappedBuffer(bytes, i, Math.min(bytes.length - i, length)));
-        }
-        return buffers;
-    }
-
-    private static final String TEST_STR = "abcdefghijkmnopqrstuvwyxzABCDEFGHIJKMNOPQRSTUVWXYZ" +
-                                           "가갸거겨고교구규그기가나다라마바사아자차카타파하";
-
-    private static void testSlice(String str, Charset charset, int maxLength, int sliceLength) {
-        final ContentPreviewer writer = ContentPreviewer.ofText(maxLength, charset);
-        final String expected = str.substring(0, Math.min(str.length(), maxLength));
-        sliceBytes(str.getBytes(charset), sliceLength).forEach(
-                b -> writer.onData(new ByteBufHttpData(b, false)));
-        assertThat(writer.produce()).isEqualTo(expected);
-    }
-
-    private static void testSliceBytes(byte[] bytes, int maxLength, int sliceLength) {
-        final ContentPreviewer writer = ContentPreviewer.ofBinary(maxLength, (headers, byteBuf) -> {
-            final byte[] b = new byte[maxLength];
-            assertThat(byteBuf.readableBytes()).isLessThanOrEqualTo(maxLength);
-            byteBuf.readBytes(b, 0, Math.min(byteBuf.readableBytes(), maxLength));
-            return BaseEncoding.base16().encode(b);
-        }, HttpHeaders.of());
-        sliceBytes(bytes, sliceLength).forEach(b -> writer.onData(new ByteBufHttpData(b, false)));
-        assertThat(writer.produce()).isEqualTo(BaseEncoding.base16().encode(Arrays.copyOf(bytes, maxLength)));
-    }
-
-    @Test
-    void testAggreagted() {
-        for (int sliceLength : new int[] { 1, 3, 6, 10, 200 }) {
-            for (int maxLength : new int[] { 1, 3, 6, 10, 12, 15, 25, 35, 200 }) {
-                testSlice(TEST_STR, StandardCharsets.UTF_8, maxLength, sliceLength);
-                testSliceBytes(TEST_STR.getBytes(), maxLength, sliceLength);
-            }
-        }
-    }
-
     @Test
     void testClientLog() throws Exception {
-        final MyHttpClient client = new MyHttpClient("/example", 10, 10);
+        final MyHttpClient client = new MyHttpClient("/example", 10);
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
         assertThat(client.getBody("/get").aggregate().get()
                          .content().toStringUtf8()).isEqualTo("test");

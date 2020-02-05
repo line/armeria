@@ -16,18 +16,23 @@
 
 package com.linecorp.armeria.server.logging;
 
-import java.util.function.Function;
+import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpRequestContentPreviewer;
+import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpResponseContentPreviewer;
+import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
+import java.nio.charset.Charset;
+import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
-import com.linecorp.armeria.internal.logging.ContentPreviewerConfigurator;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -49,48 +54,72 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 public final class ContentPreviewingService extends SimpleDecoratingHttpService {
 
     /**
-     * Returns a newly created {@link ContentPreviewingServiceBuilder}.
+     * Creates a new {@link ContentPreviewingService} decorator which produces text preview with the
+     * specified {@code maxLength} limit. The preview is produced when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} meets any of the following conditions:
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     *
+     * @param maxLength the maximum length of the preview
      */
-    public static ContentPreviewingServiceBuilder builder() {
-        return new ContentPreviewingServiceBuilder();
+    public static Function<? super HttpService, ContentPreviewingService> newDecorator(int maxLength) {
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.ofText(maxLength);
+        return delegate -> new ContentPreviewingService(delegate, factory);
+    }
+
+    /**
+     * Creates a new {@link ContentPreviewingService} decorator which produces text preview with the
+     * specified {@code maxLength} limit. The preview is produced when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} meets any of the following conditions:
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     *
+     * @param maxLength the maximum length of the preview
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
+     */
+    public static Function<? super HttpService, ContentPreviewingService> newDecorator(
+            int maxLength, Charset defaultCharset) {
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.ofText(maxLength, defaultCharset);
+        return delegate -> new ContentPreviewingService(delegate, factory);
     }
 
     /**
      * Creates a new {@link ContentPreviewingService} decorator with the specified
-     * {@code requestContentPreviewerFactory} and {@code responseContentPreviewerFactory}.
+     * {@link ContentPreviewerFactory}.
      */
     public static Function<? super HttpService, ContentPreviewingService> newDecorator(
-            ContentPreviewerFactory requestContentPreviewerFactory,
-            ContentPreviewerFactory responseContentPreviewerFactory) {
-        return builder().requestContentPreviewerFactory(requestContentPreviewerFactory)
-                        .responseContentPreviewerFactory(responseContentPreviewerFactory)
-                        .newDecorator();
+            ContentPreviewerFactory contentPreviewerFactory) {
+        requireNonNull(contentPreviewerFactory, "contentPreviewerFactory");
+        return delegate -> new ContentPreviewingService(delegate, contentPreviewerFactory);
     }
 
-    @Nullable
-    private final ContentPreviewerFactory responseContentPreviewerFactory;
-    private final ContentPreviewerConfigurator configurator;
+    private final ContentPreviewerFactory contentPreviewerFactory;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    ContentPreviewingService(HttpService delegate,
-                             @Nullable ContentPreviewerFactory requestContentPreviewerFactory,
-                             @Nullable ContentPreviewerFactory responseContentPreviewerFactory) {
+    ContentPreviewingService(HttpService delegate, ContentPreviewerFactory contentPreviewerFactory) {
         super(delegate);
-        this.responseContentPreviewerFactory = responseContentPreviewerFactory;
-        configurator = new ContentPreviewerConfigurator(
-                requestContentPreviewerFactory, responseContentPreviewerFactory);
+        this.contentPreviewerFactory = requireNonNull(contentPreviewerFactory, "contentPreviewerFactory");
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        req = configurator.maybeSetUpRequestContentPreviewer(ctx, req);
-        if (responseContentPreviewerFactory == null) {
-            return delegate().serve(ctx, req);
-        }
+        final ContentPreviewer requestContentPreviewer =
+                contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
+        req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer);
+
         ctx.logBuilder().deferResponseContentPreview();
         final HttpResponse res = delegate().serve(ctx, req);
-        return configurator.maybeSetUpResponseContentPreviewer(ctx, res);
+        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, req.headers(), res);
     }
 }

@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,21 +31,35 @@ import com.linecorp.armeria.common.HttpData;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
-abstract class AbstractContentPreviewer implements ContentPreviewer {
+class LengthLimitingContentPreviewer implements ContentPreviewer {
 
     private static final ByteBuf[] BYTE_BUFS = new ByteBuf[0];
 
     private final List<ByteBuf> bufferList = new ArrayList<>();
     private final int maxLength;
+    private final int inflatedMaxLength;
+    @Nullable
+    private Charset charset;
 
     @Nullable
     private String produced;
     private int aggregatedLength;
 
-    AbstractContentPreviewer(int maxLength) {
+    LengthLimitingContentPreviewer(int maxLength, @Nullable Charset charset) {
         this.maxLength = maxLength;
+        this.charset = charset;
+        inflatedMaxLength = inflateMaxLength(maxLength, charset);
+    }
+
+    private static int inflateMaxLength(int maxLength, @Nullable Charset charset) {
+        if (charset == null) {
+            return maxLength;
+        }
+        final long maxBytesPerChar = (long) Math.ceil(CharsetUtil.encoder(charset).maxBytesPerChar());
+        return (int) Long.min(Integer.MAX_VALUE, maxBytesPerChar * maxLength);
     }
 
     @Override
@@ -53,11 +68,11 @@ abstract class AbstractContentPreviewer implements ContentPreviewer {
         if (data.isEmpty()) {
             return;
         }
-        final int length = Math.min(maxLength - aggregatedLength, data.length());
+        final int length = Math.min(inflatedMaxLength - aggregatedLength, data.length());
         bufferList.add(duplicateData(data, length));
 
         aggregatedLength = IntMath.saturatedAdd(aggregatedLength, length);
-        if (aggregatedLength >= maxLength || data.isEndOfStream()) {
+        if (aggregatedLength >= inflatedMaxLength || data.isEndOfStream()) {
             produce();
         }
     }
@@ -66,12 +81,11 @@ abstract class AbstractContentPreviewer implements ContentPreviewer {
         if (httpData instanceof ByteBufHolder) {
             final ByteBuf content = ((ByteBufHolder) httpData).content();
             if (content.readableBytes() == length) {
-                // No need to slice.
                 return content.retainedDuplicate();
             }
             return content.retainedSlice(content.readerIndex(), length);
         } else {
-            return Unpooled.wrappedBuffer(httpData.array());
+            return Unpooled.wrappedBuffer(httpData.array(), 0, length);
         }
     }
 
@@ -81,12 +95,16 @@ abstract class AbstractContentPreviewer implements ContentPreviewer {
             return produced;
         }
         try {
-            return produced = produce(Unpooled.wrappedBuffer(bufferList.toArray(BYTE_BUFS)));
+            final String produced = produce(Unpooled.wrappedBuffer(bufferList.toArray(BYTE_BUFS)));
+            return this.produced = produced.length() > maxLength ? produced.substring(0, maxLength) : produced;
         } finally {
             bufferList.forEach(ReferenceCountUtil::safeRelease);
             bufferList.clear();
         }
     }
 
-    abstract String produce(ByteBuf wrappedBuffer);
+    String produce(ByteBuf wrappedBuffer) {
+        return wrappedBuffer.toString(wrappedBuffer.readerIndex(),
+                                      wrappedBuffer.readableBytes(), charset);
+    }
 }

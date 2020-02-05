@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,20 +18,20 @@ package com.linecorp.armeria.common.logging;
 
 import java.util.function.BiFunction;
 
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestHeaders;
 
 import io.netty.buffer.ByteBuf;
 
-final class BinaryContentPreviewer extends AbstractContentPreviewer {
+class RequestContentPreviewer extends LengthLimitingContentPreviewer {
 
-    private final BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer;
-    private final HttpHeaders headers;
+    private final RequestHeaders headers;
+    private final BiFunction<? super RequestHeaders, ? super ByteBuf, String> producer;
 
-    BinaryContentPreviewer(int maxLength, BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer,
-                           HttpHeaders headers) {
-        super(maxLength);
-        this.producer = producer;
+    RequestContentPreviewer(int maxLength, RequestHeaders headers,
+                            BiFunction<? super RequestHeaders, ? super ByteBuf, String> producer) {
+        super(maxLength, null);
         this.headers = headers;
+        this.producer = producer;
     }
 
     @Override

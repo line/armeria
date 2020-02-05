@@ -67,9 +67,7 @@ class ContentPreviewingServiceTest {
                                                   HttpData.ofUtf8("Hello " + aggregated.contentUtf8() + '!'));
                        }));
             sb.decorator("/beforeEncoding", delegate -> new EncodingService(delegate, unused -> true, 1));
-            sb.decorator("/beforeEncoding", ContentPreviewingService.builder()
-                                                                    .contentPreview(100)
-                                                                    .newDecorator());
+            sb.decorator("/beforeEncoding", ContentPreviewingService.newDecorator(100));
             sb.service("/beforeEncoding", httpService);
 
             sb.decorator("/encoded", decodingContentPreviewDecorator());
@@ -83,22 +81,21 @@ class ContentPreviewingServiceTest {
         }
 
         private Function<? super HttpService, ContentPreviewingService> decodingContentPreviewDecorator() {
-            final ContentPreviewingServiceBuilder builder = ContentPreviewingService.builder();
-            return builder.requestContentPreviewerFactory(ContentPreviewerFactory.ofText(100))
-                          .responseContentPreviewerFactory(
-                                  ContentPreviewerFactory.ofBinary(100, data -> {
-                                      final byte[] bytes = new byte[data.readableBytes()];
-                                      data.getBytes(0, bytes);
-                                      final byte[] decoded;
-                                      try (GZIPInputStream unzipper = new GZIPInputStream(
-                                              new ByteArrayInputStream(bytes))) {
-                                          decoded = ByteStreams.toByteArray(unzipper);
-                                      } catch (Exception e) {
-                                          throw new IllegalArgumentException(e);
-                                      }
-                                      return new String(decoded, StandardCharsets.UTF_8);
-                                  }))
-                          .newDecorator();
+            final ContentPreviewerFactory factory =
+                    ContentPreviewerFactory.builder().maxLength(100).requestTextContentType()
+                                           .responseProducer((headers, data) -> {
+                                               final byte[] bytes = new byte[data.readableBytes()];
+                                               data.getBytes(0, bytes);
+                                               final byte[] decoded;
+                                               try (GZIPInputStream unzipper = new GZIPInputStream(
+                                                       new ByteArrayInputStream(bytes))) {
+                                                   decoded = ByteStreams.toByteArray(unzipper);
+                                               } catch (Exception e) {
+                                                   throw new IllegalArgumentException(e);
+                                               }
+                                               return new String(decoded, StandardCharsets.UTF_8);
+                                           }).build();
+            return ContentPreviewingService.newDecorator(factory);
         }
     };
 

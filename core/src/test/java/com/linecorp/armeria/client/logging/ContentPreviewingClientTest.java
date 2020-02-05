@@ -72,9 +72,7 @@ class ContentPreviewingClientTest {
     void decodedContentPreview() {
         final WebClient client = WebClient.builder(server.uri("/"))
                                           .decorator(DecodingClient.newDecorator())
-                                          .decorator(ContentPreviewingClient.builder()
-                                                                            .contentPreview(100)
-                                                                            .newDecorator())
+                                          .decorator(ContentPreviewingClient.newDecorator(100))
                                           .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
@@ -119,22 +117,24 @@ class ContentPreviewingClientTest {
     }
 
     private static Function<? super HttpClient, ContentPreviewingClient> decodingContentPreviewDecorator() {
-        final ContentPreviewingClientBuilder builder = ContentPreviewingClient.builder();
-        return builder.requestContentPreviewerFactory(ContentPreviewerFactory.ofText(100))
-                      .responseContentPreviewerFactory(
-                              ContentPreviewerFactory.ofBinary(100, data -> {
-                                  final byte[] bytes = new byte[data.readableBytes()];
-                                  data.getBytes(0, bytes);
-                                  final byte[] decoded;
-                                  try (GZIPInputStream unzipper = new GZIPInputStream(
-                                          new ByteArrayInputStream(bytes))) {
-                                      decoded = ByteStreams.toByteArray(unzipper);
-                                  } catch (Exception e) {
-                                      throw new IllegalArgumentException(e);
-                                  }
-                                  return new String(decoded, StandardCharsets.UTF_8);
-                              }))
-                      .newDecorator();
+        final ContentPreviewerFactory factory =
+                ContentPreviewerFactory.builder()
+                                       .maxLength(100)
+                                       .requestTextContentType()
+                                       .responseProducer((headers, data) -> {
+                                           final byte[] bytes = new byte[data.readableBytes()];
+                                           data.getBytes(0, bytes);
+                                           final byte[] decoded;
+                                           try (GZIPInputStream unzipper = new GZIPInputStream(
+                                                   new ByteArrayInputStream(bytes))) {
+                                               decoded = ByteStreams.toByteArray(unzipper);
+                                           } catch (Exception e) {
+                                               throw new IllegalArgumentException(e);
+                                           }
+                                           return new String(decoded, StandardCharsets.UTF_8);
+                                       }).build();
+
+        return ContentPreviewingClient.newDecorator(factory);
     }
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,38 +24,36 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 
-final class TextualContentPreviewerFactory implements ContentPreviewerFactory {
+class TextualContentPreviewerFunction implements Function<HttpHeaders, ContentPreviewer> {
 
     private static final List<String> subTypeEquals = ImmutableList.of("json", "xml");
     private static final List<String> subTypeEndsWith = ImmutableList.of("+json", "+xml");
 
-    private final Function<? super Charset, ? extends ContentPreviewer> function;
+    private final int maxLength;
     private final Charset defaultCharset;
 
-    TextualContentPreviewerFactory(Function<? super Charset, ? extends ContentPreviewer> function,
-                                   Charset defaultCharset) {
-        this.function = function;
+    TextualContentPreviewerFunction(int maxLength, Charset defaultCharset) {
+        this.maxLength = maxLength;
         this.defaultCharset = defaultCharset;
     }
 
     @Override
-    public ContentPreviewer get(RequestContext ctx, HttpHeaders headers) {
+    public ContentPreviewer apply(HttpHeaders headers) {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
             return ContentPreviewer.disabled();
         }
         final Charset charset = contentType.charset();
         if (charset != null) {
-            return function.apply(charset);
+            return new LengthLimitingContentPreviewer(maxLength, charset);
         }
 
         if ("text".equals(contentType.type()) ||
             subTypeEquals.contains(contentType.subtype()) ||
             subTypeEndsWith.stream().anyMatch(contentType.subtype()::endsWith) ||
             contentType.is(MediaType.FORM_DATA)) {
-            return function.apply(defaultCharset);
+            return new LengthLimitingContentPreviewer(maxLength, defaultCharset);
         }
         return ContentPreviewer.disabled();
     }
