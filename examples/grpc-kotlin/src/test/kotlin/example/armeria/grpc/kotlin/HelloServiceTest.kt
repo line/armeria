@@ -8,16 +8,18 @@ import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.server.Server
 import example.armeria.grpc.kotlin.Hello.HelloReply
 import example.armeria.grpc.kotlin.Hello.HelloRequest
-import example.armeria.grpc.kotlin.HelloServiceGrpc.*
+import example.armeria.grpc.kotlin.HelloServiceGrpc.HelloServiceBlockingStub
+import example.armeria.grpc.kotlin.HelloServiceGrpc.HelloServiceFutureStub
+import example.armeria.grpc.kotlin.HelloServiceGrpc.HelloServiceStub
 import io.grpc.stub.StreamObserver
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 class HelloServiceTest {
 

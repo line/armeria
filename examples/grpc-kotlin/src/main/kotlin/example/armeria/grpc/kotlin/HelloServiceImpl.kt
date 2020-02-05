@@ -4,10 +4,10 @@ import com.linecorp.armeria.server.ServiceRequestContext
 import example.armeria.grpc.kotlin.Hello.HelloReply
 import example.armeria.grpc.kotlin.Hello.HelloRequest
 import io.grpc.stub.StreamObserver
-import reactor.core.publisher.Flux
-import reactor.core.scheduler.Schedulers
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+import reactor.core.publisher.Flux
+import reactor.core.scheduler.Schedulers
 
 class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
 
