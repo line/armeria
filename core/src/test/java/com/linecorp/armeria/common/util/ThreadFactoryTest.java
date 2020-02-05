@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.internal.EventLoopThread;
+import com.linecorp.armeria.internal.common.util.EventLoopThread;
 
 import io.netty.util.concurrent.FastThreadLocalThread;
 

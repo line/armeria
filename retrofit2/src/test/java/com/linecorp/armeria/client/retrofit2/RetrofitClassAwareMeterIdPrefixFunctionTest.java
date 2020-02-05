@@ -103,7 +103,7 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
     @MethodSource
     void metrics(RetrofitMeterIdPrefixFunction meterIdPrefixFunction, String serviceTag) {
         final Example example = ArmeriaRetrofit
-                .of(WebClient.builder(server.httpUri("/"))
+                .of(WebClient.builder(server.httpUri())
                              .factory(clientFactory)
                              .decorator(MetricCollectingClient.newDecorator(meterIdPrefixFunction))
                              .build())

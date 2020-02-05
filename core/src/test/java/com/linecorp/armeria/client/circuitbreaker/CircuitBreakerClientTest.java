@@ -151,7 +151,7 @@ public class CircuitBreakerClientTest {
                               .build();
 
         final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(builder.mapping(mapping).newDecorator())
                                           .build();
 

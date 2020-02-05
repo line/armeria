@@ -3,10 +3,10 @@ plugins {
 }
 
 dependencies {
-    compile project(':core')
-    compile project(':rxjava')
-    
-    compile 'net.javacrumbs.future-converter:future-converter-rxjava2-java8'
+    implementation project(':core')
+    implementation project(':rxjava')
+
+    implementation 'net.javacrumbs.future-converter:future-converter-rxjava2-java8'
 }
 
 application {

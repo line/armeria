@@ -56,7 +56,7 @@ class ContentPreviewerTest {
         private volatile CompletableFuture<RequestLog> waitingFuture;
 
         MyHttpClient(String uri, int maxLength) {
-            final WebClientBuilder builder = WebClient.builder(serverExtension.uri(uri));
+            final WebClientBuilder builder = WebClient.builder(serverExtension.httpUri().resolve(uri));
             client = builder.decorator(ContentPreviewingClient.newDecorator(maxLength, StandardCharsets.UTF_8))
                             .decorator(LoggingClient.builder()
                                                     .requestLogLevel(LogLevel.INFO)
@@ -128,7 +128,7 @@ class ContentPreviewerTest {
             private final WebClient client;
 
             Client(String path) {
-                client = WebClient.of(serverExtension.uri(path));
+                client = WebClient.of(serverExtension.httpUri().resolve(path));
             }
 
             RequestLog get(String path) throws Exception {

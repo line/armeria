@@ -7,25 +7,21 @@ configurations {
 }
 
 dependencies {
-    compile(project(':thrift')) {
-        ext.optional = true // To let a user choose between thrift and thrift0.9.
-    }
-    compile project(':logback')
+    // To let a user choose between thrift and thrift0.9.
+    compileOnly project(':thrift')
+    implementation project(':logback')
 
-    compile('io.micrometer:micrometer-registry-prometheus') {
-        ext.optional = true
-    }
-    compile('io.dropwizard.metrics:metrics-json') {
-        ext.optional = true
-    }
-    compile 'javax.inject:javax.inject'
+    optionalApi 'io.micrometer:micrometer-registry-prometheus'
+    optionalApi 'io.dropwizard.metrics:metrics-json'
+    api 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
-    compile 'org.springframework.boot:spring-boot-starter-webflux'
+    api 'org.springframework.boot:spring-boot-starter-webflux'
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    testCompile "io.projectreactor:reactor-test"
-    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation project(':thrift')
+    testImplementation "io.projectreactor:reactor-test"
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 // Copy common files from boot-autoconfigure module to gen-src directory in order to use them as a source set.
@@ -40,7 +36,7 @@ task copyFiles(type: Copy) {
     include '**/ArmeriaSettings.java'
     include '**/CustomAlias*KeyManager*.java'
     include '**/DropwizardSupport.java'
-    include '**/MeterIdPrefixFunctionFactory.java'
+    include '**/*MeterIdPrefixFunctionFactory.java'
     include '**/PrometheusSupport.java'
     include '**/Ssl.java'
     include '**/ThriftServiceUtils.java'

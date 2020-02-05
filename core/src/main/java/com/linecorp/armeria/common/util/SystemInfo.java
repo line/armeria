@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.internal.JavaVersionSpecific;
+import com.linecorp.armeria.internal.common.JavaVersionSpecific;
 
 /**
  * Provides utilities for accessing the information about the current system and process.

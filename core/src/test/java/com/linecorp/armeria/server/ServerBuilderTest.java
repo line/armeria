@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
+import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -229,7 +229,7 @@ class ServerBuilderTest {
      */
     @Test
     void decoratorTest() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/").aggregate().get();
         assertThat(res.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res.headers().contains("virtualhost_decorator")).isEqualTo(false);

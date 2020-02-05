@@ -65,7 +65,7 @@ public class ClientAuthIntegrationTest {
                                                                   clientCert.privateKeyFile()))
                              .tlsNoVerify()
                              .build();
-        final WebClient client = WebClient.builder(rule.httpsUri("/"))
+        final WebClient client = WebClient.builder(rule.httpsUri())
                                           .factory(clientFactory)
                                           .decorator(LoggingClient.builder().newDecorator())
                                           .build();

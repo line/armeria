@@ -70,10 +70,10 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.channel.EventLoop;
@@ -283,7 +283,7 @@ public class RetryingClientTest {
                 RetryingClient.builder(new RetryIfContentMatch("Need to retry"))
                               .contentPreviewLength(1024)
                               .newDecorator();
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(retryingDecorator)
                                           .build();
@@ -423,7 +423,7 @@ public class RetryingClientTest {
                 RetryingClient.builder(RetryStrategy.onServerErrorStatus(Backoff.fixed(8000)))
                               .newDecorator();
 
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(factory)
                                           .responseTimeoutMillis(10000)
                                           .decorator(retryingDecorator)
@@ -463,7 +463,7 @@ public class RetryingClientTest {
         for (Throwable abortCause : abortCauses) {
             final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
             final WebClient client =
-                    WebClient.builder(server.uri("/"))
+                    WebClient.builder(server.httpUri())
                              .decorator(RetryingClient.newDecorator(retryAlways))
                              .decorator((delegate, ctx, req) -> {
                                  context.set(ctx);
@@ -523,7 +523,7 @@ public class RetryingClientTest {
         for (Throwable abortCause : abortCauses) {
             final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
             final WebClient client =
-                    WebClient.builder(server.uri("/"))
+                    WebClient.builder(server.httpUri())
                              .decorator(RetryingClient.newDecorator(retryAlways))
                              .decorator((delegate, ctx, req) -> {
                                  context.set(ctx);
@@ -561,7 +561,7 @@ public class RetryingClientTest {
             retryCounter.incrementAndGet();
             return CompletableFuture.completedFuture(Backoff.withoutDelay());
         };
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator((delegate, ctx, req) -> {
                                               throw new AnticipatedException();
                                           })
@@ -577,7 +577,7 @@ public class RetryingClientTest {
     public void useSameEventLoopWhenAggregate() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<EventLoop> eventLoop = new AtomicReference<>();
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator((delegate, ctx, req) -> {
                                               eventLoop.set(ctx.eventLoop());
                                               return delegate.execute(ctx, req);
@@ -605,7 +605,7 @@ public class RetryingClientTest {
                               .maxTotalAttempts(maxTotalAttempts)
                               .newDecorator();
 
-        return WebClient.builder(server.uri("/"))
+        return WebClient.builder(server.httpUri())
                         .factory(clientFactory)
                         .responseTimeoutMillis(responseTimeoutMillis)
                         .decorator(retryingDecorator)

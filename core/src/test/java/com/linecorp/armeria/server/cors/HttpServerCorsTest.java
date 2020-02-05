@@ -270,7 +270,7 @@ public class HttpServerCorsTest {
     };
 
     static WebClient client() {
-        return WebClient.builder(server.uri("/"))
+        return WebClient.builder(server.httpUri())
                         .factory(clientFactory)
                         .build();
     }

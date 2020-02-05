@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.RpcRequest;
  *
  * @param <K> the key type
  */
-public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
+public final class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
 
     static final CircuitBreakerMapping defaultMapping =
             new KeyedCircuitBreakerMapping<>(KeySelector.HOST, CircuitBreaker::of);

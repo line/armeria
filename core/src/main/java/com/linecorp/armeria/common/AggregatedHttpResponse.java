@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLength;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;

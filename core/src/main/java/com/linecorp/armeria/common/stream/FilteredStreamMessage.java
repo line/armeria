@@ -33,7 +33,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.internal.PooledObjects;
+import com.linecorp.armeria.internal.common.util.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;

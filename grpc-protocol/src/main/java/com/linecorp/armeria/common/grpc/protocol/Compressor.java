@@ -34,9 +34,12 @@ package com.linecorp.armeria.common.grpc.protocol;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * Represents a message compressor.
  */
+@UnstableApi
 public interface Compressor {
 
     // Copied from `io.grpc.Compressor` at:

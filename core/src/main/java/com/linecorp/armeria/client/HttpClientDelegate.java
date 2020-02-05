@@ -30,10 +30,12 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.internal.RequestContextUtil;
+import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -111,7 +113,7 @@ final class HttpClientDelegate implements HttpClient {
             final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
             acquireConnectionAndExecute(ctx, endpointWithPort, ipAddr, req, res, timingsBuilder);
         } else {
-            timingsBuilder.build().setTo(ctx);
+            ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
             final Throwable cause = resolveFuture.cause();
             handleEarlyRequestException(ctx, req, cause);
             res.close(cause);
@@ -136,11 +138,11 @@ final class HttpClientDelegate implements HttpClient {
         final PoolKey key = new PoolKey(host, ipAddr, port);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
+            logSession(ctx, pooledChannel, null);
             doExecute(pooledChannel, ctx, req, res);
         } else {
             pool.acquireLater(protocol, key, timingsBuilder).handle((newPooledChannel, cause) -> {
-                timingsBuilder.build().setTo(ctx);
-
+                logSession(ctx, newPooledChannel, timingsBuilder.build());
                 if (cause == null) {
                     doExecute(newPooledChannel, ctx, req, res);
                 } else {
@@ -149,6 +151,17 @@ final class HttpClientDelegate implements HttpClient {
                 }
                 return null;
             });
+        }
+    }
+
+    private static void logSession(ClientRequestContext ctx, @Nullable PooledChannel pooledChannel,
+                                   @Nullable ClientConnectionTimings connectionTimings) {
+        if (pooledChannel != null) {
+            final Channel channel = pooledChannel.get();
+            final SessionProtocol actualProtocol = pooledChannel.protocol();
+            ctx.logBuilder().session(channel, actualProtocol, connectionTimings);
+        } else {
+            ctx.logBuilder().session(null, ctx.sessionProtocol(), connectionTimings);
         }
     }
 

@@ -29,14 +29,14 @@ import io.netty.util.AsciiString;
 /**
  * Jackson {@link JsonSerializer} for {@link HttpHeaders}.
  */
-public final class HttpHeadersJsonSerializer extends StdSerializer<HttpHeaders> {
+final class HttpHeadersJsonSerializer extends StdSerializer<HttpHeaders> {
 
     private static final long serialVersionUID = 4459242879396343114L;
 
     /**
      * Creates a new instance.
      */
-    public HttpHeadersJsonSerializer() {
+    HttpHeadersJsonSerializer() {
         super(HttpHeaders.class);
     }
 

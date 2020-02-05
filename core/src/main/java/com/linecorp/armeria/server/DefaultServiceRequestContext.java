@@ -50,10 +50,12 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -65,7 +67,10 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ServiceRequestContext} implementation.
  */
-public class DefaultServiceRequestContext extends NonWrappingRequestContext implements ServiceRequestContext {
+@UnstableApi
+public final class DefaultServiceRequestContext
+        extends NonWrappingRequestContext
+        implements ServiceRequestContext {
 
     private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders>
             additionalResponseHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -88,7 +93,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final InetAddress clientAddress;
 
-    private final DefaultRequestLog log;
+    private final RequestLogBuilder log;
 
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
@@ -122,31 +127,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      *           and {@link Response} pair.
      * @param routingContext the parameters which are used when finding a matched {@link Route}
      * @param routingResult the result of finding a matched {@link Route}
-     * @param request the request associated with this context
-     * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
-     * @param proxiedAddresses source and destination addresses delivered through proxy servers
-     * @param clientAddress the address of a client who initiated the request
-     */
-    public DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
-            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress) {
-        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, request,
-             sslSession, proxiedAddresses, clientAddress, false, 0, 0);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param cfg the {@link ServiceConfig}
-     * @param ch the {@link Channel} that handles the invocation
-     * @param meterRegistry the {@link MeterRegistry} that collects various stats
-     * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param id the {@link RequestId} that represents the identifier of the current {@link Request}
-     *           and {@link Response} pair.
-     * @param routingContext the parameters which are used when finding a matched {@link Route}
-     * @param routingResult the result of finding a matched {@link Route}
-     * @param request the request associated with this context
+     * @param req the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      * @param proxiedAddresses source and destination addresses delivered through proxy servers
      * @param clientAddress the address of a client who initiated the request
@@ -156,20 +137,9 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
-            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
-            long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, request,
-             sslSession, proxiedAddresses, clientAddress, true, requestStartTimeNanos,
-             requestStartTimeMicros);
-    }
-
-    private DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
-            boolean requestStartTimeSet, long requestStartTimeNanos,
-            long requestStartTimeMicros) {
+            long requestStartTimeNanos, long requestStartTimeMicros) {
 
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
@@ -184,12 +154,9 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
-        log = new DefaultRequestLog(this);
-        if (requestStartTimeSet) {
-            log.startRequest(ch, sessionProtocol, sslSession, requestStartTimeNanos, requestStartTimeMicros);
-        } else {
-            log.startRequest(ch, sessionProtocol, sslSession);
-        }
+        log = RequestLog.builder(this);
+        log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
+        log.session(ch, sessionProtocol, sslSession, null);
         log.requestHeaders(req.headers());
 
         // For the server, request headers are processed well before ServiceRequestContext is created. It means
@@ -239,7 +206,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), id, routingContext,
-                routingResult, req, sslSession(), proxiedAddresses(), clientAddress());
+                routingResult, req, sslSession(), proxiedAddresses(), clientAddress(),
+                System.nanoTime(), SystemInfo.currentTimeMicros());
 
         if (rpcReq != null) {
             ctx.updateRpcRequest(rpcReq);
@@ -649,7 +617,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * <p>Note: This method is meant for internal use by server-side protocol implementation to reschedule
      * a timeout task when a user updates the request timeout configuration.
      */
-    public void setRequestTimeoutController(TimeoutController requestTimeoutController) {
+    void setRequestTimeoutController(TimeoutController requestTimeoutController) {
         requireNonNull(requestTimeoutController, "requestTimeoutController");
         checkState(this.requestTimeoutController == null, "requestTimeoutController is set already.");
         this.requestTimeoutController = requestTimeoutController;

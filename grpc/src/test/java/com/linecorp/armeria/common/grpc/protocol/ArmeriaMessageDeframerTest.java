@@ -40,8 +40,8 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.internal.grpc.ForwardingDecompressor;
-import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
+import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 
 import io.grpc.Codec.Gzip;
 import io.netty.buffer.Unpooled;
@@ -164,7 +164,7 @@ class ArmeriaMessageDeframerTest {
     @Test
     void deframe_endOfStream() throws Exception {
         deframer.request(1);
-        deframer.deframe(HttpData.EMPTY_DATA, true);
+        deframer.deframe(HttpData.empty(), true);
         deframer.closeWhenComplete();
         verify(listener).endOfStream();
         verifyNoMoreInteractions(listener);

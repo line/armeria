@@ -110,16 +110,16 @@ public class HttpServiceTest {
     @Test
     public void testHello() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/hello/foo")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/hello/foo"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("Hello, foo!");
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/hello/foo/bar")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/hello/foo/bar"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 404 Not Found");
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpDelete(rule.httpUri("/hello/bar")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpDelete(rule.httpUri() + "/hello/bar"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo(
                         "HTTP/1.1 405 Method Not Allowed");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(
@@ -133,7 +133,7 @@ public class HttpServiceTest {
         // Test if the server responds with the 'content-length' header
         // even if it is the last response of the connection.
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpUriRequest req = new HttpGet(rule.httpUri("/200"));
+            final HttpUriRequest req = new HttpGet(rule.httpUri() + "/200");
             req.setHeader("Connection", "Close");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
@@ -146,13 +146,13 @@ public class HttpServiceTest {
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Ensure the HEAD response does not have content.
-            try (CloseableHttpResponse res = hc.execute(new HttpHead(rule.httpUri("/200")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpHead(rule.httpUri() + "/200"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getEntity()).isNull();
             }
 
             // Ensure the 204 response does not have content.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/204")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/204"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 204 No Content");
                 assertThat(res.getEntity()).isNull();
             }
@@ -161,11 +161,11 @@ public class HttpServiceTest {
 
     @Test
     public void contentLengthIsNotSetWhenTrailerExists() {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
         AggregatedHttpResponse res = client.get("/trailersWithoutData").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
         assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
-        assertThat(res.content()).isSameAs(HttpData.EMPTY_DATA);
+        assertThat(res.content()).isSameAs(HttpData.empty());
 
         res = client.get("/dataAndTrailers").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();

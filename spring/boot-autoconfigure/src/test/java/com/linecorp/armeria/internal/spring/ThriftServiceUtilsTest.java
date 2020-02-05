@@ -13,32 +13,31 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.test.thrift.main.HelloService.AsyncIface;
 import com.linecorp.armeria.spring.test.thrift.main.HelloService.Iface;
 
-public class ThriftServiceUtilsTest {
+class ThriftServiceUtilsTest {
     private static final String SERVICE_NAME = "com.linecorp.armeria.spring.test.thrift.main.HelloService";
 
-    private final AsyncIface asyncService = (AsyncIface) (name, cb) -> cb.onComplete("hello");
-    private final Iface syncService = (Iface) name -> "hello";
+    private final AsyncIface asyncService = (name, cb) -> cb.onComplete("hello");
+    private final Iface syncService = name -> "hello";
 
     @Test
-    public void serviceNames() {
+    void serviceNames() {
         assertThat(ThriftServiceUtils.serviceNames(THttpService.of(asyncService)))
                 .isEqualTo(ImmutableSet.of(SERVICE_NAME));
-        assertThat(ThriftServiceUtils.serviceNames(THttpService.of(ImmutableMap.of("async", asyncService,
-                                                                                   "sync", syncService))))
+        assertThat(ThriftServiceUtils.serviceNames(THttpService.builder()
+                                                               .addService("async", asyncService)
+                                                               .addService("sync", syncService).build()))
                 .isEqualTo(ImmutableSet.of(SERVICE_NAME));
     }
 }

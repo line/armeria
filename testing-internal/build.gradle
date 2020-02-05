@@ -1,9 +1,9 @@
 dependencies {
-    compile project(':testing:junit')
-    compile project(':testing:junit4')
+    api project(':testing:junit')
+    api project(':testing:junit4')
 
-    compile 'org.apache.httpcomponents:httpclient'
-    compile 'org.assertj:assertj-core'
-    compile 'org.junit.jupiter:junit-jupiter-params'
-    compile 'org.mockito:mockito-junit-jupiter'
+    api 'org.apache.httpcomponents:httpclient'
+    api 'org.assertj:assertj-core'
+    api 'org.junit.jupiter:junit-jupiter-params'
+    api 'org.mockito:mockito-junit-jupiter'
 }

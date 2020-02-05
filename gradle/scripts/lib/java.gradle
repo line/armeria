@@ -11,7 +11,7 @@ configure(rootProject) {
 
 configure(projectsWithFlags('java')) {
 
-    apply plugin: 'java'
+    apply plugin: 'java-library'
     apply plugin: 'eclipse'
     apply plugin: 'idea'
 
@@ -31,6 +31,18 @@ configure(projectsWithFlags('java')) {
         sourceSet.resources.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/resources")
     }
 
+    java {
+        withJavadocJar()
+        withSourcesJar()
+
+        // Adds an optional configuration that can be used to define optional dependencies. While it's more
+        // idiomatic to define features for each set of optional dependencies (e.g., "prometheus",
+        // "dropwizard"), it's convenient to have a single one to fallback to.
+        registerFeature('optional') {
+            usingSourceSet(sourceSets.main)
+        }
+    }
+
     // Set the sensible compiler options.
     tasks.withType(JavaCompile) {
         def task = delegate
@@ -38,7 +50,6 @@ configure(projectsWithFlags('java')) {
         targetCompatibility = project.findProperty('javaTargetCompatibility') ?: '1.8'
         options.encoding = 'UTF-8'
         options.warnings = false
-        options.debug = true
         options.compilerArgs += '-parameters'
         project.configurations.each { Configuration cfg ->
             if (cfg.name == 'annotationProcessor' || cfg.name.endsWith('AnnotationProcessor')) {
@@ -48,43 +59,10 @@ configure(projectsWithFlags('java')) {
                     def useIncrementalCompilation = deps.size() == 0
                     options.incremental = useIncrementalCompilation
                     logger.info("${useIncrementalCompilation ? 'Enabling' : 'Disabling'} " +
-                                "incremental compilation for '${task.path}'")
+                            "incremental compilation for '${task.path}'")
                 }
             }
         }
-    }
-
-    // Generate a source JAR.
-    task sourceJar(type: Jar) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-    }
-
-    // Generate a javadoc JAR.
-    task javadocJar(type: Jar, dependsOn: tasks.javadoc) {
-        classifier = 'javadoc'
-        from javadoc.destinationDir
-    }
-
-    // Generate source/javadoc JARs only when publishing.
-    def requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b -> a + b.args }
-    tasks.sourceJar.onlyIf {
-        project.ext.isSigning() ||
-        project.ext.isPublishing() ||
-        requestedTaskNames.find { it =~ /(?:^|:)sourceJar$/ }
-    }
-    [tasks.javadoc, tasks.javadocJar].each {
-        it.onlyIf {
-            project.ext.isSigning() ||
-            project.ext.isPublishing() ||
-            requestedTaskNames.find { it =~ /(?:^|:)javadoc(?:Jar)?$/ }
-        }
-    }
-
-    artifacts {
-        archives jar
-        archives sourceJar
-        archives javadocJar
     }
 
     // Enable full exception logging for test failures.

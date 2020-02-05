@@ -39,7 +39,7 @@ class HttpClientContextCaptorTest {
 
     @Test
     void simple() {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             final HttpResponse res = client.get("/foo");
             final ClientRequestContext ctx = ctxCaptor.get();

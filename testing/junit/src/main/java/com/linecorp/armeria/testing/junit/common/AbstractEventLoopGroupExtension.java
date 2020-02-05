@@ -19,7 +19,7 @@ package com.linecorp.armeria.testing.junit.common;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import com.linecorp.armeria.testing.internal.EventLoopGroupRuleDelegate;
+import com.linecorp.armeria.internal.testing.EventLoopGroupRuleDelegate;
 
 import io.netty.channel.EventLoopGroup;
 

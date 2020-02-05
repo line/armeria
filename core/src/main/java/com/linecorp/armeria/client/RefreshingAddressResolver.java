@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.dns.DnsUtil.extractAddressBytes;
+import static com.linecorp.armeria.internal.client.DnsUtil.extractAddressBytes;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -38,8 +38,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.internal.dns.DefaultDnsNameResolver;
-import com.linecorp.armeria.internal.dns.DnsQuestionWithoutTrailingDot;
+import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
+import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;

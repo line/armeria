@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client.grpc;
 
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
-import static com.linecorp.armeria.internal.ClientUtil.initContextAndExecuteWithFallback;
+import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -50,14 +50,14 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.grpc.ForwardingCompressor;
-import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
-import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
-import com.linecorp.armeria.internal.grpc.GrpcStatus;
-import com.linecorp.armeria.internal.grpc.HttpStreamReader;
-import com.linecorp.armeria.internal.grpc.MetadataUtil;
-import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
-import com.linecorp.armeria.internal.grpc.TransportStatusListener;
+import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
+import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
+import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
+import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
+import com.linecorp.armeria.internal.common.grpc.HttpStreamReader;
+import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
+import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
+import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallOptions;

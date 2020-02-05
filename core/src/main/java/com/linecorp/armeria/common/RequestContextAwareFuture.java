@@ -54,7 +54,7 @@ final class RequestContextAwareFuture<T> implements Future<T> {
         return delegate.addListener(context.makeContextAware(listener));
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings("unchecked")
     @Override
     public Future<T> addListeners(
             GenericFutureListener<? extends Future<? super T>>... listeners) {

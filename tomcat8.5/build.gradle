@@ -1,24 +1,18 @@
 final def TOMCAT_VERSION = '8.5.49'
 
-dependencyManagement {
-    // Override Tomcat versions.
-    dependencies {
-        dependencySet(group: 'org.apache.tomcat.embed', version: TOMCAT_VERSION) {
-            entry 'tomcat-embed-core'
-            entry 'tomcat-embed-jasper'
-            entry 'tomcat-embed-el'
-        }
-    }
-}
-
 dependencies {
     // Tomcat
     [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {
-        compile "org.apache.tomcat.embed:$it"
+        api("org.apache.tomcat.embed:$it") {
+            version {
+                // Will fail the build if the override doesn't work
+                strictly TOMCAT_VERSION
+            }
+        }
     }
 
     // Replace commons-logging (Tomcat's logging API) with SLF4J.
-    runtime 'org.slf4j:jcl-over-slf4j'
+    runtimeOnly 'org.slf4j:jcl-over-slf4j'
 }
 
 // Use the sources from ':tomcat' as well as ours.
@@ -30,23 +24,8 @@ tasks.compileJava.exclude '**/ConfigFileLoaderInitializer*'
 tasks.processResources.from "${rootProject.projectDir}/tomcat/src/main/resources"
 tasks.compileTestJava.source "${rootProject.projectDir}/tomcat/src/test/java"
 tasks.processTestResources.from "${rootProject.projectDir}/tomcat/src/test/resources"
-tasks.sourceJar.from "${rootProject.projectDir}/tomcat/src/main/java"
-tasks.sourceJar.from "${rootProject.projectDir}/tomcat/src/main/resources"
-tasks.sourceJar.exclude '**/ConfigFileLoaderInitializer*'
+tasks.sourcesJar.from "${rootProject.projectDir}/tomcat/src/main/java"
+tasks.sourcesJar.from "${rootProject.projectDir}/tomcat/src/main/resources"
+tasks.sourcesJar.exclude '**/ConfigFileLoaderInitializer*'
 tasks.javadoc.source "${rootProject.projectDir}/tomcat/src/main/java"
 tasks.javadoc.exclude '**/ConfigFileLoaderInitializer*'
-
-// Make sure the correct Tomcat versions are used.
-afterEvaluate {
-    [configurations.runtime, configurations.testRuntime].each { cfg ->
-        cfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
-            def group = artifact.moduleVersion.id.group
-            def version = artifact.moduleVersion.id.version
-            switch (group) {
-                case 'org.apache.tomcat.embed':
-                    assert version == TOMCAT_VERSION
-                    break
-            }
-        }
-    }
-}

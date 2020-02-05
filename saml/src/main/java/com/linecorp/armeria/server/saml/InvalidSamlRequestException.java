@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 /**
  * Indicates that a SAML request is not valid.
  */
-public class InvalidSamlRequestException extends SamlException {
+public final class InvalidSamlRequestException extends SamlException {
 
     private static final long serialVersionUID = -8253266781662471590L;
 
@@ -48,14 +48,5 @@ public class InvalidSamlRequestException extends SamlException {
      */
     public InvalidSamlRequestException(@Nullable Throwable cause) {
         super(cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
-     * disabled, and writable stack trace enabled or disabled.
-     */
-    protected InvalidSamlRequestException(@Nullable String message, @Nullable Throwable cause,
-                                          boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

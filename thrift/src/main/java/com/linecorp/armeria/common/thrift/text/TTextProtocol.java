@@ -46,7 +46,6 @@ import org.apache.thrift.protocol.TMap;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.protocol.TSet;
 import org.apache.thrift.protocol.TStruct;
 import org.apache.thrift.protocol.TType;
@@ -61,7 +60,7 @@ import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * A simple text format for serializing/deserializing thrift
@@ -113,7 +112,7 @@ import com.linecorp.armeria.internal.TemporaryThreadLocals;
  *
  * <p>TODO: Support string values for enums that have been typedef'd.
  */
-public class TTextProtocol extends TProtocol {
+public final class TTextProtocol extends TProtocol {
 
     private static final String SEQUENCE_AS_KEY_ILLEGAL =
             "Can't have a sequence (list or set) as a key in a map!";
@@ -153,7 +152,7 @@ public class TTextProtocol extends TProtocol {
     }
 
     @Override
-    public final void reset() {
+    public void reset() {
         root = null;
 
         writers.clear();
@@ -274,7 +273,7 @@ public class TTextProtocol extends TProtocol {
 
     @Override
     public void writeListBegin(TList list) throws TException {
-        writeSequenceBegin(list.size);
+        writeSequenceBegin();
     }
 
     @Override
@@ -284,7 +283,7 @@ public class TTextProtocol extends TProtocol {
 
     @Override
     public void writeSetBegin(TSet set) throws TException {
-        writeSequenceBegin(set.size);
+        writeSequenceBegin();
     }
 
     @Override
@@ -295,7 +294,7 @@ public class TTextProtocol extends TProtocol {
     /**
      * Helper shared by write{List/Set}Begin.
      */
-    private void writeSequenceBegin(int size) throws TException {
+    private void writeSequenceBegin() throws TException {
         getCurrentContext().write();
         if (getCurrentContext().isMapKey()) {
             throw new TException(SEQUENCE_AS_KEY_ILLEGAL);
@@ -754,18 +753,6 @@ public class TTextProtocol extends TProtocol {
         private WriterByteArrayOutputStream(JsonGenerator writer, ByteArrayOutputStream baos) {
             this.writer = writer;
             this.baos = baos;
-        }
-    }
-
-    /**
-     * Factory.
-     */
-    public static class Factory implements TProtocolFactory {
-        private static final long serialVersionUID = -5607714914895109618L;
-
-        @Override
-        public TProtocol getProtocol(TTransport trans) {
-            return new TTextProtocol(trans);
         }
     }
 

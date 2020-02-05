@@ -38,7 +38,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -61,7 +61,6 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
-import com.linecorp.armeria.testing.internal.TestUtil;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public  class ThriftDocServiceTest {
@@ -87,17 +86,21 @@ public  class ThriftDocServiceTest {
             if (TestUtil.isDocServiceDemoMode()) {
                 sb.http(8080);
             }
-            final THttpService helloAndSleepService = THttpService.of(ImmutableMap.of(
-                    "hello", HELLO_SERVICE_HANDLER,
-                    "sleep", SLEEP_SERVICE_HANDLER));
-            final THttpService fooService = THttpService.ofFormats(mock(FooService.AsyncIface.class),
-                                                                   COMPACT);
-            final THttpService cassandraService = THttpService.ofFormats(mock(Cassandra.AsyncIface.class),
-                                                                         BINARY);
+            final THttpService helloAndSleepService =
+                    THttpService.builder()
+                                .addService("hello", HELLO_SERVICE_HANDLER)
+                                .addService("sleep", SLEEP_SERVICE_HANDLER)
+                                .build();
+            final THttpService fooService =
+                    THttpService.ofFormats(mock(FooService.AsyncIface.class), COMPACT);
+            final THttpService cassandraService =
+                    THttpService.ofFormats(mock(Cassandra.AsyncIface.class), BINARY);
             final THttpService cassandraServiceDebug =
                     THttpService.ofFormats(mock(Cassandra.AsyncIface.class), TEXT);
-            final THttpService hbaseService = THttpService.of(mock(Hbase.AsyncIface.class));
-            final THttpService onewayHelloService = THttpService.of(mock(OnewayHelloService.AsyncIface.class));
+            final THttpService hbaseService =
+                    THttpService.of(mock(Hbase.AsyncIface.class));
+            final THttpService onewayHelloService =
+                    THttpService.of(mock(OnewayHelloService.AsyncIface.class));
 
             sb.service("/", helloAndSleepService);
             sb.service("/foo", fooService);
@@ -172,7 +175,7 @@ public  class ThriftDocServiceTest {
         // when building a DocService, so we add them manually here.
         addExamples(expectedJson);
 
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
@@ -230,7 +233,7 @@ public  class ThriftDocServiceTest {
 
     @Test
     public void excludeAllServices() throws IOException {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
@@ -246,7 +249,7 @@ public  class ThriftDocServiceTest {
     @Test
     public void testMethodNotAllowed() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(server.uri("/docs/specification.json"));
+            final HttpPost req = new HttpPost(server.httpUri() + "/docs/specification.json");
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 405 Method Not Allowed");

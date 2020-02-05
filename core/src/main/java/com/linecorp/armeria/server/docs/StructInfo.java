@@ -31,9 +31,12 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * Metadata about a struct type.
  */
+@UnstableApi
 public final class StructInfo implements NamedTypeInfo {
 
     private final String name;

@@ -1,6 +1,6 @@
 dependencies {
-    testCompile project(':grpc')
-    testCompile 'io.grpc:grpc-core'
-    testCompile 'io.grpc:grpc-interop-testing'
-    testCompile 'org.apache.hbase:hbase-shaded-client'
+    testImplementation project(':grpc')
+    testImplementation 'io.grpc:grpc-core'
+    testImplementation 'io.grpc:grpc-interop-testing'
+    testImplementation 'org.apache.hbase:hbase-shaded-client'
 }

@@ -61,7 +61,7 @@ abstract class AbstractStreamDecoderTest {
     @Test
     public void empty_unpooled() {
         final StreamDecoder decoder = newDecoder();
-        final HttpData data = decoder.decode(HttpData.EMPTY_DATA);
+        final HttpData data = decoder.decode(HttpData.empty());
         assertThat(data).isNotInstanceOf(ByteBufHolder.class);
     }
 

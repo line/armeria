@@ -104,7 +104,7 @@ public class RequestContextAssemblyTest {
     public void enableTracking() throws Exception {
         try {
             RequestContextAssembly.enable();
-            final WebClient client = WebClient.of(rule.uri("/"));
+            final WebClient client = WebClient.of(rule.httpUri());
             assertThat(client.execute(RequestHeaders.of(HttpMethod.GET, "/foo")).aggregate().get().status())
                     .isEqualTo(HttpStatus.OK);
         } finally {
@@ -114,7 +114,7 @@ public class RequestContextAssemblyTest {
 
     @Test
     public void withoutTracking() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
         assertThat(client.execute(RequestHeaders.of(HttpMethod.GET, "/foo")).aggregate().get().status())
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -126,7 +126,7 @@ public class RequestContextAssemblyTest {
             calledFlag.incrementAndGet();
             return single;
         });
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
         client.execute(RequestHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
         assertThat(calledFlag.get()).isEqualTo(3);
 

@@ -538,7 +538,7 @@ class ArmeriaCallFactoryTest {
 
     @Test
     void baseUrlContainsPath() throws Exception {
-        final Service service = ArmeriaRetrofit.builder(server.uri("/nest/"))
+        final Service service = ArmeriaRetrofit.builder(server.httpUri() + "/nest/")
                                                .addConverterFactory(converterFactory)
                                                .build()
                                                .create(Service.class);
@@ -623,7 +623,7 @@ class ArmeriaCallFactoryTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(true, false)
-                         .map(streaming -> ArmeriaRetrofit.builder(server.uri("/"))
+                         .map(streaming -> ArmeriaRetrofit.builder(server.httpUri())
                                                           .streaming(streaming)
                                                           .addConverterFactory(converterFactory)
                                                           .build()

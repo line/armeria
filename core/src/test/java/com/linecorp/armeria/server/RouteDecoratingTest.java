@@ -47,9 +47,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
-import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class RouteDecoratingTest {
@@ -164,7 +164,7 @@ class RouteDecoratingTest {
     @ParameterizedTest
     @MethodSource("generateDecorateInOrder")
     void decorateInOrder(String path, List<Integer> orders) {
-        final WebClient client = WebClient.of(decoratingServer.uri("/"));
+        final WebClient client = WebClient.of(decoratingServer.httpUri());
         client.get(path).aggregate().join();
         assertThat(queue).containsExactlyElementsOf(orders);
     }
@@ -189,7 +189,7 @@ class RouteDecoratingTest {
             "/assets/resources/private/profile.jpg, , 200, private",
     })
     void secured(String path, @Nullable String authorization, int status, String cacheControl) {
-        final WebClient client = WebClient.of(authServer.uri("/"));
+        final WebClient client = WebClient.of(authServer.httpUri());
         final RequestHeaders headers;
         if (authorization != null) {
             headers = RequestHeaders.of(HttpMethod.GET, path, HttpHeaderNames.AUTHORIZATION, authorization);
@@ -242,7 +242,7 @@ class RouteDecoratingTest {
     void decoratorShouldWorkWithMatchingHeadersAndParams(String path,
                                                          @Nullable String destHeader,
                                                          String result) {
-        final WebClient client = WebClient.of(headersAndParamsExpectingServer.uri("/"));
+        final WebClient client = WebClient.of(headersAndParamsExpectingServer.httpUri());
         final RequestHeadersBuilder builder = RequestHeaders.builder().method(HttpMethod.GET).path(path);
         if (!Strings.isNullOrEmpty(destHeader)) {
             builder.add("dest", destHeader);

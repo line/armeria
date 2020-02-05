@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.Flags;
 
 /**
@@ -27,7 +29,11 @@ public final class FailFastException extends RuntimeException {
 
     private final CircuitBreaker circuitBreaker;
 
-    FailFastException(CircuitBreaker circuitBreaker) {
+    /**
+     * Creates a new instance with the specified {@link CircuitBreaker}.
+     */
+    public FailFastException(CircuitBreaker circuitBreaker) {
+        requireNonNull(circuitBreaker, "circuitBreaker");
         this.circuitBreaker = circuitBreaker;
     }
 

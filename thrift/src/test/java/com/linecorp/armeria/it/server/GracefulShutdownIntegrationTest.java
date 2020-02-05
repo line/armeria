@@ -238,6 +238,6 @@ class GracefulShutdownIntegrationTest {
     }
 
     private static SleepService.Iface newClient() throws Exception {
-        return Clients.newClient(server.uri(BINARY, "/sleep"), SleepService.Iface.class);
+        return Clients.newClient(server.httpUri(BINARY) + "/sleep", SleepService.Iface.class);
     }
 }

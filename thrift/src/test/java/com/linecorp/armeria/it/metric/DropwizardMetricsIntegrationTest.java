@@ -21,15 +21,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.AfterClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.codahale.metrics.Counting;
 import com.codahale.metrics.MetricRegistry;
@@ -45,17 +40,17 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 
-public class DropwizardMetricsIntegrationTest {
+class DropwizardMetricsIntegrationTest {
 
     private static final DropwizardMeterRegistry registry = DropwizardMeterRegistries.newRegistry();
     private static final MetricRegistry dropwizardRegistry = registry.getDropwizardRegistry();
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.meterRegistry(registry);
@@ -72,16 +67,13 @@ public class DropwizardMetricsIntegrationTest {
     private static final ClientFactory clientFactory =
             ClientFactory.builder().meterRegistry(registry).build();
 
-    @AfterClass
-    public static void closeClientFactory() {
+    @AfterAll
+    static void closeClientFactory() {
         clientFactory.close();
     }
 
-    @Rule
-    public final TestRule globalTimeout = new DisableOnDebug(new Timeout(30, TimeUnit.SECONDS));
-
     @Test
-    public void normal() throws Exception {
+    void normal() throws Exception {
         makeRequest("world");
         makeRequest("world");
         makeRequest("space");
@@ -162,7 +154,7 @@ public class DropwizardMetricsIntegrationTest {
     }
 
     private static void makeRequest(String name) {
-        final Iface client = Clients.builder(server.uri(BINARY, "/helloservice"))
+        final Iface client = Clients.builder(server.httpUri(BINARY) + "/helloservice")
                                     .factory(clientFactory)
                                     .rpcDecorator(MetricCollectingRpcClient.newDecorator(
                                             MeterIdPrefixFunction.ofDefault("armeria.client.hello.service")))

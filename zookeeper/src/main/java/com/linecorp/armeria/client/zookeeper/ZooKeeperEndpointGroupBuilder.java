@@ -16,9 +16,9 @@
 package com.linecorp.armeria.client.zookeeper;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults.DEFAULT_CONNECT_TIMEOUT_MS;
-import static com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults.DEFAULT_RETRY_POLICY;
-import static com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults.DEFAULT_SESSION_TIMEOUT_MS;
+import static com.linecorp.armeria.internal.common.zookeeper.ZooKeeperDefaults.DEFAULT_CONNECT_TIMEOUT_MS;
+import static com.linecorp.armeria.internal.common.zookeeper.ZooKeeperDefaults.DEFAULT_RETRY_POLICY;
+import static com.linecorp.armeria.internal.common.zookeeper.ZooKeeperDefaults.DEFAULT_SESSION_TIMEOUT_MS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 /**
  * Builds a {@link ZooKeeperEndpointGroup}.
  */
-public class ZooKeeperEndpointGroupBuilder {
+public final class ZooKeeperEndpointGroupBuilder {
 
     @Nullable
     private final CuratorFramework client;

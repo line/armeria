@@ -17,16 +17,18 @@
 package com.linecorp.armeria.testing.junit.server;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.testing.ServerRuleDelegate;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.internal.ServerRuleDelegate;
 import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
 
 /**
@@ -154,11 +156,66 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     }
 
     /**
+     * Returns the {@link Endpoint} of the specified {@link SessionProtocol} for the {@link Server}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open the port for the specified {@link SessionProtocol}.
+     */
+    public Endpoint endpoint(SessionProtocol protocol) {
+        return delegate.endpoint(protocol);
+    }
+
+    /**
+     * Returns the HTTP {@link Endpoint} for the {@link Server}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTP port.
+     */
+    public Endpoint httpEndpoint() {
+        return delegate.httpEndpoint();
+    }
+
+    /**
+     * Returns the HTTPS {@link Endpoint} for the {@link Server}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTPS port.
+     */
+    public Endpoint httpsEndpoint() {
+        return delegate.httpsEndpoint();
+    }
+
+    /**
+     * Returns the {@link URI} for the {@link Server} of the specified {@link SessionProtocol}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open the port for the specified {@link SessionProtocol}.
+     */
+    public URI uri(SessionProtocol protocol) {
+        return delegate.uri(protocol);
+    }
+
+    /**
+     * Returns the {@link URI} for the {@link Server} of the specified {@link SessionProtocol} and
+     * {@link SerializationFormat}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open the port for the specified {@link SessionProtocol}.
+     */
+    public URI uri(SessionProtocol protocol, SerializationFormat format) {
+        return delegate.uri(protocol, format);
+    }
+
+    /**
      * Returns the HTTP or HTTPS URI for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or
      *                               it opened neither HTTP nor HTTPS port
+     *
+     * @deprecated Use {@link #httpUri()} or {@link #httpsUri()} and {@link URI#resolve(String)}.
      */
+    @Deprecated
     public String uri(String path) {
         return delegate.uri(path);
     }
@@ -168,7 +225,10 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      *
      * @throws IllegalStateException if the {@link Server} is not started or
      *                               it did not open a port of the protocol.
+     *
+     * @deprecated Use {@link #uri(SessionProtocol, SerializationFormat)} and {@link URI#resolve(String)}.
      */
+    @Deprecated
     public String uri(SessionProtocol protocol, SerializationFormat format, String path) {
         return delegate.uri(protocol, format, path);
     }
@@ -178,7 +238,10 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      *
      * @throws IllegalStateException if the {@link Server} is not started or
      *                               it did not open a port of the protocol.
+     *
+     * @deprecated Use {@link #uri(SessionProtocol)} and {@link URI#resolve(String)}.
      */
+    @Deprecated
     public String uri(SessionProtocol protocol, String path) {
         return delegate.uri(protocol, path);
     }
@@ -188,16 +251,45 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      *
      * @throws IllegalStateException if the {@link Server} is not started or
      *                               it opened neither HTTP nor HTTPS port
+     *
+     * @deprecated Use {@link #httpUri(SerializationFormat)} or {@link #httpsUri(SerializationFormat)}
+     *             and {@link URI#resolve(String)}.
      */
-    public String uri(SerializationFormat serializationFormat, String path) {
-        return delegate.uri(serializationFormat, path);
+    @Deprecated
+    public String uri(SerializationFormat format, String path) {
+        return delegate.uri(format, path);
+    }
+
+    /**
+     * Returns the HTTP {@link URI} for the {@link Server}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTP port.
+     */
+    public URI httpUri() {
+        return delegate.httpUri();
+    }
+
+    /**
+     * Returns the HTTP {@link URI} for the {@link Server}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTP port.
+     */
+    public URI httpUri(SerializationFormat format) {
+        return delegate.httpUri(format);
     }
 
     /**
      * Returns the HTTP URI for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
+     *
+     * @deprecated Use {@link #httpUri()} and {@link URI#resolve(String)}.
      */
+    @Deprecated
     public String httpUri(String path) {
         return delegate.httpUri(path);
     }
@@ -206,16 +298,44 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      * Returns the HTTP URI for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
+     *
+     * @deprecated Use {@link #httpUri(SerializationFormat)} and {@link URI#resolve(String)}.
      */
-    public String httpUri(SerializationFormat serializationFormat, String path) {
-        return delegate.httpUri(serializationFormat, path);
+    @Deprecated
+    public String httpUri(SerializationFormat format, String path) {
+        return delegate.httpUri(format, path);
+    }
+
+    /**
+     * Returns the HTTPS {@link URI} for the {@link Server}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTPS port.
+     */
+    public URI httpsUri() {
+        return delegate.httpsUri();
+    }
+
+    /**
+     * Returns the HTTPS {@link URI} for the {@link Server}.
+     *
+     * @return the absolute {@link URI} without a path.
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open an HTTPS port.
+     */
+    public URI httpsUri(SerializationFormat format) {
+        return delegate.httpsUri(format);
     }
 
     /**
      * Returns the HTTPS URI for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
+     *
+     * @deprecated Use {@link #httpsUri()} and {@link URI#resolve(String)}.
      */
+    @Deprecated
     public String httpsUri(String path) {
         return delegate.httpsUri(path);
     }
@@ -224,13 +344,26 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      * Returns the HTTPS URI for the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
+     *
+     * @deprecated Use {@link #httpsUri(SerializationFormat)} and {@link URI#resolve(String)}.
      */
-    public String httpsUri(SerializationFormat serializationFormat, String path) {
-        return delegate.httpsUri(serializationFormat, path);
+    @Deprecated
+    public String httpsUri(SerializationFormat format, String path) {
+        return delegate.httpsUri(format, path);
     }
 
     /**
-     * Returns the HTTP {@link InetSocketAddress} for the {@link Server}.
+     * Returns the {@link InetSocketAddress} of the specified {@link SessionProtocol} for the {@link Server}.
+     *
+     * @throws IllegalStateException if the {@link Server} is not started or
+     *                               it did not open a port for the specified {@link SessionProtocol}.
+     */
+    public InetSocketAddress socketAddress(SessionProtocol protocol) {
+        return delegate.socketAddress(protocol);
+    }
+
+    /**
+     * Returns the HTTP {@link InetSocketAddress} of the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
      */
@@ -239,7 +372,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Returns the HTTPS {@link InetSocketAddress} for the {@link Server}.
+     * Returns the HTTPS {@link InetSocketAddress} of the {@link Server}.
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
      */

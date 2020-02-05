@@ -73,7 +73,7 @@ public class ThrottlingRpcServiceTest {
     @Test
     public void serve() throws Exception {
         final HelloService.Iface client =
-                Clients.newClient(server.uri(BINARY, "/thrift-always"), HelloService.Iface.class);
+                Clients.newClient(server.httpUri(BINARY) + "/thrift-always", HelloService.Iface.class);
         when(serviceHandler.hello("foo")).thenReturn("bar");
 
         assertThat(client.hello("foo")).isEqualTo("bar");
@@ -82,7 +82,7 @@ public class ThrottlingRpcServiceTest {
     @Test
     public void throttle() throws Exception {
         final HelloService.Iface client =
-                Clients.newClient(server.uri(BINARY, "/thrift-never"), HelloService.Iface.class);
+                Clients.newClient(server.httpUri(BINARY) + "/thrift-never", HelloService.Iface.class);
 
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {

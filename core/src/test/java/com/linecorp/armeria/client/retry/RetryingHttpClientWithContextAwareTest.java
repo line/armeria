@@ -47,7 +47,7 @@ class RetryingHttpClientWithContextAwareTest {
     @Test
     void contextAwareDoesNotThrowException() {
         final WebClient client =
-                WebClient.builder(server.uri("/"))
+                WebClient.builder(server.httpUri())
                          .responseTimeoutMillis(100)
                          .decorator(RetryingClient.builder(RetryStrategy.onServerErrorStatus())
                                                   .maxTotalAttempts(2)

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.DefaultValues.UNSPECIFIED;
+import static com.linecorp.armeria.internal.server.annotation.DefaultValues.UNSPECIFIED;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

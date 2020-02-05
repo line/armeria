@@ -24,7 +24,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * A default implementation of a {@link RequestConverterFunction} which converts a binary body of
  * the {@link AggregatedHttpRequest} to one of {@code byte[]} or {@link HttpData}.
  */
-public class ByteArrayRequestConverterFunction implements RequestConverterFunction {
+public final class ByteArrayRequestConverterFunction implements RequestConverterFunction {
 
     /**
      * Converts the specified {@link AggregatedHttpRequest} to an object of {@code expectedResultType}.

@@ -45,8 +45,8 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.HttpObjectEncoder;
-import com.linecorp.armeria.internal.RequestContextUtil;
+import com.linecorp.armeria.internal.common.HttpObjectEncoder;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -84,7 +84,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
     private boolean isSubscriptionCompleted;
-
     private boolean loggedRequestFirstBytesTransferred;
 
     HttpRequestSubscriber(Channel ch, SocketAddress remoteAddress, HttpObjectEncoder encoder,
@@ -176,7 +175,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        logBuilder.startRequest(ch, protocol);
         logBuilder.requestHeaders(firstHeaders);
 
         if (request.isEmpty()) {
@@ -297,6 +295,21 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private void write0(HttpObject o, boolean endOfStream, boolean flush) {
+        // Make sure that a stream exists before writing data if first bytes were transferred.
+        // The following situation may cause the data to be written to a closed stream.
+        // 1. A connection that has pending outbound buffers receives GOAWAY frame.
+        // 2. AbstractHttp2ConnectionHandler.close() clears and flushes all active streams.
+        // 3. After successfully flushing, operationComplete() requests next data and
+        //    the subscriber attempts to write the next data to the stream closed at 2).
+        if (loggedRequestFirstBytesTransferred && !encoder.isWritable(id, streamId())) {
+            if (reqCtx.sessionProtocol().isMultiplex()) {
+                fail(ClosedPublisherException.get());
+            } else {
+                fail(ClosedSessionException.get());
+            }
+            return;
+        }
+
         final ChannelFuture future;
         if (o instanceof HttpHeaders) {
             future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream);

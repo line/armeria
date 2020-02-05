@@ -46,8 +46,8 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.JavaVersionSpecific;
-import com.linecorp.armeria.internal.RequestContextThreadLocal;
+import com.linecorp.armeria.internal.common.JavaVersionSpecific;
+import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;

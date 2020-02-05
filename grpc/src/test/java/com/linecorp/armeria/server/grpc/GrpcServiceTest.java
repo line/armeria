@@ -109,7 +109,7 @@ class GrpcServiceTest {
                                .add("grpc-message", "Method not found: grpc.testing.TestService/FooCall")
                                .addInt(HttpHeaderNames.CONTENT_LENGTH, 0)
                                .build(),
-                HttpData.EMPTY_DATA));
+                HttpData.empty()));
     }
 
     @Test

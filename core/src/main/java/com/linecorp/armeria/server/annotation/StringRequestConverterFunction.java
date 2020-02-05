@@ -20,14 +20,14 @@ import java.nio.charset.Charset;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A default implementation of a {@link RequestConverterFunction} which converts a text body of
  * the {@link AggregatedHttpRequest} to a {@link String}.
  */
-public class StringRequestConverterFunction implements RequestConverterFunction {
+public final class StringRequestConverterFunction implements RequestConverterFunction {
     /**
      * Converts the specified {@link AggregatedHttpRequest} to a {@link String}.
      */

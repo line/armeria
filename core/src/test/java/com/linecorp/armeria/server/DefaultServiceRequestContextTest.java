@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.internal.common.TimeoutController;
 
 import io.netty.util.AttributeKey;
 

@@ -52,14 +52,14 @@ class HttpClientResponseTimeoutTest {
     @Test
     void setRequestTimeoutAtPastTimeClient() {
         final WebClient client = WebClient
-                .builder(server.uri("/"))
+                .builder(server.httpUri())
                 .decorator((delegate, ctx, req) -> {
                     ctx.eventLoop().schedule(() -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
                                              1, TimeUnit.SECONDS);
                     return delegate.execute(ctx, req);
                 })
                 .build();
-        assertThatThrownBy(() -> client.get(server.uri("/") + "/no-timeout").aggregate().join())
+        assertThatThrownBy(() -> client.get(server.httpUri() + "/no-timeout").aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
     }
@@ -68,7 +68,7 @@ class HttpClientResponseTimeoutTest {
     @ArgumentsSource(TimeoutDecoratorSource.class)
     void setRequestTimeoutAtPendingTimeoutTask(Consumer<? super ClientRequestContext> timeoutCustomizer) {
         final WebClient client = WebClient
-                .builder(server.uri("/"))
+                .builder(server.httpUri())
                 .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(30L))
                 .decorator((delegate, ctx, req) -> {
                     // set timeout before initializing timeout controller
@@ -77,7 +77,7 @@ class HttpClientResponseTimeoutTest {
                 })
                 .build();
         await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
-            assertThatThrownBy(() -> client.get(server.uri("/") + "/no-timeout")
+            assertThatThrownBy(() -> client.get(server.httpUri() + "/no-timeout")
                                            .aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
