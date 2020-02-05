@@ -50,11 +50,12 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.TimeoutController;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -66,6 +67,7 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ServiceRequestContext} implementation.
  */
+@UnstableApi
 public final class DefaultServiceRequestContext
         extends NonWrappingRequestContext
         implements ServiceRequestContext {
@@ -91,7 +93,7 @@ public final class DefaultServiceRequestContext
 
     private final InetAddress clientAddress;
 
-    private final DefaultRequestLog log;
+    private final RequestLogBuilder log;
 
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
@@ -152,7 +154,7 @@ public final class DefaultServiceRequestContext
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
-        log = new DefaultRequestLog(this);
+        log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
         log.session(ch, sessionProtocol, sslSession, null);
         log.requestHeaders(req.headers());
@@ -615,7 +617,7 @@ public final class DefaultServiceRequestContext
      * <p>Note: This method is meant for internal use by server-side protocol implementation to reschedule
      * a timeout task when a user updates the request timeout configuration.
      */
-    public void setRequestTimeoutController(TimeoutController requestTimeoutController) {
+    void setRequestTimeoutController(TimeoutController requestTimeoutController) {
         requireNonNull(requestTimeoutController, "requestTimeoutController");
         checkState(this.requestTimeoutController == null, "requestTimeoutController is set already.");
         this.requestTimeoutController = requestTimeoutController;

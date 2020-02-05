@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.tomcat;
+package com.linecorp.armeria.internal.tomcat;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;

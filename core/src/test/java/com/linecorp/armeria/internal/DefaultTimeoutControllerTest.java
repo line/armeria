@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Test;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.util.TimeoutController;
 import com.linecorp.armeria.internal.DefaultTimeoutController.State;
 import com.linecorp.armeria.internal.DefaultTimeoutController.TimeoutTask;
 

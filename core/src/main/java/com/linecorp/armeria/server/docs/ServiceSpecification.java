@@ -32,12 +32,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.Service;
 
 /**
  * The specification of one or more {@link Service}s that provides their {@link ServiceInfo}s and
  * {@link NamedTypeInfo}s.
  */
+@UnstableApi
 public final class ServiceSpecification {
 
     private static final ServiceSpecification emptyServiceSpecification =

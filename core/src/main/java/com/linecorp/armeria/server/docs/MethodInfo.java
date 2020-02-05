@@ -35,11 +35,13 @@ import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.Service;
 
 /**
  * Metadata about a function of a {@link Service}.
  */
+@UnstableApi
 public final class MethodInfo {
 
     // FIXME(trustin): Return types and exception types should also have docstrings like params have them.

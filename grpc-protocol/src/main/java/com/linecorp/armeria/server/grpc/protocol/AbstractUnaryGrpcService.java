@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -29,6 +31,7 @@ import io.netty.buffer.Unpooled;
  * <p>This service does not support compression. If you need support for compression, please consider using
  * normal gRPC stubs or file a feature request.
  */
+@UnstableApi
 public abstract class AbstractUnaryGrpcService extends AbstractUnsafeUnaryGrpcService {
 
     /**

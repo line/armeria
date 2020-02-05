@@ -13,14 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 /**
  * Utilities for working with {@link io.netty.buffer.ByteBuf} in an unsafe way. These can improve performance
  * when dealing with large buffers but require careful memory management or there will be memory leaks. Only use
  * these methods if you really know what you're doing.
  */
-
+@UnstableApi
 @NonNullByDefault
 package com.linecorp.armeria.unsafe;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.util.UnstableApi;

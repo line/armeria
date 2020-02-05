@@ -26,9 +26,12 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * Creates a new {@link FieldInfo} using the builder pattern.
  */
+@UnstableApi
 public final class FieldInfoBuilder {
 
     private final String name;

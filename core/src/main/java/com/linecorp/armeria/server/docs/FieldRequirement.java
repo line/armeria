@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.server.docs;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * The requirement level of a field.
  */
+@UnstableApi
 public enum FieldRequirement {
     /**
      * The field is required. The invocation will fail if the field is not specified.

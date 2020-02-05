@@ -45,7 +45,7 @@ public class DefaultStreamMessageVerification extends StreamMessageVerification<
 
     private static void stream(long elements, boolean abort,
                                AtomicLong remaining, DefaultStreamMessage<Long> stream) {
-        stream.onDemand(() -> {
+        stream.whenConsumed().thenRun(() -> {
             for (;;) {
                 final long r = remaining.decrementAndGet();
                 final boolean written = stream.tryWrite(elements - r);

@@ -18,10 +18,12 @@ package com.linecorp.armeria.client.grpc;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryProvider;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
  * {@link ClientFactoryProvider} that creates a {@link GrpcClientFactory}.
  */
+@UnstableApi
 public final class GrpcClientFactoryProvider implements ClientFactoryProvider {
     @Override
     public ClientFactory newFactory(ClientFactory httpClientFactory) {
