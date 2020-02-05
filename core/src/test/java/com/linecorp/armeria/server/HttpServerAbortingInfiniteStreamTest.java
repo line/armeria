@@ -66,11 +66,11 @@ class HttpServerAbortingInfiniteStreamTest {
                 writer.write(ResponseHeaders.of(HttpStatus.OK));
 
                 // Do not close the response writer because it returns data infinitely.
-                writer.onDemand(new Runnable() {
+                writer.whenConsumed().thenRun(new Runnable() {
                     @Override
                     public void run() {
                         writer.write(HttpData.ofUtf8("infinite stream"));
-                        writer.onDemand(this);
+                        writer.whenConsumed().thenRun(this);
                     }
                 });
                 writer.whenComplete().whenComplete((unused, cause) -> {

@@ -34,6 +34,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -43,6 +44,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  *
  * @param <T> the type of element signaled
  */
+@UnstableApi
 public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @SuppressWarnings("rawtypes")

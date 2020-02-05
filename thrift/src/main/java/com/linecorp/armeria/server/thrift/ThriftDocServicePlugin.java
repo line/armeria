@@ -55,6 +55,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
@@ -77,6 +78,7 @@ import com.linecorp.armeria.server.docs.TypeSignature;
 /**
  * {@link DocServicePlugin} implementation that supports {@link THttpService}s.
  */
+@UnstableApi
 public final class ThriftDocServicePlugin implements DocServicePlugin {
 
     private static final String REQUEST_STRUCT_SUFFIX = "_args";

@@ -29,9 +29,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * Metadata about an enum type.
  */
+@UnstableApi
 public final class EnumInfo implements NamedTypeInfo {
 
     private final String name;

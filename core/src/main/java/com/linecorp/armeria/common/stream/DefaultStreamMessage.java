@@ -28,13 +28,15 @@ import javax.annotation.Nullable;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * A {@link StreamMessage} which buffers the elements to be signaled into a {@link Queue}.
  *
  * <p>This class implements the {@link StreamWriter} interface as well. A written element will be buffered
- * into the {@link Queue} until a {@link Subscriber} consumes it. Use {@link StreamWriter#onDemand(Runnable)}
+ * into the {@link Queue} until a {@link Subscriber} consumes it. Use {@link StreamWriter#whenConsumed()}
  * to control the rate of production so that the {@link Queue} does not grow up infinitely.
  *
  * <pre>{@code
@@ -51,7 +53,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  *         return;
  *     }
  *
- *     pub.onDemand(() -> stream(pub, i, end));
+ *     pub.whenConsumed().thenRun(() -> stream(pub, i, end));
  * }
  *
  * final DefaultStreamMessage<Integer> myPub = new DefaultStreamMessage<>();
@@ -60,6 +62,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  *
  * @param <T> the type of element signaled
  */
+@UnstableApi
 public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @SuppressWarnings("rawtypes")

@@ -46,7 +46,7 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -61,7 +61,8 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @param <T> the type of elements
  * @see StreamMessageDuplicator
  */
-public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicator<T>, SafeCloseable {
+@UnstableApi
+public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicator<T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<DefaultStreamMessageDuplicator> unsubscribedUpdater =

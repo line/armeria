@@ -32,11 +32,13 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.Service;
 
 /**
  * Metadata about the endpoints exposed by a {@link Service}.
  */
+@UnstableApi
 @JsonInclude(Include.NON_NULL)
 public final class EndpointInfo {
 

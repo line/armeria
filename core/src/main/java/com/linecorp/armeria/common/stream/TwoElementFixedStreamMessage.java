@@ -18,11 +18,14 @@ package com.linecorp.armeria.common.stream;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 import io.netty.util.ReferenceCountUtil;
 
 /**
  * A {@link FixedStreamMessage} that publishes two objects.
  */
+@UnstableApi
 public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Nullable

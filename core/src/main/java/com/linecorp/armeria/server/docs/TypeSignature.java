@@ -28,6 +28,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * Type signature of a method parameter, a method return value or a struct/exception field.
  * A type signature can be represented as a string in one of the following forms:
@@ -52,6 +54,7 @@ import com.google.common.collect.ImmutableList;
  *   </ul></li>
  * </ul>
  */
+@UnstableApi
 @JsonSerialize(using = TypeSignatureJsonSerializer.class)
 public final class TypeSignature {
 

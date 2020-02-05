@@ -18,10 +18,12 @@ package com.linecorp.armeria.client.thrift;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryProvider;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
  * {@link ClientFactoryProvider} that creates a {@link THttpClientFactory}.
  */
+@UnstableApi
 public final class THttpClientFactoryProvider implements ClientFactoryProvider {
     @Override
     public ClientFactory newFactory(ClientFactory httpClientFactory) {

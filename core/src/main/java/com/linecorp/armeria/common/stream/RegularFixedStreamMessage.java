@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -27,6 +29,7 @@ import io.netty.util.ReferenceCountUtil;
  * {@link EmptyFixedStreamMessage}, {@link OneElementFixedStreamMessage}, or
  * {@link TwoElementFixedStreamMessage} when publishing less than three objects.
  */
+@UnstableApi
 public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     private final T[] objs;

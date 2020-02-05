@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.tomcat;
+package com.linecorp.armeria.internal.tomcat;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -26,10 +26,9 @@ import org.apache.tomcat.util.file.ConfigurationSource;
 /**
  * Sets the dummy {@link ConfigurationSource} so that {@link ContextConfig} does not complain.
  */
-@SuppressWarnings("unused") // Called by TomcatService.
-final class ConfigFileLoaderInitializer {
+public final class ConfigFileLoaderInitializer {
 
-    static void init() {
+    public static void init() {
         try {
             ConfigFileLoader.getSource(); // throws IllegalStateException if source is not set.
         } catch (Exception e) {
