@@ -95,7 +95,7 @@ public class AnnotatedServiceAccessModifierTest {
 
     @Test
     public void testAccessModifier() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
 
         assertThat(client.get("/anonymous/public").aggregate().join().contentUtf8())
                 .isEqualTo("hello");

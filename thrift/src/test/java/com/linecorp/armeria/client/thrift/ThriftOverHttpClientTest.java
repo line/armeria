@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -694,7 +695,7 @@ class ThriftOverHttpClientTest {
     void testBadStatus(
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
-        final HelloService.Iface client = Clients.builder(server.uri(protocol, format, "/500"))
+        final HelloService.Iface client = Clients.builder(server.uri(protocol, format) + "/500")
                                                  .options(clientOptions)
                                                  .build(Handlers.HELLO.iface());
         assertThatThrownBy(() -> client.hello(""))
@@ -728,9 +729,9 @@ class ThriftOverHttpClientTest {
         assertThat(client.hello("trustin")).isEqualTo("Hello, trustin!");
     }
 
-    private static String uri(Handlers handler, SerializationFormat format,
-                              SessionProtocol protocol) {
-        return server.uri(protocol, format, handler.path(format));
+    private static URI uri(Handlers handler, SerializationFormat format,
+                           SessionProtocol protocol) {
+        return server.uri(protocol, format).resolve(handler.path(format));
     }
 
     private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(AsciiString name, String value) {

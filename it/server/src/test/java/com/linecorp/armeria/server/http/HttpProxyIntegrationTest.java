@@ -88,12 +88,12 @@ public class HttpProxyIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/trailers", (ctx, req) -> {
-                final WebClient client = WebClient.of(backendServer.uri("/"));
+                final WebClient client = WebClient.of(backendServer.httpUri());
                 return client.get("/trailers");
             });
 
             sb.service("/trailers-only", (ctx, req) -> {
-                final WebClient client = WebClient.of(backendServer.uri("/"));
+                final WebClient client = WebClient.of(backendServer.httpUri());
                 return client.get("/trailers-only");
             });
 
@@ -103,7 +103,7 @@ public class HttpProxyIntegrationTest {
 
     @Test
     public void proxyWithTrailers() throws Throwable {
-        final WebClient client = WebClient.of(frontendServer.uri("/"));
+        final WebClient client = WebClient.of(frontendServer.httpUri());
 
         final AtomicBoolean headersReceived = new AtomicBoolean();
         final AtomicBoolean complete = new AtomicBoolean();
@@ -146,7 +146,7 @@ public class HttpProxyIntegrationTest {
 
     @Test
     public void proxyWithTrailersOnly() throws Throwable {
-        final WebClient client = WebClient.of(frontendServer.uri("/"));
+        final WebClient client = WebClient.of(frontendServer.httpUri());
 
         final AtomicBoolean complete = new AtomicBoolean();
         final AtomicReference<Throwable> error = new AtomicReference<>();

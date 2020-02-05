@@ -232,7 +232,7 @@ public class AnnotatedServiceAnnotationAliasTest {
     @Test
     public void metaAnnotations() {
         final AggregatedHttpResponse msg =
-                WebClient.of(rule.uri("/"))
+                WebClient.of(rule.httpUri())
                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
                                                     HttpHeaderNames.CONTENT_TYPE,
                                                     MediaType.PLAIN_TEXT_UTF_8,
@@ -252,7 +252,7 @@ public class AnnotatedServiceAnnotationAliasTest {
     @Test
     public void metaOfMetaAnnotation_ProducesJson() {
         final AggregatedHttpResponse msg =
-                WebClient.of(rule.uri("/"))
+                WebClient.of(rule.httpUri())
                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
                                                     HttpHeaderNames.CONTENT_TYPE,
                                                     MediaType.PLAIN_TEXT_UTF_8,
@@ -273,7 +273,7 @@ public class AnnotatedServiceAnnotationAliasTest {
     @Test
     public void exception1() {
         final AggregatedHttpResponse msg =
-                WebClient.of(rule.uri("/")).get("/exception1").aggregate().join();
+                WebClient.of(rule.httpUri()).get("/exception1").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.
@@ -286,7 +286,7 @@ public class AnnotatedServiceAnnotationAliasTest {
     @Test
     public void exception2() {
         final AggregatedHttpResponse msg =
-                WebClient.of(rule.uri("/")).get("/exception2").aggregate().join();
+                WebClient.of(rule.httpUri()).get("/exception2").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.

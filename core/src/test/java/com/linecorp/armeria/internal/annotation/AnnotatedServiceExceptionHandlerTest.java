@@ -244,7 +244,7 @@ public class AnnotatedServiceExceptionHandlerTest {
 
     @Test
     public void testExceptionHandler() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
 
         AggregatedHttpResponse response;
 

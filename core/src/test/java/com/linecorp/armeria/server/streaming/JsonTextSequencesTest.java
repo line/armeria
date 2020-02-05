@@ -69,7 +69,7 @@ public class JsonTextSequencesTest {
 
     @Test
     public void fromPublisherOrStream() {
-        final WebClient client = WebClient.of(rule.uri("/seq"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/seq");
         for (final String path : ImmutableList.of("/publisher", "/stream", "/custom-mapper")) {
             final HttpResponse response = client.get(path);
             StepVerifier.create(response)
@@ -88,7 +88,7 @@ public class JsonTextSequencesTest {
     @Test
     public void singleSequence() {
         final AggregatedHttpResponse response =
-                WebClient.of(rule.uri("/seq")).get("/single").aggregate().join();
+                WebClient.of(rule.httpUri() + "/seq").get("/single").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().contentType()).isEqualTo(MediaType.JSON_SEQ);
         // Check whether the content is serialized as a JSON Text Sequence format.

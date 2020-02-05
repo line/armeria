@@ -171,7 +171,7 @@ public class GrpcDocServiceTest {
         // when building a DocService, so we add them manually here.
         addExamples(expectedJson);
 
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
@@ -192,7 +192,7 @@ public class GrpcDocServiceTest {
 
     @Test
     public void excludeAllServices() throws IOException {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
@@ -207,7 +207,7 @@ public class GrpcDocServiceTest {
     @Test
     public void testMethodNotAllowed() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(server.uri("/docs/specification.json"));
+            final HttpPost req = new HttpPost(server.httpUri() + "/docs/specification.json");
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 405 Method Not Allowed");

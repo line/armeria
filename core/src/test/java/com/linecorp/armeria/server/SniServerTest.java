@@ -116,7 +116,7 @@ class SniServerTest {
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("c.com: CN=c.com");
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpsUri("/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpsUri()))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("c.com: CN=c.com");
             }

@@ -522,7 +522,7 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     static class RequestBean4 {
-        private int foo;
+        private final int foo;
 
         // This field is not set because the foo param is already used in the constructor.
         @Param("foo")
@@ -625,7 +625,7 @@ public class AnnotatedServiceRequestConverterTest {
 
     @Test
     public void testRequestConverter() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -651,7 +651,7 @@ public class AnnotatedServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_bean1() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -719,7 +719,7 @@ public class AnnotatedServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_bean2() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -760,7 +760,7 @@ public class AnnotatedServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_bean3() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -799,7 +799,7 @@ public class AnnotatedServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_bean4() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/3"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/3");
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -832,7 +832,7 @@ public class AnnotatedServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_json() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -873,7 +873,7 @@ public class AnnotatedServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_binary() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
 
         final AggregatedHttpResponse response;
 
@@ -887,7 +887,7 @@ public class AnnotatedServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_text() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
 
         AggregatedHttpResponse response;
 
@@ -910,7 +910,7 @@ public class AnnotatedServiceRequestConverterTest {
 
     @Test
     public void testRedundantlyUsedParameters() throws Exception {
-        final WebClient client = WebClient.of(rule.uri("/"));
+        final WebClient client = WebClient.of(rule.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
         final RequestBean4 expectedRequestBean = new RequestBean4(100);
         expectedRequestBean.foo2 = 100;

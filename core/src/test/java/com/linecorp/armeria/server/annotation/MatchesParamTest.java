@@ -97,7 +97,7 @@ class MatchesParamTest {
 
     @BeforeAll
     public static void beforeAll() {
-        client = WebClient.of(extension.uri("/"));
+        client = WebClient.of(extension.httpUri());
     }
 
     @Test

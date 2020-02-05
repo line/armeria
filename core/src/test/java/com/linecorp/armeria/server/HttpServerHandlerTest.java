@@ -64,7 +64,7 @@ class HttpServerHandlerTest {
 
     @Test
     void methodNotAllowed() {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.delete("/hello").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.METHOD_NOT_ALLOWED);
         await().untilAsserted(() -> {
@@ -75,7 +75,7 @@ class HttpServerHandlerTest {
 
     @Test
     void handleNonExistentMapping() {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/non_existent").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
         await().untilAsserted(() -> {
@@ -86,7 +86,7 @@ class HttpServerHandlerTest {
 
     @Test
     void httpStatusExceptionIsNotLoggedAsRequestCause() {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/httpStatusException").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.CREATED);
         await().untilAsserted(() -> {
@@ -97,7 +97,7 @@ class HttpServerHandlerTest {
 
     @Test
     void httpResponseExceptionIsNotLoggedAsRequestCause() {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/httpResponseException").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.CREATED);
         await().untilAsserted(() -> {

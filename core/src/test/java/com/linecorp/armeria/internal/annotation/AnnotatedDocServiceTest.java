@@ -139,7 +139,7 @@ public class AnnotatedDocServiceTest {
                 serviceDescription, methodInfos));
         addExamples(expectedJson);
 
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("no-cache, must-revalidate");
@@ -299,7 +299,7 @@ public class AnnotatedDocServiceTest {
 
     @Test
     public void excludeAllServices() throws IOException {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());

@@ -229,7 +229,7 @@ class ServerBuilderTest {
      */
     @Test
     void decoratorTest() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/").aggregate().get();
         assertThat(res.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res.headers().contains("virtualhost_decorator")).isEqualTo(false);

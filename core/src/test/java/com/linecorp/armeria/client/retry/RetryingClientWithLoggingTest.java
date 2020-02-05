@@ -104,7 +104,7 @@ public class RetryingClientWithLoggingTest {
                     }
                     return Backoff.ofDefault();
                 });
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(loggingDecorator())
                                           .decorator(RetryingClient.builder(retryStrategy)
                                                                    .newDecorator())
@@ -120,7 +120,7 @@ public class RetryingClientWithLoggingTest {
     @Test
     public void loggingThenRetrying() throws Exception {
         successLogIndex = 1;
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(RetryingClient.newDecorator(
                                                   RetryStrategy.onServerErrorStatus()))
                                           .decorator(loggingDecorator())

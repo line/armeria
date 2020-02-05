@@ -93,7 +93,7 @@ public class ArmeriaCallFactoryLargeStreamTest {
     @Test(timeout = 30 * 1000L)
     public void largeStream() throws Exception {
         final WebClient webClient =
-                WebClient.builder(server.uri("/"))
+                WebClient.builder(server.httpUri())
                          .maxResponseLength(Long.MAX_VALUE)
                          .responseTimeout(Duration.ofSeconds(30))
                          .build();

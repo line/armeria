@@ -71,7 +71,7 @@ class ContentPreviewingClientTest {
 
     @Test
     void decodedContentPreview() {
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(DecodingClient.newDecorator())
                                           .decorator(ContentPreviewingClient.builder()
                                                                             .contentPreview(100)
@@ -99,7 +99,7 @@ class ContentPreviewingClientTest {
      */
     @Test
     void contentPreviewIsDecodedInPreviewer() {
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(decodingContentPreviewDecorator())
                                           .decorator(DecodingClient.newDecorator())
                                           .build();
