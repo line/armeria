@@ -17,7 +17,6 @@ package com.linecorp.armeria.common.logging;
 
 import java.nio.charset.Charset;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -49,7 +48,7 @@ public interface ContentPreviewerFactory {
      * @param maxLength the maximum length of the preview
      */
     static ContentPreviewerFactory text(int maxLength) {
-        return text(maxLength, ContentPreviewerFactoryBuilder.defaultCharset());
+        return builder().maxLength(maxLength).build();
     }
 
     /**
@@ -73,14 +72,16 @@ public interface ContentPreviewerFactory {
     }
 
     /**
-     * Returns a newly-created {@link ContentPreviewer} with the given {@link RequestContext} and
-     * {@link HttpHeaders}. Note that the returned {@link ContentPreviewer} can be
+     * Returns a newly-created request {@link ContentPreviewer} with the given {@link RequestContext} and
+     * {@link RequestHeaders}. Note that the returned {@link ContentPreviewer} can be
      * {@link ContentPreviewer#disabled()}.
      */
     ContentPreviewer requestContentPreviewer(RequestContext ctx, RequestHeaders headers);
 
     /**
-     * Returns.
+     * Returns a newly-created response {@link ContentPreviewer} with the given {@link RequestContext} and
+     * {@link ResponseHeaders}. Note that the returned {@link ContentPreviewer} can be
+     * {@link ContentPreviewer#disabled()}.
      */
     ContentPreviewer responseContentPreviewer(RequestContext ctx, ResponseHeaders resHeaders);
 }

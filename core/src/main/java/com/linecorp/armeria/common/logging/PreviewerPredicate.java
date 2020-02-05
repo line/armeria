@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 
 /**
- * Predicate.
+ * A {@link BiPredicate} used to evaluate to produce text, binary or disabled preview.
  */
 @FunctionalInterface
 public interface PreviewerPredicate extends BiPredicate<RequestContext, HttpHeaders> {
