@@ -37,13 +37,12 @@ class ContentPreviewerFactoryTest {
 
     @Test
     void testOfText() {
-        final ContentPreviewerFactory factory = ContentPreviewerFactory.ofText(10);
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.text(10);
         ContentPreviewer contentPreviewer = factory.requestContentPreviewer(
                 ctx, reqHeaders(MediaType.PLAIN_TEXT_UTF_8));
         checkProduced(contentPreviewer);
 
-        contentPreviewer = factory.responseContentPreviewer(ctx, reqHeaders(MediaType.ANY_AUDIO_TYPE),
-                                                            resHeaders(MediaType.PLAIN_TEXT_UTF_8));
+        contentPreviewer = factory.responseContentPreviewer(ctx, resHeaders(MediaType.PLAIN_TEXT_UTF_8));
         checkProduced(contentPreviewer);
 
         contentPreviewer = factory.requestContentPreviewer(ctx, reqHeaders(MediaType.JSON));
@@ -59,9 +58,6 @@ class ContentPreviewerFactoryTest {
                 ctx, RequestHeaders.of(HttpMethod.POST, "/",
                                        HttpHeaderNames.CONTENT_TYPE, "my/type; charset=UTF-8"));
         checkProduced(contentPreviewer);
-
-        assertThat(factory.requestContentPreviewer(ctx, reqHeaders(MediaType.ANY_AUDIO_TYPE)))
-                .isSameAs(ContentPreviewer.disabled());
     }
 
     private static void checkProduced(ContentPreviewer contentPreviewer) {
@@ -71,7 +67,7 @@ class ContentPreviewerFactoryTest {
 
     @Test
     void producedPreviewDoesNotExceedMaxLength() {
-        final ContentPreviewer contentPreviewer = ContentPreviewerFactory.ofText(4).requestContentPreviewer(
+        final ContentPreviewer contentPreviewer = ContentPreviewerFactory.text(4).requestContentPreviewer(
                 ctx, reqHeaders(MediaType.PLAIN_TEXT_UTF_8));
         contentPreviewer.onData(HttpData.ofUtf8("hello!"));
         assertThat(contentPreviewer.produce()).isEqualTo("hell");

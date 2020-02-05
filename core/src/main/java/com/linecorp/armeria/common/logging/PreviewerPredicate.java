@@ -18,12 +18,12 @@ package com.linecorp.armeria.common.logging;
 
 import java.util.function.BiPredicate;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestHeaders;
 
 /**
  * Predicate.
  */
 @FunctionalInterface
-public interface PreviewableRequestPredicate extends BiPredicate<RequestContext, RequestHeaders> {
+public interface PreviewerPredicate extends BiPredicate<RequestContext, HttpHeaders> {
 }

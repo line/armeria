@@ -17,326 +17,191 @@
 package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
-import java.util.List;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.common.logging.PreviewSpec.PreviewMode;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 /**
- * Builds.
+ * A builder which builds a {@link ContentPreviewerFactory}.
  */
-public class ContentPreviewerFactoryBuilder {
+public final class ContentPreviewerFactoryBuilder {
 
-    /**
-     * Returns.
-     */
-    public static Charset defaultCharset() {
-        return ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET;
-    }
+    //TODO(minwoox): Add setters for the seprate request and response previewer.
 
-    @Nullable
-    private List<MediaType> requestContentTypes;
-    @Nullable
-    private List<MediaType> responseContentTypes;
-    @Nullable
-    private BiFunction<? super RequestHeaders, ? super ByteBuf, String> requestProducer;
-    @Nullable
-    private BiFunction<? super ResponseHeaders, ? super ByteBuf, String> responseProducer;
-    private boolean isRequestTextContentTypeSet;
-    private boolean isResponseTextContentTypeSet;
-    @Nullable
-    private Charset requestDefaultCharset;
-    @Nullable
-    private Charset responseDefaultCharset;
-
-    private PreviewableRequestPredicate previewableRequestPredicate = (a, b) -> true;
-    private PreviewableResponsePredicate previewableResponsePredicate = (a, b, c) -> true;
-
-    private int requestMaxLength = Integer.MAX_VALUE;
-    private int responseMaxLength = Integer.MAX_VALUE;
+    private final Builder<PreviewSpec> previewSpecsBuilder = ImmutableList.builder();
+    private int maxLength;
+    private Charset defaultCharset = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET;
 
     ContentPreviewerFactoryBuilder() {}
 
     /**
-     * Sets.
-     */
-    public ContentPreviewerFactoryBuilder previewableRequestPredicate(
-            PreviewableRequestPredicate previewableRequestPredicate) {
-        this.previewableRequestPredicate =
-                requireNonNull(previewableRequestPredicate, "previewableRequestPredicate");
-        return this;
-    }
-
-    /**
-     * Sets.
-     */
-    public ContentPreviewerFactoryBuilder previewableResponsePredicate(
-            PreviewableResponsePredicate previewableResponsePredicate) {
-        this.previewableResponsePredicate =
-                requireNonNull(previewableResponsePredicate, "previewableResponsePredicate");
-        return this;
-    }
-
-    /**
-     * Sets.
+     * Sets the maximum length of the produced preview.
      */
     public ContentPreviewerFactoryBuilder maxLength(int maxLength) {
-        requestMaxLength(maxLength);
-        responseMaxLength(maxLength);
-        return this;
-    }
-
-    /**
-     * Sets.
-     */
-    public ContentPreviewerFactoryBuilder requestMaxLength(int maxLength) {
         checkArgument(maxLength > 0, "maxLength : %d (expected: > 0)", maxLength);
-        requestMaxLength = maxLength;
+        this.maxLength = maxLength;
         return this;
     }
 
     /**
-     * Sets.
+     * Sets the default {@link Charset} used to produce the text preview when a charset is not specified in the
+     * {@code "content-type"} header.
+     *
+     * <p>Note that this charset is only for the text preview, not for the binary preview.</p>
      */
-    public ContentPreviewerFactoryBuilder responseMaxLength(int maxLength) {
-        checkArgument(maxLength > 0, "maxLength : %d (expected: > 0)", maxLength);
-        responseMaxLength = maxLength;
-        return this;
-    }
-
-    /**
-     * Sets.
-     */
-    @SuppressWarnings("OverloadMethodsDeclarationOrder")
     public ContentPreviewerFactoryBuilder defaultCharset(Charset defaultCharset) {
-        requestDefaultCharset(defaultCharset);
-        responseDefaultCharset(defaultCharset);
+        this.defaultCharset = requireNonNull(defaultCharset, "defaultCharset");
         return this;
     }
 
     /**
-     * Sets.
+     * Sets the specified {@link MediaTypeSet} to produce the text preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} {@linkplain MediaTypeSet#match(MediaType) matches}
+     * the {@link MediaTypeSet}.
      */
-    public ContentPreviewerFactoryBuilder requestDefaultCharset(Charset defaultCharset) {
+    public ContentPreviewerFactoryBuilder text(MediaTypeSet mediaTypeSet) {
+        text0(previewerPredicate(mediaTypeSet), null);
+        return this;
+    }
+
+    /**
+     * Sets the specified {@link MediaTypeSet} to produce the text preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} {@linkplain MediaTypeSet#match(MediaType) matches}
+     * the {@link MediaTypeSet}.
+     *
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
+     */
+    public ContentPreviewerFactoryBuilder text(MediaTypeSet mediaTypeSet, Charset defaultCharset) {
+        return text(previewerPredicate(mediaTypeSet), defaultCharset);
+    }
+
+    /**
+     * Sets the specified {@link PreviewerPredicate} to produce the text preview when the predicate
+     * returns {@code true}.
+     */
+    public ContentPreviewerFactoryBuilder text(PreviewerPredicate predicate) {
+        return text0(predicate, null);
+    }
+
+    /**
+     * Sets the specified {@link PreviewerPredicate} to produce the text preview when the predicate
+     * returns {@code true}.
+     *
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
+     */
+    public ContentPreviewerFactoryBuilder text(PreviewerPredicate predicate, Charset defaultCharset) {
         requireNonNull(defaultCharset, "defaultCharset");
-        requestDefaultCharset = defaultCharset;
+        return text0(predicate, defaultCharset);
+    }
+
+    private ContentPreviewerFactoryBuilder text0(PreviewerPredicate predicate,
+                                                 @Nullable Charset defaultCharset) {
+        requireNonNull(predicate, "predicate");
+        previewSpecsBuilder.add(new PreviewSpec(predicate, PreviewMode.TEXT, defaultCharset, null));
         return this;
     }
 
     /**
-     * Sets.
+     * Sets the specified {@link MediaTypeSet} to produce the
+     * <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a> preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} {@linkplain MediaTypeSet#match(MediaType) matches}
+     * the {@link MediaTypeSet}.
      */
-    public ContentPreviewerFactoryBuilder responseDefaultCharset(Charset defaultCharset) {
-        requireNonNull(defaultCharset, "defaultCharset");
-        responseDefaultCharset = defaultCharset;
+    public ContentPreviewerFactoryBuilder binary(MediaTypeSet mediaTypeSet) {
+        binary(mediaTypeSet, binaryProducer());
         return this;
     }
 
     /**
-     * Sets.
+     * Sets the specified {@link MediaTypeSet} to produce the preview using the specified {@link BiFunction}
+     * when the content type of the {@link RequestHeaders} or {@link ResponseHeaders}
+     * {@linkplain MediaTypeSet#match(MediaType) matches} the {@link MediaTypeSet}.
      */
-    public ContentPreviewerFactoryBuilder textContentType() {
-        requestTextContentType();
-        responseTextContentType();
-        return this;
+    public ContentPreviewerFactoryBuilder binary(
+            MediaTypeSet mediaTypeSet, BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
+        requireNonNull(mediaTypeSet, "mediaTypesSet");
+        return binary(previewerPredicate(mediaTypeSet), producer);
     }
 
     /**
-     * Sets.
+     * Sets the specified {@link PreviewerPredicate} to produce the
+     * <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a> preview when the predicate
+     * returns {@code true}.
      */
-    public ContentPreviewerFactoryBuilder requestTextContentType() {
-        checkState(requestContentTypes == null,
-                   "requestTextContentType() and requestContentTypes() are mutually exclusive.");
-        checkState(requestProducer == null,
-                   "requestTextContentType() and requestProducer() are mutually exclusive.");
-        isRequestTextContentTypeSet = true;
-        return this;
+    public ContentPreviewerFactoryBuilder binary(PreviewerPredicate predicate) {
+        return binary(predicate, binaryProducer());
     }
 
     /**
-     * Sets.
+     * Sets the specified {@link PreviewerPredicate} to produce the preview using the specified
+     * {@link BiFunction} when the predicate returns {@code true}.
      */
-    public ContentPreviewerFactoryBuilder responseTextContentType() {
-        checkState(responseContentTypes == null,
-                   "responseTextContentType() and responseContentTypes() are mutually exclusive.");
-        checkState(responseProducer == null,
-                   "responseTextContentType() and responseProducer() are mutually exclusive.");
-        isResponseTextContentTypeSet = true;
-        return this;
-    }
-
-    /**
-     * Sets.
-     */
-    public ContentPreviewerFactoryBuilder contentTypes(MediaType... contentTypes) {
-        requestContentTypes(contentTypes);
-        responseContentTypes(contentTypes);
-        return this;
-    }
-
-    /**
-     * Sets.
-     */
-    public ContentPreviewerFactoryBuilder requestContentTypes(MediaType... contentTypes) {
-        checkState(!isRequestTextContentTypeSet,
-                   "requestTextContentType() and requestContentTypes() are mutually exclusive.");
-        this.requestContentTypes =
-                ImmutableList.copyOf(requireNonNull(contentTypes, "contentTypes"));
-        return this;
-    }
-
-    /**
-     * Sets.
-     */
-    public ContentPreviewerFactoryBuilder responseContentTypes(MediaType... contentTypes) {
-        checkState(!isResponseTextContentTypeSet,
-                   "responseTextContentType() and responseContentTypes() are mutually exclusive.");
-        this.responseContentTypes =
-                ImmutableList.copyOf(requireNonNull(contentTypes, "contentTypes"));
-        return this;
-    }
-
-    /**
-     * Sets.
-     */
-    public ContentPreviewerFactoryBuilder producer(
-            Function<? super ByteBuf, String> producer) {
+    public ContentPreviewerFactoryBuilder binary(
+            PreviewerPredicate predicate, BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
+        requireNonNull(predicate, "predicate");
         requireNonNull(producer, "producer");
-        producer((headers, byteBuf) -> producer.apply(byteBuf));
+        previewSpecsBuilder.add(new PreviewSpec(predicate, PreviewMode.BINARY, null, producer));
         return this;
     }
 
     /**
-     * Sets.
+     * Sets the specified {@link MediaTypeSet} <b>NOT</b> to produce the preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} {@linkplain MediaTypeSet#match(MediaType) matches}
+     * the {@link MediaTypeSet}.
      */
-    public ContentPreviewerFactoryBuilder producer(
-            BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
-        requestProducer(producer);
-        responseProducer(producer);
-        return this;
+    public ContentPreviewerFactoryBuilder disable(MediaTypeSet mediaTypeSet) {
+        requireNonNull(mediaTypeSet, "mediaTypesSet");
+        return disable(previewerPredicate(mediaTypeSet));
     }
 
     /**
-     * Sets.
+     * Sets the specified {@link PreviewerPredicate} <b>NOT</b> to produce the preview when the predicate
+     * returns {@code true}.
      */
-    public ContentPreviewerFactoryBuilder requestProducer(
-            BiFunction<? super RequestHeaders, ? super ByteBuf, String> producer) {
-        checkState(!isRequestTextContentTypeSet,
-                   "requestTextContentType() and requestProducer() are mutually exclusive.");
-        this.requestProducer = requireNonNull(producer, "producer");
+    public ContentPreviewerFactoryBuilder disable(PreviewerPredicate predicate) {
+        requireNonNull(predicate, "predicate");
+        previewSpecsBuilder.add(new PreviewSpec(predicate, PreviewMode.DISABLED, null, null));
         return this;
     }
 
     /**
-     * Sets.
-     */
-    public ContentPreviewerFactoryBuilder responseProducer(
-            BiFunction<? super ResponseHeaders, ? super ByteBuf, String> producer) {
-        checkState(!isResponseTextContentTypeSet,
-                   "responseTextContentType() and responseProducer() are mutually exclusive.");
-        this.responseProducer = requireNonNull(producer, "producer");
-        return this;
-    }
-
-    /**
-     * Sets.
+     * Returns a newly-created {@link ContentPreviewerFactory} based on the properties of this builder.
      */
     public ContentPreviewerFactory build() {
-        final Function<? super RequestHeaders, ? extends ContentPreviewer> requestPreviewerFactory;
-        if (isRequestTextContentTypeSet) {
-            final Charset charset = charset(requestDefaultCharset);
-            requestPreviewerFactory = new TextualContentPreviewerFunction(requestMaxLength, charset);
-        } else {
-            final BiFunction<? super RequestHeaders, ? super ByteBuf, String> requestProducer =
-                    getRequestProducer();
-
-            if (requestContentTypes != null) {
-                requestPreviewerFactory =
-                        new ContentTypeBasedRequestPreviewerFunction(requestMaxLength, requestContentTypes,
-                                                                     requestProducer);
-            } else {
-                requestPreviewerFactory =
-                        headers -> new RequestContentPreviewer(requestMaxLength, headers, requestProducer);
-            }
-        }
-
-        final Function<? super ResponseHeaders, ? extends ContentPreviewer> responsePreviewerFactory;
-        if (isResponseTextContentTypeSet) {
-            final Charset charset = charset(responseDefaultCharset);
-            responsePreviewerFactory = new TextualContentPreviewerFunction(responseMaxLength, charset);
-        } else {
-            final BiFunction<? super ResponseHeaders, ? super ByteBuf, String> responseProducer =
-                    getResponseProducer();
-
-            if (responseContentTypes != null) {
-                responsePreviewerFactory =
-                        new ContentTypeBasedResponsePreviewerFunction(responseMaxLength, responseContentTypes,
-                                                                      responseProducer);
-            } else {
-                responsePreviewerFactory =
-                        headers -> new ResponseContentPreviewer(responseMaxLength, headers, responseProducer);
-            }
-        }
-
-        return new DefaultContentPreviewerFactory(previewableRequestPredicate, previewableResponsePredicate,
-                                                  requestPreviewerFactory, responsePreviewerFactory);
+        return new DefaultContentPreviewFactory(previewSpecsBuilder.build(), maxLength, defaultCharset);
     }
 
-    private static Charset charset(@Nullable Charset charset) {
-        return charset != null ? charset : defaultCharset();
-    }
-
-    private BiFunction<? super RequestHeaders, ? super ByteBuf, String> getRequestProducer() {
-        if (requestProducer != null) {
-            return requestProducer;
-        }
-
-        return new DefaultProducer<>(charset(requestDefaultCharset));
-    }
-
-    private BiFunction<? super ResponseHeaders, ? super ByteBuf, String> getResponseProducer() {
-        if (responseProducer != null) {
-            return responseProducer;
-        }
-
-        return new DefaultProducer<>(charset(responseDefaultCharset));
-    }
-
-    private static class DefaultProducer<T extends HttpHeaders, U extends ByteBuf>
-            implements BiFunction<T, U, String> {
-
-        private final Charset defaultCharset;
-
-        DefaultProducer(Charset defaultCharset) {
-            this.defaultCharset = defaultCharset;
-        }
-
-        @Override
-        public String apply(T headers, U byteBuf) {
+    private static PreviewerPredicate previewerPredicate(MediaTypeSet mediaTypeSet) {
+        requireNonNull(mediaTypeSet, "mediaTypesSet");
+        return (ctx, headers) -> {
             final MediaType contentType = headers.contentType();
-            final Charset charset;
-            if (contentType != null) {
-                charset = contentType.charset(defaultCharset);
-            } else {
-                charset = defaultCharset;
+            if (contentType == null) {
+                return false;
             }
+            return mediaTypeSet.match(contentType) != null;
+        };
+    }
 
-            return byteBuf.toString(byteBuf.readerIndex(), byteBuf.readableBytes(), charset);
-        }
+    static BiFunction<? super HttpHeaders, ? super ByteBuf, String> binaryProducer() {
+        return (headers, byteBuf) -> ByteBufUtil.hexDump(byteBuf);
     }
 }

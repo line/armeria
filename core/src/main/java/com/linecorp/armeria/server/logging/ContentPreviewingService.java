@@ -67,7 +67,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
      * @param maxLength the maximum length of the preview
      */
     public static Function<? super HttpService, ContentPreviewingService> newDecorator(int maxLength) {
-        final ContentPreviewerFactory factory = ContentPreviewerFactory.ofText(maxLength);
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.text(maxLength);
         return delegate -> new ContentPreviewingService(delegate, factory);
     }
 
@@ -88,7 +88,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
      */
     public static Function<? super HttpService, ContentPreviewingService> newDecorator(
             int maxLength, Charset defaultCharset) {
-        final ContentPreviewerFactory factory = ContentPreviewerFactory.ofText(maxLength, defaultCharset);
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.text(maxLength, defaultCharset);
         return delegate -> new ContentPreviewingService(delegate, factory);
     }
 
@@ -120,6 +120,6 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
 
         ctx.logBuilder().deferResponseContentPreview();
         final HttpResponse res = delegate().serve(ctx, req);
-        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, req.headers(), res);
+        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res);
     }
 }

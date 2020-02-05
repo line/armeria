@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
@@ -92,10 +91,9 @@ public final class ContentPreviewingUtil {
      * {@link RequestLogBuilder#responseContentPreview(String)} when the preview is available.
      */
     public static HttpResponse setUpResponseContentPreviewer(
-            ContentPreviewerFactory factory, RequestContext ctx, RequestHeaders reqHeaders, HttpResponse res) {
+            ContentPreviewerFactory factory, RequestContext ctx, HttpResponse res) {
         requireNonNull(factory, "factory");
         requireNonNull(ctx, "ctx");
-        requireNonNull(reqHeaders, "reqHeaders");
         requireNonNull(res, "res");
 
         return new FilteredHttpResponse(res) {
@@ -112,8 +110,7 @@ public final class ContentPreviewingUtil {
                     if (ArmeriaHttpUtil.isInformational(status)) {
                         return obj;
                     }
-                    final ContentPreviewer contentPreviewer = factory.responseContentPreviewer(ctx, reqHeaders,
-                                                                                               resHeaders);
+                    final ContentPreviewer contentPreviewer = factory.responseContentPreviewer(ctx, resHeaders);
                     if (!contentPreviewer.isDisabled()) {
                         responseContentPreviewer = contentPreviewer;
                     }

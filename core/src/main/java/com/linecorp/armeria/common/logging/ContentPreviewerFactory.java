@@ -15,9 +15,6 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-
 import java.nio.charset.Charset;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -51,8 +48,8 @@ public interface ContentPreviewerFactory {
      *
      * @param maxLength the maximum length of the preview
      */
-    static ContentPreviewerFactory ofText(int maxLength) {
-        return ofText(maxLength, ContentPreviewerFactoryBuilder.defaultCharset());
+    static ContentPreviewerFactory text(int maxLength) {
+        return text(maxLength, ContentPreviewerFactoryBuilder.defaultCharset());
     }
 
     /**
@@ -71,10 +68,8 @@ public interface ContentPreviewerFactory {
      * @param defaultCharset the default charset used when a charset is not specified in the
      *                       {@code "content-type"} header
      */
-    static ContentPreviewerFactory ofText(int maxLength, Charset defaultCharset) {
-        checkArgument(maxLength > 0, "maxLength : %d (expected: > 0)", maxLength);
-        requireNonNull(defaultCharset, "defaultCharset");
-        return builder().maxLength(maxLength).textContentType().defaultCharset(defaultCharset).build();
+    static ContentPreviewerFactory text(int maxLength, Charset defaultCharset) {
+        return builder().maxLength(maxLength).defaultCharset(defaultCharset).build();
     }
 
     /**
@@ -87,6 +82,5 @@ public interface ContentPreviewerFactory {
     /**
      * Returns.
      */
-    ContentPreviewer responseContentPreviewer(RequestContext ctx,
-                                              RequestHeaders reqHeaders, ResponseHeaders resHeaders);
+    ContentPreviewer responseContentPreviewer(RequestContext ctx, ResponseHeaders resHeaders);
 }

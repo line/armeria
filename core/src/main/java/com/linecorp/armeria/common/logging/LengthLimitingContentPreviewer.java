@@ -34,15 +34,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
-class LengthLimitingContentPreviewer implements ContentPreviewer {
+abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
 
     private static final ByteBuf[] BYTE_BUFS = new ByteBuf[0];
 
     private final List<ByteBuf> bufferList = new ArrayList<>();
     private final int maxLength;
     private final int inflatedMaxLength;
-    @Nullable
-    private Charset charset;
 
     @Nullable
     private String produced;
@@ -50,7 +48,6 @@ class LengthLimitingContentPreviewer implements ContentPreviewer {
 
     LengthLimitingContentPreviewer(int maxLength, @Nullable Charset charset) {
         this.maxLength = maxLength;
-        this.charset = charset;
         inflatedMaxLength = inflateMaxLength(maxLength, charset);
     }
 
@@ -103,8 +100,5 @@ class LengthLimitingContentPreviewer implements ContentPreviewer {
         }
     }
 
-    String produce(ByteBuf wrappedBuffer) {
-        return wrappedBuffer.toString(wrappedBuffer.readerIndex(),
-                                      wrappedBuffer.readableBytes(), charset);
-    }
+    abstract String produce(ByteBuf wrappedBuffer);
 }

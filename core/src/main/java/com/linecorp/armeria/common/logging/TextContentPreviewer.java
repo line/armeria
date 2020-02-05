@@ -16,26 +16,22 @@
 
 package com.linecorp.armeria.common.logging;
 
-import java.util.function.BiFunction;
-
-import com.linecorp.armeria.common.RequestHeaders;
+import java.nio.charset.Charset;
 
 import io.netty.buffer.ByteBuf;
 
-class RequestContentPreviewer extends LengthLimitingContentPreviewer {
+final class TextContentPreviewer extends LengthLimitingContentPreviewer {
 
-    private final RequestHeaders headers;
-    private final BiFunction<? super RequestHeaders, ? super ByteBuf, String> producer;
+    private final Charset charset;
 
-    RequestContentPreviewer(int maxLength, RequestHeaders headers,
-                            BiFunction<? super RequestHeaders, ? super ByteBuf, String> producer) {
-        super(maxLength, null);
-        this.headers = headers;
-        this.producer = producer;
+    TextContentPreviewer(int maxLength, Charset charset) {
+        super(maxLength, charset);
+        this.charset = charset;
     }
 
     @Override
     String produce(ByteBuf wrappedBuffer) {
-        return producer.apply(headers, wrappedBuffer);
+        return wrappedBuffer.toString(wrappedBuffer.readerIndex(),
+                                      wrappedBuffer.readableBytes(), charset);
     }
 }

@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
@@ -37,6 +38,7 @@ import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -44,10 +46,13 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.common.logging.PreviewerPredicate;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
+
+import io.netty.buffer.ByteBuf;
 
 class ContentPreviewingClientTest {
 
@@ -101,7 +106,8 @@ class ContentPreviewingClientTest {
                                           .decorator(DecodingClient.newDecorator())
                                           .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
-                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+                                                         HttpHeaderNames.CONTENT_TYPE,
+                                                         MediaType.PLAIN_TEXT_UTF_8);
 
         final ClientRequestContext context;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -117,24 +123,26 @@ class ContentPreviewingClientTest {
     }
 
     private static Function<? super HttpClient, ContentPreviewingClient> decodingContentPreviewDecorator() {
+        final PreviewerPredicate previewerPredicate =
+                (requestContext, headers) -> "gzip".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
+        final BiFunction<HttpHeaders, ByteBuf, String> producer = (headers, data) -> {
+            final byte[] bytes = new byte[data.readableBytes()];
+            data.getBytes(0, bytes);
+            final byte[] decoded;
+            try (GZIPInputStream unzipper = new GZIPInputStream(new ByteArrayInputStream(bytes))) {
+                decoded = ByteStreams.toByteArray(unzipper);
+            } catch (Exception e) {
+                throw new IllegalArgumentException(e);
+            }
+            return new String(decoded, StandardCharsets.UTF_8);
+        };
+
         final ContentPreviewerFactory factory =
                 ContentPreviewerFactory.builder()
                                        .maxLength(100)
-                                       .requestTextContentType()
-                                       .responseProducer((headers, data) -> {
-                                           final byte[] bytes = new byte[data.readableBytes()];
-                                           data.getBytes(0, bytes);
-                                           final byte[] decoded;
-                                           try (GZIPInputStream unzipper = new GZIPInputStream(
-                                                   new ByteArrayInputStream(bytes))) {
-                                               decoded = ByteStreams.toByteArray(unzipper);
-                                           } catch (Exception e) {
-                                               throw new IllegalArgumentException(e);
-                                           }
-                                           return new String(decoded, StandardCharsets.UTF_8);
-                                       }).build();
+                                       .binary(previewerPredicate, producer)
+                                       .build();
 
         return ContentPreviewingClient.newDecorator(factory);
     }
 }
-

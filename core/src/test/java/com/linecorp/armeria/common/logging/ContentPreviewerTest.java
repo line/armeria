@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.linecorp.armeria.common.logging.ContentPreviewerFactoryBuilder.binaryProducer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.Charset;
@@ -35,18 +36,18 @@ import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
-
-import io.netty.buffer.ByteBufUtil;
 
 class ContentPreviewerTest {
 
@@ -57,7 +58,10 @@ class ContentPreviewerTest {
 
         MyHttpClient(String uri, int maxLength) {
             final WebClientBuilder builder = WebClient.builder(serverExtension.httpUri().resolve(uri));
-            client = builder.decorator(ContentPreviewingClient.newDecorator(maxLength, StandardCharsets.UTF_8))
+
+            final ContentPreviewerFactory factory = contentPreviewerFactory(maxLength);
+
+            client = builder.decorator(ContentPreviewingClient.newDecorator(factory))
                             .decorator(LoggingClient.builder()
                                                     .requestLogLevel(LogLevel.INFO)
                                                     .successfulResponseLogLevel(LogLevel.INFO)
@@ -114,6 +118,14 @@ class ContentPreviewerTest {
         RequestLog post(String path) throws Exception {
             return post(path, "");
         }
+    }
+
+    private static ContentPreviewerFactory contentPreviewerFactory(int maxLength) {
+        return ContentPreviewerFactory.builder()
+                                      .maxLength(maxLength)
+                                      .defaultCharset(StandardCharsets.UTF_8)
+                                      .disable(new MediaTypeSet(MediaType.BASIC_AUDIO))
+                                      .build();
     }
 
     static class MyHttpServer {
@@ -176,7 +188,7 @@ class ContentPreviewerTest {
         }
 
         void build(ServerBuilder sb) {
-            sb.decorator(ContentPreviewingService.newDecorator(10, StandardCharsets.UTF_8));
+            sb.decorator(ContentPreviewingService.newDecorator(contentPreviewerFactory(10)));
             sb.decorator(delegate -> (ctx, req) -> {
                 if (waitingFuture != null) {
                     ctx.log().whenComplete().thenAccept(waitingFuture::complete);
@@ -214,31 +226,6 @@ class ContentPreviewerTest {
                     return "abcdefghijkmnopqrstu";
                 }
             });
-        }
-    }
-
-    private static class HexDumpContentPreviewer implements ContentPreviewer {
-        @Nullable
-        private StringBuilder builder = new StringBuilder();
-        @Nullable
-        private String preview;
-
-        @Override
-        public void onData(HttpData data) {
-            // Invoked when a new content is received.
-            assert builder != null;
-            builder.append(ByteBufUtil.hexDump(data.array()));
-        }
-
-        @Override
-        public String produce() {
-            // Invoked when a request or response ends.
-            if (preview != null) {
-                return preview;
-            }
-            preview = builder.toString();
-            builder = null;
-            return preview;
         }
     }
 
@@ -295,14 +282,18 @@ class ContentPreviewerTest {
 
     @Test
     void testCustomPreviewer() throws Exception {
-        ContentPreviewer previewer = new HexDumpContentPreviewer();
+        ContentPreviewer previewer = hexDumpContenPreviewer();
         previewer.onData(HttpData.wrap(new byte[] { 1, 2, 3, 4 }));
         assertThat(previewer.produce()).isEqualTo("01020304");
 
-        previewer = new HexDumpContentPreviewer();
+        previewer = hexDumpContenPreviewer();
         previewer.onData(HttpData.wrap(new byte[] { 1, 2, 3 }));
         previewer.onData(HttpData.wrap(new byte[] { 4, 5 }));
         assertThat(previewer.produce()).isEqualTo("0102030405");
         assertThat(previewer.produce()).isEqualTo("0102030405");
+    }
+
+    ContentPreviewer hexDumpContenPreviewer() {
+        return new ProducerBasedContentPreviewer(100, HttpHeaders.of(), binaryProducer());
     }
 }

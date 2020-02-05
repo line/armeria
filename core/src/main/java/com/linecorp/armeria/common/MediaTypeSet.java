@@ -61,15 +61,35 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
     private final MediaType[] mediaTypes;
 
     /**
-     * Creates a new instance.
+     * Returns the {@link MediaTypeSet} with the specified {@link MediaType}s.
      */
+    public static MediaTypeSet of(MediaType... mediaTypes) {
+        return of(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
+    }
+
+    /**
+     * Returns the {@link MediaTypeSet} with the specified {@link MediaType}s.
+     */
+    public static MediaTypeSet of(Iterable<MediaType> mediaTypes) {
+        return new MediaTypeSet(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @deprecated Use {@link #of(MediaType...)}.
+     */
+    @Deprecated
     public MediaTypeSet(MediaType... mediaTypes) {
         this(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
     }
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link #of(Iterable)}.
      */
+    @Deprecated
     public MediaTypeSet(Iterable<MediaType> mediaTypes) {
         final Set<MediaType> mediaTypesCopy = new LinkedHashSet<>(); // Using a Set to deduplicate
         for (MediaType mediaType : requireNonNull(mediaTypes, "mediaTypes")) {
@@ -84,7 +104,7 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
 
             mediaTypesCopy.add(mediaType);
         }
-
+        checkArgument(!mediaTypesCopy.isEmpty(), "mediaTypes is empty.");
         this.mediaTypes = mediaTypesCopy.toArray(EMPTY_MEDIA_TYPES);
     }
 

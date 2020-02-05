@@ -18,17 +18,17 @@ package com.linecorp.armeria.common.logging;
 
 import java.util.function.BiFunction;
 
-import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.buffer.ByteBuf;
 
-class ResponseContentPreviewer extends LengthLimitingContentPreviewer {
+final class ProducerBasedContentPreviewer extends LengthLimitingContentPreviewer {
 
-    private final ResponseHeaders headers;
-    private final BiFunction<? super ResponseHeaders, ? super ByteBuf, String> producer;
+    private final HttpHeaders headers;
+    private final BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer;
 
-    ResponseContentPreviewer(int maxLength, ResponseHeaders headers,
-                             BiFunction<? super ResponseHeaders, ? super ByteBuf, String> producer) {
+    ProducerBasedContentPreviewer(int maxLength, HttpHeaders headers,
+                                  BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
         super(maxLength, null);
         this.headers = headers;
         this.producer = producer;
