@@ -63,7 +63,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link Logger} to use when logging.
      * If unset, a default {@link Logger} will be used.
      */
-   public LoggingDecoratorBuilder logger(Logger logger) {
+    public LoggingDecoratorBuilder logger(Logger logger) {
         this.logger = requireNonNull(logger, "logger");
         return this;
     }
@@ -80,7 +80,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
      */
-   public LoggingDecoratorBuilder requestLogLevel(LogLevel requestLogLevel) {
+    public LoggingDecoratorBuilder requestLogLevel(LogLevel requestLogLevel) {
         if (isRequestLogLevelMapperSet) {
             throw new IllegalStateException("requestLogLevelMapper has been set already.");
         }
@@ -103,7 +103,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      * If unset, will use {@link LogLevel#TRACE}.
      */
-   public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
+    public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         if (isResponseLogLevelMapperSet) {
             throw new IllegalStateException("responseLogLevelMapper has been set already.");
         }
@@ -127,7 +127,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
      * If unset, will use {@link LogLevel#WARN}. The request will be logged too if it was not otherwise.
      */
-   public LoggingDecoratorBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
+    public LoggingDecoratorBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         if (isResponseLogLevelMapperSet) {
             throw new IllegalStateException("responseLogLevelMapper has been set already.");
         }
@@ -149,7 +149,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link Function} to use when mapping the log level of request logs.
      */
-   public LoggingDecoratorBuilder requestLogLevelMapper(
+    public LoggingDecoratorBuilder requestLogLevelMapper(
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
         if (isRequestLogLevelSet) {
             throw new IllegalStateException("requestLogLevel has been set already.");
@@ -169,7 +169,8 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link Function} to use when mapping the log level of response logs.
      */
-   public LoggingDecoratorBuilder responseLogLevelMapper(Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+    public LoggingDecoratorBuilder responseLogLevelMapper(
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
         if (isResponseLogLevelSet) {
             throw new IllegalStateException(
                     "successfulResponseLogLevel or failedResponseLogLevel has been set already.");
@@ -191,7 +192,8 @@ public abstract class LoggingDecoratorBuilder {
      * {@link Function} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will use
      * {@link Function#identity()}.
      */
-   public LoggingDecoratorBuilder requestHeadersSanitizer(Function<? super HttpHeaders, ?> requestHeadersSanitizer) {
+    public LoggingDecoratorBuilder requestHeadersSanitizer(
+            Function<? super HttpHeaders, ?> requestHeadersSanitizer) {
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         return this;
     }
@@ -208,7 +210,8 @@ public abstract class LoggingDecoratorBuilder {
      * {@link Function} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
      * will use {@link Function#identity()}.
      */
-   public LoggingDecoratorBuilder responseHeadersSanitizer(Function<? super HttpHeaders, ?> responseHeadersSanitizer) {
+    public LoggingDecoratorBuilder responseHeadersSanitizer(
+            Function<? super HttpHeaders, ?> responseHeadersSanitizer) {
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
         return this;
     }
@@ -224,7 +227,8 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link Function} to use to sanitize request trailers before logging. If unset,
      * will use {@link Function#identity()}.
      */
-   public LoggingDecoratorBuilder requestTrailersSanitizer(Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
+    public LoggingDecoratorBuilder requestTrailersSanitizer(
+            Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
         return this;
     }
@@ -240,7 +244,8 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link Function} to use to sanitize response trailers before logging. If unset,
      * will use {@link Function#identity()}.
      */
-   public LoggingDecoratorBuilder responseTrailersSanitizer(Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
+    public LoggingDecoratorBuilder responseTrailersSanitizer(
+            Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         return this;
     }
@@ -268,7 +273,7 @@ public abstract class LoggingDecoratorBuilder {
      * @see #responseHeadersSanitizer(Function)
      * @see #responseTrailersSanitizer(Function)
      */
-   public LoggingDecoratorBuilder headersSanitizer(Function<? super HttpHeaders, ?> headersSanitizer) {
+    public LoggingDecoratorBuilder headersSanitizer(Function<? super HttpHeaders, ?> headersSanitizer) {
         requireNonNull(headersSanitizer, "headersSanitizer");
         requestHeadersSanitizer(headersSanitizer);
         requestTrailersSanitizer(headersSanitizer);
@@ -282,7 +287,7 @@ public abstract class LoggingDecoratorBuilder {
      * {@link Function} that removes sensitive content, such as an GPS location query, before logging. If unset,
      * will use {@link Function#identity()}.
      */
-   public LoggingDecoratorBuilder requestContentSanitizer(Function<Object, ?> requestContentSanitizer) {
+    public LoggingDecoratorBuilder requestContentSanitizer(Function<Object, ?> requestContentSanitizer) {
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
         return this;
     }
@@ -299,7 +304,7 @@ public abstract class LoggingDecoratorBuilder {
      * {@link Function} that removes sensitive content, such as an address, before logging. If unset,
      * will use {@link Function#identity()}.
      */
-   public LoggingDecoratorBuilder responseContentSanitizer(Function<Object, ?> responseContentSanitizer) {
+    public LoggingDecoratorBuilder responseContentSanitizer(Function<Object, ?> responseContentSanitizer) {
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         return this;
     }
@@ -324,7 +329,7 @@ public abstract class LoggingDecoratorBuilder {
      * @see #requestContentSanitizer(Function)
      * @see #responseContentSanitizer(Function)
      */
-   public LoggingDecoratorBuilder contentSanitizer(Function<Object, ?> contentSanitizer) {
+    public LoggingDecoratorBuilder contentSanitizer(Function<Object, ?> contentSanitizer) {
         requireNonNull(contentSanitizer, "contentSanitizer");
         requestContentSanitizer(contentSanitizer);
         responseContentSanitizer(contentSanitizer);
@@ -337,7 +342,8 @@ public abstract class LoggingDecoratorBuilder {
      * the stack trace completely by returning {@code null} in the {@link Function}. If unset, will use
      * {@link Function#identity()}.
      */
-   public LoggingDecoratorBuilder responseCauseSanitizer(Function<? super Throwable, ?> responseCauseSanitizer) {
+    public LoggingDecoratorBuilder responseCauseSanitizer(
+            Function<? super Throwable, ?> responseCauseSanitizer) {
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
         return this;
     }

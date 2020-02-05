@@ -20,7 +20,6 @@ import java.util.function.Supplier;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 
 /**
  * Builds a new {@link CorsPolicy}.

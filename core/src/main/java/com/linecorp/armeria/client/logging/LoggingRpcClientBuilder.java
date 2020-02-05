@@ -64,7 +64,6 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return this::build;
     }
 
-
     // Override the return type of the chaining methods in the superclass.
 
     @Override

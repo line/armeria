@@ -274,7 +274,8 @@ class AbstractClientOptionsBuilder {
      *
      * @param decorator the {@link Function} that transforms an {@link HttpClient} to another
      */
-    public AbstractClientOptionsBuilder decorator(Function<? super HttpClient, ? extends HttpClient> decorator) {
+    public AbstractClientOptionsBuilder decorator(
+            Function<? super HttpClient, ? extends HttpClient> decorator) {
         decoration.add(decorator);
         return this;
     }
@@ -294,7 +295,8 @@ class AbstractClientOptionsBuilder {
      *
      * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
      */
-    public AbstractClientOptionsBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
+    public AbstractClientOptionsBuilder rpcDecorator(
+            Function<? super RpcClient, ? extends RpcClient> decorator) {
         decoration.addRpc(decorator);
         return this;
     }
@@ -322,7 +324,8 @@ class AbstractClientOptionsBuilder {
     /**
      * Adds the specified HTTP headers.
      */
-    public AbstractClientOptionsBuilder addHttpHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+    public AbstractClientOptionsBuilder addHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         requireNonNull(httpHeaders, "httpHeaders");
         this.httpHeaders.addObject(httpHeaders);
         return this;
@@ -341,7 +344,8 @@ class AbstractClientOptionsBuilder {
     /**
      * Sets the specified HTTP headers.
      */
-    public AbstractClientOptionsBuilder setHttpHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+    public AbstractClientOptionsBuilder setHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         requireNonNull(httpHeaders, "httpHeaders");
         this.httpHeaders.setObject(httpHeaders);
         return this;
