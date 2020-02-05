@@ -75,7 +75,7 @@ public class GrpcStatusCauseTest {
 
     @Before
     public void setUp() {
-        stub = Clients.newClient("gproto+" + server.httpUri("/"), TestServiceBlockingStub.class);
+        stub = Clients.newClient("gproto+" + server.httpUri(), TestServiceBlockingStub.class);
     }
 
     @Test

@@ -27,14 +27,15 @@ import java.util.Date;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
-import com.linecorp.armeria.testing.internal.SelfSignedCertificateRuleDelegate;
+import com.linecorp.armeria.internal.testing.SelfSignedCertificateRuleDelegate;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * A {@link TestRule} that provides a temporary self-signed certificate.
  */
-public class SelfSignedCertificateRule extends ExternalResource {
+public final class SelfSignedCertificateRule extends ExternalResource {
+
     private final SelfSignedCertificateRuleDelegate delegate;
 
     /**

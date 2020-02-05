@@ -27,26 +27,26 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.util.AppRootFinder;
+import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.concurrent.Future;
 
-public class ManagedTomcatServiceTest extends WebAppContainerTest {
+class ManagedTomcatServiceTest extends WebAppContainerTest {
 
     private static final String SERVICE_NAME = "TomcatServiceTest";
 
     private static final List<Service> tomcatServices = new ArrayList<>();
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.http(0);
@@ -78,21 +78,21 @@ public class ManagedTomcatServiceTest extends WebAppContainerTest {
     };
 
     @Override
-    protected ServerRule server() {
+    protected ServerExtension server() {
         return server;
     }
 
     @Test
-    public void configurator() throws Exception {
+    void configurator() throws Exception {
         assertThat(tomcatServices).hasSize(1);
         assertThat(tomcatServices.get(0).getName()).isEqualTo(SERVICE_NAME);
     }
 
     @Test
-    public void jarBasedWebApp() throws Exception {
+    void jarBasedWebApp() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(server.uri("/jar/io/netty/util/concurrent/Future.class")))) {
+                    new HttpGet(server.httpUri() + "/jar/io/netty/util/concurrent/Future.class"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("application/java");
@@ -104,9 +104,10 @@ public class ManagedTomcatServiceTest extends WebAppContainerTest {
     }
 
     @Test
-    public void jarBasedWebAppWithAlternativeRoot() throws Exception {
+    void jarBasedWebAppWithAlternativeRoot() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/jar_altroot/Future.class")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(
+                    server.httpUri() + "/jar_altroot/Future.class"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("application/java");

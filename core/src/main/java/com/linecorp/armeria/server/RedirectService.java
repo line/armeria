@@ -121,7 +121,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * sb.service("/old", new RedirectService("/new?redirected=1"));
  * }</pre>
  */
-public class RedirectService extends AbstractHttpService {
+public final class RedirectService extends AbstractHttpService {
 
     private static final Pattern VALID_DEFAULT_URI_PATTERN = Pattern
             .compile("(?:(?:^https?:/{2}(?:([^:]+:)?[^:@]+@)?[^:]+)(?::[0-9]{1,5})?)?" +

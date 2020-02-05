@@ -67,7 +67,7 @@ public class HttpRequestSubscriberTest {
 
     @BeforeAll
     static void beforeClass() {
-        client = WebClient.of(rule.httpUri("/"));
+        client = WebClient.of(rule.httpUri());
     }
 
     @ParameterizedTest

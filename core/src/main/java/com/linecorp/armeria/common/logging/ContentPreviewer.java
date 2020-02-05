@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBuf;
 

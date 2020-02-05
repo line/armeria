@@ -16,19 +16,15 @@
 
 package example.armeria.contextpropagation.kotlin
 
+import com.google.common.base.Splitter
+import com.google.common.collect.Iterables
+import com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.AggregatedHttpResponse
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.server.HttpService
 import com.linecorp.armeria.server.ServiceRequestContext
-import com.google.common.base.Splitter
-import com.google.common.collect.Iterables
-import com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly
-import java.time.Duration
-import java.util.concurrent.CompletableFuture
-import java.util.function.Supplier
-import java.util.stream.Collectors
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
@@ -36,6 +32,10 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.future.future
+import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.function.Supplier
+import java.util.stream.Collectors
 
 class MainService(private val backendClient: WebClient) : HttpService {
     override fun serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse {

@@ -1,18 +1,25 @@
 dependencies {
-    compile project(':grpc-protocol')
+    implementation project(':grpc-protocol')
 
-    compile 'com.google.protobuf:protobuf-java'
-    compile 'com.google.protobuf:protobuf-java-util'
-    compile 'jakarta.annotation:jakarta.annotation-api'
+    api 'com.google.protobuf:protobuf-java'
+    implementation 'com.google.protobuf:protobuf-java-util'
+    api 'jakarta.annotation:jakarta.annotation-api'
 
     // gRPC
     [ 'grpc-core', 'grpc-protobuf', 'grpc-services', 'grpc-stub' ].each {
-        compile "io.grpc:$it"
+        api "io.grpc:$it"
     }
 
-    compile 'org.curioswitch.curiostack:protobuf-jackson'
+    api 'org.curioswitch.curiostack:protobuf-jackson'
 
-    testCompile 'com.google.api:gax-grpc'
-    testCompile 'io.grpc:grpc-okhttp'
-    testCompile 'io.grpc:grpc-testing'
+    testImplementation 'com.google.api:gax-grpc'
+    testImplementation 'io.grpc:grpc-okhttp'
+    testImplementation 'io.grpc:grpc-testing'
+    testImplementation 'io.micrometer:micrometer-registry-prometheus'
+}
+
+tasks {
+    javadoc {
+        exclude '**/com/linecorp/armeria/common/grpc/InternalExceptionMessages**'
+    }
 }

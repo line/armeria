@@ -25,6 +25,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.AbstractHttpData;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -36,7 +37,8 @@ import io.netty.buffer.Unpooled;
  * An {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
  * general use.
  */
-public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
+@UnstableApi
+public final class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
 
     private final ByteBuf buf;
     private final boolean endOfStream;

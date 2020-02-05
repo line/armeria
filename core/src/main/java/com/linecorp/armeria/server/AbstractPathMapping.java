@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.RouteUtil.UNKNOWN_LOGGER_NAME;
-import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.server.RouteUtil.UNKNOWN_LOGGER_NAME;
+import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;

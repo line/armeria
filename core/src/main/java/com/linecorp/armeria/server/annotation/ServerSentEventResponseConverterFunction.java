@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * would be converted into Server-Sent Events if a {@link ProducesEventStream} annotation is specified
  * on an annotated service method.
  */
-public class ServerSentEventResponseConverterFunction implements ResponseConverterFunction {
+public final class ServerSentEventResponseConverterFunction implements ResponseConverterFunction {
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,

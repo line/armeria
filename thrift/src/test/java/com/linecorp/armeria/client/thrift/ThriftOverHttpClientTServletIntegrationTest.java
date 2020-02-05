@@ -300,7 +300,7 @@ class ThriftOverHttpClientTServletIntegrationTest {
 
         return Clients.builder(uri)
                       .rpcDecorator((delegate, ctx, req) -> {
-                          ctx.log().whenAvailable(RequestLogProperty.REQUEST_START_TIME)
+                          ctx.log().whenAvailable(RequestLogProperty.SESSION)
                              .thenAccept(log -> sessionProtocol.set(log.sessionProtocol()));
                           return delegate.execute(ctx, req);
                       })

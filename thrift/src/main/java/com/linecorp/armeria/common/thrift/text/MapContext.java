@@ -41,10 +41,9 @@ import com.fasterxml.jackson.databind.JsonNode;
  *
  * @author Alex Roetter
  */
-class MapContext extends PairContext {
+final class MapContext extends PairContext {
 
-    // SUPPRESS CHECKSTYLE JavadocMethod
-    protected MapContext(@Nullable JsonNode json) {
+    MapContext(@Nullable JsonNode json) {
         super(json);
     }
 

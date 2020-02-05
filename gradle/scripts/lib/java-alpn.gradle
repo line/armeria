@@ -9,6 +9,7 @@ configure(projectsWithFlags('java')) {
         configurations {
             alpnAgent {
                 visible = false
+                canBeConsumed = false
             }
         }
 

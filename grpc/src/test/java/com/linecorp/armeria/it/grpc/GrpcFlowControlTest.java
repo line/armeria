@@ -205,7 +205,7 @@ public class GrpcFlowControlTest {
 
     @Before
     public void setUp() {
-        client = Clients.builder(server.uri(GrpcSerializationFormats.PROTO, "/"))
+        client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
                         .maxResponseLength(0)
                         .responseTimeoutMillis(0)
                         .option(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(Integer.MAX_VALUE))

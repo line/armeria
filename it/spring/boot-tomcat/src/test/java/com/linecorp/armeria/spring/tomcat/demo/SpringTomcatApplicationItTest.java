@@ -34,7 +34,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.linecorp.armeria.internal.tomcat.TomcatVersion;
+import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 

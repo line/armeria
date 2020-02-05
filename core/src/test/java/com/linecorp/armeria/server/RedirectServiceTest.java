@@ -273,7 +273,7 @@ public class RedirectServiceTest {
                 null
         };
 
-        final WebClient client = WebClient.of(serverRule1.uri("/"));
+        final WebClient client = WebClient.of(serverRule1.httpUri());
         for (int i = 0; i < testPaths.length; ++i) {
             AggregatedHttpResponse res = client.get(testPaths[i]).aggregate().get();
             assertThat(res.status()).isEqualTo(redirectStatuses[i]);
@@ -370,7 +370,7 @@ public class RedirectServiceTest {
     public void testMisconfiguredPathParams3() throws Exception {
         serverRule2c.start();
 
-        final WebClient client = WebClient.of(serverRule2c.uri("/"));
+        final WebClient client = WebClient.of(serverRule2c.httpUri());
         AggregatedHttpResponse res = client.get("/test1a/qwe/asd/zxc").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
 

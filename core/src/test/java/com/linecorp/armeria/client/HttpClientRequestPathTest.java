@@ -57,7 +57,7 @@ class HttpClientRequestPathTest {
             sb.service("/simple-client", (ctx, req) -> HttpResponse.of(OK))
               .service("/redirect", (ctx, req) -> {
                   final HttpHeaders headers = ResponseHeaders.of(HttpStatus.TEMPORARY_REDIRECT,
-                                                                 LOCATION, server1.uri("/new-location"));
+                                                                 LOCATION, server1.httpUri() + "/new-location");
                   return HttpResponse.of(headers);
               });
         }
@@ -66,7 +66,7 @@ class HttpClientRequestPathTest {
     @ParameterizedTest
     @EnumSource(value = HttpMethod.class, mode = Mode.EXCLUDE, names = "UNKNOWN")
     void default_withAbsolutePath(HttpMethod method) {
-        final HttpRequest request = HttpRequest.of(method, server2.uri("/simple-client"));
+        final HttpRequest request = HttpRequest.of(method, server2.httpUri() + "/simple-client");
         final HttpResponse response = WebClient.of().execute(request);
         assertThat(response.aggregate().join().status()).isEqualTo(OK);
     }
@@ -82,15 +82,15 @@ class HttpClientRequestPathTest {
 
     @Test
     void custom_withAbsolutePath() {
-        final WebClient client = WebClient.of(server1.uri("/"));
-        final HttpRequest request = HttpRequest.of(HttpMethod.GET, server2.uri("/simple-client"));
+        final WebClient client = WebClient.of(server1.httpUri());
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, server2.httpUri() + "/simple-client");
         final HttpResponse response = client.execute(request);
         assertThat(response.aggregate().join().status()).isEqualTo(OK);
     }
 
     @Test
     void custom_withRelativePath() {
-        final WebClient client = WebClient.of(server2.uri("/"));
+        final WebClient client = WebClient.of(server2.httpUri());
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/simple-client");
         final HttpResponse response = client.execute(request);
         assertThat(response.aggregate().join().status()).isEqualTo(OK);
@@ -98,7 +98,7 @@ class HttpClientRequestPathTest {
 
     @Test
     void redirect() {
-        final WebClient client = WebClient.of(server2.uri("/"));
+        final WebClient client = WebClient.of(server2.httpUri());
         final AggregatedHttpResponse redirected = client.get("/redirect").aggregate().join();
         final String location = redirected.headers().get(LOCATION);
         assertThat(location).isNotNull();

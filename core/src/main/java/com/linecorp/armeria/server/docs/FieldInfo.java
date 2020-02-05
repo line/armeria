@@ -27,11 +27,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * Metadata about a field of a struct or an exception.
  *
  * @see FieldInfoBuilder
  */
+@UnstableApi
 public final class FieldInfo {
 
     /**

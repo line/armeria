@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 

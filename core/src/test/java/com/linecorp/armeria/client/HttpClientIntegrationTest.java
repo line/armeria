@@ -27,7 +27,6 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.concurrent.CompletionException;
@@ -61,7 +60,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
 import com.linecorp.armeria.client.encoding.DecodingClient;
-import com.linecorp.armeria.client.encoding.DeflateStreamDecoderFactory;
+import com.linecorp.armeria.client.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -380,7 +379,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testRequestNoBody() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/httptestbody",
@@ -393,7 +392,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testRequestWithBody() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST, "/httptestbody",
@@ -431,7 +430,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testNot200() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response = client.get("/not200").aggregate().get();
 
@@ -457,7 +456,7 @@ class HttpClientIntegrationTest {
 
     private static void testHeaderOverridableByClientOption(String path, AsciiString headerName,
                                                             String headerValue) throws Exception {
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .setHttpHeader(headerName, headerValue)
                                           .build();
 
@@ -468,7 +467,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpDecoding() throws Exception {
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(DecodingClient.newDecorator())
                                           .build();
@@ -482,10 +481,10 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpDecoding_deflate() throws Exception {
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(DecodingClient.newDecorator(
-                                                  new DeflateStreamDecoderFactory()))
+                                                  StreamDecoderFactory.deflate()))
                                           .build();
 
         final AggregatedHttpResponse response =
@@ -497,10 +496,10 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpDecoding_noEncodingApplied() throws Exception {
-        final WebClient client = WebClient.builder(server.uri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(DecodingClient.newDecorator(
-                                                  new DeflateStreamDecoderFactory()))
+                                                  StreamDecoderFactory.deflate()))
                                           .build();
 
         final AggregatedHttpResponse response =
@@ -545,7 +544,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void givenHttpClientUriPathAndRequestPath_whenGet_thenRequestToConcatenatedPath() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/hello"));
+        final WebClient client = WebClient.of(server.httpUri() + "/hello");
 
         final AggregatedHttpResponse response = client.get("/world").aggregate().get();
 
@@ -554,7 +553,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void givenRequestPath_whenGet_thenRequestToPath() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response = client.get("/hello/world").aggregate().get();
 
@@ -563,7 +562,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testPooledResponseDefaultSubscriber() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/pooled")).aggregate().get();
@@ -575,7 +574,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testPooledResponsePooledSubscriber() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/pooled-aware")).aggregate().get();
@@ -587,7 +586,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testUnpooledResponsePooledSubscriber() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/pooled-unaware")).aggregate().get();
@@ -600,7 +599,7 @@ class HttpClientIntegrationTest {
     @Test
     void testCloseClientFactory() throws Exception {
         final ClientFactory factory = ClientFactory.builder().build();
-        final WebClient client = WebClient.builder(server.uri("/")).factory(factory).build();
+        final WebClient client = WebClient.builder(server.httpUri()).factory(factory).build();
         final HttpRequestWriter req = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET,
                                                                               "/stream-closed"));
         final HttpResponse res = client.execute(req);
@@ -632,7 +631,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testEscapedPathParam() throws Exception {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response = client.get("/oneparam/foo%2Fbar").aggregate().get();
 
@@ -641,7 +640,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void givenClients_thenBuildClient() throws Exception {
-        final Endpoint endpoint = newEndpoint();
+        final Endpoint endpoint = server.httpEndpoint();
         final ClientFactory factory = ClientFactory.builder().build();
 
         WebClient client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE,
@@ -664,7 +663,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void givenHttpClient_thenBuildClient() throws Exception {
-        final Endpoint endpoint = newEndpoint();
+        final Endpoint endpoint = server.httpEndpoint();
         final ClientFactory factory = ClientFactory.builder().build();
 
         WebClient client = WebClient.of(factory, SessionProtocol.HTTP, endpoint);
@@ -682,7 +681,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void givenClientBuilder_thenBuildClient() throws Exception {
-        final Endpoint endpoint = newEndpoint();
+        final Endpoint endpoint = server.httpEndpoint();
         final ClientFactory factory = ClientFactory.builder().build();
 
         WebClient client = Clients.builder(SessionProtocol.HTTP, endpoint)
@@ -721,7 +720,7 @@ class HttpClientIntegrationTest {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .useHttp2Preface(false)
                                                          .build();
-        final WebClient client = WebClient.builder(server.httpUri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(DecodingClient.newDecorator())
                                           .build();
@@ -739,7 +738,7 @@ class HttpClientIntegrationTest {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .options(ClientFactoryOptions.of())
                                                          .build();
-        final WebClient client = WebClient.builder(server.httpUri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .build();
 
@@ -755,7 +754,7 @@ class HttpClientIntegrationTest {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .options(ClientFactoryOptions.of(ImmutableList.of()))
                                                          .build();
-        final WebClient client = WebClient.builder(server.httpUri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .build();
 
@@ -769,7 +768,7 @@ class HttpClientIntegrationTest {
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
     void requestAbortWithException(boolean isAbort) {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
         final HttpResponse response = client.execute(request);
 
@@ -786,7 +785,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void responseAbortWithException() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final HttpRequest request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
         final HttpResponse response = client.execute(request);
 
@@ -800,7 +799,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpsRequestToPlainTextEndpoint() throws Exception {
-        final WebClient client = WebClient.builder(SessionProtocol.HTTPS, newEndpoint())
+        final WebClient client = WebClient.builder(SessionProtocol.HTTPS, server.httpEndpoint())
                                           .factory(ClientFactory.insecure()).build();
         final Throwable throwable = catchThrowable(() -> client.get("/hello/world").aggregate().get());
         assertThat(Exceptions.peel(throwable))
@@ -811,7 +810,7 @@ class HttpClientIntegrationTest {
     @Test
     void httpsRequestWithInvalidCertificate() throws Exception {
         final WebClient client = WebClient.builder(
-                SessionProtocol.HTTPS, newEndpoint(server.httpsUri("/"))).build();
+                SessionProtocol.HTTPS, server.httpEndpoint()).build();
         final Throwable throwable = catchThrowable(() -> client.get("/hello/world").aggregate().get());
         assertThat(Exceptions.peel(throwable))
                 .isInstanceOf(UnprocessedRequestException.class)
@@ -869,14 +868,5 @@ class HttpClientIntegrationTest {
     private static void checkGetRequest(String path, WebClient client) throws Exception {
         final AggregatedHttpResponse response = client.get(path).aggregate().get();
         assertThat(response.contentUtf8()).isEqualTo("success");
-    }
-
-    private static Endpoint newEndpoint() {
-        return newEndpoint(server.httpUri("/"));
-    }
-
-    private static Endpoint newEndpoint(String uriStr) {
-        final URI uri = URI.create(uriStr);
-        return Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
     }
 }

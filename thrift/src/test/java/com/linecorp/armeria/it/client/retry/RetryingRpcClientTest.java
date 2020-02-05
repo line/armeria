@@ -145,7 +145,7 @@ public class RetryingRpcClientTest {
 
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts) {
-        return Clients.builder(server.uri(BINARY, "/thrift"))
+        return Clients.builder(server.httpUri(BINARY) + "/thrift")
                       .rpcDecorator(RetryingRpcClient.builder(strategy)
                                                      .maxTotalAttempts(maxAttempts)
                                                      .newDecorator())
@@ -154,7 +154,7 @@ public class RetryingRpcClientTest {
 
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts, BlockingQueue<RequestLog> logQueue) {
-        return Clients.builder(server.uri(BINARY, "/thrift"))
+        return Clients.builder(server.httpUri(BINARY) + "/thrift")
                       .rpcDecorator(RetryingRpcClient.builder(strategy)
                                                      .maxTotalAttempts(maxAttempts)
                                                      .newDecorator())
@@ -168,7 +168,7 @@ public class RetryingRpcClientTest {
     @Test
     public void execute_void() throws Exception {
         final DevNullService.Iface client =
-                Clients.builder(server.uri(BINARY, "/thrift-devnull"))
+                Clients.builder(server.httpUri(BINARY) + "/thrift-devnull")
                        .rpcDecorator(RetryingRpcClient.newDecorator(retryOnException, 10))
                        .build(DevNullService.Iface.class);
 
@@ -192,7 +192,7 @@ public class RetryingRpcClientTest {
                 };
 
         final HelloService.Iface client =
-                Clients.builder(server.uri(BINARY, "/thrift"))
+                Clients.builder(server.httpUri(BINARY) + "/thrift")
                        .responseTimeoutMillis(10000)
                        .factory(factory)
                        .rpcDecorator(RetryingRpcClient.builder(strategy)
@@ -228,7 +228,7 @@ public class RetryingRpcClientTest {
     public void doNotRetryWhenResponseIsCancelled() throws Exception {
         final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
         final HelloService.Iface client =
-                Clients.builder(server.uri(BINARY, "/thrift"))
+                Clients.builder(server.httpUri(BINARY) + "/thrift")
                        .rpcDecorator(RetryingRpcClient.builder(retryAlways)
                                                       .newDecorator())
                        .rpcDecorator((delegate, ctx, req) -> {

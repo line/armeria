@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.brave.SpanContextUtil;
+import com.linecorp.armeria.internal.common.brave.SpanContextUtil;
 
 import brave.http.HttpClientAdapter;
 

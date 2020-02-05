@@ -1,12 +1,13 @@
 dependencies {
-    compile 'org.springframework.boot:spring-boot-actuator-autoconfigure'
-    compile 'javax.inject:javax.inject'
+    api 'org.springframework.boot:spring-boot-actuator-autoconfigure'
+    api 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
 
-    testCompile 'org.springframework.boot:spring-boot-starter-actuator'
-    testCompile 'org.springframework.boot:spring-boot-starter-test'
-    testCompile 'io.projectreactor:reactor-test'
-    testRuntime project(':spring:boot-starter')
+    testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'io.micrometer:micrometer-registry-prometheus'
+    testRuntimeOnly project(':spring:boot-starter')
 }
 
 // Copy common files from boot-autoconfigure module to gen-src directory in order to use them as a source set.

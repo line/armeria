@@ -25,7 +25,7 @@ import static org.mockito.Mockito.verify;
 
 import java.util.function.Function;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.internal.annotation.AnnotatedService;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -48,10 +48,10 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 
-public class ArmeriaConfigurationUtilTest {
+class ArmeriaConfigurationUtilTest {
 
     @Test
-    public void makesSureDecoratorsAreConfigured() {
+    void makesSureDecoratorsAreConfigured() {
         final Function<? super HttpService, ? extends HttpService> decorator = spy(new IdentityFunction());
         final AnnotatedServiceRegistrationBean bean = new AnnotatedServiceRegistrationBean()
                 .setServiceName("test")
@@ -61,7 +61,7 @@ public class ArmeriaConfigurationUtilTest {
         final ServerBuilder sb1 = Server.builder();
         final DocServiceBuilder dsb1 = DocService.builder();
         configureAnnotatedServices(sb1, dsb1, ImmutableList.of(bean),
-                                       MeterIdPrefixFunctionFactory.DEFAULT, null);
+                                       MeterIdPrefixFunctionFactory.ofDefault(), null);
         final Server s1 = sb1.build();
         verify(decorator, times(2)).apply(any());
         assertThat(service(s1).as(MetricCollectingService.class)).isNotNull();
@@ -79,7 +79,7 @@ public class ArmeriaConfigurationUtilTest {
     }
 
     @Test
-    public void makesSureDecoratedServiceIsAdded() {
+    void makesSureDecoratedServiceIsAdded() {
         final Function<? super HttpService, ? extends HttpService> decorator = spy(new DecoratingFunction());
         final AnnotatedServiceRegistrationBean bean = new AnnotatedServiceRegistrationBean()
                 .setServiceName("test")

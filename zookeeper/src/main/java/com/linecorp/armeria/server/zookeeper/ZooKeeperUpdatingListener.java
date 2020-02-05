@@ -25,17 +25,22 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.zookeeper.CreateMode;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
+import com.linecorp.armeria.internal.common.zookeeper.ZooKeeperDefaults;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServerPort;
 
 /**
- * A ZooKeeper Server Listener. When you add this listener, server will be automatically registered
- * into the ZooKeeper.
+ * A {@link ServerListener} which registers the current {@link Server} to
+ * <a href="https://zookeeper.apache.org/">ZooKeeper</a> as an ephemeral node. When server stops, or a network
+ * partition occurs, the underlying ZooKeeper session will be closed, and the node will be automatically
+ * removed. As a result, the clients that use a {@link ZooKeeperEndpointGroup} will be notified, and they will
+ * update their endpoint list automatically so that they do not attempt to connect to the unreachable servers.
  */
-public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
+public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
 
     /**
      * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a {@link CuratorFramework} instance and a zNode

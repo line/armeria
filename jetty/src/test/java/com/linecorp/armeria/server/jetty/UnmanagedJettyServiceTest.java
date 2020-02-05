@@ -17,20 +17,20 @@
 package com.linecorp.armeria.server.jetty;
 
 import org.eclipse.jetty.server.Server;
-import org.junit.AfterClass;
-import org.junit.ClassRule;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class UnmanagedJettyServiceTest extends WebAppContainerTest {
+class UnmanagedJettyServiceTest extends WebAppContainerTest {
 
     private static Server jetty;
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.http(0);
@@ -47,12 +47,12 @@ public class UnmanagedJettyServiceTest extends WebAppContainerTest {
     };
 
     @Override
-    protected ServerRule server() {
+    protected ServerExtension server() {
         return server;
     }
 
-    @AfterClass
-    public static void stopJetty() throws Exception {
+    @AfterAll
+    static void stopJetty() throws Exception {
         if (jetty != null) {
             jetty.stop();
             jetty.destroy();

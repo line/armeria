@@ -19,6 +19,8 @@ package com.linecorp.armeria.client.limit;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,11 +30,13 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -116,8 +120,9 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
     }
 
     private O limitedExecute(ClientRequestContext ctx, I req) throws Exception {
-        final Deferred<O> deferred = defer(ctx, req);
-        final PendingTask currentTask = new PendingTask(ctx, req, deferred);
+        final CompletableFuture<O> resFuture = new CompletableFuture<>();
+        final O deferred = newDeferredResponse(ctx, resFuture);
+        final PendingTask currentTask = new PendingTask(ctx, req, resFuture);
 
         pendingRequests.add(currentTask);
         drain();
@@ -125,13 +130,13 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         if (!currentTask.isRun() && timeoutMillis != 0) {
             // Current request was not delegated. Schedule a timeout.
             final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().schedule(
-                    () -> deferred
-                            .close(new UnprocessedRequestException(RequestTimeoutException.get())),
+                    () -> resFuture.completeExceptionally(
+                            new UnprocessedRequestException(RequestTimeoutException.get())),
                     timeoutMillis, TimeUnit.MILLISECONDS);
             currentTask.set(timeoutFuture);
         }
 
-        return deferred.response();
+        return deferred;
     }
 
     private O unlimitedExecute(ClientRequestContext ctx, I req) throws Exception {
@@ -178,36 +183,18 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
     }
 
     /**
-     * Defers the specified {@link Request}.
-     *
-     * @return a new {@link Deferred} which provides the interface for updating the result of
-     *         {@link Request} execution later.
+     * Implement this method to return a new {@link Response} which delegates to the {@link Response}
+     * the specified {@link CompletionStage} is completed with. For example, you could use
+     * {@link HttpResponse#from(CompletionStage, EventExecutor)}:
+     * <pre>{@code
+     * protected HttpResponse newDeferredResponse(
+     *         ClientRequestContext ctx, CompletionStage<HttpResponse> resFuture) {
+     *     return HttpResponse.from(resFuture, ctx.eventLoop());
+     * }
+     * }</pre>
      */
-    protected abstract Deferred<O> defer(ClientRequestContext ctx, I req) throws Exception;
-
-    /**
-     * Provides the interface for updating the result of a {@link Request} execution when its {@link Response}
-     * is ready.
-     *
-     * @param <O> the {@link Response} type
-     */
-    public interface Deferred<O extends Response> {
-        /**
-         * Returns the {@link Response} which will delegate to the {@link Response} set by
-         * {@link #delegate(Response)}.
-         */
-        O response();
-
-        /**
-         * Delegates the {@link #response() response} to the specified {@link Response}.
-         */
-        void delegate(O response);
-
-        /**
-         * Closes the {@link #response()} without delegating.
-         */
-        void close(Throwable cause);
-    }
+    protected abstract O newDeferredResponse(ClientRequestContext ctx,
+                                             CompletionStage<O> resFuture) throws Exception;
 
     private final class PendingTask extends AtomicReference<ScheduledFuture<?>> implements Runnable {
 
@@ -215,13 +202,13 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
         private final ClientRequestContext ctx;
         private final I req;
-        private final Deferred<O> deferred;
+        private final CompletableFuture<O> resFuture;
         private boolean isRun;
 
-        PendingTask(ClientRequestContext ctx, I req, Deferred<O> deferred) {
+        PendingTask(ClientRequestContext ctx, I req, CompletableFuture<O> resFuture) {
             this.ctx = ctx;
             this.req = req;
-            this.deferred = deferred;
+            this.resFuture = resFuture;
         }
 
         boolean isRun() {
@@ -249,10 +236,10 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                         drain();
                         return null;
                     }, ctx.eventLoop());
-                    deferred.delegate(actualRes);
+                    resFuture.complete(actualRes);
                 } catch (Throwable t) {
                     numActiveRequests.decrementAndGet();
-                    deferred.close(t);
+                    resFuture.completeExceptionally(t);
                 }
             }
         }

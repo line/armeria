@@ -63,7 +63,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
  *
  * @author Alex Roetter
  */
-class StructContext extends PairContext {
+final class StructContext extends PairContext {
     private static final Logger log = LoggerFactory.getLogger(StructContext.class);
     private static final Supplier<Class<?>> thriftMessageClassFinder;
 

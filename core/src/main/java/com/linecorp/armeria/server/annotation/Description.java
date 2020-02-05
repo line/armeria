@@ -21,7 +21,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.internal.server.annotation.DefaultValues;
 
 /**
  * An annotation used in annotated HTTP service. This describes:

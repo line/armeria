@@ -64,8 +64,8 @@ public class ContentPreviewerTest {
         @Nullable
         private volatile CompletableFuture<RequestLog> waitingFuture;
 
-        MyHttpClient(String uri, int reqLength, int resLength) {
-            final WebClientBuilder builder = WebClient.builder(serverRule.uri(uri));
+        MyHttpClient(String path, int reqLength, int resLength) {
+            final WebClientBuilder builder = WebClient.builder(serverRule.httpUri().resolve(path));
             final ContentPreviewerFactory reqPreviewerFactory =
                     ContentPreviewerFactory.ofText(reqLength, StandardCharsets.UTF_8);
             final ContentPreviewerFactory resPreviewerFactory =
@@ -146,7 +146,7 @@ public class ContentPreviewerTest {
             private final WebClient client;
 
             Client(String path) {
-                client = WebClient.of(serverRule.uri(path));
+                client = WebClient.of(serverRule.httpUri().resolve(path));
             }
 
             public RequestLog get(String path) throws Exception {

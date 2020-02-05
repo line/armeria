@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.ResponseConversionUtil.aggregateFrom;
+import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -46,7 +46,7 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  *
  * @see <a href="https://tools.ietf.org/html/rfc7464">JavaScript Object Notation (JSON) Text Sequences</a>
  */
-public class JacksonResponseConverterFunction implements ResponseConverterFunction {
+public final class JacksonResponseConverterFunction implements ResponseConverterFunction {
 
     private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
 

@@ -41,7 +41,7 @@ import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.internal.dns.DefaultDnsNameResolver;
+import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecordType;

@@ -40,7 +40,7 @@ import io.netty.buffer.Unpooled;
  */
 final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
 
-    static DataBufferFactoryWrapper<NettyDataBufferFactory> DEFAULT =
+    static final DataBufferFactoryWrapper<NettyDataBufferFactory> DEFAULT =
             new DataBufferFactoryWrapper<>(new NettyDataBufferFactory(PooledByteBufAllocator.DEFAULT));
 
     private final T delegate;
@@ -86,7 +86,7 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
 
     /**
      * Returns a {@link PooledDataBuffer} which will be released after consuming by the consumer.
-     * Currently the {@link NettyDataBuffer} is only one implementation of the {@link PooledDataBuffer}
+     * Currently, the {@link NettyDataBuffer} is only one implementation of the {@link PooledDataBuffer}
      * which is exposed to the public API.
      */
     private PooledDataBuffer withNettyDataBufferFactory(ByteBufHttpData data) {

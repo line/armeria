@@ -17,12 +17,12 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.RouteUtil.EXACT;
-import static com.linecorp.armeria.internal.RouteUtil.GLOB;
-import static com.linecorp.armeria.internal.RouteUtil.PREFIX;
-import static com.linecorp.armeria.internal.RouteUtil.REGEX;
-import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.server.RouteUtil.EXACT;
+import static com.linecorp.armeria.internal.server.RouteUtil.GLOB;
+import static com.linecorp.armeria.internal.server.RouteUtil.PREFIX;
+import static com.linecorp.armeria.internal.server.RouteUtil.REGEX;
+import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.server.HttpHeaderUtil.ensureUniqueMediaTypes;
 import static java.util.Objects.requireNonNull;
 

@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
+import com.linecorp.armeria.internal.common.grpc.GrpcJsonUtil;
 
 import io.grpc.Channel;
 import io.grpc.MethodDescriptor;

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.ClientUtil.initContextAndExecuteWithFallback;
+import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
 import java.net.URI;
 import java.util.function.BiFunction;
@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
+import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -147,8 +148,8 @@ public abstract class UserClient<I extends Request, O extends Response>
 
         final DefaultClientRequestContext ctx =
                 new DefaultClientRequestContext(meterRegistry, scheme().sessionProtocol(),
-                                                id, method, path, query, fragment, options(),
-                                                httpReq, rpcReq);
+                                                id, method, path, query, fragment, options(), httpReq, rpcReq,
+                                                System.nanoTime(), SystemInfo.currentTimeMicros());
 
         return initContextAndExecuteWithFallback(delegate(), ctx, endpointGroup, fallback);
     }

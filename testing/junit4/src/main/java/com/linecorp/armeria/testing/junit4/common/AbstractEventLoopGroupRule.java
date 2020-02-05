@@ -18,7 +18,7 @@ package com.linecorp.armeria.testing.junit4.common;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
-import com.linecorp.armeria.testing.internal.EventLoopGroupRuleDelegate;
+import com.linecorp.armeria.internal.testing.EventLoopGroupRuleDelegate;
 
 import io.netty.channel.EventLoopGroup;
 

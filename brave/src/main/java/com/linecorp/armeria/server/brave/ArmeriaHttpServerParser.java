@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.brave;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.internal.brave.SpanTags;
+import com.linecorp.armeria.internal.common.brave.SpanTags;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.SpanCustomizer;

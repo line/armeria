@@ -52,10 +52,9 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.SslContextUtil;
-import com.linecorp.armeria.internal.annotation.AnnotatedService;
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
-import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
+import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
+import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -601,7 +600,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Returns a new instance of {@link VirtualHostAnnotatedServiceBindingBuilder} to build
-     * {@link AnnotatedService} fluently.
+     * an annotated service fluently.
      */
     public VirtualHostAnnotatedServiceBindingBuilder annotatedService() {
         return new VirtualHostAnnotatedServiceBindingBuilder(this);

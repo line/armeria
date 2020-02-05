@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.internal.IdleTimeoutHandler;
+import com.linecorp.armeria.internal.common.IdleTimeoutHandler;
 
 import io.netty.channel.ChannelHandlerContext;
 

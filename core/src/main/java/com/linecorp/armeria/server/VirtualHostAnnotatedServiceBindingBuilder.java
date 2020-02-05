@@ -28,9 +28,9 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceElement;
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceFactory;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;

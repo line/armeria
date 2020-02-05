@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.internal.AbstractHttp2ConnectionHandlerBuilder;
+import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandlerBuilder;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;

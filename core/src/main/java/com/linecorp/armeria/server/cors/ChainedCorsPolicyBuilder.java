@@ -28,7 +28,8 @@ import java.util.List;
  *
  * <p>Calling {@link #and()} method will return the control to {@link CorsServiceBuilder}.
  */
-public class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedCorsPolicyBuilder> {
+public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder<ChainedCorsPolicyBuilder> {
+
     private final CorsServiceBuilder serviceBuilder;
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder) {

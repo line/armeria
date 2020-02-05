@@ -1,10 +1,11 @@
+import org.gradle.util.GradleVersion
+
 import java.util.concurrent.ConcurrentHashMap
-import org.gradle.util.GradleVersion;
 
 import static java.util.Objects.requireNonNull
 
 // Ensure the Gradle version first of all.
-GradleVersion minimumSupportedGradleVersion = GradleVersion.version('4.8')
+GradleVersion minimumSupportedGradleVersion = GradleVersion.version('6.0')
 if (GradleVersion.current() < minimumSupportedGradleVersion) {
     throw new IllegalStateException("${minimumSupportedGradleVersion} or above is required to build this project.")
 }
@@ -146,3 +147,7 @@ static void afterProjectsWithFlags(Project project, Iterable<?> flags, Closure<S
         }
     }
 }
+
+// We add a "virtual project", with no source code, to control dependency management using Gradle's platform
+// functionality.
+includeWithFlags ':dependencyManagement', 'dependencyManagement'

@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 public class DecodedHttpRequestTest {

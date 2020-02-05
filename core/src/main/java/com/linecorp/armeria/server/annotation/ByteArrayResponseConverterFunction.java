@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.ResponseConversionUtil.streamingFrom;
+import static com.linecorp.armeria.internal.server.ResponseConversionUtil.streamingFrom;
 
 import java.util.stream.Stream;
 
@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * A response converter implementation which creates an {@link HttpResponse} with
  * {@code content-type: application/binary} or {@code content-type: application/octet-stream}.
  */
-public class ByteArrayResponseConverterFunction implements ResponseConverterFunction {
+public final class ByteArrayResponseConverterFunction implements ResponseConverterFunction {
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
@@ -92,7 +92,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
             return HttpData.wrap((byte[]) value);
         }
         if (value == null) {
-            return HttpData.EMPTY_DATA;
+            return HttpData.empty();
         }
         throw new IllegalStateException("Failed to convert an object to an HttpData: " +
                                         value.getClass().getName());

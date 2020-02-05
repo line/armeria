@@ -30,7 +30,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * Decorates an {@link HttpService} to throttle incoming requests.
  */
-public class ThrottlingService extends AbstractThrottlingService<HttpRequest, HttpResponse>
+public final class ThrottlingService extends AbstractThrottlingService<HttpRequest, HttpResponse>
         implements HttpService {
     /**
      * Creates a new decorator using the specified {@link ThrottlingStrategy} instance.
@@ -46,7 +46,7 @@ public class ThrottlingService extends AbstractThrottlingService<HttpRequest, Ht
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    protected ThrottlingService(HttpService delegate, ThrottlingStrategy<HttpRequest> strategy) {
+    private ThrottlingService(HttpService delegate, ThrottlingStrategy<HttpRequest> strategy) {
         super(delegate, strategy, HttpResponse::from);
     }
 

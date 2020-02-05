@@ -41,6 +41,7 @@ import javax.net.ssl.TrustManagerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -193,7 +194,7 @@ public final class ClientFactoryBuilder {
         checkArgument(connectTimeoutMillis > 0,
                       "connectTimeoutMillis: %s (expected: > 0)", connectTimeoutMillis);
         return channelOption(ChannelOption.CONNECT_TIMEOUT_MILLIS,
-                             ConvertUtils.safeLongToInt(connectTimeoutMillis));
+                             Ints.saturatedCast(connectTimeoutMillis));
     }
 
     /**

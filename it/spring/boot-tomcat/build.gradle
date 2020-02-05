@@ -1,8 +1,8 @@
 dependencies {
-    compile project(':spring:boot-starter')
-    compile project(':tomcat')
-    compile('org.springframework.boot:spring-boot-starter-web') {
+    implementation project(':spring:boot-starter')
+    implementation project(':tomcat')
+    implementation('org.springframework.boot:spring-boot-starter-web') {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }
-    testCompile('org.springframework.boot:spring-boot-starter-test')
+    testImplementation('org.springframework.boot:spring-boot-starter-test')
 }

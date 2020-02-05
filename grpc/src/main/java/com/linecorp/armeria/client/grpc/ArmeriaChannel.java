@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.grpc.CallOptions;
@@ -177,6 +178,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 null,
                 options(),
                 req,
-                null);
+                null,
+                System.nanoTime(),
+                SystemInfo.currentTimeMicros());
     }
 }

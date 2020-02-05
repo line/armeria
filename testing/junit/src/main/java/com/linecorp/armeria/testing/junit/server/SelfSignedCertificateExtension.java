@@ -26,7 +26,7 @@ import java.time.temporal.TemporalAccessor;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import com.linecorp.armeria.testing.internal.SelfSignedCertificateRuleDelegate;
+import com.linecorp.armeria.internal.testing.SelfSignedCertificateRuleDelegate;
 import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;

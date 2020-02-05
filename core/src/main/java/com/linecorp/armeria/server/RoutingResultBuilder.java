@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 /**
  * Builds a new {@link RoutingResult}.

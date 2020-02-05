@@ -14,15 +14,14 @@ springBoot {
 }
 
 dependencies {
-    compile project(':spring:boot-starter')
-    compile 'org.hibernate.validator:hibernate-validator'
+    implementation project(':spring:boot-starter')
+    implementation 'org.hibernate.validator:hibernate-validator'
 
-    compileOnly 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    runtime project(':spring:boot-actuator-starter')
+    runtimeOnly project(':spring:boot-actuator-starter')
 
-    testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
-    testCompile 'org.junit.jupiter:junit-jupiter-api'
-    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

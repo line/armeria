@@ -56,7 +56,7 @@ class ZlibStreamDecoder implements StreamDecoder {
         if (decoder.finish()) {
             return fetchDecoderOutput();
         } else {
-            return HttpData.EMPTY_DATA;
+            return HttpData.empty();
         }
     }
 
@@ -84,7 +84,7 @@ class ZlibStreamDecoder implements StreamDecoder {
         }
 
         if (decoded == null) {
-            return HttpData.EMPTY_DATA;
+            return HttpData.empty();
         }
 
         return new ByteBufHttpData(decoded, false);

@@ -24,10 +24,12 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SerializationFormatProvider;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
  * {@link SerializationFormatProvider} that provides the gRPC-related {@link SerializationFormat}s.
  */
+@UnstableApi
 public final class GrpcSerializationFormatProvider extends SerializationFormatProvider {
     @Override
     protected Set<Entry> entries() {

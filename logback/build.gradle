@@ -1,5 +1,5 @@
 dependencies {
-    testCompile project(':thrift')
+    testImplementation project(':thrift')
     // Logback
-    compile 'ch.qos.logback:logback-classic'
+    api 'ch.qos.logback:logback-classic'
 }

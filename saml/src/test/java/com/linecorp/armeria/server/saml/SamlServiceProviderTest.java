@@ -300,7 +300,7 @@ public class SamlServiceProviderTest {
         }
     }
 
-    final WebClient client = WebClient.of(rule.uri("/"));
+    final WebClient client = WebClient.of(rule.httpUri());
 
     @Test
     public void shouldRespondAuthnRequest_HttpRedirect() throws Exception {

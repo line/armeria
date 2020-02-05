@@ -29,8 +29,9 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 class HttpClientWithRequestLogTest {
 
@@ -100,8 +101,8 @@ class HttpClientWithRequestLogTest {
                 WebClient.builder("http://unresolved.armeria.com")
                          .decorator(new ExceptionHoldingDecorator())
                          .decorator((delegate, ctx, req) -> {
-                             ctx.log().whenAvailable(RequestLogProperty.REQUEST_START_TIME)
-                                .thenAccept(log -> ref.set(ClientConnectionTimings.get(log)));
+                             ctx.log().whenAvailable(RequestLogProperty.SESSION)
+                                .thenAccept(log -> ref.set(log.connectionTimings()));
                              return delegate.execute(ctx, req);
                          })
                          .build();
@@ -132,8 +133,8 @@ class HttpClientWithRequestLogTest {
                 WebClient.builder("http://127.0.0.1:1")
                          .decorator(new ExceptionHoldingDecorator())
                          .decorator((delegate, ctx, req) -> {
-                             ctx.log().whenAvailable(RequestLogProperty.REQUEST_START_TIME)
-                                .thenAccept(log -> ref.set(ClientConnectionTimings.get(log)));
+                             ctx.log().whenAvailable(RequestLogProperty.SESSION)
+                                .thenAccept(log -> ref.set(log.connectionTimings()));
                              return delegate.execute(ctx, req);
                          })
                          .build();

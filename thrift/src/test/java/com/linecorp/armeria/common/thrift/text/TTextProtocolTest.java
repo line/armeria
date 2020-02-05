@@ -56,7 +56,7 @@ import com.google.common.io.Resources;
 
 import com.linecorp.armeria.common.thrift.text.RpcDebugService.doDebug_args;
 import com.linecorp.armeria.common.thrift.text.RpcDebugService.doDebug_result;
-import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
+import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
 
 /**
  * Tests the TTextProtocol.

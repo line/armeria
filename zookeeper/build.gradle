@@ -1,10 +1,10 @@
 dependencies {
     // Curator
-    compile 'org.apache.curator:curator-recipes'
+    api 'org.apache.curator:curator-recipes'
 
     // ZooKeeper
-    compile 'org.apache.zookeeper:zookeeper'
+    api 'org.apache.zookeeper:zookeeper'
 
     // ZooKeeper JUnit
-    testCompile 'org.dmonix.junit:zookeeper-junit'
+    testImplementation 'org.dmonix.junit:zookeeper-junit'
 }

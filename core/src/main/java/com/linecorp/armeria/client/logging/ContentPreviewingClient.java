@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
-import com.linecorp.armeria.internal.logging.ContentPreviewerConfigurator;
+import com.linecorp.armeria.internal.common.logging.ContentPreviewerConfigurator;
 
 /**
  * Decorates an {@link HttpClient} to preview the content of {@link Request}s and {@link Response}s.

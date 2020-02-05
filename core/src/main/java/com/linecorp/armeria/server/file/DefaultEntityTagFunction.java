@@ -21,7 +21,7 @@ import java.util.function.BiFunction;
 
 import com.google.common.io.BaseEncoding;
 
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 final class DefaultEntityTagFunction implements BiFunction<String, HttpFileAttributes, String> {
 

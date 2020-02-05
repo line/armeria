@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
@@ -74,6 +75,7 @@ import io.grpc.protobuf.ProtoFileDescriptorSupplier;
 /**
  * {@link DocServicePlugin} implementation that supports {@link GrpcService}s.
  */
+@UnstableApi
 public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting

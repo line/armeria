@@ -20,6 +20,7 @@ import java.lang.reflect.Type;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
@@ -32,7 +33,8 @@ import io.reactivex.Single;
 /**
  * Provides an {@link ObservableResponseConverterFunction} to annotated services.
  */
-public class ObservableResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
+@UnstableApi
+public final class ObservableResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
     @Nullable
     @Override

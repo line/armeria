@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
 /**
  * A {@link RuntimeException} that is raised when configuring or starting an embedded Tomcat fails.
  */
-public class TomcatServiceException extends RuntimeException {
+public final class TomcatServiceException extends RuntimeException {
 
     private static final long serialVersionUID = 8325593145475621692L;
 
@@ -49,14 +49,5 @@ public class TomcatServiceException extends RuntimeException {
      */
     public TomcatServiceException(@Nullable Throwable cause) {
         super(cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
-     * disabled, and writable stack trace enabled or disabled.
-     */
-    protected TomcatServiceException(@Nullable String message, @Nullable Throwable cause,
-                                     boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

@@ -34,7 +34,7 @@ import io.netty.util.AttributeMap;
 /**
  * Decorates a {@link ConnectionPoolListener} to log the connection pool events.
  */
-public class ConnectionPoolLoggingListener implements ConnectionPoolListener {
+public final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
     private static final Logger logger = LoggerFactory.getLogger(ConnectionPoolLoggingListener.class);
 
     private static final AttributeKey<Long> OPEN_NANOS =

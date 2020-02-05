@@ -64,7 +64,7 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
     public final void onComplete() {
         final HttpData content;
         if (contentLength == 0) {
-            content = HttpData.EMPTY_DATA;
+            content = HttpData.empty();
         } else {
             if (alloc != null) {
                 final ByteBuf merged = alloc.buffer(contentLength);

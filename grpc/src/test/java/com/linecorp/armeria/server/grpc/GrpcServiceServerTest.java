@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.REQUEST_MESSAGE;
-import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
+import static com.linecorp.armeria.internal.common.grpc.GrpcTestUtil.REQUEST_MESSAGE;
+import static com.linecorp.armeria.internal.common.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -88,10 +88,10 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
-import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
-import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
-import com.linecorp.armeria.internal.grpc.StreamRecorder;
+import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
+import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -714,7 +714,7 @@ class GrpcServiceServerTest {
     @Test
     void ignoreClientTimeout() {
         final UnitTestServiceBlockingStub client =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO, "/no-client-timeout/"))
+                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO) + "/no-client-timeout/")
                        .build(UnitTestServiceBlockingStub.class)
                        .withDeadlineAfter(10, TimeUnit.SECONDS);
         assertThatThrownBy(() -> client.timesOut(
@@ -824,7 +824,7 @@ class GrpcServiceServerTest {
 
         final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
-                Clients.builder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
+                Clients.builder(server.uri(protocol, GrpcSerializationFormats.PROTO))
                        .factory(factory)
                        .build(UnitTestServiceStub.class);
         final AtomicReference<SimpleResponse> response = new AtomicReference<>();
@@ -862,7 +862,7 @@ class GrpcServiceServerTest {
 
     @Test
     void unframed() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
@@ -882,7 +882,7 @@ class GrpcServiceServerTest {
 
     @Test
     void unframed_acceptEncoding() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
@@ -903,7 +903,7 @@ class GrpcServiceServerTest {
 
     @Test
     void unframed_streamingApi() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticStreamedOutputCallMethod()
@@ -916,7 +916,7 @@ class GrpcServiceServerTest {
 
     @Test
     void unframed_noContentType() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName()),
@@ -927,7 +927,7 @@ class GrpcServiceServerTest {
 
     @Test
     void unframed_grpcEncoding() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
@@ -940,7 +940,7 @@ class GrpcServiceServerTest {
 
     @Test
     void unframed_serviceError() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setResponseStatus(
@@ -964,7 +964,7 @@ class GrpcServiceServerTest {
 
     @Test
     void grpcWeb() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
@@ -990,7 +990,7 @@ class GrpcServiceServerTest {
 
     @Test
     void grpcWeb_error() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getErrorWithMessageMethod().getFullMethodName(),
@@ -1006,7 +1006,7 @@ class GrpcServiceServerTest {
         final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
         final AtomicReference<byte[]> payload = new AtomicReference<>();
         final UnitTestServiceBlockingStub jsonStub =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
+                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON))
                        .decorator(client -> new SimpleDecoratingHttpClient(client) {
                            @Override
                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
@@ -1044,7 +1044,7 @@ class GrpcServiceServerTest {
         final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
         final AtomicReference<byte[]> payload = new AtomicReference<>();
         final UnitTestServiceBlockingStub jsonStub =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON, "/json-preserving/"))
+                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON) + "/json-preserving/")
                        .option(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER.newValue(
                                marshaller -> marshaller.preservingProtoFieldNames(true)))
                        .decorator(client -> new SimpleDecoratingHttpClient(client) {

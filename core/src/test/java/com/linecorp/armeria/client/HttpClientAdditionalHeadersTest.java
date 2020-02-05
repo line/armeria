@@ -38,7 +38,7 @@ class HttpClientAdditionalHeadersTest {
     @Test
     void blacklistedHeadersMustBeFiltered() {
         final WebClient client =
-                WebClient.builder(server.httpUri("/"))
+                WebClient.builder(server.httpUri())
                          .decorator((delegate, ctx, req) -> {
                              ctx.addAdditionalRequestHeader(HttpHeaderNames.SCHEME, "https");
                              ctx.addAdditionalRequestHeader(HttpHeaderNames.STATUS, "503");

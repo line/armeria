@@ -71,10 +71,10 @@ import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
-import com.linecorp.armeria.internal.metric.MicrometerUtil;
+import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.Gauge;
@@ -244,7 +244,7 @@ public class ServerTest {
 
     private static void testInvocation0(String path) throws IOException {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(server.uri(path));
+            final HttpPost req = new HttpPost(server.httpUri().resolve(path));
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
@@ -257,7 +257,7 @@ public class ServerTest {
     @Test
     public void testRequestTimeoutInvocation() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(server.uri("/timeout"));
+            final HttpPost req = new HttpPost(server.httpUri() + "/timeout");
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
@@ -270,7 +270,7 @@ public class ServerTest {
     @Test
     public void testDynamicRequestTimeoutInvocation() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(server.uri("/timeout-not"));
+            final HttpPost req = new HttpPost(server.httpUri() + "/timeout-not");
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {

@@ -42,7 +42,8 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
-import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
+import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -57,7 +58,8 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  * <p>This client does not support compression. If you need support for compression, please consider using
  * normal gRPC stubs or file a feature request.
  */
-public class UnaryGrpcClient {
+@UnstableApi
+public final class UnaryGrpcClient {
 
     private final WebClient webClient;
 

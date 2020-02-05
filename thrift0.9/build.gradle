@@ -9,28 +9,24 @@
 
 final def THRIFT_VERSION = '0.9.3-1'
 
-dependencyManagement {
-    dependencies {
-        dependency("org.apache.thrift:libthrift:${THRIFT_VERSION}") {
-            exclude group: 'javax.annotation',          name: 'javax.annotation-api'
-            exclude group: 'org.apache.httpcomponents', name: 'httpcore'
-            exclude group: 'org.apache.httpcomponents', name: 'httpclient'
+dependencies {
+    api("org.apache.thrift:libthrift") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly THRIFT_VERSION
         }
     }
-}
 
-dependencies {
-    // Thrift 0.9
-    compile 'org.apache.thrift:libthrift'
-    compile 'jakarta.annotation:jakarta.annotation-api'
+    api 'jakarta.annotation:jakarta.annotation-api'
 
     // Jetty, for testing TServlet interoperability.
-    testCompile 'org.eclipse.jetty:jetty-webapp'
-    testCompile 'org.eclipse.jetty.http2:http2-server'
+    testImplementation 'org.eclipse.jetty:jetty-webapp'
+    testImplementation 'org.eclipse.jetty.http2:http2-server'
 
     // Dropwizard and Prometheus, for testing metrics integration
-    testCompile 'io.dropwizard.metrics:metrics-core'
-    testCompile 'io.prometheus:simpleclient_common'
+    testImplementation 'io.dropwizard.metrics:metrics-core'
+    testImplementation 'io.micrometer:micrometer-registry-prometheus'
+    testImplementation 'io.prometheus:simpleclient_common'
 }
 
 // Use the sources from ':thrift'.
@@ -41,8 +37,8 @@ tasks.compileJava.source "${rootProject.projectDir}/thrift/src/main/java"
 tasks.processResources.from "${rootProject.projectDir}/thrift/src/main/resources"
 tasks.compileTestJava.source "${rootProject.projectDir}/thrift/src/test/java"
 tasks.processTestResources.from "${rootProject.projectDir}/thrift/src/test/resources"
-tasks.sourceJar.from "${rootProject.projectDir}/thrift/src/main/java"
-tasks.sourceJar.from "${rootProject.projectDir}/thrift/src/main/resources"
+tasks.sourcesJar.from "${rootProject.projectDir}/thrift/src/main/java"
+tasks.sourcesJar.from "${rootProject.projectDir}/thrift/src/main/resources"
 tasks.javadoc.source "${rootProject.projectDir}/thrift/src/main/java"
 
 // Use the old compiler.
@@ -67,19 +63,4 @@ tasks.shadedJar.doLast {
 // Disable checkstyle because it's checked by ':thrift'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
-}
-
-// Make sure the correct Thrift versions are used.
-afterEvaluate {
-    [configurations.runtime, configurations.testRuntime].each { cfg ->
-        cfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
-            def group = artifact.moduleVersion.id.group
-            def version = artifact.moduleVersion.id.version
-            switch (group) {
-                case 'org.apache.thrift':
-                    assert version == THRIFT_VERSION
-                    break
-            }
-        }
-    }
 }

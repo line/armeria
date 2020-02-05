@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.client.logging;
 
-import static com.linecorp.armeria.internal.logging.LoggingDecorators.logRequest;
-import static com.linecorp.armeria.internal.logging.LoggingDecorators.logResponse;
+import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logRequest;
+import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Consumer;

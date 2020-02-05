@@ -44,12 +44,12 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.util.AsciiString;
@@ -234,7 +234,7 @@ public class AuthServiceTest {
                                     CUSTOM_TOKEN_HEADER))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/basic")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/basic"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
             try (CloseableHttpResponse res = hc.execute(
@@ -344,7 +344,7 @@ public class AuthServiceTest {
                     oauth2GetRequest("/composite", OAuth2Token.of("dummy_oauth2_token"), AUTHORIZATION))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/composite")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/composite"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
             try (CloseableHttpResponse res = hc.execute(
@@ -358,7 +358,8 @@ public class AuthServiceTest {
     @Test
     public void testAuthorizerException() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/authorizer_exception")))) {
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(server.httpUri() + "/authorizer_exception"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
         }
@@ -367,7 +368,8 @@ public class AuthServiceTest {
     @Test
     public void testAuthorizerResolveNull() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/authorizer_resolve_null")))) {
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(server.httpUri() + "/authorizer_resolve_null"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
         }
@@ -376,7 +378,8 @@ public class AuthServiceTest {
     @Test
     public void testAuthorizerNull() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/authorizer_null")))) {
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(server.httpUri() + "/authorizer_null"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 401 Unauthorized");
             }
         }
@@ -385,7 +388,8 @@ public class AuthServiceTest {
     @Test
     public void testOnSuccessException() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/on_success_exception")))) {
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(server.httpUri() + "/on_success_exception"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo(
                         "HTTP/1.1 500 Internal Server Error");
             }
@@ -395,7 +399,8 @@ public class AuthServiceTest {
     @Test
     public void testOnFailureException() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/on_failure_exception")))) {
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(server.httpUri() + "/on_failure_exception"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo(
                         "HTTP/1.1 500 Internal Server Error");
             }
@@ -403,13 +408,13 @@ public class AuthServiceTest {
     }
 
     private static HttpRequestBase getRequest(String path, String authorization) {
-        final HttpGet request = new HttpGet(server.uri(path));
+        final HttpGet request = new HttpGet(server.httpUri().resolve(path));
         request.addHeader("Authorization", authorization);
         return request;
     }
 
     private static HttpRequestBase basicGetRequest(String path, BasicToken basicToken, AsciiString header) {
-        final HttpGet request = new HttpGet(server.uri(path));
+        final HttpGet request = new HttpGet(server.httpUri().resolve(path));
         request.addHeader(header.toString(), "Basic " +
                                              BASE64_ENCODER.encodeToString(
                                                      (basicToken.username() + ':' + basicToken.password())
@@ -419,7 +424,7 @@ public class AuthServiceTest {
 
     private static HttpRequestBase oauth1aGetRequest(
             String path, OAuth1aToken oAuth1aToken, AsciiString header) {
-        final HttpGet request = new HttpGet(server.uri(path));
+        final HttpGet request = new HttpGet(server.httpUri().resolve(path));
         final StringBuilder authorization = new StringBuilder("OAuth ");
         final String realm = oAuth1aToken.realm();
         if (!Strings.isNullOrEmpty(realm)) {
@@ -454,7 +459,7 @@ public class AuthServiceTest {
     }
 
     private static HttpRequestBase oauth2GetRequest(String path, OAuth2Token oAuth2Token, AsciiString header) {
-        final HttpGet request = new HttpGet(server.uri(path));
+        final HttpGet request = new HttpGet(server.httpUri().resolve(path));
         request.addHeader(header.toString(), "Bearer " + oAuth2Token.accessToken());
         return request;
     }

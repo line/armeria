@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
-import com.linecorp.armeria.internal.logging.ContentPreviewerConfigurator;
+import com.linecorp.armeria.internal.common.logging.ContentPreviewerConfigurator;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;

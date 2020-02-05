@@ -62,11 +62,11 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
-import com.linecorp.armeria.internal.thrift.TByteBufTransport;
-import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
-import com.linecorp.armeria.internal.thrift.ThriftFunction;
-import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
+import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
+import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
+import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
+import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
+import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
