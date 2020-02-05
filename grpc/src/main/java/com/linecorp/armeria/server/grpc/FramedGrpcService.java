@@ -81,13 +81,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
 
-    /**
-     * Returns a new {@link GrpcServiceBuilder}.
-     */
-    public static GrpcServiceBuilder builder() {
-        return new GrpcServiceBuilder();
-    }
-
     private final HandlerRegistry registry;
     private final Set<Route> routes;
     private final DecompressorRegistry decompressorRegistry;
@@ -330,12 +323,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 }
             });
         }
-    }
-
-    @Override
-    public boolean shouldCachePath(String path, @Nullable String query, Route route) {
-        // gRPC services always have a single path per method that is safe to cache.
-        return true;
     }
 
     @Override
