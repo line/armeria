@@ -31,8 +31,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.brave.TraceContextUtil;
-import com.linecorp.armeria.internal.brave.TraceContextUtil.PingPongExtra;
+import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
+import com.linecorp.armeria.internal.common.brave.TraceContextUtil.PingPongExtra;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.propagation.CurrentTraceContext;

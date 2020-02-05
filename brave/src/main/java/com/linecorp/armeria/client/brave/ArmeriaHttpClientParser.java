@@ -22,7 +22,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.internal.brave.SpanTags;
+import com.linecorp.armeria.internal.common.brave.SpanTags;
 
 import brave.SpanCustomizer;
 import brave.http.HttpAdapter;

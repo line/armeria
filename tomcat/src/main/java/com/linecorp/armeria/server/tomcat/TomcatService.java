@@ -62,7 +62,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.util.AppRootFinder;
-import com.linecorp.armeria.internal.tomcat.TomcatVersion;
+import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;

@@ -27,7 +27,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.UnstableApi;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;

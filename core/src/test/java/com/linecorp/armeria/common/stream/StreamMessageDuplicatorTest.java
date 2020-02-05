@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.DownstreamSubscription;
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.SignalQueue;
 import com.linecorp.armeria.common.stream.DefaultStreamMessageDuplicator.StreamMessageProcessor;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;

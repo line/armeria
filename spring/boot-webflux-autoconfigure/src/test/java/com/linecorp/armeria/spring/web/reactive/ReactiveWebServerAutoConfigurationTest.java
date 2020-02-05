@@ -55,8 +55,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

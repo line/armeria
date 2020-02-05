@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isTrailerBlacklisted;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Set;
@@ -47,11 +47,11 @@ import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Version;
-import com.linecorp.armeria.internal.DefaultTimeoutController;
-import com.linecorp.armeria.internal.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.HttpObjectEncoder;
-import com.linecorp.armeria.internal.HttpTimestampSupplier;
-import com.linecorp.armeria.internal.RequestContextUtil;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController;
+import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
+import com.linecorp.armeria.internal.common.HttpObjectEncoder;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;

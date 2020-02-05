@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Deframed
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.internal.grpc.GrpcStatus;
+import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;

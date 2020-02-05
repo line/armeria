@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -54,6 +54,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
+import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -61,7 +62,6 @@ import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.internal.TestUtil;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.stub.StreamObserver;

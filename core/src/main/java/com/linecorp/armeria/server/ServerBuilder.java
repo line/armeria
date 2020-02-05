@@ -66,7 +66,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;

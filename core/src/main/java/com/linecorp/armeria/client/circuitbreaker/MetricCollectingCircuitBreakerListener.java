@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.internal.metric.MicrometerUtil;
+import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;

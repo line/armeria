@@ -61,7 +61,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.channel.EventLoopGroup;

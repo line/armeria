@@ -81,7 +81,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;

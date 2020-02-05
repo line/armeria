@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.channel.Channel;
 

@@ -20,7 +20,7 @@ import java.nio.charset.Charset;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

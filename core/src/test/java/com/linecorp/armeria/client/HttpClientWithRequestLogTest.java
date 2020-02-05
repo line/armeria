@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 class HttpClientWithRequestLogTest {
 

@@ -42,9 +42,9 @@ import org.eclipse.jetty.webapp.WebAppContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderNames;

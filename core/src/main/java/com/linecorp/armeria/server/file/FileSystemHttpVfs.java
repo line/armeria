@@ -35,7 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.RouteUtil;
+import com.linecorp.armeria.internal.server.RouteUtil;
 
 final class FileSystemHttpVfs extends AbstractHttpVfs {
 

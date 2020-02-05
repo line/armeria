@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.REQUEST_MESSAGE;
-import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
+import static com.linecorp.armeria.internal.common.grpc.GrpcTestUtil.REQUEST_MESSAGE;
+import static com.linecorp.armeria.internal.common.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -88,10 +88,10 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
-import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
-import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
-import com.linecorp.armeria.internal.grpc.StreamRecorder;
+import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
+import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;

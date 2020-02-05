@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.cors;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isCorsPreflightRequest;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;

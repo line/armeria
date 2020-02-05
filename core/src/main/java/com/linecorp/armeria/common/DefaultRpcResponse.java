@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.eventloop.EventLoopCheckingUtil.maybeLogIfOnEventLoop;
+import static com.linecorp.armeria.internal.common.util.EventLoopCheckingUtil.maybeLogIfOnEventLoop;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CancellationException;

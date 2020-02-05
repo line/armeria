@@ -21,7 +21,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isCorsPreflightRequest;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -58,12 +58,12 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.AbstractHttp2ConnectionHandler;
-import com.linecorp.armeria.internal.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.Http2ObjectEncoder;
-import com.linecorp.armeria.internal.HttpObjectEncoder;
-import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.internal.RequestContextUtil;
+import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
+import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
+import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
+import com.linecorp.armeria.internal.common.HttpObjectEncoder;
+import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;

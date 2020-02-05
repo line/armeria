@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.common.util.UnstableApi;
-import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
+import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

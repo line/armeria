@@ -17,8 +17,8 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.RequestContextUtil.newIllegalContextPushingException;
-import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.RequestContextThreadLocal;
+import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

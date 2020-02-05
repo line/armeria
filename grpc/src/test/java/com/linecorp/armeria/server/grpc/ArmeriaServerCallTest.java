@@ -51,7 +51,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Deframed
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;

@@ -26,9 +26,9 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.testing.ServerRuleDelegate;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.internal.ServerRuleDelegate;
 import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
 
 /**

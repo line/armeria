@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isAbsoluteUri;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 
 import java.net.URI;
 
@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
 

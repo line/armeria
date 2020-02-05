@@ -50,7 +50,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 import com.linecorp.armeria.common.util.UnstableApi;
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * Utility to escape status messages (e.g., error messages) for saving to ascii headers.

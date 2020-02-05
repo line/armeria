@@ -30,7 +30,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isAbsoluteUri;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;

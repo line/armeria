@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.ResponseConversionUtil.aggregateFrom;
+import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;

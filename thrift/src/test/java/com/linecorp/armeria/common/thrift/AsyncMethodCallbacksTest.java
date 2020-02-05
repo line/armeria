@@ -30,7 +30,7 @@ import java.util.concurrent.CompletionException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.Test;
 
-import com.linecorp.armeria.testing.internal.AnticipatedException;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 public class AsyncMethodCallbacksTest {
 

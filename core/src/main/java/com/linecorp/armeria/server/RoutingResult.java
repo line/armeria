@@ -23,7 +23,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 /**
  * The result returned by {@link Route#apply(RoutingContext)}.

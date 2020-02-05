@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseDirectiveValueAsSeconds;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseDirectives;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.parseDirectiveValueAsSeconds;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.parseDirectives;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
