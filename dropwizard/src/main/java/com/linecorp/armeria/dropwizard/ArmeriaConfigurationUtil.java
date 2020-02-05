@@ -99,8 +99,8 @@ final class ArmeriaConfigurationUtil {
 
         if (settings.getGracefulShutdownQuietPeriodMillis() >= 0 &&
             settings.getGracefulShutdownTimeoutMillis() >= 0) {
-            serverBuilder.gracefulShutdownTimeout(settings.getGracefulShutdownQuietPeriodMillis(),
-                                                  settings.getGracefulShutdownTimeoutMillis());
+            serverBuilder.gracefulShutdownTimeoutMillis(settings.getGracefulShutdownQuietPeriodMillis(),
+                                                        settings.getGracefulShutdownTimeoutMillis());
             logger.debug("Set graceful shutdown timeout: quiet period {} ms, timeout {} ms",
                          settings.getGracefulShutdownQuietPeriodMillis(),
                          settings.getGracefulShutdownTimeoutMillis());

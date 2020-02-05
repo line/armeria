@@ -37,7 +37,7 @@ import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.DnsServerAddresses;
 
-abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
+abstract class DnsEndpointGroupBuilder {
 
     private final String hostname;
     @Nullable
@@ -52,14 +52,6 @@ abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
     DnsEndpointGroupBuilder(String hostname) {
         this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
                                                       IDN.ALLOW_UNASSIGNED));
-    }
-
-    /**
-     * Returns {@code this}.
-     */
-    @SuppressWarnings("unchecked")
-    private B self() {
-        return (B) this;
     }
 
     final String hostname() {
@@ -77,13 +69,13 @@ abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
     /**
      * Sets the {@link EventLoop} to use for sending DNS queries.
      */
-    public final B eventLoop(EventLoop eventLoop) {
+    public DnsEndpointGroupBuilder eventLoop(EventLoop eventLoop) {
         requireNonNull(eventLoop, "eventLoop");
         checkArgument(TransportType.isSupported(eventLoop),
                       "unsupported event loop type: %s", eventLoop);
 
         this.eventLoop = eventLoop;
-        return self();
+        return this;
     }
 
     final int minTtl() {
@@ -101,12 +93,12 @@ abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
      * {@code minTtl} and {@code maxTtl} are {@code 1} and {@link Integer#MAX_VALUE}, which practically tells
      * to respect the server TTL.
      */
-    public final B ttl(int minTtl, int maxTtl) {
+    public DnsEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
         checkArgument(minTtl > 0 && minTtl <= maxTtl,
                       "minTtl: %s, maxTtl: %s (expected: 1 <= minTtl <= maxTtl)", minTtl, maxTtl);
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
-        return self();
+        return this;
     }
 
     final DnsServerAddressStreamProvider serverAddressStreamProvider() {
@@ -116,18 +108,18 @@ abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
     /**
      * Sets the DNS server addresses to send queries to. Operating system default is used by default.
      */
-    public final B serverAddresses(InetSocketAddress... serverAddresses) {
+    public DnsEndpointGroupBuilder serverAddresses(InetSocketAddress... serverAddresses) {
         return serverAddresses(ImmutableList.copyOf(requireNonNull(serverAddresses, "serverAddresses")));
     }
 
     /**
      * Sets the DNS server addresses to send queries to. Operating system default is used by default.
      */
-    public final B serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
+    public DnsEndpointGroupBuilder serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
         requireNonNull(serverAddresses, "serverAddresses");
         final DnsServerAddresses addrs = DnsServerAddresses.sequential(serverAddresses);
         serverAddressStreamProvider = hostname -> addrs.stream();
-        return self();
+        return this;
     }
 
     final Backoff backoff() {
@@ -139,17 +131,17 @@ abstract class DnsEndpointGroupBuilder<B extends DnsEndpointGroupBuilder<B>> {
      * server sent an error response. {@code Backoff.exponential(1000, 32000).withJitter(0.2)} is used by
      * default.
      */
-    public final B backoff(Backoff backoff) {
+    public DnsEndpointGroupBuilder backoff(Backoff backoff) {
         this.backoff = requireNonNull(backoff, "backoff");
-        return self();
+        return this;
     }
 
     /**
      * Sets the {@link EndpointSelectionStrategy} that deteremines the enumeration order of {@link Endpoint}s.
      */
-    public final B selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+    public DnsEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
-        return self();
+        return this;
     }
 
     final EndpointSelectionStrategy selectionStrategy() {

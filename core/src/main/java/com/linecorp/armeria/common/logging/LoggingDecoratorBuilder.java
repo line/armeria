@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
@@ -32,7 +31,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 /**
  * Builds a new logging decorator.
  */
-public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
+public abstract class LoggingDecoratorBuilder {
+
     private static final Function<HttpHeaders, HttpHeaders> DEFAULT_HEADERS_SANITIZER = Function.identity();
     private static final Function<Object, Object> DEFAULT_CONTENT_SANITIZER = Function.identity();
     private static final Function<Throwable, Throwable> DEFAULT_CAUSE_SANITIZER = Function.identity();
@@ -63,9 +63,9 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link Logger} to use when logging.
      * If unset, a default {@link Logger} will be used.
      */
-    public T logger(Logger logger) {
+   public LoggingDecoratorBuilder logger(Logger logger) {
         this.logger = requireNonNull(logger, "logger");
-        return self();
+        return this;
     }
 
     /**
@@ -80,13 +80,13 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
      */
-    public T requestLogLevel(LogLevel requestLogLevel) {
+   public LoggingDecoratorBuilder requestLogLevel(LogLevel requestLogLevel) {
         if (isRequestLogLevelMapperSet) {
             throw new IllegalStateException("requestLogLevelMapper has been set already.");
         }
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
         isRequestLogLevelSet = true;
-        return self();
+        return this;
     }
 
     /**
@@ -103,14 +103,14 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      * If unset, will use {@link LogLevel#TRACE}.
      */
-    public T successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
+   public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         if (isResponseLogLevelMapperSet) {
             throw new IllegalStateException("responseLogLevelMapper has been set already.");
         }
         this.successfulResponseLogLevel =
                 requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
         isResponseLogLevelSet = true;
-        return self();
+        return this;
     }
 
     /**
@@ -127,13 +127,13 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
      * If unset, will use {@link LogLevel#WARN}. The request will be logged too if it was not otherwise.
      */
-    public T failureResponseLogLevel(LogLevel failedResponseLogLevel) {
+   public LoggingDecoratorBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         if (isResponseLogLevelMapperSet) {
             throw new IllegalStateException("responseLogLevelMapper has been set already.");
         }
         this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
         isResponseLogLevelSet = true;
-        return self();
+        return this;
     }
 
     /**
@@ -149,14 +149,14 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Sets the {@link Function} to use when mapping the log level of request logs.
      */
-    public T requestLogLevelMapper(
+   public LoggingDecoratorBuilder requestLogLevelMapper(
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
         if (isRequestLogLevelSet) {
             throw new IllegalStateException("requestLogLevel has been set already.");
         }
         this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         isRequestLogLevelMapperSet = true;
-        return self();
+        return this;
     }
 
     /**
@@ -169,14 +169,14 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Sets the {@link Function} to use when mapping the log level of response logs.
      */
-    public T responseLogLevelMapper(Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+   public LoggingDecoratorBuilder responseLogLevelMapper(Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
         if (isResponseLogLevelSet) {
             throw new IllegalStateException(
                     "successfulResponseLogLevel or failedResponseLogLevel has been set already.");
         }
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         isResponseLogLevelMapperSet = true;
-        return self();
+        return this;
     }
 
     /**
@@ -191,9 +191,9 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * {@link Function} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will use
      * {@link Function#identity()}.
      */
-    public T requestHeadersSanitizer(Function<? super HttpHeaders, ?> requestHeadersSanitizer) {
+   public LoggingDecoratorBuilder requestHeadersSanitizer(Function<? super HttpHeaders, ?> requestHeadersSanitizer) {
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
-        return self();
+        return this;
     }
 
     /**
@@ -208,9 +208,9 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * {@link Function} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T responseHeadersSanitizer(Function<? super HttpHeaders, ?> responseHeadersSanitizer) {
+   public LoggingDecoratorBuilder responseHeadersSanitizer(Function<? super HttpHeaders, ?> responseHeadersSanitizer) {
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
-        return self();
+        return this;
     }
 
     /**
@@ -224,9 +224,9 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link Function} to use to sanitize request trailers before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T requestTrailersSanitizer(Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
+   public LoggingDecoratorBuilder requestTrailersSanitizer(Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
-        return self();
+        return this;
     }
 
     /**
@@ -240,9 +240,9 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link Function} to use to sanitize response trailers before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T responseTrailersSanitizer(Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
+   public LoggingDecoratorBuilder responseTrailersSanitizer(Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
-        return self();
+        return this;
     }
 
     /**
@@ -268,13 +268,13 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * @see #responseHeadersSanitizer(Function)
      * @see #responseTrailersSanitizer(Function)
      */
-    public T headersSanitizer(Function<? super HttpHeaders, ?> headersSanitizer) {
+   public LoggingDecoratorBuilder headersSanitizer(Function<? super HttpHeaders, ?> headersSanitizer) {
         requireNonNull(headersSanitizer, "headersSanitizer");
         requestHeadersSanitizer(headersSanitizer);
         requestTrailersSanitizer(headersSanitizer);
         responseHeadersSanitizer(headersSanitizer);
         responseTrailersSanitizer(headersSanitizer);
-        return self();
+        return this;
     }
 
     /**
@@ -282,9 +282,9 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * {@link Function} that removes sensitive content, such as an GPS location query, before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T requestContentSanitizer(Function<Object, ?> requestContentSanitizer) {
+   public LoggingDecoratorBuilder requestContentSanitizer(Function<Object, ?> requestContentSanitizer) {
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
-        return self();
+        return this;
     }
 
     /**
@@ -299,9 +299,9 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * {@link Function} that removes sensitive content, such as an address, before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T responseContentSanitizer(Function<Object, ?> responseContentSanitizer) {
+   public LoggingDecoratorBuilder responseContentSanitizer(Function<Object, ?> responseContentSanitizer) {
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
-        return self();
+        return this;
     }
 
     /**
@@ -324,11 +324,11 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * @see #requestContentSanitizer(Function)
      * @see #responseContentSanitizer(Function)
      */
-    public T contentSanitizer(Function<Object, ?> contentSanitizer) {
+   public LoggingDecoratorBuilder contentSanitizer(Function<Object, ?> contentSanitizer) {
         requireNonNull(contentSanitizer, "contentSanitizer");
         requestContentSanitizer(contentSanitizer);
         responseContentSanitizer(contentSanitizer);
-        return self();
+        return this;
     }
 
     /**
@@ -337,9 +337,9 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * the stack trace completely by returning {@code null} in the {@link Function}. If unset, will use
      * {@link Function#identity()}.
      */
-    public T responseCauseSanitizer(Function<? super Throwable, ?> responseCauseSanitizer) {
+   public LoggingDecoratorBuilder responseCauseSanitizer(Function<? super Throwable, ?> responseCauseSanitizer) {
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        return self();
+        return this;
     }
 
     /**
@@ -347,11 +347,6 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      */
     protected Function<? super Throwable, ?> responseCauseSanitizer() {
         return responseCauseSanitizer;
-    }
-
-    @SuppressWarnings("unchecked")
-    private T self() {
-        return (T) this;
     }
 
     @Override
@@ -363,8 +358,8 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer);
     }
 
-    private static <T extends LoggingDecoratorBuilder<T>> String toString(
-            LoggingDecoratorBuilder<T> self,
+    private static String toString(
+            LoggingDecoratorBuilder self,
             @Nullable Logger logger,
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,

@@ -173,6 +173,6 @@ class LoggingDecoratorBuilderTest {
         assertThat(builder.responseCauseSanitizer()).isEqualTo(CAUSE_SANITIZER);
     }
 
-    private static final class Builder extends LoggingDecoratorBuilder<Builder> {
+    private static final class Builder extends LoggingDecoratorBuilder {
     }
 }
