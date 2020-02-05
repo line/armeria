@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBufAllocator;
 

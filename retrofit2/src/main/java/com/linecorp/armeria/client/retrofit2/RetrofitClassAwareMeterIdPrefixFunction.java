@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.internal.metric.RequestMetricSupport;
+import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;

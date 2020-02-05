@@ -46,8 +46,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

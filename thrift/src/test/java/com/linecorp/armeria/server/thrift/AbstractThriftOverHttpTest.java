@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -59,7 +60,6 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 public abstract class AbstractThriftOverHttpTest {
 

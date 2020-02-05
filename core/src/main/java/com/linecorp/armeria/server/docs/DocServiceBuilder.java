@@ -16,7 +16,7 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;

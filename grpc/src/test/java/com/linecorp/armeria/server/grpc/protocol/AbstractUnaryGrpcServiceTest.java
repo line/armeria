@@ -39,7 +39,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
+import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 

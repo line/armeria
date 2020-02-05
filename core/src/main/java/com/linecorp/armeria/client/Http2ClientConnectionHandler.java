@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.internal.AbstractHttp2ConnectionHandler;
+import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;

@@ -30,7 +30,7 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import io.micrometer.core.instrument.MeterRegistry;

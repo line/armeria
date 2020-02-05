@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Ticker;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 class CircuitBreakerRpcClientTest {
 

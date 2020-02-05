@@ -35,12 +35,12 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesText;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.reactivex.Completable;

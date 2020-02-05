@@ -33,7 +33,7 @@ import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.internal.ThreadLocalRandom;
 

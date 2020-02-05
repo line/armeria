@@ -41,7 +41,7 @@ import org.apache.thrift.TBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
+import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
 
 abstract class AbstractThriftMessageClassFinder implements Supplier<Class<?>> {
     private static final Logger logger = LoggerFactory.getLogger(AbstractThriftMessageClassFinder.class);

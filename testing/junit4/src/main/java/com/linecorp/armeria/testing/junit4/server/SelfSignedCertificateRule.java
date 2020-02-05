@@ -27,7 +27,7 @@ import java.util.Date;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
-import com.linecorp.armeria.testing.internal.SelfSignedCertificateRuleDelegate;
+import com.linecorp.armeria.internal.testing.SelfSignedCertificateRuleDelegate;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 

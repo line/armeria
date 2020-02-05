@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
@@ -27,7 +27,7 @@ import com.linecorp.armeria.client.UserClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
 

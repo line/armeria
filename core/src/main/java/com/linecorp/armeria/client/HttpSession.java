@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;

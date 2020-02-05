@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.streaming;
 
-import static com.linecorp.armeria.internal.ResponseConversionUtil.streamingFrom;
+import static com.linecorp.armeria.internal.server.ResponseConversionUtil.streamingFrom;
 import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;

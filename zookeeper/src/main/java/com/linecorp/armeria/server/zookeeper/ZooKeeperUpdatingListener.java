@@ -27,7 +27,7 @@ import org.apache.zookeeper.CreateMode;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
+import com.linecorp.armeria.internal.common.zookeeper.ZooKeeperDefaults;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;

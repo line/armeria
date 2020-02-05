@@ -17,8 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.internal.RouteUtil.GLOB;
-import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
+import static com.linecorp.armeria.internal.server.RouteUtil.GLOB;
+import static com.linecorp.armeria.internal.server.RouteUtil.newLoggerName;
 
 import java.util.List;
 import java.util.Set;

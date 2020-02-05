@@ -24,8 +24,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.brave.SpanContextUtil;
-import com.linecorp.armeria.internal.brave.SpanTags;
+import com.linecorp.armeria.internal.common.brave.SpanContextUtil;
+import com.linecorp.armeria.internal.common.brave.SpanTags;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

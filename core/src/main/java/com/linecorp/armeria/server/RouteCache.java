@@ -35,7 +35,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
+import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.composition.CompositeServiceEntry;
 
 import io.micrometer.core.instrument.MeterRegistry;

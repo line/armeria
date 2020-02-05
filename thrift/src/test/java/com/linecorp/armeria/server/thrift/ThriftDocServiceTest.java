@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -60,7 +61,6 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
-import com.linecorp.armeria.testing.internal.TestUtil;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public  class ThriftDocServiceTest {

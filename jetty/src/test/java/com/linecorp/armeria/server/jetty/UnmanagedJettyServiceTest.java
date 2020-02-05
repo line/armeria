@@ -20,9 +20,9 @@ import org.eclipse.jetty.server.Server;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class UnmanagedJettyServiceTest extends WebAppContainerTest {

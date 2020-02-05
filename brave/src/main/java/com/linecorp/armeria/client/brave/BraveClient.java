@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.brave;
 
-import static com.linecorp.armeria.internal.brave.TraceContextUtil.ensureScopeUsesRequestContext;
+import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.ensureScopeUsesRequestContext;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.brave.SpanTags;
+import com.linecorp.armeria.internal.common.brave.SpanTags;
 
 import brave.Span;
 import brave.Tracer;

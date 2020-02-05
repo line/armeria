@@ -54,7 +54,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.UnstableApi;
-import com.linecorp.armeria.internal.TimeoutController;
+import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;

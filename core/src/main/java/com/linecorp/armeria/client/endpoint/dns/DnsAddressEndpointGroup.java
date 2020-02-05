@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static com.linecorp.armeria.internal.dns.DnsUtil.extractAddressBytes;
+import static com.linecorp.armeria.internal.client.DnsUtil.extractAddressBytes;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,7 +31,7 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.internal.dns.DnsQuestionWithoutTrailingDot;
+import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;

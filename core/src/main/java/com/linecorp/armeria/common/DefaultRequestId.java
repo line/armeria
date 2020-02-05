@@ -19,7 +19,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * The default {@link RequestId} implementation.

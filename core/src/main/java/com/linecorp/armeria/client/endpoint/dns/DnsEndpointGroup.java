@@ -36,9 +36,9 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.internal.TransportType;
-import com.linecorp.armeria.internal.dns.DefaultDnsNameResolver;
-import com.linecorp.armeria.internal.dns.DnsUtil;
+import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
+import com.linecorp.armeria.internal.client.DnsUtil;
+import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.EventLoop;

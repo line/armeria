@@ -70,10 +70,10 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.channel.EventLoop;

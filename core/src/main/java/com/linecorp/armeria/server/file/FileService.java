@@ -46,7 +46,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
+import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;

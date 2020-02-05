@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RequestTimeoutException;

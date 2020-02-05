@@ -30,7 +30,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.internal.TransportType;
+import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.netty.channel.EventLoop;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;

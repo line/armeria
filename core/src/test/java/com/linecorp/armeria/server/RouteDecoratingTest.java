@@ -47,9 +47,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
-import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class RouteDecoratingTest {

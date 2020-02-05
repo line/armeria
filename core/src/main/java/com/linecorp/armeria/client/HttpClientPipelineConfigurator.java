@@ -47,11 +47,11 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.ChannelUtil;
-import com.linecorp.armeria.internal.Http1ClientCodec;
-import com.linecorp.armeria.internal.ReadSuppressingHandler;
-import com.linecorp.armeria.internal.SslContextUtil;
-import com.linecorp.armeria.internal.TrafficLoggingHandler;
+import com.linecorp.armeria.internal.client.Http1ClientCodec;
+import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
+import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;

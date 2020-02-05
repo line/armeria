@@ -71,10 +71,10 @@ import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
-import com.linecorp.armeria.internal.metric.MicrometerUtil;
+import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.Gauge;

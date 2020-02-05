@@ -62,10 +62,9 @@ import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
-import com.linecorp.armeria.internal.ChannelUtil;
-import com.linecorp.armeria.internal.ConnectionLimitingHandler;
-import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.internal.TransportType;
+import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.TransportType;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.Gauge;

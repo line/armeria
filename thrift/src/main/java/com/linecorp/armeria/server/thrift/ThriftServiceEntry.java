@@ -23,7 +23,7 @@ import java.util.Set;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
+import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
 
 /**
  * The information about a Thrift service served by {@link THttpService} or {@link ThriftCallService}.

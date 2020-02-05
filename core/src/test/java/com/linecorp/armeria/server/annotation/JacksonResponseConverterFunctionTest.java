@@ -32,8 +32,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 import io.netty.util.AsciiString;
 import reactor.core.publisher.Flux;

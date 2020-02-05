@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AbstractOptions;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;

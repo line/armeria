@@ -56,7 +56,7 @@ import com.google.common.io.Resources;
 
 import com.linecorp.armeria.common.util.OsType;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;

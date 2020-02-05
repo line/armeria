@@ -52,8 +52,8 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.ChannelUtil;
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.channel.Channel;
 

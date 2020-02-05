@@ -60,7 +60,7 @@ import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * A simple text format for serializing/deserializing thrift

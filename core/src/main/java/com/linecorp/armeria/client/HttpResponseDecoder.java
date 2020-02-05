@@ -35,8 +35,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.DefaultTimeoutController;
-import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;

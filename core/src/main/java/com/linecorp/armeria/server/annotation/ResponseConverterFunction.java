@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.FallthroughException;
+import com.linecorp.armeria.internal.common.util.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

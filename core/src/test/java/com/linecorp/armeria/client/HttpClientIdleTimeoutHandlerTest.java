@@ -25,7 +25,7 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;

@@ -34,8 +34,8 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.internal.RequestContextUtil;
+import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
