@@ -26,8 +26,7 @@ import com.linecorp.armeria.common.util.Sampler;
 /**
  * Builds a new {@link LoggingClient}.
  */
-abstract class AbstractLoggingClientBuilder<T extends LoggingDecoratorBuilder<T>>
-        extends LoggingDecoratorBuilder<T> {
+abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
 
     private Sampler<? super ClientRequestContext> sampler = Sampler.always();
 
@@ -35,7 +34,7 @@ abstract class AbstractLoggingClientBuilder<T extends LoggingDecoratorBuilder<T>
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the requests to be logged.
      */
-    public T samplingRate(float samplingRate) {
+    public AbstractLoggingClientBuilder samplingRate(float samplingRate) {
         checkArgument(0.0 <= samplingRate && samplingRate <= 1.0,
                       "samplingRate: %s (expected: 0.0 <= samplingRate <= 1.0)", samplingRate);
         return sampler(Sampler.random(samplingRate));
@@ -44,13 +43,12 @@ abstract class AbstractLoggingClientBuilder<T extends LoggingDecoratorBuilder<T>
     /**
      * Sets the {@link Sampler} that determines which request needs logging.
      */
-    @SuppressWarnings("unchecked")
-    public T sampler(Sampler<? super ClientRequestContext> sampler) {
+    public AbstractLoggingClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
         this.sampler = requireNonNull(sampler, "sampler");
-        return (T) this;
+        return this;
     }
 
-    Sampler<? super ClientRequestContext> sampler() {
+    final Sampler<? super ClientRequestContext> sampler() {
         return sampler;
     }
 }

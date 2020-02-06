@@ -21,7 +21,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -29,7 +35,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * Builds a new {@link LoggingService}.
  */
-public final class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServiceBuilder> {
+public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
 
     private Sampler<? super ServiceRequestContext> sampler = Sampler.always();
 
@@ -83,5 +89,89 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder<Logging
      */
     public Function<? super HttpService, LoggingService> newDecorator() {
         return this::build;
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public LoggingServiceBuilder logger(Logger logger) {
+        return (LoggingServiceBuilder) super.logger(logger);
+    }
+
+    @Override
+    public LoggingServiceBuilder requestLogLevel(LogLevel requestLogLevel) {
+        return (LoggingServiceBuilder) super.requestLogLevel(requestLogLevel);
+    }
+
+    @Override
+    public LoggingServiceBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
+        return (LoggingServiceBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
+    }
+
+    @Override
+    public LoggingServiceBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
+        return (LoggingServiceBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
+    }
+
+    @Override
+    public LoggingServiceBuilder requestLogLevelMapper(
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
+        return (LoggingServiceBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseLogLevelMapper(
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
+    }
+
+    @Override
+    public LoggingServiceBuilder requestHeadersSanitizer(
+            Function<? super HttpHeaders, ?> requestHeadersSanitizer) {
+        return (LoggingServiceBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseHeadersSanitizer(
+            Function<? super HttpHeaders, ?> responseHeadersSanitizer) {
+        return (LoggingServiceBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
+    }
+
+    @Override
+    public LoggingServiceBuilder requestTrailersSanitizer(
+            Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
+        return (LoggingServiceBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseTrailersSanitizer(
+            Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
+        return (LoggingServiceBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
+    }
+
+    @Override
+    public LoggingServiceBuilder headersSanitizer(Function<? super HttpHeaders, ?> headersSanitizer) {
+        return (LoggingServiceBuilder) super.headersSanitizer(headersSanitizer);
+    }
+
+    @Override
+    public LoggingServiceBuilder requestContentSanitizer(Function<Object, ?> requestContentSanitizer) {
+        return (LoggingServiceBuilder) super.requestContentSanitizer(requestContentSanitizer);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseContentSanitizer(Function<Object, ?> responseContentSanitizer) {
+        return (LoggingServiceBuilder) super.responseContentSanitizer(responseContentSanitizer);
+    }
+
+    @Override
+    public LoggingServiceBuilder contentSanitizer(Function<Object, ?> contentSanitizer) {
+        return (LoggingServiceBuilder) super.contentSanitizer(contentSanitizer);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseCauseSanitizer(
+            Function<? super Throwable, ?> responseCauseSanitizer) {
+        return (LoggingServiceBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
     }
 }
