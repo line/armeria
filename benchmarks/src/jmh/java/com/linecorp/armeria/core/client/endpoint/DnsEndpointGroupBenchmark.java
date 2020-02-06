@@ -67,6 +67,6 @@ public class DnsEndpointGroupBenchmark {
 
     @Benchmark
     public Object resolveLocalhost() throws Exception {
-        return endpointGroup.awaitInitialEndpoints();
+        return endpointGroup.whenReady().get();
     }
 }

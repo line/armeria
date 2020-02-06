@@ -68,7 +68,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
             }
         }
@@ -92,7 +92,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints(10, TimeUnit.SECONDS)).containsExactly(
+                assertThat(group.whenReady().get(10, TimeUnit.SECONDS)).containsExactly(
                         Endpoint.of("bar.com", 8080).withIpAddr("2404:6800:4004:806::2013"),
                         Endpoint.of("bar.com", 8080).withIpAddr("::1"),
                         Endpoint.of("bar.com", 8080).withIpAddr("::1234:5678:90ab"));
@@ -115,7 +115,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("baz.com", 8080).withIpAddr("1.1.1.1"),
                         Endpoint.of("baz.com", 8080).withIpAddr("::1"));
             }
@@ -136,7 +136,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .serverAddresses(server.addr())
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).contains(
+                assertThat(group.whenReady().get()).contains(
                         Endpoint.of("baz.com", 8080).withIpAddr("1.1.1.1"));
             }
         }
@@ -161,7 +161,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("a.com", 8080).withIpAddr("1.1.1.1"),
                         Endpoint.of("a.com", 8080).withIpAddr("::1"));
             }
@@ -183,7 +183,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("foo.com", 8080).withIpAddr("127.0.0.1"));
             }
         }
@@ -205,7 +205,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("bar.com", 8080).withIpAddr("1.1.1.1"),
                         Endpoint.of("bar.com", 8080).withIpAddr("1.1.1.2"),
                         Endpoint.of("bar.com", 8080).withIpAddr("1.1.1.3"));
@@ -225,7 +225,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("no-port.com").withIpAddr("1.1.1.1"));
             }
         }
@@ -309,7 +309,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .backoff(Backoff.fixed(500))
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("partial.com").withIpAddr("1.1.1.1"));
             }
         }
@@ -331,7 +331,7 @@ public class DnsAddressEndpointGroupTest {
                                                 .backoff(Backoff.fixed(500))
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("partial.com").withIpAddr("::1"));
             }
         }

@@ -55,6 +55,7 @@ public final class CircuitBreakerRpcClientBuilder
     // Methods that were overridden to change the return type.
 
     @Override
+    @Deprecated
     public CircuitBreakerRpcClientBuilder circuitBreakerMapping(CircuitBreakerMapping mapping) {
         return mapping(mapping);
     }

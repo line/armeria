@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.file.HttpFile;
-import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
+import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 public final class Main {
@@ -57,7 +57,7 @@ public final class Main {
                                            .asService())
                      .service("/animation", new AnimationService(frameIntervalMillis))
                      // Serve health check.
-                     .service("/internal/l7check", new HttpHealthCheckService())
+                     .service("/internal/l7check", HealthCheckService.of())
                      .build();
     }
 

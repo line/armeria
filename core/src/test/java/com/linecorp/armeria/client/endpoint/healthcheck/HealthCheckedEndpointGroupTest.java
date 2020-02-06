@@ -106,7 +106,7 @@ class HealthCheckedEndpointGroupTest {
                 };
             }
         }.build()) {
-            assertThat(group.awaitInitialEndpoints(10, TimeUnit.SECONDS)).isEmpty();
+            assertThat(group.whenReady().get(10, TimeUnit.SECONDS)).isEmpty();
         }
     }
 

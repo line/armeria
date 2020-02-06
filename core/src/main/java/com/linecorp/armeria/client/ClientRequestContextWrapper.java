@@ -114,11 +114,13 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    @Deprecated
     public void setResponseTimeoutMillis(long responseTimeoutMillis) {
         delegate().setResponseTimeoutMillis(responseTimeoutMillis);
     }
 
     @Override
+    @Deprecated
     public void setResponseTimeout(Duration responseTimeout) {
         delegate().setResponseTimeout(responseTimeout);
     }

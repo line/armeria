@@ -3,14 +3,14 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.10.1
-  - io.dropwizard.metrics:metrics-bom:4.1.1
-  - io.grpc:grpc-bom:1.25.0
-  - io.micrometer:micrometer-bom:1.3.2
+  - com.fasterxml.jackson:jackson-bom:2.10.2.20200130
+  - io.dropwizard.metrics:metrics-bom:4.1.2
+  - io.grpc:grpc-bom:1.27.0
+  - io.micrometer:micrometer-bom:1.3.3
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.43.Final
-  - io.zipkin.brave:brave-bom:5.9.1
-  - org.eclipse.jetty:jetty-bom:9.4.24.v20191120
+  - io.netty:netty-bom:4.1.45.Final
+  - io.zipkin.brave:brave-bom:5.9.3
+  - org.eclipse.jetty:jetty-bom:9.4.26.v20200117
   - org.junit:junit-bom:5.6.0
 
 cglib:
@@ -24,9 +24,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.8.3'
+    version: '3.9.0'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.8.3/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.9.0/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -54,22 +54,22 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.2.0' }
 
 com.github.node-gradle:
-  gradle-node-plugin: { version: '2.2.0' }
+  gradle-node-plugin: { version: '2.2.1' }
 
 com.google.api:
-  gax-grpc: { version: '1.51.0' }
+  gax-grpc: { version: '1.53.1' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.dagger:
-  dagger: { version: &DAGGER_VERSION '2.25.4' }
+  dagger: { version: &DAGGER_VERSION '2.26' }
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '28.1-jre'
+    version: &GUAVA_VERSION '28.2-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -103,13 +103,13 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protoc: { version: '3.10.1' }
-  protobuf-java: { version: &PROTOBUF_VERSION '3.10.0' }
+  protoc: { version: '3.11.3' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.11.3' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
-  protobuf-gradle-plugin: { version: '0.8.10' }
+  protobuf-gradle-plugin: { version: '0.8.11' }
 
 com.puppycrawl.tools:
   checkstyle: { version: '8.28' }
@@ -128,7 +128,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.6.2'
+    version: &RETROFIT2_VERSION '2.7.1'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -138,37 +138,37 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '1.3.17'
+    version: &DROPWIZARD_VERSION '1.3.18'
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-core/1.3.17/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-core/1.3.18/
   dropwizard-jackson:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jackson/1.3.17/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-jackson/1.3.18/
   dropwizard-lifecycle:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-lifecycle/1.3.17/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-lifecycle/1.3.18/
   dropwizard-jersey:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jersey/1.3.17/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-jersey/1.3.18/
   dropwizard-jetty:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-jetty/1.3.17/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-jetty/1.3.18/
   dropwizard-testing:
     version: *DROPWIZARD_VERSION
     javadocs:
-      - https://static.javadoc.io/io.dropwizard/dropwizard-testing/1.3.17/
+      - https://static.javadoc.io/io.dropwizard/dropwizard-testing/1.3.18/
   dropwizard-util:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-util/1.3.17/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-util/1.3.18/
   dropwizard-validation:
     version: *DROPWIZARD_VERSION
     javadocs:
-    - https://static.javadoc.io/io.dropwizard/dropwizard-validation/1.3.17/
+    - https://static.javadoc.io/io.dropwizard/dropwizard-validation/1.3.18/
 
 io.dropwizard.metrics:
   metrics-core:
@@ -189,24 +189,25 @@ io.grpc:
     - com.google.errorprone:error_prone_annotations
     - com.google.guava:guava-jdk5
     - com.google.j2objc:j2objc-annotations
+    - io.grpc:grpc-alts
+    - io.grpc:grpc-xds
     - io.netty:netty-codec-http
     - io.netty:netty-codec-http2
     - io.netty:netty-codec-socks
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
-    - io.grpc:grpc-alts
 
 io.micrometer:
   micrometer-core:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.3.2/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.3.3/
   micrometer-registry-prometheus:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.3.2/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.3.3/
   micrometer-spring-legacy:
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.3.2/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.3.3/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -216,11 +217,11 @@ io.netty:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.26.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.28.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.1.RELEASE'
+    version: &REACTOR_VERSION '3.3.2.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -230,13 +231,13 @@ io.projectreactor.kotlin:
 
 io.prometheus:
   simpleclient_common:
-    version: '0.8.0'
+    version: '0.8.1'
     javadocs:
     - https://prometheus.github.io/client_java/
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.15'
+    version: '2.2.17'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -264,7 +265,7 @@ javax.validation:
   validation-api: { version: '2.0.1.Final' }
 
 org.testng:
-  testng: { version: '7.0.0' }
+  testng: { version: '7.1.0' }
 
 junit:
   junit:
@@ -294,7 +295,7 @@ net.javacrumbs.future-converter:
   future-converter-rxjava2-java8: { version: 1.2.0 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.11.1' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.13.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -322,7 +323,7 @@ org.apache.hbase:
 
 org.apache.httpcomponents:
   httpclient:
-    version: '4.5.10'
+    version: '4.5.11'
     exclusions:
     - commons-logging:commons-logging
 
@@ -344,7 +345,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.29'
+    version: &TOMCAT_VERSION '9.0.30'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -359,10 +360,10 @@ org.apache.zookeeper:
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.14.0' }
+  assertj-core: { version: '3.15.0' }
 
 org.awaitility:
-  awaitility: { version: '4.0.1' }
+  awaitility: { version: '4.0.2' }
 
 org.bouncycastle:
   bcprov-jdk15on:
@@ -428,7 +429,7 @@ org.jsoup:
   jsoup: { version: '1.12.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.2.0' }
+  mockito-core: { version: &MOCKITO_VERSION '3.2.4' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -466,18 +467,18 @@ org.reflections:
       to: com.linecorp.armeria.internal.shaded.reflections
 
 org.slf4j:
-  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.29' }
+  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.30' }
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
   slf4j-api:
     version: *SLF4J_VERSION
     javadocs:
-    - https://static.javadoc.io/org.slf4j/slf4j-api/1.7.29/
+    - https://static.javadoc.io/org.slf4j/slf4j-api/1.7.30/
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.2.1.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.2.4.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

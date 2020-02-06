@@ -51,7 +51,7 @@ public class KeyStoreCredentialResolverBuilderTest {
 
     @Test
     public void expectSuccessWithResource() throws Exception {
-        new KeyStoreCredentialResolverBuilder("keystore/test.jks").build();
+        new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(), "keystore/test.jks").build();
     }
 
     @Test
@@ -60,7 +60,7 @@ public class KeyStoreCredentialResolverBuilderTest {
                 () -> new KeyStoreCredentialResolverBuilder(new File("/not_exist")).build())
                 .isInstanceOf(FileNotFoundException.class);
         assertThatThrownBy(
-                () -> new KeyStoreCredentialResolverBuilder("not_exist").build())
+                () -> new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(), "not_exist").build())
                 .isInstanceOf(FileNotFoundException.class)
                 .hasMessageContaining("Resource not found");
     }
