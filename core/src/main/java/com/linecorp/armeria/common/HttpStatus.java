@@ -496,35 +496,35 @@ public final class HttpStatus implements Comparable<HttpStatus> {
      * Returns whether the {@link HttpStatus} is an information, with a status code of 1XX.
      */
     public boolean isInformational() {
-        return codeClass().equals(HttpStatusClass.INFORMATIONAL);
+        return codeClass == HttpStatusClass.INFORMATIONAL;
     }
 
     /**
      * Returns whether the {@link HttpStatus} is a success, with a status code of 2XX.
      */
     public boolean isSuccess() {
-        return codeClass().equals(HttpStatusClass.SUCCESS);
+        return codeClass == HttpStatusClass.SUCCESS;
     }
 
     /**
      * Returns whether the {@link HttpStatus} is a redirection, with a status code of 3XX.
      */
     public boolean isRedirection() {
-        return codeClass().equals(HttpStatusClass.REDIRECTION);
+        return codeClass == HttpStatusClass.REDIRECTION;
     }
 
     /**
      *  Returns whether the {@link HttpStatus} is a client error, with a status code of 4XX.
      */
     public boolean isClientError() {
-        return codeClass().equals(HttpStatusClass.CLIENT_ERROR);
+        return codeClass == HttpStatusClass.CLIENT_ERROR;
     }
 
     /**
      * Returns whether the {@link HttpStatus} is a server error, with a status code of 5XX.
      */
     public boolean isServerError() {
-        return codeClass().equals(HttpStatusClass.SERVER_ERROR);
+        return codeClass == HttpStatusClass.SERVER_ERROR;
     }
 
     /**
