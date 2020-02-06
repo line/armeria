@@ -218,9 +218,11 @@ class GracefulShutdownIntegrationTest {
         // Keep sending a request after shutdown starts so that the hard limit is reached.
         final SleepService.Iface client = newClient();
         final CompletableFuture<Long> stopFuture = CompletableFuture.supplyAsync(() -> {
+            logger.debug("Server shutting down");
             final long startTime = System.nanoTime();
             server.stop().join();
             final long stopTime = System.nanoTime();
+            logger.debug("Server shut down");
             return stopTime - startTime;
         });
 
@@ -229,6 +231,7 @@ class GracefulShutdownIntegrationTest {
                 client.sleep(100);
             } catch (Exception e) {
                 // Server has been shut down
+                logger.debug("Client detected server shutdown:", e);
                 break;
             }
         }
