@@ -40,7 +40,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 public final class EncodingService extends SimpleDecoratingHttpService {
 
     private final Predicate<MediaType> encodableContentTypePredicate;
-    private final Predicate<RequestHeaders> encodableRequestHeadersPredicate;
+    private final Predicate<? super RequestHeaders> encodableRequestHeadersPredicate;
     private final long minBytesToForceChunkedAndEncoding;
 
     /**
@@ -62,7 +62,7 @@ public final class EncodingService extends SimpleDecoratingHttpService {
      */
     EncodingService(HttpService delegate,
                     Predicate<MediaType> encodableContentTypePredicate,
-                    Predicate<RequestHeaders> encodableRequestHeadersPredicate,
+                    Predicate<? super RequestHeaders> encodableRequestHeadersPredicate,
                     long minBytesToForceChunkedAndEncoding) {
         super(delegate);
         this.encodableContentTypePredicate = encodableContentTypePredicate;

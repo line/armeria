@@ -52,6 +52,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
@@ -325,7 +326,7 @@ final class ArmeriaConfigurationUtil {
                     encodableContentTypes.stream().anyMatch(contentType::is);
         }
 
-        final Predicate<RequestHeaders> encodableRequestHeadersPredicate;
+        final Predicate<? super RequestHeaders> encodableRequestHeadersPredicate;
         if (excludedUserAgents == null || excludedUserAgents.length == 0) {
             encodableRequestHeadersPredicate = headers -> true;
         } else {
@@ -438,9 +439,7 @@ final class ArmeriaConfigurationUtil {
             if (minResponseSize == null) {
                 minBytesToForceChunkedAndEncoding = DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING;
             } else {
-                final long parsed = parseDataSize(minResponseSize);
-                minBytesToForceChunkedAndEncoding = parsed > Integer.MAX_VALUE ? Integer.MAX_VALUE
-                                                                               : (int) parsed;
+                minBytesToForceChunkedAndEncoding = Ints.saturatedCast(parseDataSize(minResponseSize));
             }
             serverBuilder.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                              compression.getExcludedUserAgents(),

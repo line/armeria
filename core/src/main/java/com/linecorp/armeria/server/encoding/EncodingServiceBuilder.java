@@ -50,7 +50,7 @@ public final class EncodingServiceBuilder {
 
     private Predicate<MediaType> encodableContentTypePredicate = defaultEncodableContentTypePredicate;
 
-    private Predicate<RequestHeaders> encodableRequestHeadersPredicate = headers -> true;
+    private Predicate<? super RequestHeaders> encodableRequestHeadersPredicate = headers -> true;
 
     private int minBytesToForceChunkedAndEncoding = DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING;
 
@@ -90,7 +90,7 @@ public final class EncodingServiceBuilder {
      * is encodable or not.
      */
     public EncodingServiceBuilder encodableRequestHeadersPredicate(
-            Predicate<RequestHeaders> encodableRequestHeadersPredicate) {
+            Predicate<? super RequestHeaders> encodableRequestHeadersPredicate) {
         requireNonNull(encodableRequestHeadersPredicate, "encodableRequestHeadersPredicate");
         this.encodableRequestHeadersPredicate = encodableRequestHeadersPredicate;
         return this;
