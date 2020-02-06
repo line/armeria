@@ -41,7 +41,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -122,8 +121,7 @@ public class CircuitBreakerClientTest {
     @Test
     public void strategyWithContent() {
         final CircuitBreakerStrategyWithContent<HttpResponse> strategy =
-                (ctx, response) -> response.aggregate().handle(
-                        (msg, unused1) -> msg.status().codeClass() != HttpStatusClass.SERVER_ERROR);
+                (ctx, response) -> response.aggregate().handle((msg, unused1) -> !msg.status().isServerError());
         circuitBreakerIsOpenOnServerError(CircuitBreakerClient.builder(strategy));
     }
 

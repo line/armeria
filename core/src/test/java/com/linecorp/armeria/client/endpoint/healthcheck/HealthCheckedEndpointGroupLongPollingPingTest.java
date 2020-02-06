@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -227,7 +226,7 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
 
                         // Record the received pings.
                         final ResponseHeaders headers = (ResponseHeaders) obj;
-                        if (headers.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+                        if (headers.status().isInformational()) {
                             ctx.attr(RECEIVED_INFORMATIONALS).add(headers);
                         }
                         return obj;
