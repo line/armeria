@@ -104,7 +104,7 @@ class ContentPreviewingServiceTest {
             final ContentPreviewerFactory factory =
                     ContentPreviewerFactory.builder()
                                            .maxLength(100)
-                                           .binary(previewerPredicate, producer)
+                                           .binary(producer, previewerPredicate)
                                            .build();
             return ContentPreviewingService.newDecorator(factory);
         }

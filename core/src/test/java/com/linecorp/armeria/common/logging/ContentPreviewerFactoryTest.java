@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -73,7 +72,7 @@ class ContentPreviewerFactoryTest {
     @Test
     void producedPreviewDoesNotExceedMaxLength() {
         final ContentPreviewerFactory factory = ContentPreviewerFactory.builder().maxLength(4).binary(
-                MediaTypeSet.of(MediaType.BASIC_AUDIO), (headers, byteBuf) -> "abcde").build();
+                (headers, byteBuf) -> "abcde", MediaType.BASIC_AUDIO).build();
 
         final ContentPreviewer contentPreviewer = factory.requestContentPreviewer(
                 ctx, reqHeaders(MediaType.PLAIN_TEXT_UTF_8));

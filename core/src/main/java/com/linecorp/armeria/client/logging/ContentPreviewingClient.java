@@ -107,7 +107,7 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    ContentPreviewingClient(HttpClient delegate, ContentPreviewerFactory contentPreviewerFactory) {
+    private ContentPreviewingClient(HttpClient delegate, ContentPreviewerFactory contentPreviewerFactory) {
         super(delegate);
         this.contentPreviewerFactory = contentPreviewerFactory;
     }

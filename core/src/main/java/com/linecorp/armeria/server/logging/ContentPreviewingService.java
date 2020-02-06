@@ -107,7 +107,7 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    ContentPreviewingService(HttpService delegate, ContentPreviewerFactory contentPreviewerFactory) {
+    private ContentPreviewingService(HttpService delegate, ContentPreviewerFactory contentPreviewerFactory) {
         super(delegate);
         this.contentPreviewerFactory = requireNonNull(contentPreviewerFactory, "contentPreviewerFactory");
     }

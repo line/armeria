@@ -25,12 +25,12 @@ import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -47,7 +47,7 @@ public final class ContentPreviewerFactoryBuilder {
 
     //TODO(minwoox): Add setters for the seprate request and response previewer.
 
-    private final Builder<PreviewSpec> previewSpecsBuilder = ImmutableList.builder();
+    private final ImmutableList.Builder<PreviewSpec> previewSpecsBuilder = ImmutableList.builder();
     private int maxLength;
     private Charset defaultCharset = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET;
 
@@ -74,25 +74,42 @@ public final class ContentPreviewerFactoryBuilder {
     }
 
     /**
-     * Sets the specified {@link MediaTypeSet} to produce the text preview when the content type of the
-     * {@link RequestHeaders} or {@link ResponseHeaders} {@linkplain MediaTypeSet#match(MediaType) matches}
-     * the {@link MediaTypeSet}.
+     * Sets the specified {@link MediaType}s to produce the text preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link MediaType}s.
      */
-    public ContentPreviewerFactoryBuilder text(MediaTypeSet mediaTypeSet) {
-        text0(previewerPredicate(mediaTypeSet), null);
+    public ContentPreviewerFactoryBuilder text(MediaType... mediaTypes) {
+        return text(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
+    }
+
+    /**
+     * Sets the specified {@link MediaType}s to produce the text preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link MediaType}s.
+     */
+    public ContentPreviewerFactoryBuilder text(Iterable<MediaType> mediaTypes) {
+        text0(null, previewerPredicate(mediaTypes));
         return this;
     }
 
     /**
-     * Sets the specified {@link MediaTypeSet} to produce the text preview when the content type of the
-     * {@link RequestHeaders} or {@link ResponseHeaders} {@linkplain MediaTypeSet#match(MediaType) matches}
-     * the {@link MediaTypeSet}.
+     * Sets the specified {@link MediaType}s to produce the text preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link MediaType}s.
      *
      * @param defaultCharset the default charset used when a charset is not specified in the
      *                       {@code "content-type"} header
      */
-    public ContentPreviewerFactoryBuilder text(MediaTypeSet mediaTypeSet, Charset defaultCharset) {
-        return text(previewerPredicate(mediaTypeSet), defaultCharset);
+    public ContentPreviewerFactoryBuilder text(Charset defaultCharset, MediaType... mediaTypes) {
+        return text(defaultCharset, ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
+    }
+
+    /**
+     * Sets the specified {@link MediaType}s to produce the text preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link MediaType}s.
+     *
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
+     */
+    public ContentPreviewerFactoryBuilder text(Charset defaultCharset, Iterable<MediaType> mediaTypes) {
+        return text(defaultCharset, previewerPredicate(mediaTypes));
     }
 
     /**
@@ -101,7 +118,7 @@ public final class ContentPreviewerFactoryBuilder {
      */
     public ContentPreviewerFactoryBuilder text(
             BiPredicate<? super RequestContext, ? super HttpHeaders> predicate) {
-        return text0(predicate, null);
+        return text0(null, predicate);
     }
 
     /**
@@ -112,39 +129,57 @@ public final class ContentPreviewerFactoryBuilder {
      *                       {@code "content-type"} header
      */
     public ContentPreviewerFactoryBuilder text(
-            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate, Charset defaultCharset) {
+            Charset defaultCharset, BiPredicate<? super RequestContext, ? super HttpHeaders> predicate) {
         requireNonNull(defaultCharset, "defaultCharset");
-        return text0(predicate, defaultCharset);
+        return text0(defaultCharset, predicate);
     }
 
     private ContentPreviewerFactoryBuilder text0(
-            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate,
-            @Nullable Charset defaultCharset) {
+            @Nullable Charset defaultCharset,
+            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate) {
         requireNonNull(predicate, "predicate");
         previewSpecsBuilder.add(new PreviewSpec(predicate, PreviewMode.TEXT, defaultCharset, null));
         return this;
     }
 
     /**
-     * Sets the specified {@link MediaTypeSet} to produce the
+     * Sets the specified {@link MediaType}s to produce the
      * <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a> preview when the content type of the
-     * {@link RequestHeaders} or {@link ResponseHeaders} {@linkplain MediaTypeSet#match(MediaType) matches}
-     * the {@link MediaTypeSet}.
+     * {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link MediaType}s.
      */
-    public ContentPreviewerFactoryBuilder binary(MediaTypeSet mediaTypeSet) {
-        binary(mediaTypeSet, hexDumpProducer());
+    public ContentPreviewerFactoryBuilder binary(MediaType... mediaTypes) {
+        return binary(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
+    }
+
+    /**
+     * Sets the specified {@link MediaType}s to produce the
+     * <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a> preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link MediaType}s.
+     */
+    public ContentPreviewerFactoryBuilder binary(Iterable<MediaType> mediaTypes) {
+        binary(hexDumpProducer(), mediaTypes);
         return this;
     }
 
     /**
-     * Sets the specified {@link MediaTypeSet} to produce the preview using the specified {@link BiFunction}
-     * when the content type of the {@link RequestHeaders} or {@link ResponseHeaders}
-     * {@linkplain MediaTypeSet#match(MediaType) matches} the {@link MediaTypeSet}.
+     * Sets the specified {@link MediaType}s to produce the preview using the specified {@link BiFunction}
+     * when the content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the
+     * {@link MediaType}s.
      */
     public ContentPreviewerFactoryBuilder binary(
-            MediaTypeSet mediaTypeSet, BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
-        requireNonNull(mediaTypeSet, "mediaTypesSet");
-        return binary(previewerPredicate(mediaTypeSet), producer);
+            BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer, MediaType... mediaTypes) {
+        return binary(producer, ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
+    }
+
+    /**
+     * Sets the specified {@link MediaType}s to produce the preview using the specified {@link BiFunction}
+     * when the content type of the {@link RequestHeaders} or {@link ResponseHeaders} is one of the
+     * {@link MediaType}s.
+     */
+    public ContentPreviewerFactoryBuilder binary(
+            BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer, Iterable<MediaType> mediaTypes) {
+        return binary(producer,
+                      previewerPredicate(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes"))));
     }
 
     /**
@@ -154,7 +189,7 @@ public final class ContentPreviewerFactoryBuilder {
      */
     public ContentPreviewerFactoryBuilder binary(
             BiPredicate<? super RequestContext, ? super HttpHeaders> predicate) {
-        return binary(predicate, hexDumpProducer());
+        return binary(hexDumpProducer(), predicate);
     }
 
     /**
@@ -162,8 +197,8 @@ public final class ContentPreviewerFactoryBuilder {
      * {@link BiFunction} when the predicate returns {@code true}.
      */
     public ContentPreviewerFactoryBuilder binary(
-            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate,
-            BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
+            BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer,
+            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate) {
         requireNonNull(predicate, "predicate");
         requireNonNull(producer, "producer");
         previewSpecsBuilder.add(new PreviewSpec(predicate, PreviewMode.BINARY, null, producer));
@@ -171,13 +206,19 @@ public final class ContentPreviewerFactoryBuilder {
     }
 
     /**
-     * Sets the specified {@link MediaTypeSet} <b>NOT</b> to produce the preview when the content type of the
-     * {@link RequestHeaders} or {@link ResponseHeaders} {@linkplain MediaTypeSet#match(MediaType) matches}
-     * the {@link MediaTypeSet}.
+     * Sets the specified {@link MediaType}s <b>NOT</b> to produce the preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link MediaType}s
      */
-    public ContentPreviewerFactoryBuilder disable(MediaTypeSet mediaTypeSet) {
-        requireNonNull(mediaTypeSet, "mediaTypesSet");
-        return disable(previewerPredicate(mediaTypeSet));
+    public ContentPreviewerFactoryBuilder disable(MediaType... mediaTypes) {
+        return disable(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
+    }
+
+    /**
+     * Sets the specified {@link MediaType}s <b>NOT</b> to produce the preview when the content type of the
+     * {@link RequestHeaders} or {@link ResponseHeaders} is one of the {@link MediaType}s
+     */
+    public ContentPreviewerFactoryBuilder disable(Iterable<MediaType> mediaTypes) {
+        return disable(previewerPredicate(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes"))));
     }
 
     /**
@@ -199,17 +240,17 @@ public final class ContentPreviewerFactoryBuilder {
     }
 
     private static BiPredicate<? super RequestContext, ? super HttpHeaders> previewerPredicate(
-            MediaTypeSet mediaTypeSet) {
-        requireNonNull(mediaTypeSet, "mediaTypesSet");
+            Iterable<MediaType> meidaTypes) {
         return (ctx, headers) -> {
             final MediaType contentType = headers.contentType();
             if (contentType == null) {
                 return false;
             }
-            return mediaTypeSet.match(contentType) != null;
+            return Streams.stream(meidaTypes).anyMatch(contentType::belongsTo);
         };
     }
 
+    @VisibleForTesting
     static BiFunction<? super HttpHeaders, ? super ByteBuf, String> hexDumpProducer() {
         return (headers, byteBuf) -> ByteBufUtil.hexDump(byteBuf);
     }

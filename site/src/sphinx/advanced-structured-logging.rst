@@ -281,17 +281,17 @@ and the hex dump preview of first 100 characters for the content type of ``appli
     ServerBuilder sb = Server.builder();
 
     ContentPreviewerFactoryBuilder builder = ContentPreviewerFactory.builder().maxLength(100);
-    builder.text((ctx, headers) -> {
+    builder.text(StandardCharsets.UTF_8 /* default charset */, (ctx, headers) -> {
         final MediaType contentType = headers.contentType();
         // Produces the textual preview when the content type is ANY_TEXT_TYPE.
         if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
             return true;
         }
         return false;
-    }, StandardCharsets.UTF_8 /* default charset */ );
+    });
 
     // Produces the hex dump when the content type is APPLICATION_BINARY.
-    builder.binary(MediaTypeSet.of(MediaType.APPLICATION_BINARY));
+    builder.binary(MediaType.APPLICATION_BINARY);
 
     sb.decorator(ContentPreviewingService.newDecorator(builder.build()));
 

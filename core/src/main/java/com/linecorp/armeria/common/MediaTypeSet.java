@@ -64,13 +64,16 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
      * Returns the {@link MediaTypeSet} which is composed of the specified {@link MediaType}s.
      */
     public static MediaTypeSet of(MediaType... mediaTypes) {
-        return of(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
+        return new MediaTypeSet(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
     }
 
     /**
      * Returns the {@link MediaTypeSet} which is composed of the specified {@link MediaType}s.
      */
     public static MediaTypeSet of(Iterable<MediaType> mediaTypes) {
+        if (mediaTypes instanceof MediaTypeSet) {
+            return (MediaTypeSet) mediaTypes;
+        }
         return new MediaTypeSet(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
     }
 
