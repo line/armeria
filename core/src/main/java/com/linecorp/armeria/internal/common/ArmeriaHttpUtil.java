@@ -121,9 +121,11 @@ public final class ArmeriaHttpUtil {
 
     /**
      * The default HTTP content-type charset.
-     * See https://tools.ietf.org/html/rfc2616#section-3.7.1
+     *
+     * <p>Note that we use {@link StandardCharsets#UTF_8} as default because it is common practice even though
+     * it's not the HTTP standard.
      */
-    public static final Charset HTTP_DEFAULT_CONTENT_CHARSET = StandardCharsets.ISO_8859_1;
+    public static final Charset HTTP_DEFAULT_CONTENT_CHARSET = StandardCharsets.UTF_8;
 
     /**
      * The old {@code "keep-alive"} header which has been superceded by {@code "connection"}.

@@ -60,7 +60,7 @@ final class DefaultContentPreviewFactory implements ContentPreviewerFactory {
             if (previewSpec.predicate().test(ctx, headers)) {
                 switch (previewSpec.mode()) {
                     case TEXT:
-                        final Charset charset = charset(headers, previewSpec);
+                        final Charset charset = charset(headers);
                         return new TextContentPreviewer(maxLength, charset);
                     case BINARY:
                         final BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer =
@@ -91,12 +91,7 @@ final class DefaultContentPreviewFactory implements ContentPreviewerFactory {
         return ContentPreviewer.disabled();
     }
 
-    private Charset charset(HttpHeaders headers, PreviewSpec previewSpec) {
-        Charset defaultCharset = previewSpec.defaultCharset();
-        if (defaultCharset == null) {
-            defaultCharset = this.defaultCharset;
-        }
-
+    private Charset charset(HttpHeaders headers) {
         final MediaType contentType = headers.contentType();
         if (contentType != null) {
             return contentType.charset(defaultCharset);

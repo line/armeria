@@ -25,6 +25,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import com.google.common.math.IntMath;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.HttpData;
 
@@ -56,7 +57,7 @@ abstract class LengthLimitingContentPreviewer implements ContentPreviewer {
             return maxLength;
         }
         final long maxBytesPerChar = (long) Math.ceil(CharsetUtil.encoder(charset).maxBytesPerChar());
-        return (int) Long.min(Integer.MAX_VALUE, maxBytesPerChar * maxLength);
+        return Ints.saturatedCast(maxBytesPerChar * maxLength);
     }
 
     @Override

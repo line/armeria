@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.logging;
 
-import java.nio.charset.Charset;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -32,16 +31,12 @@ final class PreviewSpec {
     private final BiPredicate<? super RequestContext, ? super HttpHeaders> predicate;
     private final PreviewMode mode;
     @Nullable
-    private final Charset defaultCharset;
-    @Nullable
     private final BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer;
 
     PreviewSpec(BiPredicate<? super RequestContext, ? super HttpHeaders> predicate,
-                PreviewMode mode, @Nullable Charset defaultCharset,
-                @Nullable BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
+                PreviewMode mode, @Nullable BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
         this.predicate = predicate;
         this.mode = mode;
-        this.defaultCharset = defaultCharset;
         this.producer = producer;
     }
 
@@ -51,11 +46,6 @@ final class PreviewSpec {
 
     PreviewMode mode() {
         return mode;
-    }
-
-    @Nullable
-    Charset defaultCharset() {
-        return defaultCharset;
     }
 
     @Nullable

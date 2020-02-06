@@ -31,7 +31,6 @@ final class TextContentPreviewer extends LengthLimitingContentPreviewer {
 
     @Override
     String produce(ByteBuf wrappedBuffer) {
-        return wrappedBuffer.toString(wrappedBuffer.readerIndex(),
-                                      wrappedBuffer.readableBytes(), charset);
+        return wrappedBuffer.toString(charset);
     }
 }
