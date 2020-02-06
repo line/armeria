@@ -44,19 +44,6 @@ public class ServiceTest {
         assertDecoration(inner, outer);
     }
 
-    /**
-     * Tests {@link Service#decorate(Class)}.
-     */
-    @Test
-    void reflectionDecorator() throws Exception {
-        final FooService inner = new FooService();
-        final FooServiceDecorator outer = inner.decorate(FooServiceDecorator.class);
-
-        assertDecoration(inner, outer);
-        assertThatThrownBy(() -> inner.decorate(BadFooServiceDecorator.class))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
     private static void assertDecoration(FooService inner, HttpService outer) throws Exception {
 
         // Test if Service.as() works as expected.
