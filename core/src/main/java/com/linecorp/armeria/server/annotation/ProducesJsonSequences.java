@@ -20,11 +20,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.MediaTypeNames;
+
 /**
- * An alias for {@code @Produces("application/json-seq")}.
+ * An alias for {@code @Produces(MediaTypeNames.JSON_SEQ)}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@Produces("application/json-seq")
+@Produces(MediaTypeNames.JSON_SEQ)
 public @interface ProducesJsonSequences {
 }

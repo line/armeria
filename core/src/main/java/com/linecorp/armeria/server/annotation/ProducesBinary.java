@@ -20,11 +20,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.MediaTypeNames;
+
 /**
- * An alias for {@code @Produces("application/binary")}.
+ * An alias for {@code @Produces(MediaTypeNames.APPLICATION_BINARY)}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@Produces("application/binary")
+@Produces(MediaTypeNames.APPLICATION_BINARY)
 public @interface ProducesBinary {
 }
