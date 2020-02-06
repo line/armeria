@@ -215,8 +215,11 @@ class GracefulShutdownIntegrationTest {
         final long baselineNanos = baselineNanos();
         final Server server = GracefulShutdownIntegrationTest.server.start();
 
-        // Keep sending a request after shutdown starts so that the hard limit is reached.
         final SleepService.Iface client = newClient();
+        // Send the first request to warm up the client connection, because otherwise
+        // the quiet period may end while the client establishes a connection on a busy machine.
+        client.sleep(0);
+
         final CompletableFuture<Long> stopFuture = CompletableFuture.supplyAsync(() -> {
             logger.debug("Server shutting down");
             final long startTime = System.nanoTime();
@@ -226,12 +229,13 @@ class GracefulShutdownIntegrationTest {
             return stopTime - startTime;
         });
 
-        for (;;) {
+        // Keep sending a request while shutting down so that the hard limit is reached.
+        for (int i = 1;; i++) {
             try {
-                client.sleep(100);
+                client.sleep(50);
             } catch (Exception e) {
                 // Server has been shut down
-                logger.debug("Client detected server shutdown:", e);
+                logger.debug("Client detected server shutdown after {} calls:", i, e);
                 break;
             }
         }
