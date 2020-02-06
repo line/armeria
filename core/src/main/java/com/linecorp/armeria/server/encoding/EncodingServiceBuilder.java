@@ -20,11 +20,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -38,13 +39,22 @@ import com.linecorp.armeria.server.HttpService;
  */
 public final class EncodingServiceBuilder {
 
+    private static final Set<MediaType> defaultEncodableMediaTypsSet =
+            ImmutableSet.of(MediaType.ANY_TEXT_TYPE,
+                            MediaType.APPLICATION_XML_UTF_8,
+                            MediaType.JAVASCRIPT_UTF_8,
+                            MediaType.JSON_UTF_8);
+
     // TODO(minwoox) consider this condition to align with the default text preveiwer.
     private static final Predicate<MediaType> defaultEncodableContentTypePredicate =
-            contentType -> Stream.of(MediaType.ANY_TEXT_TYPE,
-                                     MediaType.APPLICATION_XML_UTF_8,
-                                     MediaType.JAVASCRIPT_UTF_8,
-                                     MediaType.JSON_UTF_8)
-                                 .anyMatch(contentType::is);
+            contentType -> {
+                for (MediaType encodableMediaType : defaultEncodableMediaTypsSet) {
+                    if (contentType.belongsTo(encodableMediaType)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
 
     private static final int DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING = 1024;
 
