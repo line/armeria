@@ -19,15 +19,15 @@ configure(projectsWithFlags('java')) {
 
         task copyAlpnAgent(type: Copy) {
             from configurations.alpnAgent
-            into "${rootProject.buildDir}"
+            into "${project.buildDir}"
             rename { String fileName ->
-                fileName.replaceFirst("-[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[^\\.]+)?\\.jar", ".jar")
+                fileName.replaceFirst("-[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[^.]+)?\\.jar", ".jar")
             }
         }
 
         tasks.withType(JavaForkOptions) {
             dependsOn tasks.copyAlpnAgent
-            jvmArgs "-javaagent:${rootProject.buildDir}/jetty-alpn-agent.jar"
+            jvmArgs "-javaagent:${project.buildDir}/jetty-alpn-agent.jar"
         }
     }
 }
