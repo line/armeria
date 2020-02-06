@@ -213,7 +213,7 @@ boms:
 applied so you can conveniently check if your dependencies are out of date:
 
 ```
-$ ./gradlew dependencyUpdates -Drevision=release
+$ ./gradlew dependencyManagement:dependencyUpdates
 ...
 The following dependencies have later integration versions:
  - com.google.guava:guava [17.0 -> 24.0-jre]
