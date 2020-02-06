@@ -54,9 +54,6 @@ allprojects {
         if (gradle.startParameter.parallelProjectExecutionEnabled) {
             maxParallelForks = gradle.startParameter.maxWorkerCount
         }
-        // Workaround for an intermittent crash in Java 8. This flag has no effect in Java 9+.
-        // See: https://blogs.oracle.com/poonam/crashes-in-zipgetentry
-        systemProperty 'sun.zip.disableMemoryMapping', 'true'
     }
 }
 
