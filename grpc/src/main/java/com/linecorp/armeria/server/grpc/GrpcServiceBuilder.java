@@ -39,6 +39,7 @@ import com.google.protobuf.ByteString;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
@@ -72,11 +73,11 @@ public final class GrpcServiceBuilder {
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
-    private int maxInboundMessageSizeBytes = GrpcService.NO_MAX_INBOUND_MESSAGE_SIZE;
+    private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
 
     private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
-    private Consumer<Builder> jsonMarshallerCustomizer = (unused) -> {};
+    private Consumer<Builder> jsonMarshallerCustomizer = unused -> {};
 
     private boolean enableUnframedRequests;
 
@@ -298,10 +299,10 @@ public final class GrpcServiceBuilder {
      * ServerBuilder.service(HttpServiceWithRoutes)} to mount all service paths
      * without interfering with other services.
      */
-    public HttpServiceWithRoutes build() {
+    public GrpcService build() {
         final HandlerRegistry handlerRegistry = registryBuilder.build();
 
-        final GrpcService grpcService = new GrpcService(
+        final GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
                 handlerRegistry
                         .methods()
@@ -319,6 +320,6 @@ public final class GrpcServiceBuilder {
                 useClientTimeoutHeader,
                 protoReflectionService,
                 maxInboundMessageSizeBytes);
-        return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;
+        return enableUnframedRequests ? new UnframedGrpcService(grpcService) : grpcService;
     }
 }

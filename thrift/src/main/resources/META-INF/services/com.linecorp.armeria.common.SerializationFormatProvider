@@ -1,1 +1,1 @@
-com.linecorp.armeria.common.thrift.ThriftSerializationFormatProvider
+com.linecorp.armeria.internal.common.thrift.ThriftSerializationFormatProvider
