@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
@@ -73,10 +74,10 @@ public class AnnotatedServiceAnnotationAliasTest {
 
     @RequestConverter(MyRequestConverter.class)
     @ResponseConverter(MyResponseConverter.class)
-    @Consumes("text/plain; charset=utf-8")
+    @Consumes(MediaTypeNames.PLAIN_TEXT_UTF_8)
     @Consumes("application/xml")
     @ConsumesJson
-    @Produces("text/plain; charset=utf-8")
+    @Produces(MediaTypeNames.PLAIN_TEXT_UTF_8)
     @Produces("application/xml")
     @ProducesJson
     @ExceptionHandler(MyExceptionHandler1.class)

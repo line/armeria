@@ -100,7 +100,7 @@ class EndpointGroupTest {
             group1.setEndpoints(ImmutableList.of(FOO, BAR));
             group2.setEndpoints(ImmutableList.of(CAT, DOG));
             assertThat(initialEndpoints.join()).containsExactlyInAnyOrder(FOO, BAR);
-            assertThat(composite.awaitInitialEndpoints()).containsExactlyInAnyOrder(FOO, BAR);
+            assertThat(composite.whenReady().get()).containsExactlyInAnyOrder(FOO, BAR);
         }
 
         @Test
@@ -114,7 +114,7 @@ class EndpointGroupTest {
             group2.setEndpoints(ImmutableList.of(CAT, DOG));
             group1.setEndpoints(ImmutableList.of(FOO, BAR));
             assertThat(initialEndpoints.join()).containsExactlyInAnyOrder(CAT, DOG);
-            assertThat(composite.awaitInitialEndpoints()).containsExactlyInAnyOrder(CAT, DOG);
+            assertThat(composite.whenReady().get()).containsExactlyInAnyOrder(CAT, DOG);
         }
     }
 }

@@ -20,13 +20,15 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.MediaTypeNames;
+
 /**
- * An alias for {@code @Produces("text/event-stream")} and
+ * An alias for {@code @Produces(MediaTypeNames.EVENT_STREAM)} and
  * {@code @ResponseConverter(ServerSentEventResponseConverterFunction.class)}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@Produces("text/event-stream")
+@Produces(MediaTypeNames.EVENT_STREAM)
 @ResponseConverter(ServerSentEventResponseConverterFunction.class)
 public @interface ProducesEventStream {
 }

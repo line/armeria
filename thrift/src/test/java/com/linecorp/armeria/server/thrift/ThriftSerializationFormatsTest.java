@@ -22,6 +22,7 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMP
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.JSON;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
 
@@ -31,9 +32,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
@@ -61,9 +60,6 @@ public class ThriftSerializationFormatsTest {
               .service("/hellotextonly", THttpService.ofFormats(HELLO_SERVICE, TEXT));
         }
     };
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
 
     @Test
     public void findByMediaType() {
@@ -122,9 +118,8 @@ public class ThriftSerializationFormatsTest {
     public void notAllowed() throws Exception {
         final HelloService.Iface client =
                 Clients.newClient(server.httpUri(TEXT) + "/hellobinaryonly", HelloService.Iface.class);
-        thrown.expect(InvalidResponseHeadersException.class);
-        thrown.expectMessage(":status=415");
-        client.hello("Trustin");
+        assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(InvalidResponseHeadersException.class)
+                                                         .hasMessageContaining(":status=415");
     }
 
     @Test
@@ -143,9 +138,8 @@ public class ThriftSerializationFormatsTest {
                 Clients.builder(server.httpUri(TEXT) + "/hello")
                        .setHttpHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
                        .build(HelloService.Iface.class);
-        thrown.expect(InvalidResponseHeadersException.class);
-        thrown.expectMessage(":status=406");
-        client.hello("Trustin");
+        assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(InvalidResponseHeadersException.class)
+                                                         .hasMessageContaining(":status=406");
     }
 
     @Test

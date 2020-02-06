@@ -99,7 +99,7 @@ public class MediaTypeTest {
 
     @Test // reflection
     public void testConstants_charset() throws Exception {
-        for (Field field : getConstantFields()) {
+        for (Field field : getConstantFields(MediaType.class)) {
             final Charset charset = ((MediaType) field.get(null)).charset();
             if (field.getName().endsWith("_UTF_8")) {
                 assertThat(charset).isEqualTo(UTF_8);
@@ -116,20 +116,21 @@ public class MediaTypeTest {
 
     // reflection
     @SuppressWarnings("Guava")
-    private static FluentIterable<Field> getConstantFields() {
-        return FluentIterable.from(asList(MediaType.class.getDeclaredFields())).filter(input -> {
+    static <T, R> FluentIterable<Field> getConstantFields(Class<T> clazz, Class<R>... filterClazz) {
+        return FluentIterable.from(asList(clazz.getDeclaredFields())).filter(input -> {
             final int modifiers = input.getModifiers();
             return isPublic(modifiers) &&
                    isStatic(modifiers) &&
                    isFinal(modifiers) &&
-                   MediaType.class.equals(input.getType());
+                   filterClazz.length == 1 ?
+                   filterClazz[0].equals(input.getType()) : clazz.equals(input.getType());
         });
     }
 
     // reflection
     @SuppressWarnings("Guava")
     private static FluentIterable<MediaType> getConstants() {
-        return getConstantFields().transform(input -> {
+        return getConstantFields(MediaType.class).transform(input -> {
             try {
                 return (MediaType) input.get(null);
             } catch (Exception e) {

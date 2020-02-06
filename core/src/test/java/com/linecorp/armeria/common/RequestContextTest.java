@@ -44,7 +44,6 @@ import javax.annotation.Nullable;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 import org.mockito.Mock;
@@ -75,9 +74,6 @@ public class RequestContextTest {
 
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
 
     @Rule
     public final EventLoopRule eventLoop = new EventLoopRule();

@@ -83,6 +83,8 @@ import io.netty.buffer.Unpooled;
 @UnstableApi
 public class ArmeriaMessageDeframer implements AutoCloseable {
 
+    public static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
+
     private static final String DEBUG_STRING = ArmeriaMessageDeframer.class.getName();
 
     private static final int HEADER_LENGTH = 5;

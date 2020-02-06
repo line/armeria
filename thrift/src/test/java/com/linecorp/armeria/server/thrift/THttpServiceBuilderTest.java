@@ -34,7 +34,7 @@ class THttpServiceBuilderTest {
                                                  .otherSerializationFormats(JSON)
                                                  .build();
 
-        assertThat(service.allowedSerializationFormats()).containsExactly(BINARY, JSON);
+        assertThat(service.supportedSerializationFormats()).containsExactly(BINARY, JSON);
     }
 
     @Test
@@ -43,8 +43,7 @@ class THttpServiceBuilderTest {
                                                  .defaultSerializationFormat(JSON)
                                                  .build();
 
-        assertThat(service.allowedSerializationFormats())
-                                       .containsExactlyInAnyOrderElementsOf(
-                                               ThriftSerializationFormats.values());
+        assertThat(service.supportedSerializationFormats())
+                .containsExactlyInAnyOrderElementsOf(ThriftSerializationFormats.values());
     }
 }
