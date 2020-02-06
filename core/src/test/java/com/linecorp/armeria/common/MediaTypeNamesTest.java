@@ -23,11 +23,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.Streams;
 
 /**
  * Test sync with MediaType and MediaTypeNames.
@@ -51,8 +51,8 @@ class MediaTypeNamesTest {
     }
 
     private static <T> Map<String, T> getConstantFieldMap(Iterable<Field> iterable) {
-        return StreamSupport
-                .stream(iterable.spliterator(), false)
+        return Streams
+                .stream(iterable)
                 .collect(toImmutableMap(Field::getName, field -> {
                     try {
                         @SuppressWarnings("unchecked")
