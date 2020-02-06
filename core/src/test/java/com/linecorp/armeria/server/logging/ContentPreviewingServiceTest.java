@@ -67,14 +67,18 @@ class ContentPreviewingServiceTest {
                            return HttpResponse.of(responseHeaders,
                                                   HttpData.ofUtf8("Hello " + aggregated.contentUtf8() + '!'));
                        }));
-            sb.decorator("/beforeEncoding", delegate -> new EncodingService(delegate, unused -> true, 1));
+            sb.decorator("/beforeEncoding", EncodingService.builder()
+                                                           .minBytesToForceChunkedEncoding(1)
+                                                           .newDecorator());
             sb.decorator("/beforeEncoding", ContentPreviewingService.builder()
                                                                     .contentPreview(100)
                                                                     .newDecorator());
             sb.service("/beforeEncoding", httpService);
 
             sb.decorator("/encoded", decodingContentPreviewDecorator());
-            sb.decorator("/encoded", delegate -> new EncodingService(delegate, unused -> true, 1));
+            sb.decorator("/encoded", EncodingService.builder()
+                                                    .minBytesToForceChunkedEncoding(1)
+                                                    .newDecorator());
             sb.service("/encoded", httpService);
 
             sb.decoratorUnder("/", (delegate, ctx, req) -> {

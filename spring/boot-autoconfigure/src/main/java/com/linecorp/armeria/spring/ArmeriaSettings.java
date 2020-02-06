@@ -193,7 +193,7 @@ public class ArmeriaSettings {
         /**
          * The minimum bytes for encoding the content of an HTTP response.
          */
-        private String minResponseSize = "2048";
+        private String minResponseSize = "1024";
 
         /**
          * Returns {@code true} if the HTTP content encoding is enabled.

@@ -187,9 +187,11 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
         final Compression compression = getCompression();
         if (compression != null && compression.getEnabled()) {
+            final long minResponseSize = compression.getMinResponseSize().toBytes();
             sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                   compression.getExcludedUserAgents(),
-                                                  compression.getMinResponseSize().toBytes()));
+                                                  minResponseSize > Integer.MAX_VALUE ? Integer.MAX_VALUE
+                                                                                      : (int) minResponseSize));
         }
 
         final ArmeriaSettings settings = findBean(ArmeriaSettings.class);
@@ -261,9 +263,12 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
         final ArmeriaSettings.Compression compression = settings.getCompression();
         if (compression != null && compression.isEnabled()) {
+            final long parsed = parseDataSize(compression.getMinResponseSize());
+            final int minBytesToForceChunkedAndEncoding = parsed > Integer.MAX_VALUE ? Integer.MAX_VALUE
+                                                                                     : (int) parsed;
             sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                   compression.getExcludedUserAgents(),
-                                                  parseDataSize(compression.getMinResponseSize())));
+                                                  minBytesToForceChunkedAndEncoding));
         }
 
         if (!Strings.isNullOrEmpty(settings.getDocsPath())) {

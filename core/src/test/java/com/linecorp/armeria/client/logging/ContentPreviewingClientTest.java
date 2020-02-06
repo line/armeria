@@ -65,7 +65,9 @@ class ContentPreviewingClientTest {
                            return HttpResponse.of(responseHeaders,
                                                   HttpData.ofUtf8("Hello " + aggregated.contentUtf8() + '!'));
                        })));
-            sb.decorator(delegate -> new EncodingService(delegate, unused -> true, 1));
+            sb.decorator(EncodingService.builder()
+                                        .minBytesToForceChunkedEncoding(1)
+                                        .newDecorator());
         }
     };
 

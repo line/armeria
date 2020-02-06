@@ -16,15 +16,13 @@
 
 package com.linecorp.armeria.server.encoding;
 
-import static java.util.Objects.requireNonNull;
-
+import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -39,66 +37,37 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  *     <li>the response either has no fixed content length or the length is larger than 1KB</li>
  * </ul>
  */
-public class EncodingService extends SimpleDecoratingHttpService {
-
-    private static final Predicate<MediaType> DEFAULT_ENCODABLE_CONTENT_TYPE_PREDICATE =
-            contentType -> Stream.of(MediaType.ANY_TEXT_TYPE,
-                                     MediaType.APPLICATION_XML_UTF_8,
-                                     MediaType.JAVASCRIPT_UTF_8,
-                                     MediaType.JSON_UTF_8)
-                                 .anyMatch(contentType::is);
-
-    private static final Predicate<HttpHeaders> DEFAULT_ENCODABLE_REQUEST_HEADERS_PREDICATE =
-            headers -> true;
-
-    private static final int DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING = 1024;
+public final class EncodingService extends SimpleDecoratingHttpService {
 
     private final Predicate<MediaType> encodableContentTypePredicate;
-    private final Predicate<HttpHeaders> encodableRequestHeadersPredicate;
+    private final Predicate<RequestHeaders> encodableRequestHeadersPredicate;
     private final long minBytesToForceChunkedAndEncoding;
 
     /**
-     * Creates a new {@link SimpleDecoratingHttpService} that HTTP-encodes the response data published from
-     * {@code delegate}. Encoding will be applied when the client supports it, the response content type
-     * is a common web text format, and the response either has variable content length or a length greater
-     * than 1024.
+     * Returns a new {@link EncodingServiceBuilder}.
      */
-    public EncodingService(HttpService delegate) {
-        this(delegate, DEFAULT_ENCODABLE_CONTENT_TYPE_PREDICATE,
-             DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING);
+    public static EncodingServiceBuilder builder() {
+        return new EncodingServiceBuilder();
     }
 
     /**
-     * Creates a new {@link SimpleDecoratingHttpService} that HTTP-encodes the response data published from
-     * {@code delegate}. Encoding will be applied when the client supports it, the response content type
-     * passes the supplied {@code encodableContentTypePredicate} and the response either has variable
-     * content length or a length greater than {@code minBytesToForceChunkedAndEncoding}.
+     * Returns a new {@link HttpService} decorator.
      */
-    public EncodingService(HttpService delegate,
-                           Predicate<MediaType> encodableContentTypePredicate,
-                           int minBytesToForceChunkedAndEncoding) {
-        this(delegate, encodableContentTypePredicate,
-             DEFAULT_ENCODABLE_REQUEST_HEADERS_PREDICATE, minBytesToForceChunkedAndEncoding);
+    public static Function<? super HttpService, EncodingService> newDecorator() {
+        return builder().newDecorator();
     }
 
     /**
-     * Creates a new {@link SimpleDecoratingHttpService} that HTTP-encodes the response data published from
-     * {@code delegate}. Encoding will be applied when the client supports it, the response content type
-     * passes the supplied {@code encodableContentTypePredicate}, the request headers passes the supplied
-     * {@code encodableRequestHeadersPredicate} and the response either has variable content length or a length
-     * greater than {@code minBytesToForceChunkedAndEncoding}.
+     * Creates a new instance.
      */
-    public EncodingService(HttpService delegate,
-                           Predicate<MediaType> encodableContentTypePredicate,
-                           Predicate<HttpHeaders> encodableRequestHeadersPredicate,
-                           long minBytesToForceChunkedAndEncoding) {
+    EncodingService(HttpService delegate,
+                    Predicate<MediaType> encodableContentTypePredicate,
+                    Predicate<RequestHeaders> encodableRequestHeadersPredicate,
+                    long minBytesToForceChunkedAndEncoding) {
         super(delegate);
-        this.encodableContentTypePredicate = requireNonNull(encodableContentTypePredicate,
-                                                            "encodableContentTypePredicate");
-        this.encodableRequestHeadersPredicate = requireNonNull(encodableRequestHeadersPredicate,
-                                                               "encodableRequestHeadersPredicate");
-        this.minBytesToForceChunkedAndEncoding = validateMinBytesToForceChunkedAndEncoding(
-                minBytesToForceChunkedAndEncoding);
+        this.encodableContentTypePredicate = encodableContentTypePredicate;
+        this.encodableRequestHeadersPredicate = encodableRequestHeadersPredicate;
+        this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
     }
 
     @Override
@@ -113,12 +82,5 @@ public class EncodingService extends SimpleDecoratingHttpService {
                 encodingType,
                 encodableContentTypePredicate,
                 minBytesToForceChunkedAndEncoding);
-    }
-
-    static long validateMinBytesToForceChunkedAndEncoding(long minBytesToForceChunkedAndEncoding) {
-        if (minBytesToForceChunkedAndEncoding <= 0) {
-            throw new IllegalArgumentException("minBytesToForceChunkedAndEncoding must be greater than 0.");
-        }
-        return minBytesToForceChunkedAndEncoding;
     }
 }
