@@ -70,11 +70,9 @@ configure(projectsWithFlags('java')) {
         testLogging.exceptionFormat = 'full'
     }
 
-    // Use JUnit 5 if it's defined in the dependencies.
-    if (managedVersions.containsKey('org.junit.jupiter:junit-jupiter-engine')) {
-        tasks.withType(Test) {
-            useJUnitPlatform()
-        }
+    // Use JUnit platform.
+    tasks.withType(Test) {
+        useJUnitPlatform()
     }
 
     // Enforce checkstyle rules.
