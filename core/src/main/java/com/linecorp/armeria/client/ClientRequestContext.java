@@ -443,7 +443,7 @@ public interface ClientRequestContext extends RequestContext {
      *                              the beginning of the response
      *
      * @deprecated Use {@link #extendResponseTimeoutMillis(long)}, {@link #setResponseTimeoutAfterMillis(long)},
-     *             {@link #setResponseTimeoutAfterMillis(long)} or {@link #clearResponseTimeout()}
+     *             {@link #setResponseTimeoutAtMillis(long)} or {@link #clearResponseTimeout()}
      */
     @Deprecated
     void setResponseTimeoutMillis(long responseTimeoutMillis);

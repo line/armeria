@@ -147,11 +147,13 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    @Deprecated
     public void setRequestTimeoutMillis(long requestTimeoutMillis) {
         delegate().setRequestTimeoutMillis(requestTimeoutMillis);
     }
 
     @Override
+    @Deprecated
     public void setRequestTimeout(Duration requestTimeout) {
         delegate().setRequestTimeout(requestTimeout);
     }

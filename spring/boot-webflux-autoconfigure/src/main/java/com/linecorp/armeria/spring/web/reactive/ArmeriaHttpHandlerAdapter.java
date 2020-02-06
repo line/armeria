@@ -64,13 +64,12 @@ final class ArmeriaHttpHandlerAdapter {
         final ArmeriaServerHttpResponse convertedResponse =
                 new ArmeriaServerHttpResponse(ctx, future, factoryWrapper, serverHeader);
         return httpHandler.handle(convertedRequest, convertedResponse)
-                          .doOnSuccessOrError((unused, cause) -> {
-                              if (cause != null) {
-                                  logger.debug("{} Failed to handle a request", ctx, cause);
-                                  convertedResponse.setComplete(cause).subscribe();
-                              } else {
-                                  convertedResponse.setComplete().subscribe();
-                              }
+                          .doOnSuccess(unused -> {
+                              convertedResponse.setComplete().subscribe();
+                          })
+                          .doOnError(cause -> {
+                              logger.debug("{} Failed to handle a request", ctx, cause);
+                              convertedResponse.setComplete(cause).subscribe();
                           });
     }
 }

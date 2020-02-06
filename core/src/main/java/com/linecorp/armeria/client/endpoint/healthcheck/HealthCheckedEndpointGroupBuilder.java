@@ -71,6 +71,7 @@ public final class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheck
     }
 
     @Override
+    @Deprecated
     public HealthCheckedEndpointGroupBuilder healthCheckPort(int port) {
         return port(port);
     }

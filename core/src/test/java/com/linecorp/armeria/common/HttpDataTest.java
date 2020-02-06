@@ -120,7 +120,7 @@ class HttpDataTest {
 
     @Test
     void toInputStream() throws Exception {
-        assertThat(HttpData.EMPTY_DATA.toInputStream().read()).isEqualTo(-1);
+        assertThat(HttpData.empty().toInputStream().read()).isEqualTo(-1);
 
         final InputStream in1 = HttpData.wrap(new byte[] { 1, 2, 3, 4 }).toInputStream();
         assertThat(in1.read()).isOne();
