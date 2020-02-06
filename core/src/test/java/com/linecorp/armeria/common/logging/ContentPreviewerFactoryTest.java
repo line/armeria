@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -58,6 +59,10 @@ class ContentPreviewerFactoryTest {
                 ctx, RequestHeaders.of(HttpMethod.POST, "/",
                                        HttpHeaderNames.CONTENT_TYPE, "my/type; charset=UTF-8"));
         checkProduced(contentPreviewer);
+
+        contentPreviewer = factory.requestContentPreviewer(ctx, reqHeaders(MediaType.BASIC_AUDIO));
+        contentPreviewer.onData(HttpData.ofUtf8("hello!"));
+        assertThat(contentPreviewer.produce()).isNull();
     }
 
     private static void checkProduced(ContentPreviewer contentPreviewer) {
@@ -67,10 +72,18 @@ class ContentPreviewerFactoryTest {
 
     @Test
     void producedPreviewDoesNotExceedMaxLength() {
-        final ContentPreviewer contentPreviewer = ContentPreviewerFactory.text(4).requestContentPreviewer(
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.builder().maxLength(4).binary(
+                MediaTypeSet.of(MediaType.BASIC_AUDIO), (headers, byteBuf) -> "abcde").build();
+
+        final ContentPreviewer contentPreviewer = factory.requestContentPreviewer(
                 ctx, reqHeaders(MediaType.PLAIN_TEXT_UTF_8));
         contentPreviewer.onData(HttpData.ofUtf8("hello!"));
         assertThat(contentPreviewer.produce()).isEqualTo("hell");
+
+        final ContentPreviewer contentPreviewer2 = factory.requestContentPreviewer(
+                ctx, reqHeaders(MediaType.BASIC_AUDIO));
+        contentPreviewer2.onData(HttpData.ofUtf8("hello!"));
+        assertThat(contentPreviewer2.produce()).isEqualTo("abcd");
     }
 
     private static RequestHeaders reqHeaders(MediaType contentType) {

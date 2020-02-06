@@ -18,23 +18,26 @@ package com.linecorp.armeria.common.logging;
 
 import java.nio.charset.Charset;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.buffer.ByteBuf;
 
 final class PreviewSpec {
 
-    private final PreviewerPredicate predicate;
+    private final BiPredicate<? super RequestContext, ? super HttpHeaders> predicate;
     private final PreviewMode mode;
     @Nullable
     private final Charset defaultCharset;
     @Nullable
     private final BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer;
 
-    PreviewSpec(PreviewerPredicate predicate, PreviewMode mode, @Nullable Charset defaultCharset,
+    PreviewSpec(BiPredicate<? super RequestContext, ? super HttpHeaders> predicate,
+                PreviewMode mode, @Nullable Charset defaultCharset,
                 @Nullable BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
         this.predicate = predicate;
         this.mode = mode;
@@ -42,7 +45,7 @@ final class PreviewSpec {
         this.producer = producer;
     }
 
-    PreviewerPredicate predicate() {
+    BiPredicate<? super RequestContext, ? super HttpHeaders> predicate() {
         return predicate;
     }
 

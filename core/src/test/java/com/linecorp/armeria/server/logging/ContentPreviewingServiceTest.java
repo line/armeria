@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
@@ -45,7 +46,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.common.logging.PreviewerPredicate;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -86,7 +86,7 @@ class ContentPreviewingServiceTest {
         }
 
         private Function<? super HttpService, ContentPreviewingService> decodingContentPreviewDecorator() {
-            final PreviewerPredicate previewerPredicate =
+            final BiPredicate<? super RequestContext, ? super HttpHeaders> previewerPredicate =
                     (requestContext, headers) -> "gzip".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
 
             final BiFunction<HttpHeaders, ByteBuf, String> producer = (headers, data) -> {

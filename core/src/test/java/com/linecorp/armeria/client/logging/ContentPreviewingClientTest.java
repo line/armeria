@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
@@ -43,10 +44,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.common.logging.PreviewerPredicate;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
@@ -123,7 +124,7 @@ class ContentPreviewingClientTest {
     }
 
     private static Function<? super HttpClient, ContentPreviewingClient> decodingContentPreviewDecorator() {
-        final PreviewerPredicate previewerPredicate =
+        final BiPredicate<? super RequestContext, ? super HttpHeaders> previewerPredicate =
                 (requestContext, headers) -> "gzip".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
         final BiFunction<HttpHeaders, ByteBuf, String> producer = (headers, data) -> {
             final byte[] bytes = new byte[data.readableBytes()];

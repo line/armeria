@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.logging.ContentPreviewerFactoryBuilder.binaryProducer;
+import static com.linecorp.armeria.common.logging.ContentPreviewerFactoryBuilder.hexDumpProducer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.Charset;
@@ -294,6 +294,6 @@ class ContentPreviewerTest {
     }
 
     ContentPreviewer hexDumpContenPreviewer() {
-        return new ProducerBasedContentPreviewer(100, HttpHeaders.of(), binaryProducer());
+        return new ProducerBasedContentPreviewer(100, HttpHeaders.of(), hexDumpProducer());
     }
 }

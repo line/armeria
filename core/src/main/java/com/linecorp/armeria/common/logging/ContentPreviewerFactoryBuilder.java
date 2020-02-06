@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
@@ -30,6 +31,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.PreviewSpec.PreviewMode;
@@ -94,27 +96,30 @@ public final class ContentPreviewerFactoryBuilder {
     }
 
     /**
-     * Sets the specified {@link PreviewerPredicate} to produce the text preview when the predicate
+     * Sets the specified {@link BiPredicate} to produce the text preview when the predicate
      * returns {@code true}.
      */
-    public ContentPreviewerFactoryBuilder text(PreviewerPredicate predicate) {
+    public ContentPreviewerFactoryBuilder text(
+            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate) {
         return text0(predicate, null);
     }
 
     /**
-     * Sets the specified {@link PreviewerPredicate} to produce the text preview when the predicate
+     * Sets the specified {@link BiPredicate} to produce the text preview when the predicate
      * returns {@code true}.
      *
      * @param defaultCharset the default charset used when a charset is not specified in the
      *                       {@code "content-type"} header
      */
-    public ContentPreviewerFactoryBuilder text(PreviewerPredicate predicate, Charset defaultCharset) {
+    public ContentPreviewerFactoryBuilder text(
+            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate, Charset defaultCharset) {
         requireNonNull(defaultCharset, "defaultCharset");
         return text0(predicate, defaultCharset);
     }
 
-    private ContentPreviewerFactoryBuilder text0(PreviewerPredicate predicate,
-                                                 @Nullable Charset defaultCharset) {
+    private ContentPreviewerFactoryBuilder text0(
+            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate,
+            @Nullable Charset defaultCharset) {
         requireNonNull(predicate, "predicate");
         previewSpecsBuilder.add(new PreviewSpec(predicate, PreviewMode.TEXT, defaultCharset, null));
         return this;
@@ -127,7 +132,7 @@ public final class ContentPreviewerFactoryBuilder {
      * the {@link MediaTypeSet}.
      */
     public ContentPreviewerFactoryBuilder binary(MediaTypeSet mediaTypeSet) {
-        binary(mediaTypeSet, binaryProducer());
+        binary(mediaTypeSet, hexDumpProducer());
         return this;
     }
 
@@ -143,20 +148,22 @@ public final class ContentPreviewerFactoryBuilder {
     }
 
     /**
-     * Sets the specified {@link PreviewerPredicate} to produce the
+     * Sets the specified {@link BiPredicate} to produce the
      * <a href="http://en.wikipedia.org/wiki/Hex_dump">hex dump</a> preview when the predicate
      * returns {@code true}.
      */
-    public ContentPreviewerFactoryBuilder binary(PreviewerPredicate predicate) {
-        return binary(predicate, binaryProducer());
+    public ContentPreviewerFactoryBuilder binary(
+            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate) {
+        return binary(predicate, hexDumpProducer());
     }
 
     /**
-     * Sets the specified {@link PreviewerPredicate} to produce the preview using the specified
+     * Sets the specified {@link BiPredicate} to produce the preview using the specified
      * {@link BiFunction} when the predicate returns {@code true}.
      */
     public ContentPreviewerFactoryBuilder binary(
-            PreviewerPredicate predicate, BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
+            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate,
+            BiFunction<? super HttpHeaders, ? super ByteBuf, String> producer) {
         requireNonNull(predicate, "predicate");
         requireNonNull(producer, "producer");
         previewSpecsBuilder.add(new PreviewSpec(predicate, PreviewMode.BINARY, null, producer));
@@ -174,10 +181,11 @@ public final class ContentPreviewerFactoryBuilder {
     }
 
     /**
-     * Sets the specified {@link PreviewerPredicate} <b>NOT</b> to produce the preview when the predicate
+     * Sets the specified {@link BiPredicate} <b>NOT</b> to produce the preview when the predicate
      * returns {@code true}.
      */
-    public ContentPreviewerFactoryBuilder disable(PreviewerPredicate predicate) {
+    public ContentPreviewerFactoryBuilder disable(
+            BiPredicate<? super RequestContext, ? super HttpHeaders> predicate) {
         requireNonNull(predicate, "predicate");
         previewSpecsBuilder.add(new PreviewSpec(predicate, PreviewMode.DISABLED, null, null));
         return this;
@@ -190,7 +198,8 @@ public final class ContentPreviewerFactoryBuilder {
         return new DefaultContentPreviewFactory(previewSpecsBuilder.build(), maxLength, defaultCharset);
     }
 
-    private static PreviewerPredicate previewerPredicate(MediaTypeSet mediaTypeSet) {
+    private static BiPredicate<? super RequestContext, ? super HttpHeaders> previewerPredicate(
+            MediaTypeSet mediaTypeSet) {
         requireNonNull(mediaTypeSet, "mediaTypesSet");
         return (ctx, headers) -> {
             final MediaType contentType = headers.contentType();
@@ -201,7 +210,7 @@ public final class ContentPreviewerFactoryBuilder {
         };
     }
 
-    static BiFunction<? super HttpHeaders, ? super ByteBuf, String> binaryProducer() {
+    static BiFunction<? super HttpHeaders, ? super ByteBuf, String> hexDumpProducer() {
         return (headers, byteBuf) -> ByteBufUtil.hexDump(byteBuf);
     }
 }

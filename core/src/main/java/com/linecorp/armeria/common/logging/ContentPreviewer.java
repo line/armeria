@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.HttpData;
 public interface ContentPreviewer {
 
     /**
-     * A dummy {@link ContentPreviewer} which discards everything it collected and produces {@code null}.
+     * Returns a dummy {@link ContentPreviewer} which produces {@code null}.
      */
     static ContentPreviewer disabled() {
         return NoopContentPreviewer.NOOP;

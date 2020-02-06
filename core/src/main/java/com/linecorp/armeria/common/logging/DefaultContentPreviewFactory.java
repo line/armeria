@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.logging.ContentPreviewerFactoryBuilder.binaryProducer;
-
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -90,7 +88,7 @@ final class DefaultContentPreviewFactory implements ContentPreviewerFactory {
             }
         }
 
-        return new ProducerBasedContentPreviewer(maxLength, headers, binaryProducer());
+        return ContentPreviewer.disabled();
     }
 
     private Charset charset(HttpHeaders headers, PreviewSpec previewSpec) {
