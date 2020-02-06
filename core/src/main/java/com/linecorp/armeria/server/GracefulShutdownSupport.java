@@ -19,7 +19,7 @@ package com.linecorp.armeria.server;
 import java.time.Duration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 import com.google.common.base.Ticker;
 
@@ -41,20 +41,28 @@ abstract class GracefulShutdownSupport {
         return new DisabledGracefulShutdownSupport();
     }
 
+    private final LongAdder pendingResponses = new LongAdder();
+
     /**
      * Increases the number of pending responses.
      */
-    abstract void inc();
+    final void inc() {
+        pendingResponses.increment();
+    }
 
     /**
      * Decreases the number of pending responses.
      */
-    abstract void dec();
+    void dec() {
+        pendingResponses.decrement();
+    }
 
     /**
      * Returns the number of pending responses.
      */
-    abstract int pendingResponses();
+    final long pendingResponses() {
+        return pendingResponses.sum();
+    }
 
     /**
      * Returns {@code true} if the graceful shutdown has started (or finished).
@@ -69,17 +77,6 @@ abstract class GracefulShutdownSupport {
     private static final class DisabledGracefulShutdownSupport extends GracefulShutdownSupport {
 
         private volatile boolean shuttingDown;
-
-        @Override
-        void inc() {}
-
-        @Override
-        void dec() {}
-
-        @Override
-        int pendingResponses() {
-            return 0;
-        }
 
         @Override
         boolean isShuttingDown() {
@@ -100,14 +97,10 @@ abstract class GracefulShutdownSupport {
         private final Executor blockingTaskExecutor;
 
         /**
-         * NOTE: {@link #updatedLastResTimeNanos} and {@link #lastResTimeNanos} are declared as non-volatile
-         *       while using this field as a memory barrier.
+         * Declared as non-volatile because using {@link #pendingResponses} as a memory barrier.
          */
-        private final AtomicInteger pendingResponses = new AtomicInteger();
-        private boolean updatedLastResTimeNanos;
         private long lastResTimeNanos;
-        private boolean setShutdownStartTimeNanos;
-        private long shutdownStartTimeNanos;
+        private volatile long shutdownStartTimeNanos;
 
         DefaultGracefulShutdownSupport(Duration quietPeriod, Executor blockingTaskExecutor, Ticker ticker) {
             quietPeriodNanos = quietPeriod.toNanos();
@@ -116,49 +109,42 @@ abstract class GracefulShutdownSupport {
         }
 
         @Override
-        void inc() {
-            pendingResponses.incrementAndGet();
-        }
-
-        @Override
         void dec() {
-            lastResTimeNanos = ticker.read();
-            updatedLastResTimeNanos = true;
-            pendingResponses.decrementAndGet();
-        }
-
-        @Override
-        int pendingResponses() {
-            return pendingResponses.get();
+            lastResTimeNanos = readTicker();
+            super.dec();
         }
 
         @Override
         boolean isShuttingDown() {
-            return setShutdownStartTimeNanos;
+            return shutdownStartTimeNanos != 0;
         }
 
         @Override
         boolean completedQuietPeriod() {
-            if (!setShutdownStartTimeNanos) {
-                shutdownStartTimeNanos = ticker.read();
-                setShutdownStartTimeNanos = true;
+            if (shutdownStartTimeNanos == 0) {
+                shutdownStartTimeNanos = readTicker();
             }
 
-            if (pendingResponses.get() != 0 || !completedBlockingTasks()) {
+            if (pendingResponses() != 0 || !completedBlockingTasks()) {
                 return false;
             }
 
             final long shutdownStartTimeNanos = this.shutdownStartTimeNanos;
             final long currentTimeNanos = ticker.read();
-            final long duration;
-            if (updatedLastResTimeNanos) {
-                duration = Math.min(currentTimeNanos - shutdownStartTimeNanos,
-                                    currentTimeNanos - lastResTimeNanos);
+            final long durationNanos;
+            if (lastResTimeNanos != 0) {
+                durationNanos = Math.min(currentTimeNanos - shutdownStartTimeNanos,
+                                         currentTimeNanos - lastResTimeNanos);
             } else {
-                duration = currentTimeNanos - shutdownStartTimeNanos;
+                durationNanos = currentTimeNanos - shutdownStartTimeNanos;
             }
 
-            return duration >= quietPeriodNanos;
+            return durationNanos >= quietPeriodNanos;
+        }
+
+        private long readTicker() {
+            // '| 1' makes sure this method never returns 0.
+            return ticker.read() | 1;
         }
 
         private boolean completedBlockingTasks() {
