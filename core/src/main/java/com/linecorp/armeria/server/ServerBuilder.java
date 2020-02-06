@@ -590,10 +590,9 @@ public final class ServerBuilder {
      * @param quietPeriodMillis the number of milliseconds to wait for active
      *                          requests to go end before shutting down. 0 means the server will
      *                          stop right away without waiting.
-     * @param timeoutMillis the number of milliseconds to wait before shutting
-     *                      down the server regardless of active requests. This should be set to
-     *                      a time greater than {@code quietPeriodMillis} to ensure the server
-     *                      shuts down even if there is a stuck request.
+     * @param timeoutMillis the number of milliseconds to wait before shutting down the server regardless of
+     *                      active requests. This should be set to a time greater than {@code quietPeriodMillis}
+     *                      to ensure the server shuts down even if there is a stuck request.
      */
     public ServerBuilder gracefulShutdownTimeoutMillis(long quietPeriodMillis, long timeoutMillis) {
         return gracefulShutdownTimeout(
@@ -607,10 +606,9 @@ public final class ServerBuilder {
      * @param quietPeriodMillis the number of milliseconds to wait for active
      *                          requests to go end before shutting down. 0 means the server will
      *                          stop right away without waiting.
-     * @param timeoutMillis the number of milliseconds to wait before shutting
-     *                      down the server regardless of active requests. This should be set to
-     *                      a time greater than {@code quietPeriodMillis} to ensure the server
-     *                      shuts down even if there is a stuck request.
+     * @param timeoutMillis the number of milliseconds to wait before shutting down the server regardless of
+     *                      active requests. This should be set to a time greater than {@code quietPeriodMillis}
+     *                      to ensure the server shuts down even if there is a stuck request.
      *
      * @deprecated Use {@link #gracefulShutdownTimeoutMillis(long, long)}.
      */
@@ -626,10 +624,9 @@ public final class ServerBuilder {
      * @param quietPeriod the number of milliseconds to wait for active
      *                    requests to go end before shutting down. {@link Duration#ZERO} means
      *                    the server will stop right away without waiting.
-     * @param timeout the number of milliseconds to wait before shutting
-     *                down the server regardless of active requests. This should be set to
-     *                a time greater than {@code quietPeriod} to ensure the server shuts
-     *                down even if there is a stuck request.
+     * @param timeout the amount of time to wait before shutting down the server regardless of active requests.
+     *                This should be set to a time greater than {@code quietPeriod} to ensure the server
+     *                shuts down even if there is a stuck request.
      */
     public ServerBuilder gracefulShutdownTimeout(Duration quietPeriod, Duration timeout) {
         requireNonNull(quietPeriod, "quietPeriod");
