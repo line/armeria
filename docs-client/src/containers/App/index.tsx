@@ -209,15 +209,15 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                         )
                       }
                     >
-                      <Grid container alignItems="center">
-                        <Grid item xs={4}>
+                      <Grid container alignItems="center" spacing={2}>
+                        <Grid item xs={'auto'}>
                           <Typography
                             className={httpMethodClass(method.httpMethod)}
                           >
                             {method.httpMethod}
                           </Typography>
                         </Grid>
-                        <Grid item xs={8}>
+                        <Grid item xs>
                           <ListItemText
                             primaryTypographyProps={{
                               variant: 'body2',
