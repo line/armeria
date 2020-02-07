@@ -79,8 +79,6 @@ decorating an :api:`HttpService` or an :api:`RpcService`:
     ServerBuilder sb = Server.builder();
     // Using a lambda expression:
     sb.serviceUnder("/web", service.decorate(delegate -> new AuthService(delegate)));
-    // Using reflection:
-    sb.serviceUnder("/web", service.decorate(AuthService.class));
 
 Extending ``DecoratingService``
 -------------------------------
