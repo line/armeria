@@ -24,6 +24,7 @@ rootProject.ext {
 
 def managedDependencyVersions = [:]
 def managedDependencyExclusions = [:].withDefault { [] }
+def managedDependencyOverrides = [] as Set
 rootProject.ext.dependenciesYaml.forEach { String key, value ->
     if (key == 'boms') {
         value.each {
@@ -116,12 +117,25 @@ configure(dependencyManagementProject) {
             }
 
             checkConstraints = true
+
+            // We have downgraded versions for legacy artifacts which versions plugin has no way of handling.
+            // But we can provide a reminder to manually check for updates.
+            doLast {
+                logger.quiet "Don't forget to check the following for updates to legacy version downgrades"
+                managedDependencyOverrides.each { override ->
+                    def (group, artifact, version) = override.split(':')
+                    def parts = version.split('\\.')
+                    if (parts.length >= 2) {
+                        logger.quiet "${artifact} is currently version ${version}"
+                        logger.quiet "https://search.maven.org/search?q=g:${group}%20a:${artifact}%20v:${parts[0]}.${parts[1]}.*\n"
+                    }
+                }
+            }
         }
     }
 }
 
 configure(projectsWithFlags('java')) {
-    evaluationDependsOn(dependencyManagementProject.path)
 
     configurations.configureEach { configuration ->
         configuration.dependencies.whenObjectAdded { dep ->
@@ -141,6 +155,17 @@ configure(projectsWithFlags('java')) {
                 // Add to resolvable configurations
                 if (configuration.canBeResolved && !configuration.canBeConsumed) {
                     add(configuration.name, platform(dependencyManagementProject))
+                }
+
+                // Find version overrides in dependency declaration configurations
+                if (!configuration.canBeResolved && !configuration.canBeConsumed) {
+                    configuration.dependencies.configureEach { dep ->
+                        if (dep instanceof org.gradle.api.artifacts.ExternalDependency) {
+                            if (dep.version != null) {
+                                managedDependencyOverrides.add(String.valueOf("${dep.module}:${dep.version}"))
+                            }
+                        }
+                    }
                 }
             }
         }

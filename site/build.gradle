@@ -19,7 +19,6 @@ apply plugin: 'base'
 apply plugin: 'kr.motd.sphinx'
 
 def aggregatedProjects = projectsWithFlags('java', 'publish') - projectsWithFlags('no_aggregation')
-aggregatedProjects.each { evaluationDependsOn it.path }
 
 sphinx {
     group = 'Documentation'

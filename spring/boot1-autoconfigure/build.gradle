@@ -1,8 +1,5 @@
 final def SPRING_BOOT_VERSION = '1.5.22.RELEASE'
 
-evaluationDependsOn ':spring:boot-autoconfigure'
-
-
 dependencies {
     // To let a user choose between thrift and thrift0.9.
     compileOnly project(':thrift')
