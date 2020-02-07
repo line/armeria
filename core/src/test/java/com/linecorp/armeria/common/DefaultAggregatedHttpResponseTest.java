@@ -49,7 +49,7 @@ class DefaultAggregatedHttpResponseTest {
     @Test
     void toHttpResponseWithoutContent() {
         final AggregatedHttpResponse aRes = AggregatedHttpResponse.of(HttpStatus.OK, PLAIN_TEXT_UTF_8,
-                                                                      HttpData.EMPTY_DATA);
+                                                                      HttpData.empty());
         final HttpResponse res = aRes.toHttpResponse();
         final List<HttpObject> drained = res.drainAll().join();
 
@@ -78,7 +78,7 @@ class DefaultAggregatedHttpResponseTest {
     void toHttpResponseWithInformationals() {
         final AggregatedHttpResponse aRes = AggregatedHttpResponse.of(
                 ImmutableList.of(ResponseHeaders.of(HttpStatus.CONTINUE)),
-                ResponseHeaders.of(HttpStatus.OK), HttpData.EMPTY_DATA, HttpHeaders.of());
+                ResponseHeaders.of(HttpStatus.OK), HttpData.empty(), HttpHeaders.of());
 
         final HttpResponse res = aRes.toHttpResponse();
         final List<HttpObject> drained = res.drainAll().join();
@@ -99,13 +99,13 @@ class DefaultAggregatedHttpResponseTest {
         contentAndTrailersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.ofUtf8("bob"),
                                         HttpHeaders.of());
 
-        contentAndTrailersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.EMPTY_DATA,
+        contentAndTrailersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.empty(),
                                         HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        contentAndTrailersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.EMPTY_DATA,
+        contentAndTrailersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.empty(),
                                         HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        contentAndTrailersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.EMPTY_DATA,
+        contentAndTrailersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.empty(),
                                         HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        contentAndTrailersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.EMPTY_DATA,
+        contentAndTrailersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.empty(),
                                         HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
     }
 

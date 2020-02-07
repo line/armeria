@@ -20,7 +20,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.InetSocketAddress;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.retry.Backoff;
 
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
@@ -28,10 +31,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 
-public class DnsEndpointGroupBuilderTest {
+class DnsEndpointGroupBuilderTest {
 
     @Test
-    public void hostname() {
+    void hostname() {
         assertThat(new Builder("my-host.com").hostname()).isEqualTo("my-host.com");
         assertThat(new Builder("MY-HOST.COM").hostname()).isEqualTo("my-host.com");
 
@@ -40,7 +43,7 @@ public class DnsEndpointGroupBuilderTest {
     }
 
     @Test
-    public void eventLoop() {
+    void eventLoop() {
         assertThat(builder().eventLoop()).isNotNull();
         final EventLoop loop = new NioEventLoopGroup().next();
         assertThat(builder().eventLoop(loop).eventLoop()).isSameAs(loop);
@@ -49,7 +52,7 @@ public class DnsEndpointGroupBuilderTest {
     }
 
     @Test
-    public void ttl() {
+    void ttl() {
         assertThat(builder().minTtl()).isOne();
         assertThat(builder().maxTtl()).isEqualTo(Integer.MAX_VALUE);
         final Builder builderWithCustomTtl = builder().ttl(10, 20);
@@ -65,7 +68,7 @@ public class DnsEndpointGroupBuilderTest {
     }
 
     @Test
-    public void serverAddresses() {
+    void serverAddresses() {
         // Should be set by default.
         assertThat(builder().serverAddressStreamProvider()).isNotNull();
 
@@ -87,9 +90,39 @@ public class DnsEndpointGroupBuilderTest {
         return new Builder("foo.com");
     }
 
-    private static final class Builder extends DnsEndpointGroupBuilder<Builder> {
+    private static final class Builder extends DnsEndpointGroupBuilder {
         Builder(String hostname) {
             super(hostname);
+        }
+
+        @Override
+        public Builder eventLoop(EventLoop eventLoop) {
+            return (Builder) super.eventLoop(eventLoop);
+        }
+
+        @Override
+        public Builder ttl(int minTtl, int maxTtl) {
+            return (Builder) super.ttl(minTtl, maxTtl);
+        }
+
+        @Override
+        public Builder serverAddresses(InetSocketAddress... serverAddresses) {
+            return (Builder) super.serverAddresses(serverAddresses);
+        }
+
+        @Override
+        public Builder serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
+            return (Builder) super.serverAddresses(serverAddresses);
+        }
+
+        @Override
+        public Builder backoff(Backoff backoff) {
+            return (Builder) super.backoff(backoff);
+        }
+
+        @Override
+        public Builder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+            return (Builder) super.selectionStrategy(selectionStrategy);
         }
     }
 }

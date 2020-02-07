@@ -67,10 +67,6 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
         return (VirtualHostServiceBindingBuilder) super.path(pathPattern);
     }
 
-    /**
-     * {@inheritDoc}
-     * @deprecated Use {@link #pathPrefix(String)}.
-     */
     @Override
     @Deprecated
     public VirtualHostServiceBindingBuilder pathUnder(String prefix) {

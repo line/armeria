@@ -28,7 +28,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.net.URI;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -1200,7 +1199,7 @@ public class GrpcClientTest {
 
         final ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
         verify(responseObserver,
-               timeout(Duration.ofMillis(operationTimeoutMillis()))).onError(captor.capture());
+               timeout(operationTimeoutMillis())).onError(captor.capture());
         assertThat(GrpcStatus.fromThrowable(captor.getValue()).getCode()).isEqualTo(Status.UNKNOWN.getCode());
         assertThat(GrpcStatus.fromThrowable(captor.getValue()).getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);

@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -45,7 +46,6 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -55,6 +55,7 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerMethodDefinition;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -74,7 +75,7 @@ import io.netty.buffer.ByteBufHolder;
  *     </li>
  * </ul>
  */
-final class UnframedGrpcService extends SimpleDecoratingHttpService implements HttpServiceWithRoutes {
+final class UnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
 
     private static final char LINE_SEPARATOR = '\n';
 
@@ -84,17 +85,31 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements H
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    UnframedGrpcService(HttpService delegate) {
+    UnframedGrpcService(GrpcService delegate) {
         super(delegate);
-        final GrpcService delegateGrpcService = delegate.as(GrpcService.class);
-        checkArgument(delegateGrpcService != null, "Decorated service must be a GrpcService.");
-        this.delegateGrpcService = delegateGrpcService;
-        methodsByName = delegateGrpcService.services()
-                                           .stream()
-                                           .flatMap(service -> service.getMethods().stream())
-                                           .map(ServerMethodDefinition::getMethodDescriptor)
-                                           .collect(toImmutableMap(MethodDescriptor::getFullMethodName,
-                                                                   Function.identity()));
+        checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
+        delegateGrpcService = delegate;
+        methodsByName = delegate.services()
+                                .stream()
+                                .flatMap(service -> service.getMethods().stream())
+                                .map(ServerMethodDefinition::getMethodDescriptor)
+                                .collect(toImmutableMap(MethodDescriptor::getFullMethodName,
+                                                        Function.identity()));
+    }
+
+    @Override
+    public boolean isFramed() {
+        return false;
+    }
+
+    @Override
+    public List<ServerServiceDefinition> services() {
+        return delegateGrpcService.services();
+    }
+
+    @Override
+    public Set<SerializationFormat> supportedSerializationFormats() {
+        return delegateGrpcService.supportedSerializationFormats();
     }
 
     @Override

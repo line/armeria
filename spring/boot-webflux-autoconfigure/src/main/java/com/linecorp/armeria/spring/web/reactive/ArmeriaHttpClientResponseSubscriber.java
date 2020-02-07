@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
@@ -84,7 +83,7 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
         if (httpObject instanceof ResponseHeaders) {
             final ResponseHeaders headers = (ResponseHeaders) httpObject;
             final HttpStatus status = headers.status();
-            if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+            if (!status.isInformational()) {
                 headersFuture.complete(headers);
                 return;
             }

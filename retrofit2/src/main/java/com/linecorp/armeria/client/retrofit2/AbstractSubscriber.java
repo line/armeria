@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 
 import io.netty.util.ReferenceCountUtil;
 import okhttp3.Callback;
@@ -105,7 +104,7 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
                 }
 
                 final HttpStatus status = HttpStatus.valueOf(statusText);
-                if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+                if (!status.isInformational()) {
                     state = State.WAIT_DATA_OR_TRAILERS;
                     responseBuilder.code(status.code());
                     responseBuilder.message(status.reasonPhrase());

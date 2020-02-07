@@ -19,10 +19,15 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.time.Duration;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -55,7 +60,7 @@ import com.linecorp.armeria.common.SessionProtocol;
  * Similarly, {@code decorations} will contain all decorators of {@code decorationA} and {@code decorationB},
  * but there will be no replacement but only addition.
  */
-public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuilder> {
+public final class ClientBuilder extends AbstractClientOptionsBuilder {
 
     @Nullable
     private final URI uri;
@@ -192,5 +197,147 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
                     getClass().getSimpleName() + " must be created with an " +
                     EndpointGroup.class.getSimpleName() + " to call this method.");
         }
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public ClientBuilder options(ClientOptions options) {
+        return (ClientBuilder) super.options(options);
+    }
+
+    @Override
+    public ClientBuilder options(ClientOptionValue<?>... options) {
+        return (ClientBuilder) super.options(options);
+    }
+
+    @Override
+    public ClientBuilder options(Iterable<ClientOptionValue<?>> options) {
+        return (ClientBuilder) super.options(options);
+    }
+
+    @Override
+    public <T> ClientBuilder option(ClientOption<T> option, T value) {
+        return (ClientBuilder) super.option(option, value);
+    }
+
+    @Override
+    public <T> ClientBuilder option(ClientOptionValue<T> optionValue) {
+        return (ClientBuilder) super.option(optionValue);
+    }
+
+    @Override
+    public ClientBuilder factory(ClientFactory factory) {
+        return (ClientBuilder) super.factory(factory);
+    }
+
+    @Override
+    @Deprecated
+    public ClientBuilder defaultWriteTimeout(Duration writeTimeout) {
+        return (ClientBuilder) super.defaultWriteTimeout(writeTimeout);
+    }
+
+    @Override
+    @Deprecated
+    public ClientBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
+        return (ClientBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
+    }
+
+    @Override
+    public ClientBuilder writeTimeout(Duration writeTimeout) {
+        return (ClientBuilder) super.writeTimeout(writeTimeout);
+    }
+
+    @Override
+    public ClientBuilder writeTimeoutMillis(long writeTimeoutMillis) {
+        return (ClientBuilder) super.writeTimeoutMillis(writeTimeoutMillis);
+    }
+
+    @Override
+    @Deprecated
+    public ClientBuilder defaultResponseTimeout(Duration responseTimeout) {
+        return (ClientBuilder) super.defaultResponseTimeout(responseTimeout);
+    }
+
+    @Override
+    @Deprecated
+    public ClientBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
+        return (ClientBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    public ClientBuilder responseTimeout(Duration responseTimeout) {
+        return (ClientBuilder) super.responseTimeout(responseTimeout);
+    }
+
+    @Override
+    public ClientBuilder responseTimeoutMillis(long responseTimeoutMillis) {
+        return (ClientBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    @Deprecated
+    public ClientBuilder defaultMaxResponseLength(long maxResponseLength) {
+        return (ClientBuilder) super.defaultMaxResponseLength(maxResponseLength);
+    }
+
+    @Override
+    public ClientBuilder maxResponseLength(long maxResponseLength) {
+        return (ClientBuilder) super.maxResponseLength(maxResponseLength);
+    }
+
+    @Override
+    public ClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
+        return (ClientBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public ClientBuilder endpointRemapper(
+            Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
+        return (ClientBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public ClientBuilder decorator(
+            Function<? super HttpClient, ? extends HttpClient> decorator) {
+        return (ClientBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public ClientBuilder decorator(DecoratingHttpClientFunction decorator) {
+        return (ClientBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public ClientBuilder rpcDecorator(
+            Function<? super RpcClient, ? extends RpcClient> decorator) {
+        return (ClientBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
+    public ClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
+        return (ClientBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
+    public ClientBuilder addHttpHeader(CharSequence name, Object value) {
+        return (ClientBuilder) super.addHttpHeader(name, value);
+    }
+
+    @Override
+    public ClientBuilder addHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+        return (ClientBuilder) super.addHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public ClientBuilder setHttpHeader(CharSequence name, Object value) {
+        return (ClientBuilder) super.setHttpHeader(name, value);
+    }
+
+    @Override
+    public ClientBuilder setHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+        return (ClientBuilder) super.setHttpHeaders(httpHeaders);
     }
 }

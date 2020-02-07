@@ -154,8 +154,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
-        checkArgument(status.codeClass() != HttpStatusClass.INFORMATIONAL,
-                      "status: %s (expected: a non-1xx status");
+        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status");
 
         if (status.isContentAlwaysEmpty()) {
             return new OneElementFixedHttpResponse(ResponseHeaders.of(status));

@@ -52,7 +52,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
     @Deprecated
     default void respond(HttpStatus status) {
         requireNonNull(status, "status");
-        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+        if (status.isInformational()) {
             tryWrite(ResponseHeaders.of(status));
         } else if (status.isContentAlwaysEmpty()) {
             if (tryWrite(ResponseHeaders.of(status))) {

@@ -20,11 +20,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.MediaTypeNames;
+
 /**
- * An alias for {@code @Consumes("application/octet-stream")}.
+ * An alias for {@code @Consumes(MediaTypeNames.OCTET_STREAM)}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@Consumes("application/octet-stream")
+@Consumes(MediaTypeNames.OCTET_STREAM)
 public @interface ConsumesOctetStream {
 }

@@ -90,7 +90,7 @@ public interface RetryStrategy {
     static RetryStrategy onServerErrorStatus(Backoff backoff) {
         requireNonNull(backoff, "backoff");
         return onStatus((status, thrown) -> {
-            if (thrown != null || (status != null && status.codeClass() == HttpStatusClass.SERVER_ERROR)) {
+            if (thrown != null || (status != null && status.isServerError())) {
                 return backoff;
             }
             return null;

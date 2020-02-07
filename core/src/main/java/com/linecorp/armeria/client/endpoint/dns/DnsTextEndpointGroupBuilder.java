@@ -17,16 +17,20 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.retry.Backoff;
+
+import io.netty.channel.EventLoop;
 
 /**
  * Builds a new {@link DnsTextEndpointGroup} that sources its {@link Endpoint} list from the {@code TXT}
  * DNS records of a certain hostname.
  */
-public final class DnsTextEndpointGroupBuilder
-        extends DnsEndpointGroupBuilder<DnsTextEndpointGroupBuilder> {
+public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
 
     private final Function<byte[], Endpoint> mapping;
 
@@ -52,5 +56,37 @@ public final class DnsTextEndpointGroupBuilder
     public DnsTextEndpointGroup build() {
         return new DnsTextEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
                                         serverAddressStreamProvider(), backoff(), hostname(), mapping);
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public DnsTextEndpointGroupBuilder eventLoop(EventLoop eventLoop) {
+        return (DnsTextEndpointGroupBuilder) super.eventLoop(eventLoop);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
+        return (DnsTextEndpointGroupBuilder) super.ttl(minTtl, maxTtl);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder serverAddresses(InetSocketAddress... serverAddresses) {
+        return (DnsTextEndpointGroupBuilder) super.serverAddresses(serverAddresses);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
+        return (DnsTextEndpointGroupBuilder) super.serverAddresses(serverAddresses);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder backoff(Backoff backoff) {
+        return (DnsTextEndpointGroupBuilder) super.backoff(backoff);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+        return (DnsTextEndpointGroupBuilder) super.selectionStrategy(selectionStrategy);
     }
 }

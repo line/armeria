@@ -27,7 +27,6 @@ import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.conf
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureTls;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.contentEncodingDecorator;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.parseDataSize;
-import static com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory.DEFAULT;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -231,7 +230,8 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     private void configureArmeriaService(ServerBuilder sb, ArmeriaSettings settings) {
         final MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory =
-                settings.isEnableMetrics() ? firstNonNull(findBean(MeterIdPrefixFunctionFactory.class), DEFAULT)
+                settings.isEnableMetrics() ? firstNonNull(findBean(MeterIdPrefixFunctionFactory.class),
+                                                          MeterIdPrefixFunctionFactory.ofDefault())
                                            : null;
 
         configurePorts(sb, settings.getPorts());

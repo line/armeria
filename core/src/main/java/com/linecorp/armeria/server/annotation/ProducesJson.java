@@ -20,11 +20,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.MediaTypeNames;
+
 /**
- * An alias for {@code @Produces("application/json; charset=utf-8")}.
+ * An alias for {@code @Produces(MediaTypeNames.JSON_UTF_8)}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@Produces("application/json; charset=utf-8")
+@Produces(MediaTypeNames.JSON_UTF_8)
 public @interface ProducesJson {
 }
