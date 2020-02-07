@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
-import com.linecorp.armeria.common.stream.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -403,7 +403,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             // Attempted to write something on a finished request/response; discard.
             // e.g. the request already timed out.
             ReferenceCountUtil.safeRelease(obj);
-            return newFailedFuture(ClosedPublisherException.get());
+            return newFailedFuture(ClosedStreamException.get());
         }
 
         final PendingWrites currentPendingWrites = pendingWritesMap.get(id);

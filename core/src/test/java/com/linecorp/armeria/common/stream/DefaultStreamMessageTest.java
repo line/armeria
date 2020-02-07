@@ -109,7 +109,7 @@ class DefaultStreamMessageTest {
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
         assertThat(stream.tryWrite(buf)).isFalse();
         assertThat(buf.refCnt()).isOne();
-        assertThatThrownBy(() -> stream.write(buf)).isInstanceOf(ClosedPublisherException.class);
+        assertThatThrownBy(() -> stream.write(buf)).isInstanceOf(ClosedStreamException.class);
         assertThat(buf.refCnt()).isZero();
     }
 
@@ -122,7 +122,7 @@ class DefaultStreamMessageTest {
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
         assertThat(stream.tryWrite(() -> buf)).isFalse();
         assertThat(buf.refCnt()).isOne();
-        assertThatThrownBy(() -> stream.write(() -> buf)).isInstanceOf(ClosedPublisherException.class);
+        assertThatThrownBy(() -> stream.write(() -> buf)).isInstanceOf(ClosedStreamException.class);
         assertThat(buf.refCnt()).isZero();
     }
 
@@ -136,7 +136,7 @@ class DefaultStreamMessageTest {
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
         assertThat(stream.tryWrite(data)).isFalse();
         assertThat(data.refCnt()).isOne();
-        assertThatThrownBy(() -> stream.write(data)).isInstanceOf(ClosedPublisherException.class);
+        assertThatThrownBy(() -> stream.write(data)).isInstanceOf(ClosedStreamException.class);
         assertThat(data.refCnt()).isZero();
     }
 
@@ -150,7 +150,7 @@ class DefaultStreamMessageTest {
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
         assertThat(stream.tryWrite(() -> data)).isFalse();
         assertThat(data.refCnt()).isOne();
-        assertThatThrownBy(() -> stream.write(() -> data)).isInstanceOf(ClosedPublisherException.class);
+        assertThatThrownBy(() -> stream.write(() -> data)).isInstanceOf(ClosedStreamException.class);
         assertThat(data.refCnt()).isZero();
     }
 }

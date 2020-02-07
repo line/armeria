@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.stream.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Version;
@@ -297,7 +297,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         if (loggedResponseHeadersFirstBytesTransferred &&
             !responseEncoder.isWritable(req.id(), req.streamId())) {
             if (reqCtx.sessionProtocol().isMultiplex()) {
-                fail(ClosedPublisherException.get());
+                fail(ClosedStreamException.get());
             } else {
                 fail(ClosedSessionException.get());
             }

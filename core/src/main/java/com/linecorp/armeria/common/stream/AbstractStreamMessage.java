@@ -175,7 +175,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      * Helper method for the common case of cleaning up all elements in a queue when shutting down the stream.
      */
     void cleanupQueue(SubscriptionImpl subscription, Queue<Object> queue) {
-        final Throwable cause = ClosedPublisherException.get();
+        final Throwable cause = ClosedStreamException.get();
         for (;;) {
             final Object e = queue.poll();
             if (e == null) {
