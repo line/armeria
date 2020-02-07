@@ -54,7 +54,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
-import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -390,39 +389,47 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), routed.route())) {
                 reqCtx.log().whenComplete().thenAccept(log -> {
-                    final HttpStatus status = log.responseHeaders().status();
-                    if (status.code() >= 200 && status.code() < 400) {
+                    final int statusCode = log.responseHeaders().status().code();
+                    if (statusCode >= 200 && statusCode < 400) {
                         pathAndQuery.storeInCache(originalPath);
                     }
                 });
             }
 
             req.whenComplete().handle((ret, cause) -> {
-                if (cause == null) {
-                    logBuilder.endRequest();
-                } else {
-                    logBuilder.endRequest(cause);
-                    // NB: logBuilder.endResponse(cause) will be called by HttpResponseSubscriber below
+                try {
+                    if (cause == null) {
+                        logBuilder.endRequest();
+                    } else {
+                        logBuilder.endRequest(cause);
+                        // NB: logBuilder.endResponse(cause) will be called by HttpResponseSubscriber below.
+                    }
+                } catch (Throwable t) {
+                    logger.warn("Unexpected exception:", t);
                 }
                 return null;
-            }).exceptionally(CompletionActions::log);
+            });
 
             res.whenComplete().handleAsync((ret, cause) -> {
-                if (cause == null) {
-                    req.abort();
-                } else {
-                    req.abort(cause);
-                }
-                // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
-                if (!isTransient) {
-                    gracefulShutdownSupport.dec();
-                }
-                unfinishedRequests.remove(req);
-                if (unfinishedRequests.isEmpty() && handledLastRequest) {
-                    ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                try {
+                    if (cause == null) {
+                        req.abort();
+                    } else {
+                        req.abort(cause);
+                    }
+                    // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
+                    if (!isTransient) {
+                        gracefulShutdownSupport.dec();
+                    }
+                    unfinishedRequests.remove(req);
+                    if (unfinishedRequests.isEmpty() && handledLastRequest) {
+                        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                    }
+                } catch (Throwable t) {
+                    logger.warn("Unexpected exception:", t);
                 }
                 return null;
-            }, eventLoop).exceptionally(CompletionActions::log);
+            }, eventLoop);
 
             // Set the response to the request in order to be able to immediately abort the response
             // when the peer cancels the stream.
