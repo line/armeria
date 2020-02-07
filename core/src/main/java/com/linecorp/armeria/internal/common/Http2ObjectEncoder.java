@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.stream.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -61,12 +61,12 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
             // One of the following cases:
             // - Stream has been closed already.
             // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
-            return newFailedFuture(ClosedPublisherException.get());
+            return newFailedFuture(ClosedStreamException.get());
         }
 
         if (conn.local().mayHaveCreatedStream(streamId)) {
             // Stream has been closed.
-            return newFailedFuture(ClosedPublisherException.get());
+            return newFailedFuture(ClosedStreamException.get());
         }
 
         // Client starts a new stream.
@@ -85,7 +85,7 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
             // Can't write to an outdated (closed) stream.
             ReferenceCountUtil.safeRelease(data);
             return data.isEmpty() ? ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
-                                  : newFailedFuture(ClosedPublisherException.get());
+                                  : newFailedFuture(ClosedStreamException.get());
         }
 
         // Cannot start a new stream with a DATA frame. It must start with a HEADERS frame.

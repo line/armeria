@@ -19,27 +19,26 @@ package com.linecorp.armeria.common.stream;
 import com.linecorp.armeria.common.Flags;
 
 /**
- * A {@link RuntimeException} that is raised when a {@link StreamWriter} attempts to write an object to a
- * closed {@link StreamMessage}.
- *
- * @deprecated Use {@link ClosedStreamException}.
+ * A {@link RuntimeException} that is raised when a {@link StreamMessage} has been closed unexpectedly.
  */
-@Deprecated
-public class ClosedPublisherException extends RuntimeException {
+public final class ClosedStreamException extends ClosedPublisherException {
 
     private static final long serialVersionUID = -7665826869012452735L;
 
+    private static final ClosedStreamException INSTANCE = new ClosedStreamException(false);
+
     /**
-     * Returns a {@link ClosedPublisherException} which may be a singleton or a new instance, depending on
+     * Returns a {@link ClosedStreamException} which may be a singleton or a new instance, depending on
      * {@link Flags#verboseExceptionSampler()}'s decision.
      */
-    public static ClosedPublisherException get() {
-        return ClosedStreamException.get();
+    public static ClosedStreamException get() {
+        return Flags.verboseExceptionSampler().isSampled(ClosedStreamException.class) ?
+               new ClosedStreamException() : INSTANCE;
     }
 
-    ClosedPublisherException() {}
+    private ClosedStreamException() {}
 
-    ClosedPublisherException(@SuppressWarnings("unused") boolean dummy) {
-        super(null, null, false, false);
+    private ClosedStreamException(boolean dummy) {
+        super(dummy);
     }
 }

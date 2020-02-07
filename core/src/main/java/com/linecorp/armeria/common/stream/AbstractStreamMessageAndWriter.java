@@ -79,7 +79,7 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
     public CompletableFuture<Void> whenConsumed() {
         final AwaitDemandFuture f = new AwaitDemandFuture();
         if (!isOpen()) {
-            f.completeExceptionally(ClosedPublisherException.get());
+            f.completeExceptionally(ClosedStreamException.get());
             return f;
         }
 

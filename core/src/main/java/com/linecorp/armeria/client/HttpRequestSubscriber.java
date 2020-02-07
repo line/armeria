@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.HttpObjectEncoder;
@@ -303,7 +304,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         //    the subscriber attempts to write the next data to the stream closed at 2).
         if (loggedRequestFirstBytesTransferred && !encoder.isWritable(id, streamId())) {
             if (reqCtx.sessionProtocol().isMultiplex()) {
-                fail(ClosedPublisherException.get());
+                fail(ClosedStreamException.get());
             } else {
                 fail(ClosedSessionException.get());
             }
