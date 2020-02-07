@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.annotation;
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
 
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -30,6 +29,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -48,7 +48,7 @@ public final class StringResponseConverterFunction implements ResponseConverterF
             // @Produces("text/plain") or @ProducesText is specified.
             if (mediaType.is(MediaType.ANY_TEXT_TYPE)) {
                 // Use 'utf-8' charset by default.
-                final Charset charset = mediaType.charset(StandardCharsets.UTF_8);
+                final Charset charset = mediaType.charset(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
 
                 // To avoid sending an unfinished text to the client, always aggregate the published strings.
                 if (result instanceof Publisher) {

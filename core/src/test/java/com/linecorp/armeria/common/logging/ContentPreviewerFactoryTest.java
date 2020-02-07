@@ -18,104 +18,78 @@ package com.linecorp.armeria.common.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.charset.Charset;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
-
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
-public class ContentPreviewerFactoryTest {
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
+class ContentPreviewerFactoryTest {
 
-    @Mock
-    RequestContext ctx;
-
-    private static HttpHeaders headers(MediaType contentType) {
-        return HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, contentType);
-    }
-
-    private static HttpHeaders headers(String contentType) {
-        return headers(MediaType.parse(contentType));
-    }
-
-    private static final HttpHeaders textHeader = headers(MediaType.PLAIN_TEXT_UTF_8);
-    private static final HttpHeaders jsonHeader = headers(MediaType.JSON);
-    private static final HttpHeaders pXmlHeader = headers(MediaType.SOAP_XML_UTF_8);
+    private static final RequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
     @Test
-    public void testCreating() {
-        assertThat(ContentPreviewerFactory.of(ContentPreviewerFactory.ofText(10))).isInstanceOf(
-                TextualContentPreviewerFactory.class);
-        assertThat(ContentPreviewerFactory
-                           .of(ContentPreviewerFactory.ofText(10),
-                               ContentPreviewerFactory.of(() -> ContentPreviewer.ofText(10), MediaType.JSON)))
-                .isInstanceOf(CompositeContentPreviewerFactory.class);
-        assertThat(ContentPreviewerFactory
-                           .of(ContentPreviewerFactory.of(() -> ContentPreviewer.ofText(10), MediaType.JSON),
-                               ContentPreviewerFactory.of(() -> ContentPreviewer.ofText(1), "text/*")))
-                .isInstanceOf(MappedContentPreviewerFactory.class);
+    void testOfText() {
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.text(10);
+        ContentPreviewer contentPreviewer = factory.requestContentPreviewer(
+                ctx, reqHeaders(MediaType.PLAIN_TEXT_UTF_8));
+        checkProduced(contentPreviewer);
+
+        contentPreviewer = factory.responseContentPreviewer(ctx, resHeaders(MediaType.PLAIN_TEXT_UTF_8));
+        checkProduced(contentPreviewer);
+
+        contentPreviewer = factory.requestContentPreviewer(ctx, reqHeaders(MediaType.JSON));
+        checkProduced(contentPreviewer);
+
+        contentPreviewer = factory.requestContentPreviewer(ctx, reqHeaders(MediaType.SOAP_XML_UTF_8));
+        checkProduced(contentPreviewer);
+
+        contentPreviewer = factory.requestContentPreviewer(ctx, reqHeaders(MediaType.FORM_DATA));
+        checkProduced(contentPreviewer);
+
+        contentPreviewer = factory.requestContentPreviewer(
+                ctx, RequestHeaders.of(HttpMethod.POST, "/",
+                                       HttpHeaderNames.CONTENT_TYPE, "my/type; charset=UTF-8"));
+        checkProduced(contentPreviewer);
+
+        contentPreviewer = factory.requestContentPreviewer(ctx, reqHeaders(MediaType.BASIC_AUDIO));
+        contentPreviewer.onData(HttpData.ofUtf8("hello!"));
+        assertThat(contentPreviewer.produce()).isNull();
     }
 
-    @Test
-    public void testOfText() {
-        assertThat(ContentPreviewerFactory.ofText(10).get(ctx, textHeader))
-                .isInstanceOf(StringContentPreviewer.class);
-        assertThat(ContentPreviewerFactory.ofText(10).get(ctx, jsonHeader))
-                .isInstanceOf(StringContentPreviewer.class);
-        assertThat(ContentPreviewerFactory.ofText(10).get(ctx, pXmlHeader))
-                .isInstanceOf(StringContentPreviewer.class);
-        // returns disabled when length == 0
-        assertThat(ContentPreviewerFactory.ofText(0)).isSameAs(ContentPreviewerFactory.disabled());
-        assertThat(ContentPreviewerFactory.ofText(0, Charset.defaultCharset(), "text/plain")).isSameAs(
-                ContentPreviewerFactory.disabled());
+    private static void checkProduced(ContentPreviewer contentPreviewer) {
+        contentPreviewer.onData(HttpData.ofUtf8("hello!"));
+        assertThat(contentPreviewer.produce()).isEqualTo("hello!");
     }
 
     @Test
-    public void testComposite() {
-        final ContentPreviewerFactory factory = ContentPreviewerFactory.of(
-                ContentPreviewerFactory.ofText(20, Charset.defaultCharset(), "text/test"),
-                ContentPreviewerFactory.ofText(10),
-                // shouldn't get those.
-                ContentPreviewerFactory.ofText(30, Charset.defaultCharset(), "text/aaa")
-        );
-        assertThat(factory.get(ctx, textHeader)).isInstanceOf(StringContentPreviewer.class);
-        assertThat(((StringContentPreviewer) factory.get(ctx, textHeader)).length()).isEqualTo(10);
-        assertThat(((StringContentPreviewer) factory.get(ctx, headers("text/test"))).length())
-                .isEqualTo(20);
-        assertThat(((StringContentPreviewer) factory.get(ctx, headers("text/aaa"))).length())
-                .isEqualTo(10);
-        // returns disabled if all components are null.
-        assertThat(ContentPreviewerFactory.of(ContentPreviewerFactory.disabled(),
-                                              ContentPreviewerFactory.disabled()))
-                .isEqualTo(ContentPreviewerFactory.disabled());
-        // returns the left one if others are disabled.
-        final ContentPreviewerFactory f = ContentPreviewerFactory.ofText(10);
-        assertThat(ContentPreviewerFactory.of(ContentPreviewerFactory.disabled(), f))
-                .isSameAs(f);
-        assertThat(((CompositeContentPreviewerFactory) ContentPreviewerFactory.of(
-                factory, ContentPreviewerFactory.ofText(10))).factoryList).hasSize(4);
+    void producedPreviewDoesNotExceedMaxLength() {
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.builder().maxLength(4).binary(
+                (headers, byteBuf) -> "abcde", MediaType.BASIC_AUDIO).build();
+
+        final ContentPreviewer contentPreviewer = factory.requestContentPreviewer(
+                ctx, reqHeaders(MediaType.PLAIN_TEXT_UTF_8));
+        contentPreviewer.onData(HttpData.ofUtf8("hello!"));
+        assertThat(contentPreviewer.produce()).isEqualTo("hell");
+
+        final ContentPreviewer contentPreviewer2 = factory.requestContentPreviewer(
+                ctx, reqHeaders(MediaType.BASIC_AUDIO));
+        contentPreviewer2.onData(HttpData.ofUtf8("hello!"));
+        assertThat(contentPreviewer2.produce()).isEqualTo("abcd");
     }
 
-    @Test
-    public void testMapped() {
-        final ContentPreviewerFactory factory = ContentPreviewerFactory.of(
-                ContentPreviewerFactory.ofText(10, Charset.defaultCharset(), MediaType.JSON),
-                ContentPreviewerFactory.ofText(20, Charset.defaultCharset(), MediaType.ANY_TEXT_TYPE),
-                // shouldn't get those.
-                ContentPreviewerFactory.ofText(30, Charset.defaultCharset(), MediaType.JSON),
-                ContentPreviewerFactory.ofText(40, Charset.defaultCharset(), MediaType.JSON),
-                ContentPreviewerFactory.ofText(50, Charset.defaultCharset(), MediaType.JSON),
-                ContentPreviewerFactory.ofText(60, Charset.defaultCharset(), MediaType.JSON)
-        );
-        assertThat(((StringContentPreviewer) factory.get(ctx, textHeader)).length()).isEqualTo(20);
-        assertThat(((StringContentPreviewer) factory.get(ctx, jsonHeader)).length()).isEqualTo(10);
+    private static RequestHeaders reqHeaders(MediaType contentType) {
+        return RequestHeaders.of(HttpMethod.POST, "/", HttpHeaderNames.CONTENT_TYPE, contentType);
+    }
+
+    private static ResponseHeaders resHeaders(MediaType contentType) {
+        return ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, contentType);
     }
 }

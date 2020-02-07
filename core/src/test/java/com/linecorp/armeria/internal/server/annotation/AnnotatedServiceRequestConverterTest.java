@@ -27,8 +27,8 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -64,12 +64,12 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class AnnotatedServiceRequestConverterTest {
+class AnnotatedServiceRequestConverterTest {
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/1", new MyService1(), LoggingService.newDecorator());
@@ -624,8 +624,8 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    public void testRequestConverter() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+    void testRequestConverter() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -650,8 +650,8 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    public void testDefaultRequestConverter_bean1() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+    void testDefaultRequestConverter_bean1() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -718,8 +718,8 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    public void testDefaultRequestConverter_bean2() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+    void testDefaultRequestConverter_bean2() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -759,8 +759,8 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    public void testDefaultRequestConverter_bean3() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+    void testDefaultRequestConverter_bean3() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -798,8 +798,8 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    public void testDefaultRequestConverter_bean4() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri() + "/3");
+    void testDefaultRequestConverter_bean4() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri() + "/3");
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -831,8 +831,8 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    public void testDefaultRequestConverter_json() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+    void testDefaultRequestConverter_json() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -872,8 +872,8 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    public void testDefaultRequestConverter_binary() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+    void testDefaultRequestConverter_binary() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response;
 
@@ -886,8 +886,8 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    public void testDefaultRequestConverter_text() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+    void testDefaultRequestConverter_text() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
 
         AggregatedHttpResponse response;
 
@@ -899,9 +899,8 @@ public class AnnotatedServiceRequestConverterTest {
         assertThat(response.content().array()).isEqualTo(utf8);
 
         final MediaType textPlain = MediaType.create("text", "plain");
-        final byte[] iso8859_1 = "¥".getBytes(StandardCharsets.ISO_8859_1);
         response = client.execute(AggregatedHttpRequest.of(HttpMethod.POST, "/2/default/text",
-                                                           textPlain, iso8859_1))
+                                                           textPlain, utf8))
                          .aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         // Response is encoded as UTF-8.
@@ -909,8 +908,8 @@ public class AnnotatedServiceRequestConverterTest {
     }
 
     @Test
-    public void testRedundantlyUsedParameters() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+    void testRedundantlyUsedParameters() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
         final ObjectMapper mapper = new ObjectMapper();
         final RequestBean4 expectedRequestBean = new RequestBean4(100);
         expectedRequestBean.foo2 = 100;

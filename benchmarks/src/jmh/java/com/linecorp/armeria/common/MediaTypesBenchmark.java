@@ -24,7 +24,7 @@ import org.openjdk.jmh.infra.Blackhole;
  */
 public class MediaTypesBenchmark {
 
-    private static final MediaTypeSet MEDIA_TYPES = new MediaTypeSet(
+    private static final MediaTypeSet MEDIA_TYPES = MediaTypeSet.of(
             MediaType.create("application", "grpc"), MediaType.create("application", "grpc+proto"));
 
     private static final MediaType GRPC_MEDIA_TYPE = MediaType.create("application", "grpc");

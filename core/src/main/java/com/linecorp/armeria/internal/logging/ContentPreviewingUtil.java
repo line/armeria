@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.logging;
+package com.linecorp.armeria.internal.logging;
 
 import static java.util.Objects.requireNonNull;
 
@@ -26,60 +26,33 @@ import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
-/**
- * A configurator to set up request and response content previewers.
- */
-public final class ContentPreviewerConfigurator {
-
-    @Nullable
-    private final ContentPreviewerFactory requestContentPreviewerFactory;
-
-    @Nullable
-    private final ContentPreviewerFactory responseContentPreviewerFactory;
+public final class ContentPreviewingUtil {
 
     /**
-     * Creates a new instance.
+     * Sets up the request {@link ContentPreviewer} to set
+     * {@link RequestLogBuilder#requestContentPreview(String)} when the preview is available.
      */
-    public ContentPreviewerConfigurator(@Nullable ContentPreviewerFactory requestContentPreviewerFactory,
-                                        @Nullable ContentPreviewerFactory responseContentPreviewerFactory) {
-        assert requestContentPreviewerFactory != null || responseContentPreviewerFactory != null;
-        this.requestContentPreviewerFactory = requestContentPreviewerFactory;
-        this.responseContentPreviewerFactory = responseContentPreviewerFactory;
-    }
-
-    /**
-     * Sets up the request {@link ContentPreviewer} when {@code requestContentPreviewerFactory}
-     * is non-null and {@link ContentPreviewerFactory#get(RequestContext, HttpHeaders)} returns a
-     * {@link ContentPreviewer} instance that is not {@link ContentPreviewer#isDisabled()}.
-     */
-    public HttpRequest maybeSetUpRequestContentPreviewer(RequestContext ctx, HttpRequest req) {
+    public static HttpRequest setUpRequestContentPreviewer(RequestContext ctx, HttpRequest req,
+                                                           ContentPreviewer requestContentPreviewer) {
         requireNonNull(ctx, "ctx");
         requireNonNull(req, "req");
-        if (requestContentPreviewerFactory == null) {
-            return req;
-        }
-
-        final RequestHeaders headers = req.headers();
-        final ContentPreviewer requestContentPreviewer = requestContentPreviewerFactory.get(ctx, headers);
+        requireNonNull(requestContentPreviewer, "requestContentPreviewer");
         if (requestContentPreviewer.isDisabled()) {
             return req;
         }
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.deferRequestContentPreview();
-        requestContentPreviewer.onHeaders(headers);
         req.whenComplete().handle((unused, unused1) -> {
             // The HttpRequest cannot be subscribed so call requestContentPreview(null) to make sure that the
             // log is complete.
@@ -114,15 +87,14 @@ public final class ContentPreviewerConfigurator {
     }
 
     /**
-     * Sets up the response {@link ContentPreviewer} when {@code responseContentPreviewerFactory}
-     * is non-null.
+     * Sets up the response {@link ContentPreviewer} to set
+     * {@link RequestLogBuilder#responseContentPreview(String)} when the preview is available.
      */
-    public HttpResponse maybeSetUpResponseContentPreviewer(RequestContext ctx, HttpResponse res) {
+    public static HttpResponse setUpResponseContentPreviewer(
+            ContentPreviewerFactory factory, RequestContext ctx, HttpResponse res) {
+        requireNonNull(factory, "factory");
         requireNonNull(ctx, "ctx");
         requireNonNull(res, "res");
-        if (responseContentPreviewerFactory == null) {
-            return res;
-        }
 
         return new FilteredHttpResponse(res) {
             @Nullable
@@ -131,16 +103,15 @@ public final class ContentPreviewerConfigurator {
             @Override
             protected HttpObject filter(HttpObject obj) {
                 if (obj instanceof ResponseHeaders) {
-                    final ResponseHeaders headers = (ResponseHeaders) obj;
+                    final ResponseHeaders resHeaders = (ResponseHeaders) obj;
 
                     // Skip informational headers.
-                    final String status = headers.get(HttpHeaderNames.STATUS);
+                    final String status = resHeaders.get(HttpHeaderNames.STATUS);
                     if (ArmeriaHttpUtil.isInformational(status)) {
                         return obj;
                     }
-                    final ContentPreviewer contentPreviewer = responseContentPreviewerFactory.get(ctx, headers);
+                    final ContentPreviewer contentPreviewer = factory.responseContentPreviewer(ctx, resHeaders);
                     if (!contentPreviewer.isDisabled()) {
-                        contentPreviewer.onHeaders(headers);
                         responseContentPreviewer = contentPreviewer;
                     }
                 } else if (obj instanceof HttpData) {
@@ -173,4 +144,6 @@ public final class ContentPreviewerConfigurator {
             }
         };
     }
+
+    private ContentPreviewingUtil() {}
 }
