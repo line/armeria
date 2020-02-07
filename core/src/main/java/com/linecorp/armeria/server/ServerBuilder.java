@@ -155,7 +155,6 @@ public final class ServerBuilder {
     final VirtualHostBuilder virtualHostTemplate = new VirtualHostBuilder(this, false);
     private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
     private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
-    private final List<AnnotatedServiceBindingBuilder> annotatedServiceBindingBuilders = new ArrayList<>();
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
@@ -1125,13 +1124,13 @@ public final class ServerBuilder {
     }
 
     ServerBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
-        virtualHostTemplate.addServiceConfigBuilder(serviceConfigBuilder);
+        virtualHostTemplate.addServiceConfigSetters(serviceConfigBuilder);
         return this;
     }
 
     ServerBuilder annotatedServiceBindingBuilder(
             AnnotatedServiceBindingBuilder annotatedServiceBindingBuilder) {
-        annotatedServiceBindingBuilders.add(annotatedServiceBindingBuilder);
+        virtualHostTemplate.addServiceConfigSetters(annotatedServiceBindingBuilder);
         return this;
     }
 
@@ -1562,10 +1561,6 @@ public final class ServerBuilder {
                 virtualHostTemplate.annotatedServiceExtensions();
 
         assert extensions != null;
-
-        annotatedServiceBindingBuilders.stream()
-                                       .flatMap(b -> b.buildServiceConfigBuilder(extensions).stream())
-                                       .forEach(this::serviceConfigBuilder);
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate);

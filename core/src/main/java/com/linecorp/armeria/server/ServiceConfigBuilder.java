@@ -18,13 +18,16 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
+import java.util.function.Function;
+
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-final class ServiceConfigBuilder {
+final class ServiceConfigBuilder implements ServiceConfigSetters {
 
     private final Route route;
     private final HttpService service;
@@ -44,45 +47,45 @@ final class ServiceConfigBuilder {
         this.service = requireNonNull(service, "service");
     }
 
-    @Nullable
-    Long requestTimeoutMillis() {
-        return requestTimeoutMillis;
+    @Override
+    public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
+        return requestTimeoutMillis(requestTimeout.toMillis());
     }
 
-    ServiceConfigBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+    @Override
+    public ServiceConfigBuilder requestTimeoutMillis(long requestTimeoutMillis) {
         this.requestTimeoutMillis = requestTimeoutMillis;
         return this;
     }
 
-    @Nullable
-    Long maxRequestLength() {
-        return maxRequestLength;
-    }
-
-    ServiceConfigBuilder maxRequestLength(long maxRequestLength) {
+    @Override
+    public ServiceConfigBuilder maxRequestLength(long maxRequestLength) {
         this.maxRequestLength = maxRequestLength;
         return this;
     }
 
-    @Nullable
-    Boolean verboseResponses() {
-        return verboseResponses;
-    }
-
-    ServiceConfigBuilder verboseResponses(boolean verboseResponses) {
+    @Override
+    public ServiceConfigBuilder verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
         return this;
     }
 
-    @Nullable
-    AccessLogWriter accessLogWriter() {
-        return accessLogWriter;
-    }
-
-    ServiceConfigBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
+    @Override
+    public ServiceConfigBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
         this.accessLogWriter = accessLogWriter;
         shutdownAccessLogWriterOnStop = shutdownOnStop;
         return this;
+    }
+
+    @Override
+    public ServiceConfigSetters accessLogFormat(String accessLogFormat) {
+        return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
+                               true);
+    }
+
+    @Override
+    public ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator) {
+        throw new UnsupportedOperationException();
     }
 
     ServiceConfig build(long defaultRequestTimeoutMillis,

@@ -203,6 +203,6 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
 
     @Override
     void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
-        virtualHostBuilder.addServiceConfigBuilder(serviceConfigBuilder);
+        virtualHostBuilder.addServiceConfigSetters(serviceConfigBuilder);
     }
 }
