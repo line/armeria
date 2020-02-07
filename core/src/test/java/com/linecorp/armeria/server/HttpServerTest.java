@@ -293,7 +293,7 @@ class HttpServerTest {
                             HttpData.ofUtf8("is "),
                             HttpData.ofUtf8("awesome!"));
                 }
-            }.decorate(EncodingService.class));
+            }.decorate(EncodingService.newDecorator()));
 
             sb.service("/images", new AbstractHttpService() {
                 @Override
@@ -305,7 +305,7 @@ class HttpServerTest {
                             HttpData.ofUtf8("is "),
                             HttpData.ofUtf8("awesome!"));
                 }
-            }.decorate(EncodingService.class));
+            }.decorate(EncodingService.newDecorator()));
 
             sb.service("/small", new AbstractHttpService() {
                 @Override
@@ -317,7 +317,7 @@ class HttpServerTest {
                                                HttpHeaderNames.CONTENT_LENGTH, response.length()),
                             HttpData.ofUtf8(response));
                 }
-            }.decorate(EncodingService.class));
+            }.decorate(EncodingService.newDecorator()));
 
             sb.service("/large", new AbstractHttpService() {
                 @Override
@@ -329,7 +329,7 @@ class HttpServerTest {
                                                HttpHeaderNames.CONTENT_LENGTH, response.length()),
                             HttpData.ofUtf8(response));
                 }
-            }.decorate(EncodingService.class));
+            }.decorate(EncodingService.newDecorator()));
 
             sb.service("/sslsession", new AbstractHttpService() {
                 @Override
@@ -341,7 +341,7 @@ class HttpServerTest {
                     }
                     return HttpResponse.of(HttpStatus.OK);
                 }
-            }.decorate(EncodingService.class));
+            }.decorate(EncodingService.newDecorator()));
 
             sb.service("/headers", new AbstractHttpService() {
                 @Override
@@ -353,7 +353,7 @@ class HttpServerTest {
                                                HttpHeaderNames.of("X-Custom-Header2"), "custom2"),
                             HttpData.ofUtf8("headers"));
                 }
-            }.decorate(EncodingService.class));
+            }.decorate(EncodingService.newDecorator()));
 
             sb.service("/trailers", new AbstractHttpService() {
                 @Override

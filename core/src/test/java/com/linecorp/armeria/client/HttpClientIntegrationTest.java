@@ -280,7 +280,7 @@ class HttpClientIntegrationTest {
                             HttpData.ofUtf8("some content to compress "),
                             HttpData.ofUtf8("more content to compress"));
                 }
-            }.decorate(EncodingService.class));
+            }.decorate(EncodingService.newDecorator()));
 
             sb.service("/encoding-toosmall", new AbstractHttpService() {
                 @Override
@@ -288,7 +288,7 @@ class HttpClientIntegrationTest {
                         throws Exception {
                     return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "small content");
                 }
-            }.decorate(EncodingService.class));
+            }.decorate(EncodingService.newDecorator()));
 
             sb.service("/pooled", new PooledContentService());
 

@@ -55,6 +55,7 @@ import org.springframework.http.server.reactive.HttpHandler;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -186,9 +187,10 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
         final Compression compression = getCompression();
         if (compression != null && compression.getEnabled()) {
+            final long minResponseSize = compression.getMinResponseSize().toBytes();
             sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                   compression.getExcludedUserAgents(),
-                                                  compression.getMinResponseSize().toBytes()));
+                                                  Ints.saturatedCast(minResponseSize)));
         }
 
         final ArmeriaSettings settings = findBean(ArmeriaSettings.class);
@@ -261,9 +263,10 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
         final ArmeriaSettings.Compression compression = settings.getCompression();
         if (compression != null && compression.isEnabled()) {
+            final long parsed = parseDataSize(compression.getMinResponseSize());
             sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                   compression.getExcludedUserAgents(),
-                                                  parseDataSize(compression.getMinResponseSize())));
+                                                  Ints.saturatedCast(parsed)));
         }
 
         if (!Strings.isNullOrEmpty(settings.getDocsPath())) {

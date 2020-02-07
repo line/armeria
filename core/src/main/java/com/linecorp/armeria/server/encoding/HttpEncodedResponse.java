@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.encoding;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.function.Predicate;
@@ -56,17 +54,14 @@ class HttpEncodedResponse extends FilteredHttpResponse {
 
     private boolean headersSent;
 
-    HttpEncodedResponse(
-            HttpResponse delegate,
-            HttpEncodingType encodingType,
-            Predicate<MediaType> encodableContentTypePredicate,
-            long minBytesToForceChunkedAndEncoding) {
+    HttpEncodedResponse(HttpResponse delegate,
+                        HttpEncodingType encodingType,
+                        Predicate<MediaType> encodableContentTypePredicate,
+                        long minBytesToForceChunkedAndEncoding) {
         super(delegate);
-        this.encodingType = requireNonNull(encodingType, "encodingType");
-        this.encodableContentTypePredicate = requireNonNull(encodableContentTypePredicate,
-                                                            "encodableContentTypePredicate");
-        this.minBytesToForceChunkedAndEncoding = EncodingService.validateMinBytesToForceChunkedAndEncoding(
-                minBytesToForceChunkedAndEncoding);
+        this.encodingType = encodingType;
+        this.encodableContentTypePredicate = encodableContentTypePredicate;
+        this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
     }
 
     @Override

@@ -56,10 +56,12 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
@@ -163,9 +165,11 @@ public final class ArmeriaConfigurationUtil {
 
         final ArmeriaSettings.Compression compression = settings.getCompression();
         if (compression != null && compression.isEnabled()) {
+            final int minBytesToForceChunkedAndEncoding =
+                    Ints.saturatedCast(parseDataSize(compression.getMinResponseSize()));
             server.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                       compression.getExcludedUserAgents(),
-                                                      parseDataSize(compression.getMinResponseSize())));
+                                                      minBytesToForceChunkedAndEncoding));
         }
     }
 
@@ -539,7 +543,7 @@ public final class ArmeriaConfigurationUtil {
      */
     public static Function<? super HttpService, EncodingService> contentEncodingDecorator(
             @Nullable String[] mimeTypes, @Nullable String[] excludedUserAgents,
-            long minBytesToForceChunkedAndEncoding) {
+            int minBytesToForceChunkedAndEncoding) {
         final Predicate<MediaType> encodableContentTypePredicate;
         if (mimeTypes == null || mimeTypes.length == 0) {
             encodableContentTypePredicate = contentType -> true;
@@ -550,7 +554,7 @@ public final class ArmeriaConfigurationUtil {
                     encodableContentTypes.stream().anyMatch(contentType::is);
         }
 
-        final Predicate<HttpHeaders> encodableRequestHeadersPredicate;
+        final Predicate<? super RequestHeaders> encodableRequestHeadersPredicate;
         if (excludedUserAgents == null || excludedUserAgents.length == 0) {
             encodableRequestHeadersPredicate = headers -> true;
         } else {
@@ -563,10 +567,11 @@ public final class ArmeriaConfigurationUtil {
             };
         }
 
-        return delegate -> new EncodingService(delegate,
-                                               encodableContentTypePredicate,
-                                               encodableRequestHeadersPredicate,
-                                               minBytesToForceChunkedAndEncoding);
+        return EncodingService.builder()
+                              .encodableContentTypePredicate(encodableContentTypePredicate)
+                              .encodableRequestHeadersPredicate(encodableRequestHeadersPredicate)
+                              .minBytesToForceChunkedEncoding(minBytesToForceChunkedAndEncoding)
+                              .newDecorator();
     }
 
     /**
