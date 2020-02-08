@@ -48,7 +48,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
+    public ServiceConfigBuilder requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requestTimeout.toMillis());
     }
 
@@ -78,13 +78,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters accessLogFormat(String accessLogFormat) {
+    public ServiceConfigBuilder accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
                                true);
     }
 
     @Override
-    public ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator) {
+    public ServiceConfigBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
         throw new UnsupportedOperationException();
     }
 

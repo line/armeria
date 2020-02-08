@@ -923,7 +923,9 @@ public final class VirtualHostBuilder {
                     } else if (cfgSetters instanceof ServiceConfigBuilder) {
                         return Stream.of((ServiceConfigBuilder) cfgSetters);
                     } else {
-                        throw new Error(); // Should not reach here.
+                        // Should not reach here.
+                        throw new Error("Unexpected service config setters type: " +
+                                        cfgSetters.getClass().getSimpleName());
                     }
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(requestTimeoutMillis, maxRequestLength, verboseResponses,
