@@ -248,7 +248,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     public VirtualHostBuilder build(Object service) {
         requireNonNull(service, "service");
         this.service = service;
-        virtualHostBuilder.addAnnotatedServiceBindingBuilder(this);
+        virtualHostBuilder.addServiceConfigSetters(this);
         return virtualHostBuilder;
     }
 
