@@ -28,7 +28,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class ServiceRoutingTest {
     @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
+    static ServerExtension server1 = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/api/v0/", new Object() {
@@ -47,9 +47,62 @@ class ServiceRoutingTest {
         }
     };
 
+    @RegisterExtension
+    static ServerExtension server2 = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.annotatedService("/api/v0/", new Object() {
+                @Get("/users/me")
+                public String me() {
+                    return "me";
+                }
+            });
+            sb.annotatedService("/api/v0/", new Object() {
+                @Get("regex:/projects/(?<projectName>[^/]+)")
+                public String project(@Param("projectName") String projectName) {
+                    return "project";
+                }
+            });
+            sb.serviceUnder("/", (ctx, req) -> HttpResponse.of("fallback"));
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension server3 = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceUnder("/", (ctx, req) -> HttpResponse.of("fallback"));
+            sb.annotatedService("/api/v0/", new Object() {
+                @Get("/users/me")
+                public String me() {
+                    return "me";
+                }
+            });
+            sb.annotatedService("/api/v0/", new Object() {
+                @Get("regex:/projects/(?<projectName>[^/]+)")
+                public String project(@Param("projectName") String projectName) {
+                    return "project";
+                }
+            });
+        }
+    };
+
     @Test
     void checkServiceRoutingPriority() {
-        final WebClient client = WebClient.of(server.httpUri());
-        assertThat(client.get("/api/v0/users/me").aggregate().join().contentUtf8()).isEqualTo("me");
+        final WebClient client1 = WebClient.of(server1.httpUri());
+        assertThat(client1.get("/api/v0/users/me").aggregate().join().contentUtf8()).isEqualTo("me");
+        assertThat(client1.get("/api/v0/projects/foo").aggregate().join().contentUtf8()).isEqualTo("project");
+        assertThat(client1.get("/fallback").aggregate().join().contentUtf8()).isEqualTo("fallback");
+
+        final WebClient client2 = WebClient.of(server2.httpUri());
+        assertThat(client2.get("/api/v0/users/me").aggregate().join().contentUtf8()).isEqualTo("me");
+        assertThat(client2.get("/api/v0/projects/foo").aggregate().join().contentUtf8()).isEqualTo("project");
+        assertThat(client2.get("/fallback").aggregate().join().contentUtf8()).isEqualTo("fallback");
+
+        final WebClient client3 = WebClient.of(server3.httpUri());
+        assertThat(client3.get("/api/v0/users/me").aggregate().join().contentUtf8()).isEqualTo("me");
+        assertThat(client3.get("/fallback").aggregate().join().contentUtf8()).isEqualTo("fallback");
+        // end of trie route, fallback has higher priority than regex
+        assertThat(client3.get("/api/v0/projects/foo").aggregate().join().contentUtf8()).isEqualTo("fallback");
     }
 }
