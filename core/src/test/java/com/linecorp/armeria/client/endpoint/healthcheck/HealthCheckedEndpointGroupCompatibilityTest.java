@@ -33,7 +33,9 @@ class HealthCheckedEndpointGroupCompatibilityTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/bad",
+            sb.service("/no_value",
+                       (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.service("/bad_value",
                        (ctx, req) -> HttpResponse.of(ResponseHeaders.of(
                                HttpStatus.OK, "armeria-lphc", "bad_value")));
             sb.service("/0.97",
@@ -43,8 +45,13 @@ class HealthCheckedEndpointGroupCompatibilityTest {
     };
 
     @Test
+    void compatibilityWithUnsupportedServer() throws Exception {
+        test("/no_value");
+    }
+
+    @Test
     void compatibilityWithBadServer() throws Exception {
-        test("/bad");
+        test("/bad_value");
     }
 
     @Test
