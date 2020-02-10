@@ -107,8 +107,9 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionEnd() {
-        checkState(pendingAcquisitionStartTimeMicros >= 0, "pendingAcquisitionStart() is not called yet.");
-        checkState(!pendingAcquisitionEndSet, "pendingAcquisitionEnd() is already called.");
+        // TODO: decide how to handle pendingAcquisitionEnd now that it might be called multiple times
+        // checkState(pendingAcquisitionStartTimeMicros >= 0, "pendingAcquisitionStart() is not called yet.");
+        // checkState(!pendingAcquisitionEndSet, "pendingAcquisitionEnd() is already called.");
         pendingAcquisitionEndNanos = System.nanoTime();
         pendingAcquisitionEndSet = true;
         return this;

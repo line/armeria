@@ -281,7 +281,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                 session.unfinishedResponses(), session.maxUnfinishedResponses());
                     // Need to subtract 1 since the current pending request may also be unfinished
                     if (session.unfinishedResponses() >= session.maxUnfinishedResponses() - 1) {
-                        connect(actualProtocol, key, promise, timingsBuilder);
+                        acquireLater(actualProtocol, key, timingsBuilder).thenAccept(promise::complete);
                     } else {
                         promise.complete(pch);
                     }
