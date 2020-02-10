@@ -9,7 +9,7 @@ boms:
   - io.micrometer:micrometer-bom:1.3.3
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.45.Final
-  - io.zipkin.brave:brave-bom:5.9.3
+  - io.zipkin.brave:brave-bom:5.9.4
   - org.eclipse.jetty:jetty-bom:9.4.26.v20200117
   - org.junit:junit-bom:5.6.0
 
@@ -426,7 +426,7 @@ org.jlleitschuh.gradle:
   ktlint-gradle: { version: '9.1.1' }
 
 org.jsoup:
-  jsoup: { version: '1.12.1' }
+  jsoup: { version: '1.12.2' }
 
 org.mockito:
   mockito-core: { version: &MOCKITO_VERSION '3.2.4' }
