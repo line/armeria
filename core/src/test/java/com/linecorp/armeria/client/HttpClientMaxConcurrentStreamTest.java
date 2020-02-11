@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
@@ -34,6 +36,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -62,6 +65,7 @@ public class HttpClientMaxConcurrentStreamTest {
                 return HttpResponse.from(f);
             });
             sb.http2MaxStreamsPerConnection(MAX_CONCURRENT_STREAMS);
+            sb.maxNumConnections(6);
         }
     };
 
@@ -222,6 +226,53 @@ public class HttpClientMaxConcurrentStreamTest {
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(opens).hasValue(numExpectedConnections);
+        responses.forEach(response -> response.complete(HttpResponse.of(200)));
+        await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
+    }
+
+    @Test
+    public void maxConcurrentStream_failedConnectionHandling() throws Exception {
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+                                          .factory(clientFactory)
+                                          .build();
+        final AtomicInteger opens = new AtomicInteger();
+        final AtomicInteger closes = new AtomicInteger();
+        connectionPoolListener = new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                opens.incrementAndGet();
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                closes.incrementAndGet();
+            }
+        };
+        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
+
+        // running inside event loop ensures requests are queued before initial connect completes.
+        final int numExpectedConnections = 6;
+        final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
+
+        clientFactory.eventLoopGroup().execute(() -> {
+            for (int j = 0; j < numRequests + 1; j++) {
+                receivedResponses.add(client.get(PATH).aggregate());
+            }
+        });
+
+        // server maxNumConnections = 6 causes 3 requests to fail
+        await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
+        assertThat(opens).hasValue(numExpectedConnections);
+
+        // we should catch an exception here
+        final CompletableFuture<AggregatedHttpResponse> uncompletedFuture =
+                receivedResponses.stream().filter(future -> !future.isDone()).findFirst().get();
+        assertThatThrownBy(() -> uncompletedFuture.get(3, TimeUnit.SECONDS))
+                .isInstanceOf(ClosedSessionException.class);
+
+        // clean up
         responses.forEach(response -> response.complete(HttpResponse.of(200)));
         await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
     }
