@@ -26,7 +26,6 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.AbstractHttpData;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
@@ -40,7 +39,10 @@ import io.netty.buffer.Unpooled;
  * @deprecated Use {@link PooledHttpData}.
  */
 @Deprecated
-public final class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
+public final class ByteBufHttpData extends AbstractHttpData implements PooledHttpData {
+
+    private static final AtomicIntegerFieldUpdater<ByteBufHttpData>
+            closedUpdater = AtomicIntegerFieldUpdater.newUpdater(ByteBufHttpData.class, "closed");
 
     private final ByteBuf buf;
     private final boolean endOfStream;
