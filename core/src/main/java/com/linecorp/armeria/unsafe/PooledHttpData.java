@@ -96,6 +96,22 @@ import io.netty.buffer.PooledByteBufAllocator;
  */
 public interface PooledHttpData extends HttpData, ByteBufHolder, AutoCloseable {
 
+    /**
+     * Converts the specified Netty {@link ByteBuf} into an {@link HttpData}. The buffer is not copied; any
+     * changes made to it will be visible to {@link HttpData}. The ownership of the buffer is transferred to the
+     * {@link HttpData}. If you still need to use it after calling this method, make sure to call
+     * {@link ByteBuf#retain()} first.
+     *
+     * @return a new {@link HttpData}. {@link #empty()} if the readable bytes of {@code buf} is 0.
+     */
+    static PooledHttpData wrap(ByteBuf buf) {
+        requireNonNull(buf, "buf");
+        if (!buf.isReadable()) {
+            return ByteBufHttpData.EMPTY;
+        }
+        return new ByteBufHttpData(buf, false);
+    }
+
     static PooledHttpData of(HttpData data) {
         requireNonNull(data, "data");
         if (data instanceof PooledHttpData) {
@@ -113,4 +129,7 @@ public interface PooledHttpData extends HttpData, ByteBufHolder, AutoCloseable {
         final ByteBuf buf = alloc.buffer(data.length());
         return new ByteBufHttpData(buf, data.isEndOfStream());
     }
+
+    @Override
+    PooledHttpData withEndOfStream();
 }

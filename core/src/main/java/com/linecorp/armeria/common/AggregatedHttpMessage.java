@@ -20,12 +20,15 @@ import java.nio.charset.Charset;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * A complete HTTP message whose content is readily available as a single {@link HttpData}. It can be an
  * HTTP request or an HTTP response depending on what header values it contains. For example, having a
  * {@link HttpHeaderNames#STATUS} header could mean it is an HTTP response.
  */
-interface AggregatedHttpMessage {
+@UnstableApi
+public interface AggregatedHttpMessage {
 
     /**
      * Returns the HTTP headers.

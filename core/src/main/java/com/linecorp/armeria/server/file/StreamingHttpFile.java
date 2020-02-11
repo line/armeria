@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -223,7 +224,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
 
                     final HttpFileBuilder builder =
                             HttpFile.builder(array != null ? HttpData.wrap(array)
-                                                           : new ByteBufHttpData(buf, true),
+                                                           : PooledHttpData.wrap(buf).withEndOfStream(),
                                              attrs.lastModifiedMillis())
                                     .date(isDateEnabled())
                                     .lastModified(isLastModifiedEnabled());

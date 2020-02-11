@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -85,7 +85,7 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
                         merged.writeBytes(data.array());
                     }
                 }
-                content = new ByteBufHttpData(merged, true);
+                content = PooledHttpData.wrap(merged).withEndOfStream();
             } else {
                 final byte[] merged = new byte[contentLength];
                 for (int i = 0, offset = 0; i < contentList.size(); i++) {

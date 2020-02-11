@@ -18,7 +18,6 @@ package com.linecorp.armeria.unsafe;
 
 import java.nio.charset.Charset;
 
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -35,7 +34,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 public interface PooledWebClient extends WebClient {
 
     /**
-     * Creates a {@link PooledWebClient} that delegates to the provided {@link HttpClient} for issuing requests.
+     * Creates a {@link PooledWebClient} that delegates to the provided {@link WebClient} for issuing requests.
      */
     static PooledWebClient of(WebClient delegate) {
         return new DefaultPooledWebClient(delegate);

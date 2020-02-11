@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Locale;
 
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -107,13 +107,12 @@ public interface HttpData extends HttpObject {
      * {@link ByteBuf#retain()} first.
      *
      * @return a new {@link HttpData}. {@link #empty()} if the readable bytes of {@code buf} is 0.
+     *
+     * @deprecated Use {@link PooledHttpData#wrap(ByteBuf)}.
      */
+    @Deprecated
     static HttpData wrap(ByteBuf buf) {
-        requireNonNull(buf, "buf");
-        if (!buf.isReadable()) {
-            return empty();
-        }
-        return new ByteBufHttpData(buf, false);
+        return PooledHttpData.wrap(buf);
     }
 
     /**

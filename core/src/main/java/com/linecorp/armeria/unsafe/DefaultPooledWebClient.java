@@ -24,52 +24,51 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
-final class DefaultPooledWebClient implements PooledWebClient {
-
-    private final WebClient delegate;
+final class DefaultPooledWebClient extends AbstractUnwrappable<WebClient> implements PooledWebClient {
 
     DefaultPooledWebClient(WebClient delegate) {
-        this.delegate = delegate;
+        super(delegate);
     }
 
     @Override
     public PooledHttpResponse execute(HttpRequest req) {
-        return new DefaultPooledHttpResponse(delegate.execute(req));
+        return new DefaultPooledHttpResponse(delegate().execute(req));
     }
 
     @Override
     public PooledHttpResponse execute(AggregatedHttpRequest aggregatedReq) {
-        return new DefaultPooledHttpResponse(delegate.execute(aggregatedReq));
+        return new DefaultPooledHttpResponse(delegate().execute(aggregatedReq));
     }
 
     @Override
     public Scheme scheme() {
-        return delegate.scheme();
+        return delegate().scheme();
     }
 
     @Override
     public EndpointGroup endpointGroup() {
-        return delegate.endpointGroup();
+        return delegate().endpointGroup();
     }
 
     @Override
     public String absolutePathRef() {
-        return delegate.absolutePathRef();
+        return delegate().absolutePathRef();
     }
 
     @Override
     public URI uri() {
-        return delegate.uri();
+        return delegate().uri();
     }
 
     @Override
     public Class<?> clientType() {
-        return delegate.clientType();
+        return delegate().clientType();
     }
 
     @Override
     public ClientOptions options() {
-        return delegate.options();
+        return delegate().options();
     }
 }

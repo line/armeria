@@ -37,6 +37,7 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -211,7 +212,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     if (req.isOpen()) {
-                        req.write(new ByteBufHttpData(data.retain(), false));
+                        req.write(PooledHttpData.wrap(data.retain()));
                     }
                 }
 

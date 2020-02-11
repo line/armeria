@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -176,7 +176,7 @@ public final class UnaryGrpcClient {
                                    assert buf != null;
                                    responseFuture.complete(HttpResponse.of(
                                            msg.headers(),
-                                           new ByteBufHttpData(buf, true),
+                                           PooledHttpData.wrap(buf).withEndOfStream(),
                                            msg.trailers()));
                                }
 

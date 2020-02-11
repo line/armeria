@@ -30,7 +30,9 @@ import com.linecorp.armeria.common.HttpData;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 
 /**
  * An {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
@@ -43,6 +45,9 @@ public final class ByteBufHttpData extends AbstractHttpData implements PooledHtt
 
     private static final AtomicIntegerFieldUpdater<ByteBufHttpData>
             closedUpdater = AtomicIntegerFieldUpdater.newUpdater(ByteBufHttpData.class, "closed");
+
+    static final ByteBufHttpData EMPTY = new ByteBufHttpData(
+            new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT), false);
 
     private final ByteBuf buf;
     private final boolean endOfStream;

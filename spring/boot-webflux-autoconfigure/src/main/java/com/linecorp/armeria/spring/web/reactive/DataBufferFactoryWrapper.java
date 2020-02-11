@@ -29,6 +29,7 @@ import org.springframework.core.io.buffer.PooledDataBuffer;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -64,13 +65,12 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
      */
     HttpData toHttpData(DataBuffer dataBuffer) {
         if (dataBuffer instanceof NettyDataBuffer) {
-            return new ByteBufHttpData(((NettyDataBuffer) dataBuffer).getNativeBuffer(), false);
+            return PooledHttpData.wrap((((NettyDataBuffer) dataBuffer).getNativeBuffer()));
         }
-        if (dataBuffer instanceof DefaultDataBuffer) {
-            return new ByteBufHttpData(
-                    Unpooled.wrappedBuffer(((DefaultDataBuffer) dataBuffer).getNativeBuffer()), false);
-        }
-        return new ByteBufHttpData(Unpooled.wrappedBuffer(dataBuffer.asByteBuffer()), false);
+        final ByteBuffer buf = dataBuffer instanceof DefaultDataBuffer ?
+                               ((DefaultDataBuffer) dataBuffer).getNativeBuffer() :
+                               dataBuffer.asByteBuffer();
+        return PooledHttpData.wrap(Unpooled.wrappedBuffer(buf));
     }
 
     /**

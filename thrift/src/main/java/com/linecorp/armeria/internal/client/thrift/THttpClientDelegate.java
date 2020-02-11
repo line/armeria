@@ -68,6 +68,7 @@ import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -139,7 +140,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                                   .authority(endpoint != null ? endpoint.authority() : "UNKNOWN")
                                   .contentType(mediaType)
                                   .build(),
-                    new ByteBufHttpData(buf, true));
+                    PooledHttpData.wrap(buf).withEndOfStream());
 
             ctx.updateRequest(httpReq);
             ctx.logBuilder().deferResponseContent();

@@ -80,6 +80,7 @@ import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -792,7 +793,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, result));
 
-            final HttpData encoded = new ByteBufHttpData(buf, false);
+            final HttpData encoded = PooledHttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {
@@ -839,7 +840,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, appException));
 
-            final HttpData encoded = new ByteBufHttpData(buf, false);
+            final HttpData encoded = PooledHttpData.wrap(buf);
             success = true;
             return encoded;
         } catch (TException e) {

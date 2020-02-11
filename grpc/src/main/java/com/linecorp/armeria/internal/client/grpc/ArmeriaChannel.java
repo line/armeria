@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.unsafe.PooledHttpClient;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -63,7 +64,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private static final int DEFAULT_MAX_INBOUND_MESSAGE_SIZE = 4 * 1024 * 1024;
 
     private final ClientBuilderParams params;
-    private final HttpClient httpClient;
+    private final PooledHttpClient httpClient;
 
     private final MeterRegistry meterRegistry;
     private final SessionProtocol sessionProtocol;
@@ -79,7 +80,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                    SerializationFormat serializationFormat,
                    @Nullable MessageMarshaller jsonMarshaller) {
         this.params = params;
-        this.httpClient = httpClient;
+        this.httpClient = PooledHttpClient.of(httpClient);
         this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
         this.serializationFormat = serializationFormat;

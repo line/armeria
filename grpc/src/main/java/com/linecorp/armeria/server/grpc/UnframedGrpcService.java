@@ -51,6 +51,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
@@ -275,7 +276,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                     @Override
                     public void messageRead(DeframedMessage message) {
                         // We know that we don't support compression, so this is always a ByteBuffer.
-                        final HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
+                        final HttpData unframedContent = PooledHttpData.wrap(message.buf()).withEndOfStream();
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
                         res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
                     }
