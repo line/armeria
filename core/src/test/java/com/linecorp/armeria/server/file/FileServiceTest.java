@@ -696,8 +696,7 @@ class FileServiceTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(server.httpUri() + "/cached",
-                             server.httpUri() + "/uncached")
-                         .map(Arguments::of);
+                             server.httpUri() + "/uncached").map(Arguments::of);
         }
     }
 }
