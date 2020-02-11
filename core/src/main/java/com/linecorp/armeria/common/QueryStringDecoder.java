@@ -36,7 +36,7 @@ import java.util.Arrays;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 final class QueryStringDecoder {
 

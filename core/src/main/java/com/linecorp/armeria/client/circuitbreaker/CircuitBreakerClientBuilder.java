@@ -67,6 +67,7 @@ public class CircuitBreakerClientBuilder extends AbstractCircuitBreakerClientBui
     // Methods that were overridden to change the return type.
 
     @Override
+    @Deprecated
     public CircuitBreakerClientBuilder circuitBreakerMapping(CircuitBreakerMapping mapping) {
         return mapping(mapping);
     }

@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Constructor;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -82,7 +83,13 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
      * Creates a new {@link Service} that decorates this {@link Service} with a new {@link Service} instance
      * of the specified {@code serviceType}. The specified {@link Class} must have a single-parameter
      * constructor which accepts this {@link Service}.
+     *
+     * @deprecated Use {@link HttpService#decorate(Function)},
+     *             {@link HttpService#decorate(DecoratingHttpServiceFunction)},
+     *             {@link RpcService#decorate(Function)} and
+     *             {@link RpcService#decorate(DecoratingRpcServiceFunction)}.
      */
+    @Deprecated
     default <R extends Service<?, ?>> R decorate(Class<R> serviceType) {
         requireNonNull(serviceType, "serviceType");
 

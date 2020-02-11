@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;

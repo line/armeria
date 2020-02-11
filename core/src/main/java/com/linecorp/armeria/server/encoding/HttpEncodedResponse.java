@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.encoding;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.function.Predicate;
@@ -37,7 +35,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 /**
  * A {@link FilteredStreamMessage} that applies HTTP encoding to {@link HttpObject}s as they are published.
@@ -56,17 +54,14 @@ class HttpEncodedResponse extends FilteredHttpResponse {
 
     private boolean headersSent;
 
-    HttpEncodedResponse(
-            HttpResponse delegate,
-            HttpEncodingType encodingType,
-            Predicate<MediaType> encodableContentTypePredicate,
-            long minBytesToForceChunkedAndEncoding) {
+    HttpEncodedResponse(HttpResponse delegate,
+                        HttpEncodingType encodingType,
+                        Predicate<MediaType> encodableContentTypePredicate,
+                        long minBytesToForceChunkedAndEncoding) {
         super(delegate);
-        this.encodingType = requireNonNull(encodingType, "encodingType");
-        this.encodableContentTypePredicate = requireNonNull(encodableContentTypePredicate,
-                                                            "encodableContentTypePredicate");
-        this.minBytesToForceChunkedAndEncoding = EncodingService.validateMinBytesToForceChunkedAndEncoding(
-                minBytesToForceChunkedAndEncoding);
+        this.encodingType = encodingType;
+        this.encodableContentTypePredicate = encodableContentTypePredicate;
+        this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
     }
 
     @Override

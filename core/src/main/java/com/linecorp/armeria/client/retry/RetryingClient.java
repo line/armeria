@@ -18,7 +18,7 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 
 import java.time.Duration;
 import java.util.Date;

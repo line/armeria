@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * Provides the getter methods to {@link QueryParams} and {@link QueryParamsBuilder}.

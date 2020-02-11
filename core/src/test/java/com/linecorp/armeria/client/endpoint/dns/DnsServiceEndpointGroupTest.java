@@ -59,7 +59,7 @@ public class DnsServiceEndpointGroupTest {
                                                 .serverAddresses(server.addr())
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("a.foo.com", 2).withWeight(1),
                         Endpoint.of("b.foo.com", 4).withWeight(3));
             }
@@ -78,7 +78,7 @@ public class DnsServiceEndpointGroupTest {
                                                 .serverAddresses(server.addr())
                                                 .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("c.baz.com", 6).withWeight(5));
             }
         }
@@ -93,7 +93,7 @@ public class DnsServiceEndpointGroupTest {
             try (DnsServiceEndpointGroup group =
                          DnsServiceEndpointGroup.builder("no-port.com")
                                                 .serverAddresses(server.addr()).build()) {
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("d.no-port.com"));
             }
         }

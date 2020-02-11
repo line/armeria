@@ -3,13 +3,13 @@ plugins {
 }
 
 dependencies {
-    compile project(':logback')
-    compile project(':saml')
-    runtime 'org.slf4j:slf4j-simple'
+    implementation project(':logback')
+    implementation project(':saml')
+    runtimeOnly 'org.slf4j:slf4j-simple'
 
-    testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
-    testCompile 'org.assertj:assertj-core'
-    testCompile 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
 }
 
 application {

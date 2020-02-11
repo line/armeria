@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
-import com.linecorp.armeria.internal.metric.MicrometerUtil;
+import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -82,23 +82,23 @@ class CompositeServiceTest {
     @Test
     void testRoute() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/foo/X")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/qux/foo/X"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("A:/qux/foo/X:/X:/X");
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/bar/Y")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/qux/bar/Y"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("B:/qux/bar/Y:/Y:/Y");
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/Z")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/qux/Z"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("C:/qux/Z:/Z:/Z");
             }
 
             // Make sure encoded path is handled correctly.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/%C2%A2")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/qux/%C2%A2"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("C:/qux/%C2%A2:/%C2%A2:/¢");
             }
@@ -108,7 +108,7 @@ class CompositeServiceTest {
     @Test
     void testNonExistentRoute() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/Z/T")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/qux/Z/T"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 404 Not Found");
             }
         }

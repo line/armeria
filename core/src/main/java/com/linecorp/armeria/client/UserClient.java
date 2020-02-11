@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.ClientUtil.initContextAndExecuteWithFallback;
+import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
 import java.net.URI;
 import java.util.function.BiFunction;

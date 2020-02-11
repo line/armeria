@@ -35,12 +35,12 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesText;
-import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.reactivex.Completable;
@@ -170,7 +170,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void maybe() {
-        final WebClient client = WebClient.of(rule.uri("/maybe"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/maybe");
 
         AggregatedHttpResponse res;
 
@@ -192,7 +192,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void single() {
-        final WebClient client = WebClient.of(rule.uri("/single"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/single");
 
         AggregatedHttpResponse res;
 
@@ -210,7 +210,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void completable() {
-        final WebClient client = WebClient.of(rule.uri("/completable"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/completable");
 
         AggregatedHttpResponse res;
 
@@ -223,7 +223,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void observable() {
-        final WebClient client = WebClient.of(rule.uri("/observable"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/observable");
 
         AggregatedHttpResponse res;
 
@@ -247,7 +247,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void streaming() {
-        final WebClient client = WebClient.of(rule.uri("/streaming"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/streaming");
         final AtomicBoolean isFinished = new AtomicBoolean();
         client.get("/json").subscribe(new DefaultSubscriber<HttpObject>() {
             final ImmutableList.Builder<HttpObject> received = new Builder<>();
@@ -285,7 +285,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void failure() {
-        final WebClient client = WebClient.of(rule.uri("/failure"));
+        final WebClient client = WebClient.of(rule.httpUri() + "/failure");
 
         AggregatedHttpResponse res;
 

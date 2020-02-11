@@ -20,8 +20,6 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINA
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -31,6 +29,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -48,6 +48,8 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class GracefulShutdownIntegrationTest {
 
+    private static final Logger logger = LoggerFactory.getLogger(GracefulShutdownIntegrationTest.class);
+
     private static final AtomicInteger accessLogWriterCounter1 = new AtomicInteger();
     private static final AtomicInteger accessLogWriterCounter2 = new AtomicInteger();
 
@@ -57,7 +59,7 @@ class GracefulShutdownIntegrationTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.gracefulShutdownTimeout(1000L, 2000L);
+            sb.gracefulShutdownTimeoutMillis(1000L, 2000L);
             sb.requestTimeoutMillis(0); // Disable RequestTimeoutException.
 
             sb.service("/sleep", THttpService.of(
@@ -155,7 +157,7 @@ class GracefulShutdownIntegrationTest {
                 client.sleep(500L);
                 completed.set(true);
             } catch (Throwable t) {
-                fail("Shouldn't happen: " + t);
+                logger.error("Unexpected failure:", t);
             }
         });
 
@@ -188,7 +190,7 @@ class GracefulShutdownIntegrationTest {
             } catch (ClosedSessionException expected) {
                 latch2.countDown();
             } catch (Throwable t) {
-                fail("Shouldn't happen: " + t);
+                logger.error("Unexpected failure:", t);
             }
         });
 
@@ -197,7 +199,7 @@ class GracefulShutdownIntegrationTest {
 
         final long startTime = System.nanoTime();
         server.stop().join();
-        assertFalse(completed.get());
+        assertThat(completed.get()).isFalse();
 
         // 'client.sleep()' must fail immediately when the server closes the connection.
         latch2.await();
@@ -213,20 +215,27 @@ class GracefulShutdownIntegrationTest {
         final long baselineNanos = baselineNanos();
         final Server server = GracefulShutdownIntegrationTest.server.start();
 
-        // Keep sending a request after shutdown starts so that the hard limit is reached.
         final SleepService.Iface client = newClient();
+        // Send the first request to warm up the client connection, because otherwise
+        // the quiet period may end while the client establishes a connection on a busy machine.
+        client.sleep(0);
+
         final CompletableFuture<Long> stopFuture = CompletableFuture.supplyAsync(() -> {
+            logger.debug("Server shutting down");
             final long startTime = System.nanoTime();
             server.stop().join();
             final long stopTime = System.nanoTime();
+            logger.debug("Server shut down");
             return stopTime - startTime;
         });
 
-        for (int i = 0; i < 50; i++) {
+        // Keep sending a request while shutting down so that the hard limit is reached.
+        for (int i = 1;; i++) {
             try {
-                client.sleep(100);
+                client.sleep(50);
             } catch (Exception e) {
                 // Server has been shut down
+                logger.debug("Client detected server shutdown after {} calls:", i, e);
                 break;
             }
         }
@@ -238,6 +247,6 @@ class GracefulShutdownIntegrationTest {
     }
 
     private static SleepService.Iface newClient() throws Exception {
-        return Clients.newClient(server.uri(BINARY, "/sleep"), SleepService.Iface.class);
+        return Clients.newClient(server.httpUri(BINARY) + "/sleep", SleepService.Iface.class);
     }
 }

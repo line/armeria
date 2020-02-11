@@ -34,7 +34,7 @@ import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.internal.PooledObjects;
+import com.linecorp.armeria.internal.common.util.PooledObjects;
 
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
@@ -175,7 +175,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      * Helper method for the common case of cleaning up all elements in a queue when shutting down the stream.
      */
     void cleanupQueue(SubscriptionImpl subscription, Queue<Object> queue) {
-        final Throwable cause = ClosedPublisherException.get();
+        final Throwable cause = ClosedStreamException.get();
         for (;;) {
             final Object e = queue.poll();
             if (e == null) {

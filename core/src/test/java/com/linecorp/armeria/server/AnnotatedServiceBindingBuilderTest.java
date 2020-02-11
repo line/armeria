@@ -152,12 +152,12 @@ class AnnotatedServiceBindingBuilderTest {
     }
 
     private static AggregatedHttpResponse get(String path) {
-        final WebClient webClient = WebClient.of(server.httpUri("/"));
+        final WebClient webClient = WebClient.of(server.httpUri());
         return webClient.get(path).aggregate().join();
     }
 
     private static AggregatedHttpResponse postJson(String path, String json) {
-        final WebClient webClient = WebClient.of(server.httpUri("/"));
+        final WebClient webClient = WebClient.of(server.httpUri());
         final RequestHeaders postJson = RequestHeaders.of(HttpMethod.POST, path,
                                                           HttpHeaderNames.CONTENT_TYPE, "application/json");
         return webClient.execute(postJson, json).aggregate().join();

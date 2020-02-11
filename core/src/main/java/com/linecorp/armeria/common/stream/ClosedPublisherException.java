@@ -21,25 +21,25 @@ import com.linecorp.armeria.common.Flags;
 /**
  * A {@link RuntimeException} that is raised when a {@link StreamWriter} attempts to write an object to a
  * closed {@link StreamMessage}.
+ *
+ * @deprecated Use {@link ClosedStreamException}.
  */
-public final class ClosedPublisherException extends RuntimeException {
+@Deprecated
+public class ClosedPublisherException extends RuntimeException {
 
     private static final long serialVersionUID = -7665826869012452735L;
-
-    private static final ClosedPublisherException INSTANCE = new ClosedPublisherException(false);
 
     /**
      * Returns a {@link ClosedPublisherException} which may be a singleton or a new instance, depending on
      * {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static ClosedPublisherException get() {
-        return Flags.verboseExceptionSampler().isSampled(ClosedPublisherException.class) ?
-               new ClosedPublisherException() : INSTANCE;
+        return ClosedStreamException.get();
     }
 
-    private ClosedPublisherException() {}
+    ClosedPublisherException() {}
 
-    private ClosedPublisherException(@SuppressWarnings("unused") boolean dummy) {
+    ClosedPublisherException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
     }
 }

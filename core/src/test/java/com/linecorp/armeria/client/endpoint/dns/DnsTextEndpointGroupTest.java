@@ -67,7 +67,7 @@ public class DnsTextEndpointGroupTest {
                 }
             }).serverAddresses(server.addr()).build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.whenReady().get()).containsExactly(
                         Endpoint.of("a.foo.com"),
                         Endpoint.of("b.foo.com"));
             }

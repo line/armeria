@@ -66,11 +66,11 @@ class HttpServerAbortingInfiniteStreamTest {
                 writer.write(ResponseHeaders.of(HttpStatus.OK));
 
                 // Do not close the response writer because it returns data infinitely.
-                writer.onDemand(new Runnable() {
+                writer.whenConsumed().thenRun(new Runnable() {
                     @Override
                     public void run() {
                         writer.write(HttpData.ofUtf8("infinite stream"));
-                        writer.onDemand(this);
+                        writer.whenConsumed().thenRun(this);
                     }
                 });
                 writer.whenComplete().whenComplete((unused, cause) -> {
@@ -96,7 +96,7 @@ class HttpServerAbortingInfiniteStreamTest {
     void shouldCancelInfiniteStreamImmediately(SessionProtocol protocol) {
         expectedProtocol.set(protocol);
 
-        final WebClient client = WebClient.of(server.uri(protocol, "/"));
+        final WebClient client = WebClient.of(server.uri(protocol));
         final HttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/infinity"));
 
         response.subscribe(new Subscriber<HttpObject>() {

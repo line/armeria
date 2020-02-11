@@ -69,7 +69,7 @@ class HttpServerAutoRedirectTest {
 
     @Test
     void redirection() {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         AggregatedHttpResponse res;
 
         res = client.get("/a").aggregate().join();

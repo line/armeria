@@ -1,1 +1,1 @@
-com.linecorp.armeria.internal.annotation.AnnotatedDocServicePlugin
+com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin

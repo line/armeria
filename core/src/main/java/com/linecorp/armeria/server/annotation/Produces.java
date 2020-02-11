@@ -21,9 +21,15 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.nio.charset.StandardCharsets;
+
+import com.linecorp.armeria.common.MediaType;
 
 /**
  * Specifies a media type which would be produced by the service method or class.
+ *
+ * <p>Note that {@link StandardCharsets#UTF_8} is used to produce the response when the specified media type is
+ * {@link MediaType#ANY_TEXT_TYPE} and the charset is not specified.
  */
 @Repeatable(ProducesGroup.class)
 @Retention(RetentionPolicy.RUNTIME)

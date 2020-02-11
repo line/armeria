@@ -292,7 +292,7 @@ public class PrometheusMetricsIntegrationTest {
     }
 
     private static void makeRequest(String path, String serviceName, String name) throws TException {
-        final Iface client = Clients.builder(server.uri(BINARY, path))
+        final Iface client = Clients.builder(server.httpUri(BINARY).resolve(path))
                                     .factory(clientFactory)
                                     .rpcDecorator(MetricCollectingRpcClient.newDecorator(
                                             new MeterIdPrefixFunctionImpl("client", serviceName)))

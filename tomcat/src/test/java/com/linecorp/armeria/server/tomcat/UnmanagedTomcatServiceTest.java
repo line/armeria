@@ -32,23 +32,23 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.junit.AfterClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.util.NetUtil;
 
-public class UnmanagedTomcatServiceTest {
+class UnmanagedTomcatServiceTest {
 
     private static Tomcat tomcatWithWebApp;
     private static Tomcat tomcatWithoutWebApp;
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             // Prepare Tomcat instances.
@@ -79,8 +79,8 @@ public class UnmanagedTomcatServiceTest {
         }
     };
 
-    @AfterClass
-    public static void destroyTomcat() throws Exception {
+    @AfterAll
+    static void destroyTomcat() throws Exception {
         if (tomcatWithWebApp != null) {
             tomcatWithWebApp.stop();
             tomcatWithWebApp.destroy();
@@ -92,9 +92,9 @@ public class UnmanagedTomcatServiceTest {
     }
 
     @Test
-    public void serviceUnavailable() throws Exception {
+    void serviceUnavailable() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/empty/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/empty/"))) {
                 // as connector is not configured, TomcatServiceInvocationHandler will throw.
                 assertThat(res.getStatusLine().toString()).isEqualTo(
                         "HTTP/1.1 503 Service Unavailable");
@@ -103,9 +103,9 @@ public class UnmanagedTomcatServiceTest {
     }
 
     @Test
-    public void unconfiguredWebApp() throws Exception {
+    void unconfiguredWebApp() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/no-webapp/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/no-webapp/"))) {
                 // When no webapp is configured, Tomcat sends:
                 // - 400 Bad Request response for 9.0.10+
                 // - 404 Not Found for other versions
@@ -116,25 +116,26 @@ public class UnmanagedTomcatServiceTest {
     }
 
     @Test
-    public void ok() throws Exception {
+    void ok() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/some-webapp/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/some-webapp/"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
         }
     }
 
     @Test
-    public void okNoHostName() throws Exception {
+    void okNoHostName() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/some-webapp-nohostname/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(
+                    server.httpUri() + "/some-webapp-nohostname/"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
         }
     }
 
     @Test
-    public void okWithoutAuthorityHeader() throws Exception {
+    void okWithoutAuthorityHeader() throws Exception {
         final int port = server.httpPort();
         try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
             final InputStream in = s.getInputStream();

@@ -62,7 +62,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.util.AppRootFinder;
-import com.linecorp.armeria.internal.tomcat.TomcatVersion;
+import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -84,8 +84,8 @@ public abstract class TomcatService implements HttpService {
     static final Class<?> PROTOCOL_HANDLER_CLASS;
 
     static {
-        final String prefix = TomcatService.class.getPackage().getName() + '.';
-        final ClassLoader classLoader = TomcatService.class.getClassLoader();
+        final String prefix = TomcatVersion.class.getPackage().getName() + '.';
+        final ClassLoader classLoader = TomcatVersion.class.getClassLoader();
         final Class<?> inputBufferClass;
         final Class<?> outputBufferClass;
         final Class<?> protocolHandlerClass;

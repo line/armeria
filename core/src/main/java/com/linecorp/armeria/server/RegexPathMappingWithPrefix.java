@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.RouteUtil.PREFIX;
-import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
+import static com.linecorp.armeria.internal.server.RouteUtil.PREFIX;
+import static com.linecorp.armeria.internal.server.RouteUtil.newLoggerName;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;

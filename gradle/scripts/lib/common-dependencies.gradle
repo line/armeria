@@ -9,12 +9,9 @@ buildscript {
     dependencies {
         // These should be the only dependencies that need hard-coded versions.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.27.0'
-        classpath 'io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE'
         classpath 'org.yaml:snakeyaml:1.25'
     }
 }
-
-apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
 
 rootProject.ext {
     def dependenciesYamlFile = new File("${project.projectDir}/dependencies.yml")
@@ -25,36 +22,75 @@ rootProject.ext {
     }
 }
 
-allprojects {
-    apply plugin: 'io.spring.dependency-management'
-
-    dependencyManagement {
-        generatedPomCustomization {
-            enabled = false
+def managedDependencyVersions = [:]
+def managedDependencyExclusions = [:].withDefault { [] }
+def managedDependencyOverrides = [] as Set
+rootProject.ext.dependenciesYaml.forEach { String key, value ->
+    if (key == 'boms') {
+        value.each {
+            def parsed = it.split(':')
+            managedDependencyVersions["${parsed[0]}:${parsed[1]}"] = parsed[2]
         }
-
-        imports {
-            if (rootProject.ext.dependenciesYaml.containsKey('boms')) {
-                dependenciesYaml['boms'].each {
-                    mavenBom "${it}"
+    } else {
+        def groupId = key
+        def artifact = value as Map
+        artifact.forEach { String artifactId, Map props ->
+            if (props.containsKey('version')) {
+                managedDependencyVersions["${groupId}:${artifactId}"] = String.valueOf(props['version'])
+            }
+            if (props.containsKey('exclusions')) {
+                props['exclusions'].each { String spec ->
+                    def parsed = spec.split(':')
+                    managedDependencyExclusions["${groupId}:${artifactId}"].add([
+                            group: parsed[0],
+                            module: parsed[1],
+                    ])
                 }
             }
         }
+    }
+}
 
-        dependencies {
+allprojects {
+    ext {
+        managedVersions = managedDependencyVersions
+    }
+}
+
+def dependencyManagementProjects = projectsWithFlags('dependencyManagement')
+assert !dependencyManagementProjects.isEmpty() // Guaranteed by settings-flags.gradle
+def dependencyManagementProject = dependencyManagementProjects[0]
+
+configure(dependencyManagementProject) {
+    apply plugin: 'java-platform'
+    apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
+
+    repositories {
+        jcenter()
+        // Since we manage plugin versions here too.
+        gradlePluginPortal()
+        mavenCentral()
+    }
+
+    javaPlatform {
+        allowDependencies()
+    }
+
+    dependencies {
+        if (rootProject.ext.dependenciesYaml.containsKey('boms')) {
+            dependenciesYaml['boms'].each {
+                api platform("${it}")
+            }
+        }
+
+        constraints {
             rootProject.ext.dependenciesYaml.forEach { String key, value ->
                 if (key != 'boms') {
                     def groupId = key
                     def artifact = value as Map
                     artifact.forEach { String artifactId, Map props ->
                         if (props.containsKey('version')) {
-                            dependency("${groupId}:${artifactId}:${props['version']}") {
-                                if (props.containsKey('exclusions')) {
-                                    props['exclusions'].each { String spec ->
-                                        exclude spec
-                                    }
-                                }
-                            }
+                            api "${groupId}:${artifactId}:${props['version']}"
                         }
                     }
                 }
@@ -62,8 +98,77 @@ allprojects {
         }
     }
 
-    ext {
-        managedVersions = dependencyManagement.managedVersions
+
+    tasks {
+        dependencyUpdates {
+            revision = 'release'
+
+            resolutionStrategy {
+                componentSelection { rules ->
+                    rules.all { ComponentSelection selection ->
+                        boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview'].any { qualifier ->
+                            selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+                        }
+                        if (rejected) {
+                            selection.reject('Release candidate')
+                        }
+                    }
+                }
+            }
+
+            checkConstraints = true
+
+            // We have downgraded versions for legacy artifacts which versions plugin has no way of handling.
+            // But we can provide a reminder to manually check for updates.
+            doLast {
+                logger.quiet "Don't forget to check the following for updates to legacy version downgrades"
+                managedDependencyOverrides.each { override ->
+                    def (group, artifact, version) = override.split(':')
+                    def parts = version.split('\\.')
+                    if (parts.length >= 2) {
+                        logger.quiet "${artifact} is currently version ${version}"
+                        logger.quiet "https://search.maven.org/search?q=g:${group}%20a:${artifact}%20v:${parts[0]}.${parts[1]}.*\n"
+                    }
+                }
+            }
+        }
+    }
+}
+
+configure(projectsWithFlags('java')) {
+
+    configurations.configureEach { configuration ->
+        configuration.dependencies.whenObjectAdded { dep ->
+            if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
+                managedDependencyExclusions["${dep.group}:${dep.name}"].each {
+                    exclude it
+                }
+            }
+        }
+    }
+
+    // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
+    // canBeConsumed are set otherwise.
+    afterEvaluate {
+        dependencies {
+            configurations.configureEach { configuration ->
+                // Add to resolvable configurations
+                if (configuration.canBeResolved && !configuration.canBeConsumed) {
+                    add(configuration.name, platform(dependencyManagementProject))
+                }
+
+                // Find version overrides in dependency declaration configurations
+                if (!configuration.canBeResolved && !configuration.canBeConsumed) {
+                    configuration.dependencies.configureEach { dep ->
+                        if (dep instanceof org.gradle.api.artifacts.ExternalDependency) {
+                            if (dep.version != null) {
+                                managedDependencyOverrides.add(String.valueOf("${dep.module}:${dep.version}"))
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -72,22 +177,6 @@ rootProject.configurations {
     allDependencies {
         visible = false
         transitive = false
-    }
-}
-
-// Add all dependencies declared in 'dependencies.yml' to 'allDependencies' because otherwise
-// 'dependencyUpdates' task will not check all dependencies.
-rootProject.dependencies {
-    rootProject.ext.dependenciesYaml.forEach { String key, value ->
-        if (key != 'boms') {
-            def groupId = key
-            def artifact = value as Map
-            artifact.forEach { String artifactId, Map props ->
-                if (props.containsKey('version')) {
-                    allDependencies("${groupId}:${artifactId}")
-                }
-            }
-        }
     }
 }
 
@@ -116,7 +205,7 @@ rootProject.ext {
             def groupId = entry.key
             entry.value.forEach { String artifactId, Map props ->
                 if (props.containsKey('javadocs')) {
-                    def version = String.valueOf(managedVersions["${groupId}:${artifactId}"])
+                    def version = String.valueOf(managedDependencyVersions["${groupId}:${artifactId}"])
                     props['javadocs'].each { url ->
                         list.add([
                                 groupId: groupId,
@@ -144,26 +233,12 @@ configure(rootProject) {
     task managedVersions(
             group: 'Build',
             description: 'Generates the file that contains dependency versions.') {
-        inputs.properties dependencyManagement.managedVersions
+        inputs.properties managedDependencyVersions
         doLast {
             def f = file("${project.buildDir}/managed_versions.yml")
             f.parentFile.mkdir()
             f.withWriter('UTF-8') {
-                new Yaml().dump(dependencyManagement.managedVersions, it)
-            }
-        }
-    }
-}
-
-// Ignore release candidates when checking dependency updates.
-rootProject.tasks.dependencyUpdates.resolutionStrategy {
-    componentSelection { rules ->
-        rules.all { ComponentSelection selection ->
-            boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview'].any { qualifier ->
-                selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
-            }
-            if (rejected) {
-                selection.reject('Release candidate')
+                new Yaml().dump(managedDependencyVersions, it)
             }
         }
     }

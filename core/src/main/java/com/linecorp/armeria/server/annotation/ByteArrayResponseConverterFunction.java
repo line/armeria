@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.ResponseConversionUtil.streamingFrom;
+import static com.linecorp.armeria.internal.server.ResponseConversionUtil.streamingFrom;
 
 import java.util.stream.Stream;
 

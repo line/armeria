@@ -1,1 +1,1 @@
-com.linecorp.armeria.server.grpc.GrpcDocServicePlugin
+com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin

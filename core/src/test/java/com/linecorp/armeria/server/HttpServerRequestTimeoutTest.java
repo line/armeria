@@ -121,7 +121,7 @@ class HttpServerRequestTimeoutTest {
 
     @BeforeEach
     void setUp() {
-        clientWithoutTimeout = WebClient.builder(server.uri("/"))
+        clientWithoutTimeout = WebClient.builder(server.httpUri())
                                         .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
                                         .build();
     }
@@ -153,7 +153,7 @@ class HttpServerRequestTimeoutTest {
     @Test
     void setRequestTimeoutAfterNoTimeout() {
         final AggregatedHttpResponse response = clientWithoutTimeout.get(
-                serverWithoutTimeout.uri("/") + "/extend-timeout-from-now").aggregate().join();
+                serverWithoutTimeout.httpUri() + "/extend-timeout-from-now").aggregate().join();
         assertThat(response.status().code()).isEqualTo(200);
     }
 
@@ -166,7 +166,7 @@ class HttpServerRequestTimeoutTest {
     })
     void extendRequestTimeoutByDecorator(String path) {
         final AggregatedHttpResponse response =
-                clientWithoutTimeout.get(server.uri("/") + path).aggregate().join();
+                clientWithoutTimeout.get(server.httpUri() + path).aggregate().join();
         assertThat(response.status().code()).isEqualTo(200);
     }
 
@@ -177,7 +177,7 @@ class HttpServerRequestTimeoutTest {
     })
     void limitRequestTimeoutByDecorator(String path) {
         final AggregatedHttpResponse response =
-                clientWithoutTimeout.get(serverWithoutTimeout.uri("/") + path).aggregate().join();
+                clientWithoutTimeout.get(serverWithoutTimeout.httpUri() + path).aggregate().join();
         assertThat(response.status().code()).isEqualTo(503);
     }
 }

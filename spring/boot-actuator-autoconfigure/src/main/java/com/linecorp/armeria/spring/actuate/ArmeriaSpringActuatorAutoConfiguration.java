@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.cors.CorsService;
@@ -79,7 +80,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     static final MediaType ACTUATOR_MEDIA_TYPE = MediaType.parse(ActuatorMediaType.V3_JSON);
 
     private static final List<String> MEDIA_TYPES =
-            ImmutableList.of(ActuatorMediaType.V3_JSON, "application/json");
+            ImmutableList.of(ActuatorMediaType.V3_JSON, MediaTypeNames.JSON);
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

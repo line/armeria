@@ -102,7 +102,7 @@ class ServiceBindingTest {
 
     @Test
     void routeService() throws InterruptedException {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         AggregatedHttpResponse res = client.get("/greet/armeria").aggregate().join();
         propertyCheckLatch.await();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
@@ -121,7 +121,7 @@ class ServiceBindingTest {
 
     @Test
     void consumesAndProduces() throws IOException {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
                                            .aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
@@ -157,7 +157,7 @@ class ServiceBindingTest {
 
     @Test
     void accessLogWriter() throws InterruptedException {
-        final WebClient client = WebClient.of(server.uri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
         client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
               .aggregate().join();
 

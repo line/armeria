@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;

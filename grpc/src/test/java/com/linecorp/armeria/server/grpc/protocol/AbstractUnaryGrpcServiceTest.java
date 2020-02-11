@@ -39,7 +39,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
+import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -77,7 +77,7 @@ public class AbstractUnaryGrpcServiceTest {
     @Test
     public void normal_downstream() {
         final TestServiceBlockingStub stub =
-                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO, "/"),
+                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
                                   TestServiceBlockingStub.class);
         assertThat(stub.unaryCall(SimpleRequest.newBuilder()
                                                .setPayload(Payload.newBuilder()
@@ -111,7 +111,7 @@ public class AbstractUnaryGrpcServiceTest {
 
     @Test
     public void invalidPayload() {
-        final WebClient client = WebClient.of(server.httpUri("/"));
+        final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse message =
                 client.post("/armeria.grpc.testing.TestService/UnaryCall", "foobarbreak").aggregate().join();

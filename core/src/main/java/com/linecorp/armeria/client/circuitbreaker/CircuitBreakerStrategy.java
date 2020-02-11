@@ -41,8 +41,7 @@ public interface CircuitBreakerStrategy {
      * {@link Exception} raised.
      */
     static CircuitBreakerStrategy onServerErrorStatus() {
-        return onStatus(
-                (status, thrown) -> status != null && status.codeClass() != HttpStatusClass.SERVER_ERROR);
+        return onStatus((status, thrown) -> status != null && !status.isServerError());
     }
 
     /**

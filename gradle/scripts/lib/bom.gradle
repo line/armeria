@@ -1,110 +1,32 @@
-import groovy.xml.QName
-
 configure(projectsWithFlags('bom')) {
-    apply plugin: 'base'
-
-    dependencyManagement {
-        generatedPomCustomization {
-            enabled = true
-        }
-    }
+    apply plugin: 'java-platform'
+    apply plugin: 'maven-publish'
 
     publishing {
         publications {
             bom(MavenPublication) {
-                artifactId project.ext.artifactId
+                from components.javaPlatform
+
                 pom.packaging = 'pom'
-                // Generate the POM.
-                pom.withXml {
-                    findChildNode(asNode(), 'packaging') + {
-                        resolveStrategy = DELEGATE_FIRST
-
-                        // Write the elements required by OSSRH.
-                        name "${project.ext.projectName} (${project.ext.artifactId})"
-                        description "${project.ext.projectDescription} (${project.ext.artifactId})"
-                        url "${project.ext.projectUrl}"
-                        inceptionYear "${project.ext.inceptionYear}"
-
-                        licenses {
-                            license {
-                                name "${project.ext.licenseName}"
-                                url "${project.ext.licenseUrl}"
-                                distribution 'repo'
-                            }
-                        }
-
-                        developers {
-                            developer {
-                                name "${project.ext.authorName}"
-                                email "${project.ext.authorEmail}"
-                                url "${project.ext.authorUrl}"
-                            }
-                        }
-
-                        scm {
-                            url "${project.ext.scmUrl}"
-                            connection "${project.ext.scmConnection}"
-                            developerConnection "${project.ext.scmDeveloperConnection}"
-                        }
-                    }
-
-                    // Find (or create) the 'dependencyManagement' section.
-                    Node dependencyMgmt = findChildNode(asNode(), 'dependencyManagement')
-                    if (dependencyMgmt == null) {
-                        findChildNode(asNode(), 'scm') + {
-                            resolveStrategy = DELEGATE_FIRST
-                            dependencyManagement {}
-                        }
-                        dependencyMgmt = findChildNode(asNode(), 'dependencyManagement')
-                    }
-
-                    // Replace the `dependencyManagement` section populated by dependency-management-plugin
-                    // or created by ourselves above.
-                    dependencyMgmt.replaceNode {
-                        resolveStrategy = DELEGATE_FIRST
-                        dependencyManagement {
-                            dependencies {
-                                projectsWithFlags('java', 'publish').toList().sort { a, b ->
-                                    def groupComparison = "${a.group}".compareTo("${b.group}")
-                                    if (groupComparison != 0) {
-                                        return groupComparison
-                                    }
-                                    return "${a.ext.artifactId}".compareTo("${b.ext.artifactId}")
-                                }.each { p ->
-                                    dependency {
-                                        groupId "${p.group}"
-                                        artifactId "${p.ext.artifactId}"
-                                        version "${p.version}"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     }
 
-    if (project.ext.isSigning()) {
-        signing {
-            sign publishing.publications
+    dependencies {
+        constraints {
+            projectsWithFlags('java', 'publish').toList().sort { a, b ->
+                def groupComparison = "${a.group}".compareTo("${b.group}")
+                if (groupComparison != 0) {
+                    return groupComparison
+                }
+                return "${a.ext.artifactId}".compareTo("${b.ext.artifactId}")
+            }.each { p ->
+                api "${p.group}:${p.ext.artifactId}:${p.version}"
+            }
         }
     }
 
     tasks.assemble.dependsOn {
         tasks.generatePomFileForBomPublication
     }
-}
-
-private static Node findChildNode(Node parent, String childName) {
-    return parent.children().find {
-        def name = it.name()
-        if (name instanceof QName) {
-            name = name.localPart
-        } else {
-            name = name.toString()
-        }
-
-        return name == childName
-    } as Node
 }

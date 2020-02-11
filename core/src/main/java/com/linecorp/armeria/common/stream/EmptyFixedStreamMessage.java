@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.common.stream;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * A {@link FixedStreamMessage} that publishes no objects, just a close event.
  */
+@UnstableApi
 public class EmptyFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     // No objects, so just notify of close as soon as there is demand.

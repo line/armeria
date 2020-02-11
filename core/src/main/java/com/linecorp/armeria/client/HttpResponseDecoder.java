@@ -29,14 +29,13 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.DefaultTimeoutController;
-import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -201,7 +200,7 @@ abstract class HttpResponseDecoder {
                     if (o instanceof ResponseHeaders) {
                         final ResponseHeaders headers = (ResponseHeaders) o;
                         final HttpStatus status = headers.status();
-                        if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+                        if (!status.isInformational()) {
                             state = State.WAIT_DATA_OR_TRAILERS;
                             if (ctx != null) {
                                 ctx.logBuilder().responseHeaders(headers);

@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
 
-class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
+class AbstractClientOptionsBuilder {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = ClientDecoration.builder();
@@ -50,46 +50,41 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
         options(options);
     }
 
-    @SuppressWarnings("unchecked")
-    final B self() {
-        return (B) this;
-    }
-
     /**
      * Adds the specified {@link ClientOptions}.
      */
-    public B options(ClientOptions options) {
+    public AbstractClientOptionsBuilder options(ClientOptions options) {
         requireNonNull(options, "options");
         options.asMap().values().forEach(this::option);
-        return self();
+        return this;
     }
 
     /**
      * Adds the specified {@link ClientOptionValue}s.
      */
-    public B options(ClientOptionValue<?>... options) {
+    public AbstractClientOptionsBuilder options(ClientOptionValue<?>... options) {
         requireNonNull(options, "options");
         for (ClientOptionValue<?> o : options) {
             option(o);
         }
-        return self();
+        return this;
     }
 
     /**
      * Adds the specified {@link ClientOptionValue}s.
      */
-    public B options(Iterable<ClientOptionValue<?>> options) {
+    public AbstractClientOptionsBuilder options(Iterable<ClientOptionValue<?>> options) {
         requireNonNull(options, "options");
         for (ClientOptionValue<?> o : options) {
             option(o);
         }
-        return self();
+        return this;
     }
 
     /**
      * Adds the specified {@link ClientOption} and its {@code value}.
      */
-    public <T> B option(ClientOption<T> option, T value) {
+    public <T> AbstractClientOptionsBuilder option(ClientOption<T> option, T value) {
         requireNonNull(option, "option");
         requireNonNull(value, "value");
         return option(option.newValue(value));
@@ -98,7 +93,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
     /**
      * Adds the specified {@link ClientOptionValue}.
      */
-    public <T> B option(ClientOptionValue<T> optionValue) {
+    public <T> AbstractClientOptionsBuilder option(ClientOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
         final ClientOption<?> opt = optionValue.option();
         if (opt == ClientOption.DECORATION) {
@@ -111,14 +106,14 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
         } else {
             options.put(opt, optionValue);
         }
-        return self();
+        return this;
     }
 
     /**
      * Sets the {@link ClientFactory} used for creating a client.
      * The default is {@link ClientFactory#ofDefault()}.
      */
-    public B factory(ClientFactory factory) {
+    public AbstractClientOptionsBuilder factory(ClientFactory factory) {
         return option(ClientOption.FACTORY, requireNonNull(factory, "factory"));
     }
 
@@ -130,7 +125,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      * @param writeTimeout the timeout. {@code 0} disables the timeout.
      */
     @Deprecated
-    public B defaultWriteTimeout(Duration writeTimeout) {
+    public AbstractClientOptionsBuilder defaultWriteTimeout(Duration writeTimeout) {
         return writeTimeoutMillis(requireNonNull(writeTimeout, "writeTimeout").toMillis());
     }
 
@@ -142,7 +137,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      * @param writeTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     @Deprecated
-    public B defaultWriteTimeoutMillis(long writeTimeoutMillis) {
+    public AbstractClientOptionsBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
         return writeTimeoutMillis(writeTimeoutMillis);
     }
 
@@ -151,7 +146,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      *
      * @param writeTimeout the timeout. {@code 0} disables the timeout.
      */
-    public B writeTimeout(Duration writeTimeout) {
+    public AbstractClientOptionsBuilder writeTimeout(Duration writeTimeout) {
         return writeTimeoutMillis(requireNonNull(writeTimeout, "writeTimeout").toMillis());
     }
 
@@ -160,7 +155,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      *
      * @param writeTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    public B writeTimeoutMillis(long writeTimeoutMillis) {
+    public AbstractClientOptionsBuilder writeTimeoutMillis(long writeTimeoutMillis) {
         return option(ClientOption.WRITE_TIMEOUT_MILLIS, writeTimeoutMillis);
     }
 
@@ -172,7 +167,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      * @param responseTimeout the timeout. {@code 0} disables the timeout.
      */
     @Deprecated
-    public B defaultResponseTimeout(Duration responseTimeout) {
+    public AbstractClientOptionsBuilder defaultResponseTimeout(Duration responseTimeout) {
         return responseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
     }
 
@@ -184,7 +179,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      * @param responseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     @Deprecated
-    public B defaultResponseTimeoutMillis(long responseTimeoutMillis) {
+    public AbstractClientOptionsBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
         return responseTimeoutMillis(responseTimeoutMillis);
     }
 
@@ -193,7 +188,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      *
      * @param responseTimeout the timeout. {@code 0} disables the timeout.
      */
-    public B responseTimeout(Duration responseTimeout) {
+    public AbstractClientOptionsBuilder responseTimeout(Duration responseTimeout) {
         return responseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
     }
 
@@ -202,7 +197,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      *
      * @param responseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    public B responseTimeoutMillis(long responseTimeoutMillis) {
+    public AbstractClientOptionsBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return option(ClientOption.RESPONSE_TIMEOUT_MILLIS, responseTimeoutMillis);
     }
 
@@ -214,7 +209,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
      */
     @Deprecated
-    public B defaultMaxResponseLength(long maxResponseLength) {
+    public AbstractClientOptionsBuilder defaultMaxResponseLength(long maxResponseLength) {
         return maxResponseLength(maxResponseLength);
     }
 
@@ -223,14 +218,14 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      *
      * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
      */
-    public B maxResponseLength(long maxResponseLength) {
+    public AbstractClientOptionsBuilder maxResponseLength(long maxResponseLength) {
         return option(ClientOption.MAX_RESPONSE_LENGTH, maxResponseLength);
     }
 
     /**
      * Sets the {@link Supplier} that generates a {@link RequestId}.
      */
-    public B requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
+    public AbstractClientOptionsBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
        return option(ClientOption.REQUEST_ID_GENERATOR, requestIdGenerator);
     }
 
@@ -268,7 +263,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      * @see ClientOption#ENDPOINT_REMAPPER
      * @see ClientOptions#endpointRemapper()
      */
-    public B endpointRemapper(
+    public AbstractClientOptionsBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         requireNonNull(endpointRemapper, "endpointRemapper");
         return option(ClientOption.ENDPOINT_REMAPPER, endpointRemapper);
@@ -279,9 +274,10 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      *
      * @param decorator the {@link Function} that transforms an {@link HttpClient} to another
      */
-    public B decorator(Function<? super HttpClient, ? extends HttpClient> decorator) {
+    public AbstractClientOptionsBuilder decorator(
+            Function<? super HttpClient, ? extends HttpClient> decorator) {
         decoration.add(decorator);
-        return self();
+        return this;
     }
 
     /**
@@ -289,9 +285,9 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      *
      * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
-    public B decorator(DecoratingHttpClientFunction decorator) {
+    public AbstractClientOptionsBuilder decorator(DecoratingHttpClientFunction decorator) {
         decoration.add(decorator);
-        return self();
+        return this;
     }
 
     /**
@@ -299,9 +295,10 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      *
      * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
      */
-    public B rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
+    public AbstractClientOptionsBuilder rpcDecorator(
+            Function<? super RpcClient, ? extends RpcClient> decorator) {
         decoration.addRpc(decorator);
-        return self();
+        return this;
     }
 
     /**
@@ -309,50 +306,52 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      *
      * @param decorator the {@link DecoratingRpcClientFunction} that intercepts an invocation
      */
-    public B rpcDecorator(DecoratingRpcClientFunction decorator) {
+    public AbstractClientOptionsBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         decoration.addRpc(decorator);
-        return self();
+        return this;
     }
 
     /**
      * Adds the specified HTTP header.
      */
-    public B addHttpHeader(CharSequence name, Object value) {
+    public AbstractClientOptionsBuilder addHttpHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         httpHeaders.addObject(HttpHeaderNames.of(name), value);
-        return self();
+        return this;
     }
 
     /**
      * Adds the specified HTTP headers.
      */
-    public B addHttpHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+    public AbstractClientOptionsBuilder addHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         requireNonNull(httpHeaders, "httpHeaders");
         this.httpHeaders.addObject(httpHeaders);
-        return self();
+        return this;
     }
 
     /**
      * Sets the specified HTTP header.
      */
-    public B setHttpHeader(CharSequence name, Object value) {
+    public AbstractClientOptionsBuilder setHttpHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         httpHeaders.setObject(HttpHeaderNames.of(name), value);
-        return self();
+        return this;
     }
 
     /**
      * Sets the specified HTTP headers.
      */
-    public B setHttpHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+    public AbstractClientOptionsBuilder setHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         requireNonNull(httpHeaders, "httpHeaders");
         this.httpHeaders.setObject(httpHeaders);
-        return self();
+        return this;
     }
 
-    ClientOptions buildOptions() {
+    final ClientOptions buildOptions() {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
         final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);

@@ -80,7 +80,7 @@ public class ThriftHttpErrorResponseTest {
     @ParameterizedTest
     @EnumSource(TestParam.class)
     void test(TestParam param) throws Exception {
-        final Iface client = Clients.newClient(server.uri(BINARY, param.path), Iface.class);
+        final Iface client = Clients.newClient(server.httpUri(BINARY).resolve(param.path), Iface.class);
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.CONFLICT);

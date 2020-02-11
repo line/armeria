@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.testing.internal.UniqueProtocolsProvider;
+import com.linecorp.armeria.internal.testing.UniqueProtocolsProvider;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class PortUnificationServerTest {
@@ -64,7 +64,7 @@ class PortUnificationServerTest {
     @ParameterizedTest
     @ArgumentsSource(UniqueProtocolsProvider.class)
     void test(SessionProtocol protocol) throws Exception {
-        final WebClient client = WebClient.builder(server.uri(protocol, "/"))
+        final WebClient client = WebClient.builder(server.uri(protocol))
                                           .factory(ClientFactory.insecure())
                                           .build();
         final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))

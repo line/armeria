@@ -3,12 +3,12 @@ plugins {
 }
 
 dependencies {
-    compile project(':core')
+    implementation project(':core')
 
-    compile 'com.google.dagger:dagger'
-    compile 'com.google.dagger:dagger-producers'
+    implementation 'com.google.dagger:dagger'
+    implementation 'com.google.dagger:dagger-producers'
     annotationProcessor 'com.google.dagger:dagger-compiler'
-    compile 'com.spotify:futures-extra'
+    implementation 'com.spotify:futures-extra'
 }
 
 application {

@@ -37,11 +37,11 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.Http2ObjectEncoder;
-import com.linecorp.armeria.internal.HttpObjectEncoder;
-import com.linecorp.armeria.internal.InboundTrafficController;
-import com.linecorp.armeria.internal.RequestContextUtil;
+import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
+import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
+import com.linecorp.armeria.internal.common.HttpObjectEncoder;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;

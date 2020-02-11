@@ -81,7 +81,7 @@ class ThriftDynamicTimeoutTest {
     @ArgumentsSource(ClientDecoratorProvider.class)
     void testDynamicTimeout(Function<? super RpcClient, ? extends RpcClient> clientDecorator) throws Exception {
         final SleepService.Iface client =
-                Clients.builder(server.uri(BINARY, "/sleep"))
+                Clients.builder(server.httpUri(BINARY) + "/sleep")
                        .rpcDecorator(clientDecorator)
                        .responseTimeout(Duration.ofSeconds(1))
                        .build(SleepService.Iface.class);
@@ -97,7 +97,7 @@ class ThriftDynamicTimeoutTest {
     void testDisabledTimeout(Function<? super RpcClient, ? extends RpcClient> clientDecorator)
             throws Exception {
         final SleepService.Iface client =
-                Clients.builder(server.uri(BINARY, "/fakeSleep"))
+                Clients.builder(server.httpUri(BINARY) + "/fakeSleep")
                        .rpcDecorator(clientDecorator)
                        .responseTimeout(Duration.ofSeconds(1))
                        .build(SleepService.Iface.class);

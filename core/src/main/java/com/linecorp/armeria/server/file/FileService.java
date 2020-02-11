@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.file;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -24,6 +25,7 @@ import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
 
@@ -34,7 +36,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.base.Splitter;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
@@ -46,7 +47,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
+import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
@@ -318,18 +319,17 @@ public class FileService extends AbstractHttpService {
     private HttpFile cache(ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile file) {
         assert cache != null;
 
-        // TODO(trustin): We assume here that the file being read is small enough that it will not block
-        //                an event loop for a long time. Revisit if the assumption turns out to be false.
-        final AggregatedHttpFile cachedFile = cache.get(pathAndEncoding, key -> {
-            try {
-                return file.aggregateWithPooledObjects(MoreExecutors.directExecutor(), ctx.alloc()).get();
-            } catch (Exception e) {
-                logger.warn("{} Failed to cache a file: {}", ctx, file, Exceptions.peel(e));
-                return null;
-            }
-        });
+        final Executor executor = ctx.blockingTaskExecutor();
+        final AggregatedHttpFile maybeAggregated =
+                file.aggregateWithPooledObjects(executor, ctx.alloc()).thenApply(aggregated -> {
+                    cache.put(pathAndEncoding, aggregated);
+                    return aggregated;
+                }).exceptionally(cause -> {
+                    logger.warn("{} Failed to cache a file: {}", ctx, file, Exceptions.peel(cause));
+                    return null;
+                }).getNow(null);
 
-        return cachedFile != null ? cachedFile : file;
+        return firstNonNull(maybeAggregated, file);
     }
 
     /**

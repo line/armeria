@@ -66,7 +66,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -155,7 +155,6 @@ public final class ServerBuilder {
     final VirtualHostBuilder virtualHostTemplate = new VirtualHostBuilder(this, false);
     private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
     private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
-    private final List<AnnotatedServiceBindingBuilder> annotatedServiceBindingBuilders = new ArrayList<>();
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
@@ -588,14 +587,13 @@ public final class ServerBuilder {
      * requests to go away before actually shutting down.
      *
      * @param quietPeriodMillis the number of milliseconds to wait for active
-     *     requests to go end before shutting down. 0 means the server will
-     *     stop right away without waiting.
-     * @param timeoutMillis the number of milliseconds to wait before shutting
-     *     down the server regardless of active requests. This should be set to
-     *     a time greater than {@code quietPeriodMillis} to ensure the server
-     *     shuts down even if there is a stuck request.
+     *                          requests to go end before shutting down. 0 means the server will
+     *                          stop right away without waiting.
+     * @param timeoutMillis the number of milliseconds to wait before shutting down the server regardless of
+     *                      active requests. This should be set to a time greater than {@code quietPeriodMillis}
+     *                      to ensure the server shuts down even if there is a stuck request.
      */
-    public ServerBuilder gracefulShutdownTimeout(long quietPeriodMillis, long timeoutMillis) {
+    public ServerBuilder gracefulShutdownTimeoutMillis(long quietPeriodMillis, long timeoutMillis) {
         return gracefulShutdownTimeout(
                 Duration.ofMillis(quietPeriodMillis), Duration.ofMillis(timeoutMillis));
     }
@@ -604,13 +602,30 @@ public final class ServerBuilder {
      * Sets the amount of time to wait after calling {@link Server#stop()} for
      * requests to go away before actually shutting down.
      *
+     * @param quietPeriodMillis the number of milliseconds to wait for active
+     *                          requests to go end before shutting down. 0 means the server will
+     *                          stop right away without waiting.
+     * @param timeoutMillis the number of milliseconds to wait before shutting down the server regardless of
+     *                      active requests. This should be set to a time greater than {@code quietPeriodMillis}
+     *                      to ensure the server shuts down even if there is a stuck request.
+     *
+     * @deprecated Use {@link #gracefulShutdownTimeoutMillis(long, long)}.
+     */
+    @Deprecated
+    public ServerBuilder gracefulShutdownTimeout(long quietPeriodMillis, long timeoutMillis) {
+        return gracefulShutdownTimeoutMillis(quietPeriodMillis, timeoutMillis);
+    }
+
+    /**
+     * Sets the amount of time to wait after calling {@link Server#stop()} for
+     * requests to go away before actually shutting down.
+     *
      * @param quietPeriod the number of milliseconds to wait for active
-     *     requests to go end before shutting down. {@link Duration#ZERO} means
-     *     the server will stop right away without waiting.
-     * @param timeout the number of milliseconds to wait before shutting
-     *     down the server regardless of active requests. This should be set to
-     *     a time greater than {@code quietPeriod} to ensure the server shuts
-     *     down even if there is a stuck request.
+     *                    requests to go end before shutting down. {@link Duration#ZERO} means
+     *                    the server will stop right away without waiting.
+     * @param timeout the amount of time to wait before shutting down the server regardless of active requests.
+     *                This should be set to a time greater than {@code quietPeriod} to ensure the server
+     *                shuts down even if there is a stuck request.
      */
     public ServerBuilder gracefulShutdownTimeout(Duration quietPeriod, Duration timeout) {
         requireNonNull(quietPeriod, "quietPeriod");
@@ -1109,13 +1124,13 @@ public final class ServerBuilder {
     }
 
     ServerBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
-        virtualHostTemplate.addServiceConfigBuilder(serviceConfigBuilder);
+        virtualHostTemplate.addServiceConfigSetters(serviceConfigBuilder);
         return this;
     }
 
     ServerBuilder annotatedServiceBindingBuilder(
             AnnotatedServiceBindingBuilder annotatedServiceBindingBuilder) {
-        annotatedServiceBindingBuilders.add(annotatedServiceBindingBuilder);
+        virtualHostTemplate.addServiceConfigSetters(annotatedServiceBindingBuilder);
         return this;
     }
 
@@ -1546,10 +1561,6 @@ public final class ServerBuilder {
                 virtualHostTemplate.annotatedServiceExtensions();
 
         assert extensions != null;
-
-        annotatedServiceBindingBuilders.stream()
-                                       .flatMap(b -> b.buildServiceConfigBuilder(extensions).stream())
-                                       .forEach(this::serviceConfigBuilder);
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate);

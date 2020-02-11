@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.internal.TransportType;
+import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolver;

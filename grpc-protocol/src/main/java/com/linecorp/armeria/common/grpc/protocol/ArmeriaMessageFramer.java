@@ -55,7 +55,8 @@ import java.io.OutputStream;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.internal.grpc.protocol.StatusCodes;
+import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -73,6 +74,7 @@ import io.netty.buffer.CompositeByteBuf;
  * abstraction in favor of using {@link ByteBuf} directly. The code has been vastly simplified due to the lack
  * of support for arbitrary {@link InputStream}s.
  */
+@UnstableApi
 public class ArmeriaMessageFramer implements AutoCloseable {
 
     public static final int NO_MAX_OUTBOUND_MESSAGE_SIZE = -1;

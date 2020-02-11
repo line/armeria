@@ -1,15 +1,16 @@
 dependencies {
     // Thrift
-    compile 'org.apache.thrift:libthrift'
-    compile 'jakarta.annotation:jakarta.annotation-api'
+    api 'org.apache.thrift:libthrift'
+    api 'jakarta.annotation:jakarta.annotation-api'
 
     // Jetty, for testing TServlet interoperability.
-    testCompile 'org.eclipse.jetty:jetty-webapp'
-    testCompile 'org.eclipse.jetty.http2:http2-server'
+    testImplementation 'org.eclipse.jetty:jetty-webapp'
+    testImplementation 'org.eclipse.jetty.http2:http2-server'
 
     // Dropwizard and Prometheus, for testing metrics integration
-    testCompile 'io.dropwizard.metrics:metrics-core'
-    testCompile 'io.prometheus:simpleclient_common'
+    testImplementation 'io.dropwizard.metrics:metrics-core'
+    testImplementation 'io.micrometer:micrometer-registry-prometheus'
+    testImplementation 'io.prometheus:simpleclient_common'
 }
 
 // Keep the original Guava references in ThriftListenableFuture,

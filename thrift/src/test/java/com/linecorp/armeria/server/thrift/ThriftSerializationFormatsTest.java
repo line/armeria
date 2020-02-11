@@ -22,8 +22,8 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMP
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.JSON;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -32,12 +32,9 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.Scheme;
@@ -63,9 +60,6 @@ public class ThriftSerializationFormatsTest {
               .service("/hellotextonly", THttpService.ofFormats(HELLO_SERVICE, TEXT));
         }
     };
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
 
     @Test
     public void findByMediaType() {
@@ -108,14 +102,14 @@ public class ThriftSerializationFormatsTest {
 
     @Test
     public void defaults() throws Exception {
-        final HelloService.Iface client = Clients.newClient(server.uri(BINARY, "/hello"),
+        final HelloService.Iface client = Clients.newClient(server.httpUri(BINARY) + "/hello",
                                                             HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
     public void notDefault() throws Exception {
-        final HelloService.Iface client = Clients.newClient(server.uri(TEXT, "/hello"),
+        final HelloService.Iface client = Clients.newClient(server.httpUri(TEXT) + "/hello",
                                                             HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
@@ -123,17 +117,16 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void notAllowed() throws Exception {
         final HelloService.Iface client =
-                Clients.newClient(server.uri(TEXT, "/hellobinaryonly"), HelloService.Iface.class);
-        thrown.expect(InvalidResponseHeadersException.class);
-        thrown.expectMessage(":status=415");
-        client.hello("Trustin");
+                Clients.newClient(server.httpUri(TEXT) + "/hellobinaryonly", HelloService.Iface.class);
+        assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(InvalidResponseHeadersException.class)
+                                                         .hasMessageContaining(":status=415");
     }
 
     @Test
     public void contentTypeNotThrift() throws Exception {
         // Browser clients often send a non-Thrift content type.
         final HelloService.Iface client =
-                Clients.builder(server.uri(BINARY, "/hello"))
+                Clients.builder(server.httpUri(BINARY) + "/hello")
                        .setHttpHeader(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
                        .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
@@ -142,19 +135,18 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void acceptNotSameAsContentType() throws Exception {
         final HelloService.Iface client =
-                Clients.builder(server.uri(TEXT, "/hello"))
+                Clients.builder(server.httpUri(TEXT) + "/hello")
                        .setHttpHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
                        .build(HelloService.Iface.class);
-        thrown.expect(InvalidResponseHeadersException.class);
-        thrown.expectMessage(":status=406");
-        client.hello("Trustin");
+        assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(InvalidResponseHeadersException.class)
+                                                         .hasMessageContaining(":status=406");
     }
 
     @Test
     public void defaultSerializationFormat() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Send a TTEXT request with content type 'application/x-thrift' without 'protocol' parameter.
-            final HttpPost req = new HttpPost(server.uri("/hellotextonly"));
+            final HttpPost req = new HttpPost(server.httpUri() + "/hellotextonly");
             req.setHeader("Content-type", "application/x-thrift");
             req.setEntity(new StringEntity(
                     '{' +
@@ -172,19 +164,14 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void givenClients_whenBinary_thenBuildClient() throws Exception {
         HelloService.Iface client =
-                Clients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), newEndpoint(BINARY))
+                Clients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), server.httpEndpoint())
                        .path("/hello")
                        .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
 
-        client = Clients.builder(Scheme.of(TEXT, SessionProtocol.HTTP), newEndpoint(TEXT))
+        client = Clients.builder(Scheme.of(TEXT, SessionProtocol.HTTP), server.httpEndpoint())
                         .path("/hello")
                         .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
-    }
-
-    private static Endpoint newEndpoint(SerializationFormat format) {
-        final URI uri = URI.create(server.uri(format, "/"));
-        return Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
     }
 }

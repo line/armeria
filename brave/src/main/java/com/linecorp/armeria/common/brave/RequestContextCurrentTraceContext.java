@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common.brave;
 
-import static com.linecorp.armeria.internal.brave.TraceContextUtil.setTraceContext;
-import static com.linecorp.armeria.internal.brave.TraceContextUtil.traceContext;
+import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.setTraceContext;
+import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.traceContext;
 
 import java.util.List;
 import java.util.function.Function;
@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.brave.TraceContextUtil;
+import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
 import com.linecorp.armeria.server.brave.BraveService;
 
 import brave.Tracing;

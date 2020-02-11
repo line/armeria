@@ -85,52 +85,49 @@ dependencies {
         "java${version}TestImplementation" files(sourceSets.test.output.classesDirs) { builtBy compileTestJava }
     }
 
+    // Logging decorators expose slf4j in API
+    api 'org.slf4j:slf4j-api'
+
     // cglib
-    testCompile 'cglib:cglib'
+    testImplementation 'cglib:cglib'
 
     // Caffeine
-    compile 'com.github.ben-manes.caffeine:caffeine'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
 
     // Jackson
     [ 'jackson-core', 'jackson-annotations', 'jackson-databind' ].each {
-        compile "com.fasterxml.jackson.core:$it"
+        api "com.fasterxml.jackson.core:$it"
     }
 
     // Micrometer and other metric-related stuff
-    compile 'io.micrometer:micrometer-core'
-    compile('io.micrometer:micrometer-registry-prometheus') {
-        ext.optional = true
-    }
-    compile('io.dropwizard.metrics:metrics-core') {
-        ext.optional = true
-    }
-    compile('io.prometheus:simpleclient_common') {
-        ext.optional = true
-    }
+    api 'io.micrometer:micrometer-core'
+    optionalApi 'io.micrometer:micrometer-registry-prometheus'
+    optionalApi 'io.dropwizard.metrics:metrics-core'
+    optionalApi 'io.prometheus:simpleclient_common'
 
     // Netty
     [ 'netty-transport', 'netty-codec-http2', 'netty-codec-haproxy', 'netty-resolver-dns' ].each {
-        compile "io.netty:$it"
+        api "io.netty:$it"
     }
-    compile "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-transport-native-unix-common']}:linux-x86_64"
-    compile "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
-    compile 'io.netty:netty-tcnative-boringssl-static'
+    implementation "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-transport-native-unix-common']}:linux-x86_64"
+    implementation "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
+    implementation 'io.netty:netty-tcnative-boringssl-static'
 
     // Project Reactor
-    testCompile 'io.projectreactor:reactor-test'
+    testImplementation 'io.projectreactor:reactor-test'
 
     // TestNG
-    testCompile 'org.testng:testng'
+    testImplementation 'org.testng:testng'
 
     // Reactive Streams
-    compile 'org.reactivestreams:reactive-streams'
-    testCompile 'org.reactivestreams:reactive-streams-tck'
+    api 'org.reactivestreams:reactive-streams'
+    testImplementation 'org.reactivestreams:reactive-streams-tck'
 
     // Bouncy Castle
-    compile 'org.bouncycastle:bcprov-jdk15on'
+    implementation 'org.bouncycastle:bcprov-jdk15on'
 
     // Jetty, for testing interoperability with other servers.
-    testCompile 'org.eclipse.jetty:jetty-webapp'
+    testImplementation 'org.eclipse.jetty:jetty-webapp'
 }
 
 if (!rootProject.hasProperty('noWeb')) {

@@ -3,7 +3,7 @@ rootProject.name = 'armeria'
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 
 // Published BOM projects
-includeWithFlags ':bom',                       'bom'
+includeWithFlags ':bom',                       'bom', 'publish'
 
 // Published Java projects
 includeWithFlags ':brave',                              'java', 'publish', 'relocate'
@@ -40,10 +40,11 @@ includeWithFlags ':it:server',                'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat',    'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat8.5', 'java', 'relocate'
 includeWithFlags ':testing-internal',         'java', 'relocate'
-includeWithFlags ':thrift0.11',               'java', 'relocate'
+includeWithFlags ':thrift0.12',               'java', 'relocate'
 
 // Unpublished non-Java projects
 includeWithFlags ':docs-client'
+
 
 // Site generation project
 includeWithFlags ':site'

@@ -39,22 +39,22 @@ import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.thread.ThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 
-public class JettyServiceTest extends WebAppContainerTest {
+class JettyServiceTest extends WebAppContainerTest {
 
     private static final List<Object> jettyBeans = new ArrayList<>();
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.http(0);
@@ -106,22 +106,22 @@ public class JettyServiceTest extends WebAppContainerTest {
     }
 
     @Override
-    protected ServerRule server() {
+    protected ServerExtension server() {
         return server;
     }
 
     @Test
-    public void configurator() throws Exception {
+    void configurator() throws Exception {
         assertThat(jettyBeans)
                   .hasAtLeastOneElementOfType(ThreadPool.class)
                   .hasAtLeastOneElementOfType(WebAppContext.class);
     }
 
     @Test
-    public void defaultHandlerFavicon() throws Exception {
+    void defaultHandlerFavicon() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(server.uri("/default/favicon.ico")))) {
+                    new HttpGet(server.httpUri() + "/default/favicon.ico"))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                               .startsWith("image/x-icon");
@@ -132,7 +132,7 @@ public class JettyServiceTest extends WebAppContainerTest {
     }
 
     @Test
-    public void resourceHandlerWithLargeResource() throws Exception {
+    void resourceHandlerWithLargeResource() throws Exception {
         testLarge("/resources/large.txt");
     }
 }

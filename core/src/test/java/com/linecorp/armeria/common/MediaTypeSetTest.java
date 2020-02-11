@@ -35,13 +35,13 @@ class MediaTypeSetTest {
 
     @Test
     void getters() {
-        final MediaTypeSet set = new MediaTypeSet(HTML_UTF_8, PLAIN_TEXT_UTF_8);
+        final MediaTypeSet set = MediaTypeSet.of(HTML_UTF_8, PLAIN_TEXT_UTF_8);
         assertThat(set).containsOnly(HTML_UTF_8, PLAIN_TEXT_UTF_8).hasSize(2);
     }
 
     @Test
     void matchList() {
-        final MediaTypeSet set = new MediaTypeSet(HTML_UTF_8, PLAIN_TEXT_UTF_8);
+        final MediaTypeSet set = MediaTypeSet.of(HTML_UTF_8, PLAIN_TEXT_UTF_8);
 
         // No ranges
         assertThat(set.match(ImmutableList.of())).isNull();
@@ -63,7 +63,7 @@ class MediaTypeSetTest {
 
     @Test
     void matchHeaders() {
-        final MediaTypeSet set = new MediaTypeSet(HTML_UTF_8, PLAIN_TEXT_UTF_8);
+        final MediaTypeSet set = MediaTypeSet.of(HTML_UTF_8, PLAIN_TEXT_UTF_8);
 
         // No ranges
         assertThat(set.matchHeaders()).isNull();
@@ -85,10 +85,10 @@ class MediaTypeSetTest {
     @Test
     void moreSpecificRangeWins() {
         final MediaType HTML_UTF_8_LEVEL_1 = HTML_UTF_8.withParameter("level", "1");
-        final MediaTypeSet set = new MediaTypeSet(WEBM_VIDEO,
-                                                  PLAIN_TEXT_UTF_8,
-                                                  HTML_UTF_8,
-                                                  HTML_UTF_8_LEVEL_1);
+        final MediaTypeSet set = MediaTypeSet.of(WEBM_VIDEO,
+                                                 PLAIN_TEXT_UTF_8,
+                                                 HTML_UTF_8,
+                                                 HTML_UTF_8_LEVEL_1);
 
         assertThat(set.matchHeaders("*/*")).isEqualTo(WEBM_VIDEO);
         assertThat(set.matchHeaders("*/*, text/*")).isEqualTo(PLAIN_TEXT_UTF_8);
@@ -99,13 +99,13 @@ class MediaTypeSetTest {
 
     @Test
     void invalidRange() {
-        final MediaTypeSet set = new MediaTypeSet(HTML_UTF_8);
+        final MediaTypeSet set = MediaTypeSet.of(HTML_UTF_8);
         assertThat(set.matchHeaders("foo, */*")).isEqualTo(HTML_UTF_8);
     }
 
     @Test
     void invalidQValue() {
-        final MediaTypeSet set = new MediaTypeSet(HTML_UTF_8, PLAIN_TEXT_UTF_8);
+        final MediaTypeSet set = MediaTypeSet.of(HTML_UTF_8, PLAIN_TEXT_UTF_8);
 
         // A bad qvalue is interpreted as 0.
         assertThat(set.matchHeaders("text/*; q=bad, text/plain; q=0.5")).isEqualTo(PLAIN_TEXT_UTF_8);
@@ -114,7 +114,7 @@ class MediaTypeSetTest {
     @Test
     void parameterMatching() {
         final MediaType HTML_US_ASCII = HTML_UTF_8.withCharset(StandardCharsets.US_ASCII);
-        final MediaTypeSet set = new MediaTypeSet(HTML_UTF_8, HTML_US_ASCII);
+        final MediaTypeSet set = MediaTypeSet.of(HTML_UTF_8, HTML_US_ASCII);
 
         assertThat(set.matchHeaders("*/*")).isEqualTo(HTML_UTF_8);
 

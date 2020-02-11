@@ -1,1 +1,1 @@
-com.linecorp.armeria.server.thrift.ThriftDocServicePlugin
+com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin

@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.RequestContextUtil.newIllegalContextPushingException;
-import static com.linecorp.armeria.internal.RequestContextUtil.noopSafeCloseable;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -46,7 +46,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.RequestContextThreadLocal;
+import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**

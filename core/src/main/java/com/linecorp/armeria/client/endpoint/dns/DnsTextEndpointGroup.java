@@ -28,7 +28,7 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.internal.dns.DnsQuestionWithoutTrailingDot;
+import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;

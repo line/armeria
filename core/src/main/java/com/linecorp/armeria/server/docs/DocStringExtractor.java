@@ -39,10 +39,13 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.io.Resources;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 /**
  * A supporting base class for implementing the standard pattern of extracting docstrings
  * from arbitrary files in a particular classpath location.
  */
+@UnstableApi
 public abstract class DocStringExtractor {
 
     private static final Logger logger = LoggerFactory.getLogger(DocStringExtractor.class);

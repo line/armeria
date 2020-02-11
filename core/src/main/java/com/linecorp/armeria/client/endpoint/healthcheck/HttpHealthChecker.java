@@ -250,7 +250,7 @@ final class HttpHealthChecker implements AsyncCloseable {
                         0, Integer.parseInt(longPollingSettings.substring(0, commaPos).trim()));
                 pingIntervalSeconds = Integer.max(
                         0, Integer.parseInt(longPollingSettings.substring(commaPos + 1).trim()));
-            } catch (NumberFormatException e) {
+            } catch (Exception e) {
                 // Ignore malformed settings.
             }
 

@@ -26,7 +26,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
@@ -36,6 +37,7 @@ import io.netty.util.AttributeKey;
  * A skeletal {@link RequestContext} implementation that helps to implement a non-wrapping
  * {@link RequestContext}.
  */
+@UnstableApi
 public abstract class NonWrappingRequestContext implements RequestContext {
 
     private final MeterRegistry meterRegistry;

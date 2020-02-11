@@ -1,7 +1,7 @@
 dependencies {
     // Jetty
-    compile 'org.eclipse.jetty:jetty-server'
+    api 'org.eclipse.jetty:jetty-server'
     ['jetty-webapp', 'jetty-annotations', 'apache-jsp', 'apache-jstl'].each {
-        testCompile "org.eclipse.jetty:$it"
+        testImplementation "org.eclipse.jetty:$it"
     }
 }

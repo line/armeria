@@ -196,26 +196,26 @@ class BraveIntegrationTest {
 
     @BeforeEach
     void setupClients() {
-        fooClient = Clients.builder(server.uri(BINARY, "/foo"))
+        fooClient = Clients.builder(server.httpUri(BINARY) + "/foo")
                            .decorator(BraveClient.newDecorator(newTracing("client/foo")))
                            .build(HelloService.Iface.class);
-        zipClient = Clients.builder(server.uri(BINARY, "/zip"))
+        zipClient = Clients.builder(server.httpUri(BINARY) + "/zip")
                            .decorator(BraveClient.newDecorator(newTracing("client/zip")))
                            .build(HelloService.Iface.class);
-        fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
+        fooClientWithoutTracing = Clients.newClient(server.httpUri(BINARY) + "/foo", HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
-        poolWebClient = WebClient.of(server.uri("/"));
-        timeoutClient = Clients.builder(server.uri(BINARY, "/timeout"))
+        poolWebClient = WebClient.of(server.httpUri());
+        timeoutClient = Clients.builder(server.httpUri(BINARY) + "/timeout")
                                .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
                                .build(HelloService.Iface.class);
         timeoutClientClientTimesOut =
-                Clients.builder(server.uri(BINARY, "/timeout"))
+                Clients.builder(server.httpUri(BINARY) + "/timeout")
                        .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
                        .responseTimeout(Duration.ofMillis(10))
                        .build(HelloService.Iface.class);
         http1TimeoutClientClientTimesOut =
-                Clients.builder(server.uri(H1C, BINARY, "/timeout"))
+                Clients.builder(server.uri(H1C, BINARY) + "/timeout")
                        .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
                        .responseTimeout(Duration.ofMillis(10))
                        .build(HelloService.Iface.class);
@@ -236,7 +236,7 @@ class BraveIntegrationTest {
     }
 
     private static HelloService.AsyncIface newClient(String path) {
-        return Clients.builder(server.uri(BINARY, path))
+        return Clients.builder(server.httpUri(BINARY).resolve(path))
                       .decorator(BraveClient.newDecorator(newTracing("client" + path)))
                       .build(HelloService.AsyncIface.class);
     }
@@ -259,7 +259,7 @@ class BraveIntegrationTest {
     void testTimingAnnotations() {
         // Use separate client factory to make sure connection is created.
         final ClientFactory clientFactory = ClientFactory.builder().build();
-        final WebClient client = WebClient.builder(server.httpUri("/"))
+        final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(BraveClient.newDecorator(newTracing("timed-client")))
                                           .build();

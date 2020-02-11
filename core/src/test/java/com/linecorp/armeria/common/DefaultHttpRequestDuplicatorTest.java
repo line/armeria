@@ -91,7 +91,7 @@ class DefaultHttpRequestDuplicatorTest {
     @Test
     void longLivedRequest() {
         final WebClient client =
-                WebClient.builder(server.uri("/"))
+                WebClient.builder(server.httpUri())
                          .decorator(RetryingClient.newDecorator(
                                  RetryStrategy.onServerErrorStatus(Backoff.withoutDelay())))
                          .build();
@@ -108,7 +108,7 @@ class DefaultHttpRequestDuplicatorTest {
             return;
         }
         req.write(HttpData.ofUtf8(String.valueOf(index)));
-        req.onDemand(() -> eventLoop.get().schedule(() -> writeStreamingRequest(req, index + 1),
-                                                    300, TimeUnit.MILLISECONDS));
+        req.whenConsumed().thenRun(() -> eventLoop.get().schedule(() -> writeStreamingRequest(req, index + 1),
+                                                                  300, TimeUnit.MILLISECONDS));
     }
 }

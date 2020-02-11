@@ -1,5 +1,7 @@
 dependencies {
-    compile 'com.squareup.retrofit2:retrofit'
+    api 'com.squareup.retrofit2:retrofit'
 
-    testCompile 'com.squareup.retrofit2:converter-jackson'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
+    testImplementation 'com.squareup.retrofit2:converter-jackson'
 }

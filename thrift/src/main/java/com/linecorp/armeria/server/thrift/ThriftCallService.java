@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.internal.thrift.ThriftFunction;
+import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

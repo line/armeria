@@ -48,13 +48,13 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
-import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -67,6 +67,7 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ClientRequestContext} implementation.
  */
+@UnstableApi
 public final class DefaultClientRequestContext
         extends NonWrappingRequestContext
         implements ClientRequestContext {
@@ -88,7 +89,7 @@ public final class DefaultClientRequestContext
     @Nullable
     private final ServiceRequestContext root;
 
-    private final DefaultRequestLog log;
+    private final RequestLogBuilder log;
 
     private long writeTimeoutMillis;
     private long responseTimeoutMillis;
@@ -172,7 +173,7 @@ public final class DefaultClientRequestContext
         this.fragment = fragment;
         this.root = root;
 
-        log = new DefaultRequestLog(this);
+        log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
         writeTimeoutMillis = options.writeTimeoutMillis();
@@ -309,7 +310,7 @@ public final class DefaultClientRequestContext
         fragment = ctx.fragment();
         root = ctx.root();
 
-        log = new DefaultRequestLog(this);
+        log = RequestLog.builder(this);
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         responseTimeoutMillis = ctx.responseTimeoutMillis();
@@ -366,7 +367,7 @@ public final class DefaultClientRequestContext
     @Nullable
     protected Channel channel() {
         if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.channel();
+            return log.partial().channel();
         } else {
             return null;
         }
@@ -382,7 +383,7 @@ public final class DefaultClientRequestContext
     @Override
     public SSLSession sslSession() {
         if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.sslSession();
+            return log.partial().sslSession();
         } else {
             return null;
         }
@@ -573,7 +574,7 @@ public final class DefaultClientRequestContext
      * <p>Note: This method is meant for internal use by client-side protocol implementation to reschedule
      * a timeout task when a user updates the response timeout configuration.
      */
-    public void setResponseTimeoutController(TimeoutController responseTimeoutController) {
+    void setResponseTimeoutController(TimeoutController responseTimeoutController) {
         requireNonNull(responseTimeoutController, "responseTimeoutController");
         checkState(this.responseTimeoutController == null, "responseTimeoutController is set already.");
         this.responseTimeoutController = responseTimeoutController;

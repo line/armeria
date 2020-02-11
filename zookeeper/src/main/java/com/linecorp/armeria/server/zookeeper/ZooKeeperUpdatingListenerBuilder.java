@@ -30,7 +30,7 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
+import com.linecorp.armeria.internal.common.zookeeper.ZooKeeperDefaults;
 
 /**
  * Builds a new {@link ZooKeeperUpdatingListener}, which registers the server to a ZooKeeper cluster.

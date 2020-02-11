@@ -45,6 +45,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.common.HttpStatus;
     import com.linecorp.armeria.common.MediaType;
+    import com.linecorp.armeria.common.MediaTypeNames;
     import com.linecorp.armeria.common.QueryParams;
 
     import com.linecorp.armeria.server.AbstractHttpService;
@@ -118,13 +119,13 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     // Using media type negotiation:
     sb.annotatedService(new Object() {
         @Get("/greet7")
-        @Produces("application/json;charset=UTF-8")
+        @Produces(MediaTypeNames.JSON_UTF_8)
         public HttpResponse greetGet(@Param("name") String name) {
             return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, "{\"name\":\"%s\"}", name);
         }
 
         @Post("/greet7")
-        @Consumes("application/x-www-form-urlencoded")
+        @Consumes(MediaTypeNames.FORM_DATA)
         public HttpResponse greetPost(@Param("name") String name) {
             return HttpResponse.of(HttpStatus.OK);
         }

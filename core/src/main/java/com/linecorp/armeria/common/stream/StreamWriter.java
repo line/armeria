@@ -65,13 +65,13 @@ public interface StreamWriter<T> {
      * Writes the specified object to the {@link StreamMessage}. The written object will be transferred to the
      * {@link Subscriber}.
      *
-     * @throws ClosedPublisherException if the stream was already closed
+     * @throws ClosedStreamException if the stream was already closed
      * @throws IllegalArgumentException if the publication of the specified object has been rejected
      * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
      */
     default void write(T o) {
         if (!tryWrite(o)) {
-            throw ClosedPublisherException.get();
+            throw ClosedStreamException.get();
         }
     }
 
@@ -79,12 +79,12 @@ public interface StreamWriter<T> {
      * Writes the specified object {@link Supplier} to the {@link StreamMessage}. The object provided by the
      * {@link Supplier} will be transferred to the {@link Subscriber}.
      *
-     * @throws ClosedPublisherException if the stream was already closed.
+     * @throws ClosedStreamException if the stream was already closed.
      * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
      */
     default void write(Supplier<? extends T> o) {
         if (!tryWrite(o)) {
-            throw ClosedPublisherException.get();
+            throw ClosedStreamException.get();
         }
     }
 
@@ -153,7 +153,7 @@ public interface StreamWriter<T> {
      * Writes the given object and closes the stream successfully. The written object will be transferred to
      * the {@link Subscriber}.
      *
-     * @throws ClosedPublisherException if the stream was already closed.
+     * @throws ClosedStreamException if the stream was already closed.
      * @see <a href="#reference-counted">Life cycle of reference-counted objects</a>
      *
      * @deprecated Use {@link #tryWrite(Object)} and {@link #close()}.

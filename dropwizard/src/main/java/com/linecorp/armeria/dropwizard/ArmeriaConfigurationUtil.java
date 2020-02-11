@@ -52,10 +52,11 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.dropwizard.ArmeriaSettings.AccessLog;
 import com.linecorp.armeria.dropwizard.ArmeriaSettings.Compression;
@@ -84,6 +85,9 @@ final class ArmeriaConfigurationUtil {
 
     private static final Port DEFAULT_PORT = new Port().setPort(8080)
                                                        .setProtocol(SessionProtocol.HTTP);
+
+    private static final int DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING = 1024;
+
     /**
      * The pattern for data size text.
      * TODO(ikhoon): a-z seems rather broad, assuming just (kMGTP)?(Bb)
@@ -99,8 +103,8 @@ final class ArmeriaConfigurationUtil {
 
         if (settings.getGracefulShutdownQuietPeriodMillis() >= 0 &&
             settings.getGracefulShutdownTimeoutMillis() >= 0) {
-            serverBuilder.gracefulShutdownTimeout(settings.getGracefulShutdownQuietPeriodMillis(),
-                                                  settings.getGracefulShutdownTimeoutMillis());
+            serverBuilder.gracefulShutdownTimeoutMillis(settings.getGracefulShutdownQuietPeriodMillis(),
+                                                        settings.getGracefulShutdownTimeoutMillis());
             logger.debug("Set graceful shutdown timeout: quiet period {} ms, timeout {} ms",
                          settings.getGracefulShutdownQuietPeriodMillis(),
                          settings.getGracefulShutdownTimeoutMillis());
@@ -311,7 +315,7 @@ final class ArmeriaConfigurationUtil {
      */
     private static Function<? super HttpService, EncodingService> contentEncodingDecorator(
             @Nullable String[] mimeTypes, @Nullable String[] excludedUserAgents,
-            long minBytesToForceChunkedAndEncoding) {
+            int minBytesToForceChunkedAndEncoding) {
         final Predicate<MediaType> encodableContentTypePredicate;
         if (mimeTypes == null || mimeTypes.length == 0) {
             encodableContentTypePredicate = contentType -> true;
@@ -322,7 +326,7 @@ final class ArmeriaConfigurationUtil {
                     encodableContentTypes.stream().anyMatch(contentType::is);
         }
 
-        final Predicate<HttpHeaders> encodableRequestHeadersPredicate;
+        final Predicate<? super RequestHeaders> encodableRequestHeadersPredicate;
         if (excludedUserAgents == null || excludedUserAgents.length == 0) {
             encodableRequestHeadersPredicate = headers -> true;
         } else {
@@ -335,10 +339,11 @@ final class ArmeriaConfigurationUtil {
             };
         }
 
-        return delegate -> new EncodingService(delegate,
-                                               encodableContentTypePredicate,
-                                               encodableRequestHeadersPredicate,
-                                               minBytesToForceChunkedAndEncoding);
+        return EncodingService.builder()
+                              .encodableContentTypePredicate(encodableContentTypePredicate)
+                              .encodableRequestHeadersPredicate(encodableRequestHeadersPredicate)
+                              .minBytesToForceChunkedEncoding(minBytesToForceChunkedAndEncoding)
+                              .newDecorator();
     }
 
     /**
@@ -429,9 +434,16 @@ final class ArmeriaConfigurationUtil {
 
     private static void configureCompression(ServerBuilder serverBuilder, Compression compression) {
         if (compression.isEnabled()) {
+            final int minBytesToForceChunkedAndEncoding;
+            final String minResponseSize = compression.getMinResponseSize();
+            if (minResponseSize == null) {
+                minBytesToForceChunkedAndEncoding = DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING;
+            } else {
+                minBytesToForceChunkedAndEncoding = Ints.saturatedCast(parseDataSize(minResponseSize));
+            }
             serverBuilder.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                              compression.getExcludedUserAgents(),
-                                                             parseDataSize(compression.getMinResponseSize())));
+                                                             minBytesToForceChunkedAndEncoding));
         }
     }
 

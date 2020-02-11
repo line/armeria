@@ -17,20 +17,24 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.net.InetSocketAddress;
+
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.retry.Backoff;
 
+import io.netty.channel.EventLoop;
 import io.netty.resolver.ResolvedAddressTypes;
 
 /**
  * Builds a new {@link DnsAddressEndpointGroup} that sources its {@link Endpoint} list from the {@code A} or
  * {@code AAAA} DNS records of a certain hostname.
  */
-public final class DnsAddressEndpointGroupBuilder
-        extends DnsEndpointGroupBuilder<DnsAddressEndpointGroupBuilder> {
+public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilder {
 
     private int port;
     @Nullable
@@ -72,5 +76,37 @@ public final class DnsAddressEndpointGroupBuilder
         return new DnsAddressEndpointGroup(selectionStrategy(), eventLoop(), minTtl(), maxTtl(),
                                            serverAddressStreamProvider(), backoff(),
                                            resolvedAddressTypes, hostname(), port);
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public DnsAddressEndpointGroupBuilder eventLoop(EventLoop eventLoop) {
+        return (DnsAddressEndpointGroupBuilder) super.eventLoop(eventLoop);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
+        return (DnsAddressEndpointGroupBuilder) super.ttl(minTtl, maxTtl);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder serverAddresses(InetSocketAddress... serverAddresses) {
+        return (DnsAddressEndpointGroupBuilder) super.serverAddresses(serverAddresses);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
+        return (DnsAddressEndpointGroupBuilder) super.serverAddresses(serverAddresses);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder backoff(Backoff backoff) {
+        return (DnsAddressEndpointGroupBuilder) super.backoff(backoff);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+        return (DnsAddressEndpointGroupBuilder) super.selectionStrategy(selectionStrategy);
     }
 }

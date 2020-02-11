@@ -44,9 +44,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.spring.ArmeriaSettings;
-import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import reactor.core.publisher.Mono;

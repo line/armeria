@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.cors;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isCorsPreflightRequest;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -35,7 +35,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.HttpService;
@@ -129,7 +128,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
 
                 final ResponseHeaders headers = (ResponseHeaders) obj;
                 final HttpStatus status = headers.status();
-                if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+                if (status.isInformational()) {
                     return headers;
                 }
 

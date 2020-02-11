@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.internal.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * Immutable HTTP query parameters.

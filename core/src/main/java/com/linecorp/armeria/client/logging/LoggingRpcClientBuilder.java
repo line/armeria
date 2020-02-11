@@ -18,12 +18,20 @@ package com.linecorp.armeria.client.logging;
 
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * Builds a new {@link LoggingRpcClient}.
  */
-public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder<LoggingRpcClientBuilder> {
+public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder {
 
     /**
      * Creates a new instance.
@@ -54,5 +62,101 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder<
      */
     public Function<? super RpcClient, LoggingRpcClient> newDecorator() {
         return this::build;
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public LoggingRpcClientBuilder samplingRate(float samplingRate) {
+        return (LoggingRpcClientBuilder) super.samplingRate(samplingRate);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
+        return (LoggingRpcClientBuilder) super.sampler(sampler);
+    }
+
+    // Override the return type of the chaining methods in the super-superclass.
+
+    @Override
+    public LoggingRpcClientBuilder logger(Logger logger) {
+        return (LoggingRpcClientBuilder) super.logger(logger);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder requestLogLevel(LogLevel requestLogLevel) {
+        return (LoggingRpcClientBuilder) super.requestLogLevel(requestLogLevel);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
+        return (LoggingRpcClientBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
+        return (LoggingRpcClientBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder requestLogLevelMapper(
+            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
+        return (LoggingRpcClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseLogLevelMapper(
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder requestHeadersSanitizer(
+            Function<? super HttpHeaders, ?> requestHeadersSanitizer) {
+        return (LoggingRpcClientBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseHeadersSanitizer(
+            Function<? super HttpHeaders, ?> responseHeadersSanitizer) {
+        return (LoggingRpcClientBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder requestTrailersSanitizer(
+            Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
+        return (LoggingRpcClientBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseTrailersSanitizer(
+            Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
+        return (LoggingRpcClientBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder headersSanitizer(Function<? super HttpHeaders, ?> headersSanitizer) {
+        return (LoggingRpcClientBuilder) super.headersSanitizer(headersSanitizer);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder requestContentSanitizer(Function<Object, ?> requestContentSanitizer) {
+        return (LoggingRpcClientBuilder) super.requestContentSanitizer(requestContentSanitizer);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseContentSanitizer(Function<Object, ?> responseContentSanitizer) {
+        return (LoggingRpcClientBuilder) super.responseContentSanitizer(responseContentSanitizer);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder contentSanitizer(Function<Object, ?> contentSanitizer) {
+        return (LoggingRpcClientBuilder) super.contentSanitizer(contentSanitizer);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseCauseSanitizer(
+            Function<? super Throwable, ?> responseCauseSanitizer) {
+        return (LoggingRpcClientBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
     }
 }

@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.internal.common.TimeoutController;
 
 import io.netty.util.AttributeKey;
 
@@ -210,7 +210,7 @@ class DefaultServiceRequestContextTest {
         ctx.setRequestTimeoutController(timeoutController);
 
         ctx.setRequestTimeoutAt(Instant.now().minusSeconds(1));
-        verify(timeoutController, timeout(Duration.ofSeconds(1))).timeoutNow();
+        verify(timeoutController, timeout(1000)).timeoutNow();
     }
 
     @Test
@@ -221,8 +221,7 @@ class DefaultServiceRequestContextTest {
         ctx.setRequestTimeoutController(timeoutController);
 
         ctx.clearRequestTimeout();
-        verify(timeoutController, timeout(Duration.ofSeconds(1)))
-                .cancelTimeout();
+        verify(timeoutController, timeout(1000)).cancelTimeout();
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
 
@@ -253,7 +252,7 @@ class DefaultServiceRequestContextTest {
         ctx.setRequestTimeoutController(timeoutController);
 
         ctx.setRequestTimeoutMillis(0);
-        verify(timeoutController, timeout(Duration.ofSeconds(1))).cancelTimeout();
+        verify(timeoutController, timeout(1000)).cancelTimeout();
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
 

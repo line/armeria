@@ -20,11 +20,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.MediaTypeNames;
+
 /**
- * An alias for {@code @Consumes("text/plain; charset=utf-8")}.
+ * An alias for {@code @Consumes(MediaTypeNames.PLAIN_TEXT_UTF_8)}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@Consumes("text/plain; charset=utf-8")
+@Consumes(MediaTypeNames.PLAIN_TEXT_UTF_8)
 public @interface ConsumesText {
 }

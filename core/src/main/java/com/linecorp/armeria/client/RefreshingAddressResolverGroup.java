@@ -16,12 +16,9 @@
 
 package com.linecorp.armeria.client;
 
-import java.net.Inet6Address;
-import java.net.InetAddress;
+import static com.linecorp.armeria.internal.client.DnsUtil.anyInterfaceSupportsIpV6;
+
 import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -41,7 +38,7 @@ import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.internal.dns.DefaultDnsNameResolver;
+import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecordType;
@@ -78,27 +75,6 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         }
 
         defaultDnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
-    }
-
-    /**
-     * Returns {@code true} if any {@link NetworkInterface} supports {@code IPv6}, {@code false} otherwise.
-     */
-    private static boolean anyInterfaceSupportsIpV6() {
-        try {
-            final Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                final NetworkInterface iface = interfaces.nextElement();
-                final Enumeration<InetAddress> addresses = iface.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    if (addresses.nextElement() instanceof Inet6Address) {
-                        return true;
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            logger.debug("Unable to detect if any interface supports IPv6, assuming IPv4-only", e);
-        }
-        return false;
     }
 
     private static ImmutableList<DnsRecordType> dnsRecordTypes(ResolvedAddressTypes resolvedAddressTypes) {

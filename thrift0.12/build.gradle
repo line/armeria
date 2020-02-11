@@ -7,31 +7,27 @@
 
 final def THRIFT_VERSION = '0.12.0'
 
-dependencyManagement {
-    dependencies {
-        dependency("org.apache.thrift:libthrift:${THRIFT_VERSION}") {
-            exclude group: 'javax.annotation',          name: 'javax.annotation-api'
-            exclude group: 'org.apache.httpcomponents', name: 'httpcore'
-            exclude group: 'org.apache.httpcomponents', name: 'httpclient'
-        }
-    }
-}
-
 dependencies {
     // Use the classes compiled with the latest libthrift,
     // but use an older version for test classes.
-    testCompile(project(':thrift')) {
+    testImplementation(project(':thrift')) {
         exclude group: 'org.apache.thrift', module: 'libthrift'
     }
-    testCompile 'org.apache.thrift:libthrift'
+    testImplementation("org.apache.thrift:libthrift:${THRIFT_VERSION}") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly THRIFT_VERSION
+        }
+    }
 
     // Jetty, for testing TServlet interoperability.
-    testCompile 'org.eclipse.jetty:jetty-webapp'
-    testCompile 'org.eclipse.jetty.http2:http2-server'
+    testImplementation 'org.eclipse.jetty:jetty-webapp'
+    testImplementation 'org.eclipse.jetty.http2:http2-server'
 
     // Dropwizard and Prometheus, for testing metrics integration
-    testCompile 'io.dropwizard.metrics:metrics-core'
-    testCompile 'io.prometheus:simpleclient_common'
+    testImplementation 'io.dropwizard.metrics:metrics-core'
+    testImplementation 'io.micrometer:micrometer-registry-prometheus'
+    testImplementation 'io.prometheus:simpleclient_common'
 }
 
 // Use the test sources from ':thrift'.
@@ -49,19 +45,4 @@ ext {
 // Disable checkstyle because it's checked by ':thrift'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
-}
-
-// Make sure the correct Thrift versions are used.
-afterEvaluate {
-    [configurations.runtime, configurations.testRuntime].each { cfg ->
-        cfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
-            def group = artifact.moduleVersion.id.group
-            def version = artifact.moduleVersion.id.version
-            switch (group) {
-                case 'org.apache.thrift':
-                    assert version == THRIFT_VERSION
-                    break
-            }
-        }
-    }
 }

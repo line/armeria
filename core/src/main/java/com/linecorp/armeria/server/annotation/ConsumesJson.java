@@ -20,11 +20,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.MediaTypeNames;
+
 /**
- * An alias for {@code @Consumes("application/json")}.
+ * An alias for {@code @Consumes(MediaTypeNames.JSON)}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@Consumes("application/json")
+@Consumes(MediaTypeNames.JSON)
 public @interface ConsumesJson {
 }

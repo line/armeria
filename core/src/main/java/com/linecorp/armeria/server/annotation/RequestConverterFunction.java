@@ -19,7 +19,7 @@ package com.linecorp.armeria.server.annotation;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
-import com.linecorp.armeria.internal.FallthroughException;
+import com.linecorp.armeria.internal.common.util.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

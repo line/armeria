@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.common.util.TimeoutController;
+import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
@@ -325,7 +325,7 @@ class DefaultClientRequestContextTest {
         ctx.setResponseTimeoutController(timeoutController);
 
         ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1));
-        verify(timeoutController, timeout(Duration.ofSeconds(1))).timeoutNow();
+        verify(timeoutController, timeout(1000)).timeoutNow();
     }
 
     @Test
@@ -336,8 +336,7 @@ class DefaultClientRequestContextTest {
         ctx.setResponseTimeoutController(timeoutController);
 
         ctx.clearResponseTimeout();
-        verify(timeoutController, timeout(Duration.ofSeconds(1)))
-                .cancelTimeout();
+        verify(timeoutController, timeout(1000)).cancelTimeout();
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }
 
@@ -349,8 +348,7 @@ class DefaultClientRequestContextTest {
         final TimeoutController timeoutController = mock(TimeoutController.class);
         ctx.setResponseTimeoutController(timeoutController);
 
-        verify(timeoutController, timeout(Duration.ofSeconds(1)))
-                .cancelTimeout();
+        verify(timeoutController, timeout(1000)).cancelTimeout();
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }
 
@@ -379,7 +377,7 @@ class DefaultClientRequestContextTest {
         ctx.setResponseTimeoutController(timeoutController);
 
         ctx.setResponseTimeoutMillis(0);
-        verify(timeoutController, timeout(Duration.ofSeconds(1))).cancelTimeout();
+        verify(timeoutController, timeout(1000)).cancelTimeout();
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }
 

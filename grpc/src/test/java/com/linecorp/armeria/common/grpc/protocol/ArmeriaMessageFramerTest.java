@@ -30,8 +30,8 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.internal.grpc.ForwardingCompressor;
-import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
+import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.grpc.Codec.Gzip;

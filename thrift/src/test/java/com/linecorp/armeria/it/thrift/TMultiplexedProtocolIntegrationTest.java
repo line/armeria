@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINA
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.URI;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -85,9 +86,11 @@ public class TMultiplexedProtocolIntegrationTest {
     }
 
     private static Iface client(String serviceName) {
-        String uri = server.uri(BINARY, "/");
-        if (!serviceName.isEmpty()) {
-            uri += '#' + serviceName;
+        final URI uri;
+        if (serviceName.isEmpty()) {
+            uri = server.httpUri(BINARY);
+        } else {
+            uri = server.httpUri(BINARY).resolve('#' + serviceName);
         }
         return Clients.newClient(uri, Iface.class);
     }

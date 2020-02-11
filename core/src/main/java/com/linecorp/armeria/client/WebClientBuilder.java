@@ -20,8 +20,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.time.Duration;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -29,6 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -38,7 +42,7 @@ import com.linecorp.armeria.common.SessionProtocol;
  * Use the factory methods in {@link WebClient} if you do not have many options to override.
  * Please refer to {@link ClientBuilder} for how decorators and HTTP headers are configured
  */
-public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClientBuilder> {
+public final class WebClientBuilder extends AbstractClientOptionsBuilder {
 
     /**
      * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
@@ -168,5 +172,136 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder<WebClie
     @Override
     public WebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public WebClientBuilder options(ClientOptions options) {
+        return (WebClientBuilder) super.options(options);
+    }
+
+    @Override
+    public WebClientBuilder options(ClientOptionValue<?>... options) {
+        return (WebClientBuilder) super.options(options);
+    }
+
+    @Override
+    public WebClientBuilder options(Iterable<ClientOptionValue<?>> options) {
+        return (WebClientBuilder) super.options(options);
+    }
+
+    @Override
+    public <T> WebClientBuilder option(ClientOption<T> option, T value) {
+        return (WebClientBuilder) super.option(option, value);
+    }
+
+    @Override
+    public <T> WebClientBuilder option(ClientOptionValue<T> optionValue) {
+        return (WebClientBuilder) super.option(optionValue);
+    }
+
+    @Override
+    public WebClientBuilder factory(ClientFactory factory) {
+        return (WebClientBuilder) super.factory(factory);
+    }
+
+    @Override
+    @Deprecated
+    public WebClientBuilder defaultWriteTimeout(Duration writeTimeout) {
+        return (WebClientBuilder) super.defaultWriteTimeout(writeTimeout);
+    }
+
+    @Override
+    @Deprecated
+    public WebClientBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
+        return (WebClientBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
+    }
+
+    @Override
+    public WebClientBuilder writeTimeout(Duration writeTimeout) {
+        return (WebClientBuilder) super.writeTimeout(writeTimeout);
+    }
+
+    @Override
+    public WebClientBuilder writeTimeoutMillis(long writeTimeoutMillis) {
+        return (WebClientBuilder) super.writeTimeoutMillis(writeTimeoutMillis);
+    }
+
+    @Override
+    @Deprecated
+    public WebClientBuilder defaultResponseTimeout(Duration responseTimeout) {
+        return (WebClientBuilder) super.defaultResponseTimeout(responseTimeout);
+    }
+
+    @Override
+    @Deprecated
+    public WebClientBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
+        return (WebClientBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    public WebClientBuilder responseTimeout(Duration responseTimeout) {
+        return (WebClientBuilder) super.responseTimeout(responseTimeout);
+    }
+
+    @Override
+    public WebClientBuilder responseTimeoutMillis(long responseTimeoutMillis) {
+        return (WebClientBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    @Deprecated
+    public WebClientBuilder defaultMaxResponseLength(long maxResponseLength) {
+        return (WebClientBuilder) super.defaultMaxResponseLength(maxResponseLength);
+    }
+
+    @Override
+    public WebClientBuilder maxResponseLength(long maxResponseLength) {
+        return (WebClientBuilder) super.maxResponseLength(maxResponseLength);
+    }
+
+    @Override
+    public WebClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
+        return (WebClientBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public WebClientBuilder endpointRemapper(
+            Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
+        return (WebClientBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public WebClientBuilder decorator(
+            Function<? super HttpClient, ? extends HttpClient> decorator) {
+        return (WebClientBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public WebClientBuilder decorator(DecoratingHttpClientFunction decorator) {
+        return (WebClientBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public WebClientBuilder addHttpHeader(CharSequence name, Object value) {
+        return (WebClientBuilder) super.addHttpHeader(name, value);
+    }
+
+    @Override
+    public WebClientBuilder addHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+        return (WebClientBuilder) super.addHttpHeaders(httpHeaders);
+    }
+
+    @Override
+    public WebClientBuilder setHttpHeader(CharSequence name, Object value) {
+        return (WebClientBuilder) super.setHttpHeader(name, value);
+    }
+
+    @Override
+    public WebClientBuilder setHttpHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
+        return (WebClientBuilder) super.setHttpHeaders(httpHeaders);
     }
 }

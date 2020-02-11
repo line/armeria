@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
@@ -52,10 +53,9 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.SslContextUtil;
-import com.linecorp.armeria.internal.annotation.AnnotatedService;
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceExtensions;
-import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
+import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
+import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -82,7 +82,7 @@ public final class VirtualHostBuilder {
 
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
-    private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
+    private final List<ServiceConfigSetters> serviceConfigSetters = new ArrayList<>();
     private final List<VirtualHostAnnotatedServiceBindingBuilder> virtualHostAnnotatedServiceBindingBuilders =
             new ArrayList<>();
 
@@ -422,8 +422,7 @@ public final class VirtualHostBuilder {
      * Binds the specified {@link HttpService} at the specified {@link Route}.
      */
     public VirtualHostBuilder service(Route route, HttpService service) {
-        serviceConfigBuilders.add(new ServiceConfigBuilder(route, service));
-        return this;
+        return addServiceConfigSetters(new ServiceConfigBuilder(route, service));
     }
 
     /**
@@ -601,35 +600,29 @@ public final class VirtualHostBuilder {
 
     /**
      * Returns a new instance of {@link VirtualHostAnnotatedServiceBindingBuilder} to build
-     * {@link AnnotatedService} fluently.
+     * an annotated service fluently.
      */
     public VirtualHostAnnotatedServiceBindingBuilder annotatedService() {
         return new VirtualHostAnnotatedServiceBindingBuilder(this);
     }
 
-    VirtualHostBuilder addServiceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
-        serviceConfigBuilders.add(serviceConfigBuilder);
+    VirtualHostBuilder addServiceConfigSetters(ServiceConfigSetters serviceConfigSetters) {
+        this.serviceConfigSetters.add(serviceConfigSetters);
         return this;
     }
 
-    VirtualHostBuilder addAnnotatedServiceBindingBuilder(
-            VirtualHostAnnotatedServiceBindingBuilder virtualHostAnnotatedServiceBindingBuilder) {
-        virtualHostAnnotatedServiceBindingBuilders.add(virtualHostAnnotatedServiceBindingBuilder);
-        return this;
-    }
-
-    private List<ServiceConfigBuilder> getServiceConfigBuilders(
+    private List<ServiceConfigSetters> getServiceConfigSetters(
             @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
-        final List<ServiceConfigBuilder> serviceConfigBuilders;
+        final List<ServiceConfigSetters> serviceConfigSetters;
         if (defaultVirtualHostBuilder != null) {
-            serviceConfigBuilders = ImmutableList.<ServiceConfigBuilder>builder()
-                                                 .addAll(this.serviceConfigBuilders)
-                                                 .addAll(defaultVirtualHostBuilder.serviceConfigBuilders)
-                                                 .build();
+            serviceConfigSetters = ImmutableList.<ServiceConfigSetters>builder()
+                                                .addAll(this.serviceConfigSetters)
+                                                .addAll(defaultVirtualHostBuilder.serviceConfigSetters)
+                                                .build();
         } else {
-            serviceConfigBuilders = ImmutableList.copyOf(this.serviceConfigBuilders);
+            serviceConfigSetters = ImmutableList.copyOf(this.serviceConfigSetters);
         }
-        return serviceConfigBuilders;
+        return serviceConfigSetters;
     }
 
     VirtualHostBuilder addRouteDecoratingService(RouteDecoratingService routeDecoratingService) {
@@ -852,8 +845,8 @@ public final class VirtualHostBuilder {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
         annotatedServiceExtensions =
                 new AnnotatedServiceExtensions(ImmutableList.copyOf(requestConverterFunctions),
-                                                   ImmutableList.copyOf(responseConverterFunctions),
-                                                   ImmutableList.copyOf(exceptionHandlerFunctions));
+                                               ImmutableList.copyOf(responseConverterFunctions),
+                                               ImmutableList.copyOf(exceptionHandlerFunctions));
         return this;
     }
 
@@ -918,17 +911,26 @@ public final class VirtualHostBuilder {
         assert accessLoggerMapper != null;
         assert extensions != null;
 
-        virtualHostAnnotatedServiceBindingBuilders.stream()
-                                                  .flatMap(b -> b.buildServiceConfigBuilder(extensions)
-                                                                 .stream())
-                                                  .forEach(this::addServiceConfigBuilder);
-
-        final List<ServiceConfigBuilder> serviceConfigBuilders =
-                getServiceConfigBuilders(template);
-        final List<ServiceConfig> serviceConfigs = serviceConfigBuilders.stream().map(cfgBuilder -> {
-            return cfgBuilder.build(requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                    accessLogWriter, shutdownAccessLogWriterOnStop);
-        }).collect(toImmutableList());
+        final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
+                .stream()
+                .flatMap(cfgSetters -> {
+                    if (cfgSetters instanceof VirtualHostAnnotatedServiceBindingBuilder) {
+                        return ((VirtualHostAnnotatedServiceBindingBuilder) cfgSetters)
+                                .buildServiceConfigBuilder(extensions).stream();
+                    } else if (cfgSetters instanceof AnnotatedServiceBindingBuilder) {
+                        return ((AnnotatedServiceBindingBuilder) cfgSetters)
+                                .buildServiceConfigBuilder(extensions).stream();
+                    } else if (cfgSetters instanceof ServiceConfigBuilder) {
+                        return Stream.of((ServiceConfigBuilder) cfgSetters);
+                    } else {
+                        // Should not reach here.
+                        throw new Error("Unexpected service config setters type: " +
+                                        cfgSetters.getClass().getSimpleName());
+                    }
+                }).map(cfgBuilder -> {
+                    return cfgBuilder.build(requestTimeoutMillis, maxRequestLength, verboseResponses,
+                                            accessLogWriter, shutdownAccessLogWriterOnStop);
+                }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(Route.ofCatchAll(), FallbackService.INSTANCE)
@@ -1075,7 +1077,7 @@ public final class VirtualHostBuilder {
         return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("defaultHostname", defaultHostname)
                           .add("hostnamePattern", hostnamePattern)
-                          .add("serviceConfigBuilders", serviceConfigBuilders)
+                          .add("serviceConfigSetters", serviceConfigSetters)
                           .add("sslContext", sslContext)
                           .add("sslContextBuilder", sslContextBuilder)
                           .add("tlsSelfSigned", tlsSelfSigned)
