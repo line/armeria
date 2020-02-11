@@ -527,13 +527,16 @@ class FileServiceTest {
         }
     }
 
-    private static void writeFile(Path path, String content) {
+    private static void writeFile(Path path, String content) throws Exception {
         // Retry to work around the `AccessDeniedException` in Windows.
-        for (int i = 0; i < 10; i++) {
+        for (int i = 9; i >= 0; i--) {
             try {
                 Files.write(path, content.getBytes(StandardCharsets.UTF_8));
                 return;
             } catch (Exception e) {
+                if (i == 0) {
+                    throw e;
+                }
                 logger.warn("Unexpected exception while writing to {}:", path, e);
             }
 
