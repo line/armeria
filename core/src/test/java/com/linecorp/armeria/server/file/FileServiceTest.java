@@ -50,6 +50,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
@@ -65,6 +67,8 @@ import io.netty.handler.codec.DateFormatter;
 
 class FileServiceTest {
 
+    private static final Logger logger = LoggerFactory.getLogger(FileServiceTest.class);
+
     private static final ZoneId UTC = ZoneId.of("UTC");
     private static final Pattern ETAG_PATTERN = Pattern.compile("^\"[^\"]+\"$");
 
@@ -72,10 +76,7 @@ class FileServiceTest {
             FileServiceTest.class.getPackage().getName().replace('.', '/') + '/';
 
     @TempDir
-    static Path cachedTmpDir;
-
-    @TempDir
-    static Path uncachedTmpDir;
+    static Path tmpDir;
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -86,13 +87,13 @@ class FileServiceTest {
 
             sb.serviceUnder(
                     "/cached/fs/",
-                    FileService.builder(cachedTmpDir)
+                    FileService.builder(tmpDir)
                                .autoIndex(true)
                                .build());
 
             sb.serviceUnder(
                     "/uncached/fs/",
-                    FileService.builder(uncachedTmpDir)
+                    FileService.builder(tmpDir)
                                .maxCacheEntries(0)
                                .autoIndex(true)
                                .build());
@@ -245,8 +246,8 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
-    void testAutoIndex(String baseUri, Path tmpDir) throws Exception {
+    @ArgumentsSource(BaseUriProvider.class)
+    void testAutoIndex(String baseUri) throws Exception {
         final Path rootDir = tmpDir.resolve("auto_index");
         final Path childFile = rootDir.resolve("child_file");
         final Path childDir = rootDir.resolve("child_dir");
@@ -259,9 +260,9 @@ class FileServiceTest {
         Files.createDirectories(emptyChildDir);
         Files.createDirectories(childDirWithCustomIndex);
 
-        Files.write(childFile, "child_file".getBytes(StandardCharsets.UTF_8));
-        Files.write(grandchildFile, "grandchild_file".getBytes(StandardCharsets.UTF_8));
-        Files.write(customIndexFile, "custom_index_file".getBytes(StandardCharsets.UTF_8));
+        writeFile(childFile, "child_file");
+        writeFile(grandchildFile, "grandchild_file");
+        writeFile(customIndexFile, "custom_index_file");
 
         final String basePath = new URI(baseUri).getPath();
 
@@ -397,12 +398,12 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
-    void testFileSystemGet(String baseUri, Path tmpDir) throws Exception {
+    @ArgumentsSource(BaseUriProvider.class)
+    void testFileSystemGet(String baseUri) throws Exception {
         final Path barFile = tmpDir.resolve("bar.html");
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
-        Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
+        writeFile(barFile, expectedContentA);
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final String lastModified;
@@ -423,7 +424,7 @@ class FileServiceTest {
                           DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(now, UTC)));
 
             // HTTP-date has no sub-second precision; just add a few seconds to the time.
-            Files.write(barFile, expectedContentB.getBytes(StandardCharsets.UTF_8));
+            writeFile(barFile, expectedContentB);
             Files.setLastModifiedTime(barFile, FileTime.fromMillis(now.toEpochMilli() + 5000));
 
             final String newLastModified;
@@ -465,12 +466,12 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
-    void testFileSystemGet_modifiedFile(String baseUri, Path tmpDir) throws Exception {
+    @ArgumentsSource(BaseUriProvider.class)
+    void testFileSystemGet_modifiedFile(String baseUri) throws Exception {
         final Path barFile = tmpDir.resolve("modifiedFile.html");
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
-        Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
+        writeFile(barFile, expectedContentA);
         final long barFileLastModified = Files.getLastModifiedTime(barFile).toMillis();
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -481,7 +482,7 @@ class FileServiceTest {
 
             // Modify the file cached by the service. Update last modification time explicitly
             // so that it differs from the old value.
-            Files.write(barFile, expectedContentB.getBytes(StandardCharsets.UTF_8));
+            writeFile(barFile, expectedContentB);
             Files.setLastModifiedTime(barFile, FileTime.fromMillis(barFileLastModified + 5000));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
@@ -491,8 +492,8 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
-    void testFileSystemGet_newFile(String baseUri, Path tmpDir) throws Exception {
+    @ArgumentsSource(BaseUriProvider.class)
+    void testFileSystemGet_newFile(String baseUri) throws Exception {
         final String barFileName = baseUri.substring(baseUri.lastIndexOf('/') + 1) + "_newFile.html";
         assertThat(barFileName).isIn("cached_newFile.html", "uncached_newFile.html");
 
@@ -504,7 +505,7 @@ class FileServiceTest {
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert404NotFound(res);
             }
-            Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
+            writeFile(barFile, expectedContentA);
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentA);
             }
@@ -512,16 +513,35 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
-    void testFileSystemGetUtf8(String baseUri, Path tmpDir) throws Exception {
+    @ArgumentsSource(BaseUriProvider.class)
+    void testFileSystemGetUtf8(String baseUri) throws Exception {
         final Path barFile = tmpDir.resolve("¢.txt");
         final String expectedContentA = "¢";
-        Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
+        writeFile(barFile, expectedContentA);
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpUriRequest req = new HttpGet(baseUri + "/fs/%C2%A2.txt");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/plain", expectedContentA);
+            }
+        }
+    }
+
+    private static void writeFile(Path path, String content) {
+        // Retry to work around the `AccessDeniedException` in Windows.
+        for (int i = 0; i < 10; i++) {
+            try {
+                Files.write(path, content.getBytes(StandardCharsets.UTF_8));
+                return;
+            } catch (Exception e) {
+                logger.warn("Unexpected exception while writing to {}:", path, e);
+            }
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
             }
         }
     }
@@ -669,19 +689,12 @@ class FileServiceTest {
         return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now(UTC));
     }
 
-    private static class BaseUriAndTmpDirProvider implements ArgumentsProvider {
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(Arguments.of(server.httpUri() + "/cached", cachedTmpDir),
-                             Arguments.of(server.httpUri() + "/uncached", uncachedTmpDir));
-        }
-    }
-
     private static class BaseUriProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return new BaseUriAndTmpDirProvider().provideArguments(context)
-                                                 .map(args -> Arguments.of(args.get()[0]));
+            return Stream.of(server.httpUri() + "/cached",
+                             server.httpUri() + "/uncached")
+                         .map(Arguments::of);
         }
     }
 }
