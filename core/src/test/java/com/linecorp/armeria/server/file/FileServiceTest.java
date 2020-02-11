@@ -72,7 +72,10 @@ class FileServiceTest {
             FileServiceTest.class.getPackage().getName().replace('.', '/') + '/';
 
     @TempDir
-    static Path tmpDir;
+    static Path cachedTmpDir;
+
+    @TempDir
+    static Path uncachedTmpDir;
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -83,13 +86,13 @@ class FileServiceTest {
 
             sb.serviceUnder(
                     "/cached/fs/",
-                    FileService.builder(tmpDir)
+                    FileService.builder(cachedTmpDir)
                                .autoIndex(true)
                                .build());
 
             sb.serviceUnder(
                     "/uncached/fs/",
-                    FileService.builder(tmpDir)
+                    FileService.builder(uncachedTmpDir)
                                .maxCacheEntries(0)
                                .autoIndex(true)
                                .build());
@@ -242,8 +245,8 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriProvider.class)
-    void testAutoIndex(String baseUri) throws Exception {
+    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
+    void testAutoIndex(String baseUri, Path tmpDir) throws Exception {
         final Path rootDir = tmpDir.resolve("auto_index");
         final Path childFile = rootDir.resolve("child_file");
         final Path childDir = rootDir.resolve("child_dir");
@@ -394,8 +397,8 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriProvider.class)
-    void testFileSystemGet(String baseUri) throws Exception {
+    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
+    void testFileSystemGet(String baseUri, Path tmpDir) throws Exception {
         final Path barFile = tmpDir.resolve("bar.html");
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
@@ -462,8 +465,8 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriProvider.class)
-    void testFileSystemGet_modifiedFile(String baseUri) throws Exception {
+    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
+    void testFileSystemGet_modifiedFile(String baseUri, Path tmpDir) throws Exception {
         final Path barFile = tmpDir.resolve("modifiedFile.html");
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
@@ -488,8 +491,8 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriProvider.class)
-    void testFileSystemGet_newFile(String baseUri) throws Exception {
+    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
+    void testFileSystemGet_newFile(String baseUri, Path tmpDir) throws Exception {
         final String barFileName = baseUri.substring(baseUri.lastIndexOf('/') + 1) + "_newFile.html";
         assertThat(barFileName).isIn("cached_newFile.html", "uncached_newFile.html");
 
@@ -509,8 +512,8 @@ class FileServiceTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(BaseUriProvider.class)
-    void testFileSystemGetUtf8(String baseUri) throws Exception {
+    @ArgumentsSource(BaseUriAndTmpDirProvider.class)
+    void testFileSystemGetUtf8(String baseUri, Path tmpDir) throws Exception {
         final Path barFile = tmpDir.resolve("¢.txt");
         final String expectedContentA = "¢";
         Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
@@ -666,11 +669,19 @@ class FileServiceTest {
         return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now(UTC));
     }
 
+    private static class BaseUriAndTmpDirProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(Arguments.of(server.httpUri() + "/cached", cachedTmpDir),
+                             Arguments.of(server.httpUri() + "/uncached", uncachedTmpDir));
+        }
+    }
+
     private static class BaseUriProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(server.httpUri() + "/cached",
-                             server.httpUri() + "/uncached").map(Arguments::of);
+            return new BaseUriAndTmpDirProvider().provideArguments(context)
+                                                 .map(args -> Arguments.of(args.get()[0]));
         }
     }
 }
