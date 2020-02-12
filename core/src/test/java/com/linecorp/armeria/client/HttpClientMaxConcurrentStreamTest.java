@@ -36,7 +36,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -251,26 +250,31 @@ public class HttpClientMaxConcurrentStreamTest {
             }
         };
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
+        final List<CompletableFuture<AggregatedHttpResponse>> connectFailedResponses = new ArrayList<>();
 
         // running inside event loop ensures requests are queued before initial connect completes.
         final int numExpectedConnections = 6;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
         clientFactory.eventLoopGroup().execute(() -> {
-            for (int j = 0; j < numRequests + 1; j++) {
+            for (int j = 0; j < numRequests; j++) {
                 receivedResponses.add(client.get(PATH).aggregate());
+            }
+            // two more requests which fails due to server maxNumConnections
+            for (int j = 0; j < 2; j++) {
+                connectFailedResponses.add(client.get(PATH).aggregate());
             }
         });
 
-        // server maxNumConnections = 6 causes 3 requests to fail
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
+        await().untilAsserted(() -> assertThat(connectFailedResponses).hasSize(2));
         assertThat(opens).hasValue(numExpectedConnections);
 
-        // we should catch an exception here
-        final CompletableFuture<AggregatedHttpResponse> uncompletedFuture =
-                receivedResponses.stream().filter(future -> !future.isDone()).findFirst().get();
-        assertThatThrownBy(() -> uncompletedFuture.get(3, TimeUnit.SECONDS))
-                .isInstanceOf(ClosedSessionException.class);
+        // Check exception thrown by responses
+        assertThatThrownBy(() -> connectFailedResponses.get(0).get(3, TimeUnit.SECONDS))
+                .hasCauseInstanceOf(UnprocessedRequestException.class);
+        assertThatThrownBy(() -> connectFailedResponses.get(1).get(3, TimeUnit.SECONDS))
+                .hasCauseInstanceOf(UnprocessedRequestException.class);
 
         // clean up
         responses.forEach(response -> response.complete(HttpResponse.of(200)));
