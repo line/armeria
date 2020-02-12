@@ -30,17 +30,23 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.util.UnstableApi;
 
-class AbstractClientOptionsBuilder {
+/**
+ * A skeletal builder implementation for {@link ClientOptions}.
+ * Note: This class is meant for internal use only.
+ */
+@UnstableApi
+public class AbstractClientOptionsBuilder {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = ClientDecoration.builder();
     private final HttpHeadersBuilder httpHeaders = HttpHeaders.builder();
 
     /**
-     * Creates a new instance with the default options.
+     * Creates a new instance.
      */
-    AbstractClientOptionsBuilder() {}
+    protected AbstractClientOptionsBuilder() {}
 
     /**
      * Creates a new instance with the specified base options.
@@ -120,9 +126,9 @@ class AbstractClientOptionsBuilder {
     /**
      * Sets the timeout of a socket write attempt.
      *
-     * @deprecated Use {@link #writeTimeout(Duration)}.
-     *
      * @param writeTimeout the timeout. {@code 0} disables the timeout.
+     *
+     * @deprecated Use {@link #writeTimeout(Duration)}.
      */
     @Deprecated
     public AbstractClientOptionsBuilder defaultWriteTimeout(Duration writeTimeout) {
@@ -132,9 +138,9 @@ class AbstractClientOptionsBuilder {
     /**
      * Sets the timeout of a socket write attempt in milliseconds.
      *
-     * @deprecated Use {@link #writeTimeoutMillis(long)}.
-     *
      * @param writeTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     *
+     * @deprecated Use {@link #writeTimeoutMillis(long)}.
      */
     @Deprecated
     public AbstractClientOptionsBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
@@ -162,9 +168,9 @@ class AbstractClientOptionsBuilder {
     /**
      * Sets the timeout of a response.
      *
-     * @deprecated Use {@link #responseTimeout(Duration)}.
-     *
      * @param responseTimeout the timeout. {@code 0} disables the timeout.
+     *
+     * @deprecated Use {@link #responseTimeout(Duration)}.
      */
     @Deprecated
     public AbstractClientOptionsBuilder defaultResponseTimeout(Duration responseTimeout) {
@@ -174,9 +180,9 @@ class AbstractClientOptionsBuilder {
     /**
      * Sets the timeout of a response in milliseconds.
      *
-     * @deprecated Use {@link #responseTimeoutMillis(long)}.
-     *
      * @param responseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     *
+     * @deprecated Use {@link #responseTimeoutMillis(long)}.
      */
     @Deprecated
     public AbstractClientOptionsBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
@@ -204,9 +210,9 @@ class AbstractClientOptionsBuilder {
     /**
      * Sets the maximum allowed length of a server response in bytes.
      *
-     * @deprecated Use {@link #maxResponseLength(long)}.
-     *
      * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
+     *
+     * @deprecated Use {@link #maxResponseLength(long)}.
      */
     @Deprecated
     public AbstractClientOptionsBuilder defaultMaxResponseLength(long maxResponseLength) {
@@ -226,7 +232,7 @@ class AbstractClientOptionsBuilder {
      * Sets the {@link Supplier} that generates a {@link RequestId}.
      */
     public AbstractClientOptionsBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
-       return option(ClientOption.REQUEST_ID_GENERATOR, requestIdGenerator);
+        return option(ClientOption.REQUEST_ID_GENERATOR, requestIdGenerator);
     }
 
     /**
@@ -351,13 +357,30 @@ class AbstractClientOptionsBuilder {
         return this;
     }
 
-    final ClientOptions buildOptions() {
+    /**
+     * Builds {@link ClientOptions} with the given options and the
+     * {@linkplain ClientOptions#of() default options}.
+     */
+    protected final ClientOptions buildOptions() {
+        return buildOptions(true);
+    }
+
+    /**
+     * Builds {@link ClientOptions} with the given options and the
+     * {@linkplain ClientOptions#of() default options} if the specified {@code includeDefault} is {@code true}.
+     * Otherwise builds {@link ClientOptions} with the given options only.
+     */
+    protected final ClientOptions buildOptions(boolean includeDefault) {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
         final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);
         optValArray[numOpts] = ClientOption.DECORATION.newValue(decoration.build());
         optValArray[numOpts + 1] = ClientOption.HTTP_HEADERS.newValue(httpHeaders.build());
 
-        return ClientOptions.of(optValArray);
+        if (includeDefault) {
+            return ClientOptions.of(optValArray);
+        } else {
+            return ClientOptions.of(ClientOptions.EMPTY, optValArray);
+        }
     }
 }
