@@ -247,6 +247,15 @@ final class HttpChannelPool implements AsyncCloseable {
         return promise;
     }
 
+    private CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key,
+                                                          ClientConnectionTimingsBuilder timingsBuilder,
+                                                          CompletableFuture<PooledChannel> promise) {
+        if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
+            connect(desiredProtocol, key, promise, timingsBuilder);
+        }
+        return promise;
+    }
+
     /**
      * Tries to use the pending HTTP/2 connection to avoid creating an extra connection.
      *
@@ -281,7 +290,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                 session.unfinishedResponses(), session.maxUnfinishedResponses());
                     // Need to subtract 1 since the current pending request may also be unfinished
                     if (session.unfinishedResponses() >= session.maxUnfinishedResponses() - 1) {
-                        acquireLater(actualProtocol, key, timingsBuilder).thenAccept(promise::complete);
+                        acquireLater(actualProtocol, key, timingsBuilder, promise);
                     } else {
                         promise.complete(pch);
                     }
