@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,18 +25,26 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.client.ClientDecoration;
+import com.linecorp.armeria.client.ClientDecorationBuilder;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptionValue;
+import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.DecoratingHttpClientFunction;
+import com.linecorp.armeria.client.DecoratingRpcClientFunction;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
  * A skeletal builder implementation for {@link ClientOptions}.
- * Note: This class is meant for internal use only.
  */
-@UnstableApi
 public class AbstractClientOptionsBuilder {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
@@ -51,7 +59,7 @@ public class AbstractClientOptionsBuilder {
     /**
      * Creates a new instance with the specified base options.
      */
-    AbstractClientOptionsBuilder(ClientOptions options) {
+    protected AbstractClientOptionsBuilder(ClientOptions options) {
         requireNonNull(options, "options");
         options(options);
     }
@@ -103,9 +111,7 @@ public class AbstractClientOptionsBuilder {
         requireNonNull(optionValue, "optionValue");
         final ClientOption<?> opt = optionValue.option();
         if (opt == ClientOption.DECORATION) {
-            final ClientDecoration d = (ClientDecoration) optionValue.value();
-            d.decorators().forEach(decoration::add);
-            d.rpcDecorators().forEach(decoration::addRpc);
+            decoration.add((ClientDecoration) optionValue.value());
         } else if (opt == ClientOption.HTTP_HEADERS) {
             final HttpHeaders h = (HttpHeaders) optionValue.value();
             setHttpHeaders(h);
@@ -380,7 +386,7 @@ public class AbstractClientOptionsBuilder {
         if (includeDefault) {
             return ClientOptions.of(optValArray);
         } else {
-            return ClientOptions.of(ClientOptions.EMPTY, optValArray);
+            return ClientOptions.of(ClientOptions.empty(), optValArray);
         }
     }
 }

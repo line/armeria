@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.client.AbstractClientOptionsBuilder;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory

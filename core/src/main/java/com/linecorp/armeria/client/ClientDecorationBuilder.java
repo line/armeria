@@ -39,6 +39,16 @@ public final class ClientDecorationBuilder {
     public ClientDecorationBuilder() {}
 
     /**
+     * Adds the specified {@link ClientDecoration}.
+     */
+    public ClientDecorationBuilder add(ClientDecoration clientDecoration) {
+        requireNonNull(clientDecoration, "clientDecoration");
+        clientDecoration.decorators().forEach(this::add);
+        clientDecoration.rpcDecorators().forEach(this::addRpc);
+        return this;
+    }
+
+    /**
      * Adds the specified HTTP-level {@code decorator}.
      *
      * @param decorator the {@link Function} that transforms an {@link HttpClient} to another

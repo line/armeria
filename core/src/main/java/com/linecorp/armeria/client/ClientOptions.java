@@ -85,7 +85,7 @@ public final class ClientOptions extends AbstractOptions {
             ENDPOINT_REMAPPER.newValue(Function.identity())
     };
 
-    static final ClientOptions EMPTY = new ClientOptions();
+    private static final ClientOptions EMPTY = new ClientOptions();
 
     /**
      * The default {@link ClientOptions}.
@@ -94,6 +94,13 @@ public final class ClientOptions extends AbstractOptions {
      */
     @Deprecated
     public static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
+
+    /**
+     * Returns an empty {@link ClientOptions}.
+     */
+    public static ClientOptions empty() {
+        return EMPTY;
+    }
 
     /**
      * Returns the {@link ClientOptions} with the default options only.
