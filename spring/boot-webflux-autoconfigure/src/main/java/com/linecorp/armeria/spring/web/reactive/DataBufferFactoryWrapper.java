@@ -67,9 +67,9 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
         if (dataBuffer instanceof NettyDataBuffer) {
             return PooledHttpData.wrap((((NettyDataBuffer) dataBuffer).getNativeBuffer()));
         }
-        final ByteBuffer buf = dataBuffer instanceof DefaultDataBuffer
-                               ? ((DefaultDataBuffer) dataBuffer).getNativeBuffer()
-                               : dataBuffer.asByteBuffer();
+        final ByteBuffer buf =
+                dataBuffer instanceof DefaultDataBuffer ? ((DefaultDataBuffer) dataBuffer).getNativeBuffer()
+                                                        : dataBuffer.asByteBuffer();
         return PooledHttpData.wrap(Unpooled.wrappedBuffer(buf));
     }
 
