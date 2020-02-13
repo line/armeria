@@ -30,6 +30,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +41,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -456,5 +459,31 @@ class ServerBuilderTest {
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
+    void tlsPkcsPrivateKeys(String privateKeyPath) {
+        final String resourceRoot =
+                '/' + BouncyCastleKeyFactoryProvider.class.getPackage().getName().replace('.', '/') + '/';
+        Server.builder()
+              .tls(getClass().getResourceAsStream("/cert.pem"),
+                   getClass().getResourceAsStream(privateKeyPath))
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .build();
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
+    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyPath) {
+        Server.builder()
+              .tlsSelfSigned()
+              .tlsCustomizer(sslCtxBuilder -> {
+                  sslCtxBuilder.keyManager(
+                          getClass().getResourceAsStream("/cert.pem"),
+                          getClass().getResourceAsStream(privateKeyPath));
+              })
+              .service("/", (ctx, req) -> HttpResponse.of(200))
+              .build();
     }
 }

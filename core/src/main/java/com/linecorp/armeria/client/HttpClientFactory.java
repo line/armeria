@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -51,6 +52,7 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.FutureListener;
@@ -73,7 +75,8 @@ final class HttpClientFactory implements ClientFactory {
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
     private final Bootstrap baseBootstrap;
-    private final List<Consumer<? super SslContextBuilder>> tlsCustomizers;
+    private final SslContext sslCtxHttp1Or2;
+    private final SslContext sslCtxHttp1Only;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -116,10 +119,14 @@ final class HttpClientFactory implements ClientFactory {
             bootstrap.option(castOption, value);
         });
 
+        final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
+                ImmutableList.of(options.tlsCustomizer());
+
         shutdownWorkerGroupOnClose = options.shutdownWorkerGroupOnClose();
         eventLoopScheduler = options.eventLoopSchedulerFactory().apply(workerGroup);
         baseBootstrap = bootstrap;
-        tlsCustomizers = ImmutableList.of(options.tlsCustomizer());
+        sslCtxHttp1Or2 = SslContextUtil.createSslContext(SslContextBuilder::forClient, false, tlsCustomizers);
+        sslCtxHttp1Only = SslContextUtil.createSslContext(SslContextBuilder::forClient, true, tlsCustomizers);
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
         http2MaxFrameSize = options.http2MaxFrameSize();
@@ -144,10 +151,6 @@ final class HttpClientFactory implements ClientFactory {
      */
     Bootstrap newBootstrap() {
         return baseBootstrap.clone();
-    }
-
-    List<Consumer<? super SslContextBuilder>> tlsCustomizers() {
-        return tlsCustomizers;
     }
 
     int http2InitialConnectionWindowSize() {
@@ -331,6 +334,8 @@ final class HttpClientFactory implements ClientFactory {
         }
 
         return pools.computeIfAbsent(eventLoop,
-                                     e -> new HttpChannelPool(this, eventLoop, connectionPoolListener()));
+                                     e -> new HttpChannelPool(this, eventLoop,
+                                                              sslCtxHttp1Or2, sslCtxHttp1Only,
+                                                              connectionPoolListener()));
     }
 }
