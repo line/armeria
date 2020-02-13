@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
@@ -192,7 +191,7 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @Test
-    public void maxConcurrentStreamExceeded_minimalConnectionsOpened() throws Exception {
+    public void maxConcurrentStreamExceeded_openMinimalConnections() throws Exception {
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
                                           .build();
@@ -230,7 +229,7 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @Test
-    public void maxConcurrentStream_failedConnectionHandling() throws Exception {
+    public void maxConcurrentStream_handleConnectionFailure() throws Exception {
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
                                           .build();
@@ -250,7 +249,6 @@ public class HttpClientMaxConcurrentStreamTest {
             }
         };
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
-        final List<CompletableFuture<AggregatedHttpResponse>> connectFailedResponses = new ArrayList<>();
 
         // running inside event loop ensures requests are queued before initial connect completes.
         final int numExpectedConnections = 6;
@@ -262,22 +260,21 @@ public class HttpClientMaxConcurrentStreamTest {
             }
             // two more requests which fails due to server maxNumConnections
             for (int j = 0; j < 2; j++) {
-                connectFailedResponses.add(client.get(PATH).aggregate());
+                receivedResponses.add(client.get(PATH).aggregate());
             }
         });
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
-        await().untilAsserted(() -> assertThat(connectFailedResponses).hasSize(2));
         assertThat(opens).hasValue(numExpectedConnections);
+        await().untilAsserted(() -> assertThat(receivedResponses.stream().filter(
+                CompletableFuture::isCompletedExceptionally)).hasSize(2));
 
         // Check exception thrown by responses
-        assertThatThrownBy(() -> connectFailedResponses.get(0).get(3, TimeUnit.SECONDS))
-                .hasCauseInstanceOf(UnprocessedRequestException.class);
-        assertThatThrownBy(() -> connectFailedResponses.get(1).get(3, TimeUnit.SECONDS))
-                .hasCauseInstanceOf(UnprocessedRequestException.class);
+        receivedResponses.stream().filter(CompletableFuture::isCompletedExceptionally).forEach(
+                responseFuture -> assertThatThrownBy(responseFuture::get)
+                        .hasCauseInstanceOf(UnprocessedRequestException.class));
 
         // clean up
-        responses.forEach(response -> response.complete(HttpResponse.of(200)));
         await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
     }
 }
