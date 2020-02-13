@@ -179,11 +179,9 @@ public class HttpClientMaxConcurrentStreamTest {
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
 
         // running inside event loop ensures requests are queued before initial connect completes.
-        clientFactory.eventLoopGroup().execute(() -> {
-            for (int j = 0; j < MAX_CONCURRENT_STREAMS + 1; j++) {
-                receivedResponses.add(client.get(PATH).aggregate());
-            }
-        });
+        for (int j = 0; j < MAX_CONCURRENT_STREAMS + 1; j++) {
+            receivedResponses.add(client.get(PATH).aggregate());
+        }
 
         await().untilAsserted(() -> assertThat(responses).hasSize(MAX_CONCURRENT_STREAMS + 1));
         responses.forEach(response -> response.complete(HttpResponse.of(200)));
@@ -212,15 +210,12 @@ public class HttpClientMaxConcurrentStreamTest {
         };
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
 
-        // running inside event loop ensures requests are queued before initial connect completes.
         final int numExpectedConnections = 4;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
-        clientFactory.eventLoopGroup().execute(() -> {
-            for (int j = 0; j < numRequests; j++) {
-                receivedResponses.add(client.get(PATH).aggregate());
-            }
-        });
+        for (int j = 0; j < numRequests; j++) {
+            receivedResponses.add(client.get(PATH).aggregate());
+        }
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(opens).hasValue(numExpectedConnections);
@@ -250,19 +245,16 @@ public class HttpClientMaxConcurrentStreamTest {
         };
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
 
-        // running inside event loop ensures requests are queued before initial connect completes.
         final int numExpectedConnections = 6;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
-        clientFactory.eventLoopGroup().execute(() -> {
-            for (int j = 0; j < numRequests; j++) {
-                receivedResponses.add(client.get(PATH).aggregate());
-            }
-            // two more requests which fails due to server maxNumConnections
-            for (int j = 0; j < 2; j++) {
-                receivedResponses.add(client.get(PATH).aggregate());
-            }
-        });
+        for (int j = 0; j < numRequests; j++) {
+            receivedResponses.add(client.get(PATH).aggregate());
+        }
+        // two more requests which fails due to server maxNumConnections
+        for (int j = 0; j < 2; j++) {
+            receivedResponses.add(client.get(PATH).aggregate());
+        }
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(opens).hasValue(numExpectedConnections);
@@ -275,6 +267,46 @@ public class HttpClientMaxConcurrentStreamTest {
                         .hasCauseInstanceOf(UnprocessedRequestException.class));
 
         // clean up
+        await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
+    }
+
+    @Test
+    public void maxConcurrentStream_multipleEventLoops() {
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .connectionPoolListener(connectionPoolListenerWrapper)
+                             .maxNumEventLoopsPerEndpoint(2)
+                             .build();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+                                          .factory(clientFactory)
+                                          .build();
+        final AtomicInteger opens = new AtomicInteger();
+        final AtomicInteger closes = new AtomicInteger();
+        connectionPoolListener = new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                opens.incrementAndGet();
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                closes.incrementAndGet();
+            }
+        };
+        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
+
+        final int numExpectedConnections = 6;
+        final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
+
+        for (int j = 0; j < numRequests; j++) {
+            receivedResponses.add(client.get(PATH).aggregate());
+        }
+
+        await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
+        assertThat(opens).hasValue(numExpectedConnections);
+        responses.forEach(response -> response.complete(HttpResponse.of(200)));
         await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
     }
 }
