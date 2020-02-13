@@ -30,12 +30,11 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 class DefaultHttpResponseTest {
@@ -84,26 +83,17 @@ class DefaultHttpResponseTest {
      * The aggregation future must be completed even if the response being aggregated has been aborted.
      */
     @ParameterizedTest
-    @ArgumentsSource(ParametersProvider.class)
-    void abortedAggregation(boolean executorSpecified, boolean withPooledObjects) {
+    @ValueSource(booleans = { true, false })
+    void abortedAggregation(boolean executorSpecified) {
         final Thread mainThread = Thread.currentThread();
         final HttpResponseWriter res = HttpResponse.streaming();
         final CompletableFuture<AggregatedHttpResponse> future;
 
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
-            if (withPooledObjects) {
-                future = res.aggregateWithPooledObjects(
-                        CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
-            } else {
-                future = res.aggregate(CommonPools.workerGroup().next());
-            }
+             future = res.aggregate(CommonPools.workerGroup().next());
         } else {
-            if (withPooledObjects) {
-                future = res.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
-            } else {
-                future = res.aggregate();
-            }
+            future = res.aggregate();
         }
 
         final AtomicReference<Thread> callbackThread = new AtomicReference<>();

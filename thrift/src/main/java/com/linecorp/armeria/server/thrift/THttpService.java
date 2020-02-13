@@ -79,7 +79,6 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;

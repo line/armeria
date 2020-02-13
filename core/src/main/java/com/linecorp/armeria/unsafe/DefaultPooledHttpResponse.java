@@ -42,7 +42,7 @@ final class DefaultPooledHttpResponse extends FilteredHttpResponse implements Po
         if (!(obj instanceof HttpData)) {
             return obj;
         }
-        return PooledHttpData.of((HttpData) obj);
+        return ByteBufHttpData.convert((HttpData) obj);
     }
 
     @Override
@@ -54,8 +54,9 @@ final class DefaultPooledHttpResponse extends FilteredHttpResponse implements Po
     public void subscribe(Subscriber<? super HttpObject> subscriber, SubscriptionOption... options) {
         if (hasPooledObjects(options)) {
             super.subscribe(subscriber,  options);
+        } else {
+            super.subscribe(subscriber, withPooled(options));
         }
-        super.subscribe(subscriber, withPooled(options));
     }
 
     @Override
@@ -68,8 +69,9 @@ final class DefaultPooledHttpResponse extends FilteredHttpResponse implements Po
                           SubscriptionOption... options) {
         if (hasPooledObjects(options)) {
             super.subscribe(subscriber, executor, options);
+        } else {
+            super.subscribe(subscriber, executor, withPooled(options));
         }
-        super.subscribe(subscriber, executor, withPooled(options));
     }
 
     @Override

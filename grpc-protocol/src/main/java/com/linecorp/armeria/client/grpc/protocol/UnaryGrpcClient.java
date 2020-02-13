@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
+import com.linecorp.armeria.unsafe.PooledHttpClient;
 import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -130,7 +131,7 @@ public final class UnaryGrpcClient {
     private static final class GrpcFramingDecorator extends SimpleDecoratingHttpClient {
 
         private GrpcFramingDecorator(HttpClient delegate) {
-            super(delegate);
+            super(PooledHttpClient.of(delegate));
         }
 
         @Override
@@ -151,10 +152,12 @@ public final class UnaryGrpcClient {
                                        framed = framer.writePayload(buf);
                                    }
 
+                                   assert delegate() instanceof PooledHttpClient;
+                                   final PooledHttpClient client = delegate();
                                    try {
-                                       return delegate().execute(ctx, HttpRequest.of(req.headers(), framed))
-                                                        .aggregateWithPooledObjects(ctx.eventLoop(),
-                                                                                    ctx.alloc());
+                                       return client.execute(ctx, HttpRequest.of(req.headers(), framed))
+                                                    .aggregateWithPooledObjects(ctx.eventLoop(),
+                                                                                ctx.alloc());
                                    } catch (Exception e) {
                                        throw new ArmeriaStatusException(StatusCodes.INTERNAL,
                                                                         "Error executing request.");

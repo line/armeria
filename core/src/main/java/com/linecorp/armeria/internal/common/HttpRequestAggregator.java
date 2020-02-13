@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal;
+package com.linecorp.armeria.internal.common;
 
 import java.util.concurrent.CompletableFuture;
 

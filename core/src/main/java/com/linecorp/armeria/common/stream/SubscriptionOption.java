@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.stream;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.util.UnstableApi;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.concurrent.EventExecutor;
@@ -35,6 +37,7 @@ public enum SubscriptionOption {
      * To receive the pooled {@link ByteBuf} and {@link ByteBufHolder} as is, without making a copy.
      * If you don't know what this means, do not specify this when you subscribe the {@link StreamMessage}.
      */
+    @UnstableApi
     WITH_POOLED_OBJECTS,
 
     /**

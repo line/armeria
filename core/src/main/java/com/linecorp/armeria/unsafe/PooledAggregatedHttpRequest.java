@@ -17,9 +17,17 @@
 package com.linecorp.armeria.unsafe;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
-public interface PooledAggregatedHttpRequest extends AggregatedHttpRequest, AutoCloseable {
+/**
+ * An {@link AggregatedHttpRequest} using pooled buffers for the content. Make sure to call
+ * {@link AutoCloseable#close()} on this response or the {@code content} to release pooled resources.
+ */
+public interface PooledAggregatedHttpRequest extends AggregatedHttpRequest, SafeCloseable {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     PooledHttpData content();
 }

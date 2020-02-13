@@ -39,10 +39,8 @@ import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.internal.HttpResponseAggregator;
-import com.linecorp.armeria.unsafe.PooledWebClient;
+import com.linecorp.armeria.internal.common.HttpResponseAggregator;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -398,7 +396,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
      */
-    default CompletableFuture<? extends AggregatedHttpResponse> aggregate() {
+    default CompletableFuture<AggregatedHttpResponse> aggregate() {
         return aggregate(defaultSubscriberExecutor());
     }
 
@@ -406,41 +404,10 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
      */
-    default CompletableFuture<? extends AggregatedHttpResponse> aggregate(EventExecutor executor) {
+    default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
         final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
         subscribe(aggregator, executor);
-        return future;
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the response are received fully. {@link AggregatedHttpResponse#content()} will
-     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link #aggregate()}.
-     *
-     * @deprecated Use {@link PooledWebClient}.
-     */
-    @Deprecated
-    default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
-        return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
-    }
-
-    /**
-     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the request is received fully. {@link AggregatedHttpResponse#content()} will
-     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link #aggregate()}.
-     *
-     * @deprecated Use {@link PooledWebClient}.
-     */
-    default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(
-            EventExecutor executor, ByteBufAllocator alloc) {
-        requireNonNull(executor, "executor");
-        requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
-        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
     }
 

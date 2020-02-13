@@ -27,12 +27,19 @@ import com.linecorp.armeria.common.HttpRequest;
 public interface PooledHttpClient extends HttpClient {
 
     /**
-     * Creates a {@link PooledHttpClient} that delegates to the provided {@link HttpClient} for issuing requests.
+     * Creates a {@link PooledHttpClient} that delegates to the provided {@link HttpClient} for issuing
+     * requests.
      */
     static PooledHttpClient of(HttpClient delegate) {
+        if (delegate instanceof PooledHttpClient) {
+            return (PooledHttpClient) delegate;
+        }
         return new DefaultPooledHttpClient(delegate);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     PooledHttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception;
 }

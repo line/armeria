@@ -23,10 +23,10 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -189,7 +189,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                                 fail(ctx, ContentTooLargeException.get());
                                 return;
                             } else {
-                                res.tryWrite(HttpData.wrap(data.retain()));
+                                res.tryWrite(PooledHttpData.wrap(data.retain()));
                             }
                         }
 

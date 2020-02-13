@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.internal.HttpResponseAggregator;
+import com.linecorp.armeria.internal.common.HttpResponseAggregator;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -40,28 +40,28 @@ public interface PooledHttpResponse extends HttpResponse {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
      */
-    default CompletableFuture<PooledAggregatedHttpResponse> aggregate() {
-        return aggregate(defaultSubscriberExecutor());
+    default CompletableFuture<PooledAggregatedHttpResponse> aggregateWithPooledObjects() {
+        return aggregateWithPooledObjects(defaultSubscriberExecutor());
     }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
      */
-    default CompletableFuture<PooledAggregatedHttpResponse> aggregate(EventExecutor executor) {
+    default CompletableFuture<PooledAggregatedHttpResponse> aggregateWithPooledObjects(EventExecutor executor) {
         requireNonNull(executor);
-        return aggregate(executor, PooledByteBufAllocator.DEFAULT);
+        return aggregateWithPooledObjects(executor, PooledByteBufAllocator.DEFAULT);
     }
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
      */
-    default CompletableFuture<PooledAggregatedHttpResponse> aggregate(EventExecutor executor,
-                                                                      ByteBufAllocator alloc) {
+    default CompletableFuture<PooledAggregatedHttpResponse> aggregateWithPooledObjects(
+            EventExecutor executor, ByteBufAllocator alloc) {
         final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
         subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
-        return future.thenApply(response -> new DefaultPooledAggregatedHttpResponse(response, alloc));
+        return future.thenApply(DefaultPooledAggregatedHttpResponse::new);
     }
 }

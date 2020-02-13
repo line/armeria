@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.netty.buffer.ByteBuf;

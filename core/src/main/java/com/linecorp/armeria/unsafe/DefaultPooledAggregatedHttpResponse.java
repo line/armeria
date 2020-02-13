@@ -27,16 +27,14 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 
-import io.netty.buffer.ByteBufAllocator;
-
 final class DefaultPooledAggregatedHttpResponse implements PooledAggregatedHttpResponse {
 
     private final AggregatedHttpResponse delegate;
     private final PooledHttpData content;
 
-    DefaultPooledAggregatedHttpResponse(AggregatedHttpResponse delegate, ByteBufAllocator alloc) {
+    DefaultPooledAggregatedHttpResponse(AggregatedHttpResponse delegate) {
         this.delegate = delegate;
-        content = PooledHttpData.of(delegate.content(), alloc);
+        content = ByteBufHttpData.convert(delegate.content());
     }
 
     @Override
@@ -86,7 +84,7 @@ final class DefaultPooledAggregatedHttpResponse implements PooledAggregatedHttpR
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         content.close();
     }
 }

@@ -50,7 +50,6 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import com.linecorp.armeria.unsafe.PooledHttpData;
 
 import io.grpc.MethodDescriptor;

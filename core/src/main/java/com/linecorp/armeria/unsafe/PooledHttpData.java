@@ -19,11 +19,10 @@ package com.linecorp.armeria.unsafe;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.PooledByteBufAllocator;
 
 /**
  * A {@link HttpData} that is backed by a pooled {@link ByteBuf} for optimizing certain internal use cases. Not
@@ -31,19 +30,19 @@ import io.netty.buffer.PooledByteBufAllocator;
  *
  * <h3>What are pooled buffers?</h3>
  *
- * <p>The buffer backing a {@link ByteBufHttpData} is a pooled buffer - this means that it does not use normal
+ * <p>The buffer backing a {@link PooledHttpData} is a pooled buffer - this means that it does not use normal
  * Java garbage collection, and instead uses manual memory management using a reference count, similar to
  * some constructs in languages like C++. Manual memory management is more fragile and not idiomatic in Java -
  * you should only use this class in performance-sensitive situations and after being ready to deal with these
  * very hard-to-debug issues.
  *
- * <p>You may interact with {@link ByteBufHttpData} when using methods that return pooled objects, such as
- * {@link com.linecorp.armeria.common.HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}. If you don't
- * use such methods, you will never see a {@link ByteBufHttpData} and don't need to read further.
+ * <p>You may interact with {@link PooledHttpData} when using objects that return pooled objects, such as
+ * {@link PooledWebClient}. If you don't use such objects, you will never see a {@link PooledHttpData} and don't
+ * need to read further.
  *
  * <h3>Impact of pooled buffers</h3>
  *
- * <p>Any time you receive a {@link ByteBufHttpData} it will have a single reference that must be released -
+ * <p>Any time you receive a {@link PooledHttpData} it will have a single reference that must be released -
  * failure to release the reference will result in a memory leak and poor performance. You must make sure to do
  * this by calling {@link PooledHttpData#close()}, usually in a try-with-resources structure to avoid side
  * effects.
@@ -94,13 +93,13 @@ import io.netty.buffer.PooledByteBufAllocator;
  * <p>It is recommended to also read through <a href="https://netty.io/wiki/reference-counted-objects.html">
  * Reference counted objects</a> for more information on pooled objects.
  */
-public interface PooledHttpData extends HttpData, ByteBufHolder, AutoCloseable {
+public interface PooledHttpData extends HttpData, ByteBufHolder, SafeCloseable {
 
     /**
-     * Converts the specified Netty {@link ByteBuf} into an {@link HttpData}. The buffer is not copied; any
-     * changes made to it will be visible to {@link HttpData}. The ownership of the buffer is transferred to the
-     * {@link HttpData}. If you still need to use it after calling this method, make sure to call
-     * {@link ByteBuf#retain()} first.
+     * Converts the specified Netty {@link ByteBuf} into an {@link PooledHttpData}. The buffer is not copied;
+     * any changes made to it will be visible to {@link PooledHttpData}. The ownership of the buffer is
+     * transferred to the {@link HttpData}. If you still need to use it after calling this method, make sure to
+     * call {@link ByteBuf#retain()} first.
      *
      * @return a new {@link HttpData}. {@link #empty()} if the readable bytes of {@code buf} is 0.
      */
@@ -112,24 +111,9 @@ public interface PooledHttpData extends HttpData, ByteBufHolder, AutoCloseable {
         return new ByteBufHttpData(buf, false);
     }
 
-    static PooledHttpData of(HttpData data) {
-        requireNonNull(data, "data");
-        if (data instanceof PooledHttpData) {
-            return (PooledHttpData) data;
-        }
-        return of(data, PooledByteBufAllocator.DEFAULT);
-    }
-
-    static PooledHttpData of(HttpData data, ByteBufAllocator alloc) {
-        requireNonNull(data, "data");
-        requireNonNull(alloc, "alloc");
-        if (data instanceof PooledHttpData) {
-            return (PooledHttpData) data;
-        }
-        final ByteBuf buf = alloc.buffer(data.length());
-        return new ByteBufHttpData(buf, data.isEndOfStream());
-    }
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
     PooledHttpData withEndOfStream();
 }
