@@ -26,7 +26,10 @@ import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static java.util.Objects.requireNonNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOError;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.security.PrivateKey;
@@ -51,6 +54,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
@@ -238,7 +242,20 @@ public final class VirtualHostBuilder {
                                   @Nullable String keyPassword) {
         requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
         requireNonNull(keyInputStream, "keyInputStream");
-        return tls(() -> SslContextBuilder.forServer(keyCertChainInputStream, keyInputStream, keyPassword));
+
+        // Retrieve the content of the given streams so that they can be consumed more than once.
+        final byte[] keyCertChain;
+        final byte[] key;
+        try {
+            keyCertChain = ByteStreams.toByteArray(keyCertChainInputStream);
+            key = ByteStreams.toByteArray(keyInputStream);
+        } catch (IOException e) {
+            throw new IOError(e);
+        }
+
+        return tls(() -> SslContextBuilder.forServer(new ByteArrayInputStream(keyCertChain),
+                                                     new ByteArrayInputStream(key),
+                                                     keyPassword));
     }
 
     /**
