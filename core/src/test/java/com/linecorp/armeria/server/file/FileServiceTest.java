@@ -50,6 +50,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
@@ -64,6 +66,8 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import io.netty.handler.codec.DateFormatter;
 
 class FileServiceTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(FileServiceTest.class);
 
     private static final ZoneId UTC = ZoneId.of("UTC");
     private static final Pattern ETAG_PATTERN = Pattern.compile("^\"[^\"]+\"$");
@@ -256,9 +260,9 @@ class FileServiceTest {
         Files.createDirectories(emptyChildDir);
         Files.createDirectories(childDirWithCustomIndex);
 
-        Files.write(childFile, "child_file".getBytes(StandardCharsets.UTF_8));
-        Files.write(grandchildFile, "grandchild_file".getBytes(StandardCharsets.UTF_8));
-        Files.write(customIndexFile, "custom_index_file".getBytes(StandardCharsets.UTF_8));
+        writeFile(childFile, "child_file");
+        writeFile(grandchildFile, "grandchild_file");
+        writeFile(customIndexFile, "custom_index_file");
 
         final String basePath = new URI(baseUri).getPath();
 
@@ -399,7 +403,7 @@ class FileServiceTest {
         final Path barFile = tmpDir.resolve("bar.html");
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
-        Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
+        writeFile(barFile, expectedContentA);
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final String lastModified;
@@ -420,7 +424,7 @@ class FileServiceTest {
                           DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(now, UTC)));
 
             // HTTP-date has no sub-second precision; just add a few seconds to the time.
-            Files.write(barFile, expectedContentB.getBytes(StandardCharsets.UTF_8));
+            writeFile(barFile, expectedContentB);
             Files.setLastModifiedTime(barFile, FileTime.fromMillis(now.toEpochMilli() + 5000));
 
             final String newLastModified;
@@ -467,7 +471,7 @@ class FileServiceTest {
         final Path barFile = tmpDir.resolve("modifiedFile.html");
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
-        Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
+        writeFile(barFile, expectedContentA);
         final long barFileLastModified = Files.getLastModifiedTime(barFile).toMillis();
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -478,7 +482,7 @@ class FileServiceTest {
 
             // Modify the file cached by the service. Update last modification time explicitly
             // so that it differs from the old value.
-            Files.write(barFile, expectedContentB.getBytes(StandardCharsets.UTF_8));
+            writeFile(barFile, expectedContentB);
             Files.setLastModifiedTime(barFile, FileTime.fromMillis(barFileLastModified + 5000));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
@@ -501,7 +505,7 @@ class FileServiceTest {
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert404NotFound(res);
             }
-            Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
+            writeFile(barFile, expectedContentA);
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentA);
             }
@@ -513,12 +517,34 @@ class FileServiceTest {
     void testFileSystemGetUtf8(String baseUri) throws Exception {
         final Path barFile = tmpDir.resolve("¢.txt");
         final String expectedContentA = "¢";
-        Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
+        writeFile(barFile, expectedContentA);
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpUriRequest req = new HttpGet(baseUri + "/fs/%C2%A2.txt");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/plain", expectedContentA);
+            }
+        }
+    }
+
+    private static void writeFile(Path path, String content) throws Exception {
+        // Retry to work around the `AccessDeniedException` in Windows.
+        for (int i = 9; i >= 0; i--) {
+            try {
+                Files.write(path, content.getBytes(StandardCharsets.UTF_8));
+                return;
+            } catch (Exception e) {
+                if (i == 0) {
+                    throw e;
+                }
+                logger.warn("Unexpected exception while writing to {}:", path, e);
+            }
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
             }
         }
     }
