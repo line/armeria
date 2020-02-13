@@ -175,7 +175,7 @@ For gRPC:
 - Configure the protobuf plugin to generate the ``.dsc`` file that contains the docstrings and
   put it into the ``META-INF/armeria/grpc`` directory:
 
-  Using gradle:
+  Using Gradle:
 
   .. code-block:: java
 
@@ -191,10 +191,11 @@ For gRPC:
           }
       }
 
-  Using maven:
+  Using Maven:
 
   .. code-block:: xml
 
+    <!-- See https://www.xolstice.org/protobuf-maven-plugin/usage.html for more information. -->
     <plugin>
       <groupId>org.xolstice.maven.plugins</groupId>
       <artifactId>protobuf-maven-plugin</artifactId>
