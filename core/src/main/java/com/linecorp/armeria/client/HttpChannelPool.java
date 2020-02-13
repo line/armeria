@@ -51,6 +51,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -74,7 +75,9 @@ final class HttpChannelPool implements AsyncCloseable {
     private final Bootstrap[] bootstraps;
     private final int connectTimeoutMillis;
 
-    HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop, ConnectionPoolListener listener) {
+    HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
+                    SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
+                    ConnectionPoolListener listener) {
         this.eventLoop = eventLoop;
         pool = newEnumMap(
                 Map.class,
@@ -95,12 +98,15 @@ final class HttpChannelPool implements AsyncCloseable {
         bootstraps = newEnumMap(
                 Bootstrap.class,
                 desiredProtocol -> {
+                    final SslContext sslCtx = desiredProtocol == SessionProtocol.H1 ||
+                                              desiredProtocol == SessionProtocol.H1C ? sslCtxHttp1Only
+                                                                                     : sslCtxHttp1Or2;
                     final Bootstrap bootstrap = baseBootstrap.clone();
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(
-                                    new HttpClientPipelineConfigurator(clientFactory, desiredProtocol));
+                                    new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                         }
                     });
                     return bootstrap;

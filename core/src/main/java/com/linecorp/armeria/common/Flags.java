@@ -455,7 +455,7 @@ public final class Flags {
         dumpOpenSslInfo = getBoolean("dumpOpenSslInfo", false);
         if (dumpOpenSslInfo) {
             final SSLEngine engine = SslContextUtil.createSslContext(
-                    SslContextBuilder.forClient(),
+                    SslContextBuilder::forClient,
                     false,
                     ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",

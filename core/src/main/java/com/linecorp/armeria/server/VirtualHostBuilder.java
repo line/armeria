@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -51,9 +52,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -83,8 +82,6 @@ public final class VirtualHostBuilder {
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigSetters> serviceConfigSetters = new ArrayList<>();
-    private final List<VirtualHostAnnotatedServiceBindingBuilder> virtualHostAnnotatedServiceBindingBuilders =
-            new ArrayList<>();
 
     @Nullable
     private String defaultHostname;
@@ -92,7 +89,7 @@ public final class VirtualHostBuilder {
     @Nullable
     private SslContext sslContext;
     @Nullable
-    private SslContextBuilder sslContextBuilder;
+    private Supplier<SslContextBuilder> sslContextBuilderSupplier;
     @Nullable
     private Boolean tlsSelfSigned;
     @Nullable
@@ -167,8 +164,8 @@ public final class VirtualHostBuilder {
     @Deprecated
     public VirtualHostBuilder tls(SslContext sslContext) {
         requireNonNull(sslContext, "sslContext");
-        checkState(this.sslContext == null, "sslContext is already set: %s", this.sslContext);
-        checkState(sslContextBuilder == null, "sslContextBuilder is already set: %s", sslContextBuilder);
+        checkState(this.sslContext == null && sslContextBuilderSupplier == null,
+                   "TLS has been configured already.");
         this.sslContext = sslContext;
         return this;
     }
@@ -205,7 +202,7 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
         requireNonNull(keyCertChainFile, "keyCertChainFile");
         requireNonNull(keyFile, "keyFile");
-        return tls(SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword));
+        return tls(() -> SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword));
     }
 
     /**
@@ -241,7 +238,7 @@ public final class VirtualHostBuilder {
                                   @Nullable String keyPassword) {
         requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
         requireNonNull(keyInputStream, "keyInputStream");
-        return tls(SslContextBuilder.forServer(keyCertChainInputStream, keyInputStream, keyPassword));
+        return tls(() -> SslContextBuilder.forServer(keyCertChainInputStream, keyInputStream, keyPassword));
     }
 
     /**
@@ -289,8 +286,8 @@ public final class VirtualHostBuilder {
             requireNonNull(keyCert, "keyCertChain contains null.");
         }
 
-        return tls(SslContextBuilder.forServer(key, keyPassword,
-                                               Iterables.toArray(keyCertChain, X509Certificate.class)));
+        final X509Certificate[] keyCertChainArray = Iterables.toArray(keyCertChain, X509Certificate.class);
+        return tls(() -> SslContextBuilder.forServer(key, keyPassword, keyCertChainArray));
     }
 
     /**
@@ -300,7 +297,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder tls(KeyManagerFactory keyManagerFactory) {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
-        return tls(SslContextBuilder.forServer(keyManagerFactory));
+        return tls(() -> SslContextBuilder.forServer(keyManagerFactory));
     }
 
     /**
@@ -316,12 +313,11 @@ public final class VirtualHostBuilder {
         return tlsCustomizer(tlsCustomizer);
     }
 
-    private VirtualHostBuilder tls(SslContextBuilder sslContextBuilder) {
-        requireNonNull(sslContextBuilder, "sslContextBuilder");
-        checkState(sslContext == null, "sslContext is already set: %s", sslContext);
-        checkState(this.sslContextBuilder == null,
-                   "sslContextBuilder is already set: %s", this.sslContextBuilder);
-        this.sslContextBuilder = sslContextBuilder;
+    private VirtualHostBuilder tls(Supplier<SslContextBuilder> sslContextBuilderSupplier) {
+        requireNonNull(sslContextBuilderSupplier, "sslContextBuilderSupplier");
+        checkState(sslContext == null && this.sslContextBuilderSupplier == null,
+                   "TLS has been configured already.");
+        this.sslContextBuilderSupplier = sslContextBuilderSupplier;
         return this;
     }
 
@@ -947,14 +943,14 @@ public final class VirtualHostBuilder {
             if (this.sslContext != null) {
                 sslContext = this.sslContext;
                 sslContextFromThis = true;
-            } else if (sslContextBuilder != null) {
-                sslContext = buildSslContext(sslContextBuilder, tlsCustomizers);
+            } else if (sslContextBuilderSupplier != null) {
+                sslContext = buildSslContext(sslContextBuilderSupplier, tlsCustomizers);
                 sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
             } else if (template.sslContext != null) {
                 sslContext = template.sslContext;
-            } else if (template.sslContextBuilder != null) {
-                sslContext = buildSslContext(template.sslContextBuilder, template.tlsCustomizers);
+            } else if (template.sslContextBuilderSupplier != null) {
+                sslContext = buildSslContext(template.sslContextBuilderSupplier, template.tlsCustomizers);
                 releaseSslContextOnFailure = true;
             }
 
@@ -974,8 +970,8 @@ public final class VirtualHostBuilder {
                 if (tlsSelfSigned) {
                     try {
                         final SelfSignedCertificate ssc = selfSignedCertificate();
-                        sslContext = buildSslContext(SslContextBuilder.forServer(ssc.certificate(),
-                                                                                 ssc.privateKey()),
+                        sslContext = buildSslContext(() -> SslContextBuilder.forServer(ssc.certificate(),
+                                                                                       ssc.privateKey()),
                                                      tlsCustomizers);
                         releaseSslContextOnFailure = true;
                     } catch (Exception e) {
@@ -1021,15 +1017,9 @@ public final class VirtualHostBuilder {
     }
 
     private static SslContext buildSslContext(
-            SslContextBuilder sslContextBuilder,
+            Supplier<SslContextBuilder> sslContextBuilderSupplier,
             Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
-        try {
-            return BouncyCastleKeyFactoryProvider.call(() -> SslContextUtil.createSslContext(
-                    sslContextBuilder, false, tlsCustomizers));
-        } catch (Exception e) {
-            // `createSslContext()` always throws an unchecked exception.
-            return Exceptions.throwUnsafely(e);
-        }
+        return SslContextUtil.createSslContext(sslContextBuilderSupplier, false, tlsCustomizers);
     }
 
     /**
@@ -1051,7 +1041,7 @@ public final class VirtualHostBuilder {
             serverEngine.setNeedClientAuth(false);
 
             final SslContext sslContextClient =
-                    buildSslContext(SslContextBuilder.forClient(), ImmutableList.of());
+                    buildSslContext(SslContextBuilder::forClient, ImmutableList.of());
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
 
@@ -1078,9 +1068,6 @@ public final class VirtualHostBuilder {
                           .add("defaultHostname", defaultHostname)
                           .add("hostnamePattern", hostnamePattern)
                           .add("serviceConfigSetters", serviceConfigSetters)
-                          .add("sslContext", sslContext)
-                          .add("sslContextBuilder", sslContextBuilder)
-                          .add("tlsSelfSigned", tlsSelfSigned)
                           .add("routeDecoratingServices", routeDecoratingServices)
                           .add("accessLoggerMapper", accessLoggerMapper)
                           .add("rejectedRouteHandler", rejectedRouteHandler)

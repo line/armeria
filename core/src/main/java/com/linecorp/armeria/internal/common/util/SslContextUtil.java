@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -84,64 +85,68 @@ public final class SslContextUtil {
      * TLSv1.3 (if supported), and TLSv1.2.
      */
     public static SslContext createSslContext(
-            SslContextBuilder builder, boolean forceHttp1,
+            Supplier<SslContextBuilder> builderSupplier, boolean forceHttp1,
             Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers) {
 
-        final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
-        builder.sslProvider(provider);
+        return BouncyCastleKeyFactoryProvider.call(() -> {
+            final SslContextBuilder builder = builderSupplier.get();
+            final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
+            builder.sslProvider(provider);
 
-        final Set<String> supportedProtocols = supportedProtocols(builder);
-        final List<String> protocols = DEFAULT_PROTOCOLS.stream()
-                                                        .filter(supportedProtocols::contains)
-                                                        .collect(toImmutableList());
-        if (protocols.isEmpty()) {
-            throw new IllegalStateException(provider + " supports none of " + DEFAULT_PROTOCOLS);
-        }
-
-        if (!warnedUnsupportedProtocols && DEFAULT_PROTOCOLS.size() != protocols.size()) {
-            warnedUnsupportedProtocols = true;
-            if (logger.isDebugEnabled()) {
-                final List<String> missingProtocols = DEFAULT_PROTOCOLS.stream()
-                                                                       .filter(p -> !protocols.contains(p))
-                                                                       .collect(toImmutableList());
-                logger.debug("{} does not support: {}", provider, missingProtocols);
+            final Set<String> supportedProtocols = supportedProtocols(builder);
+            final List<String> protocols = DEFAULT_PROTOCOLS.stream()
+                                                            .filter(supportedProtocols::contains)
+                                                            .collect(toImmutableList());
+            if (protocols.isEmpty()) {
+                throw new IllegalStateException(provider + " supports none of " + DEFAULT_PROTOCOLS);
             }
-        }
 
-        builder.protocols(protocols.toArray(EmptyArrays.EMPTY_STRINGS))
-               .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+            if (!warnedUnsupportedProtocols && DEFAULT_PROTOCOLS.size() != protocols.size()) {
+                warnedUnsupportedProtocols = true;
+                if (logger.isDebugEnabled()) {
+                    final List<String> missingProtocols = DEFAULT_PROTOCOLS.stream()
+                                                                           .filter(p -> !protocols.contains(p))
+                                                                           .collect(toImmutableList());
+                    logger.debug("{} does not support: {}", provider, missingProtocols);
+                }
+            }
 
-        userCustomizers.forEach(customizer -> customizer.accept(builder));
+            builder.protocols(protocols.toArray(EmptyArrays.EMPTY_STRINGS))
+                   .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
 
-        // We called user customization logic before setting ALPN to make sure they don't break
-        // compatibility with HTTP/2.
-        if (!forceHttp1) {
-            builder.applicationProtocolConfig(ALPN_CONFIG);
-        }
+            userCustomizers.forEach(customizer -> customizer.accept(builder));
 
-        SslContext sslContext = null;
-        boolean success = false;
-        try {
-            sslContext = builder.build();
-
-            final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
-            checkState(!ciphers.isEmpty(), "SSLContext has no cipher suites enabled.");
-
+            // We called user customization logic before setting ALPN to make sure they don't break
+            // compatibility with HTTP/2.
             if (!forceHttp1) {
-                validateHttp2Ciphers(ciphers);
+                builder.applicationProtocolConfig(ALPN_CONFIG);
             }
 
-            success = true;
-            return sslContext;
-        } catch (SSLException e) {
-            throw new IllegalStateException("Could not initialize SSL context. Ensure that netty-tcnative is " +
-                                            "on the path, this is running on Java 11+, or user customization " +
-                                            "of the SSL context is supported by the environment.", e);
-        } finally {
-            if (!success && sslContext != null) {
-                ReferenceCountUtil.release(sslContext);
+            SslContext sslContext = null;
+            boolean success = false;
+            try {
+                sslContext = builder.build();
+
+                final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
+                checkState(!ciphers.isEmpty(), "SSLContext has no cipher suites enabled.");
+
+                if (!forceHttp1) {
+                    validateHttp2Ciphers(ciphers);
+                }
+
+                success = true;
+                return sslContext;
+            } catch (SSLException e) {
+                throw new IllegalStateException(
+                        "Could not initialize SSL context. Ensure that netty-tcnative is " +
+                        "on the path, this is running on Java 11+, or user customization " +
+                        "of the SSL context is supported by the environment.", e);
+            } finally {
+                if (!success && sslContext != null) {
+                    ReferenceCountUtil.release(sslContext);
+                }
             }
-        }
+        });
     }
 
     @VisibleForTesting

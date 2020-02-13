@@ -51,7 +51,6 @@ import com.linecorp.armeria.internal.client.Http1ClientCodec;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -83,7 +82,6 @@ import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AsciiString;
@@ -111,7 +109,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     @Nullable
     private InetSocketAddress remoteAddress;
 
-    HttpClientPipelineConfigurator(HttpClientFactory clientFactory, SessionProtocol sessionProtocol) {
+    HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
+                                   SessionProtocol sessionProtocol,
+                                   @Nullable SslContext sslCtx) {
         this.clientFactory = clientFactory;
 
         if (sessionProtocol == HTTP || sessionProtocol == HTTPS) {
@@ -126,11 +126,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         if (sessionProtocol.isTls()) {
-            sslCtx = SslContextUtil.createSslContext(SslContextBuilder.forClient(),
-                                                     httpPreference == HttpPreference.HTTP1_REQUIRED,
-                                                     clientFactory.tlsCustomizers());
+            this.sslCtx = sslCtx;
         } else {
-            sslCtx = null;
+            this.sslCtx = null;
         }
     }
 

@@ -24,8 +24,11 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 
 import io.netty.channel.ChannelOption;
 import io.netty.resolver.DefaultAddressResolverGroup;
@@ -108,5 +111,17 @@ class ClientFactoryBuilderTest {
     void useRefreshingAddressResolverGroup() {
         final DefaultClientFactory clientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
         assertThat(clientFactory.addressResolverGroup()).isInstanceOf(RefreshingAddressResolverGroup.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "pkcs5.key", "pkcs8.key" })
+    void shouldAllowPkcsPrivateKeys(String privateKeyPath) {
+        final String resourceRoot =
+                '/' + BouncyCastleKeyFactoryProvider.class.getPackage().getName().replace('.', '/') + '/';
+        ClientFactory.builder().tlsCustomizer(sslCtxBuilder -> {
+            sslCtxBuilder.keyManager(
+                    getClass().getResourceAsStream(resourceRoot + "test.crt"),
+                    getClass().getResourceAsStream(resourceRoot + privateKeyPath));
+        }).build();
     }
 }
