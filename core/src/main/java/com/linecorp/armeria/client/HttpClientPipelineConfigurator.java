@@ -47,7 +47,6 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.Http1ClientCodec;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -64,6 +63,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpContent;
@@ -289,7 +289,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 pipeline.addLast(new DowngradeHandler());
                 pipeline.addLast(http2Handler);
             } else {
-                final Http1ClientCodec http1Codec = newHttp1Codec(
+                final HttpClientCodec http1Codec = newHttp1Codec(
                         clientFactory.http1MaxInitialLineLength(),
                         clientFactory.http1MaxHeaderSize(),
                         clientFactory.http1MaxChunkSize());
@@ -624,9 +624,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         return settings;
     }
 
-    private static Http1ClientCodec newHttp1Codec(
+    private static HttpClientCodec newHttp1Codec(
             int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize) {
-        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize);
+        return new HttpClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize);
     }
 
     /**
