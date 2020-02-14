@@ -66,16 +66,16 @@ class DefaultTimeoutControllerTest {
     void shouldHaveTimeoutTask() {
         final TimeoutController emptyTaskTimeoutController =
                 new DefaultTimeoutController(CommonPools.workerGroup().next());
-        assertThatThrownBy(() -> emptyTaskTimeoutController.extendTimeout(10))
+        assertThatThrownBy(() -> emptyTaskTimeoutController.extendTimeout(100))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("setTimeoutTask(timeoutTask) is not called yet");
     }
 
     @Test
     void adjustTimeout() {
-        final long initTimeoutMillis = 100;
-        final long adjustmentMillis = 10;
-        final long tolerance = 5;
+        final long initTimeoutMillis = 1000;
+        final long adjustmentMillis = 100;
+        final long tolerance = 50;
 
         timeoutController.scheduleTimeout(initTimeoutMillis);
         final long startTimeNanos = timeoutController.startTimeNanos();
@@ -86,7 +86,7 @@ class DefaultTimeoutControllerTest {
                 initTimeoutMillis + adjustmentMillis - passedMillis - tolerance,
                 initTimeoutMillis + adjustmentMillis - passedMillis + tolerance);
 
-        final long adjustmentMillis2 = -20;
+        final long adjustmentMillis2 = -200;
         timeoutController.extendTimeout(adjustmentMillis2);
         final long passedMillis2 = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
         assertThat(timeoutController.timeoutMillis()).isBetween(
@@ -96,50 +96,50 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void resetTimeout() {
-        timeoutController.scheduleTimeout(100);
-        timeoutController.resetTimeout(10);
-        assertThat(timeoutController.timeoutMillis()).isEqualTo(10);
+        timeoutController.scheduleTimeout(1000);
+        timeoutController.resetTimeout(500);
+        assertThat(timeoutController.timeoutMillis()).isEqualTo(500);
     }
 
     @Test
     void resetTimeout_withoutInit() {
-        timeoutController.resetTimeout(10);
-        assertThat(timeoutController.timeoutMillis()).isEqualTo(10);
+        timeoutController.resetTimeout(500);
+        assertThat(timeoutController.timeoutMillis()).isEqualTo(500);
         assertThat((Object) timeoutController.timeoutFuture()).isNotNull();
     }
 
     @Test
     void resetTimout_multipleZero() {
-        timeoutController.scheduleTimeout(100);
+        timeoutController.scheduleTimeout(1000);
         timeoutController.resetTimeout(0);
         timeoutController.resetTimeout(0);
     }
 
     @Test
     void resetTimout_multipleNonZero() {
-        timeoutController.scheduleTimeout(100);
+        timeoutController.scheduleTimeout(1000);
         timeoutController.resetTimeout(0);
-        timeoutController.resetTimeout(20);
+        timeoutController.resetTimeout(500);
     }
 
     @Test
     void cancelTimeout_beforeDeadline() {
-        timeoutController.scheduleTimeout(100);
+        timeoutController.scheduleTimeout(1000);
         assertThat(timeoutController.cancelTimeout()).isTrue();
         assertThat(isTimeout).isFalse();
     }
 
     @Test
     void cancelTimeout_afterDeadline() {
-        timeoutController.scheduleTimeout(100);
-        Uninterruptibles.sleepUninterruptibly(200, TimeUnit.MILLISECONDS);
+        timeoutController.scheduleTimeout(500);
+        Uninterruptibles.sleepUninterruptibly(1000, TimeUnit.MILLISECONDS);
         assertThat(timeoutController.cancelTimeout()).isFalse();
         assertThat(isTimeout).isTrue();
     }
 
     @Test
     void cancelTimeout_byResetTimeoutZero() {
-        timeoutController.scheduleTimeout(100);
+        timeoutController.scheduleTimeout(1000);
         timeoutController.resetTimeout(0);
         assertThat(timeoutController.timeoutMillis()).isEqualTo(0);
         assertThat((Object) timeoutController.timeoutFuture()).isNull();
@@ -233,7 +233,7 @@ class DefaultTimeoutControllerTest {
 
     @Test
     void ignoreScheduledTimeoutAfterReset() {
-        timeoutController.resetTimeout(100);
+        timeoutController.resetTimeout(1000);
         assertThat(timeoutController.scheduleTimeout(1)).isFalse();
     }
 
