@@ -13,11 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.util;
-
-import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-import com.linecorp.armeria.server.annotation.RequestConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+package com.linecorp.armeria.server.annotation;
 
 /**
  * A {@link RuntimeException} raised for falling through to the next something. It would be raised from
@@ -31,8 +27,12 @@ public final class FallthroughException extends RuntimeException {
 
     /**
      * Returns a singleton {@link FallthroughException}.
+     *
+     * @see RequestConverterFunction#fallthrough()
+     * @see ResponseConverterFunction#fallthrough()
+     * @see ExceptionHandlerFunction#fallthrough()
      */
-    public static FallthroughException get() {
+    static FallthroughException get() {
         return INSTANCE;
     }
 
