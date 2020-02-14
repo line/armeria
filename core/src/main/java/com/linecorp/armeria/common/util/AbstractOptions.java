@@ -127,11 +127,45 @@ public abstract class AbstractOptions {
         valueMap.putAll(additionalOptions.valueMap);
     }
 
+    /**
+     * Merge two option values. You can specify how to merge conflict values.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * // keep old value
+     * protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
+     *     return oldValue;
+     * }
+     *
+     * // override old value
+     * protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
+     *     return newValue;
+     * }
+     * }</pre>
+     *
+     * @param <T> the type of the {@link AbstractOptionValue}
+     * @param oldValue an option value which was set before.
+     * @param newValue a new option value.
+     */
+    protected abstract <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue);
+
     @SuppressWarnings("unchecked")
     private <T extends AbstractOptionValue<?, ?>> void putAll(Function<T, T> valueFilter, Stream<T> values) {
         values.map(valueFilter)
-              .forEach(v -> valueMap.put((AbstractOption<Object>) v.option(),
-                                         (AbstractOptionValue<AbstractOption<Object>, Object>) v));
+              .forEach(newValue -> {
+                  final AbstractOption<Object> option = (AbstractOption<Object>) newValue.option();
+                  final AbstractOptionValue<AbstractOption<Object>, Object> oldValue = valueMap.get(option);
+                  if (oldValue == null) {
+                      final AbstractOptionValue<AbstractOption<Object>, Object> optionValue =
+                              (AbstractOptionValue<AbstractOption<Object>, Object>) newValue;
+                      valueMap.put(option, optionValue);
+                  } else {
+                      final AbstractOptionValue<AbstractOption<Object>, Object> merged =
+                              (AbstractOptionValue<AbstractOption<Object>, Object>)
+                                      mergeValue(oldValue, newValue);
+                      valueMap.put(option, merged);
+                  }
+              });
     }
 
     /**

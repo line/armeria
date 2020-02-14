@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.AbstractOptionValue;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
@@ -206,6 +207,30 @@ public final class ClientOptions extends AbstractOptions {
 
     private ClientOptions(ClientOptions baseOptions, ClientOptions additionalOptions) {
         super(baseOptions, additionalOptions);
+    }
+
+    @Override
+    protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
+        if (oldValue.option() == DECORATION) {
+            final ClientDecoration oldDecoration = (ClientDecoration) oldValue.value();
+            final ClientDecoration newDecoration = (ClientDecoration) newValue.value();
+            final ClientDecoration merged = ClientDecoration.builder()
+                                                            .add(oldDecoration)
+                                                            .add(newDecoration)
+                                                            .build();
+            @SuppressWarnings("unchecked")
+            final T cast = (T) DECORATION.newValue(merged);
+            return cast;
+        } else if (oldValue.option() == HTTP_HEADERS) {
+            final HttpHeaders oldHeaders = (HttpHeaders) oldValue.value();
+            final HttpHeaders newHeaders = (HttpHeaders) newValue.value();
+            final HttpHeaders merged = oldHeaders.toBuilder().setObject(newHeaders).build();
+            @SuppressWarnings("unchecked")
+            final T cast = (T) HTTP_HEADERS.newValue(merged);
+            return cast;
+        } else {
+            return newValue;
+        }
     }
 
     /**

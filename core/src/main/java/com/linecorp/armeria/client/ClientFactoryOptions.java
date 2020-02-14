@@ -35,6 +35,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.AbstractOptionValue;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -410,5 +411,27 @@ public final class ClientFactoryOptions extends AbstractOptions {
      */
     public MeterRegistry meterRegistry() {
         return get0(ClientFactoryOption.METER_REGISTRY);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
+        if (oldValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
+            final ClientFactoryOptionValue<Map<ChannelOption<?>, Object>> castOldValue =
+                    (ClientFactoryOptionValue<Map<ChannelOption<?>, Object>>) oldValue;
+            final ClientFactoryOptionValue<Map<ChannelOption<?>, Object>> castNewValue =
+                    (ClientFactoryOptionValue<Map<ChannelOption<?>, Object>>) newValue;
+            final ImmutableMap.Builder<ChannelOption<?>, Object> builder =
+                    ImmutableMap.builderWithExpectedSize(castNewValue.value().size());
+            castOldValue.value().forEach((channelOption, value) -> {
+                if (!castNewValue.value().containsKey(channelOption)) {
+                    builder.put(channelOption, value);
+                }
+            });
+            builder.putAll(castNewValue.value());
+            return (T) ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
+        }
+
+        return newValue;
     }
 }
