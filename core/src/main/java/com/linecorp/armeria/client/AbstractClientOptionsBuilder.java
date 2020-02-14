@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.client;
+package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
@@ -27,17 +27,6 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientDecorationBuilder;
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOption;
-import com.linecorp.armeria.client.ClientOptionValue;
-import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.client.DecoratingHttpClientFunction;
-import com.linecorp.armeria.client.DecoratingRpcClientFunction;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;

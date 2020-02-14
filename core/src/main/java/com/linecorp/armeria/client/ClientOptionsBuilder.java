@@ -22,7 +22,6 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.internal.client.AbstractClientOptionsBuilder;
 
 /**
  * Creates a new {@link ClientOptions} using the builder pattern.

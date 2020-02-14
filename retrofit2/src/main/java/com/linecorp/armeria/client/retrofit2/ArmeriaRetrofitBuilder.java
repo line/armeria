@@ -48,7 +48,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.client.AbstractClientOptionsBuilder;
+import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
 
 import okhttp3.HttpUrl;
 import retrofit2.Call;
