@@ -119,14 +119,14 @@ public final class ClientOptions extends AbstractOptions {
      *
      * @return the merged {@link ClientOptions}
      */
-    public static ClientOptions of(ClientOptions baseOptions, ClientOptionValue<?>... options) {
+    public static ClientOptions of(ClientOptions baseOptions, ClientOptionValue<?>... additionalValues) {
         // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        if (options.length == 0) {
+        requireNonNull(additionalValues, "additionalValues");
+        if (additionalValues.length == 0) {
             return baseOptions;
         }
-        return new ClientOptions(baseOptions, options);
+        return new ClientOptions(baseOptions, additionalValues);
     }
 
     /**
@@ -134,14 +134,15 @@ public final class ClientOptions extends AbstractOptions {
      *
      * @return the merged {@link ClientOptions}
      */
-    public static ClientOptions of(ClientOptions baseOptions, Iterable<ClientOptionValue<?>> options) {
+    public static ClientOptions of(ClientOptions baseOptions,
+                                   Iterable<ClientOptionValue<?>> additionalValues) {
         // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        if (Iterables.isEmpty(options)) {
+        requireNonNull(additionalValues, "additionalValues");
+        if (Iterables.isEmpty(additionalValues)) {
             return baseOptions;
         }
-        return new ClientOptions(baseOptions, options);
+        return new ClientOptions(baseOptions, additionalValues);
     }
 
     /**
@@ -149,11 +150,11 @@ public final class ClientOptions extends AbstractOptions {
      *
      * @return the merged {@link ClientOptions}
      */
-    public static ClientOptions of(ClientOptions baseOptions, ClientOptions options) {
+    public static ClientOptions of(ClientOptions baseOptions, ClientOptions additionalOptions) {
         // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        return new ClientOptions(baseOptions, options);
+        requireNonNull(additionalOptions, "additionalOptions");
+        return new ClientOptions(baseOptions, additionalOptions);
     }
 
     /**
@@ -195,16 +196,16 @@ public final class ClientOptions extends AbstractOptions {
         super(ClientOptions::filterValue, options);
     }
 
-    private ClientOptions(ClientOptions clientOptions, ClientOptionValue<?>... options) {
-        super(ClientOptions::filterValue, clientOptions, options);
+    private ClientOptions(ClientOptions baseOptions, ClientOptionValue<?>... additionalOptions) {
+        super(ClientOptions::filterValue, baseOptions, additionalOptions);
     }
 
-    private ClientOptions(ClientOptions clientOptions, Iterable<ClientOptionValue<?>> options) {
-        super(ClientOptions::filterValue, clientOptions, options);
+    private ClientOptions(ClientOptions baseOptions, Iterable<ClientOptionValue<?>> additionalOptions) {
+        super(ClientOptions::filterValue, baseOptions, additionalOptions);
     }
 
-    private ClientOptions(ClientOptions clientOptions, ClientOptions options) {
-        super(clientOptions, options);
+    private ClientOptions(ClientOptions baseOptions, ClientOptions additionalOptions) {
+        super(baseOptions, additionalOptions);
     }
 
     /**

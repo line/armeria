@@ -75,53 +75,56 @@ public abstract class AbstractOptions {
      * Creates a new instance.
      *
      * @param <T> the type of the {@link AbstractOptionValue}
-     * @param valueFilter the {@link Function} to apply to the elements of the specified {@code values}
+     * @param valueFilter the {@link Function} to apply to the elements of the specified
+     *                    {@code additionalValues}
      * @param baseOptions the base options to merge
-     * @param values the option values
+     * @param additionalValues the additional option values
      */
     @SafeVarargs
     protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
-                                                                    AbstractOptions baseOptions, T... values) {
+                                                                    AbstractOptions baseOptions,
+                                                                    T... additionalValues) {
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(valueFilter, "valueFilter");
-        requireNonNull(values, "values");
+        requireNonNull(additionalValues, "additionalValues");
 
         valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        putAll(valueFilter, Stream.of(values));
+        putAll(valueFilter, Stream.of(additionalValues));
     }
 
     /**
      * Creates a new instance.
      *
      * @param <T> the type of the {@link AbstractOptionValue}
-     * @param valueFilter the {@link Function} to apply to the elements of the specified {@code values}
+     * @param valueFilter the {@link Function} to apply to the elements of the specified
+     *                    {@code additionalValues}
      * @param baseOptions the base options to merge
-     * @param values the option values
+     * @param additionalValues the option values
      */
     protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
                                                                     AbstractOptions baseOptions,
-                                                                    Iterable<T> values) {
+                                                                    Iterable<T> additionalValues) {
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(valueFilter, "valueFilter");
-        requireNonNull(values, "values");
+        requireNonNull(additionalValues, "additionalValues");
 
         valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        putAll(valueFilter, Streams.stream(values));
+        putAll(valueFilter, Streams.stream(additionalValues));
     }
 
     /**
      * Creates a new instance by merging two options.
      *
      * @param baseOptions the base options to merge
-     * @param options the additional options to merge
+     * @param additionalOptions the additional options to merge
      */
-    protected AbstractOptions(AbstractOptions baseOptions, AbstractOptions options) {
+    protected AbstractOptions(AbstractOptions baseOptions, AbstractOptions additionalOptions) {
 
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
+        requireNonNull(additionalOptions, "additionalOptions");
 
         valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        valueMap.putAll(options.valueMap);
+        valueMap.putAll(additionalOptions.valueMap);
     }
 
     @SuppressWarnings("unchecked")

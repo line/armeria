@@ -127,14 +127,14 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * @return the merged {@link ClientFactoryOptions}
      */
     public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
-                                          ClientFactoryOptionValue<?>... options) {
+                                          ClientFactoryOptionValue<?>... additionalOptions) {
 
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        if (options.length == 0) {
+        requireNonNull(additionalOptions, "additionalOptions");
+        if (additionalOptions.length == 0) {
             return baseOptions;
         }
-        return new ClientFactoryOptions(baseOptions, options);
+        return new ClientFactoryOptions(baseOptions, additionalOptions);
     }
 
     /**
@@ -143,15 +143,15 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * @return the merged {@link ClientFactoryOptions}
      */
     public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
-                                          Iterable<ClientFactoryOptionValue<?>> options) {
+                                          Iterable<ClientFactoryOptionValue<?>> additionalOptions) {
 
         // TODO: Reduce the cost of creating a derived ClientFactoryOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        if (Iterables.isEmpty(options)) {
+        requireNonNull(additionalOptions, "additionalOptions");
+        if (Iterables.isEmpty(additionalOptions)) {
             return baseOptions;
         }
-        return new ClientFactoryOptions(baseOptions, options);
+        return new ClientFactoryOptions(baseOptions, additionalOptions);
     }
 
     /**
@@ -159,11 +159,12 @@ public final class ClientFactoryOptions extends AbstractOptions {
      *
      * @return the merged {@link ClientFactoryOptions}
      */
-    public static ClientFactoryOptions of(ClientFactoryOptions baseOptions, ClientFactoryOptions options) {
+    public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
+                                          ClientFactoryOptions additionalOptions) {
         // TODO: Reduce the cost of creating a derived ClientFactoryOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        return new ClientFactoryOptions(baseOptions, options);
+        requireNonNull(additionalOptions, "additionalOptions");
+        return new ClientFactoryOptions(baseOptions, additionalOptions);
     }
 
     private static <T> ClientFactoryOptionValue<T> filterValue(ClientFactoryOptionValue<T> optionValue) {
@@ -204,22 +205,22 @@ public final class ClientFactoryOptions extends AbstractOptions {
         super(ClientFactoryOptions::filterValue, options);
     }
 
-    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
-                                 ClientFactoryOptionValue<?>... options) {
+    private ClientFactoryOptions(ClientFactoryOptions baseOptions,
+                                 ClientFactoryOptionValue<?>... additionalOptions) {
 
-        super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
+        super(ClientFactoryOptions::filterValue, baseOptions, additionalOptions);
     }
 
-    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
-                                 Iterable<ClientFactoryOptionValue<?>> options) {
+    private ClientFactoryOptions(ClientFactoryOptions baseOptions,
+                                 Iterable<ClientFactoryOptionValue<?>> additionalOptions) {
 
-        super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
+        super(ClientFactoryOptions::filterValue, baseOptions, additionalOptions);
     }
 
-    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
-                                 ClientFactoryOptions options) {
+    private ClientFactoryOptions(ClientFactoryOptions baseOptions,
+                                 ClientFactoryOptions additionalOptions) {
 
-        super(clientFactoryOptions, options);
+        super(baseOptions, additionalOptions);
     }
 
     /**
