@@ -28,8 +28,6 @@ import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import com.linecorp.armeria.internal.client.Http1ClientCodec;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -47,6 +45,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -265,7 +264,7 @@ final class THttp2Client extends TTransport {
                 p.addLast(connHandler);
                 configureEndOfPipeline(p);
             } else {
-                final Http1ClientCodec sourceCodec = new Http1ClientCodec();
+                final HttpClientCodec sourceCodec = new HttpClientCodec();
                 final HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(
                         sourceCodec, new Http2ClientUpgradeCodec(connHandler), 65536);
 
