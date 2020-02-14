@@ -25,6 +25,8 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -368,25 +370,24 @@ public class AbstractClientOptionsBuilder {
      * {@linkplain ClientOptions#of() default options}.
      */
     protected final ClientOptions buildOptions() {
-        return buildOptions(true);
+        return buildOptions(null);
     }
 
     /**
-     * Builds {@link ClientOptions} with the given options and the
-     * {@linkplain ClientOptions#of() default options} if the specified {@code includeDefault} is {@code true}.
-     * Otherwise builds {@link ClientOptions} with the given options only.
+     * Builds {@link ClientOptions} with the specified {@code baseOptions} and
+     * the options which were set to this builder.
      */
-    protected final ClientOptions buildOptions(boolean includeDefault) {
+    protected final ClientOptions buildOptions(@Nullable ClientOptions baseOptions) {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
         final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);
         optValArray[numOpts] = ClientOption.DECORATION.newValue(decoration.build());
         optValArray[numOpts + 1] = ClientOption.HTTP_HEADERS.newValue(httpHeaders.build());
 
-        if (includeDefault) {
-            return ClientOptions.of(optValArray);
+        if (baseOptions != null) {
+            return ClientOptions.of(baseOptions, optValArray);
         } else {
-            return ClientOptions.of(ClientOptions.empty(), optValArray);
+            return ClientOptions.of(optValArray);
         }
     }
 }

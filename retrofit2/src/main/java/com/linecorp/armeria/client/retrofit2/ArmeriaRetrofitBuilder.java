@@ -210,16 +210,14 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     public Retrofit build() {
         final SessionProtocol protocol = webClient.scheme().sessionProtocol();
 
-        final ClientOptions retrofitOptions = buildOptions(false);
+        final ClientOptions retrofitOptions = buildOptions(webClient.options());
         // Re-create the base client without a path, because Retrofit will always provide a full path.
         final WebClient baseWebClient = WebClient.builder(protocol, webClient.endpointGroup())
-                                                 .options(webClient.options())
                                                  .options(retrofitOptions)
                                                  .build();
 
         if (nonBaseClientFactory == null) {
             nonBaseClientFactory = (p, url) -> WebClient.builder(p, Endpoint.of(url.host(), url.port()))
-                                                        .options(webClient.options())
                                                         .options(retrofitOptions)
                                                         .build();
         }
