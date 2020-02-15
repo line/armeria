@@ -428,7 +428,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
             });
             builder.putAll(castNewValue);
             @SuppressWarnings("unchecked")
-            T cast = (T) ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
+            final T cast = (T) ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
             return cast;
         }
 
