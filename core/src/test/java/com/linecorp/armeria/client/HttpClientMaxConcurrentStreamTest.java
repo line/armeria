@@ -37,6 +37,8 @@ import org.junit.Test;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -173,25 +175,44 @@ public class HttpClientMaxConcurrentStreamTest {
 
     @Test
     public void succeedWhenExceedMaxStreams() throws Exception {
+        final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
+                                          .decorator((delegate, ctx, req) -> {
+                                              ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
+                                                 .thenAccept(requestLog -> {
+                                                     connectionTimings.add(requestLog.connectionTimings());
+                                                 });
+                                              return delegate.execute(ctx, req);
+                                          })
                                           .build();
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
+        final int numRequests = MAX_CONCURRENT_STREAMS + 1;
 
-        // running inside event loop ensures requests are queued before initial connect completes.
-        for (int j = 0; j < MAX_CONCURRENT_STREAMS + 1; j++) {
-            receivedResponses.add(client.get(PATH).aggregate());
-        }
+        clientFactory.eventLoopGroup().execute(() -> {
+            for (int j = 0; j < numRequests; j++) {
+                receivedResponses.add(client.get(PATH).aggregate());
+            }
+        });
 
-        await().untilAsserted(() -> assertThat(responses).hasSize(MAX_CONCURRENT_STREAMS + 1));
-        responses.forEach(response -> response.complete(HttpResponse.of(200)));
-        await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
+        await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
+        assertThat(connectionTimings.stream().filter(
+                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                .hasSize(numRequests - 1);
     }
 
     @Test
     public void maxConcurrentStreamExceeded_openMinimalConnections() throws Exception {
+        final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
+                                          .decorator((delegate, ctx, req) -> {
+                                              ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
+                                                 .thenAccept(requestLog -> {
+                                                     connectionTimings.add(requestLog.connectionTimings());
+                                                 });
+                                              return delegate.execute(ctx, req);
+                                          })
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
         final AtomicInteger closes = new AtomicInteger();
@@ -213,20 +234,31 @@ public class HttpClientMaxConcurrentStreamTest {
         final int numExpectedConnections = 4;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
-        for (int j = 0; j < numRequests; j++) {
-            receivedResponses.add(client.get(PATH).aggregate());
-        }
+        clientFactory.eventLoopGroup().execute(() -> {
+            for (int j = 0; j < numRequests; j++) {
+                receivedResponses.add(client.get(PATH).aggregate());
+            }
+        });
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(opens).hasValue(numExpectedConnections);
-        responses.forEach(response -> response.complete(HttpResponse.of(200)));
-        await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
+        assertThat(connectionTimings.stream().filter(
+                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                .hasSize(numRequests - 1);
     }
 
     @Test
     public void maxConcurrentStream_handleConnectionFailure() throws Exception {
+        final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
+                                          .decorator((delegate, ctx, req) -> {
+                                              ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
+                                                 .thenAccept(requestLog -> {
+                                                     connectionTimings.add(requestLog.connectionTimings());
+                                                 });
+                                              return delegate.execute(ctx, req);
+                                          })
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
         final AtomicInteger closes = new AtomicInteger();
@@ -247,27 +279,30 @@ public class HttpClientMaxConcurrentStreamTest {
 
         final int numExpectedConnections = 6;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
+        final int numFailedRequests = MAX_CONCURRENT_STREAMS - 1;
 
-        for (int j = 0; j < numRequests; j++) {
-            receivedResponses.add(client.get(PATH).aggregate());
-        }
-        // two more requests which fails due to server maxNumConnections
-        for (int j = 0; j < 2; j++) {
-            receivedResponses.add(client.get(PATH).aggregate());
-        }
+        clientFactory.eventLoopGroup().execute(() -> {
+            for (int j = 0; j < numRequests; j++) {
+                receivedResponses.add(client.get(PATH).aggregate());
+            }
+            // two more requests which fails due to server maxNumConnections
+            for (int j = 0; j < numFailedRequests; j++) {
+                receivedResponses.add(client.get(PATH).aggregate());
+            }
+        });
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(opens).hasValue(numExpectedConnections);
-        await().untilAsserted(() -> assertThat(receivedResponses.stream().filter(
-                CompletableFuture::isCompletedExceptionally)).hasSize(2));
+        assertThat(connectionTimings.stream().filter(
+                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                .hasSize(numRequests + numFailedRequests - 1);
 
         // Check exception thrown by responses
+        await().untilAsserted(() -> assertThat(receivedResponses.stream().filter(
+                CompletableFuture::isCompletedExceptionally)).hasSize(2));
         receivedResponses.stream().filter(CompletableFuture::isCompletedExceptionally).forEach(
                 responseFuture -> assertThatThrownBy(responseFuture::get)
                         .hasCauseInstanceOf(UnprocessedRequestException.class));
-
-        // clean up
-        await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
     }
 
     @Test
@@ -300,13 +335,13 @@ public class HttpClientMaxConcurrentStreamTest {
         final int numExpectedConnections = 6;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
-        for (int j = 0; j < numRequests; j++) {
-            receivedResponses.add(client.get(PATH).aggregate());
-        }
+        clientFactory.eventLoopGroup().execute(() -> {
+            for (int j = 0; j < numRequests; j++) {
+                receivedResponses.add(client.get(PATH).aggregate());
+            }
+        });
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(opens).hasValue(numExpectedConnections);
-        responses.forEach(response -> response.complete(HttpResponse.of(200)));
-        await().untilAsserted(() -> assertThat(receivedResponses).allMatch(CompletableFuture::isDone));
     }
 }
