@@ -56,6 +56,7 @@ public class HttpClientMaxConcurrentStreamTest {
 
     private static final String PATH = "/test";
     private static final int MAX_CONCURRENT_STREAMS = 3;
+    private static final int MAX_NUM_CONNECTIONS = 6;
 
     static final Queue<CompletableFuture<HttpResponse>> responses = new ConcurrentLinkedQueue<>();
 
@@ -69,10 +70,58 @@ public class HttpClientMaxConcurrentStreamTest {
                 return HttpResponse.from(f);
             });
             sb.http2MaxStreamsPerConnection(MAX_CONCURRENT_STREAMS);
-            sb.maxNumConnections(6);
+            sb.maxNumConnections(MAX_NUM_CONNECTIONS);
             sb.idleTimeoutMillis(3000);
         }
     };
+
+    @RegisterExtension
+    static final ServerExtension serverWithMaxConcurrentStreams_1 = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service(PATH, (ctx, req) -> {
+                final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
+                responses.add(f);
+                return HttpResponse.from(f);
+            });
+            sb.http2MaxStreamsPerConnection(1);
+            sb.maxNumConnections(MAX_NUM_CONNECTIONS);
+            sb.idleTimeoutMillis(3000);
+        }
+    };
+
+    // running inside an event loop ensures requests are queued before an initial connect attempt completes.
+    private static void runInsideEventLoop(EventLoopGroup eventLoopGroup, Runnable runnable) {
+        eventLoopGroup.execute(runnable);
+    }
+
+    private static DecoratingHttpClientFunction connectionTimingsAccumulatingDecorator(
+            Queue<ClientConnectionTimings> connectionTimings) {
+        return (delegate, ctx, req) -> {
+            ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
+               .thenAccept(requestLog -> {
+                   connectionTimings.add(requestLog.connectionTimings());
+               });
+            return delegate.execute(ctx, req);
+        };
+    }
+
+    private static ConnectionPoolListener newConnectionPoolListener(
+            Runnable openRunnable, Runnable closeRunnable) {
+        return new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                openRunnable.run();
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                closeRunnable.run();
+            }
+        };
+    }
 
     private final ConnectionPoolListener connectionPoolListenerWrapper = new ConnectionPoolListener() {
         @Override
@@ -125,6 +174,7 @@ public class HttpClientMaxConcurrentStreamTest {
         }
 
         await().until(() -> server.server().numConnections() == 0);
+        await().until(() -> serverWithMaxConcurrentStreams_1.server().numConnections() == 0);
     }
 
     @Test
@@ -134,19 +184,7 @@ public class HttpClientMaxConcurrentStreamTest {
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
         final AtomicInteger closes = new AtomicInteger();
-        connectionPoolListener = new ConnectionPoolListener() {
-            @Override
-            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                opens.incrementAndGet();
-            }
-
-            @Override
-            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                closes.incrementAndGet();
-            }
-        };
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, closes::incrementAndGet);
 
         // Send (2 * MAX_CONCURRENT_STREAMS) requests to create 2 connections, never more and never less.
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
@@ -182,23 +220,16 @@ public class HttpClientMaxConcurrentStreamTest {
 
     @Test
     void handleExceedsMaxStreamsBasicCase() throws Exception {
-        final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+        final Queue<ClientConnectionTimings> connectionTimings = new ConcurrentLinkedQueue<>();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
                                           .factory(clientFactory)
-                                          .decorator((delegate, ctx, req) -> {
-                                              ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
-                                                 .thenAccept(requestLog -> {
-                                                     connectionTimings.add(requestLog.connectionTimings());
-                                                 });
-                                              return delegate.execute(ctx, req);
-                                          })
+                                          .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
-        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
         final int numRequests = MAX_CONCURRENT_STREAMS + 1;
 
         runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
             for (int i = 0; i < numRequests; i++) {
-                receivedResponses.add(client.get(PATH).aggregate());
+                client.get(PATH).aggregate();
             }
         });
 
@@ -210,40 +241,20 @@ public class HttpClientMaxConcurrentStreamTest {
 
     @Test
     void openMinimalConnectionsWhenExceededMaxStreams() throws Exception {
-        final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+        final Queue<ClientConnectionTimings> connectionTimings = new ConcurrentLinkedQueue<>();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
                                           .factory(clientFactory)
-                                          .decorator((delegate, ctx, req) -> {
-                                              ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
-                                                 .thenAccept(requestLog -> {
-                                                     connectionTimings.add(requestLog.connectionTimings());
-                                                 });
-                                              return delegate.execute(ctx, req);
-                                          })
+                                          .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
-        final AtomicInteger closes = new AtomicInteger();
-        connectionPoolListener = new ConnectionPoolListener() {
-            @Override
-            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                opens.incrementAndGet();
-            }
-
-            @Override
-            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                closes.incrementAndGet();
-            }
-        };
-        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
 
         final int numExpectedConnections = 4;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
         runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
             for (int i = 0; i < numRequests; i++) {
-                receivedResponses.add(client.get(PATH).aggregate());
+                client.get(PATH).aggregate();
             }
         });
 
@@ -256,32 +267,13 @@ public class HttpClientMaxConcurrentStreamTest {
 
     @Test
     void exceededMaxStreamsPropagatesFailureCorrectly() throws Exception {
-        final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+        final Queue<ClientConnectionTimings> connectionTimings = new ConcurrentLinkedQueue<>();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
                                           .factory(clientFactory)
-                                          .decorator((delegate, ctx, req) -> {
-                                              ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
-                                                 .thenAccept(requestLog -> {
-                                                     connectionTimings.add(requestLog.connectionTimings());
-                                                 });
-                                              return delegate.execute(ctx, req);
-                                          })
+                                          .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
-        final AtomicInteger closes = new AtomicInteger();
-        connectionPoolListener = new ConnectionPoolListener() {
-            @Override
-            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                opens.incrementAndGet();
-            }
-
-            @Override
-            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                closes.incrementAndGet();
-            }
-        };
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
 
         final int numExpectedConnections = 6;
@@ -320,32 +312,18 @@ public class HttpClientMaxConcurrentStreamTest {
                              .connectionPoolListener(connectionPoolListenerWrapper)
                              .maxNumEventLoopsPerEndpoint(2)
                              .build();
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
                                           .factory(clientFactory)
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
-        final AtomicInteger closes = new AtomicInteger();
-        connectionPoolListener = new ConnectionPoolListener() {
-            @Override
-            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                opens.incrementAndGet();
-            }
-
-            @Override
-            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                closes.incrementAndGet();
-            }
-        };
-        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
 
         final int numExpectedConnections = 6;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
         runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
             for (int i = 0; i < numRequests; i++) {
-                receivedResponses.add(client.get(PATH).aggregate());
+                client.get(PATH).aggregate();
             }
         });
 
@@ -355,37 +333,26 @@ public class HttpClientMaxConcurrentStreamTest {
 
     @Test
     void ensureCorrectPendingAcquisitionDurationBehavior() throws Exception {
-        final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
-        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+        final Queue<ClientConnectionTimings> connectionTimings = new ConcurrentLinkedQueue<>();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
                                           .factory(clientFactory)
-                                          .decorator((delegate, ctx, req) -> {
-                                              ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
-                                                 .thenAccept(requestLog -> {
-                                                     connectionTimings.add(requestLog.connectionTimings());
-                                                 });
-                                              return delegate.execute(ctx, req);
-                                          })
+                                          .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
         final int sleepMillis = 300;
-        connectionPoolListener = new ConnectionPoolListener() {
-            @Override
-            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+        connectionPoolListener = newConnectionPoolListener(() -> {
+            try {
                 Thread.sleep(sleepMillis);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
             }
+        }, () -> {});
 
-            @Override
-            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-            }
-        };
-        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
         final int numConnections = 6;
         final int numRequests = MAX_CONCURRENT_STREAMS * numConnections;
 
         runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
             for (int i = 0; i < numRequests; i++) {
-                receivedResponses.add(client.get(PATH).aggregate());
+                client.get(PATH).aggregate();
             }
         });
 
@@ -401,8 +368,30 @@ public class HttpClientMaxConcurrentStreamTest {
                 .isGreaterThan(TimeUnit.MILLISECONDS.toNanos(sleepMillis * numConnections));
     }
 
-    // running inside an event loop ensures requests are queued before initial connect completes.
-    private static void runInsideEventLoop(EventLoopGroup eventLoopGroup, Runnable runnable) {
-        eventLoopGroup.execute(runnable);
+    @Test
+    void maxConcurrentStreamsValue_1() throws Exception {
+        final Queue<ClientConnectionTimings> connectionTimings = new ConcurrentLinkedQueue<>();
+        final WebClient client = WebClient.builder(serverWithMaxConcurrentStreams_1.uri(SessionProtocol.H2C))
+                                          .factory(clientFactory)
+                                          .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
+                                          .build();
+        final AtomicInteger opens = new AtomicInteger();
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
+
+        final int numExpectedConnections = 6;
+        final int maxConcurrentStreams = 1;
+        final int numRequests = maxConcurrentStreams * numExpectedConnections;
+
+        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
+            for (int i = 0; i < numRequests; i++) {
+                client.get(PATH).aggregate();
+            }
+        });
+
+        await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
+        assertThat(opens).hasValue(numExpectedConnections);
+        assertThat(connectionTimings.stream().filter(
+                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                .hasSize(numRequests - 1);
     }
 }
