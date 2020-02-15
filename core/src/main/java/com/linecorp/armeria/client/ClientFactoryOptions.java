@@ -35,6 +35,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.AbstractOptionValue;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -127,14 +128,14 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * @return the merged {@link ClientFactoryOptions}
      */
     public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
-                                          ClientFactoryOptionValue<?>... options) {
+                                          ClientFactoryOptionValue<?>... additionalOptions) {
 
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        if (options.length == 0) {
+        requireNonNull(additionalOptions, "additionalOptions");
+        if (additionalOptions.length == 0) {
             return baseOptions;
         }
-        return new ClientFactoryOptions(baseOptions, options);
+        return new ClientFactoryOptions(baseOptions, additionalOptions);
     }
 
     /**
@@ -143,15 +144,15 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * @return the merged {@link ClientFactoryOptions}
      */
     public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
-                                          Iterable<ClientFactoryOptionValue<?>> options) {
+                                          Iterable<ClientFactoryOptionValue<?>> additionalOptions) {
 
         // TODO: Reduce the cost of creating a derived ClientFactoryOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        if (Iterables.isEmpty(options)) {
+        requireNonNull(additionalOptions, "additionalOptions");
+        if (Iterables.isEmpty(additionalOptions)) {
             return baseOptions;
         }
-        return new ClientFactoryOptions(baseOptions, options);
+        return new ClientFactoryOptions(baseOptions, additionalOptions);
     }
 
     /**
@@ -159,31 +160,12 @@ public final class ClientFactoryOptions extends AbstractOptions {
      *
      * @return the merged {@link ClientFactoryOptions}
      */
-    public static ClientFactoryOptions of(ClientFactoryOptions baseOptions, ClientFactoryOptions options) {
+    public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
+                                          ClientFactoryOptions additionalOptions) {
         // TODO: Reduce the cost of creating a derived ClientFactoryOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        return new ClientFactoryOptions(baseOptions, options);
-    }
-
-    private static <T> ClientFactoryOptionValue<T> filterValue(ClientFactoryOptionValue<T> optionValue) {
-        requireNonNull(optionValue, "optionValue");
-
-        final ClientFactoryOption<?> option = optionValue.option();
-        final T value = optionValue.value();
-
-        if (option == ClientFactoryOption.CHANNEL_OPTIONS) {
-            @SuppressWarnings("unchecked")
-            final ClientFactoryOption<Map<ChannelOption<?>, Object>> castOption =
-                    (ClientFactoryOption<Map<ChannelOption<?>, Object>>) option;
-            @SuppressWarnings("unchecked")
-            final ClientFactoryOptionValue<T> castOptionValue =
-                    (ClientFactoryOptionValue<T>) castOption.newValue(
-                            filterChannelOptions((Map<ChannelOption<?>, Object>) value));
-            optionValue = castOptionValue;
-        }
-
-        return optionValue;
+        requireNonNull(additionalOptions, "additionalOptions");
+        return new ClientFactoryOptions(baseOptions, additionalOptions);
     }
 
     private static Map<ChannelOption<?>, Object> filterChannelOptions(
@@ -201,25 +183,25 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     private ClientFactoryOptions(ClientFactoryOptionValue<?>... options) {
-        super(ClientFactoryOptions::filterValue, options);
+        super(options);
     }
 
-    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
-                                 ClientFactoryOptionValue<?>... options) {
+    private ClientFactoryOptions(ClientFactoryOptions baseOptions,
+                                 ClientFactoryOptionValue<?>... additionalOptions) {
 
-        super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
+        super(baseOptions, additionalOptions);
     }
 
-    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
-                                 Iterable<ClientFactoryOptionValue<?>> options) {
+    private ClientFactoryOptions(ClientFactoryOptions baseOptions,
+                                 Iterable<ClientFactoryOptionValue<?>> additionalOptions) {
 
-        super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
+        super(baseOptions, additionalOptions);
     }
 
-    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
-                                 ClientFactoryOptions options) {
+    private ClientFactoryOptions(ClientFactoryOptions baseOptions,
+                                 ClientFactoryOptions additionalOptions) {
 
-        super(clientFactoryOptions, options);
+        super(baseOptions, additionalOptions);
     }
 
     /**
@@ -409,5 +391,47 @@ public final class ClientFactoryOptions extends AbstractOptions {
      */
     public MeterRegistry meterRegistry() {
         return get0(ClientFactoryOption.METER_REGISTRY);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected <T extends AbstractOptionValue<?, ?>> T filterValue(T optionValue) {
+        if (optionValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
+            final ClientFactoryOption<Map<ChannelOption<?>, Object>> castOption =
+                    (ClientFactoryOption<Map<ChannelOption<?>, Object>>) optionValue.option();
+            final Map<ChannelOption<?>, Object> value = (Map<ChannelOption<?>, Object>) optionValue.value();
+            return (T) castOption.newValue(filterChannelOptions(value));
+        }
+        return optionValue;
+    }
+
+    @Override
+    protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
+        if (oldValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
+            @SuppressWarnings("unchecked")
+            final Map<ChannelOption<?>, Object> castOldValue = (Map<ChannelOption<?>, Object>) oldValue.value();
+            @SuppressWarnings("unchecked")
+            final Map<ChannelOption<?>, Object> castNewValue = (Map<ChannelOption<?>, Object>) newValue.value();
+            if (castOldValue.isEmpty()) {
+                return newValue;
+            }
+            if (castNewValue.isEmpty()) {
+                return oldValue;
+            }
+
+            final ImmutableMap.Builder<ChannelOption<?>, Object> builder =
+                    ImmutableMap.builderWithExpectedSize(castOldValue.size() + castNewValue.size());
+            castOldValue.forEach((channelOption, value) -> {
+                if (!castNewValue.containsKey(channelOption)) {
+                    builder.put(channelOption, value);
+                }
+            });
+            builder.putAll(castNewValue);
+            @SuppressWarnings("unchecked")
+            final T cast = (T) ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
+            return cast;
+        }
+
+        return newValue;
     }
 }

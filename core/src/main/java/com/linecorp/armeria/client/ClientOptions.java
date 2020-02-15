@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.AbstractOptionValue;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
@@ -119,14 +120,14 @@ public final class ClientOptions extends AbstractOptions {
      *
      * @return the merged {@link ClientOptions}
      */
-    public static ClientOptions of(ClientOptions baseOptions, ClientOptionValue<?>... options) {
+    public static ClientOptions of(ClientOptions baseOptions, ClientOptionValue<?>... additionalValues) {
         // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        if (options.length == 0) {
+        requireNonNull(additionalValues, "additionalValues");
+        if (additionalValues.length == 0) {
             return baseOptions;
         }
-        return new ClientOptions(baseOptions, options);
+        return new ClientOptions(baseOptions, additionalValues);
     }
 
     /**
@@ -134,14 +135,15 @@ public final class ClientOptions extends AbstractOptions {
      *
      * @return the merged {@link ClientOptions}
      */
-    public static ClientOptions of(ClientOptions baseOptions, Iterable<ClientOptionValue<?>> options) {
+    public static ClientOptions of(ClientOptions baseOptions,
+                                   Iterable<ClientOptionValue<?>> additionalValues) {
         // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        if (Iterables.isEmpty(options)) {
+        requireNonNull(additionalValues, "additionalValues");
+        if (Iterables.isEmpty(additionalValues)) {
             return baseOptions;
         }
-        return new ClientOptions(baseOptions, options);
+        return new ClientOptions(baseOptions, additionalValues);
     }
 
     /**
@@ -149,11 +151,11 @@ public final class ClientOptions extends AbstractOptions {
      *
      * @return the merged {@link ClientOptions}
      */
-    public static ClientOptions of(ClientOptions baseOptions, ClientOptions options) {
+    public static ClientOptions of(ClientOptions baseOptions, ClientOptions additionalOptions) {
         // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(options, "options");
-        return new ClientOptions(baseOptions, options);
+        requireNonNull(additionalOptions, "additionalOptions");
+        return new ClientOptions(baseOptions, additionalOptions);
     }
 
     /**
@@ -161,23 +163,6 @@ public final class ClientOptions extends AbstractOptions {
      */
     public static ClientOptionsBuilder builder() {
         return new ClientOptionsBuilder();
-    }
-
-    private static <T> ClientOptionValue<T> filterValue(ClientOptionValue<T> optionValue) {
-        requireNonNull(optionValue, "optionValue");
-
-        final ClientOption<?> option = optionValue.option();
-        final T value = optionValue.value();
-
-        if (option == HTTP_HEADERS) {
-            @SuppressWarnings("unchecked")
-            final ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) option;
-            @SuppressWarnings("unchecked")
-            final ClientOptionValue<T> castOptionValue =
-                    (ClientOptionValue<T>) castOption.newValue(filterHttpHeaders((HttpHeaders) value));
-            optionValue = castOptionValue;
-        }
-        return optionValue;
     }
 
     private static HttpHeaders filterHttpHeaders(HttpHeaders headers) {
@@ -192,19 +177,70 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     private ClientOptions(ClientOptionValue<?>... options) {
-        super(ClientOptions::filterValue, options);
+        super(options);
     }
 
-    private ClientOptions(ClientOptions clientOptions, ClientOptionValue<?>... options) {
-        super(ClientOptions::filterValue, clientOptions, options);
+    private ClientOptions(ClientOptions baseOptions, ClientOptionValue<?>... additionalOptions) {
+        super(baseOptions, additionalOptions);
     }
 
-    private ClientOptions(ClientOptions clientOptions, Iterable<ClientOptionValue<?>> options) {
-        super(ClientOptions::filterValue, clientOptions, options);
+    private ClientOptions(ClientOptions baseOptions, Iterable<ClientOptionValue<?>> additionalOptions) {
+        super(baseOptions, additionalOptions);
     }
 
-    private ClientOptions(ClientOptions clientOptions, ClientOptions options) {
-        super(clientOptions, options);
+    private ClientOptions(ClientOptions baseOptions, ClientOptions additionalOptions) {
+        super(baseOptions, additionalOptions);
+    }
+
+    @Override
+    protected <T extends AbstractOptionValue<?, ?>> T filterValue(T optionValue) {
+        if (optionValue.option() == HTTP_HEADERS) {
+            @SuppressWarnings("unchecked")
+            final ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) optionValue.option();
+            @SuppressWarnings("unchecked")
+            final T castOptionValue = (T) castOption.newValue(
+                    filterHttpHeaders((HttpHeaders) optionValue.value()));
+            return castOptionValue;
+        }
+        return optionValue;
+    }
+
+    @Override
+    protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
+        if (oldValue.option() == DECORATION) {
+            final ClientDecoration oldDecoration = (ClientDecoration) oldValue.value();
+            final ClientDecoration newDecoration = (ClientDecoration) newValue.value();
+            if (oldDecoration.isEmpty()) {
+                return newValue;
+            }
+            if (newDecoration.isEmpty()) {
+                return oldValue;
+            }
+
+            final ClientDecoration merged = ClientDecoration.builder()
+                                                            .add(oldDecoration)
+                                                            .add(newDecoration)
+                                                            .build();
+            @SuppressWarnings("unchecked")
+            final T cast = (T) DECORATION.newValue(merged);
+            return cast;
+        } else if (oldValue.option() == HTTP_HEADERS) {
+            final HttpHeaders oldHeaders = (HttpHeaders) oldValue.value();
+            final HttpHeaders newHeaders = (HttpHeaders) newValue.value();
+            if (oldHeaders.isEmpty()) {
+                return newValue;
+            }
+            if (newHeaders.isEmpty()) {
+                return oldValue;
+            }
+
+            final HttpHeaders merged = oldHeaders.toBuilder().setObject(newHeaders).build();
+            @SuppressWarnings("unchecked")
+            final T cast = (T) HTTP_HEADERS.newValue(merged);
+            return cast;
+        } else {
+            return newValue;
+        }
     }
 
     /**
