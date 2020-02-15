@@ -49,7 +49,6 @@ final class HttpClientDelegate implements HttpClient {
             ClientRequestContext.class.getSimpleName() + " initialization failed", null, false, false) {
         private static final long serialVersionUID = 837901495421033459L;
     };
-    static final int MAX_RETRY_COUNT = 100;
 
     private final HttpClientFactory factory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
@@ -121,43 +120,6 @@ final class HttpClientDelegate implements HttpClient {
         }
     }
 
-    public static final class ConnectionAcquisitionContext {
-        private SessionProtocol sessionProtocol;
-        private final PoolKey poolKey;
-        int retryCount;
-        private final int maxRetryCount;
-
-        private ConnectionAcquisitionContext(SessionProtocol sessionProtocol, PoolKey poolKey, int maxRetryCount) {
-            this.sessionProtocol = sessionProtocol;
-            this.poolKey = poolKey;
-            this.maxRetryCount = maxRetryCount;
-        }
-
-        public SessionProtocol getSessionProtocol() {
-            return sessionProtocol;
-        }
-
-        public int getRetryCount() {
-            return retryCount;
-        }
-
-        public PoolKey getPoolKey() {
-            return poolKey;
-        }
-
-        public void setSessionProtocol(SessionProtocol sessionProtocol) {
-            this.sessionProtocol = sessionProtocol;
-        }
-
-        public void incrementRetryCount() {
-            retryCount++;
-        }
-
-        public boolean canRetry() {
-            return retryCount < maxRetryCount;
-        }
-    }
-
     private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpointWithPort,
                                              String ipAddr, HttpRequest req, DecodedHttpResponse res,
                                              ClientConnectionTimingsBuilder timingsBuilder) {
@@ -179,9 +141,7 @@ final class HttpClientDelegate implements HttpClient {
             logSession(ctx, pooledChannel, null);
             doExecute(pooledChannel, ctx, req, res);
         } else {
-            final ConnectionAcquisitionContext acqCtx = new ConnectionAcquisitionContext(
-                    protocol, key, MAX_RETRY_COUNT);
-            pool.acquireLater(acqCtx, timingsBuilder).handle((newPooledChannel, cause) -> {
+            pool.acquireLater(protocol, key, timingsBuilder).handle((newPooledChannel, cause) -> {
                 logSession(ctx, newPooledChannel, timingsBuilder.build());
                 if (cause == null) {
                     doExecute(newPooledChannel, ctx, req, res);
