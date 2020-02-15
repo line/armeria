@@ -406,10 +406,11 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
         if (oldValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
+            @SuppressWarnings("unchecked")
             final Map<ChannelOption<?>, Object> castOldValue = (Map<ChannelOption<?>, Object>) oldValue.value();
+            @SuppressWarnings("unchecked")
             final Map<ChannelOption<?>, Object> castNewValue = (Map<ChannelOption<?>, Object>) newValue.value();
             if (castOldValue.isEmpty()) {
                 return newValue;
@@ -426,7 +427,9 @@ public final class ClientFactoryOptions extends AbstractOptions {
                 }
             });
             builder.putAll(castNewValue);
-            return (T) ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
+            @SuppressWarnings("unchecked")
+            T cast = (T) ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
+            return cast;
         }
 
         return newValue;
