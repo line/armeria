@@ -83,6 +83,10 @@ public final class ClientDecoration {
         return rpcDecorators;
     }
 
+    boolean isEmpty() {
+        return decorators.isEmpty() && rpcDecorators.isEmpty();
+    }
+
     /**
      * Decorates the specified {@link HttpClient} using the decorator.
      *

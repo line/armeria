@@ -210,10 +210,10 @@ public final class ClientOptions extends AbstractOptions {
         if (oldValue.option() == DECORATION) {
             final ClientDecoration oldDecoration = (ClientDecoration) oldValue.value();
             final ClientDecoration newDecoration = (ClientDecoration) newValue.value();
-            if (oldDecoration.decorators().isEmpty() && oldDecoration.rpcDecorators().isEmpty()) {
+            if (oldDecoration.isEmpty()) {
                 return newValue;
             }
-            if (newDecoration.decorators().isEmpty() && newDecoration.rpcDecorators().isEmpty()) {
+            if (newDecoration.isEmpty()) {
                 return oldValue;
             }
 
