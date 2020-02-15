@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.HttpClientDelegate.ConnectionAcquisitionContext;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
@@ -160,7 +162,7 @@ final class HttpChannelPool implements AsyncCloseable {
      * Attempts to acquire a {@link Channel} which is matched by the specified condition immediately.
      *
      * @return {@code null} is there's no match left in the pool and thus a new connection has to be
-     *         requested via {@link #acquireLater(SessionProtocol, PoolKey, ClientConnectionTimingsBuilder)}.
+     *         requested via {@link #acquireLater(ConnectionAcquisitionContext, ClientConnectionTimingsBuilder)}.
      */
     @Nullable
     PooledChannel acquireNow(SessionProtocol desiredProtocol, PoolKey key) {
@@ -238,20 +240,20 @@ final class HttpChannelPool implements AsyncCloseable {
      * Acquires a new {@link Channel} which is matched by the specified condition by making a connection
      * attempt or waiting for the current connection attempt in progress.
      */
-    CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key,
+    CompletableFuture<PooledChannel> acquireLater(ConnectionAcquisitionContext acqCtx,
                                                   ClientConnectionTimingsBuilder timingsBuilder) {
         final CompletableFuture<PooledChannel> promise = new CompletableFuture<>();
-        if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
-            connect(desiredProtocol, key, promise, timingsBuilder);
+        if (!usePendingAcquisition(acqCtx, promise, timingsBuilder)) {
+            connect(acqCtx.getSessionProtocol(), acqCtx.getPoolKey(), promise, timingsBuilder);
         }
         return promise;
     }
 
-    private CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key,
+    private CompletableFuture<PooledChannel> acquireLater(ConnectionAcquisitionContext acqCtx,
                                                           ClientConnectionTimingsBuilder timingsBuilder,
                                                           CompletableFuture<PooledChannel> promise) {
-        if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
-            connect(desiredProtocol, key, promise, timingsBuilder);
+        if (!usePendingAcquisition(acqCtx, promise, timingsBuilder)) {
+            connect(acqCtx.getSessionProtocol(), acqCtx.getPoolKey(), promise, timingsBuilder);
         }
         return promise;
     }
@@ -261,9 +263,11 @@ final class HttpChannelPool implements AsyncCloseable {
      *
      * @return {@code true} if succeeded to reuse the pending connection.
      */
-    private boolean usePendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
+    private boolean usePendingAcquisition(ConnectionAcquisitionContext acqCtx,
                                           CompletableFuture<PooledChannel> promise,
                                           ClientConnectionTimingsBuilder timingsBuilder) {
+
+        final SessionProtocol desiredProtocol = acqCtx.getSessionProtocol();
 
         if (desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C) {
             // Can't use HTTP/1 connections because they will not be available in the pool until
@@ -271,6 +275,7 @@ final class HttpChannelPool implements AsyncCloseable {
             return false;
         }
 
+        final PoolKey key = acqCtx.getPoolKey();
         final CompletableFuture<PooledChannel> pendingAcquisition =
                 getPendingAcquisition(desiredProtocol, key);
 
@@ -290,7 +295,13 @@ final class HttpChannelPool implements AsyncCloseable {
                                 session.unfinishedResponses(), session.maxUnfinishedResponses());
                     // unfinishedResponses >= maxUnfinishedResponses - current connecting request
                     if (session.unfinishedResponses() >= session.maxUnfinishedResponses() - 1) {
-                        acquireLater(actualProtocol, key, timingsBuilder, promise);
+                        acqCtx.incrementRetryCount();
+                        if (acqCtx.canRetry()) {
+                            acqCtx.setSessionProtocol(actualProtocol);
+                            acquireLater(acqCtx, timingsBuilder, promise);
+                        } else {
+                            promise.completeExceptionally(new IllegalStateException("some exception"));
+                        }
                     } else {
                         promise.complete(pch);
                     }
