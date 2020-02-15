@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -302,10 +303,14 @@ public class HttpClientMaxConcurrentStreamTest {
         // Check exception thrown by responses
         await().untilAsserted(() -> assertThat(receivedResponses.stream().filter(
                 CompletableFuture::isCompletedExceptionally)).hasSize(2));
-        receivedResponses.stream().filter(CompletableFuture::isCompletedExceptionally).forEach(
-                responseFuture -> assertThatThrownBy(responseFuture::get)
-                        .hasCauseInstanceOf(UnprocessedRequestException.class).hasRootCauseInstanceOf(
-                                ClosedSessionException.class));
+
+        receivedResponses.stream().filter(CompletableFuture::isCompletedExceptionally)
+                         .forEach(responseFuture -> {
+                             final Throwable throwable = catchThrowable(responseFuture::join);
+                             assertThat(throwable).isInstanceOf(CompletionException.class)
+                                                  .hasCauseInstanceOf(UnprocessedRequestException.class);
+                             assertThat(throwable.getCause()).hasCauseInstanceOf(ClosedSessionException.class);
+                         });
     }
 
     @Test
