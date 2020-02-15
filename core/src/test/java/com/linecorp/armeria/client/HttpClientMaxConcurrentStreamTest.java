@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
@@ -287,11 +288,7 @@ public class HttpClientMaxConcurrentStreamTest {
         final int numFailedRequests = MAX_CONCURRENT_STREAMS - 1;
 
         runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
-            for (int i = 0; i < numRequests; i++) {
-                receivedResponses.add(client.get(PATH).aggregate());
-            }
-            // two more requests which fails due to server maxNumConnections
-            for (int i = 0; i < numFailedRequests; i++) {
+            for (int i = 0; i < numRequests + numFailedRequests; i++) {
                 receivedResponses.add(client.get(PATH).aggregate());
             }
         });
@@ -307,7 +304,8 @@ public class HttpClientMaxConcurrentStreamTest {
                 CompletableFuture::isCompletedExceptionally)).hasSize(2));
         receivedResponses.stream().filter(CompletableFuture::isCompletedExceptionally).forEach(
                 responseFuture -> assertThatThrownBy(responseFuture::get)
-                        .hasCauseInstanceOf(UnprocessedRequestException.class));
+                        .hasCauseInstanceOf(UnprocessedRequestException.class).hasRootCauseInstanceOf(
+                                ClosedSessionException.class));
     }
 
     @Test
