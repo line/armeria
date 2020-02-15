@@ -21,7 +21,6 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
