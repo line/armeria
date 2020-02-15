@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
+import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeMap;
 
 /**
@@ -194,8 +195,8 @@ public class HttpClientMaxConcurrentStreamTest {
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
         final int numRequests = MAX_CONCURRENT_STREAMS + 1;
 
-        clientFactory.eventLoopGroup().execute(() -> {
-            for (int j = 0; j < numRequests; j++) {
+        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
+            for (int i = 0; i < numRequests; i++) {
                 receivedResponses.add(client.get(PATH).aggregate());
             }
         });
@@ -239,8 +240,8 @@ public class HttpClientMaxConcurrentStreamTest {
         final int numExpectedConnections = 4;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
-        clientFactory.eventLoopGroup().execute(() -> {
-            for (int j = 0; j < numRequests; j++) {
+        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
+            for (int i = 0; i < numRequests; i++) {
                 receivedResponses.add(client.get(PATH).aggregate());
             }
         });
@@ -286,12 +287,12 @@ public class HttpClientMaxConcurrentStreamTest {
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
         final int numFailedRequests = MAX_CONCURRENT_STREAMS - 1;
 
-        clientFactory.eventLoopGroup().execute(() -> {
-            for (int j = 0; j < numRequests; j++) {
+        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
+            for (int i = 0; i < numRequests; i++) {
                 receivedResponses.add(client.get(PATH).aggregate());
             }
             // two more requests which fails due to server maxNumConnections
-            for (int j = 0; j < numFailedRequests; j++) {
+            for (int i = 0; i < numFailedRequests; i++) {
                 receivedResponses.add(client.get(PATH).aggregate());
             }
         });
@@ -340,8 +341,8 @@ public class HttpClientMaxConcurrentStreamTest {
         final int numExpectedConnections = 6;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
-        clientFactory.eventLoopGroup().execute(() -> {
-            for (int j = 0; j < numRequests; j++) {
+        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
+            for (int i = 0; i < numRequests; i++) {
                 receivedResponses.add(client.get(PATH).aggregate());
             }
         });
@@ -380,8 +381,8 @@ public class HttpClientMaxConcurrentStreamTest {
         final int numConnections = 6;
         final int numRequests = MAX_CONCURRENT_STREAMS * numConnections;
 
-        clientFactory.eventLoopGroup().execute(() -> {
-            for (int j = 0; j < numRequests; j++) {
+        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
+            for (int i = 0; i < numRequests; i++) {
                 receivedResponses.add(client.get(PATH).aggregate());
             }
         });
@@ -392,10 +393,14 @@ public class HttpClientMaxConcurrentStreamTest {
                 .hasSize(numRequests - 1);
 
         // There should be at least one request with at least numConnections * pendingAcquisitionsDuration
-        final Long maxPendingAcquisitionDurationNanos = connectionTimings.stream().map(
-                ClientConnectionTimings::pendingAcquisitionDurationNanos).max(
-                Comparator.naturalOrder()).orElse(0L);
+        final Long maxPendingAcquisitionDurationNanos = connectionTimings.stream().mapToLong(
+                ClientConnectionTimings::pendingAcquisitionDurationNanos).max().orElse(0L);
         assertThat(maxPendingAcquisitionDurationNanos)
                 .isGreaterThan(TimeUnit.MILLISECONDS.toNanos(sleepMillis * numConnections));
+    }
+
+    // running inside an event loop ensures requests are queued before initial connect completes.
+    private static void runInsideEventLoop(EventLoopGroup eventLoopGroup, Runnable runnable) {
+        eventLoopGroup.execute(runnable);
     }
 }

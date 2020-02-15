@@ -286,10 +286,11 @@ final class HttpChannelPool implements AsyncCloseable {
                 final SessionProtocol actualProtocol = pch.protocol();
                 if (actualProtocol.isMultiplex()) {
                     final HttpSession session = HttpSession.get(pch.get());
+                    // TODO: remove this log before merging
                     logger.info("session.unfinishedResponses(): {}, session.maxUnfinishedResponses(): {}",
                                 session.unfinishedResponses(), session.maxUnfinishedResponses());
-                    // unfinishedResponses >= maxUnfinishedResponses - current connecting request
-                    if (session.unfinishedResponses() >= session.maxUnfinishedResponses() - 1) {
+                    final int activeRequests = session.unfinishedResponses() + 1;
+                    if (activeRequests >= session.maxUnfinishedResponses()) {
                         acquireLater(actualProtocol, key, timingsBuilder, promise);
                     } else {
                         promise.complete(pch);

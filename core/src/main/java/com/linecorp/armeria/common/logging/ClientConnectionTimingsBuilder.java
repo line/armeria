@@ -95,7 +95,7 @@ public final class ClientConnectionTimingsBuilder {
      * in order to use one connection for HTTP/2.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionStart() {
-        if (pendingAcquisitionStartTimeMicros == 0 && pendingAcquisitionEndNanos == 0) {
+        if (pendingAcquisitionStartTimeMicros == 0 && !pendingAcquisitionEndSet) {
             pendingAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
             pendingAcquisitionStartNanos = System.nanoTime();
         }
