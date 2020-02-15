@@ -21,6 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -343,5 +344,54 @@ public class HttpClientMaxConcurrentStreamTest {
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(opens).hasValue(numExpectedConnections);
+    }
+
+    @Test
+    public void maxConcurrentStreams_pendingAcquisition() throws Exception {
+        final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
+                                          .factory(clientFactory)
+                                          .decorator((delegate, ctx, req) -> {
+                                              ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
+                                                 .thenAccept(requestLog -> {
+                                                     connectionTimings.add(requestLog.connectionTimings());
+                                                 });
+                                              return delegate.execute(ctx, req);
+                                          })
+                                          .build();
+        final int sleepMillis = 300;
+        connectionPoolListener = new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                Thread.sleep(sleepMillis);
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+            }
+        };
+        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
+        final int numConnections = 6;
+        final int numRequests = MAX_CONCURRENT_STREAMS * numConnections;
+
+        clientFactory.eventLoopGroup().execute(() -> {
+            for (int j = 0; j < numRequests; j++) {
+                receivedResponses.add(client.get(PATH).aggregate());
+            }
+        });
+
+        await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
+        assertThat(connectionTimings.stream().filter(
+                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                .hasSize(numRequests - 1);
+
+        // There should be at least one request with 6 pendingAcquisitions
+        final Long maxPendingAcquisitionDurationNanos = connectionTimings.stream().map(
+                ClientConnectionTimings::pendingAcquisitionDurationNanos).max(
+                Comparator.naturalOrder()).orElse(0L);
+        assertThat(maxPendingAcquisitionDurationNanos)
+                .isGreaterThan(sleepMillis * numConnections * 1000000);
     }
 }
