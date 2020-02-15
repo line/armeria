@@ -26,14 +26,15 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
@@ -42,7 +43,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.util.AttributeMap;
 
@@ -54,10 +55,10 @@ public class HttpClientMaxConcurrentStreamTest {
     private static final String PATH = "/test";
     private static final int MAX_CONCURRENT_STREAMS = 3;
 
-    private final Queue<CompletableFuture<HttpResponse>> responses = new ConcurrentLinkedQueue<>();
+    static final Queue<CompletableFuture<HttpResponse>> responses = new ConcurrentLinkedQueue<>();
 
-    @Rule
-    public final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(PATH, (ctx, req) -> {
@@ -67,6 +68,7 @@ public class HttpClientMaxConcurrentStreamTest {
             });
             sb.http2MaxStreamsPerConnection(MAX_CONCURRENT_STREAMS);
             sb.maxNumConnections(6);
+            sb.idleTimeoutMillis(3000);
         }
     };
 
@@ -97,7 +99,7 @@ public class HttpClientMaxConcurrentStreamTest {
     @Nullable
     private volatile ConnectionPoolListener connectionPoolListener;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         clientFactory = ClientFactory.builder()
                                      .workerGroup(EventLoopGroups.newEventLoopGroup(1), true)
@@ -105,8 +107,8 @@ public class HttpClientMaxConcurrentStreamTest {
                                      .build();
     }
 
-    @After
-    public void tearDown() {
+    @AfterEach
+    public void tearDown() throws Exception {
         // Complete all uncompleted requests.
         for (;;) {
             final CompletableFuture<HttpResponse> f = responses.poll();
@@ -119,10 +121,12 @@ public class HttpClientMaxConcurrentStreamTest {
         if (clientFactory != null) {
             clientFactory.close();
         }
+
+        await().until(() -> server.server().numConnections() == 0);
     }
 
     @Test
-    public void shouldCreateConnectionWhenExceedsMaxConcurrentStreams() throws Exception {
+    void shouldCreateConnectionWhenExceedsMaxConcurrentStreams() throws Exception {
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
                                           .factory(clientFactory)
                                           .build();
@@ -175,7 +179,7 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @Test
-    public void succeedWhenExceedMaxStreams() throws Exception {
+    void handleExceedsMaxStreamsBasicCase() throws Exception {
         final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
@@ -203,7 +207,7 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @Test
-    public void maxConcurrentStreamExceeded_openMinimalConnections() throws Exception {
+    void openMinimalConnectionsWhenExceededMaxStreams() throws Exception {
         final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
@@ -249,7 +253,7 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @Test
-    public void maxConcurrentStream_handleConnectionFailure() throws Exception {
+    void exceededMaxStreamsPropagatesFailureCorrectly() throws Exception {
         final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
@@ -307,7 +311,7 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @Test
-    public void maxConcurrentStream_multipleEventLoops() {
+    void exceededMaxStreamsForMultipleEventLoops() {
         final ClientFactory clientFactory =
                 ClientFactory.builder()
                              .connectionPoolListener(connectionPoolListenerWrapper)
@@ -347,7 +351,7 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @Test
-    public void maxConcurrentStreams_pendingAcquisition() throws Exception {
+    void ensureCorrectPendingAcquisitionDurationBehavior() throws Exception {
         final List<ClientConnectionTimings> connectionTimings = new ArrayList<>();
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C, "/"))
                                           .factory(clientFactory)
@@ -387,11 +391,11 @@ public class HttpClientMaxConcurrentStreamTest {
                 timings -> timings.pendingAcquisitionDurationNanos() > 0))
                 .hasSize(numRequests - 1);
 
-        // There should be at least one request with 6 pendingAcquisitions
+        // There should be at least one request with at least numConnections * pendingAcquisitionsDuration
         final Long maxPendingAcquisitionDurationNanos = connectionTimings.stream().map(
                 ClientConnectionTimings::pendingAcquisitionDurationNanos).max(
                 Comparator.naturalOrder()).orElse(0L);
         assertThat(maxPendingAcquisitionDurationNanos)
-                .isGreaterThan(sleepMillis * numConnections * 1000000);
+                .isGreaterThan(TimeUnit.MILLISECONDS.toNanos(sleepMillis * numConnections));
     }
 }
