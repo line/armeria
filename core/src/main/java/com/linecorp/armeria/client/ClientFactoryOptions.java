@@ -168,26 +168,6 @@ public final class ClientFactoryOptions extends AbstractOptions {
         return new ClientFactoryOptions(baseOptions, additionalOptions);
     }
 
-    private static <T> ClientFactoryOptionValue<T> filterValue(ClientFactoryOptionValue<T> optionValue) {
-        requireNonNull(optionValue, "optionValue");
-
-        final ClientFactoryOption<?> option = optionValue.option();
-        final T value = optionValue.value();
-
-        if (option == ClientFactoryOption.CHANNEL_OPTIONS) {
-            @SuppressWarnings("unchecked")
-            final ClientFactoryOption<Map<ChannelOption<?>, Object>> castOption =
-                    (ClientFactoryOption<Map<ChannelOption<?>, Object>>) option;
-            @SuppressWarnings("unchecked")
-            final ClientFactoryOptionValue<T> castOptionValue =
-                    (ClientFactoryOptionValue<T>) castOption.newValue(
-                            filterChannelOptions((Map<ChannelOption<?>, Object>) value));
-            optionValue = castOptionValue;
-        }
-
-        return optionValue;
-    }
-
     private static Map<ChannelOption<?>, Object> filterChannelOptions(
             Map<ChannelOption<?>, Object> channelOptions) {
 
@@ -203,19 +183,19 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     private ClientFactoryOptions(ClientFactoryOptionValue<?>... options) {
-        super(ClientFactoryOptions::filterValue, options);
+        super(options);
     }
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
                                  ClientFactoryOptionValue<?>... additionalOptions) {
 
-        super(ClientFactoryOptions::filterValue, baseOptions, additionalOptions);
+        super(baseOptions, additionalOptions);
     }
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
                                  Iterable<ClientFactoryOptionValue<?>> additionalOptions) {
 
-        super(ClientFactoryOptions::filterValue, baseOptions, additionalOptions);
+        super(baseOptions, additionalOptions);
     }
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
@@ -415,20 +395,37 @@ public final class ClientFactoryOptions extends AbstractOptions {
 
     @Override
     @SuppressWarnings("unchecked")
+    protected <T extends AbstractOptionValue<?, ?>> T filterValue(T optionValue) {
+        if (optionValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
+            final ClientFactoryOption<Map<ChannelOption<?>, Object>> castOption =
+                    (ClientFactoryOption<Map<ChannelOption<?>, Object>>) optionValue.option();
+            final Map<ChannelOption<?>, Object> value = (Map<ChannelOption<?>, Object>) optionValue.value();
+            return (T) castOption.newValue(filterChannelOptions(value));
+        }
+        return optionValue;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
     protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
         if (oldValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
-            final ClientFactoryOptionValue<Map<ChannelOption<?>, Object>> castOldValue =
-                    (ClientFactoryOptionValue<Map<ChannelOption<?>, Object>>) oldValue;
-            final ClientFactoryOptionValue<Map<ChannelOption<?>, Object>> castNewValue =
-                    (ClientFactoryOptionValue<Map<ChannelOption<?>, Object>>) newValue;
+            final Map<ChannelOption<?>, Object> castOldValue = (Map<ChannelOption<?>, Object>) oldValue.value();
+            final Map<ChannelOption<?>, Object> castNewValue = (Map<ChannelOption<?>, Object>) newValue.value();
+            if (castOldValue.isEmpty()) {
+                return newValue;
+            }
+            if (castNewValue.isEmpty()) {
+                return oldValue;
+            }
+
             final ImmutableMap.Builder<ChannelOption<?>, Object> builder =
-                    ImmutableMap.builderWithExpectedSize(castNewValue.value().size());
-            castOldValue.value().forEach((channelOption, value) -> {
-                if (!castNewValue.value().containsKey(channelOption)) {
+                    ImmutableMap.builderWithExpectedSize(castOldValue.size() + castNewValue.size());
+            castOldValue.forEach((channelOption, value) -> {
+                if (!castNewValue.containsKey(channelOption)) {
                     builder.put(channelOption, value);
                 }
             });
-            builder.putAll(castNewValue.value());
+            builder.putAll(castNewValue);
             return (T) ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
         }
 

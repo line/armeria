@@ -17,17 +17,14 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.function.Function;
-import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
-
-import com.google.common.collect.Streams;
 
 /**
  * A set of configuration options and their respective values.
@@ -43,73 +40,60 @@ public abstract class AbstractOptions {
      * Creates a new instance.
      *
      * @param <T> the type of the {@link AbstractOptionValue}
-     * @param valueFilter the {@link Function} to apply to the elements of the specified {@code values}
      * @param values the option values
      */
     @SafeVarargs
-    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter, T... values) {
-        requireNonNull(valueFilter, "valueFilter");
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(T... values) {
         requireNonNull(values, "values");
 
         valueMap = new IdentityHashMap<>();
-        putAll(valueFilter, Stream.of(values));
+        putAll(Arrays.asList(values));
     }
 
     /**
      * Creates a new instance.
      *
      * @param <T> the type of the {@link AbstractOptionValue}
-     * @param valueFilter the {@link Function} to apply to the elements of the specified {@code values}
      * @param values the option values
      */
-    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
-                                                                    Iterable<T> values) {
-        requireNonNull(valueFilter, "valueFilter");
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Iterable<T> values) {
         requireNonNull(values, "values");
 
         valueMap = new IdentityHashMap<>();
-        putAll(valueFilter, Streams.stream(values));
+        putAll(values);
     }
 
     /**
      * Creates a new instance.
      *
      * @param <T> the type of the {@link AbstractOptionValue}
-     * @param valueFilter the {@link Function} to apply to the elements of the specified
-     *                    {@code additionalValues}
      * @param baseOptions the base options to merge
      * @param additionalValues the additional option values
      */
     @SafeVarargs
-    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
-                                                                    AbstractOptions baseOptions,
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(AbstractOptions baseOptions,
                                                                     T... additionalValues) {
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(valueFilter, "valueFilter");
         requireNonNull(additionalValues, "additionalValues");
 
         valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        putAll(valueFilter, Stream.of(additionalValues));
+        putAll(Arrays.asList(additionalValues));
     }
 
     /**
      * Creates a new instance.
      *
      * @param <T> the type of the {@link AbstractOptionValue}
-     * @param valueFilter the {@link Function} to apply to the elements of the specified
-     *                    {@code additionalValues}
      * @param baseOptions the base options to merge
      * @param additionalValues the option values
      */
-    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
-                                                                    AbstractOptions baseOptions,
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(AbstractOptions baseOptions,
                                                                     Iterable<T> additionalValues) {
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(valueFilter, "valueFilter");
         requireNonNull(additionalValues, "additionalValues");
 
         valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        putAll(valueFilter, Streams.stream(additionalValues));
+        putAll(additionalValues);
     }
 
     /**
@@ -126,6 +110,11 @@ public abstract class AbstractOptions {
         valueMap = new IdentityHashMap<>(baseOptions.valueMap);
         valueMap.putAll(additionalOptions.valueMap);
     }
+
+    /**
+     * Filters an {@link AbstractOptionValue}. You can apply this filter before creating a new options.
+     */
+    protected abstract <T extends AbstractOptionValue<?, ?>> T filterValue(T value);
 
     /**
      * Merge two option values. You can specify how to merge conflict values.
@@ -150,22 +139,23 @@ public abstract class AbstractOptions {
     protected abstract <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue);
 
     @SuppressWarnings("unchecked")
-    private <T extends AbstractOptionValue<?, ?>> void putAll(Function<T, T> valueFilter, Stream<T> values) {
-        values.map(valueFilter)
-              .forEach(newValue -> {
-                  final AbstractOption<Object> option = (AbstractOption<Object>) newValue.option();
-                  final AbstractOptionValue<AbstractOption<Object>, Object> oldValue = valueMap.get(option);
-                  if (oldValue == null) {
-                      final AbstractOptionValue<AbstractOption<Object>, Object> optionValue =
-                              (AbstractOptionValue<AbstractOption<Object>, Object>) newValue;
-                      valueMap.put(option, optionValue);
-                  } else {
-                      final AbstractOptionValue<AbstractOption<Object>, Object> merged =
-                              (AbstractOptionValue<AbstractOption<Object>, Object>)
-                                      mergeValue(oldValue, newValue);
-                      valueMap.put(option, merged);
-                  }
-              });
+    private <T extends AbstractOptionValue<?, ?>> void putAll(Iterable<T> values) {
+        for (final T value : values) {
+            final T newValue = filterValue(value);
+            final AbstractOption<Object> option = (AbstractOption<Object>) newValue.option();
+            final AbstractOptionValue<AbstractOption<Object>, Object> oldValue = valueMap.get(option);
+
+            if (oldValue == null) {
+                final AbstractOptionValue<AbstractOption<Object>, Object> optionValue =
+                        (AbstractOptionValue<AbstractOption<Object>, Object>) newValue;
+                valueMap.put(option, optionValue);
+            } else {
+                final AbstractOptionValue<AbstractOption<Object>, Object> merged =
+                        (AbstractOptionValue<AbstractOption<Object>, Object>)
+                                mergeValue(oldValue, newValue);
+                valueMap.put(option, merged);
+            }
+        }
     }
 
     /**

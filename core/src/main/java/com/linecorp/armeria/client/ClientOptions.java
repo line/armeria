@@ -165,23 +165,6 @@ public final class ClientOptions extends AbstractOptions {
         return new ClientOptionsBuilder();
     }
 
-    private static <T> ClientOptionValue<T> filterValue(ClientOptionValue<T> optionValue) {
-        requireNonNull(optionValue, "optionValue");
-
-        final ClientOption<?> option = optionValue.option();
-        final T value = optionValue.value();
-
-        if (option == HTTP_HEADERS) {
-            @SuppressWarnings("unchecked")
-            final ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) option;
-            @SuppressWarnings("unchecked")
-            final ClientOptionValue<T> castOptionValue =
-                    (ClientOptionValue<T>) castOption.newValue(filterHttpHeaders((HttpHeaders) value));
-            optionValue = castOptionValue;
-        }
-        return optionValue;
-    }
-
     private static HttpHeaders filterHttpHeaders(HttpHeaders headers) {
         requireNonNull(headers, "headers");
         for (AsciiString name : BLACKLISTED_HEADER_NAMES) {
@@ -194,15 +177,15 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     private ClientOptions(ClientOptionValue<?>... options) {
-        super(ClientOptions::filterValue, options);
+        super(options);
     }
 
     private ClientOptions(ClientOptions baseOptions, ClientOptionValue<?>... additionalOptions) {
-        super(ClientOptions::filterValue, baseOptions, additionalOptions);
+        super(baseOptions, additionalOptions);
     }
 
     private ClientOptions(ClientOptions baseOptions, Iterable<ClientOptionValue<?>> additionalOptions) {
-        super(ClientOptions::filterValue, baseOptions, additionalOptions);
+        super(baseOptions, additionalOptions);
     }
 
     private ClientOptions(ClientOptions baseOptions, ClientOptions additionalOptions) {
@@ -210,10 +193,30 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     @Override
+    protected <T extends AbstractOptionValue<?, ?>> T filterValue(T optionValue) {
+        if (optionValue.option() == HTTP_HEADERS) {
+            @SuppressWarnings("unchecked")
+            final ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) optionValue.option();
+            @SuppressWarnings("unchecked")
+            final T castOptionValue = (T) castOption.newValue(
+                    filterHttpHeaders((HttpHeaders) optionValue.value()));
+            return castOptionValue;
+        }
+        return optionValue;
+    }
+
+    @Override
     protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
         if (oldValue.option() == DECORATION) {
             final ClientDecoration oldDecoration = (ClientDecoration) oldValue.value();
             final ClientDecoration newDecoration = (ClientDecoration) newValue.value();
+            if (oldDecoration.decorators().isEmpty() && oldDecoration.rpcDecorators().isEmpty()) {
+                return newValue;
+            }
+            if (newDecoration.decorators().isEmpty() && newDecoration.rpcDecorators().isEmpty()) {
+                return oldValue;
+            }
+
             final ClientDecoration merged = ClientDecoration.builder()
                                                             .add(oldDecoration)
                                                             .add(newDecoration)
@@ -224,6 +227,13 @@ public final class ClientOptions extends AbstractOptions {
         } else if (oldValue.option() == HTTP_HEADERS) {
             final HttpHeaders oldHeaders = (HttpHeaders) oldValue.value();
             final HttpHeaders newHeaders = (HttpHeaders) newValue.value();
+            if (oldHeaders.isEmpty()) {
+                return newValue;
+            }
+            if (newHeaders.isEmpty()) {
+                return oldValue;
+            }
+
             final HttpHeaders merged = oldHeaders.toBuilder().setObject(newHeaders).build();
             @SuppressWarnings("unchecked")
             final T cast = (T) HTTP_HEADERS.newValue(merged);
