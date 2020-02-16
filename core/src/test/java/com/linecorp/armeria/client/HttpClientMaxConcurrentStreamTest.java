@@ -301,6 +301,9 @@ public class HttpClientMaxConcurrentStreamTest {
                              final Throwable throwable = catchThrowable(responseFuture::join);
                              assertThat(throwable).isInstanceOf(CompletionException.class)
                                                   .hasCauseInstanceOf(UnprocessedRequestException.class);
+                             if (!(throwable.getCause().getCause() instanceof ClosedSessionException)) {
+                                 throw new IllegalStateException(throwable);
+                             }
                              assertThat(throwable.getCause()).hasCauseInstanceOf(ClosedSessionException.class);
                          });
     }
