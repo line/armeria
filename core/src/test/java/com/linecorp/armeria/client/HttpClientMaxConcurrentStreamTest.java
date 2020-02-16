@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.awaitility.Awaitility.await;
 
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -296,16 +297,17 @@ public class HttpClientMaxConcurrentStreamTest {
         await().untilAsserted(() -> assertThat(receivedResponses.stream().filter(
                 CompletableFuture::isCompletedExceptionally)).hasSize(2));
 
-        receivedResponses.stream().filter(CompletableFuture::isCompletedExceptionally)
-                         .forEach(responseFuture -> {
-                             final Throwable throwable = catchThrowable(responseFuture::join);
-                             assertThat(throwable).isInstanceOf(CompletionException.class)
-                                                  .hasCauseInstanceOf(UnprocessedRequestException.class);
-                             if (!(throwable.getCause().getCause() instanceof ClosedSessionException)) {
-                                 throw new IllegalStateException(throwable);
-                             }
-                             assertThat(throwable.getCause()).hasCauseInstanceOf(ClosedSessionException.class);
-                         });
+        receivedResponses
+                .stream().filter(CompletableFuture::isCompletedExceptionally)
+                .forEach(responseFuture -> {
+                    final Throwable throwable = catchThrowable(responseFuture::join);
+                    assertThat(throwable).isInstanceOf(CompletionException.class)
+                                         .hasCauseInstanceOf(UnprocessedRequestException.class);
+                    assertThat(throwable.getCause().getCause()).satisfiesAnyOf(
+                            e -> assertThat(e).isInstanceOf(ClosedSessionException.class),
+                            e -> assertThat(e).isInstanceOf(ConnectException.class)
+                                                .hasMessageContaining("reset by peer"));
+                });
     }
 
     @Test
