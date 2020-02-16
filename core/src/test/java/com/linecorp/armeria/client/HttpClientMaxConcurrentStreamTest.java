@@ -91,21 +91,6 @@ public class HttpClientMaxConcurrentStreamTest {
         }
     };
 
-    @RegisterExtension
-    static final ServerExtension serverWithMaxConcurrentStreams_0 = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.service(PATH, (ctx, req) -> {
-                final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
-                responses.add(f);
-                return HttpResponse.from(f);
-            });
-            sb.http2MaxStreamsPerConnection(0);
-            sb.maxNumConnections(MAX_NUM_CONNECTIONS);
-            sb.idleTimeoutMillis(3000);
-        }
-    };
-
     // running inside an event loop ensures requests are queued before an initial connect attempt completes.
     private static void runInsideEventLoop(EventLoopGroup eventLoopGroup, Runnable runnable) {
         eventLoopGroup.execute(runnable);
@@ -190,7 +175,6 @@ public class HttpClientMaxConcurrentStreamTest {
         }
 
         await().until(() -> server.server().numConnections() == 0);
-        await().until(() -> serverWithMaxConcurrentStreams_0.server().numConnections() == 0);
         await().until(() -> serverWithMaxConcurrentStreams_1.server().numConnections() == 0);
     }
 
@@ -387,35 +371,6 @@ public class HttpClientMaxConcurrentStreamTest {
                 ClientConnectionTimings::pendingAcquisitionDurationNanos).max().orElse(0L);
         assertThat(maxPendingAcquisitionDurationNanos)
                 .isGreaterThan(TimeUnit.MILLISECONDS.toNanos(sleepMillis * numConnections));
-    }
-
-    @Test
-    void maxConcurrentStreamsValue_0() throws Exception {
-        final Queue<ClientConnectionTimings> connectionTimings = new ConcurrentLinkedQueue<>();
-        final WebClient client = WebClient.builder(serverWithMaxConcurrentStreams_0.uri(SessionProtocol.H2C))
-                                          .factory(clientFactory)
-                                          .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
-                                          .build();
-        final AtomicInteger opens = new AtomicInteger();
-        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
-
-        final int numRequests = 6;
-        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
-
-        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
-            for (int i = 0; i < numRequests; i++) {
-                receivedResponses.add(client.get(PATH).aggregate());
-            }
-        });
-
-        await().untilAsserted(() -> assertThat(receivedResponses.stream().filter(
-                CompletableFuture::isCompletedExceptionally)).hasSize(numRequests));
-        receivedResponses.forEach(responseFuture -> {
-            final Throwable throwable = catchThrowable(responseFuture::join);
-            assertThat(throwable).isInstanceOf(CompletionException.class)
-                                 .hasCauseInstanceOf(UnprocessedRequestException.class)
-                                 .hasRootCauseInstanceOf(RefusedStreamException.class);
-        });
     }
 
     @Test

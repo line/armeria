@@ -521,9 +521,9 @@ public final class ServerBuilder {
      * multiplexed over each.
      */
     public ServerBuilder http2MaxStreamsPerConnection(long http2MaxStreamsPerConnection) {
-        checkArgument(http2MaxStreamsPerConnection >= 0 &&
+        checkArgument(http2MaxStreamsPerConnection > 0 &&
                       http2MaxStreamsPerConnection <= 0xFFFFFFFFL,
-                      "http2MaxStreamsPerConnection: %s (expected: 0 or a positive 32-bit unsigned integer)",
+                      "http2MaxStreamsPerConnection: %s (expected: a positive 32-bit unsigned integer)",
                       http2MaxStreamsPerConnection);
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
         return this;
