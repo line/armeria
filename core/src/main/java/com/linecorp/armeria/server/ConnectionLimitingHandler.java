@@ -118,7 +118,7 @@ final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
      * Validates the maximum allowed number of open connections. It must be a positive number.
      */
     public static int validateMaxNumConnections(int maxNumConnections) {
-        if (maxNumConnections <= 0) {
+        if (maxNumConnections < 0) {
             throw new IllegalArgumentException("maxNumConnections: " + maxNumConnections + " (expected: > 0)");
         }
         return maxNumConnections;
