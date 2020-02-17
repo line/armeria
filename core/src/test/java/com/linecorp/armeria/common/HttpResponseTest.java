@@ -86,5 +86,4 @@ class HttpResponseTest {
 
         data.release();
     }
-
 }
