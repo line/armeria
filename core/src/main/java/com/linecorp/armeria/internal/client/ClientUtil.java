@@ -92,7 +92,7 @@ public final class ClientUtil {
 
         requireNonNull(delegate, "delegate");
         requireNonNull(ctx, "ctx");
-        requireNonNull(fallbackResponseFactory, "fallback");
+        requireNonNull(fallbackResponseFactory, "fallbackResponseFactory");
 
         try {
             return pushAndExecute(delegate, ctx);
