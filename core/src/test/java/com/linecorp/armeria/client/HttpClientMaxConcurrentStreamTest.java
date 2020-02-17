@@ -119,7 +119,7 @@ public class HttpClientMaxConcurrentStreamTest {
     private volatile ConnectionPoolListener connectionPoolListener;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         clientFactory = ClientFactory.builder()
                                      .workerGroup(EventLoopGroups.newEventLoopGroup(1), true)
                                      .connectionPoolListener(connectionPoolListenerWrapper)
@@ -127,7 +127,7 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @AfterEach
-    public void tearDown() throws Exception {
+    void tearDown() throws Exception {
         // Complete all uncompleted requests.
         for (;;) {
             final CompletableFuture<HttpResponse> f = responses.poll();
