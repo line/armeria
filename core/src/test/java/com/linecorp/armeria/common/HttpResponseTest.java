@@ -65,4 +65,25 @@ class HttpResponseTest {
         assertThat(aggregatedRes.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
     }
+
+    @Test
+    void shouldReleaseEmptyContent() {
+        final EmptyReferenceCountedHttpData data = new EmptyReferenceCountedHttpData();
+
+        data.retain();
+        HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, data);
+        assertThat(data.refCnt()).isOne();
+
+        data.retain();
+        HttpResponse.of(ResponseHeaders.of(200), data);
+        assertThat(data.refCnt()).isOne();
+
+        data.retain();
+        HttpResponse.of(ResponseHeaders.of(200),
+                        data,
+                        HttpHeaders.of("some-trailer", "value"));
+        assertThat(data.refCnt()).isOne();
+
+        data.release();
+    }
 }
