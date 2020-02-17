@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,6 +24,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 
 class HttpRequestTest {
 
@@ -62,5 +66,28 @@ class HttpRequestTest {
         await().untilAsserted(() -> {
             assertThat(abortCauseHolder).hasValue(abortCause);
         });
+    }
+
+    @Test
+    void shouldReleaseEmptyContent() {
+        final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
+        assertThat(buf.readableBytes()).isZero();
+        assertThat(buf.refCnt()).isOne();
+
+        buf.retain();
+        HttpRequest.of(HttpMethod.GET, "/", MediaType.PLAIN_TEXT_UTF_8, new ByteBufHttpData(buf, false));
+        assertThat(buf.refCnt()).isOne();
+
+        buf.retain();
+        HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"), new ByteBufHttpData(buf, false));
+        assertThat(buf.refCnt()).isOne();
+
+        buf.retain();
+        HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"),
+                       new ByteBufHttpData(buf, false),
+                       HttpHeaders.of("some-trailer", "value"));
+        assertThat(buf.refCnt()).isOne();
+
+        buf.release();
     }
 }
