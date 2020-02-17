@@ -61,6 +61,9 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
  *     mime-types: text/*, application/json
  *     excluded-user-agents: some-user-agent, another-user-agent
  *     min-response-size: 1KB
+ *   secure:
+ *     enabled: true
+ *     ports: 8080
  * }</pre>
  * TODO(ide) Adds virtualhost settings
  */
@@ -255,6 +258,51 @@ public class ArmeriaSettings {
     }
 
     /**
+     * TBD.
+     */
+    public static class Secure {
+
+        /**
+         * TBD.
+         */
+        private boolean enabled;
+
+        /**
+         * TBD.
+         */
+        @Nullable
+        private List<Integer> ports;
+
+        /**
+         * TBD.
+         */
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        /**
+         * TBD.
+         */
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        /**
+         * TBD.
+         */
+        public List<Integer> getPorts() {
+            return ports;
+        }
+
+        /**
+         * TBD.
+         */
+        public void setPorts(List<Integer> ports) {
+            this.ports = ports;
+        }
+    }
+
+    /**
      * The ports to listen on for requests. If not specified, will listen on
      * port 8080 for HTTP (not SSL).
      */
@@ -318,6 +366,9 @@ public class ArmeriaSettings {
      */
     @Nullable
     private Compression compression;
+
+    @Nullable
+    private Secure secure;
 
     /**
      * Returns the {@link Port}s of the {@link Server}.
@@ -466,5 +517,20 @@ public class ArmeriaSettings {
      */
     public void setCompression(Compression compression) {
         this.compression = compression;
+    }
+
+    /**
+     * TBD.
+     */
+    @Nullable
+    public Secure getSecure() {
+        return secure;
+    }
+
+    /**
+     * TBD.
+     */
+    public void setSecure(Secure secure) {
+        this.secure = secure;
     }
 }

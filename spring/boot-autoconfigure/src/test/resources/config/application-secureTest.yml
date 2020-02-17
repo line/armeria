@@ -1,0 +1,7 @@
+armeria:
+  ports:
+    - port: 8080
+    - port: 8081
+  secure:
+    enabled: true
+    ports: 8080

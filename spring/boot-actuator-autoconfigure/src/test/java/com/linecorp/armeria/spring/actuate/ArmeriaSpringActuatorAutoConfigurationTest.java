@@ -305,4 +305,67 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
             assertThat(res.status()).isNotEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
+
+    @RunWith(SpringRunner.class)
+    @SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
+    @ActiveProfiles({ "local", "secureTest" })
+    @DirtiesContext
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    public static class ArmeriaSpringActuatorAutoConfigurationSecureTest {
+
+        @SpringBootApplication
+        public static class TestConfiguration {}
+
+        @Rule
+        public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+
+        @Test
+        public void normal() throws Exception {
+            assertStatusLine(8080, "/actuator", HttpStatus.NOT_FOUND);
+            assertStatusLine(8081, "/actuator", HttpStatus.OK);
+            assertStatusLine(8080, "/actuator/health", HttpStatus.NOT_FOUND);
+            assertStatusLine(8081, "/actuator/health", HttpStatus.OK);
+            assertStatusLine(8080, "/actuator/loggers/" + TEST_LOGGER_NAME, HttpStatus.NOT_FOUND);
+            assertStatusLine(8081, "/actuator/loggers/" + TEST_LOGGER_NAME, HttpStatus.OK);
+            assertStatusLine(8080, "/actuator/prometheus", HttpStatus.NOT_FOUND);
+            assertStatusLine(8081, "/actuator/prometheus", HttpStatus.OK);
+        }
+
+        private static void assertStatusLine(int port, String url, HttpStatus httpStatus) throws Exception {
+            final WebClient client = WebClient.of(newUrl("h1c", port));
+            final HttpResponse response = client.get(url);
+
+            if (!httpStatus.isSuccess()) {
+                assertThat(response.aggregate().join().status()).isEqualTo(httpStatus);
+                return;
+            }
+
+            final AtomicLong remainingBytes = new AtomicLong();
+            StepVerifier.create(response)
+                        .assertNext(obj -> {
+                            assertThat(obj).isInstanceOf(ResponseHeaders.class);
+                            final ResponseHeaders headers = (ResponseHeaders) obj;
+                            assertThat(headers.status()).isEqualTo(httpStatus);
+                            final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1);
+                            assertThat(contentLength).isPositive();
+                            remainingBytes.set(contentLength);
+                        })
+                        .thenConsumeWhile(obj -> {
+                            assertThat(obj).isInstanceOf(HttpData.class);
+                            final HttpData data = (HttpData) obj;
+                            final long newRemainingBytes = remainingBytes.addAndGet(-data.length());
+                            assertThat(newRemainingBytes).isNotNegative();
+                            return newRemainingBytes > 0; // Stop at the last HttpData.
+                        })
+                        .expectNextCount(1) // Skip the last HttpData.
+                        .verifyComplete();
+
+            assertThat(remainingBytes).hasValue(0);
+        }
+
+        private static String newUrl(String scheme, int port) {
+            return scheme + "://127.0.0.1:" + port;
+        }
+    }
 }

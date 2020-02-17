@@ -19,6 +19,7 @@ package com.linecorp.armeria.spring.actuate;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,6 +68,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
+import com.linecorp.armeria.spring.ArmeriaSettings;
 
 /**
  * A {@link Configuration} to enable actuator endpoints on an Armeria server. Corresponds to
@@ -73,7 +76,8 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
  */
 @Configuration
 @AutoConfigureAfter(EndpointAutoConfiguration.class)
-@EnableConfigurationProperties({ WebEndpointProperties.class, CorsEndpointProperties.class })
+@EnableConfigurationProperties(
+        { WebEndpointProperties.class, CorsEndpointProperties.class, ArmeriaSettings.class })
 public class ArmeriaSpringActuatorAutoConfiguration {
 
     @VisibleForTesting
@@ -119,7 +123,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             EndpointMediaTypes mediaTypes,
             WebEndpointProperties properties,
             HealthStatusHttpMapper healthMapper,
-            CorsEndpointProperties corsProperties) {
+            CorsEndpointProperties corsProperties,
+            ArmeriaSettings settings) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
@@ -194,6 +199,25 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             }
             if (cors != null) {
                 sb.routeDecorator().pathPrefix("/").build(cors.newDecorator());
+            }
+
+            final ArmeriaSettings.Secure secure = settings.getSecure();
+            if (secure != null && secure.isEnabled() && !CollectionUtils.isEmpty(secure.getPorts())) {
+                final List<Integer> ports = secure.getPorts();
+                final String basePath = properties.getBasePath();
+                if (!StringUtils.isEmpty(basePath)) {
+                    sb.routeDecorator()
+                      .path(basePath)
+                      .pathPrefix(basePath)
+                      .build((delegate, ctx, req) -> {
+                          final InetSocketAddress laddr = ctx.localAddress();
+                          if (ports.contains(laddr.getPort())) {
+                              return HttpResponse.of(404);
+                          } else {
+                              return delegate.serve(ctx, req);
+                          }
+                      });
+                }
             }
         };
     }
