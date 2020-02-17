@@ -17,7 +17,8 @@ package com.linecorp.armeria.server.rxjava;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
@@ -28,13 +29,12 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
-import io.reactivex.BackpressureStrategy;
-import io.reactivex.Completable;
-import io.reactivex.Flowable;
-import io.reactivex.Maybe;
-import io.reactivex.Observable;
-import io.reactivex.Single;
-import io.reactivex.disposables.Disposable;
+import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Single;
 
 /**
  * A {@link ResponseConverterFunction} which converts the {@link Observable} instance to a {@link Flowable}
@@ -51,9 +51,9 @@ public final class ObservableResponseConverterFunction implements ResponseConver
      * Creates a new {@link ResponseConverterFunction} instance.
      *
      * @param responseConverter the function which converts an object with the configured
-     *                          {@link ResponseConverterFunction}
+     * {@link ResponseConverterFunction}
      * @param exceptionHandler the function which converts a {@link Throwable} with the configured
-     *                         {@link ExceptionHandlerFunction}
+     * {@link ExceptionHandlerFunction}
      */
     public ObservableResponseConverterFunction(ResponseConverterFunction responseConverter,
                                                ExceptionHandlerFunction exceptionHandler) {
@@ -72,28 +72,20 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         }
 
         if (result instanceof Maybe) {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-            final Disposable disposable = ((Maybe<?>) result).subscribe(
-                    o -> future.complete(onSuccess(ctx, headers, o, trailers)),
-                    cause -> future.complete(onError(ctx, cause)),
-                    () -> future.complete(onSuccess(ctx, headers, null, trailers)));
-            return respond(future, disposable);
+            @SuppressWarnings("unchecked")
+            final CompletionStage<Object> future = ((Maybe<Object>) result).toCompletionStage(null);
+            return HttpResponse.from(future.handle(handleResult(ctx, headers, trailers)));
         }
 
         if (result instanceof Single) {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-            final Disposable disposable = ((Single<?>) result).subscribe(
-                    o -> future.complete(onSuccess(ctx, headers, o, trailers)),
-                    cause -> future.complete(onError(ctx, cause)));
-            return respond(future, disposable);
+            @SuppressWarnings("unchecked")
+            final CompletionStage<Object> future = ((Single<Object>) result).toCompletionStage();
+            return HttpResponse.from(future.handle(handleResult(ctx, headers, trailers)));
         }
 
         if (result instanceof Completable) {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-            final Disposable disposable = ((Completable) result).subscribe(
-                    () -> future.complete(onSuccess(ctx, headers, null, trailers)),
-                    cause -> future.complete(onError(ctx, cause)));
-            return respond(future, disposable);
+            final CompletionStage<Object> future = ((Completable) result).toCompletionStage(null);
+            return HttpResponse.from(future.handle(handleResult(ctx, headers, trailers)));
         }
 
         return ResponseConverterFunction.fallthrough();
@@ -114,12 +106,13 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         return exceptionHandler.handleException(ctx, ctx.request(), cause);
     }
 
-    private static HttpResponse respond(CompletableFuture<HttpResponse> future, Disposable disposable) {
-        final HttpResponse response = HttpResponse.from(future);
-        response.whenComplete().exceptionally(cause -> {
-            disposable.dispose();
-            return null;
-        });
-        return response;
+    private BiFunction<Object, Throwable, HttpResponse> handleResult(
+            ServiceRequestContext ctx, ResponseHeaders headers, HttpHeaders trailers) {
+        return (result, cause) -> {
+            if (cause != null) {
+                return onError(ctx, cause);
+            }
+            return onSuccess(ctx, headers, result, trailers);
+        };
     }
 }

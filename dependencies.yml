@@ -241,6 +241,12 @@ io.reactivex.rxjava2:
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
+io.reactivex.rxjava3:
+  rxjava:
+    version: '3.0.0'
+    javadocs:
+      - http://reactivex.io/RxJava/3.x/javadoc/
+
 io.zipkin.brave:
   brave:
     # ':site:javadoc' fails when we use a newer version of Javadoc.
