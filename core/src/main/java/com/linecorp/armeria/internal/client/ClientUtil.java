@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
@@ -30,7 +32,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -60,7 +61,7 @@ public final class ClientUtil {
                 if (res instanceof StreamMessage) {
                     ((StreamMessage<?>) res).abort();
                 }
-                return fallback.apply(ctx, ctx.log().partial().requestCause());
+                return failAndGetFallbackResponse(ctx, fallback, ctx.log().partial().requestCause());
             }
         } catch (Throwable cause) {
             return failAndGetFallbackResponse(ctx, fallback, cause);
@@ -103,20 +104,25 @@ public final class ClientUtil {
     private static <O extends Response> O failAndGetFallbackResponse(
             ClientRequestContext ctx,
             BiFunction<ClientRequestContext, Throwable, O> fallback,
-            Throwable cause) {
+            @Nullable Throwable cause) {
 
-        final RequestLogBuilder logBuilder = ctx.logBuilder();
-        if (!ctx.log().isAvailable(RequestLogProperty.SESSION)) {
-            // An exception is raised even before sending a request,
-            // so end the request with the exception.
-            logBuilder.endRequest(cause);
-
-            final HttpRequest req = ctx.request();
-            if (req != null) {
+        final HttpRequest req = ctx.request();
+        if (req != null) {
+            if (cause != null) {
                 req.abort(cause);
+            } else {
+                req.abort();
             }
         }
-        logBuilder.endResponse(cause);
+
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        if (cause != null) {
+            logBuilder.endRequest(cause);
+            logBuilder.endResponse(cause);
+        } else {
+            logBuilder.endRequest();
+            logBuilder.endResponse();
+        }
 
         return fallback.apply(ctx, cause);
     }

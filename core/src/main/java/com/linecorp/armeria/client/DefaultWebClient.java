@@ -28,7 +28,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -94,18 +93,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         }
         return execute(endpointGroup, req.method(),
                        pathAndQuery.path(), pathAndQuery.query(), null, req,
-                       (ctx, cause) -> {
-                           if (ctx != null && !ctx.log().isAvailable(RequestLogProperty.SESSION)) {
-                               // An exception has been raised even before sending a request,
-                               // so abort the request to release the elements.
-                               if (cause == null) {
-                                   req.abort();
-                               } else {
-                                   req.abort(cause);
-                               }
-                           }
-                           return HttpResponse.ofFailure(cause);
-                       });
+                       (ctx, cause) -> HttpResponse.ofFailure(cause));
     }
 
     @Override
