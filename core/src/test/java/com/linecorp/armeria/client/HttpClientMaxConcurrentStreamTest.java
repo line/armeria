@@ -91,39 +91,6 @@ public class HttpClientMaxConcurrentStreamTest {
         }
     };
 
-    // running inside an event loop ensures requests are queued before an initial connect attempt completes.
-    private static void runInsideEventLoop(EventLoopGroup eventLoopGroup, Runnable runnable) {
-        eventLoopGroup.execute(runnable);
-    }
-
-    private static DecoratingHttpClientFunction connectionTimingsAccumulatingDecorator(
-            Queue<ClientConnectionTimings> connectionTimings) {
-        return (delegate, ctx, req) -> {
-            ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
-               .thenAccept(requestLog -> {
-                   connectionTimings.add(requestLog.connectionTimings());
-               });
-            return delegate.execute(ctx, req);
-        };
-    }
-
-    private static ConnectionPoolListener newConnectionPoolListener(
-            Runnable openRunnable, Runnable closeRunnable) {
-        return new ConnectionPoolListener() {
-            @Override
-            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                openRunnable.run();
-            }
-
-            @Override
-            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-                closeRunnable.run();
-            }
-        };
-    }
-
     private final ConnectionPoolListener connectionPoolListenerWrapper = new ConnectionPoolListener() {
         @Override
         public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
@@ -323,7 +290,7 @@ public class HttpClientMaxConcurrentStreamTest {
         final AtomicInteger opens = new AtomicInteger();
         connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
 
-        final int numExpectedConnections = 6;
+        final int numExpectedConnections = MAX_CONCURRENT_STREAMS;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
         runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
@@ -398,5 +365,38 @@ public class HttpClientMaxConcurrentStreamTest {
         assertThat(connectionTimings.stream().filter(
                 timings -> timings.pendingAcquisitionDurationNanos() > 0))
                 .hasSize(numRequests - 1);
+    }
+
+    // running inside an event loop ensures requests are queued before an initial connect attempt completes.
+    private static void runInsideEventLoop(EventLoopGroup eventLoopGroup, Runnable runnable) {
+        eventLoopGroup.execute(runnable);
+    }
+
+    private static DecoratingHttpClientFunction connectionTimingsAccumulatingDecorator(
+            Queue<ClientConnectionTimings> connectionTimings) {
+        return (delegate, ctx, req) -> {
+            ctx.logBuilder().whenAvailable(RequestLogProperty.SESSION)
+               .thenAccept(requestLog -> {
+                   connectionTimings.add(requestLog.connectionTimings());
+               });
+            return delegate.execute(ctx, req);
+        };
+    }
+
+    private static ConnectionPoolListener newConnectionPoolListener(
+            Runnable openRunnable, Runnable closeRunnable) {
+        return new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                openRunnable.run();
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                closeRunnable.run();
+            }
+        };
     }
 }
