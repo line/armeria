@@ -22,7 +22,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -49,17 +48,31 @@ public abstract class AbstractThrottlingService<I extends Request, O extends Res
         this.responseConverter = requireNonNull(responseConverter);
     }
 
+    protected ThrottlingStrategy<I> strategy() {
+        return strategy;
+    }
+
     /**
      * Invoked when {@code req} is not throttled. By default, this method delegates the specified {@code req} to
      * the {@link #delegate()} of this service.
+     * @param ctx request context
+     * @param req {@link Request} to process
+     * @return {@link Response} returned after successful processing
+     * @throws Exception when something wrong happens
      */
     protected O onSuccess(ServiceRequestContext ctx, I req) throws Exception {
         return delegate().serve(ctx, req);
     }
 
     /**
-     * Invoked when {@code req} is throttled. By default, this method responds with the
-     * {@link HttpStatus#SERVICE_UNAVAILABLE} status.
+     * Invoked when {@code req} is throttled. This method responds with the
+     * {@link ThrottlingStrategy#failureStatus()} status.
+     * @param ctx request context
+     * @param req throttled {@link Request}
+     * @param cause exception thrown during execution of
+     *        {@link ThrottlingStrategy#accept(ServiceRequestContext, Request)}
+     * @return {@link Response} returned on throttled request
+     * @throws Exception when something wrong happens
      */
     protected abstract O onFailure(ServiceRequestContext ctx, I req, @Nullable Throwable cause)
             throws Exception;

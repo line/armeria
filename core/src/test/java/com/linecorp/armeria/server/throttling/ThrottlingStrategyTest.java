@@ -21,20 +21,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletionStage;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 public class ThrottlingStrategyTest {
     @Test
-    public void name() {
+    public void nameAndFailureStatus() {
         assertThat(ThrottlingStrategy.always().name()).isEqualTo("throttling-strategy-always");
+
         assertThat(ThrottlingStrategy.never().name()).isEqualTo("throttling-strategy-never");
-        assertThat(ThrottlingStrategy.of((ctx, req) -> completedFuture(false), "test-strategy").name())
-                .isEqualTo("test-strategy");
-        assertThat(new TestThrottlingStrategy().name())
-                .isEqualTo("throttling-strategy-TestThrottlingStrategy");
+        assertThat(ThrottlingStrategy.never().failureStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+
+        final ThrottlingStrategy<HttpRequest> strategy1 =
+                ThrottlingStrategy.of((ctx, req) -> completedFuture(false), "test-strategy",
+                                      HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(strategy1.name()).isEqualTo("test-strategy");
+        assertThat(strategy1.failureStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+
+        final ThrottlingStrategy<RpcRequest> strategy2 = new TestThrottlingStrategy();
+        assertThat(strategy2.name()).isEqualTo("throttling-strategy-TestThrottlingStrategy");
+        assertThat(strategy2.failureStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     private static class TestThrottlingStrategy extends ThrottlingStrategy<RpcRequest> {

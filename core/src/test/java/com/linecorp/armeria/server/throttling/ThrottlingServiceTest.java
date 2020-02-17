@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.throttling;
 
 import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.always;
 import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.never;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Rule;
@@ -46,8 +47,15 @@ public class ThrottlingServiceTest {
     public ServerRule serverRule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/http-never", SERVICE.decorate(ThrottlingService.newDecorator(never())));
             sb.service("/http-always", SERVICE.decorate(ThrottlingService.newDecorator(always())));
+            sb.service("/http-never", SERVICE.decorate(ThrottlingService.newDecorator(never())));
+            sb.service("/http-never-too-many-requests", SERVICE.decorate(
+                    ThrottlingService.newDecorator(
+                            ThrottlingStrategy.of((ctx, req) -> completedFuture(false),
+                                                  "too-many-requests-strategy",
+                                                  HttpStatus.TOO_MANY_REQUESTS))
+                       )
+            );
         }
     };
 
@@ -58,9 +66,16 @@ public class ThrottlingServiceTest {
     }
 
     @Test
-    public void throttle() throws Exception {
+    public void throttleWithDefaultStatus() throws Exception {
         final WebClient client = WebClient.of(serverRule.httpUri());
         assertThat(client.get("/http-never").aggregate().get().status())
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    public void throttleWithCustomStatus() throws Exception {
+        final WebClient client = WebClient.of(serverRule.httpUri());
+        assertThat(client.get("/http-never-too-many-requests").aggregate().get().status())
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 }

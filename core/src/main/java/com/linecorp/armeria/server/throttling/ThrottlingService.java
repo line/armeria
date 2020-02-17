@@ -51,12 +51,14 @@ public final class ThrottlingService extends AbstractThrottlingService<HttpReque
     }
 
     /**
-     * Invoked when {@code req} is throttled. By default, this method responds with the
-     * {@link HttpStatus#SERVICE_UNAVAILABLE} status.
+     * Invoked when {@code req} is throttled. This method responds with a failure status set by
+     * the supplied strategy, which defaults to {@link HttpStatus#SERVICE_UNAVAILABLE}.
+     * However, in some cases a different status could be required,
+     * such as {@link HttpStatus#TOO_MANY_REQUESTS}.
      */
     @Override
     protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req, @Nullable Throwable cause)
             throws Exception {
-        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+        return HttpResponse.of(strategy().failureStatus());
     }
 }
