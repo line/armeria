@@ -17,9 +17,9 @@
 package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.Http2KeepAliveHandler;
-import com.linecorp.armeria.internal.IdleTimeoutHandler;
+import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
+import com.linecorp.armeria.internal.common.IdleTimeoutHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
