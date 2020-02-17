@@ -253,6 +253,15 @@ final class HttpChannelPool implements AsyncCloseable {
         return promise;
     }
 
+    private CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key,
+                                                          ClientConnectionTimingsBuilder timingsBuilder,
+                                                          CompletableFuture<PooledChannel> promise) {
+        if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
+            connect(desiredProtocol, key, promise, timingsBuilder);
+        }
+        return promise;
+    }
+
     /**
      * Tries to use the pending HTTP/2 connection to avoid creating an extra connection.
      *
@@ -282,7 +291,12 @@ final class HttpChannelPool implements AsyncCloseable {
             if (cause == null) {
                 final SessionProtocol actualProtocol = pch.protocol();
                 if (actualProtocol.isMultiplex()) {
-                    promise.complete(pch);
+                    final HttpSession session = HttpSession.get(pch.get());
+                    if (session.maxUnfinishedResponses() - session.unfinishedResponses() <= 1) {
+                        acquireLater(actualProtocol, key, timingsBuilder, promise);
+                    } else {
+                        promise.complete(pch);
+                    }
                 } else {
                     // Try to acquire again because the connection was not HTTP/2.
                     // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
