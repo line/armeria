@@ -77,7 +77,7 @@ public class HttpClientMaxConcurrentStreamTest {
     };
 
     @RegisterExtension
-    static final ServerExtension serverWithMaxConcurrentStreams_1 = new ServerExtension() {
+    static final ServerExtension serverWithMaxConcurrentStreams1 = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(PATH, (ctx, req) -> {
@@ -142,7 +142,7 @@ public class HttpClientMaxConcurrentStreamTest {
         }
 
         await().until(() -> server.server().numConnections() == 0);
-        await().until(() -> serverWithMaxConcurrentStreams_1.server().numConnections() == 0);
+        await().until(() -> serverWithMaxConcurrentStreams1.server().numConnections() == 0);
     }
 
     @Test
@@ -217,7 +217,7 @@ public class HttpClientMaxConcurrentStreamTest {
         final AtomicInteger opens = new AtomicInteger();
         connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
 
-        final int numExpectedConnections = 4;
+        final int numExpectedConnections = MAX_NUM_CONNECTIONS;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
         runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
@@ -244,7 +244,7 @@ public class HttpClientMaxConcurrentStreamTest {
         connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
 
-        final int numExpectedConnections = 6;
+        final int numExpectedConnections = MAX_NUM_CONNECTIONS;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
         final int numFailedRequests = MAX_CONCURRENT_STREAMS - 1;
 
@@ -290,7 +290,7 @@ public class HttpClientMaxConcurrentStreamTest {
         final AtomicInteger opens = new AtomicInteger();
         connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
 
-        final int numExpectedConnections = MAX_CONCURRENT_STREAMS;
+        final int numExpectedConnections = MAX_NUM_CONNECTIONS;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
 
         runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
@@ -319,7 +319,7 @@ public class HttpClientMaxConcurrentStreamTest {
             }
         }, () -> {});
 
-        final int numConnections = 6;
+        final int numConnections = MAX_NUM_CONNECTIONS;
         final int numRequests = MAX_CONCURRENT_STREAMS * numConnections;
 
         runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
@@ -343,7 +343,7 @@ public class HttpClientMaxConcurrentStreamTest {
     @Test
     void maxConcurrentStreamsValue_1() throws Exception {
         final Queue<ClientConnectionTimings> connectionTimings = new ConcurrentLinkedQueue<>();
-        final WebClient client = WebClient.builder(serverWithMaxConcurrentStreams_1.uri(SessionProtocol.H2C))
+        final WebClient client = WebClient.builder(serverWithMaxConcurrentStreams1.uri(SessionProtocol.H2C))
                                           .factory(clientFactory)
                                           .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
