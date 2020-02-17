@@ -312,20 +312,22 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(trailers, "trailers");
 
         final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailers);
-        if (content.isEmpty() && trailers.isEmpty()) {
+        final boolean contentIsEmpty = content.isEmpty();
+        if (contentIsEmpty) {
             ReferenceCountUtil.safeRelease(content);
-            return new OneElementFixedHttpResponse(newHeaders);
-        }
-
-        if (!content.isEmpty()) {
             if (trailers.isEmpty()) {
-                return new TwoElementFixedHttpResponse(newHeaders, content);
+                return new OneElementFixedHttpResponse(newHeaders);
             } else {
-                return new RegularFixedHttpResponse(newHeaders, content, trailers);
+                return new TwoElementFixedHttpResponse(newHeaders, trailers);
             }
         }
 
-        return new TwoElementFixedHttpResponse(newHeaders, trailers);
+        // `content` is not empty.
+        if (trailers.isEmpty()) {
+            return new TwoElementFixedHttpResponse(newHeaders, content);
+        } else {
+            return new RegularFixedHttpResponse(newHeaders, content, trailers);
+        }
     }
 
     /**

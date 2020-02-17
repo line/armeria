@@ -25,11 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
-
 class HttpRequestTest {
 
     @Test
@@ -70,24 +65,22 @@ class HttpRequestTest {
 
     @Test
     void shouldReleaseEmptyContent() {
-        final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
-        assertThat(buf.readableBytes()).isZero();
-        assertThat(buf.refCnt()).isOne();
+        final EmptyReferenceCountedHttpData data = new EmptyReferenceCountedHttpData();
 
-        buf.retain();
-        HttpRequest.of(HttpMethod.GET, "/", MediaType.PLAIN_TEXT_UTF_8, new ByteBufHttpData(buf, false));
-        assertThat(buf.refCnt()).isOne();
+        data.retain();
+        HttpRequest.of(HttpMethod.GET, "/", MediaType.PLAIN_TEXT_UTF_8, data);
+        assertThat(data.refCnt()).isOne();
 
-        buf.retain();
-        HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"), new ByteBufHttpData(buf, false));
-        assertThat(buf.refCnt()).isOne();
+        data.retain();
+        HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"), data);
+        assertThat(data.refCnt()).isOne();
 
-        buf.retain();
+        data.retain();
         HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"),
-                       new ByteBufHttpData(buf, false),
+                       data,
                        HttpHeaders.of("some-trailer", "value"));
-        assertThat(buf.refCnt()).isOne();
+        assertThat(data.refCnt()).isOne();
 
-        buf.release();
+        data.release();
     }
 }
