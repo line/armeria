@@ -20,8 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.util.AbstractOption;
 
@@ -43,9 +46,13 @@ public final class ClientFactoryOption<T> extends AbstractOption<T> {
     private static final ConstantPool pool = new ConstantPool() {
         @Override
         protected ClientFactoryOption<Object> newConstant(int id, String name) {
-            return new ClientFactoryOption<>(id, name);
+            final ClientFactoryOption<Object> option = new ClientFactoryOption<>(id, name);
+            OPTIONS.add(option);
+            return option;
         }
     };
+
+    static final Set<ClientFactoryOption<Object>> OPTIONS = Sets.newIdentityHashSet();
 
     /**
      * The worker {@link EventLoopGroup}.

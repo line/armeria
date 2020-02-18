@@ -17,8 +17,11 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -39,9 +42,13 @@ public final class ClientOption<T> extends AbstractOption<T> {
     private static final ConstantPool pool = new ConstantPool() {
         @Override
         protected ClientOption<Object> newConstant(int id, String name) {
-            return new ClientOption<>(id, name);
+            final ClientOption<Object> option = new ClientOption<>(id, name);
+            OPTIONS.add(option);
+            return option;
         }
     };
+
+    static final Set<ClientOption<Object>> OPTIONS = Sets.newIdentityHashSet();
 
     /**
      * The {@link ClientFactory} used for creating a client.

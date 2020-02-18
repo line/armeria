@@ -16,17 +16,36 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.client.ClientOption.DECORATION;
+import static com.linecorp.armeria.client.ClientOption.ENDPOINT_REMAPPER;
+import static com.linecorp.armeria.client.ClientOption.FACTORY;
+import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
+import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
+import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
+import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_MILLIS;
+import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestId;
 
 class ClientOptionsTest {
 
@@ -47,24 +66,29 @@ class ClientOptionsTest {
                       })
                       .collect(toImmutableSet());
 
-        assertThat(ClientOptions.of().asMap().keySet()).isEqualTo(options);
+        assertThat(ClientOption.OPTIONS).isEqualTo(options);
+        final ClientOptions defaultOption = ClientOptions.of();
+        for (final ClientOption<Object> option : ClientOption.OPTIONS) {
+            // should not be null
+            defaultOption.get(option);
+        }
     }
 
     @Test
     void testSetHttpHeader() {
         final HttpHeaders httpHeader = HttpHeaders.of(HttpHeaderNames.of("x-user-defined"), "HEADER_VALUE");
 
-        final ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
-        assertThat(options.get(ClientOption.HTTP_HEADERS)).isEqualTo(httpHeader);
+        final ClientOptions options = ClientOptions.of(HTTP_HEADERS.newValue(httpHeader));
+        assertThat(options.get(HTTP_HEADERS)).isEqualTo(httpHeader);
 
         final ClientOptions options2 = ClientOptions.of();
-        assertThat(options2.get(ClientOption.HTTP_HEADERS)).isEqualTo(HttpHeaders.of());
+        assertThat(options2.get(HTTP_HEADERS)).isEqualTo(HttpHeaders.of());
     }
 
     @Test
     void testSetBlackListHeader() {
         assertThatThrownBy(() -> {
-            ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(
+            ClientOptions.of(HTTP_HEADERS.newValue(
                     HttpHeaders.of(HttpHeaderNames.HOST, "localhost")));
         }).isInstanceOf(IllegalArgumentException.class);
     }
@@ -72,14 +96,14 @@ class ClientOptionsTest {
     @Test
     void testInvalidWriteTimeoutMillis() {
         assertThatThrownBy(() -> {
-            ClientOptions.of(ClientOption.WRITE_TIMEOUT_MILLIS.newValue(null));
+            ClientOptions.of(WRITE_TIMEOUT_MILLIS.newValue(null));
         }).isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void testInvalidResponseTimeoutMillis() {
         assertThatThrownBy(() -> {
-            ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(null));
+            ClientOptions.of(RESPONSE_TIMEOUT_MILLIS.newValue(null));
         }).isInstanceOf(NullPointerException.class);
     }
 
@@ -88,5 +112,32 @@ class ClientOptionsTest {
         assertThatThrownBy(() -> {
             ClientOptions.of(ClientOption.MAX_RESPONSE_LENGTH.newValue(null));
         }).isInstanceOf(NullPointerException.class);
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(ClientOptionsProvider.class)
+    void testKeepExplicitOption(ClientOption<Object> option, Object value) {
+        final ClientOptions first = ClientOptions.of(option.newValue(value));
+        final ClientOptions second = ClientOptions.of();
+        final ClientOptions merged = ClientOptions.of(first, second);
+        assertThat(merged.get(option)).isEqualTo(value);
+    }
+
+    private static class ClientOptionsProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            final Supplier<RequestId> requestIdGenerator = () -> () -> "1";
+            return Stream.of(
+                    arguments(FACTORY,
+                              ClientFactory.builder().option(ClientFactoryOption.IDLE_TIMEOUT_MILLIS, 100L)
+                                           .build()),
+                    arguments(WRITE_TIMEOUT_MILLIS, 10),
+                    arguments(RESPONSE_TIMEOUT_MILLIS, 20),
+                    arguments(MAX_RESPONSE_LENGTH, 123),
+                    arguments(HTTP_HEADERS, HttpHeaders.of(HttpHeaderNames.USER_AGENT, "armeria")),
+                    arguments(DECORATION, ClientDecoration.of(LoggingClient.newDecorator())),
+                    arguments(REQUEST_ID_GENERATOR, requestIdGenerator),
+                    arguments(ENDPOINT_REMAPPER, Function.identity()));
+        }
     }
 }

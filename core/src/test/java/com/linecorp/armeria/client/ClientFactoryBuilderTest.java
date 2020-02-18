@@ -79,13 +79,15 @@ class ClientFactoryBuilderTest {
                                                     .idleTimeoutMillis(30000)
                                                     .build();
 
-        assertThat(factory2.options().asMap()).allSatisfy((opt, optVal) -> {
-            if (opt.compareTo(ClientFactoryOption.IDLE_TIMEOUT_MILLIS) == 0) {
-                assertThat(optVal.value()).isNotEqualTo(factory1.options().asMap().get(opt).value());
+        final ClientFactoryOptions factory1Option = factory1.options();
+        final ClientFactoryOptions factory2Option = factory2.options();
+        for (ClientFactoryOption<Object> option : ClientFactoryOption.OPTIONS) {
+            if (option.compareTo(ClientFactoryOption.IDLE_TIMEOUT_MILLIS) == 0) {
+                assertThat(factory1Option.get(option)).isNotEqualTo(factory2Option.get(option));
             } else {
-                assertThat(optVal.value()).isEqualTo(factory1.options().asMap().get(opt).value());
+                assertThat(factory1Option.get(option)).isEqualTo(factory2Option.get(option));
             }
-        });
+        }
     }
 
     @Test

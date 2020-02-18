@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -33,6 +32,33 @@ import javax.annotation.Nullable;
  * @see AbstractOptionValue
  */
 public abstract class AbstractOptions {
+
+    protected static <V> V get(AbstractOptions first, AbstractOptions second, AbstractOption<V> option) {
+        final V value = first.getOrNull0(option);
+        if (value != null) {
+            return value;
+        }
+        return second.get0(option);
+    }
+
+    @Nullable
+    protected static <T> T getOrNull(AbstractOptions first, AbstractOptions second, AbstractOption<T> option) {
+        final T value = first.getOrNull0(option);
+        if (value != null) {
+            return value;
+        }
+        return second.getOrNull0(option);
+    }
+
+    protected static <T> T getOrElse(AbstractOptions first, AbstractOptions second,
+                                     AbstractOption<T> option, T defaultValue) {
+        final T value = getOrNull(first, second, option);
+        if (value != null) {
+            return value;
+        } else {
+            return defaultValue;
+        }
+    }
 
     private final Map<AbstractOption<Object>, AbstractOptionValue<AbstractOption<Object>, Object>> valueMap;
 
@@ -108,7 +134,7 @@ public abstract class AbstractOptions {
         requireNonNull(additionalOptions, "additionalOptions");
 
         valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        valueMap.putAll(additionalOptions.valueMap);
+        putAll(additionalOptions.valueMap.values());
     }
 
     /**
@@ -205,20 +231,9 @@ public abstract class AbstractOptions {
         }
     }
 
-    /**
-     * Returns the {@link Map} whose key is {@link AbstractOption} and value is {@link AbstractOptionValue}.
-     *
-     * @param <K> the type of the options
-     * @param <V> the type of the option values
-     */
-    @SuppressWarnings("unchecked")
-    protected final <K extends AbstractOption<?>, V extends AbstractOptionValue<K, ?>> Map<K, V> asMap0() {
-        return Collections.unmodifiableMap((Map<? extends K, ? extends V>) valueMap);
-    }
-
     @Override
     public String toString() {
-        return toString(asMap0().values());
+        return toString(valueMap.values());
     }
 
     static String toString(Collection<?> values) {

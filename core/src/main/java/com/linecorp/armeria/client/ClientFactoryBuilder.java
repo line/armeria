@@ -505,7 +505,12 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder options(ClientFactoryOptions options) {
         requireNonNull(options, "options");
-        options.asMap().values().forEach(this::option);
+        for (ClientFactoryOption<Object> option : ClientFactoryOption.OPTIONS) {
+            final Object value = options.getOrNull(option, false);
+            if (value != null) {
+                option(option, value);
+            }
+        }
         return this;
     }
 

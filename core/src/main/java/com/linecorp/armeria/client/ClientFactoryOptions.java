@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -101,25 +102,27 @@ public final class ClientFactoryOptions extends AbstractOptions {
 
     private static final ClientFactoryOptions DEFAULT = new ClientFactoryOptions(DEFAULT_OPTIONS);
 
+    private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions();
+
     /**
      * The default {@link ClientFactoryOptions}.
      */
     public static ClientFactoryOptions of() {
-        return DEFAULT;
+        return EMPTY;
     }
 
     /**
      * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
      */
     public static ClientFactoryOptions of(ClientFactoryOptionValue<?>... options) {
-        return of(of(), requireNonNull(options, "options"));
+        return of(EMPTY, requireNonNull(options, "options"));
     }
 
     /**
      * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
      */
     public static ClientFactoryOptions of(Iterable<ClientFactoryOptionValue<?>> options) {
-        return of(of(), requireNonNull(options, "options"));
+        return of(EMPTY, requireNonNull(options, "options"));
     }
 
     /**
@@ -182,25 +185,25 @@ public final class ClientFactoryOptions extends AbstractOptions {
         return channelOptions;
     }
 
+    @Nullable
+    private Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> valueMap;
+
     private ClientFactoryOptions(ClientFactoryOptionValue<?>... options) {
         super(options);
     }
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
                                  ClientFactoryOptionValue<?>... additionalOptions) {
-
         super(baseOptions, additionalOptions);
     }
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
                                  Iterable<ClientFactoryOptionValue<?>> additionalOptions) {
-
         super(baseOptions, additionalOptions);
     }
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
                                  ClientFactoryOptions additionalOptions) {
-
         super(baseOptions, additionalOptions);
     }
 
@@ -212,7 +215,11 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * @throws NoSuchElementException if no value is set for the specified {@link ClientFactoryOption}.
      */
     public <T> T get(ClientFactoryOption<T> option) {
-        return get0(option);
+        final T ownValue = getOwnValue(option);
+        if (ownValue != null) {
+            return ownValue;
+        }
+        return get(this, DEFAULT, option);
     }
 
     /**
@@ -223,7 +230,25 @@ public final class ClientFactoryOptions extends AbstractOptions {
      */
     @Nullable
     public <T> T getOrNull(ClientFactoryOption<T> option) {
-        return getOrNull0(option);
+        final T ownValue = getOwnValue(option);
+        if (ownValue != null) {
+            return ownValue;
+        }
+        return getOrNull(this, DEFAULT, option);
+    }
+
+    @Nullable
+    <T> T getOrNull(ClientFactoryOption<T> option, boolean includeDefault) {
+        final T ownValue = getOwnValue(option);
+        if (ownValue != null) {
+            return ownValue;
+        }
+
+        if (includeDefault) {
+            return getOrNull(this, DEFAULT, option);
+        } else {
+            return getOrNull(this, EMPTY, option);
+        }
     }
 
     /**
@@ -233,21 +258,33 @@ public final class ClientFactoryOptions extends AbstractOptions {
      *         {@code defaultValue} if the specified {@link ClientFactoryOption} is not set.
      */
     public <T> T getOrElse(ClientFactoryOption<T> option, T defaultValue) {
-        return getOrElse0(option, defaultValue);
+        requireNonNull(defaultValue, "defaultValue");
+        final T ownValue = getOwnValue(option);
+        if (ownValue != null) {
+            return ownValue;
+        }
+        return getOrElse(this, DEFAULT, option, defaultValue);
     }
 
-    /**
-     * Converts this {@link ClientFactoryOptions} to a {@link Map}.
-     */
-    public Map<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>> asMap() {
-        return asMap0();
+    @SuppressWarnings("unchecked")
+    @Nullable
+    private <T> T getOwnValue(ClientFactoryOption<T> option) {
+        if (valueMap == null) {
+            return null;
+        }
+
+        final ClientFactoryOptionValue<?> optionValue = valueMap.get(option);
+        if (optionValue != null) {
+            return (T) optionValue.value();
+        }
+        return null;
     }
 
     /**
      * Returns the worker {@link EventLoopGroup}.
      */
     public EventLoopGroup workerGroup() {
-        return get0(ClientFactoryOption.WORKER_GROUP);
+        return get(ClientFactoryOption.WORKER_GROUP);
     }
 
     /**
@@ -255,7 +292,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * when the {@link ClientFactory} is closed.
      */
     public boolean shutdownWorkerGroupOnClose() {
-        return get0(ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE);
+        return get(ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE);
     }
 
     /**
@@ -263,14 +300,14 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * {@link EventLoop} to handle a connection to the specified {@link Endpoint}.
      */
     public Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory() {
-        return get0(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY);
+        return get(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY);
     }
 
     /**
      * Returns the {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
      */
     public Map<ChannelOption<?>, Object> channelOptions() {
-        return get0(ClientFactoryOption.CHANNEL_OPTIONS);
+        return get(ClientFactoryOption.CHANNEL_OPTIONS);
     }
 
     /**
@@ -289,7 +326,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * applied to the SSL session.
      */
     public Consumer<? super SslContextBuilder> tlsCustomizer() {
-        return get0(ClientFactoryOption.TLS_CUSTOMIZER);
+        return get(ClientFactoryOption.TLS_CUSTOMIZER);
     }
 
     /**
@@ -299,7 +336,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
     public Function<? super EventLoopGroup,
             ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
 
-        return get0(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY);
+        return get(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY);
     }
 
     /**
@@ -307,7 +344,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * flow-control window size</a>.
      */
     public int http2InitialConnectionWindowSize() {
-        return get0(ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE);
+        return get(ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE);
     }
 
     /**
@@ -315,7 +352,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * for HTTP/2 stream-level flow control.
      */
     public int http2InitialStreamWindowSize() {
-        return get0(ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE);
+        return get(ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE);
     }
 
     /**
@@ -323,7 +360,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public int http2MaxFrameSize() {
-        return get0(ClientFactoryOption.HTTP2_MAX_FRAME_SIZE);
+        return get(ClientFactoryOption.HTTP2_MAX_FRAME_SIZE);
     }
 
     /**
@@ -332,35 +369,35 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * that the client is prepared to accept, in octets.
      */
     public long http2MaxHeaderListSize() {
-        return get0(ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE);
+        return get(ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE);
     }
 
     /**
      * Returns the maximum length of an HTTP/1 response initial line.
      */
     public int http1MaxInitialLineLength() {
-        return get0(ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH);
+        return get(ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH);
     }
 
     /**
      * Returns the maximum length of all headers in an HTTP/1 response.
      */
     public int http1MaxHeaderSize() {
-        return get0(ClientFactoryOption.HTTP1_MAX_HEADER_SIZE);
+        return get(ClientFactoryOption.HTTP1_MAX_HEADER_SIZE);
     }
 
     /**
      * Returns the maximum length of each chunk in an HTTP/1 response content.
      */
     public int http1MaxChunkSize() {
-        return get0(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE);
+        return get(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE);
     }
 
     /**
      * Returns the idle timeout of a socket connection in milliseconds.
      */
     public long idleTimeoutMillis() {
-        return get0(ClientFactoryOption.IDLE_TIMEOUT_MILLIS);
+        return get(ClientFactoryOption.IDLE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -368,7 +405,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * the protocol version of a cleartext HTTP connection.
      */
     public boolean useHttp2Preface() {
-        return get0(ClientFactoryOption.USE_HTTP2_PREFACE);
+        return get(ClientFactoryOption.USE_HTTP2_PREFACE);
     }
 
     /**
@@ -376,31 +413,39 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * HTTP/1 connections.
      */
     public boolean useHttp1Pipelining() {
-        return get0(ClientFactoryOption.USE_HTTP1_PIPELINING);
+        return get(ClientFactoryOption.USE_HTTP1_PIPELINING);
     }
 
     /**
      * Returns the listener which is notified on a connection pool event.
      */
     public ConnectionPoolListener connectionPoolListener() {
-        return get0(ClientFactoryOption.CONNECTION_POOL_LISTENER);
+        return get(ClientFactoryOption.CONNECTION_POOL_LISTENER);
     }
 
     /**
      * Returns the {@link MeterRegistry} which collects various stats.
      */
     public MeterRegistry meterRegistry() {
-        return get0(ClientFactoryOption.METER_REGISTRY);
+        return get(ClientFactoryOption.METER_REGISTRY);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected <T extends AbstractOptionValue<?, ?>> T filterValue(T optionValue) {
+        if (valueMap == null) {
+            valueMap = new IdentityHashMap<>(1);
+        }
         if (optionValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
-            final ClientFactoryOption<Map<ChannelOption<?>, Object>> castOption =
-                    (ClientFactoryOption<Map<ChannelOption<?>, Object>>) optionValue.option();
+            @SuppressWarnings("unchecked")
             final Map<ChannelOption<?>, Object> value = (Map<ChannelOption<?>, Object>) optionValue.value();
-            return (T) castOption.newValue(filterChannelOptions(value));
+            final ClientFactoryOptionValue<Map<ChannelOption<?>, Object>> newValue =
+                    ClientFactoryOption.CHANNEL_OPTIONS.newValue(filterChannelOptions(value));
+
+            valueMap.compute(ClientFactoryOption.CHANNEL_OPTIONS,
+                             (k, oldValue) -> oldValue == null ? newValue : mergeValue(oldValue, newValue));
+            @SuppressWarnings("unchecked")
+            final T cast = (T) newValue;
+            return cast;
         }
         return optionValue;
     }
