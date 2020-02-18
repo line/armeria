@@ -443,8 +443,9 @@ public final class Server implements ListenableAsyncCloseable {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
-            meterRegistry.gauge("armeria.server.pendingResponses", gracefulShutdownSupport,
-                                GracefulShutdownSupport::pendingResponses);
+            meterRegistry.gauge(Flags.useLegacyMeterNames() ? "armeria.server.pendingResponses"
+                                                            : "armeria.server.pending.responses",
+                                gracefulShutdownSupport, GracefulShutdownSupport::pendingResponses);
             meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
                                 ConnectionLimitingHandler::numConnections);
         }
