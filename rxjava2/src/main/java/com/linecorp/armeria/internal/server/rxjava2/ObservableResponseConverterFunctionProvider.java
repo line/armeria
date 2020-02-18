@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
-import com.linecorp.armeria.server.rxjava.ObservableResponseConverterFunction;
+import com.linecorp.armeria.server.rxjava2.ObservableResponseConverterFunction;
 
 import io.reactivex.Completable;
 import io.reactivex.Maybe;

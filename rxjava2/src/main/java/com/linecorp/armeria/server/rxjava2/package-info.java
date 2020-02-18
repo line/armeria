@@ -21,6 +21,6 @@
  * is returned by an annotated HTTP service.
  */
 @NonNullByDefault
-package com.linecorp.armeria.server.rxjava;
+package com.linecorp.armeria.server.rxjava2;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;
