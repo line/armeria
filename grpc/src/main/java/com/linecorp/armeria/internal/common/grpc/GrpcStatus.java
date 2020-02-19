@@ -54,12 +54,12 @@ import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Exception.StreamException;
 
 /**
  * Utilities for handling {@link Status} in Armeria.
@@ -88,11 +88,8 @@ public final class GrpcStatus {
         if (s.getCode() != Code.UNKNOWN) {
             return s;
         }
-        if (t instanceof StreamException) {
-            final StreamException streamException = (StreamException) t;
-            if (streamException.getMessage() != null && streamException.getMessage().contains("RST_STREAM")) {
-                return Status.CANCELLED;
-            }
+        if (t instanceof ClosedStreamException) {
+            return Status.CANCELLED;
         }
         if (t instanceof ClosedChannelException) {
             // ClosedChannelException is used any time the Netty channel is closed. Proper error
@@ -104,6 +101,12 @@ public final class GrpcStatus {
             return Status.UNAVAILABLE.withCause(t);
         }
         if (t instanceof Http2Exception) {
+            if (t instanceof Http2Exception.StreamException) {
+                final String message = t.getMessage();
+                if (message != null && message.contains("RST_STREAM")) {
+                    return Status.CANCELLED;
+                }
+            }
             return Status.INTERNAL.withCause(t);
         }
         if (t instanceof TimeoutException) {
