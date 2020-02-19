@@ -29,6 +29,7 @@ import static com.linecorp.armeria.common.logging.BuiltInProperty.REMOTE_PORT;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_AUTHORITY;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_CONTENT_LENGTH;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_DIRECTION;
+import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_ID;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_METHOD;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_NAME;
 import static com.linecorp.armeria.common.logging.BuiltInProperty.REQ_PATH;
@@ -260,6 +261,9 @@ public final class RequestContextExporter {
         if (builtInProperties.contains(REQ_AUTHORITY)) {
             exportAuthority(out, ctx, log);
         }
+        if (builtInProperties.contains(REQ_ID)) {
+            exportId(out, ctx);
+        }
         if (builtInProperties.contains(REQ_PATH)) {
             exportPath(out, ctx);
         }
@@ -421,6 +425,10 @@ public final class RequestContextExporter {
         }
 
         return null;
+    }
+
+    private static void exportId(Map<String, String> out, RequestContext ctx) {
+        putBuiltInProperty(out, REQ_ID, ctx.id().text());
     }
 
     private static void exportPath(Map<String, String> out, RequestContext ctx) {

@@ -62,6 +62,7 @@ class RequestContextExporterTest {
                 BuiltInProperty.REQ_PATH.key,
                 BuiltInProperty.RES_CONTENT_LENGTH.key,
                 BuiltInProperty.RES_STATUS_CODE.key,
+                BuiltInProperty.REQ_ID.key,
                 BuiltInProperty.SCHEME.key,
                 "attrs.attr1");
     }

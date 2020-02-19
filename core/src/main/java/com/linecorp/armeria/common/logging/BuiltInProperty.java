@@ -91,6 +91,10 @@ public enum BuiltInProperty {
      */
     REQ_AUTHORITY("req.authority"),
     /**
+     * {@code "req.id"} - the id of the request.
+     */
+    REQ_ID("req.id"),
+    /**
      * {@code "req.path"} - the path of the request.
      */
     REQ_PATH("req.path"),
