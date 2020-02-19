@@ -194,16 +194,19 @@ public final class ClientFactoryOptions extends AbstractOptions {
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
                                  ClientFactoryOptionValue<?>... additionalOptions) {
+
         super(baseOptions, additionalOptions);
     }
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
                                  Iterable<ClientFactoryOptionValue<?>> additionalOptions) {
+
         super(baseOptions, additionalOptions);
     }
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
                                  ClientFactoryOptions additionalOptions) {
+
         super(baseOptions, additionalOptions);
     }
 
