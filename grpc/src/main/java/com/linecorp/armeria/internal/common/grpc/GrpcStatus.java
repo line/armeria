@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 
 /**
@@ -73,16 +74,7 @@ public final class GrpcStatus {
      * well and the protocol package.
      */
     public static Status fromThrowable(Throwable t) {
-        requireNonNull(t, "t");
-
-        Throwable cause = t;
-        while (cause != null) {
-            if (cause instanceof ArmeriaStatusException) {
-                t = StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
-                break;
-            }
-            cause = cause.getCause();
-        }
+        t = unwrap(requireNonNull(t, "t"));
 
         final Status s = Status.fromThrowable(t);
         if (s.getCode() != Code.UNKNOWN) {
@@ -101,11 +93,9 @@ public final class GrpcStatus {
             return Status.UNAVAILABLE.withCause(t);
         }
         if (t instanceof Http2Exception) {
-            if (t instanceof Http2Exception.StreamException) {
-                final String message = t.getMessage();
-                if (message != null && message.contains("RST_STREAM")) {
-                    return Status.CANCELLED;
-                }
+            if (t instanceof Http2Exception.StreamException &&
+                ((Http2Exception.StreamException) t).error() == Http2Error.CANCEL) {
+                return Status.CANCELLED;
             }
             return Status.INTERNAL.withCause(t);
         }
@@ -113,6 +103,18 @@ public final class GrpcStatus {
             return Status.DEADLINE_EXCEEDED.withCause(t);
         }
         return s;
+    }
+
+    private static Throwable unwrap(Throwable t) {
+        Throwable cause = t;
+        while (cause != null) {
+            if (cause instanceof ArmeriaStatusException) {
+                t = StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
+                break;
+            }
+            cause = cause.getCause();
+        }
+        return t;
     }
 
     /**
