@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Exception.streamError;
 
 import java.nio.charset.StandardCharsets;
 
@@ -31,6 +30,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -298,8 +298,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                   "received a RST_STREAM frame for an unknown stream: %d", streamId);
         }
 
-        req.abortResponse(streamError(
-                streamId, Http2Error.valueOf(errorCode), "received a RST_STREAM frame"));
+        req.abortResponse(ClosedStreamException.get());
     }
 
     @Override
