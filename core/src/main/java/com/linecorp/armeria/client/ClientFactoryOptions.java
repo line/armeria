@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -281,6 +282,16 @@ public final class ClientFactoryOptions extends AbstractOptions {
             return (T) optionValue.value();
         }
         return null;
+    }
+
+    /**
+     * Returns {@link ClientFactoryOption}s of this {@link ClientFactoryOptions}.
+     */
+    @SuppressWarnings("unchecked")
+    public Set<ClientFactoryOption<Object>> options() {
+        final Set<ClientFactoryOption<Object>> first = (Set<ClientFactoryOption<Object>>) DEFAULT.options0();
+        final Set<ClientFactoryOption<Object>> second = (Set<ClientFactoryOption<Object>>) options0();
+        return Sets.union(first, second);
     }
 
     /**

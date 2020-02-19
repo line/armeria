@@ -81,7 +81,7 @@ class ClientFactoryBuilderTest {
 
         final ClientFactoryOptions factory1Option = factory1.options();
         final ClientFactoryOptions factory2Option = factory2.options();
-        for (ClientFactoryOption<Object> option : ClientFactoryOption.OPTIONS) {
+        for (ClientFactoryOption<Object> option : factory2.options().options()) {
             if (option.compareTo(ClientFactoryOption.IDLE_TIMEOUT_MILLIS) == 0) {
                 assertThat(factory1Option.get(option)).isNotEqualTo(factory2Option.get(option));
             } else {

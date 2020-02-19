@@ -22,8 +22,11 @@ import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A set of configuration options and their respective values.
@@ -229,6 +232,13 @@ public abstract class AbstractOptions {
         } else {
             return defaultValue;
         }
+    }
+
+    /**
+     * Returns {@link AbstractOption}s of this {@link AbstractOptions}.
+     */
+    protected final Set<? extends AbstractOption<?>> options0() {
+        return ImmutableSet.copyOf(valueMap.keySet());
     }
 
     @Override

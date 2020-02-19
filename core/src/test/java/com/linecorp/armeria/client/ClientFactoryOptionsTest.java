@@ -95,9 +95,9 @@ class ClientFactoryOptionsTest {
                       })
                       .collect(toImmutableSet());
 
-        assertThat(ClientFactoryOption.OPTIONS).isEqualTo(options);
+        assertThat(ClientFactoryOptions.of().options()).isEqualTo(options);
         final ClientFactoryOptions defaultOption = ClientFactoryOptions.of();
-        for (final ClientFactoryOption<Object> option : ClientFactoryOption.OPTIONS) {
+        for (final ClientFactoryOption<Object> option : defaultOption.options()) {
             // should not be null
             defaultOption.get(option);
         }

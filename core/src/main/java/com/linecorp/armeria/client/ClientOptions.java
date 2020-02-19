@@ -32,12 +32,14 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Flags;
@@ -334,6 +336,16 @@ public final class ClientOptions extends AbstractOptions {
             return (T) optionValue.value();
         }
         return null;
+    }
+
+    /**
+     * Returns {@link ClientOption}s of this {@link ClientOptions}.
+     */
+    @SuppressWarnings("unchecked")
+    public Set<ClientOption<Object>> options() {
+        final Set<ClientOption<Object>> first = (Set<ClientOption<Object>>) DEFAULT.options0();
+        final Set<ClientOption<Object>> seconds = (Set<ClientOption<Object>>) options0();
+        return Sets.union(first, seconds);
     }
 
     /**

@@ -84,5 +84,4 @@ class WebClientBuilderTest {
         final ClientFactory clientFactory = clientOptions.factory();
         assertThat(clientFactory.options().get(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE)).isEqualTo(100);
     }
-
 }
