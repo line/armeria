@@ -54,12 +54,13 @@ import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Exception.StreamException;
 
 /**
  * Utilities for handling {@link Status} in Armeria.
@@ -73,26 +74,14 @@ public final class GrpcStatus {
      * well and the protocol package.
      */
     public static Status fromThrowable(Throwable t) {
-        requireNonNull(t, "t");
-
-        Throwable cause = t;
-        while (cause != null) {
-            if (cause instanceof ArmeriaStatusException) {
-                t = StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
-                break;
-            }
-            cause = cause.getCause();
-        }
+        t = unwrap(requireNonNull(t, "t"));
 
         final Status s = Status.fromThrowable(t);
         if (s.getCode() != Code.UNKNOWN) {
             return s;
         }
-        if (t instanceof StreamException) {
-            final StreamException streamException = (StreamException) t;
-            if (streamException.getMessage() != null && streamException.getMessage().contains("RST_STREAM")) {
-                return Status.CANCELLED;
-            }
+        if (t instanceof ClosedStreamException) {
+            return Status.CANCELLED;
         }
         if (t instanceof ClosedChannelException) {
             // ClosedChannelException is used any time the Netty channel is closed. Proper error
@@ -104,12 +93,28 @@ public final class GrpcStatus {
             return Status.UNAVAILABLE.withCause(t);
         }
         if (t instanceof Http2Exception) {
+            if (t instanceof Http2Exception.StreamException &&
+                ((Http2Exception.StreamException) t).error() == Http2Error.CANCEL) {
+                return Status.CANCELLED;
+            }
             return Status.INTERNAL.withCause(t);
         }
         if (t instanceof TimeoutException) {
             return Status.DEADLINE_EXCEEDED.withCause(t);
         }
         return s;
+    }
+
+    private static Throwable unwrap(Throwable t) {
+        Throwable cause = t;
+        while (cause != null) {
+            if (cause instanceof ArmeriaStatusException) {
+                t = StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
+                break;
+            }
+            cause = cause.getCause();
+        }
+        return t;
     }
 
     /**
