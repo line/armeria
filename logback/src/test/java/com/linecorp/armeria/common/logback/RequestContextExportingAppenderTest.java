@@ -267,7 +267,8 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .hasSize(15);
+                           .containsKey("req.id")
+                           .hasSize(16);
         }
     }
 
@@ -308,7 +309,8 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("elapsed_nanos")
-                           .hasSize(20);
+                           .containsKey("req.id")
+                           .hasSize(21);
         }
     }
 
@@ -369,8 +371,9 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsEntry("attrs.my_attr", "some-attr")
+                           .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(27);
+                           .hasSize(28);
         }
     }
 
@@ -441,7 +444,8 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .hasSize(15);
+                           .containsKey("req.id")
+                           .hasSize(16);
         }
     }
 
@@ -500,8 +504,9 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsEntry("attrs.my_attr", "some-attr")
+                           .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(25);
+                           .hasSize(26);
         }
     }
 
