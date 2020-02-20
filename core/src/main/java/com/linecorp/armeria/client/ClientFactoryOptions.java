@@ -116,14 +116,14 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
      */
     public static ClientFactoryOptions of(ClientFactoryOptionValue<?>... options) {
-        return of(EMPTY, requireNonNull(options, "options"));
+        return of(of(), requireNonNull(options, "options"));
     }
 
     /**
      * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
      */
     public static ClientFactoryOptions of(Iterable<ClientFactoryOptionValue<?>> options) {
-        return of(EMPTY, requireNonNull(options, "options"));
+        return of(of(), requireNonNull(options, "options"));
     }
 
     /**

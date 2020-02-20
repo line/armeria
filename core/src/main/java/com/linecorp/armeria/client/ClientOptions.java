@@ -108,14 +108,14 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
     public static ClientOptions of(ClientOptionValue<?>... options) {
-        return of(EMPTY, requireNonNull(options, "options"));
+        return of(of(), requireNonNull(options, "options"));
     }
 
     /**
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
     public static ClientOptions of(Iterable<ClientOptionValue<?>> options) {
-        return of(EMPTY, requireNonNull(options, "options"));
+        return of(of(), requireNonNull(options, "options"));
     }
 
     /**
