@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,64 +14,59 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
+package com.linecorp.armeria.common.rxjava;
+
+import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.rxjava3.core.MaybeObserver;
-import io.reactivex.rxjava3.disposables.Disposable;
-import io.reactivex.rxjava3.internal.disposables.DisposableHelper;
+import io.reactivex.rxjava3.internal.fuseable.QueueSubscription;
+import io.reactivex.rxjava3.internal.subscribers.BasicFuseableSubscriber;
 
-final class RequestContextMaybeObserver<T> implements MaybeObserver<T>, Disposable {
-    private final MaybeObserver<T> actual;
+final class RequestContextSubscriber<T> extends BasicFuseableSubscriber<T, T> {
+
     private final RequestContext assemblyContext;
-    private Disposable disposable;
 
-    RequestContextMaybeObserver(MaybeObserver<T> actual, RequestContext assemblyContext) {
-        this.actual = actual;
+    RequestContextSubscriber(Subscriber<? super T> downstream, RequestContext assemblyContext) {
+        super(downstream);
         this.assemblyContext = assemblyContext;
     }
 
     @Override
-    public void onSubscribe(Disposable d) {
-        if (!DisposableHelper.validate(disposable, d)) {
-            return;
-        }
-        disposable = d;
+    public void onNext(T t) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            actual.onSubscribe(this);
+            downstream.onNext(t);
         }
     }
 
     @Override
     public void onError(Throwable t) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            actual.onError(t);
-        }
-    }
-
-    @Override
-    public void onSuccess(T value) {
-        try (SafeCloseable ignored = assemblyContext.push()) {
-            actual.onSuccess(value);
+            downstream.onError(t);
         }
     }
 
     @Override
     public void onComplete() {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            actual.onComplete();
+            downstream.onComplete();
         }
     }
 
     @Override
-    public boolean isDisposed() {
-        return disposable.isDisposed();
+    public int requestFusion(int mode) {
+        final QueueSubscription<T> qs = this.qs;
+        if (qs != null) {
+            final int m = qs.requestFusion(mode);
+            sourceMode = m;
+            return m;
+        }
+        return NONE;
     }
 
     @Override
-    public void dispose() {
-        disposable.dispose();
+    public T poll() throws Throwable {
+        return qs.poll();
     }
 }

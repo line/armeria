@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
+package com.linecorp.armeria.common.rxjava;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -23,14 +23,15 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.functions.Supplier;
 import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
 
-final class RequestContextSupplierFlowable<T> extends Flowable<T> implements Supplier<T> {
+final class RequestContextScalarSupplierFlowable<T> extends Flowable<T>
+        implements ScalarSupplier<T> {
     private final Publisher<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextSupplierFlowable(Publisher<T> source, RequestContext assemblyContext) {
+    RequestContextScalarSupplierFlowable(Publisher<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
@@ -40,9 +41,8 @@ final class RequestContextSupplierFlowable<T> extends Flowable<T> implements Sup
     protected void subscribeActual(Subscriber<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
             if (s instanceof ConditionalSubscriber) {
-                source.subscribe(new RequestContextConditionalSubscriber<>(
-                        (ConditionalSubscriber<? super T>) s, assemblyContext
-                ));
+                source.subscribe(new RequestContextConditionalSubscriber<>((ConditionalSubscriber<? super T>) s,
+                                                                           assemblyContext));
             } else {
                 source.subscribe(new RequestContextSubscriber<>(s, assemblyContext));
             }
@@ -51,9 +51,9 @@ final class RequestContextSupplierFlowable<T> extends Flowable<T> implements Sup
 
     @SuppressWarnings("unchecked")
     @Override
-    public T get() throws Throwable {
+    public T get() {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((Supplier<T>) source).get();
+            return ((ScalarSupplier<T>) source).get();
         }
     }
 }

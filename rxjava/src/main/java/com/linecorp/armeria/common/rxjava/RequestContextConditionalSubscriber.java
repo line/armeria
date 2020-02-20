@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,23 +14,30 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
-
-import org.reactivestreams.Subscriber;
+package com.linecorp.armeria.common.rxjava;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
 import io.reactivex.rxjava3.internal.fuseable.QueueSubscription;
-import io.reactivex.rxjava3.internal.subscribers.BasicFuseableSubscriber;
+import io.reactivex.rxjava3.internal.subscribers.BasicFuseableConditionalSubscriber;
 
-final class RequestContextSubscriber<T> extends BasicFuseableSubscriber<T, T> {
+final class RequestContextConditionalSubscriber<T> extends BasicFuseableConditionalSubscriber<T, T> {
 
     private final RequestContext assemblyContext;
 
-    RequestContextSubscriber(Subscriber<? super T> downstream, RequestContext assemblyContext) {
+    RequestContextConditionalSubscriber(ConditionalSubscriber<? super T> downstream,
+                                        RequestContext assemblyContext) {
         super(downstream);
         this.assemblyContext = assemblyContext;
+    }
+
+    @Override
+    public boolean tryOnNext(T t) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
+            return downstream.tryOnNext(t);
+        }
     }
 
     @Override

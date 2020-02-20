@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,29 +14,29 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
+package com.linecorp.armeria.common.rxjava;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.CompletableObserver;
-import io.reactivex.rxjava3.core.CompletableSource;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.ObservableSource;
+import io.reactivex.rxjava3.core.Observer;
 
-final class RequestContextCompletable extends Completable {
+final class RequestContextObservable<T> extends Observable<T> {
 
-    private final CompletableSource source;
+    private final ObservableSource<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextCompletable(CompletableSource source, RequestContext assemblyContext) {
+    RequestContextObservable(ObservableSource<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
 
     @Override
-    protected void subscribeActual(CompletableObserver s) {
+    protected void subscribeActual(Observer<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            source.subscribe(new RequestContextCompletableObserver(s, assemblyContext));
+            source.subscribe(new RequestContextObserver<>(s, assemblyContext));
         }
     }
 }

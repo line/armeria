@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,29 +14,29 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
+package com.linecorp.armeria.common.rxjava;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.rxjava3.core.Maybe;
-import io.reactivex.rxjava3.core.MaybeObserver;
-import io.reactivex.rxjava3.core.MaybeSource;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.CompletableObserver;
+import io.reactivex.rxjava3.core.CompletableSource;
 
-final class RequestContextMaybe<T> extends Maybe<T> {
+final class RequestContextCompletable extends Completable {
 
-    private final MaybeSource<T> source;
+    private final CompletableSource source;
     private final RequestContext assemblyContext;
 
-    RequestContextMaybe(MaybeSource<T> source, RequestContext assemblyContext) {
+    RequestContextCompletable(CompletableSource source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
 
     @Override
-    protected void subscribeActual(MaybeObserver<? super T> s) {
+    protected void subscribeActual(CompletableObserver s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            source.subscribe(new RequestContextMaybeObserver<>(s, assemblyContext));
+            source.subscribe(new RequestContextCompletableObserver(s, assemblyContext));
         }
     }
 }

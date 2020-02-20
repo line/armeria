@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,23 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
+package com.linecorp.armeria.common.rxjava;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.core.ObservableSource;
 import io.reactivex.rxjava3.core.Observer;
-import io.reactivex.rxjava3.functions.Supplier;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.functions.Consumer;
+import io.reactivex.rxjava3.observables.ConnectableObservable;
 
-final class RequestContextSupplierObservable<T> extends Observable<T>
-        implements Supplier<T> {
+final class RequestContextConnectableObservable<T> extends ConnectableObservable<T> {
 
-    private final ObservableSource<T> source;
+    private final ConnectableObservable<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextSupplierObservable(ObservableSource<T> source, RequestContext assemblyContext) {
+    RequestContextConnectableObservable(ConnectableObservable<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
@@ -42,11 +41,15 @@ final class RequestContextSupplierObservable<T> extends Observable<T>
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public T get() throws Throwable {
+    public void connect(Consumer<? super Disposable> connection) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((Supplier<T>) source).get();
+            source.connect(connection);
         }
+    }
+
+    @Override
+    public void reset() {
+        source.reset();
     }
 }

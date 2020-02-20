@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,12 +14,6 @@
  * under the License.
  */
 
-/**
- * Provide a default {@link com.linecorp.armeria.server.annotation.ResponseConverterFunction}
- * which automatically converts an {@link io.reactivex.rxjava3.core.ObservableSource} into an
- * {@link com.linecorp.armeria.common.HttpResponse} when the {@link io.reactivex.rxjava3.core.ObservableSource}
- * is returned by an annotated HTTP service.
- */
 @NonNullByDefault
 package com.linecorp.armeria.internal.server.rxjava;
 

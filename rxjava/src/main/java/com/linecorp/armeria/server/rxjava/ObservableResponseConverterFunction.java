@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -51,9 +51,9 @@ public final class ObservableResponseConverterFunction implements ResponseConver
      * Creates a new {@link ResponseConverterFunction} instance.
      *
      * @param responseConverter the function which converts an object with the configured
-     * {@link ResponseConverterFunction}
+     *                          {@link ResponseConverterFunction}
      * @param exceptionHandler the function which converts a {@link Throwable} with the configured
-     * {@link ExceptionHandlerFunction}
+     *                         {@link ExceptionHandlerFunction}
      */
     public ObservableResponseConverterFunction(ResponseConverterFunction responseConverter,
                                                ExceptionHandlerFunction exceptionHandler) {

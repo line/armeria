@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,21 +14,21 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
+package com.linecorp.armeria.common.rxjava;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.rxjava3.core.SingleObserver;
+import io.reactivex.rxjava3.core.CompletableObserver;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.internal.disposables.DisposableHelper;
 
-final class RequestContextSingleObserver<T> implements SingleObserver<T>, Disposable {
-    private final SingleObserver<T> actual;
+final class RequestContextCompletableObserver implements CompletableObserver, Disposable {
+    private final CompletableObserver actual;
     private final RequestContext assemblyContext;
     private Disposable disposable;
 
-    RequestContextSingleObserver(SingleObserver<T> actual, RequestContext assemblyContext) {
+    RequestContextCompletableObserver(CompletableObserver actual, RequestContext assemblyContext) {
         this.actual = actual;
         this.assemblyContext = assemblyContext;
     }
@@ -52,9 +52,9 @@ final class RequestContextSingleObserver<T> implements SingleObserver<T>, Dispos
     }
 
     @Override
-    public void onSuccess(T value) {
+    public void onComplete() {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            actual.onSuccess(value);
+            actual.onComplete();
         }
     }
 

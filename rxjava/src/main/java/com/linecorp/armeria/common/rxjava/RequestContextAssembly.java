@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
+package com.linecorp.armeria.common.rxjava;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -76,9 +76,6 @@ public final class RequestContextAssembly {
 
     @GuardedBy("RequestContextAssembly.class")
     private static boolean enabled;
-
-    private RequestContextAssembly() {
-    }
 
     /**
      * Enable {@link RequestContext} during operators.
@@ -175,11 +172,8 @@ public final class RequestContextAssembly {
                 compose(oldOnConnectableFlowableAssembly,
                         new ConditionalOnCurrentRequestContextFunction<ConnectableFlowable>() {
                             @Override
-                            ConnectableFlowable applyActual(
-                                    ConnectableFlowable cf,
-                                    RequestContext ctx) {
-                                return new RequestContextConnectableFlowable(
-                                        cf, ctx);
+                            ConnectableFlowable applyActual(ConnectableFlowable cf, RequestContext ctx) {
+                                return new RequestContextConnectableFlowable(cf, ctx);
                             }
                         }
                 ));
@@ -222,6 +216,8 @@ public final class RequestContextAssembly {
         oldOnParallelAssembly = null;
         enabled = false;
     }
+
+    private RequestContextAssembly() {}
 
     private abstract static class ConditionalOnCurrentRequestContextFunction<T> implements Function<T, T> {
         @Override

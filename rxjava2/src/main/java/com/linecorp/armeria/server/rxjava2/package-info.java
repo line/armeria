@@ -15,7 +15,7 @@
  */
 
 /**
- * Provide a default {@link com.linecorp.armeria.server.annotation.ResponseConverterFunction}
+ * Provides a default {@link com.linecorp.armeria.server.annotation.ResponseConverterFunction}
  * which automatically converts an {@link io.reactivex.ObservableSource} into an
  * {@link com.linecorp.armeria.common.HttpResponse} when the {@link io.reactivex.ObservableSource}
  * is returned by an annotated HTTP service.

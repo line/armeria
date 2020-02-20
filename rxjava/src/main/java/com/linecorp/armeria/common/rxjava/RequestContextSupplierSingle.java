@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
+package com.linecorp.armeria.common.rxjava;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -22,14 +22,13 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.core.SingleObserver;
 import io.reactivex.rxjava3.core.SingleSource;
-import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
+import io.reactivex.rxjava3.functions.Supplier;
 
-final class RequestContextScalarSupplierSingle<T> extends Single<T>
-        implements ScalarSupplier<T> {
+final class RequestContextSupplierSingle<T> extends Single<T> implements Supplier<T> {
     private final SingleSource<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextScalarSupplierSingle(SingleSource<T> source, RequestContext assemblyContext) {
+    RequestContextSupplierSingle(SingleSource<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
@@ -43,9 +42,9 @@ final class RequestContextScalarSupplierSingle<T> extends Single<T>
 
     @SuppressWarnings("unchecked")
     @Override
-    public T get() {
+    public T get() throws Throwable {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((ScalarSupplier<T>) source).get();
+            return ((Supplier<T>) source).get();
         }
     }
 }

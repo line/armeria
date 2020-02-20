@@ -14,13 +14,7 @@
  * under the License.
  */
 
-/**
- * Provides a default {@link com.linecorp.armeria.server.annotation.ResponseConverterFunction}
- * which automatically converts an {@link io.reactivex.rxjava3.core.ObservableSource} into an
- * {@link com.linecorp.armeria.common.HttpResponse} when the {@link io.reactivex.rxjava3.core.ObservableSource}
- * is returned by an annotated HTTP service.
- */
 @NonNullByDefault
-package com.linecorp.armeria.server.rxjava;
+package com.linecorp.armeria.internal.server.rxjava2;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

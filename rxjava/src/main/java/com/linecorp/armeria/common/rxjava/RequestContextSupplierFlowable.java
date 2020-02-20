@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,23 +14,23 @@
  * under the License.
  */
 
-package com.linecorp.armeria.rxjava;
+package com.linecorp.armeria.common.rxjava;
 
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.rxjava3.disposables.Disposable;
-import io.reactivex.rxjava3.flowables.ConnectableFlowable;
-import io.reactivex.rxjava3.functions.Consumer;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.functions.Supplier;
 import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
 
-final class RequestContextConnectableFlowable<T> extends ConnectableFlowable<T> {
-    private final ConnectableFlowable<T> source;
+final class RequestContextSupplierFlowable<T> extends Flowable<T> implements Supplier<T> {
+    private final Publisher<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextConnectableFlowable(ConnectableFlowable<T> source, RequestContext assemblyContext) {
+    RequestContextSupplierFlowable(Publisher<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
@@ -40,24 +40,19 @@ final class RequestContextConnectableFlowable<T> extends ConnectableFlowable<T> 
     protected void subscribeActual(Subscriber<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
             if (s instanceof ConditionalSubscriber) {
-                source.subscribe(new RequestContextConditionalSubscriber<>(
-                        (ConditionalSubscriber<? super T>) s, assemblyContext
-                ));
+                source.subscribe(new RequestContextConditionalSubscriber<>((ConditionalSubscriber<? super T>) s,
+                                                                           assemblyContext));
             } else {
                 source.subscribe(new RequestContextSubscriber<>(s, assemblyContext));
             }
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public void connect(Consumer<? super Disposable> connection) {
+    public T get() throws Throwable {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            source.connect(connection);
+            return ((Supplier<T>) source).get();
         }
-    }
-
-    @Override
-    public void reset() {
-        source.reset();
     }
 }
