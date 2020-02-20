@@ -15,16 +15,11 @@
  */
 package com.linecorp.armeria.common.logback;
 
-public class CustomValue {
+import java.util.function.Function;
 
-    final String value;
-
-    public CustomValue(String value) {
-        this.value = value;
-    }
-
+public final class CustomObjectNameStringifier implements Function<CustomObject, String> {
     @Override
-    public String toString() {
-        return "CustomValue(" + value + ')';
+    public String apply(CustomObject o) {
+        return o.name;
     }
 }

@@ -626,7 +626,8 @@ public final class RequestContextExporter {
                 return false;
             }
 
-            return key.equals(((ExportEntry<?>) o).key);
+            return key.equals(((ExportEntry<?>) o).key) &&
+                   exportKey.equals(((ExportEntry<?>) o).exportKey);
         }
 
         @Override

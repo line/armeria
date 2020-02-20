@@ -22,7 +22,8 @@
     <export>req.http_headers.user-agent</export>
     <export>res.http_headers.set-cookie</export>
     <export>attrs.foo:com.example.AttrKeys#FOO</export>
-    <export>attrs.bar:com.example.AttrKeys#BAR:com.linecorp.armeria.common.logback.CustomValueStringifier</export>
+    <export>attrs.bar:com.example.AttrKeys#BAR:com.linecorp.armeria.common.logback.CustomObjectValueStringifier</export>
+    <export>attrs.qux:com.example.AttrKeys#BAR:com.linecorp.armeria.common.logback.CustomObjectNameStringifier</export>
   </appender>
 
   <logger name="com.linecorp.armeria.common.logback.RequestContextExportingAppenderTest" level="TRACE">
