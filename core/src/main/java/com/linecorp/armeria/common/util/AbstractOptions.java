@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -238,7 +239,7 @@ public abstract class AbstractOptions {
      * Returns {@link AbstractOption}s of this {@link AbstractOptions}.
      */
     protected final Set<? extends AbstractOption<?>> options0() {
-        return ImmutableSet.copyOf(valueMap.keySet());
+        return Collections.unmodifiableSet(valueMap.keySet());
     }
 
     @Override
