@@ -28,15 +28,14 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.util.AbstractOptionValue;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -51,7 +50,7 @@ import io.netty.resolver.AddressResolverGroup;
 /**
  * A set of {@link ClientFactoryOption}s and their respective values.
  */
-public final class ClientFactoryOptions extends AbstractOptions {
+public final class ClientFactoryOptions extends AbstractOptions<ClientFactoryOptionValue<?>> {
     private static final EventLoopGroup DEFAULT_WORKER_GROUP = CommonPools.workerGroup();
 
     private static final Function<? super EventLoopGroup, ? extends EventLoopScheduler>
@@ -100,7 +99,8 @@ public final class ClientFactoryOptions extends AbstractOptions {
             ClientFactoryOption.METER_REGISTRY.newValue(Metrics.globalRegistry)
     };
 
-    private static final ClientFactoryOptions DEFAULT = new ClientFactoryOptions(DEFAULT_OPTIONS);
+    @VisibleForTesting
+    static final ClientFactoryOptions DEFAULT = new ClientFactoryOptions(DEFAULT_OPTIONS);
 
     private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions();
 
@@ -247,16 +247,6 @@ public final class ClientFactoryOptions extends AbstractOptions {
     public <T> T getOrElse(ClientFactoryOption<T> option, T defaultValue) {
         requireNonNull(defaultValue, "defaultValue");
         return getOrElse(this, DEFAULT, option, defaultValue);
-    }
-
-    /**
-     * Returns {@link ClientFactoryOption}s of this {@link ClientFactoryOptions}.
-     */
-    @SuppressWarnings("unchecked")
-    public Set<ClientFactoryOption<Object>> options() {
-        final Set<ClientFactoryOption<Object>> first = (Set<ClientFactoryOption<Object>>) DEFAULT.options0();
-        final Set<ClientFactoryOption<Object>> second = (Set<ClientFactoryOption<Object>>) options0();
-        return Sets.union(first, second);
     }
 
     /**
@@ -410,19 +400,19 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    protected <T extends AbstractOptionValue<?, ?>> T filterValue(T optionValue) {
+    protected ClientFactoryOptionValue<?> filterValue(ClientFactoryOptionValue<?> optionValue) {
         if (optionValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
-            final ClientFactoryOption<Map<ChannelOption<?>, Object>> castOption =
-                    (ClientFactoryOption<Map<ChannelOption<?>, Object>>) optionValue.option();
-            final Map<ChannelOption<?>, Object> value = (Map<ChannelOption<?>, Object>) optionValue.value();
-            return (T) castOption.newValue(filterChannelOptions(value));
+            @SuppressWarnings("unchecked")
+            final ClientFactoryOptionValue<Map<ChannelOption<?>, Object>> cast =
+                    (ClientFactoryOptionValue<Map<ChannelOption<?>, Object>>) optionValue;
+            return cast.option().newValue(filterChannelOptions(cast.value()));
         }
         return optionValue;
     }
 
     @Override
-    protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
+    protected ClientFactoryOptionValue<?> mergeValue(ClientFactoryOptionValue<?> oldValue,
+                                                     ClientFactoryOptionValue<?> newValue) {
         if (oldValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
             @SuppressWarnings("unchecked")
             final Map<ChannelOption<?>, Object> castOldValue = (Map<ChannelOption<?>, Object>) oldValue.value();
@@ -443,9 +433,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
                 }
             });
             builder.putAll(castNewValue);
-            @SuppressWarnings("unchecked")
-            final T cast = (T) ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
-            return cast;
+            return ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
         }
 
         return newValue;

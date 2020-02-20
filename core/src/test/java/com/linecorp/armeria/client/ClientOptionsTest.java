@@ -42,36 +42,42 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Streams;
+
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.util.AbstractOptionValue;
 
 class ClientOptionsTest {
 
+    static <T> Set<T> getAllPublicStaticFinal(Class<T> clazz) {
+        final int expectedModifiers = Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL;
+        return Arrays.stream(clazz.getDeclaredFields())
+                     .filter(f -> (f.getModifiers() & expectedModifiers) == expectedModifiers)
+                     .map(f -> {
+                         try {
+                             @SuppressWarnings("unchecked")
+                             final T opt = (T) f.get(null);
+                             return opt;
+                         } catch (IllegalAccessException e) {
+                             throw new Error(e);
+                         }
+                     })
+                     .collect(toImmutableSet());
+    }
+
     @Test
     void allDefaultOptionsArePresent() throws Exception {
-        final int expectedModifiers = Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL;
-        final Set<ClientOption<Object>> options =
-                Arrays.stream(ClientOption.class.getDeclaredFields())
-                      .filter(f -> (f.getModifiers() & expectedModifiers) == expectedModifiers)
-                      .map(f -> {
-                          try {
-                              @SuppressWarnings("unchecked")
-                              final ClientOption<Object> opt = (ClientOption<Object>) f.get(null);
-                              return opt;
-                          } catch (IllegalAccessException e) {
-                              throw new Error(e);
-                          }
-                      })
-                      .collect(toImmutableSet());
-
-        assertThat(ClientOptions.of().options()).isEqualTo(options);
-        final ClientOptions defaultOption = ClientOptions.of();
-        for (final ClientOption<Object> option : defaultOption.options()) {
-            // should not be null
-            defaultOption.get(option);
-        }
+        @SuppressWarnings("rawtypes")
+        final Set<ClientOption> options = getAllPublicStaticFinal(ClientOption.class);
+        final Set<ClientOption<?>> defaults = Streams.stream(ClientOptions.DEFAULT)
+                                                     .map(AbstractOptionValue::option)
+                                                     .collect(toImmutableSet());
+        assertThat(defaults).isEqualTo(options);
+        assertThat(Iterables.size(ClientOptions.of())).isZero();
     }
 
     @Test

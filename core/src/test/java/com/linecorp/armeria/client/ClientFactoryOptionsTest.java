@@ -34,12 +34,11 @@ import static com.linecorp.armeria.client.ClientFactoryOption.SHUTDOWN_WORKER_GR
 import static com.linecorp.armeria.client.ClientFactoryOption.USE_HTTP1_PIPELINING;
 import static com.linecorp.armeria.client.ClientFactoryOption.USE_HTTP2_PREFACE;
 import static com.linecorp.armeria.client.ClientFactoryOption.WORKER_GROUP;
+import static com.linecorp.armeria.client.ClientOptionsTest.getAllPublicStaticFinal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -56,8 +55,11 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.common.util.AbstractOptionValue;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 
 import io.micrometer.core.instrument.Metrics;
@@ -80,27 +82,14 @@ class ClientFactoryOptionsTest {
 
     @Test
     void allDefaultOptionsArePresent() throws Exception {
-        final int expectedModifiers = Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL;
-        final Set<ClientFactoryOption<Object>> options =
-                Arrays.stream(ClientFactoryOption.class.getDeclaredFields())
-                      .filter(f -> (f.getModifiers() & expectedModifiers) == expectedModifiers)
-                      .map(f -> {
-                          try {
-                              @SuppressWarnings("unchecked")
-                              final ClientFactoryOption<Object> opt = (ClientFactoryOption<Object>) f.get(null);
-                              return opt;
-                          } catch (IllegalAccessException e) {
-                              throw new Error(e);
-                          }
-                      })
-                      .collect(toImmutableSet());
+        @SuppressWarnings("rawtypes")
+        final Set<ClientFactoryOption> options = getAllPublicStaticFinal(ClientFactoryOption.class);
+        final Set<ClientFactoryOption<?>> defaults = Streams.stream(ClientFactoryOptions.DEFAULT)
+                                                            .map(AbstractOptionValue::option)
+                                                            .collect(toImmutableSet());
 
-        assertThat(ClientFactoryOptions.of().options()).isEqualTo(options);
-        final ClientFactoryOptions defaultOption = ClientFactoryOptions.of();
-        for (final ClientFactoryOption<Object> option : defaultOption.options()) {
-            // should not be null
-            defaultOption.get(option);
-        }
+        assertThat(defaults).isEqualTo(options);
+        assertThat(Iterables.size(ClientFactoryOptions.of())).isZero();
     }
 
     @ParameterizedTest
