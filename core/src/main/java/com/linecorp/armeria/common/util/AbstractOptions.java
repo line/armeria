@@ -27,8 +27,6 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableSet;
-
 /**
  * A set of configuration options and their respective values.
  *

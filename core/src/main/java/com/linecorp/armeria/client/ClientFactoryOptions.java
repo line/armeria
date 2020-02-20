@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -186,9 +185,6 @@ public final class ClientFactoryOptions extends AbstractOptions {
         return channelOptions;
     }
 
-    @Nullable
-    private Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> valueMap;
-
     private ClientFactoryOptions(ClientFactoryOptionValue<?>... options) {
         super(options);
     }
@@ -219,10 +215,6 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * @throws NoSuchElementException if no value is set for the specified {@link ClientFactoryOption}.
      */
     public <T> T get(ClientFactoryOption<T> option) {
-        final T ownValue = getOwnValue(option);
-        if (ownValue != null) {
-            return ownValue;
-        }
         return get(this, DEFAULT, option);
     }
 
@@ -234,20 +226,11 @@ public final class ClientFactoryOptions extends AbstractOptions {
      */
     @Nullable
     public <T> T getOrNull(ClientFactoryOption<T> option) {
-        final T ownValue = getOwnValue(option);
-        if (ownValue != null) {
-            return ownValue;
-        }
         return getOrNull(this, DEFAULT, option);
     }
 
     @Nullable
     <T> T getOrNull(ClientFactoryOption<T> option, boolean includeDefault) {
-        final T ownValue = getOwnValue(option);
-        if (ownValue != null) {
-            return ownValue;
-        }
-
         if (includeDefault) {
             return getOrNull(this, DEFAULT, option);
         } else {
@@ -263,25 +246,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
      */
     public <T> T getOrElse(ClientFactoryOption<T> option, T defaultValue) {
         requireNonNull(defaultValue, "defaultValue");
-        final T ownValue = getOwnValue(option);
-        if (ownValue != null) {
-            return ownValue;
-        }
         return getOrElse(this, DEFAULT, option, defaultValue);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Nullable
-    private <T> T getOwnValue(ClientFactoryOption<T> option) {
-        if (valueMap == null) {
-            return null;
-        }
-
-        final ClientFactoryOptionValue<?> optionValue = valueMap.get(option);
-        if (optionValue != null) {
-            return (T) optionValue.value();
-        }
-        return null;
     }
 
     /**
@@ -445,21 +410,13 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected <T extends AbstractOptionValue<?, ?>> T filterValue(T optionValue) {
-        if (valueMap == null) {
-            valueMap = new IdentityHashMap<>(1);
-        }
         if (optionValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
-            @SuppressWarnings("unchecked")
+            final ClientFactoryOption<Map<ChannelOption<?>, Object>> castOption =
+                    (ClientFactoryOption<Map<ChannelOption<?>, Object>>) optionValue.option();
             final Map<ChannelOption<?>, Object> value = (Map<ChannelOption<?>, Object>) optionValue.value();
-            final ClientFactoryOptionValue<Map<ChannelOption<?>, Object>> newValue =
-                    ClientFactoryOption.CHANNEL_OPTIONS.newValue(filterChannelOptions(value));
-
-            valueMap.compute(ClientFactoryOption.CHANNEL_OPTIONS,
-                             (k, oldValue) -> oldValue == null ? newValue : mergeValue(oldValue, newValue));
-            @SuppressWarnings("unchecked")
-            final T cast = (T) newValue;
-            return cast;
+            return (T) castOption.newValue(filterChannelOptions(value));
         }
         return optionValue;
     }
