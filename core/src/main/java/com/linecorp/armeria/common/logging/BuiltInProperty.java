@@ -91,7 +91,7 @@ public enum BuiltInProperty {
      */
     REQ_AUTHORITY("req.authority"),
     /**
-     * {@code "req.id"} - the id of the request.
+     * {@code "req.id"} - the ID of the request.
      */
     REQ_ID("req.id"),
     /**
