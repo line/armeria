@@ -38,12 +38,12 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
 
     /**
      * Returns the value of the specified {@code option} in the {@code first}.
-     * If the value of {@code option} is not found in {@code first}, will look for the {@code second}.
+     * If the {@code option} is not found in {@code first}, will look for the {@code second}.
      *
      * @param <O> the type of the option value
      * @param <V> the type of the value
-     * @return the value of the specified {@link AbstractOptions<O>}
-     * @throws NoSuchElementException if the specified {@link AbstractOption<V>} does not have a value.
+     * @return the value of the specified {@link AbstractOption}
+     * @throws NoSuchElementException if the specified {@link AbstractOption} does not have a value.
      */
     protected static <O extends AbstractOptionValue<?, ?>, V>
     V get(AbstractOptions<O> first, AbstractOptions<O> second, AbstractOption<V> option) {
@@ -56,12 +56,12 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
 
     /**
      * Returns the value of the specified {@code option} in the {@code first}.
-     * If the value of {@code option} is not found in {@code first}, will look for the {@code second}.
+     * If the {@code option} is not found in {@code first}, will look for the {@code second}.
      *
      * @param <O> the type of the option value
      * @param <V> the type of the value
-     * @return the value of the {@link AbstractOptions<O>}, or
-     *         {@code null} if the specified {@link AbstractOption<V>} is not set.
+     * @return the value of the {@link AbstractOption}, or
+     *         {@code null} if the specified {@link AbstractOption} is not set.
      */
     @Nullable
     protected static <O extends AbstractOptionValue<?, ?>, V>
@@ -75,12 +75,12 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
 
     /**
      * Returns the value of the specified {@code option} in the {@code first}.
-     * If the value of {@code option} is not found in {@code first}, will look for the {@code second}.
+     * If the {@code option} is not found in {@code first}, will look for the {@code second}.
      *
      * @param <O> the type of the option value
      * @param <V> the type of the value
-     * @return the value of the {@link AbstractOption<V>}, or
-     *         {@code defaultValue} if the specified {@link AbstractOption<V>} is not set.
+     * @return the value of the {@link AbstractOption}, or
+     *         {@code defaultValue} if the specified {@link AbstractOption} is not set.
      */
     protected static <O extends AbstractOptionValue<?, ?>, V>
     V getOrElse(AbstractOptions<O> first, AbstractOptions<O> second, AbstractOption<V> option, V defaultValue) {

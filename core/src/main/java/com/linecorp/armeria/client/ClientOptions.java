@@ -94,7 +94,7 @@ public final class ClientOptions extends AbstractOptions<ClientOptionValue<?>> {
     static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
 
     /**
-     * Returns the {@link ClientOptions} with the default options only.
+     * Returns an empty singleton {@link ClientOptions}.
      */
     public static ClientOptions of() {
         return EMPTY;
