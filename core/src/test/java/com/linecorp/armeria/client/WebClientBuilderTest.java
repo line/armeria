@@ -41,15 +41,16 @@ class WebClientBuilderTest {
 
     @Test
     void keepLastFactory_by_options() {
-        final ClientFactory optionClientFactory = ClientFactory.builder()
-                                                    .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 200)
-                                                    .build();
+        final ClientFactory optionClientFactory =
+                ClientFactory.builder()
+                             .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 200)
+                             .build();
         final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L),
                                                        ClientOption.FACTORY.newValue(optionClientFactory));
 
         final ClientFactory factory = ClientFactory.builder()
-                                                    .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
-                                                    .build();
+                                                   .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
+                                                   .build();
 
         final WebClient webClient = WebClient.builder("http://foo")
                                              .factory(factory)
@@ -64,15 +65,16 @@ class WebClientBuilderTest {
 
     @Test
     void keepLastFactory_by_factory() {
-        final ClientFactory optionClientFactory = ClientFactory.builder()
-                                                    .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 200)
-                                                    .build();
+        final ClientFactory optionClientFactory =
+                ClientFactory.builder()
+                             .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 200)
+                             .build();
         final ClientOptions options = ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(200L),
                                                        ClientOption.FACTORY.newValue(optionClientFactory));
 
         final ClientFactory factory = ClientFactory.builder()
-                                                    .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
-                                                    .build();
+                                                   .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
+                                                   .build();
 
         final WebClient webClient = WebClient.builder("http://foo")
                                              .options(options)

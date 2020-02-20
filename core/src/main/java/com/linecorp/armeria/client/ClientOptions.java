@@ -257,15 +257,6 @@ public final class ClientOptions extends AbstractOptions<ClientOptionValue<?>> {
         return getOrNull(this, DEFAULT, option);
     }
 
-    @Nullable
-    <T> T getOrNull(ClientOption<T> option, boolean includeDefault) {
-        if (includeDefault) {
-            return getOrNull(this, DEFAULT, option);
-        } else {
-            return getOrNull(this, EMPTY, option);
-        }
-    }
-
     /**
      * Returns the value of the specified {@link ClientOption}.
      *

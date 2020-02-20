@@ -42,7 +42,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -77,7 +76,7 @@ class ClientOptionsTest {
                                                      .map(AbstractOptionValue::option)
                                                      .collect(toImmutableSet());
         assertThat(defaults).isEqualTo(options);
-        assertThat(Iterables.size(ClientOptions.of())).isZero();
+        assertThat(ClientOptions.of()).isEmpty();
     }
 
     @Test

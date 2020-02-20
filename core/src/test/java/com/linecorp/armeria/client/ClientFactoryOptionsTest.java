@@ -55,7 +55,6 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -89,7 +88,7 @@ class ClientFactoryOptionsTest {
                                                             .collect(toImmutableSet());
 
         assertThat(defaults).isEqualTo(options);
-        assertThat(Iterables.size(ClientFactoryOptions.of())).isZero();
+        assertThat(ClientFactoryOptions.of()).isEmpty();
     }
 
     @ParameterizedTest

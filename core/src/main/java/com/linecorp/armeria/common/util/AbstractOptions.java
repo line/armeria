@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -26,6 +25,7 @@ import java.util.NoSuchElementException;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterators;
 
 /**
@@ -36,7 +36,17 @@ import com.google.common.collect.Iterators;
  */
 public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> implements Iterable<T> {
 
-    protected static <V> V get(AbstractOptions<?> first, AbstractOptions<?> second, AbstractOption<V> option) {
+    /**
+     * Returns the value of the specified {@code option} in the {@code first}.
+     * If the value of {@code option} is not found in {@code first}, will look for the {@code second}.
+     *
+     * @param <O> the type of the option value
+     * @param <V> the type of the value
+     * @return the value of the specified {@link AbstractOptions<O>}
+     * @throws NoSuchElementException if the specified {@link AbstractOption<V>} does not have a value.
+     */
+    protected static <O extends AbstractOptionValue<?, ?>, V>
+    V get(AbstractOptions<O> first, AbstractOptions<O> second, AbstractOption<V> option) {
         final V value = first.getOrNull0(option);
         if (value != null) {
             return value;
@@ -44,9 +54,18 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
         return second.get0(option);
     }
 
+    /**
+     * Returns the value of the specified {@code option} in the {@code first}.
+     * If the value of {@code option} is not found in {@code first}, will look for the {@code second}.
+     *
+     * @param <O> the type of the option value
+     * @param <V> the type of the value
+     * @return the value of the {@link AbstractOptions<O>}, or
+     *         {@code null} if the specified {@link AbstractOption<V>} is not set.
+     */
     @Nullable
-    protected static <V> V getOrNull(AbstractOptions<?> first, AbstractOptions<?> second,
-                                     AbstractOption<V> option) {
+    protected static <O extends AbstractOptionValue<?, ?>, V>
+    V getOrNull(AbstractOptions<O> first, AbstractOptions<O> second, AbstractOption<V> option) {
         final V value = first.getOrNull0(option);
         if (value != null) {
             return value;
@@ -54,8 +73,17 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
         return second.getOrNull0(option);
     }
 
-    protected static <V> V getOrElse(AbstractOptions<?> first, AbstractOptions<?> second,
-                                     AbstractOption<V> option, V defaultValue) {
+    /**
+     * Returns the value of the specified {@code option} in the {@code first}.
+     * If the value of {@code option} is not found in {@code first}, will look for the {@code second}.
+     *
+     * @param <O> the type of the option value
+     * @param <V> the type of the value
+     * @return the value of the {@link AbstractOption<V>}, or
+     *         {@code defaultValue} if the specified {@link AbstractOption<V>} is not set.
+     */
+    protected static <O extends AbstractOptionValue<?, ?>, V>
+    V getOrElse(AbstractOptions<O> first, AbstractOptions<O> second, AbstractOption<V> option, V defaultValue) {
         final V value = getOrNull(first, second, option);
         if (value != null) {
             return value;
@@ -208,10 +236,8 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
 
     @Override
     public String toString() {
-        return toString(valueMap.values());
-    }
-
-    static String toString(Collection<?> values) {
-        return "OptionValues{" + values + '}';
+        return MoreObjects.toStringHelper(this)
+                          .add("values", valueMap.values())
+                          .toString();
     }
 }

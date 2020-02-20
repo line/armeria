@@ -105,7 +105,7 @@ public final class ClientFactoryOptions extends AbstractOptions<ClientFactoryOpt
     private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions();
 
     /**
-     * The default {@link ClientFactoryOptions}.
+     * Returns an empty singleton {@link ClientFactoryOptions}.
      */
     public static ClientFactoryOptions of() {
         return EMPTY;
@@ -227,15 +227,6 @@ public final class ClientFactoryOptions extends AbstractOptions<ClientFactoryOpt
     @Nullable
     public <T> T getOrNull(ClientFactoryOption<T> option) {
         return getOrNull(this, DEFAULT, option);
-    }
-
-    @Nullable
-    <T> T getOrNull(ClientFactoryOption<T> option, boolean includeDefault) {
-        if (includeDefault) {
-            return getOrNull(this, DEFAULT, option);
-        } else {
-            return getOrNull(this, EMPTY, option);
-        }
     }
 
     /**
