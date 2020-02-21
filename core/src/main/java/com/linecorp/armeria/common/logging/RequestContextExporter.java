@@ -245,7 +245,7 @@ public final class RequestContextExporter {
         boolean needsUpdate;
 
         // Needs to update if availabilityStamp has changed.
-        final long availabilityStamp = log.availabilityStamp();
+        final int availabilityStamp = log.availabilityStamp();
         if (state.availabilityStamp != availabilityStamp) {
             state.availabilityStamp = availabilityStamp;
             needsUpdate = true;
@@ -686,7 +686,7 @@ public final class RequestContextExporter {
     private static final class State extends Object2ObjectOpenHashMap<String, String> {
         private static final long serialVersionUID = -7084248226635055988L;
 
-        long availabilityStamp = -1;
+        int availabilityStamp = -1;
         @Nullable
         final Object[] attrValues;
 
