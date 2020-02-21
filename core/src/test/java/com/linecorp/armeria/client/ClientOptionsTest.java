@@ -131,7 +131,7 @@ class ClientOptionsTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientOptionsProvider.class)
-    void testKeepExplicitOption(ClientOption<Object> option, Object value) {
+    void shouldKeepSpecifiedOption(ClientOption<Object> option, Object value) {
         final ClientOptions first = ClientOptions.of(option.newValue(value));
         final ClientOptions second = ClientOptions.of();
         final ClientOptions merged = ClientOptions.of(first, second);
