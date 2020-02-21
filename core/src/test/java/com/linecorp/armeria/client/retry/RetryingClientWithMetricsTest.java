@@ -127,7 +127,7 @@ class RetryingClientWithMetricsTest {
     @Test
     void retryingThenMetricCollectingWithConnectionRefused() throws Exception {
         // The first request will fail with an UnprocessedException and
-        // the second request will succeed with 404.
+        // the second request will succeed with 200.
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
                                                      server.httpEndpoint());
         final WebClient client = WebClient.builder(SessionProtocol.HTTP, group)
@@ -170,7 +170,7 @@ class RetryingClientWithMetricsTest {
     @Test
     public void metricCollectingThenRetryingWithConnectionRefused() throws Exception {
         // The first request will fail with an UnprocessedException and
-        // the second request will succeed with 404.
+        // the second request will succeed with 200.
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
                                                      server.httpEndpoint());
         final WebClient client =
