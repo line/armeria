@@ -33,7 +33,6 @@ import org.reflections.scanners.ResourcesScanner;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
-import org.reflections.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +81,7 @@ public abstract class DocStringExtractor {
 
         final Reflections reflections = new Reflections(configuration);
         final Store store = reflections.getStore();
-        if (!store.keySet().contains(Utils.index(ResourcesScanner.class))) {
+        if (!store.keySet().contains(ResourcesScanner.class.getSimpleName())) {
             // No resources were found.
             return ImmutableMap.of();
         }

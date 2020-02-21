@@ -457,7 +457,8 @@ org.reactivestreams:
 
 org.reflections:
   reflections:
-    version: '0.9.12'
+    # Upgrade once https://github.com/ronmamo/reflections/issues/279 is fixed.
+    version: '0.9.11'
     exclusions:
       - com.google.errorprone:error_prone_annotations
       - com.google.j2objc:j2objc-annotations
