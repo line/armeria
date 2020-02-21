@@ -293,7 +293,9 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     public void closeWhenComplete() {
         if (isClosed()) {
             return;
-        } else if (isStalled()) {
+        }
+
+        if (isStalled()) {
             close();
         } else {
             closeWhenComplete = true;
@@ -524,10 +526,6 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
     private DeframedMessage getUncompressedBody(ByteBuf buf) {
         return new DeframedMessage(buf, currentType);
-    }
-
-    private boolean isClosedOrScheduledToClose() {
-        return isClosed() || closeWhenComplete;
     }
 
     private DeframedMessage getCompressedBody(ByteBuf buf) {

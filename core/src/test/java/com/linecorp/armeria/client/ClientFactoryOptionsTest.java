@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.client.ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY;
 import static com.linecorp.armeria.client.ClientFactoryOption.CHANNEL_OPTIONS;
 import static com.linecorp.armeria.client.ClientFactoryOption.CONNECTION_POOL_LISTENER;
@@ -34,13 +33,11 @@ import static com.linecorp.armeria.client.ClientFactoryOption.SHUTDOWN_WORKER_GR
 import static com.linecorp.armeria.client.ClientFactoryOption.USE_HTTP1_PIPELINING;
 import static com.linecorp.armeria.client.ClientFactoryOption.USE_HTTP2_PREFACE;
 import static com.linecorp.armeria.client.ClientFactoryOption.WORKER_GROUP;
-import static com.linecorp.armeria.client.ClientOptionsTest.getAllPublicStaticFinal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -56,10 +53,8 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.common.util.AbstractOptionValue;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 
 import io.micrometer.core.instrument.Metrics;
@@ -78,18 +73,6 @@ class ClientFactoryOptionsTest {
     @AfterAll
     static void tearDown() {
         assertThat(MoreExecutors.shutdownAndAwaitTermination(executors, 10, TimeUnit.SECONDS)).isTrue();
-    }
-
-    @Test
-    void allDefaultOptionsArePresent() throws Exception {
-        @SuppressWarnings("rawtypes")
-        final Set<ClientFactoryOption> options = getAllPublicStaticFinal(ClientFactoryOption.class);
-        final Set<ClientFactoryOption<?>> defaults = Streams.stream(ClientFactoryOptions.DEFAULT)
-                                                            .map(AbstractOptionValue::option)
-                                                            .collect(toImmutableSet());
-
-        assertThat(defaults).isEqualTo(options);
-        assertThat(ClientFactoryOptions.of()).isEmpty();
     }
 
     @Test

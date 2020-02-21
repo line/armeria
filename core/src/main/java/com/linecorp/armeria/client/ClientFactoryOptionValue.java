@@ -22,7 +22,8 @@ import com.linecorp.armeria.common.util.AbstractOptionValue;
  *
  * @param <T> the type of the option value
  */
-public final class ClientFactoryOptionValue<T> extends AbstractOptionValue<ClientFactoryOption<T>, T> {
+public final class ClientFactoryOptionValue<T>
+        extends AbstractOptionValue<ClientFactoryOptionValue<T>, ClientFactoryOption<T>, T> {
     ClientFactoryOptionValue(ClientFactoryOption<T> option, T value) {
         super(option, value);
     }

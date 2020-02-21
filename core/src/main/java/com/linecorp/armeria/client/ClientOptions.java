@@ -27,72 +27,24 @@ import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_MILLIS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AbstractOptions;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-
-import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
-import io.netty.util.AsciiString;
 
 /**
  * A set of {@link ClientOption}s and their respective values.
  */
-public final class ClientOptions extends AbstractOptions<ClientOptionValue<?>> {
+public final class ClientOptions
+        extends AbstractOptions<ClientOption<Object>, ClientOptionValue<Object>> {
 
-    private static final Collection<AsciiString> BLACKLISTED_HEADER_NAMES =
-            Collections.unmodifiableCollection(Arrays.asList(
-                    HttpHeaderNames.CONNECTION,
-                    HttpHeaderNames.HOST,
-                    HttpHeaderNames.HTTP2_SETTINGS,
-                    HttpHeaderNames.METHOD,
-                    HttpHeaderNames.PATH,
-                    HttpHeaderNames.SCHEME,
-                    HttpHeaderNames.STATUS,
-                    HttpHeaderNames.TRANSFER_ENCODING,
-                    HttpHeaderNames.UPGRADE,
-                    ArmeriaHttpUtil.HEADER_NAME_KEEP_ALIVE,
-                    ArmeriaHttpUtil.HEADER_NAME_PROXY_CONNECTION,
-                    ExtensionHeaderNames.PATH.text(),
-                    ExtensionHeaderNames.SCHEME.text(),
-                    ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(),
-                    ExtensionHeaderNames.STREAM_ID.text(),
-                    ExtensionHeaderNames.STREAM_PROMISE_ID.text()));
-
-    private static final ClientOptionValue<?>[] DEFAULT_OPTIONS = {
-            FACTORY.newValue(ClientFactory.ofDefault()),
-            WRITE_TIMEOUT_MILLIS.newValue(Flags.defaultWriteTimeoutMillis()),
-            RESPONSE_TIMEOUT_MILLIS.newValue(Flags.defaultResponseTimeoutMillis()),
-            MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
-            DECORATION.newValue(ClientDecoration.of()),
-            HTTP_HEADERS.newValue(HttpHeaders.of()),
-            REQUEST_ID_GENERATOR.newValue(RequestId::random),
-            ENDPOINT_REMAPPER.newValue(Function.identity())
-    };
-
-    private static final ClientOptions EMPTY = new ClientOptions();
-
-    /**
-     * The default {@link ClientOptions}.
-     */
-    @VisibleForTesting
-    static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
+    private static final ClientOptions EMPTY = new ClientOptions(ImmutableList.of());
 
     /**
      * Returns an empty singleton {@link ClientOptions}.
@@ -104,15 +56,23 @@ public final class ClientOptions extends AbstractOptions<ClientOptionValue<?>> {
     /**
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
-    public static ClientOptions of(ClientOptionValue<?>... options) {
-        return of(of(), requireNonNull(options, "options"));
+    public static ClientOptions of(ClientOptionValue<?>... values) {
+        requireNonNull(values, "values");
+        if (values.length == 0) {
+            return EMPTY;
+        }
+        return of(Arrays.asList(values));
     }
 
     /**
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
-    public static ClientOptions of(Iterable<ClientOptionValue<?>> options) {
-        return of(of(), requireNonNull(options, "options"));
+    public static ClientOptions of(Iterable<? extends ClientOptionValue<?>> values) {
+        requireNonNull(values, "values");
+        if (values instanceof ClientOptions) {
+            return (ClientOptions) values;
+        }
+        return new ClientOptions(values);
     }
 
     /**
@@ -121,13 +81,12 @@ public final class ClientOptions extends AbstractOptions<ClientOptionValue<?>> {
      * @return the merged {@link ClientOptions}
      */
     public static ClientOptions of(ClientOptions baseOptions, ClientOptionValue<?>... additionalValues) {
-        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(additionalValues, "additionalValues");
         if (additionalValues.length == 0) {
             return baseOptions;
         }
-        return new ClientOptions(baseOptions, additionalValues);
+        return new ClientOptions(baseOptions, Arrays.asList(additionalValues));
     }
 
     /**
@@ -136,26 +95,10 @@ public final class ClientOptions extends AbstractOptions<ClientOptionValue<?>> {
      * @return the merged {@link ClientOptions}
      */
     public static ClientOptions of(ClientOptions baseOptions,
-                                   Iterable<ClientOptionValue<?>> additionalValues) {
-        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
+                                   Iterable<? extends ClientOptionValue<?>> additionalValues) {
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(additionalValues, "additionalValues");
-        if (Iterables.isEmpty(additionalValues)) {
-            return baseOptions;
-        }
         return new ClientOptions(baseOptions, additionalValues);
-    }
-
-    /**
-     * Merges the specified two {@link ClientOptions} into one.
-     *
-     * @return the merged {@link ClientOptions}
-     */
-    public static ClientOptions of(ClientOptions baseOptions, ClientOptions additionalOptions) {
-        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
-        requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(additionalOptions, "additionalOptions");
-        return new ClientOptions(baseOptions, additionalOptions);
     }
 
     /**
@@ -165,116 +108,13 @@ public final class ClientOptions extends AbstractOptions<ClientOptionValue<?>> {
         return new ClientOptionsBuilder();
     }
 
-    private static HttpHeaders filterHttpHeaders(HttpHeaders headers) {
-        requireNonNull(headers, "headers");
-        for (AsciiString name : BLACKLISTED_HEADER_NAMES) {
-            if (headers.contains(name)) {
-                throw new IllegalArgumentException("unallowed header name: " + name);
-            }
-        }
-
-        return headers;
+    private ClientOptions(Iterable<? extends ClientOptionValue<?>> values) {
+        super(values);
     }
 
-    private ClientOptions(ClientOptionValue<?>... options) {
-        super(options);
-    }
-
-    private ClientOptions(ClientOptions baseOptions, ClientOptionValue<?>... additionalOptions) {
-        super(baseOptions, additionalOptions);
-    }
-
-    private ClientOptions(ClientOptions baseOptions, Iterable<ClientOptionValue<?>> additionalOptions) {
-        super(baseOptions, additionalOptions);
-    }
-
-    private ClientOptions(ClientOptions baseOptions, ClientOptions additionalOptions) {
-        super(baseOptions, additionalOptions);
-    }
-
-    @Override
-    protected ClientOptionValue<?> filterValue(ClientOptionValue<?> optionValue) {
-        if (optionValue.option() == HTTP_HEADERS) {
-            @SuppressWarnings("unchecked")
-            final ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) optionValue.option();
-            return castOption.newValue(filterHttpHeaders((HttpHeaders) optionValue.value()));
-        }
-        return optionValue;
-    }
-
-    @Override
-    protected ClientOptionValue<?> mergeValue(ClientOptionValue<?> oldValue, ClientOptionValue<?> newValue) {
-        if (oldValue.option() == DECORATION) {
-            final ClientDecoration oldDecoration = (ClientDecoration) oldValue.value();
-            final ClientDecoration newDecoration = (ClientDecoration) newValue.value();
-            if (oldDecoration.isEmpty()) {
-                return newValue;
-            }
-            if (newDecoration.isEmpty()) {
-                return oldValue;
-            }
-
-            final ClientDecoration merged = ClientDecoration.builder()
-                                                            .add(oldDecoration)
-                                                            .add(newDecoration)
-                                                            .build();
-            return DECORATION.newValue(merged);
-        } else if (oldValue.option() == HTTP_HEADERS) {
-            final HttpHeaders oldHeaders = (HttpHeaders) oldValue.value();
-            final HttpHeaders newHeaders = (HttpHeaders) newValue.value();
-            if (oldHeaders.isEmpty()) {
-                return newValue;
-            }
-            if (newHeaders.isEmpty()) {
-                return oldValue;
-            }
-
-            final HttpHeaders merged = oldHeaders.toBuilder().setObject(newHeaders).build();
-            return HTTP_HEADERS.newValue(merged);
-        } else {
-            return newValue;
-        }
-    }
-
-    /**
-     * Returns the value of the specified {@link ClientOption}.
-     *
-     * @return the value of the specified {@link ClientOption}
-     *
-     * @throws NoSuchElementException if no value is set for the specified {@link ClientOption}.
-     */
-    public <T> T get(ClientOption<T> option) {
-        return get(this, DEFAULT, option);
-    }
-
-    /**
-     * Returns the value of the specified {@link ClientOption}.
-     *
-     * @return the value of the {@link ClientOption}, or
-     *         {@code null} if the specified {@link ClientOption} is not set.
-     */
-    @Nullable
-    public <T> T getOrNull(ClientOption<T> option) {
-        return getOrNull(this, DEFAULT, option);
-    }
-
-    /**
-     * Returns the value of the specified {@link ClientOption}.
-     *
-     * @return the value of the {@link ClientOption}, or
-     *         {@code defaultValue} if the specified {@link ClientOption} is not set.
-     */
-    public <T> T getOrElse(ClientOption<T> option, T defaultValue) {
-        requireNonNull(defaultValue, "defaultValue");
-        return getOrElse(this, DEFAULT, option, defaultValue);
-    }
-
-    /**
-     * Converts this {@link ClientOptions} to a {@link Map}.
-     */
-    @SuppressWarnings("unchecked")
-    public Map<ClientOption<Object>, ClientOptionValue<Object>> asMap() {
-         return (Map<ClientOption<Object>, ClientOptionValue<Object>>) asMap0();
+    private ClientOptions(ClientOptions baseOptions,
+                          Iterable<? extends ClientOptionValue<?>> additionalValues) {
+        super(baseOptions, additionalValues);
     }
 
     /**
