@@ -82,7 +82,7 @@ public abstract class DocStringExtractor {
 
         final Reflections reflections = new Reflections(configuration);
         final Store store = reflections.getStore();
-        if (!store.keySet().contains(Utils.index(ResourcesScanner.class))) {
+        if (!store.keySet().contains(ResourcesScanner.class.getSimpleName())) {
             // No resources were found.
             return ImmutableMap.of();
         }
