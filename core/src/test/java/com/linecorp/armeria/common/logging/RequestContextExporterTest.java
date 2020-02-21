@@ -19,8 +19,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AttributeKey;
@@ -65,5 +67,51 @@ class RequestContextExporterTest {
                 BuiltInProperty.REQ_ID.key,
                 BuiltInProperty.SCHEME.key,
                 "attrs.attr1");
+    }
+
+    @Test
+    void shouldRepopulateWhenAttributeChanges() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final RequestContextExporter exporter =
+                RequestContextExporter.builder()
+                                      .addAttribute("attr1", ATTR1)
+                                      .build();
+
+        assertThat(exporter.export(ctx)).doesNotContainKeys("attrs.attr1");
+
+        ctx.setAttr(ATTR1, "foo");
+        assertThat(exporter.export(ctx)).containsEntry("attrs.attr1", "foo");
+
+        ctx.setAttr(ATTR1, "bar");
+        assertThat(exporter.export(ctx)).containsEntry("attrs.attr1", "bar");
+
+        ctx.setAttr(ATTR1, null);
+        assertThat(exporter.export(ctx)).doesNotContainKeys("attrs.attr1");
+    }
+
+    @Test
+    void shouldUseOwnAttrToStoreInternalState() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext rootCtx = ServiceRequestContext.of(req);
+        final RequestContextExporter exporter = RequestContextExporter.builder().build();
+
+        // Create an internal state.
+        exporter.export(rootCtx);
+        final Object rootState = rootCtx.attr(RequestContextExporter.STATE);
+        assertThat(rootState).isNotNull();
+
+        // Create a child context.
+        final ClientRequestContext childCtx;
+        try (SafeCloseable unused = rootCtx.push()) {
+            childCtx = ClientRequestContext.of(req);
+        }
+        assertThat(childCtx.root()).isSameAs(rootCtx);
+        assertThat(childCtx.attr(RequestContextExporter.STATE)).isSameAs(rootState);
+        assertThat(childCtx.ownAttr(RequestContextExporter.STATE)).isNull();
+
+        // Make sure a new internal state object is created.
+        exporter.export(childCtx);
+        final Object childState = childCtx.attr(RequestContextExporter.STATE);
+        assertThat(childState).isNotNull().isNotSameAs(rootState);
     }
 }

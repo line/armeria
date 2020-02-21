@@ -104,7 +104,7 @@ final class RouteDecoratingService implements HttpService {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("route", route)
-                          .add("decorator", decorator).toString();
+                          .toString();
     }
 
     private static class InitialDispatcherService extends SimpleDecoratingHttpService {

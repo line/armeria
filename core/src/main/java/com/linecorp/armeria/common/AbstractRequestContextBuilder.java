@@ -718,5 +718,10 @@ public abstract class AbstractRequestContextBuilder {
         public int compareTo(Channel o) {
             return id().compareTo(o.id());
         }
+
+        @Override
+        public String toString() {
+            return "[id: 0x" + id.asShortText() + ", L:" + localAddress + " - " + "R:" + remoteAddress + ']';
+        }
     }
 }

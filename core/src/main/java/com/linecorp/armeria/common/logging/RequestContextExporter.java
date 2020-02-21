@@ -50,6 +50,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -58,6 +59,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.BaseEncoding;
@@ -89,8 +91,8 @@ public final class RequestContextExporter {
     @SuppressWarnings("rawtypes")
     private static final ExportEntry[] EMPTY_EXPORT_ENTRIES = new ExportEntry[0];
 
-    private static final AttributeKey<State> STATE =
-            AttributeKey.valueOf(RequestContextExporter.class, "STATE");
+    @VisibleForTesting
+    static final AttributeKey<State> STATE = AttributeKey.valueOf(RequestContextExporter.class, "STATE");
 
     /**
      * Returns a newly created {@link RequestContextExporterBuilder}.
@@ -103,6 +105,7 @@ public final class RequestContextExporter {
     private final BuiltInProperties builtInProperties;
     @Nullable
     private final ExportEntry<AttributeKey<?>>[] attrs;
+    private final int numAttrs;
     @Nullable
     private final ExportEntry<AsciiString>[] httpReqHeaders;
     @Nullable
@@ -120,8 +123,10 @@ public final class RequestContextExporter {
 
         if (!attrs.isEmpty()) {
             this.attrs = attrs.toArray(EMPTY_EXPORT_ENTRIES);
+            numAttrs = this.attrs.length;
         } else {
             this.attrs = null;
+            numAttrs = 0;
         }
 
         if (!httpReqHeaders.isEmpty()) {
@@ -235,15 +240,37 @@ public final class RequestContextExporter {
         requireNonNull(ctx, "ctx");
 
         final State state = state(ctx);
-        final RequestLog log = ctx.log().partial();
-        final int availabilities = log.availabilityStamp();
-        if (availabilities != state.availabilities) {
-            state.availabilities = availabilities;
-            export(state, ctx, log);
+        final RequestLogAccess log = ctx.log();
+
+        boolean needsUpdate;
+
+        // Needs to update if availabilityStamp has changed.
+        final long availabilityStamp = log.availabilityStamp();
+        if (state.availabilityStamp != availabilityStamp) {
+            state.availabilityStamp = availabilityStamp;
+            needsUpdate = true;
+        } else {
+            needsUpdate = false;
         }
+
+        // Needs to update if any attributes have changed.
+        if (attrs != null) {
+            assert state.attrValues != null;
+            for (int i = 0; i < attrs.length; i++) {
+                final Object oldValue = state.attrValues[i];
+                final Object newValue = ctx.attr(attrs[i].key);
+                state.attrValues[i] = newValue;
+                needsUpdate |= !Objects.equals(oldValue, newValue);
+            }
+        }
+
+        if (needsUpdate) {
+            export(state, ctx, log.partial());
+        }
+
         // Create a copy of 'state' to avoid the race between:
         // - the delegate appenders who iterate over the MDC map and
-        // - this class who update 'state'.
+        // - this class who updates 'state'.
         return state.clone();
     }
 
@@ -583,8 +610,12 @@ public final class RequestContextExporter {
             final String valueStr = entry.stringify(value);
             if (valueStr != null) {
                 out.put(entry.exportKey, valueStr);
+                return;
             }
         }
+
+        // Remove the value if it exists already.
+        out.remove(entry.exportKey);
     }
 
     static final class ExportEntry<T> {
@@ -635,24 +666,32 @@ public final class RequestContextExporter {
         }
     }
 
-    private static State state(RequestContext ctx) {
-        final State state = ctx.attr(STATE);
-        if (state == null) {
-            ctx.setAttr(STATE, new State());
-            final State newState = new State();
-            final State oldState = ctx.setAttrIfAbsent(STATE, newState);
-            if (oldState != null) {
-                return oldState;
-            } else {
-                return newState;
-            }
+    private State state(RequestContext ctx) {
+        final State state;
+        if (ctx instanceof ClientRequestContext) {
+            state = ((ClientRequestContext) ctx).ownAttr(STATE);
+        } else {
+            state = ctx.attr(STATE);
         }
-        return state;
+
+        if (state != null) {
+            return state;
+        }
+
+        final State newState = new State(numAttrs);
+        ctx.setAttr(STATE, newState);
+        return newState;
     }
 
     private static final class State extends Object2ObjectOpenHashMap<String, String> {
         private static final long serialVersionUID = -7084248226635055988L;
 
-        int availabilities = -1;
+        long availabilityStamp = -1;
+        @Nullable
+        final Object[] attrValues;
+
+        State(int numAttrs) {
+            attrValues = numAttrs != 0 ? new Object[numAttrs] : null;
+        }
     }
 }
