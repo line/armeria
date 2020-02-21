@@ -257,11 +257,11 @@ public final class RequestContextExporter {
             assert state.attrValues != null;
             for (int i = 0; i < attrs.length; i++) {
                 final Object newValue = ctx.attr(attrs[i].key);
-                state.attrValues[i] = newValue;
                 if (!needsUpdate) {
                     final Object oldValue = state.attrValues[i];
                     needsUpdate = !Objects.equals(oldValue, newValue);
                 }
+                state.attrValues[i] = newValue;
             }
         }
 
