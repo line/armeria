@@ -33,7 +33,6 @@ import org.reflections.scanners.ResourcesScanner;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
-import org.reflections.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
