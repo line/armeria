@@ -37,12 +37,13 @@ import com.google.common.collect.Iterators;
 public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> implements Iterable<T> {
 
     /**
-     * Returns the value of the specified {@code option} in the {@code first}.
-     * If the {@code option} is not found in {@code first}, will look for the {@code second}.
+     * Returns the value of the specified {@code option} in the given {@code first} options.
+     * If the {@code option} is not found in the {@code first} options,
+     * will look for the specified {@code second} options.
      *
-     * @param <O> the type of the option value
-     * @param <V> the type of the value
-     * @return the value of the specified {@link AbstractOption}
+     * @param <O> the type of the option value.
+     * @param <V> the type of the value.
+     * @return the value of the specified {@link AbstractOption}.
      * @throws NoSuchElementException if the specified {@link AbstractOption} does not have a value.
      */
     protected static <O extends AbstractOptionValue<?, ?>, V>
@@ -55,11 +56,12 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
     }
 
     /**
-     * Returns the value of the specified {@code option} in the {@code first}.
-     * If the {@code option} is not found in {@code first}, will look for the {@code second}.
+     * Returns the value of the specified {@code option} in the given {@code first} options.
+     * If the {@code option} is not found in the {@code first} options,
+     * will look for the specified {@code second} options.
      *
-     * @param <O> the type of the option value
-     * @param <V> the type of the value
+     * @param <O> the type of the option value.
+     * @param <V> the type of the value.
      * @return the value of the {@link AbstractOption}, or
      *         {@code null} if the specified {@link AbstractOption} is not set.
      */
@@ -74,11 +76,12 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
     }
 
     /**
-     * Returns the value of the specified {@code option} in the {@code first}.
-     * If the {@code option} is not found in {@code first}, will look for the {@code second}.
+     * Returns the value of the specified {@code option} in the given {@code first} options.
+     * If the {@code option} is not found in the {@code first} options,
+     * will look for the specified {@code second} options.
      *
-     * @param <O> the type of the option value
-     * @param <V> the type of the value
+     * @param <O> the type of the option value.
+     * @param <V> the type of the value.
      * @return the value of the {@link AbstractOption}, or
      *         {@code defaultValue} if the specified {@link AbstractOption} is not set.
      */
