@@ -241,26 +241,27 @@ public final class RequestContextExporter {
 
         final State state = state(ctx);
         final RequestLogAccess log = ctx.log();
-
-        boolean needsUpdate;
+        boolean needsUpdate = false;
 
         // Needs to update if availabilityStamp has changed.
+        // Also updates `State.availabilityStamp` while checking.
         final int availabilityStamp = log.availabilityStamp();
         if (state.availabilityStamp != availabilityStamp) {
             state.availabilityStamp = availabilityStamp;
             needsUpdate = true;
-        } else {
-            needsUpdate = false;
         }
 
         // Needs to update if any attributes have changed.
+        // Also updates `State.attrValues` while scanning.
         if (attrs != null) {
             assert state.attrValues != null;
             for (int i = 0; i < attrs.length; i++) {
-                final Object oldValue = state.attrValues[i];
                 final Object newValue = ctx.attr(attrs[i].key);
                 state.attrValues[i] = newValue;
-                needsUpdate |= !Objects.equals(oldValue, newValue);
+                if (!needsUpdate) {
+                    final Object oldValue = state.attrValues[i];
+                    needsUpdate = !Objects.equals(oldValue, newValue);
+                }
             }
         }
 
