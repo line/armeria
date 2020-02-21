@@ -83,6 +83,5 @@ class RequestContextExporterTest {
                 "attrs.attr1-1",
                 "attrs.attr1-2",
                 "attrs.attr2");
-
     }
 }
