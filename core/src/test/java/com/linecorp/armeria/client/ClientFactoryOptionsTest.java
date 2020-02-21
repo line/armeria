@@ -103,7 +103,7 @@ class ClientFactoryOptionsTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientFactoryOptionsProvider.class)
-    void testKeepExplicitOption(ClientFactoryOption<Object> option, Object value) {
+    void shouldKeepSpecifiedOption(ClientFactoryOption<Object> option, Object value) {
         final ClientFactoryOptions first = ClientFactoryOptions.of(option.newValue(value));
         final ClientFactoryOptions second = ClientFactoryOptions.of();
         final ClientFactoryOptions merged = ClientFactoryOptions.of(first, second);
