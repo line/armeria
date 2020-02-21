@@ -30,6 +30,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -48,6 +49,7 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.util.AbstractOption;
 import com.linecorp.armeria.common.util.AbstractOptionValue;
 
 class ClientOptionsTest {
@@ -77,6 +79,15 @@ class ClientOptionsTest {
                                                      .collect(toImmutableSet());
         assertThat(defaults).isEqualTo(options);
         assertThat(ClientOptions.of()).isEmpty();
+    }
+
+    @Test
+    void testAsMap() {
+        final HttpHeaders httpHeader = HttpHeaders.of(HttpHeaderNames.of("x-user-defined"), "HEADER_VALUE");
+        final ClientOptions options = ClientOptions.of(HTTP_HEADERS.newValue(httpHeader));
+        final Map<AbstractOption<ClientOptionValue<?>>, ClientOptionValue<?>> map = options.asMap();
+        assertThat(map).hasSize(1);
+        assertThat(map.get(HTTP_HEADERS).value()).isEqualTo(httpHeader);
     }
 
     @Test
@@ -115,7 +126,7 @@ class ClientOptionsTest {
     @Test
     void testInvalidMaxResponseLength() {
         assertThatThrownBy(() -> {
-            ClientOptions.of(ClientOption.MAX_RESPONSE_LENGTH.newValue(null));
+            ClientOptions.of(MAX_RESPONSE_LENGTH.newValue(null));
         }).isInstanceOf(NullPointerException.class);
     }
 

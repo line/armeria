@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -235,6 +236,14 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
     @Override
     public Iterator<T> iterator() {
         return Iterators.unmodifiableIterator(valueMap.values().iterator());
+    }
+
+    /**
+     * Returns the {@link Map} whose key is {@link AbstractOption} and value is {@link AbstractOptionValue}.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<AbstractOption<T>, T> asMap() {
+        return Collections.unmodifiableMap(valueMap);
     }
 
     @Override
