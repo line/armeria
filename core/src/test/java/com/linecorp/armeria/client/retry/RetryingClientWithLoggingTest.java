@@ -26,9 +26,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -44,12 +44,17 @@ import com.linecorp.armeria.common.logging.RequestLogAvailabilityException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class RetryingClientWithLoggingTest {
+class RetryingClientWithLoggingTest {
 
-    @Rule
-    public final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    final ServerExtension server = new ServerExtension() {
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/hello", new AbstractHttpService() {
@@ -86,8 +91,8 @@ public class RetryingClientWithLoggingTest {
     private int successLogIndex;
     private final List<RequestLog> logResult = new ArrayList<>();
 
-    @Before
-    public void init() {
+    @BeforeEach
+    void init() {
         logIndex.set(0);
         logResult.clear();
     }
@@ -95,7 +100,7 @@ public class RetryingClientWithLoggingTest {
     // WebClient -> RetryingClient -> LoggingClient -> HttpClientDelegate
     // In this case, all of the requests and responses are logged.
     @Test
-    public void retryingThenLogging() {
+    void retryingThenLogging() {
         successLogIndex = 5;
         final RetryStrategyWithContent<HttpResponse> retryStrategy =
                 (ctx, response) -> response.aggregate().handle((msg, cause) -> {
@@ -118,7 +123,7 @@ public class RetryingClientWithLoggingTest {
     // WebClient -> LoggingClient -> RetryingClient -> HttpClientDelegate
     // In this case, only the first request and the last response are logged.
     @Test
-    public void loggingThenRetrying() throws Exception {
+    void loggingThenRetrying() throws Exception {
         successLogIndex = 1;
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(RetryingClient.newDecorator(

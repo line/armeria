@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -75,6 +76,14 @@ class DefaultRequestLogTest {
         assertThat(headers.authority()).isEqualTo("?");
         assertThat(headers.method()).isSameAs(HttpMethod.UNKNOWN);
         assertThat(headers.path()).isEqualTo("?");
+    }
+
+    @Test
+    void endRequestWithHeadersInContext() {
+        when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        when(ctx.request()).thenReturn(HttpRequest.of(HttpMethod.GET, "/foo"));
+        log.endRequest();
+        assertThat(log.requestHeaders()).isSameAs(ctx.request().headers());
     }
 
     @Test
