@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -89,6 +90,15 @@ class ClientFactoryOptionsTest {
 
         assertThat(defaults).isEqualTo(options);
         assertThat(ClientFactoryOptions.of()).isEmpty();
+    }
+
+    @Test
+    void testAsMap() {
+        final ClientFactoryOptions options = ClientFactoryOptions.of(
+                HTTP2_INITIAL_CONNECTION_WINDOW_SIZE.newValue(1));
+        final Map<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>> map = options.asMap();
+        assertThat(map).hasSize(1);
+        assertThat(map.get(HTTP2_INITIAL_CONNECTION_WINDOW_SIZE).value()).isEqualTo(1);
     }
 
     @ParameterizedTest

@@ -29,6 +29,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -266,6 +267,14 @@ public final class ClientOptions extends AbstractOptions<ClientOptionValue<?>> {
     public <T> T getOrElse(ClientOption<T> option, T defaultValue) {
         requireNonNull(defaultValue, "defaultValue");
         return getOrElse(this, DEFAULT, option, defaultValue);
+    }
+
+    /**
+     * Converts this {@link ClientOptions} to a {@link Map}.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<ClientOption<Object>, ClientOptionValue<Object>> asMap() {
+         return (Map<ClientOption<Object>, ClientOptionValue<Object>>) asMap0();
     }
 
     /**

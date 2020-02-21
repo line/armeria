@@ -241,6 +241,14 @@ public final class ClientFactoryOptions extends AbstractOptions<ClientFactoryOpt
     }
 
     /**
+     * Converts this {@link ClientFactoryOptions} to a {@link Map}.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>> asMap() {
+        return (Map<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>>) asMap0();
+    }
+
+    /**
      * Returns the worker {@link EventLoopGroup}.
      */
     public EventLoopGroup workerGroup() {

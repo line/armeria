@@ -242,7 +242,7 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
      * Returns the {@link Map} whose key is {@link AbstractOption} and value is {@link AbstractOptionValue}.
      */
     @SuppressWarnings("unchecked")
-    public Map<AbstractOption<T>, T> asMap() {
+    protected final Map<? extends AbstractOption<?>, ? extends T> asMap0() {
         return Collections.unmodifiableMap(valueMap);
     }
 

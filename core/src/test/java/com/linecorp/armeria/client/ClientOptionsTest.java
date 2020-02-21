@@ -49,7 +49,6 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.util.AbstractOption;
 import com.linecorp.armeria.common.util.AbstractOptionValue;
 
 class ClientOptionsTest {
@@ -85,7 +84,7 @@ class ClientOptionsTest {
     void testAsMap() {
         final HttpHeaders httpHeader = HttpHeaders.of(HttpHeaderNames.of("x-user-defined"), "HEADER_VALUE");
         final ClientOptions options = ClientOptions.of(HTTP_HEADERS.newValue(httpHeader));
-        final Map<AbstractOption<ClientOptionValue<?>>, ClientOptionValue<?>> map = options.asMap();
+        final Map<ClientOption<Object>, ClientOptionValue<Object>> map = options.asMap();
         assertThat(map).hasSize(1);
         assertThat(map.get(HTTP_HEADERS).value()).isEqualTo(httpHeader);
     }
