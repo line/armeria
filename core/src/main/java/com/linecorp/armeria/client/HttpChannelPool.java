@@ -51,6 +51,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
+import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
@@ -107,6 +108,10 @@ final class HttpChannelPool implements AsyncCloseable {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(
                                     new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
+                            // TODO: proxyAddresses might need to be set per connection instead of here.
+                            if (clientFactory.options().useProxy()) {
+                                ch.pipeline().addLast(new Socks4ProxyHandler(new InetSocketAddress(20080)));
+                            }
                         }
                     });
                     return bootstrap;

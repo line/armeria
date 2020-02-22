@@ -203,6 +203,11 @@ public final class ClientFactoryOption<T>
             define("USE_HTTP1_PIPELINING", Flags.defaultUseHttp1Pipelining());
 
     /**
+     * TODO: add javadoc comment.
+     */
+    public static final ClientFactoryOption<Boolean> USE_PROXY = valueOf("USE_PROXY");
+
+    /**
      * The listener which is notified on a connection pool event.
      */
     public static final ClientFactoryOption<ConnectionPoolListener> CONNECTION_POOL_LISTENER =

@@ -245,6 +245,13 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * TODO: add javadoc comment.
+     */
+    public boolean useProxy() {
+        return get(ClientFactoryOption.USE_PROXY);
+    }
+
+    /**
      * Returns the listener which is notified on a connection pool event.
      */
     public ConnectionPoolListener connectionPoolListener() {

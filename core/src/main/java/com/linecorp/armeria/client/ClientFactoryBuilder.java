@@ -462,6 +462,14 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * TODO: add javadoc comment.
+     */
+    public ClientFactoryBuilder useProxy(boolean useProxy) {
+        option(ClientFactoryOption.USE_PROXY, useProxy);
+        return this;
+    }
+
+    /**
      * Sets the listener which is notified on a connection pool event.
      */
     public ClientFactoryBuilder connectionPoolListener(
