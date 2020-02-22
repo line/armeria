@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
@@ -71,7 +72,28 @@ public abstract class AbstractOption<
     }
 
     /**
-     * Defines a new option or returns an existing one if exists already.
+     * Returns the option of the specified option type and name.
+     *
+     * @return the option which is an instance of the specified {@code type} and
+     *         which has the specified {@code name}.
+     */
+    protected static <T extends AbstractOption<?, ?, ?>> T of(Class<?> type, String name) {
+        requireNonNull(type, "type");
+        requireNonNull(name, "name");
+
+        final Pool pool = map.get(type);
+        if (pool == null) {
+            throw new NoSuchElementException(
+                    '\'' + type.getName() + '#' + name + "' does not exist.");
+        }
+
+        @SuppressWarnings("unchecked")
+        final T cast = (T) pool.get(name);
+        return cast;
+    }
+
+    /**
+     * Defines a new option.
      *
      * @param type the type of the option, e.g. {@link ClientOption}.
      * @param name the name of the option, e.g. {@code "RESPONSE_TIMEOUT_MILLIS"}.
@@ -83,7 +105,9 @@ public abstract class AbstractOption<
      * @param <U> the type of the option value holder.
      * @param <V> the type of the option value.
      *
-     * @return a new or existing option instance.
+     * @return a new option instance.
+     *
+     * @throws IllegalStateException if an option with the specified name exists already.
      */
     protected static <T extends AbstractOption<T, U, V>, U extends AbstractOptionValue<U, T, V>, V>
     T define(Class<?> type, String name, V defaultValue,
@@ -97,7 +121,7 @@ public abstract class AbstractOption<
         requireNonNull(mergeFunction, "mergeFunction");
 
         return map.computeIfAbsent(type, unused -> new Pool(type, optionFactory))
-                  .getOrCreate(name, defaultValue, validator, mergeFunction);
+                  .define(name, defaultValue, validator, mergeFunction);
     }
 
     private final long uniqueId;
@@ -216,13 +240,12 @@ public abstract class AbstractOption<
         }
 
         synchronized <T extends AbstractOption<T, U, V>, U extends AbstractOptionValue<U, T, V>, V>
-        T getOrCreate(String name, V defaultValue,
-                      Function<V, V> validator, BiFunction<U, U, U> mergeFunction) {
+        T define(String name, V defaultValue,
+                 Function<V, V> validator, BiFunction<U, U, U> mergeFunction) {
             final AbstractOption<?, ?, ?> oldOption = options.get(name);
             if (oldOption != null) {
-                @SuppressWarnings("unchecked")
-                final T cast = (T) oldOption;
-                return cast;
+                throw new IllegalStateException(
+                        '\'' + type.getName() + '#' + name + "' exists already.");
             }
 
             @SuppressWarnings("unchecked")
@@ -232,6 +255,16 @@ public abstract class AbstractOption<
                           "OptionFactory.newOption() must return an instance of %s.", type);
             options.put(name, newOption);
             return newOption;
+        }
+
+        synchronized AbstractOption<?, ?, ?> get(String name) {
+            final AbstractOption<?, ?, ?> option = options.get(name);
+            if (option == null) {
+                throw new NoSuchElementException(
+                        '\'' + type.getName() + '#' + name + "' does not exist.");
+            }
+
+            return option;
         }
 
         synchronized Set<AbstractOption<?, ?, ?>> getAll() {

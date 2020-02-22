@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -173,10 +174,21 @@ public final class ClientOption<T> extends AbstractOption<ClientOption<T>, Clien
     }
 
     /**
+     * Returns the {@link ClientOption} with the specified {@code name}.
+     *
+     * @throws NoSuchElementException if there's no such option defined.
+     */
+    public static ClientOption<?> of(String name) {
+        return of(ClientOption.class, name);
+    }
+
+    /**
      * Defines a new {@link ClientOption} of the specified name and default value.
      *
      * @param name the name of the option.
      * @param defaultValue the default value of the option, which will be used when unspecified.
+     *
+     * @throws IllegalStateException if an option with the specified name exists already.
      */
     public static <T> ClientOption<T> define(String name, T defaultValue) {
         return define(name, defaultValue, Function.identity(), (oldValue, newValue) -> newValue);
@@ -189,6 +201,8 @@ public final class ClientOption<T> extends AbstractOption<ClientOption<T>, Clien
      * @param defaultValue the default value of the option, which will be used when unspecified.
      * @param validator the {@link Function} which is used for validating ane normalizing an option value.
      * @param mergeFunction the {@link BiFunction} which is used for merging old and new option values.
+     *
+     * @throws IllegalStateException if an option with the specified name exists already.
      */
     public static <T> ClientOption<T> define(
             String name,

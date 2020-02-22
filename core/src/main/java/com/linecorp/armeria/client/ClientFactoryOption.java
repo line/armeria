@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -221,10 +222,21 @@ public final class ClientFactoryOption<T>
     }
 
     /**
+     * Returns the {@link ClientFactoryOption} with the specified {@code name}.
+     *
+     * @throws NoSuchElementException if there's no such option defined.
+     */
+    public static ClientFactoryOption<?> of(String name) {
+        return of(ClientFactoryOption.class, name);
+    }
+
+    /**
      * Defines a new {@link ClientFactoryOption} of the specified name and default value.
      *
      * @param name the name of the option.
      * @param defaultValue the default value of the option, which will be used when unspecified.
+     *
+     * @throws IllegalStateException if an option with the specified name exists already.
      */
     public static <T> ClientFactoryOption<T> define(String name, T defaultValue) {
         return define(name, defaultValue, Function.identity(), (oldValue, newValue) -> newValue);
@@ -237,6 +249,8 @@ public final class ClientFactoryOption<T>
      * @param defaultValue the default value of the option, which will be used when unspecified.
      * @param validator the {@link Function} which is used for validating ane normalizing an option value.
      * @param mergeFunction the {@link BiFunction} which is used for merging old and new option values.
+     *
+     * @throws IllegalStateException if an option with the specified name exists already.
      */
     public static <T> ClientFactoryOption<T> define(
             String name,
