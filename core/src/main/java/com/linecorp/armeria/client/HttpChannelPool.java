@@ -106,12 +106,13 @@ final class HttpChannelPool implements AsyncCloseable {
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(
-                                    new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                             // TODO: proxyAddresses might need to be set per connection instead of here.
                             if (clientFactory.options().useProxy()) {
-                                ch.pipeline().addLast(new Socks4ProxyHandler(new InetSocketAddress(20080)));
+                                ch.pipeline().addLast(new Socks4ProxyHandler(
+                                        new InetSocketAddress("127.0.0.1", 20080)));
                             }
+                            ch.pipeline().addLast(
+                                    new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                         }
                     });
                     return bootstrap;
