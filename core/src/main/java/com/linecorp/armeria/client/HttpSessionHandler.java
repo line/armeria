@@ -52,6 +52,7 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWrittenEvent;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.proxy.ProxyConnectionEvent;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AttributeKey;
@@ -305,6 +306,14 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             evt instanceof SslCloseCompletionEvent ||
             evt instanceof ChannelInputShutdownReadComplete) {
             // Expected events
+            return;
+        }
+
+        if (evt instanceof ProxyConnectionEvent) {
+            // TODO: remove log statement before merge.
+            final ProxyConnectionEvent proxyEvt = (ProxyConnectionEvent) evt;
+            logger.debug("Connecting by proxy: {} -> destination: {}, channel.remote: {}",
+                         proxyEvt.proxyAddress(), proxyEvt.destinationAddress(), channel.remoteAddress());
             return;
         }
 

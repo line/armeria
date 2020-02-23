@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import java.net.InetSocketAddress;
+
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
@@ -31,15 +33,15 @@ import io.netty.handler.logging.LoggingHandler;
 
 public class NettyServerExtension extends AbstractAllOrEachExtension {
 
-    private final int port;
+    private final InetSocketAddress address;
     private final ChannelHandler childHandler;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private Channel channel;
 
-    public NettyServerExtension(int port, ChannelHandler childHandler) {
-        this.port = port;
+    public NettyServerExtension(InetSocketAddress address, ChannelHandler childHandler) {
+        this.address = address;
         this.childHandler = childHandler;
     }
 
@@ -53,7 +55,7 @@ public class NettyServerExtension extends AbstractAllOrEachExtension {
                  .channel(NioServerSocketChannel.class)
                  .handler(new LoggingHandler(LogLevel.INFO))
                  .childHandler(childHandler);
-        channel = bootstrap.bind(port).sync().channel();
+        channel = bootstrap.bind(address).sync().channel();
     }
 
     @Override

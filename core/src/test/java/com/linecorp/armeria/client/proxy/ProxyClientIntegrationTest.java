@@ -102,10 +102,10 @@ public class ProxyClientIntegrationTest {
     @RegisterExtension
     @Order(2)
     static NettyServerExtension proxyServer =
-            new NettyServerExtension(PROXY_ADDRESS.getPort(), new SocksServerInitializer());
+            new NettyServerExtension(PROXY_ADDRESS, new SocksServerInitializer());
 
     @Test
-    void dumbProxyClientTest() throws Exception {
+    void testBasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().useProxy(true).build();
         final Endpoint endpoint = Endpoint.of(BACKEND_ADDRESS.getHostString(), BACKEND_ADDRESS.getPort());
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, endpoint)
@@ -120,7 +120,8 @@ public class ProxyClientIntegrationTest {
     }
 
     @Test
-    void testNettyServerWithArmeriaBacking() throws Exception {
+    void testServerUsingNettyClient() throws Exception {
+        // TODO: this is for testing the socks netty server. remove before merging.
         final Bootstrap b = new Bootstrap();
         b.group(new NioEventLoopGroup(1));
         b.channel(NioSocketChannel.class);
@@ -254,6 +255,7 @@ public class ProxyClientIntegrationTest {
             b.connect(backendAddress).addListener((ChannelFutureListener) f -> {
                 if (!f.isSuccess()) {
                     clientCtx.close();
+                    return;
                 }
                 backend = f.channel();
                 flush();
