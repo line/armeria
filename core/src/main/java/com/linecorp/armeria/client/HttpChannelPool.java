@@ -126,9 +126,8 @@ final class HttpChannelPool implements AsyncCloseable {
 
     private static void addSocksProxyHandlerIfPossible(
             ChannelPipeline pipeline, Optional<? extends ProxyHandler> proxyHandler) {
-        if (proxyHandler.isPresent()
-            && (proxyHandler.get() instanceof Socks4ProxyHandler ||
-                proxyHandler.get() instanceof Socks5ProxyHandler)) {
+        if (proxyHandler.isPresent() && (proxyHandler.get() instanceof Socks4ProxyHandler ||
+                                         proxyHandler.get() instanceof Socks5ProxyHandler)) {
             pipeline.addLast(proxyHandler.get());
         }
     }

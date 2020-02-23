@@ -46,6 +46,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -58,16 +59,24 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.socksx.SocksPortUnificationServerHandler;
 import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandRequest;
 import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandResponse;
 import io.netty.handler.codec.socksx.v4.Socks4ClientDecoder;
 import io.netty.handler.codec.socksx.v4.Socks4ClientEncoder;
 import io.netty.handler.codec.socksx.v4.Socks4CommandStatus;
 import io.netty.handler.codec.socksx.v4.Socks4CommandType;
-import io.netty.handler.codec.socksx.v4.Socks4ServerDecoder;
-import io.netty.handler.codec.socksx.v4.Socks4ServerEncoder;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5InitialRequest;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5InitialResponse;
+import io.netty.handler.codec.socksx.v5.Socks5AddressType;
+import io.netty.handler.codec.socksx.v5.Socks5AuthMethod;
+import io.netty.handler.codec.socksx.v5.Socks5CommandRequest;
+import io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder;
+import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
+import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.util.ReferenceCountUtil;
 
 public class ProxyClientIntegrationTest {
@@ -80,9 +89,8 @@ public class ProxyClientIntegrationTest {
         @Override
         public void initChannel(SocketChannel ch) throws Exception {
             ch.pipeline().addLast(
-                    new Socks4ServerDecoder(),
-                    Socks4ServerEncoder.INSTANCE,
                     new LoggingHandler(getClass()),
+                    new SocksPortUnificationServerHandler(),
                     new CustomSocksProxyServerHandler());
         }
     }
@@ -124,6 +132,24 @@ public class ProxyClientIntegrationTest {
     }
 
     @Test
+    void testSocks5BasicCase() throws Exception {
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyHandler(new Socks5ProxyHandler(PROXY_ADDRESS))
+                             .build();
+        final Endpoint endpoint = Endpoint.of(BACKEND_ADDRESS.getHostString(), BACKEND_ADDRESS.getPort());
+        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, endpoint)
+                                             .factory(clientFactory)
+                                             .decorator(LoggingClient.newDecorator())
+                                             .build();
+        final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                webClient.get(PROXY_PATH).aggregate();
+        assertThat(responseFuture).satisfies(CompletableFuture::isDone);
+        final AggregatedHttpResponse response = responseFuture.join();
+        assertThat(response.status()).isEqualByComparingTo(OK);
+    }
+
+    @Test
     void testServerUsingNettyClient() throws Exception {
         // TODO: this is for testing the socks netty server. remove before merging.
         final Bootstrap b = new Bootstrap();
@@ -137,7 +163,7 @@ public class ProxyClientIntegrationTest {
                 ch.pipeline().addLast(new LoggingHandler(getClass()));
                 ch.pipeline().addLast(Socks4ClientEncoder.INSTANCE);
                 ch.pipeline().addLast(new Socks4ClientDecoder());
-                ch.pipeline().addLast(new CustomSocksProxyClientHandler());
+                ch.pipeline().addLast(new CustomSocks4ProxyClientHandler());
                 ch.pipeline().addLast(new CustomHttpClientHandler(status::set));
             }
         });
@@ -146,7 +172,7 @@ public class ProxyClientIntegrationTest {
         await().untilAtomic(status, equalTo(HttpResponseStatus.OK));
     }
 
-    private static class CustomSocksProxyClientHandler extends ChannelInboundHandlerAdapter {
+    private static class CustomSocks4ProxyClientHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.writeAndFlush(new DefaultSocks4CommandRequest(
@@ -197,28 +223,29 @@ public class ProxyClientIntegrationTest {
 
     private static class CustomSocksProxyServerHandler extends ChannelInboundHandlerAdapter {
         private InetSocketAddress backendAddress;
-        private boolean finished;
         private final ConcurrentLinkedDeque<ByteBuf> received = new ConcurrentLinkedDeque<>();
         private Channel backend;
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof DefaultSocks4CommandRequest) {
-                if (finished) {
-                    return;
-                }
-                finished = true;
-
                 final DefaultSocks4CommandRequest req = (DefaultSocks4CommandRequest) msg;
                 backendAddress = new InetSocketAddress(req.dstAddr(), req.dstPort());
-
-                final DefaultSocks4CommandResponse res =
-                        new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
-                ctx.writeAndFlush(res);
-                ctx.pipeline().remove(Socks4ServerDecoder.class);
-                ctx.pipeline().remove(Socks4ServerEncoder.class);
-
-                connectBackend(ctx);
+                connectBackend(ctx).addListener(f -> {
+                    ctx.writeAndFlush(new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS));
+                });
+            } else if (msg instanceof DefaultSocks5InitialRequest) {
+                ctx.pipeline().addBefore(ctx.name(), Socks5CommandRequestDecoder.class.getName(),
+                                         new Socks5CommandRequestDecoder());
+                ctx.writeAndFlush(new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH));
+            } else if (msg instanceof Socks5CommandRequest) {
+                final Socks5CommandRequest req = (Socks5CommandRequest) msg;
+                backendAddress = new InetSocketAddress(req.dstAddr(), req.dstPort());
+                connectBackend(ctx).addListener(f -> {
+                    ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
+                    ctx.writeAndFlush(new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
+                                                                       Socks5AddressType.IPv4));
+                });
             } else if (msg instanceof ByteBuf) {
                 final ByteBuf backendMessage = ReferenceCountUtil.retain((ByteBuf) msg);
                 received.add(backendMessage);
@@ -232,7 +259,7 @@ public class ProxyClientIntegrationTest {
             backend.close();
         }
 
-        private void connectBackend(final ChannelHandlerContext ctx) {
+        private ChannelFuture connectBackend(final ChannelHandlerContext ctx) {
             final ChannelHandlerContext clientCtx = ctx;
             final Bootstrap b = new Bootstrap();
             b.group(ctx.channel().eventLoop());
@@ -256,7 +283,7 @@ public class ProxyClientIntegrationTest {
                     });
                 }
             });
-            b.connect(backendAddress).addListener((ChannelFutureListener) f -> {
+            return b.connect(backendAddress).addListener((ChannelFutureListener) f -> {
                 if (!f.isSuccess()) {
                     clientCtx.close();
                     return;
