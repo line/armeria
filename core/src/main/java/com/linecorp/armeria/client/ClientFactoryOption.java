@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -40,6 +41,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
@@ -203,11 +205,6 @@ public final class ClientFactoryOption<T>
             define("USE_HTTP1_PIPELINING", Flags.defaultUseHttp1Pipelining());
 
     /**
-     * TODO: add javadoc comment.
-     */
-    public static final ClientFactoryOption<Boolean> USE_PROXY = valueOf("USE_PROXY");
-
-    /**
      * The listener which is notified on a connection pool event.
      */
     public static final ClientFactoryOption<ConnectionPoolListener> CONNECTION_POOL_LISTENER =
@@ -225,6 +222,12 @@ public final class ClientFactoryOption<T>
     public static Set<ClientFactoryOption<?>> allOptions() {
         return allOptions(ClientFactoryOption.class);
     }
+
+    /**
+     * TODO: add javadoc comment.
+     */
+    public static final ClientFactoryOption<Optional<? extends ProxyHandler>> PROXY_HANDLER =
+            valueOf("PROXY_HANDLER");
 
     /**
      * Returns the {@link ClientFactoryOption} with the specified {@code name}.

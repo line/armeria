@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -31,6 +32,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
@@ -245,13 +247,6 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * TODO: add javadoc comment.
-     */
-    public boolean useProxy() {
-        return get(ClientFactoryOption.USE_PROXY);
-    }
-
-    /**
      * Returns the listener which is notified on a connection pool event.
      */
     public ConnectionPoolListener connectionPoolListener() {
@@ -263,5 +258,12 @@ public final class ClientFactoryOptions
      */
     public MeterRegistry meterRegistry() {
         return get(ClientFactoryOption.METER_REGISTRY);
+    }
+
+    /**
+     * TODO: add javadoc comment.
+     */
+    public Optional<? extends ProxyHandler> getProxyHandler() {
+        return get(ClientFactoryOption.PROXY_HANDLER);
     }
 }

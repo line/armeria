@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -52,6 +53,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.resolver.AddressResolverGroup;
@@ -462,14 +464,6 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * TODO: add javadoc comment.
-     */
-    public ClientFactoryBuilder useProxy(boolean useProxy) {
-        option(ClientFactoryOption.USE_PROXY, useProxy);
-        return this;
-    }
-
-    /**
      * Sets the listener which is notified on a connection pool event.
      */
     public ClientFactoryBuilder connectionPoolListener(
@@ -484,6 +478,14 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder meterRegistry(MeterRegistry meterRegistry) {
         option(ClientFactoryOption.METER_REGISTRY, requireNonNull(meterRegistry, "meterRegistry"));
+        return this;
+    }
+
+    /**
+     * TODO: add javadoc comment.
+     */
+    public ClientFactoryBuilder proxyHandler(ProxyHandler proxyHandlerCustomizer) {
+        option(ClientFactoryOption.PROXY_HANDLER, Optional.of(proxyHandlerCustomizer));
         return this;
     }
 

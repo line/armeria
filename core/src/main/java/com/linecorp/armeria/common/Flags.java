@@ -247,7 +247,6 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
-    private static final boolean DEFAULT_USE_PROXY = getBoolean("defaultUseProxy", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";
@@ -674,13 +673,6 @@ public final class Flags {
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
-    }
-
-    /**
-     * TODO: add javadoc comments.
-     */
-    public static boolean defaultUseProxy() {
-        return DEFAULT_USE_PROXY;
     }
 
     /**

@@ -67,6 +67,7 @@ import io.netty.handler.codec.socksx.v4.Socks4CommandType;
 import io.netty.handler.codec.socksx.v4.Socks4ServerDecoder;
 import io.netty.handler.codec.socksx.v4.Socks4ServerEncoder;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.util.ReferenceCountUtil;
 
 public class ProxyClientIntegrationTest {
@@ -105,8 +106,11 @@ public class ProxyClientIntegrationTest {
             new NettyServerExtension(PROXY_ADDRESS, new SocksServerInitializer());
 
     @Test
-    void testBasicCase() throws Exception {
-        final ClientFactory clientFactory = ClientFactory.builder().useProxy(true).build();
+    void testSocks4BasicCase() throws Exception {
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyHandler(new Socks4ProxyHandler(PROXY_ADDRESS))
+                             .build();
         final Endpoint endpoint = Endpoint.of(BACKEND_ADDRESS.getHostString(), BACKEND_ADDRESS.getPort());
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, endpoint)
                                              .factory(clientFactory)
