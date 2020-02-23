@@ -613,7 +613,7 @@ public final class RequestContextExporter {
 
         @Override
         public int hashCode() {
-            return key.hashCode();
+            return key.hashCode() * 31 + exportKey.hashCode();
         }
 
         @Override
