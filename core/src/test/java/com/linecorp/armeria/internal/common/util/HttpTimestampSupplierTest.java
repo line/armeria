@@ -61,7 +61,7 @@ class HttpTimestampSupplierTest {
         verify(nanoTimeSupplier, times(1)).getAsLong();
         clearInvocations(instantSupplier, nanoTimeSupplier);
 
-        // Advance nano time by tad bit less than 950 milliseconds.
+        // Advance the current nano time by (950 milliseconds - 1 nanosecond)
         // This time, only the current nano time must be read.
         // Therefore instantHolder will never be accessed.
         when(nanoTimeSupplier.getAsLong()).thenReturn(TimeUnit.MILLISECONDS.toNanos(-500 + 950) - 1);
@@ -73,8 +73,8 @@ class HttpTimestampSupplierTest {
         verify(nanoTimeSupplier, times(1)).getAsLong();
         clearInvocations(instantSupplier, nanoTimeSupplier);
 
-        // Advance nano time by 1 nanosecond.
-        // Then, both the instant and nano time will be read.
+        // Advance the current nano time by 1 nanosecond.
+        // Then, both the current instant and nano time will be read.
         when(nanoTimeSupplier.getAsLong()).thenReturn(TimeUnit.MILLISECONDS.toNanos(-500 + 950));
         when(instantSupplier.get()).thenReturn(TIME1);
         assertThat(supplier.currentTimestamp()).isEqualTo("Fri, 18 Oct 2019 10:15:31 GMT");
