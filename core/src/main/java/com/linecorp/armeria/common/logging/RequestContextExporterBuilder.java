@@ -19,14 +19,12 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
-import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import com.google.common.collect.ImmutableSet;
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.logging.RequestContextExporter.ExportEntry;
@@ -40,10 +38,11 @@ import io.netty.util.AttributeKey;
 public final class RequestContextExporterBuilder {
 
     static final String PREFIX_ATTRS = "attrs.";
+    private static final String ATTR_NAMESPACE = "attr:";
     private static final String PREFIX_HTTP_REQ_HEADERS = "req.http_headers.";
     private static final String PREFIX_HTTP_RES_HEADERS = "res.http_headers.";
 
-    private final Set<BuiltInProperty> builtIns = EnumSet.noneOf(BuiltInProperty.class);
+    private final Set<ExportEntry<BuiltInProperty>> builtIns = new HashSet<>();
     private final Set<ExportEntry<AttributeKey<?>>> attrs = new HashSet<>();
     private final Set<ExportEntry<AsciiString>> httpReqHeaders = new HashSet<>();
     private final Set<ExportEntry<AsciiString>> httpResHeaders = new HashSet<>();
@@ -52,9 +51,22 @@ public final class RequestContextExporterBuilder {
 
     /**
      * Adds the specified {@link BuiltInProperty} to the export list.
+     * The {@link BuiltInProperty#key} will be used for the export key.
      */
     public RequestContextExporterBuilder addBuiltIn(BuiltInProperty property) {
-        builtIns.add(requireNonNull(property, "property"));
+        requireNonNull(property, "property");
+        builtIns.add(new ExportEntry<>(property, property.key));
+        return this;
+    }
+
+    /**
+     * Adds the specified {@link BuiltInProperty} to the export list.
+     * The specified {@code alias} will be used for the export key.
+     */
+    public RequestContextExporterBuilder addBuiltIn(BuiltInProperty property, String alias) {
+        requireNonNull(property, "property");
+        requireNonNull(alias, "alias");
+        builtIns.add(new ExportEntry<>(property, alias));
         return this;
     }
 
@@ -65,7 +77,8 @@ public final class RequestContextExporterBuilder {
      */
     @Deprecated
     public boolean containsBuiltIn(BuiltInProperty property) {
-        return builtIns.contains(requireNonNull(property, "property"));
+        requireNonNull(property, "property");
+        return builtIns.stream().anyMatch(entry -> entry.key == property);
     }
 
     /**
@@ -75,24 +88,44 @@ public final class RequestContextExporterBuilder {
      */
     @Deprecated
     public Set<BuiltInProperty> getBuiltIns() {
-        return ImmutableSet.copyOf(builtIns);
+        return builtIns.stream().map(entry -> entry.key).collect(toImmutableSet());
     }
 
     /**
      * Adds the specified {@link AttributeKey} to the export list.
+     * The specified {@code alias} prefixed with {@value PREFIX_ATTRS} is used for the export key.
+     * This method is a shortcut for {@code addAttribute(alias, attrKey, true)}.
      *
      * @param alias the alias of the attribute to export
      * @param attrKey the key of the attribute to export
      */
     public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey) {
+        return addAttribute(alias, attrKey, true);
+    }
+
+    /**
+     * Adds the specified {@link AttributeKey} to the export list.
+     * If the specified {@code usePrefix} is {@code true}, the specified {@code alias} prefixed with
+     * {@value PREFIX_ATTRS} is used for the export key.
+     * Otherwise only the specified {@code alias} is used.
+     *
+     * @param alias the alias of the attribute to export
+     * @param attrKey the key of the attribute to export
+     * @param usePrefix whether to use the default attribute prefix or not
+     */
+    public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey,
+                                                      boolean usePrefix) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
-        attrs.add(new ExportEntry<>(attrKey, PREFIX_ATTRS + alias, null));
+        final String exportKey = usePrefix ? PREFIX_ATTRS + alias : alias;
+        attrs.add(new ExportEntry<>(attrKey, exportKey));
         return this;
     }
 
     /**
      * Adds the specified {@link AttributeKey} to the export list.
+     * The specified {@code alias} prefixed with {@value PREFIX_ATTRS} is used for the export key.
+     * This method is a shortcut for {@code addAttribute(alias, attrKey, stringifier, true)}.
      *
      * @param alias the alias of the attribute to export
      * @param attrKey the key of the attribute to export
@@ -100,10 +133,27 @@ public final class RequestContextExporterBuilder {
      */
     public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey,
                                                       Function<?, String> stringifier) {
+        return addAttribute(alias, attrKey, stringifier, true);
+    }
+
+    /**
+     * Adds the specified {@link AttributeKey} to the export list.
+     * If the specified {@code usePrefix} is {@code true}, the specified {@code alias} prefixed with
+     * {@value PREFIX_ATTRS} is used for the export key.
+     * Otherwise only the {@code alias} is used.
+     *
+     * @param alias the alias of the attribute to export
+     * @param attrKey the key of the attribute to export
+     * @param stringifier the {@link Function} that converts the attribute value into a {@link String}
+     * @param usePrefix whether to use the default attribute prefix or not
+     */
+    public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey,
+                                                      Function<?, String> stringifier, boolean usePrefix) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         requireNonNull(stringifier, "stringifier");
-        attrs.add(new ExportEntry<>(attrKey, PREFIX_ATTRS + alias, stringifier));
+        final String exportKey = usePrefix ? PREFIX_ATTRS + alias : alias;
+        attrs.add(new ExportEntry<>(attrKey, exportKey, stringifier));
         return this;
     }
 
@@ -128,14 +178,32 @@ public final class RequestContextExporterBuilder {
     @Deprecated
     public Map<String, AttributeKey<?>> getAttributes() {
         return attrs.stream().collect(
-                toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key));
+                toImmutableMap(e -> {
+                    if (e.exportKey.startsWith(PREFIX_ATTRS)) {
+                        return e.exportKey.substring(PREFIX_ATTRS.length());
+                    }
+                    return e.exportKey;
+                }, e -> e.key));
     }
 
     /**
      * Adds the specified HTTP request header name to the export list.
      */
     public RequestContextExporterBuilder addHttpRequestHeader(CharSequence name) {
-        addHttpHeader(PREFIX_HTTP_REQ_HEADERS, httpReqHeaders, requireNonNull(name, "name"));
+        final AsciiString key = toHeaderName(requireNonNull(name, "name"));
+        final String exportKey = PREFIX_HTTP_REQ_HEADERS + key;
+        httpReqHeaders.add(new ExportEntry<>(key, exportKey));
+        return this;
+    }
+
+    /**
+     * Adds the specified HTTP request header name to the export list.
+     * The specified {@code alias} is used for the export key.
+     */
+    public RequestContextExporterBuilder addHttpRequestHeader(CharSequence headerName, String alias) {
+        requireNonNull(headerName, "headerName");
+        requireNonNull(alias, "alias");
+        httpReqHeaders.add(new ExportEntry<>(toHeaderName(headerName), alias));
         return this;
     }
 
@@ -143,15 +211,21 @@ public final class RequestContextExporterBuilder {
      * Adds the specified HTTP response header name to the export list.
      */
     public RequestContextExporterBuilder addHttpResponseHeader(CharSequence name) {
-        addHttpHeader(PREFIX_HTTP_RES_HEADERS, httpResHeaders, requireNonNull(name, "name"));
+        final AsciiString key = toHeaderName(requireNonNull(name, "name"));
+        final String exportKey = PREFIX_HTTP_RES_HEADERS + key;
+        httpResHeaders.add(new ExportEntry<>(key, exportKey));
         return this;
     }
 
-    private static void addHttpHeader(
-            String mdcKeyPrefix, Set<ExportEntry<AsciiString>> httpHeaders, CharSequence name) {
-        final AsciiString key = toHeaderName(name);
-        final String value = mdcKeyPrefix + key;
-        httpHeaders.add(new ExportEntry<>(key, value, null));
+    /**
+     * Adds the specified HTTP response header name to the export list.
+     * The specified {@code alias} is used for the export key.
+     */
+    public RequestContextExporterBuilder addHttpResponseHeader(CharSequence headerName, String alias) {
+        requireNonNull(headerName, "headerName");
+        requireNonNull(alias, "alias");
+        httpResHeaders.add(new ExportEntry<>(toHeaderName(headerName), alias));
+        return this;
     }
 
     /**
@@ -208,49 +282,81 @@ public final class RequestContextExporterBuilder {
     public RequestContextExporterBuilder addKeyPattern(String keyPattern) {
         requireNonNull(keyPattern, "keyPattern");
 
-        final List<BuiltInProperty> builtInPropertyList = BuiltInProperty.findByKeyPattern(keyPattern);
-        if (!builtInPropertyList.isEmpty()) {
-            builtIns.addAll(builtInPropertyList);
-            return this;
-        }
+        final int exportKeyPos = keyPattern.indexOf('=');
 
         if (keyPattern.contains(BuiltInProperty.WILDCARD_STR)) {
+            if (exportKeyPos > 0) {
+                throw new IllegalArgumentException(
+                        "A custom export key is unsupported for the wildcard: " + keyPattern);
+            }
+            BuiltInProperty.findByKeyPattern(keyPattern)
+                           .stream().map(prop -> new ExportEntry<>(prop, prop.key))
+                           .forEach(builtIns::add);
             return this;
         }
 
-        if (keyPattern.startsWith(PREFIX_ATTRS)) {
-            final String[] components = keyPattern.split(":");
-            switch (components.length) {
-                case 2:
-                    addAttribute(components[0].substring(PREFIX_ATTRS.length()),
-                                 AttributeKey.valueOf(components[1]));
-                    break;
-                case 3:
-                    final Function<?, String> stringifier = newStringifier(keyPattern, components[2]);
+        String exportKey = null;
+        if (exportKeyPos > 0) {
+            exportKey = keyPattern.substring(0, exportKeyPos);
+            keyPattern = keyPattern.substring(exportKeyPos + 1);
+        }
 
-                    addAttribute(components[0].substring(PREFIX_ATTRS.length()),
-                                 AttributeKey.valueOf(components[1]),
-                                 stringifier);
-                    break;
-                default:
-                    throw new IllegalArgumentException(
-                            "invalid attribute export: " + keyPattern +
-                            " (expected: attrs.<alias>:<AttributeKey.name>[:<FQCN of Function<?, String>>])");
-            }
+        final BuiltInProperty property = BuiltInProperty.findByKey(keyPattern);
+        if (property != null) {
+            builtIns.add(new ExportEntry<>(property, exportKey != null ? exportKey : property.key));
+            return this;
+        }
+
+        if (keyPattern.startsWith(PREFIX_ATTRS) || keyPattern.startsWith(ATTR_NAMESPACE)) {
+            final ExportEntry<AttributeKey<?>> attrExportEntry = parseAttrPattern(keyPattern, exportKey);
+            attrs.add(attrExportEntry);
             return this;
         }
 
         if (keyPattern.startsWith(PREFIX_HTTP_REQ_HEADERS)) {
-            addHttpRequestHeader(keyPattern.substring(PREFIX_HTTP_REQ_HEADERS.length()));
+            if (exportKey == null) {
+                addHttpRequestHeader(keyPattern.substring(PREFIX_HTTP_REQ_HEADERS.length()));
+            } else {
+                addHttpRequestHeader(keyPattern.substring(PREFIX_HTTP_REQ_HEADERS.length()), exportKey);
+            }
             return this;
         }
 
         if (keyPattern.startsWith(PREFIX_HTTP_RES_HEADERS)) {
-            addHttpResponseHeader(keyPattern.substring(PREFIX_HTTP_RES_HEADERS.length()));
+            if (exportKey == null) {
+                addHttpResponseHeader(keyPattern.substring(PREFIX_HTTP_RES_HEADERS.length()));
+            } else {
+                addHttpResponseHeader(keyPattern.substring(PREFIX_HTTP_RES_HEADERS.length()), exportKey);
+            }
             return this;
         }
 
         throw new IllegalArgumentException("unknown key pattern: " + keyPattern);
+    }
+
+    private ExportEntry<AttributeKey<?>> parseAttrPattern(String keyPattern, @Nullable String exportKey) {
+        final String[] components = keyPattern.split(":");
+        if (components.length < 2 || components.length > 3) {
+            if (exportKey == null) {
+                throw new IllegalArgumentException(
+                        "invalid attribute export: " + keyPattern +
+                        " (expected: attrs.<alias>:<AttributeKey.name>[:<FQCN of Function<?, String>>])");
+            } else {
+                throw new IllegalArgumentException(
+                        "invalid attribute export: " + keyPattern +
+                        " (expected: <alias>=attr:<AttributeKey.name>[:<FQCN of Function<?, String>>])");
+            }
+        }
+
+        if (exportKey == null) {
+            exportKey = components[0].substring(PREFIX_ATTRS.length());
+        }
+        final AttributeKey<Object> attributeKey = AttributeKey.valueOf(components[1]);
+        if (components.length == 3) {
+            return new ExportEntry<>(attributeKey, exportKey, newStringifier(keyPattern, components[2]));
+        } else {
+            return new ExportEntry<>(attributeKey, exportKey);
+        }
     }
 
     @SuppressWarnings("unchecked")

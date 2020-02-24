@@ -36,6 +36,11 @@ For example, the following configuration:
         <!-- ... or with wildcard:
         <export>req.*</export>
         -->
+        <!-- ... or with custom MDC key:
+        <export>remote_id=remote.id</export>
+        <export>UA=req.http_headers.user-agent</export>
+        <export>some_value=attr:com.example.AttrKeys#SOME_VALUE</exports>
+        -->
       </appender>
       ...
     </configuration>
@@ -130,6 +135,27 @@ as the 3rd component of the ``<export />`` element in the XML configuration:
       <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
         ...
         <export>attrs.some_value:com.example.AttrKeys#SOME_VALUE:com.example.MyStringifier</export>
+        ...
+      </appender>
+      ...
+    </configuration>
+
+Customize MDC key
+-----------------
+You can override the pre-defined the MDC key by adding an alias in front of it.
+Note that this cannot be used with wildcard expressions ``*`` or ``req. *``.
+For example, if you want to change ``req.id`` to ``request_id``, use ``request_id=req.id``.
+
+.. code-block:: xml
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <configuration>
+      ...
+      <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+        ...
+        <export>remote_id=remote.id</export>
+        <export>UA=req.http_headers.user-agent</export>
+        <export>some_value=attr:com.example.AttrKeys#SOME_VALUE</exports>
         ...
       </appender>
       ...
