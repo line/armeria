@@ -36,6 +36,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -44,7 +45,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.util.AbstractOptionValue;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
@@ -54,7 +54,7 @@ import io.netty.util.AsciiString;
 /**
  * A set of {@link ClientOption}s and their respective values.
  */
-public final class ClientOptions extends AbstractOptions {
+public final class ClientOptions extends AbstractOptions<ClientOptionValue<?>> {
 
     private static final Collection<AsciiString> BLACKLISTED_HEADER_NAMES =
             Collections.unmodifiableCollection(Arrays.asList(
@@ -86,19 +86,19 @@ public final class ClientOptions extends AbstractOptions {
             ENDPOINT_REMAPPER.newValue(Function.identity())
     };
 
-    /**
-     * The default {@link ClientOptions}.
-     *
-     * @deprecated Use {@link #of()}.
-     */
-    @Deprecated
-    public static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
+    private static final ClientOptions EMPTY = new ClientOptions();
 
     /**
-     * Returns the {@link ClientOptions} with the default options only.
+     * The default {@link ClientOptions}.
+     */
+    @VisibleForTesting
+    static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
+
+    /**
+     * Returns an empty singleton {@link ClientOptions}.
      */
     public static ClientOptions of() {
-        return DEFAULT;
+        return EMPTY;
     }
 
     /**
@@ -193,20 +193,17 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     @Override
-    protected <T extends AbstractOptionValue<?, ?>> T filterValue(T optionValue) {
+    protected ClientOptionValue<?> filterValue(ClientOptionValue<?> optionValue) {
         if (optionValue.option() == HTTP_HEADERS) {
             @SuppressWarnings("unchecked")
             final ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) optionValue.option();
-            @SuppressWarnings("unchecked")
-            final T castOptionValue = (T) castOption.newValue(
-                    filterHttpHeaders((HttpHeaders) optionValue.value()));
-            return castOptionValue;
+            return castOption.newValue(filterHttpHeaders((HttpHeaders) optionValue.value()));
         }
         return optionValue;
     }
 
     @Override
-    protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
+    protected ClientOptionValue<?> mergeValue(ClientOptionValue<?> oldValue, ClientOptionValue<?> newValue) {
         if (oldValue.option() == DECORATION) {
             final ClientDecoration oldDecoration = (ClientDecoration) oldValue.value();
             final ClientDecoration newDecoration = (ClientDecoration) newValue.value();
@@ -221,9 +218,7 @@ public final class ClientOptions extends AbstractOptions {
                                                             .add(oldDecoration)
                                                             .add(newDecoration)
                                                             .build();
-            @SuppressWarnings("unchecked")
-            final T cast = (T) DECORATION.newValue(merged);
-            return cast;
+            return DECORATION.newValue(merged);
         } else if (oldValue.option() == HTTP_HEADERS) {
             final HttpHeaders oldHeaders = (HttpHeaders) oldValue.value();
             final HttpHeaders newHeaders = (HttpHeaders) newValue.value();
@@ -235,9 +230,7 @@ public final class ClientOptions extends AbstractOptions {
             }
 
             final HttpHeaders merged = oldHeaders.toBuilder().setObject(newHeaders).build();
-            @SuppressWarnings("unchecked")
-            final T cast = (T) HTTP_HEADERS.newValue(merged);
-            return cast;
+            return HTTP_HEADERS.newValue(merged);
         } else {
             return newValue;
         }
@@ -251,7 +244,7 @@ public final class ClientOptions extends AbstractOptions {
      * @throws NoSuchElementException if no value is set for the specified {@link ClientOption}.
      */
     public <T> T get(ClientOption<T> option) {
-        return get0(option);
+        return get(this, DEFAULT, option);
     }
 
     /**
@@ -262,7 +255,7 @@ public final class ClientOptions extends AbstractOptions {
      */
     @Nullable
     public <T> T getOrNull(ClientOption<T> option) {
-        return getOrNull0(option);
+        return getOrNull(this, DEFAULT, option);
     }
 
     /**
@@ -272,14 +265,16 @@ public final class ClientOptions extends AbstractOptions {
      *         {@code defaultValue} if the specified {@link ClientOption} is not set.
      */
     public <T> T getOrElse(ClientOption<T> option, T defaultValue) {
-        return getOrElse0(option, defaultValue);
+        requireNonNull(defaultValue, "defaultValue");
+        return getOrElse(this, DEFAULT, option, defaultValue);
     }
 
     /**
      * Converts this {@link ClientOptions} to a {@link Map}.
      */
+    @SuppressWarnings("unchecked")
     public Map<ClientOption<Object>, ClientOptionValue<Object>> asMap() {
-        return asMap0();
+         return (Map<ClientOption<Object>, ClientOptionValue<Object>>) asMap0();
     }
 
     /**

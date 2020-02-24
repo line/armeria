@@ -255,6 +255,8 @@ public class HttpClientMaxConcurrentStreamTest {
         });
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
+        await().until(() -> receivedResponses.stream().filter(CompletableFuture::isCompletedExceptionally)
+                                             .count() == numFailedRequests);
         assertThat(opens).hasValue(numExpectedConnections);
         assertThat(connectionTimings.stream().filter(
                 timings -> timings.pendingAcquisitionDurationNanos() > 0))

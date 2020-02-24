@@ -76,7 +76,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 public class RequestContextExportingAppenderTest {
 
-    private static final AttributeKey<CustomValue> MY_ATTR =
+    private static final AttributeKey<CustomObject> MY_ATTR =
             AttributeKey.valueOf(RequestContextExportingAppenderTest.class, "MY_ATTR");
 
     private static final RpcRequest RPC_REQ = RpcRequest.of(Object.class, "hello", "world");
@@ -204,7 +204,8 @@ public class RequestContextExportingAppenderTest {
             final AttributeKey<Object> fooAttr = AttributeKey.valueOf("com.example.AttrKeys#FOO");
             final AttributeKey<Object> barAttr = AttributeKey.valueOf("com.example.AttrKeys#BAR");
             assertThat(rcea.getAttributes()).containsOnly(new SimpleEntry<>("foo", fooAttr),
-                                                          new SimpleEntry<>("bar", barAttr));
+                                                          new SimpleEntry<>("bar", barAttr),
+                                                          new SimpleEntry<>("qux", barAttr));
         } finally {
             // Revert to the original configuration.
             final JoranConfigurator configurator = new JoranConfigurator();
@@ -322,7 +323,8 @@ public class RequestContextExportingAppenderTest {
                 a.addBuiltIn(p);
             }
             // .. and an attribute.
-            a.addAttribute("my_attr", MY_ATTR, new CustomValueStringifier());
+            a.addAttribute("my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
+            a.addAttribute("my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
             // .. and some HTTP headers.
             a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
             a.addHttpResponseHeader(HttpHeaderNames.DATE);
@@ -370,10 +372,11 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .containsEntry("attrs.my_attr", "some-attr")
+                           .containsEntry("attrs.my_attr_name", "some-name")
+                           .containsEntry("attrs.my_attr_value", "some-value")
                            .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(28);
+                           .hasSize(29);
         }
     }
 
@@ -412,7 +415,7 @@ public class RequestContextExportingAppenderTest {
                                              ProxiedAddresses.of(new InetSocketAddress("9.10.11.12", 0)))
                                      .build();
 
-        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomObject("some-name", "some-value"));
         return ctx;
     }
 
@@ -457,7 +460,8 @@ public class RequestContextExportingAppenderTest {
                 a.addBuiltIn(p);
             }
             // .. and an attribute.
-            a.addAttribute("my_attr", MY_ATTR, new CustomValueStringifier());
+            a.addAttribute("my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
+            a.addAttribute("my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
             // .. and some HTTP headers.
             a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
             a.addHttpResponseHeader(HttpHeaderNames.DATE);
@@ -503,10 +507,11 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .containsEntry("attrs.my_attr", "some-attr")
+                           .containsEntry("attrs.my_attr_name", "some-name")
+                           .containsEntry("attrs.my_attr_value", "some-value")
                            .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(26);
+                           .hasSize(27);
         }
     }
 
@@ -531,7 +536,7 @@ public class RequestContextExportingAppenderTest {
                                     .sslSession(newSslSession())
                                     .build();
 
-        ctx.setAttr(MY_ATTR, new CustomValue("some-attr"));
+        ctx.setAttr(MY_ATTR, new CustomObject("some-name", "some-value"));
         return ctx;
     }
 

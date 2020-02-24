@@ -647,7 +647,7 @@ public final class RequestContextExporter {
 
         @Override
         public int hashCode() {
-            return key.hashCode();
+            return key.hashCode() * 31 + exportKey.hashCode();
         }
 
         @Override
@@ -660,7 +660,8 @@ public final class RequestContextExporter {
                 return false;
             }
 
-            return key.equals(((ExportEntry<?>) o).key);
+            return key.equals(((ExportEntry<?>) o).key) &&
+                   exportKey.equals(((ExportEntry<?>) o).exportKey);
         }
 
         @Override

@@ -60,7 +60,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder options(ClientOptions options) {
         requireNonNull(options, "options");
-        options.asMap().values().forEach(this::option);
+        options.forEach(this::option);
         return this;
     }
 

@@ -114,4 +114,22 @@ class RequestContextExporterTest {
         final Object childState = childCtx.attr(RequestContextExporter.STATE);
         assertThat(childState).isNotNull().isNotSameAs(rootState);
     }
+
+    @Test
+    void shouldExportDifferentAliasOnSameKey() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx.setAttr(ATTR1, "1");
+        ctx.setAttr(ATTR2, "2");
+        final RequestContextExporter exporter =
+                RequestContextExporter.builder()
+                                      .addAttribute("attr1-1", ATTR1)
+                                      .addAttribute("attr1-2", ATTR1)
+                                      .addAttribute("attr2", ATTR2)
+                                      .build();
+
+        assertThat(exporter.export(ctx)).containsOnlyKeys(
+                "attrs.attr1-1",
+                "attrs.attr1-2",
+                "attrs.attr2");
+    }
 }
