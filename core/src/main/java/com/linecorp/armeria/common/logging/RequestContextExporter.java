@@ -571,7 +571,7 @@ public final class RequestContextExporter {
         }
 
         assert state.attrValues != null;
-        for (int i = 0; i < attrs.length; i++) {
+        for (int i = 0; i < numAttrs; i++) {
             final ExportEntry<AttributeKey<?>> e = attrs[i];
             putOtherProperty(state, e, state.attrValues[i]);
         }
