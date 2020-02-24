@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -37,55 +35,32 @@ public abstract class AbstractThrottlingService<I extends Request, O extends Res
 
     private final ThrottlingStrategy<I> strategy;
     private final Function<CompletionStage<? extends O>, O> responseConverter;
+    private final ThrottlingAcceptHandler<I, O> acceptHandler;
+    private final ThrottlingRejectHandler<I, O> rejectHandler;
 
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
     protected AbstractThrottlingService(Service<I, O> delegate, ThrottlingStrategy<I> strategy,
-                                        Function<CompletionStage<? extends O>, O> responseConverter) {
+                                        Function<CompletionStage<? extends O>, O> responseConverter,
+                                        ThrottlingAcceptHandler<I, O> acceptHandler,
+                                        ThrottlingRejectHandler<I, O> rejectHandler) {
         super(delegate);
         this.strategy = requireNonNull(strategy, "strategy");
         this.responseConverter = requireNonNull(responseConverter);
+        this.acceptHandler = acceptHandler;
+        this.rejectHandler = rejectHandler;
     }
-
-    protected ThrottlingStrategy<I> strategy() {
-        return strategy;
-    }
-
-    /**
-     * Invoked when {@code req} is not throttled. By default, this method delegates the specified {@code req} to
-     * the {@link #delegate()} of this service.
-     * @param ctx request context
-     * @param req {@link Request} to process
-     * @return {@link Response} returned after successful processing
-     * @throws Exception when something wrong happens
-     */
-    protected O onSuccess(ServiceRequestContext ctx, I req) throws Exception {
-        return delegate().serve(ctx, req);
-    }
-
-    /**
-     * Invoked when {@code req} is throttled. This method responds with the
-     * {@link ThrottlingStrategy#failureStatus()} status.
-     * @param ctx request context
-     * @param req throttled {@link Request}
-     * @param cause exception thrown during execution of
-     *        {@link ThrottlingStrategy#accept(ServiceRequestContext, Request)}
-     * @return {@link Response} returned on throttled request
-     * @throws Exception when something wrong happens
-     */
-    protected abstract O onFailure(ServiceRequestContext ctx, I req, @Nullable Throwable cause)
-            throws Exception;
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         return responseConverter.apply(
-                strategy.accept(ctx, req).handleAsync((accept, thrown) -> {
+                strategy.accept(ctx, req).handleAsync((accept, cause) -> {
                     try {
-                        if (thrown != null || !accept) {
-                            return onFailure(ctx, req, thrown);
+                        if (cause != null || !accept) {
+                            return rejectHandler.handleRejected(delegate(), ctx, req, cause);
                         }
-                        return onSuccess(ctx, req);
+                        return acceptHandler.handleAccepted(delegate(), ctx, req);
                     } catch (Exception e) {
                         return Exceptions.throwUnsafely(e);
                     }

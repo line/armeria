@@ -49,13 +49,11 @@ public class ThrottlingServiceTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/http-always", SERVICE.decorate(ThrottlingService.newDecorator(always())));
             sb.service("/http-never", SERVICE.decorate(ThrottlingService.newDecorator(never())));
-            sb.service("/http-never-too-many-requests", SERVICE.decorate(
-                    ThrottlingService.newDecorator(
-                            ThrottlingStrategy.of((ctx, req) -> completedFuture(false),
-                                                  "too-many-requests-strategy",
-                                                  HttpStatus.TOO_MANY_REQUESTS))
-                       )
-            );
+            sb.service("/http-never-custom", SERVICE.decorate(
+                    ThrottlingService.newDecorator(ThrottlingStrategy.of((ctx, req) -> completedFuture(false)),
+                        (delegate, ctx, req, cause) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE))
+
+            ));
         }
     };
 
@@ -69,13 +67,13 @@ public class ThrottlingServiceTest {
     public void throttleWithDefaultStatus() throws Exception {
         final WebClient client = WebClient.of(serverRule.httpUri());
         assertThat(client.get("/http-never").aggregate().get().status())
-                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 
     @Test
     public void throttleWithCustomStatus() throws Exception {
         final WebClient client = WebClient.of(serverRule.httpUri());
-        assertThat(client.get("/http-never-too-many-requests").aggregate().get().status())
-                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(client.get("/http-never-custom").aggregate().get().status())
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 }

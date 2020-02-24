@@ -23,7 +23,6 @@ import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -32,7 +31,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public abstract class ThrottlingStrategy<T extends Request> {
     private static final AtomicInteger GLOBAL_STRATEGY_ID = new AtomicInteger();
-    private static final HttpStatus DEFAULT_FAILURE_STATUS = HttpStatus.SERVICE_UNAVAILABLE;
 
     private static final ThrottlingStrategy<?> NEVER =
             new ThrottlingStrategy<Request>("throttling-strategy-never") {
@@ -51,7 +49,6 @@ public abstract class ThrottlingStrategy<T extends Request> {
             };
 
     private final String name;
-    private final HttpStatus failureStatus;
 
     /**
      * Creates a new {@link ThrottlingStrategy} with a default name.
@@ -64,13 +61,6 @@ public abstract class ThrottlingStrategy<T extends Request> {
      * Creates a new {@link ThrottlingStrategy} with specified name.
      */
     protected ThrottlingStrategy(@Nullable String name) {
-        this(name, null);
-    }
-
-    /**
-     * Creates a new {@link ThrottlingStrategy} with specified failure status and name.
-     */
-    protected ThrottlingStrategy(@Nullable String name, @Nullable HttpStatus failureStatus) {
         if (name != null) {
             this.name = name;
         } else {
@@ -78,7 +68,6 @@ public abstract class ThrottlingStrategy<T extends Request> {
                         (getClass().isAnonymousClass() ? Integer.toString(GLOBAL_STRATEGY_ID.getAndIncrement())
                                                        : getClass().getSimpleName());
         }
-        this.failureStatus = (failureStatus == null) ? DEFAULT_FAILURE_STATUS : failureStatus;
     }
 
     /**
@@ -95,21 +84,6 @@ public abstract class ThrottlingStrategy<T extends Request> {
     @SuppressWarnings("unchecked")
     public static <T extends Request> ThrottlingStrategy<T> always() {
         return (ThrottlingStrategy<T>) ALWAYS;
-    }
-
-    /**
-     * Creates a new {@link ThrottlingStrategy} that determines whether a request should be accepted or not
-     * using a given {@link BiFunction} instance.
-     */
-    public static <T extends Request> ThrottlingStrategy<T> of(
-            BiFunction<ServiceRequestContext, T, CompletionStage<Boolean>> function,
-            String strategyName, HttpStatus failureStatus) {
-        return new ThrottlingStrategy<T>(strategyName, failureStatus) {
-            @Override
-            public CompletionStage<Boolean> accept(ServiceRequestContext ctx, T request) {
-                return function.apply(ctx, request);
-            }
-        };
     }
 
     /**
@@ -151,12 +125,5 @@ public abstract class ThrottlingStrategy<T extends Request> {
      */
     public String name() {
         return name;
-    }
-
-    /**
-     * Returns the failure status to be used for the throttled requests.
-     */
-    protected HttpStatus failureStatus() {
-        return failureStatus;
     }
 }

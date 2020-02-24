@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.RateLimiter;
 
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -39,24 +38,14 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
     private final RateLimiter rateLimiter;
 
     /**
-     * Creates a new strategy with specified failure status and name.
-     *
-     * @param requestPerSecond the number of requests per one second this {@link ThrottlingStrategy} accepts.
-     */
-    public RateLimitingThrottlingStrategy(double requestPerSecond, @Nullable String name,
-                                          @Nullable HttpStatus failureStatus) {
-        super(name, failureStatus);
-        checkArgument(requestPerSecond > 0, "requestPerSecond: %s (expected: > 0)", requestPerSecond);
-        rateLimiter = RateLimiter.create(requestPerSecond);
-    }
-
-    /**
      * Creates a new strategy with specified name.
      *
      * @param requestPerSecond the number of requests per one second this {@link ThrottlingStrategy} accepts.
      */
     public RateLimitingThrottlingStrategy(double requestPerSecond, @Nullable String name) {
-        this(requestPerSecond, name, null);
+        super(name);
+        checkArgument(requestPerSecond > 0, "requestPerSecond: %s (expected: > 0)", requestPerSecond);
+        rateLimiter = RateLimiter.create(requestPerSecond);
     }
 
     /**
