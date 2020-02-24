@@ -87,5 +87,4 @@ public final class HttpTimestampSupplier {
         return timestamp = DateTimeFormatter.RFC_1123_DATE_TIME.format(
                 ZonedDateTime.ofInstant(now, ZoneOffset.UTC));
     }
-
 }
