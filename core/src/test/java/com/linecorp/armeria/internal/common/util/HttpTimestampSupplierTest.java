@@ -61,9 +61,9 @@ class HttpTimestampSupplierTest {
         verify(nanoTimeSupplier, times(1)).getAsLong();
         clearInvocations(instantSupplier, nanoTimeSupplier);
 
-        // Advance the current nano time by (950 milliseconds - 1 nanosecond)
+        // Advance the current nano time by (950 milliseconds - 1 nanosecond).
         // This time, only the current nano time must be read.
-        // Therefore instantHolder will never be accessed.
+        // Therefore instantSupplier will never be accessed.
         when(nanoTimeSupplier.getAsLong()).thenReturn(TimeUnit.MILLISECONDS.toNanos(-500 + 950) - 1);
         when(instantSupplier.get()).thenReturn(null);
         final String timestamp2 = supplier.currentTimestamp();
