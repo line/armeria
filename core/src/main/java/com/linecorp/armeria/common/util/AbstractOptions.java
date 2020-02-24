@@ -17,125 +17,37 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
-import javax.annotation.Nullable;
-
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterators;
+
+import it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap;
 
 /**
  * A set of configuration options and their respective values.
  *
+ * @param <T> the type of the option.
+ * @param <U> the type of the option value holder.
+ *
  * @see AbstractOption
  * @see AbstractOptionValue
  */
-public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> implements Iterable<T> {
+public abstract class AbstractOptions<
+        T extends AbstractOption<T, U, Object>,
+        U extends AbstractOptionValue<U, T, Object>> implements Iterable<U> {
 
-    /**
-     * Returns the value of the specified {@code option} in the given {@code first} options.
-     * If the {@code option} is not found in the {@code first} options,
-     * will look for the specified {@code second} options.
-     *
-     * @param <O> the type of the option value.
-     * @param <V> the type of the value.
-     * @return the value of the specified {@link AbstractOption}.
-     * @throws NoSuchElementException if the specified {@link AbstractOption} does not have a value.
-     */
-    protected static <O extends AbstractOptionValue<?, ?>, V>
-    V get(AbstractOptions<O> first, AbstractOptions<O> second, AbstractOption<V> option) {
-        final V value = first.getOrNull0(option);
-        if (value != null) {
-            return value;
-        }
-        return second.get0(option);
-    }
-
-    /**
-     * Returns the value of the specified {@code option} in the given {@code first} options.
-     * If the {@code option} is not found in the {@code first} options,
-     * will look for the specified {@code second} options.
-     *
-     * @param <O> the type of the option value.
-     * @param <V> the type of the value.
-     * @return the value of the {@link AbstractOption}, or
-     *         {@code null} if the specified {@link AbstractOption} is not set.
-     */
-    @Nullable
-    protected static <O extends AbstractOptionValue<?, ?>, V>
-    V getOrNull(AbstractOptions<O> first, AbstractOptions<O> second, AbstractOption<V> option) {
-        final V value = first.getOrNull0(option);
-        if (value != null) {
-            return value;
-        }
-        return second.getOrNull0(option);
-    }
-
-    /**
-     * Returns the value of the specified {@code option} in the given {@code first} options.
-     * If the {@code option} is not found in the {@code first} options,
-     * will look for the specified {@code second} options.
-     *
-     * @param <O> the type of the option value.
-     * @param <V> the type of the value.
-     * @return the value of the {@link AbstractOption}, or
-     *         {@code defaultValue} if the specified {@link AbstractOption} is not set.
-     */
-    protected static <O extends AbstractOptionValue<?, ?>, V>
-    V getOrElse(AbstractOptions<O> first, AbstractOptions<O> second, AbstractOption<V> option, V defaultValue) {
-        final V value = getOrNull(first, second, option);
-        if (value != null) {
-            return value;
-        } else {
-            return defaultValue;
-        }
-    }
-
-    private final Map<AbstractOption<T>, T> valueMap;
+    private final Reference2ReferenceOpenHashMap<T, U> valueMap;
 
     /**
      * Creates a new instance.
      *
      * @param values the option values
      */
-    @SafeVarargs
-    protected AbstractOptions(T... values) {
+    protected AbstractOptions(Iterable<? extends AbstractOptionValue<?, ?, ?>> values) {
         requireNonNull(values, "values");
-
-        valueMap = new IdentityHashMap<>();
-        putAll(Arrays.asList(values));
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param values the option values
-     */
-    protected AbstractOptions(Iterable<T> values) {
-        requireNonNull(values, "values");
-
-        valueMap = new IdentityHashMap<>();
-        putAll(values);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param baseOptions the base options to merge
-     * @param additionalValues the additional option values
-     */
-    @SafeVarargs
-    protected AbstractOptions(AbstractOptions<T> baseOptions, T... additionalValues) {
-        requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(additionalValues, "additionalValues");
-
-        valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        putAll(Arrays.asList(additionalValues));
+        valueMap = init(values);
     }
 
     /**
@@ -144,112 +56,97 @@ public abstract class AbstractOptions<T extends AbstractOptionValue<?, ?>> imple
      * @param baseOptions the base options to merge
      * @param additionalValues the option values
      */
-    protected AbstractOptions(AbstractOptions<T> baseOptions, Iterable<T> additionalValues) {
+    protected AbstractOptions(AbstractOptions<T, U> baseOptions,
+                              Iterable<? extends AbstractOptionValue<?, ?, ?>> additionalValues) {
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(additionalValues, "additionalValues");
 
-        valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        putAll(additionalValues);
+        if (baseOptions.valueMap.isEmpty()) {
+            valueMap = init(additionalValues);
+        } else {
+            valueMap = init(baseOptions, additionalValues);
+        }
     }
 
-    /**
-     * Creates a new instance by merging two options.
-     *
-     * @param baseOptions the base options to merge
-     * @param additionalOptions the additional options to merge
-     */
-    protected AbstractOptions(AbstractOptions<T> baseOptions, AbstractOptions<T> additionalOptions) {
+    private Reference2ReferenceOpenHashMap<T, U> init(
+            Iterable<? extends AbstractOptionValue<?, ?, ?>> additionalValues) {
 
-        requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(additionalOptions, "additionalOptions");
-
-        valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        putAll(additionalOptions.valueMap.values());
-    }
-
-    /**
-     * Filters an {@link AbstractOptionValue}. You can apply this filter before creating a new options.
-     */
-    protected abstract T filterValue(T value);
-
-    /**
-     * Merge two option values. You can specify how to merge conflict values.
-     *
-     * <p>For example:
-     * <pre>{@code
-     * // keep old value
-     * protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
-     *     return oldValue;
-     * }
-     *
-     * // override old value
-     * protected <T extends AbstractOptionValue<?, ?>> T mergeValue(T oldValue, T newValue) {
-     *     return newValue;
-     * }
-     * }</pre>
-     *
-     * @param oldValue an option value which was set before.
-     * @param newValue a new option value.
-     */
-    protected abstract T mergeValue(T oldValue, T newValue);
-
-    private void putAll(Iterable<T> values) {
-        for (final T value : values) {
-            final T newValue = filterValue(value);
+        if (additionalValues instanceof AbstractOptions) {
             @SuppressWarnings("unchecked")
-            final AbstractOption<T> option = (AbstractOption<T>) newValue.option();
-            valueMap.compute(option,
-                             (k, oldValue) -> oldValue == null ? newValue : mergeValue(oldValue, newValue));
+            final Reference2ReferenceOpenHashMap<T, U> clone =
+                    ((AbstractOptions<T, U>) additionalValues).valueMap.clone();
+            return clone;
         }
+
+        final Reference2ReferenceOpenHashMap<T, U> map = new Reference2ReferenceOpenHashMap<>();
+        for (final AbstractOptionValue<?, ?, ?> value : additionalValues) {
+            @SuppressWarnings("unchecked")
+            final U newValue = (U) value;
+            map.put(newValue.option(), newValue);
+        }
+        return map;
+    }
+
+    private Reference2ReferenceOpenHashMap<T, U> init(
+            AbstractOptions<T, U> baseOptions,
+            Iterable<? extends AbstractOptionValue<?, ?, ?>> additionalValues) {
+
+        // Use cheaper Iterable if possible.
+        if (additionalValues instanceof AbstractOptions) {
+            @SuppressWarnings("unchecked")
+            final Reference2ReferenceOpenHashMap<T, U> additionalValueMap =
+                    ((AbstractOptions<T, U>) additionalValues).valueMap;
+            additionalValues = additionalValueMap.values();
+        }
+
+        // Merge all options.
+        final Reference2ReferenceOpenHashMap<T, U> map = baseOptions.valueMap.clone();
+        for (final AbstractOptionValue<?, ?, ?> value : additionalValues) {
+            @SuppressWarnings("unchecked")
+            final U newValue = (U) value;
+            final T option = newValue.option();
+            final U oldValue = map.putIfAbsent(option, newValue);
+            if (oldValue != null) {
+                map.put(option, option.merge(oldValue, newValue));
+            }
+        }
+        return map;
     }
 
     /**
      * Returns the value of the specified {@code option}.
      *
-     * @param <O> the type of the option
      * @param <V> the type of the value
-     *
-     * @throws NoSuchElementException if the specified {@code option} does not have a value.
      */
-    protected final <O extends AbstractOption<V>, V> V get0(AbstractOption<V> option) {
-        @SuppressWarnings("unchecked")
-        final AbstractOptionValue<O, V> optionValue = (AbstractOptionValue<O, V>) valueMap.get(option);
+    public final <V> V get(AbstractOption<?, ?, V> option) {
+        requireNonNull(option, "option");
+        final U optionValue = valueMap.get(option);
         if (optionValue == null) {
-            throw new NoSuchElementException();
+            return option.defaultValue();
         }
-        return optionValue.value();
+
+        @SuppressWarnings("unchecked")
+        final V cast = (V) optionValue.value();
+        return cast;
     }
 
     /**
-     * Returns the value of the specified {@code option}.
-     *
-     * @param <O> the type of the option
-     * @param <V> the type of the value
+     * Returns an immutable {@link Iterator} of user-specified options.
      */
-    @Nullable
-    protected final <O extends AbstractOption<V>, V> V getOrNull0(AbstractOption<V> option) {
-        @SuppressWarnings("unchecked")
-        final AbstractOptionValue<O, V> optionValue = (AbstractOptionValue<O, V>) valueMap.get(option);
-        return optionValue != null ? optionValue.value() : null;
-    }
-
     @Override
-    public Iterator<T> iterator() {
+    public Iterator<U> iterator() {
         return Iterators.unmodifiableIterator(valueMap.values().iterator());
     }
 
     /**
-     * Returns the {@link Map} whose key is {@link AbstractOption} and value is {@link AbstractOptionValue}.
+     * Returns an immutable {@link Map} of user-specified options.
      */
-    @SuppressWarnings("unchecked")
-    protected final Map<? extends AbstractOption<?>, ? extends T> asMap0() {
+    public final Map<T, U> asMap() {
         return Collections.unmodifiableMap(valueMap);
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("values", valueMap.values())
-                          .toString();
+        return getClass().getSimpleName() + Iterators.toString(valueMap.values().iterator());
     }
 }

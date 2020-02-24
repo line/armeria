@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.client.grpc;
 
 import java.net.URI;
@@ -22,8 +21,9 @@ import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
+import com.google.common.primitives.Ints;
+
 import com.linecorp.armeria.client.ClientBuilderParams;
-import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
 
@@ -46,7 +45,6 @@ import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -56,11 +54,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  * {@link HttpClient} params for the associated gRPC stub.
  */
 final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable {
-
-    /**
-     * See {@link ManagedChannelBuilder} for default setting.
-     */
-    private static final int DEFAULT_MAX_INBOUND_MESSAGE_SIZE = 4 * 1024 * 1024;
 
     private final ClientBuilderParams params;
     private final HttpClient httpClient;
@@ -101,25 +94,27 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
         ctx.logBuilder().deferResponseContent();
+
+        final ClientOptions options = options();
+        final int maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);
+        final int maxInboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES);
+        final boolean unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
+
         return new ArmeriaClientCall<>(
                 ctx,
                 params.endpointGroup(),
                 httpClient,
                 req,
                 method,
-                options().getOrElse(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES,
-                                    ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE),
-                options().getOrElse(
-                        GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES,
-                        options().getOrElse(
-                                ClientOption.MAX_RESPONSE_LENGTH,
-                                (long) DEFAULT_MAX_INBOUND_MESSAGE_SIZE).intValue()),
+                maxOutboundMessageSizeBytes,
+                maxInboundMessageSizeBytes > 0 ? maxInboundMessageSizeBytes
+                                               : Ints.saturatedCast(options.maxResponseLength()),
                 callOptions,
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
                 serializationFormat,
                 jsonMarshaller,
-                options().getOrElse(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS, false),
+                unsafeWrapResponseBuffers,
                 advertisedEncodingsHeader);
     }
 

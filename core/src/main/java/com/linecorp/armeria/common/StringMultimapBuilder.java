@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -515,6 +516,6 @@ abstract class StringMultimapBuilder<
 
     @Override
     public final String toString() {
-        return getClass().getSimpleName() + getters();
+        return getClass().getSimpleName() + firstNonNull(getters(), "[]");
     }
 }

@@ -66,7 +66,6 @@ class ClientFactoryBuilderTest {
                 .hasMessageContaining("mutually exclusive");
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     void shouldInheritClientFactoryOptions() {
         final ClientFactory factory1 = ClientFactory.builder()

@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.client.ClientOption.DECORATION;
 import static com.linecorp.armeria.client.ClientOption.ENDPOINT_REMAPPER;
 import static com.linecorp.armeria.client.ClientOption.FACTORY;
@@ -28,10 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -43,42 +39,12 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.google.common.collect.Streams;
-
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.util.AbstractOptionValue;
 
 class ClientOptionsTest {
-
-    static <T> Set<T> getAllPublicStaticFinal(Class<T> clazz) {
-        final int expectedModifiers = Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL;
-        return Arrays.stream(clazz.getDeclaredFields())
-                     .filter(f -> (f.getModifiers() & expectedModifiers) == expectedModifiers)
-                     .map(f -> {
-                         try {
-                             @SuppressWarnings("unchecked")
-                             final T opt = (T) f.get(null);
-                             return opt;
-                         } catch (IllegalAccessException e) {
-                             throw new Error(e);
-                         }
-                     })
-                     .collect(toImmutableSet());
-    }
-
-    @Test
-    void allDefaultOptionsArePresent() throws Exception {
-        @SuppressWarnings("rawtypes")
-        final Set<ClientOption> options = getAllPublicStaticFinal(ClientOption.class);
-        final Set<ClientOption<?>> defaults = Streams.stream(ClientOptions.DEFAULT)
-                                                     .map(AbstractOptionValue::option)
-                                                     .collect(toImmutableSet());
-        assertThat(defaults).isEqualTo(options);
-        assertThat(ClientOptions.of()).isEmpty();
-    }
 
     @Test
     void testAsMap() {

@@ -45,6 +45,7 @@ import com.google.common.base.Strings;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
@@ -101,6 +102,9 @@ public final class GrpcStatus {
         }
         if (t instanceof TimeoutException) {
             return Status.DEADLINE_EXCEEDED.withCause(t);
+        }
+        if (t instanceof ContentTooLargeException) {
+            return Status.RESOURCE_EXHAUSTED.withCause(t);
         }
         return s;
     }

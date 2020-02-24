@@ -13,96 +13,34 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
 /**
  * A set of {@link ClientFactoryOption}s and their respective values.
  */
-public final class ClientFactoryOptions extends AbstractOptions<ClientFactoryOptionValue<?>> {
-    private static final EventLoopGroup DEFAULT_WORKER_GROUP = CommonPools.workerGroup();
+public final class ClientFactoryOptions
+        extends AbstractOptions<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>> {
 
-    private static final Function<? super EventLoopGroup, ? extends EventLoopScheduler>
-            DEFAULT_EVENT_LOOP_SCHEDULER_FACTORY =
-            eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, ImmutableList.of());
-
-    static final Consumer<SslContextBuilder> DEFAULT_TLS_CUSTOMIZER = b -> { /* no-op */ };
-
-    private static final Function<? super EventLoopGroup,
-            ? extends AddressResolverGroup<? extends InetSocketAddress>>
-            DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY =
-            eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup);
-
-    private static final ConnectionPoolListener DEFAULT_CONNECTION_POOL_LISTENER =
-            ConnectionPoolListener.noop();
-
-    // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
-    @SuppressWarnings("deprecation")
-    private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
-            ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
-            ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
-            ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-            EpollChannelOption.EPOLL_MODE);
-
-    private static final ClientFactoryOptionValue<?>[] DEFAULT_OPTIONS = {
-            ClientFactoryOption.WORKER_GROUP.newValue(DEFAULT_WORKER_GROUP),
-            ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE.newValue(false),
-            ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY.newValue(DEFAULT_EVENT_LOOP_SCHEDULER_FACTORY),
-            ClientFactoryOption.CHANNEL_OPTIONS.newValue(ImmutableMap.of()),
-            ClientFactoryOption.TLS_CUSTOMIZER.newValue(DEFAULT_TLS_CUSTOMIZER),
-            ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY),
-            ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE.newValue(
-                    Flags.defaultHttp2InitialConnectionWindowSize()),
-            ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE.newValue(
-                    Flags.defaultHttp2InitialStreamWindowSize()),
-            ClientFactoryOption.HTTP2_MAX_FRAME_SIZE.newValue(Flags.defaultHttp2MaxFrameSize()),
-            ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE.newValue(Flags.defaultHttp2MaxHeaderListSize()),
-            ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH.newValue(
-                    Flags.defaultHttp1MaxInitialLineLength()),
-            ClientFactoryOption.HTTP1_MAX_HEADER_SIZE.newValue(Flags.defaultHttp1MaxHeaderSize()),
-            ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE.newValue(Flags.defaultHttp1MaxChunkSize()),
-            ClientFactoryOption.IDLE_TIMEOUT_MILLIS.newValue(Flags.defaultClientIdleTimeoutMillis()),
-            ClientFactoryOption.USE_HTTP2_PREFACE.newValue(Flags.defaultUseHttp2Preface()),
-            ClientFactoryOption.USE_HTTP1_PIPELINING.newValue(Flags.defaultUseHttp1Pipelining()),
-            ClientFactoryOption.CONNECTION_POOL_LISTENER.newValue(DEFAULT_CONNECTION_POOL_LISTENER),
-            ClientFactoryOption.METER_REGISTRY.newValue(Metrics.globalRegistry)
-    };
-
-    @VisibleForTesting
-    static final ClientFactoryOptions DEFAULT = new ClientFactoryOptions(DEFAULT_OPTIONS);
-
-    private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions();
+    private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions(ImmutableList.of());
 
     /**
      * Returns an empty singleton {@link ClientFactoryOptions}.
@@ -114,15 +52,23 @@ public final class ClientFactoryOptions extends AbstractOptions<ClientFactoryOpt
     /**
      * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
      */
-    public static ClientFactoryOptions of(ClientFactoryOptionValue<?>... options) {
-        return of(of(), requireNonNull(options, "options"));
+    public static ClientFactoryOptions of(ClientFactoryOptionValue<?>... values) {
+        requireNonNull(values, "values");
+        if (values.length == 0) {
+            return EMPTY;
+        }
+        return of(Arrays.asList(values));
     }
 
     /**
      * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
      */
-    public static ClientFactoryOptions of(Iterable<ClientFactoryOptionValue<?>> options) {
-        return of(of(), requireNonNull(options, "options"));
+    public static ClientFactoryOptions of(Iterable<? extends ClientFactoryOptionValue<?>> values) {
+        requireNonNull(values, "values");
+        if (values instanceof ClientFactoryOptions) {
+            return (ClientFactoryOptions) values;
+        }
+        return new ClientFactoryOptions(values);
     }
 
     /**
@@ -131,14 +77,13 @@ public final class ClientFactoryOptions extends AbstractOptions<ClientFactoryOpt
      * @return the merged {@link ClientFactoryOptions}
      */
     public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
-                                          ClientFactoryOptionValue<?>... additionalOptions) {
-
+                                          ClientFactoryOptionValue<?>... additionalValues) {
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(additionalOptions, "additionalOptions");
-        if (additionalOptions.length == 0) {
+        requireNonNull(additionalValues, "additionalValues");
+        if (additionalValues.length == 0) {
             return baseOptions;
         }
-        return new ClientFactoryOptions(baseOptions, additionalOptions);
+        return new ClientFactoryOptions(baseOptions, Arrays.asList(additionalValues));
     }
 
     /**
@@ -147,105 +92,20 @@ public final class ClientFactoryOptions extends AbstractOptions<ClientFactoryOpt
      * @return the merged {@link ClientFactoryOptions}
      */
     public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
-                                          Iterable<ClientFactoryOptionValue<?>> additionalOptions) {
-
-        // TODO: Reduce the cost of creating a derived ClientFactoryOptions.
+                                          Iterable<? extends ClientFactoryOptionValue<?>> additionalValues) {
         requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(additionalOptions, "additionalOptions");
-        if (Iterables.isEmpty(additionalOptions)) {
-            return baseOptions;
-        }
-        return new ClientFactoryOptions(baseOptions, additionalOptions);
+        requireNonNull(additionalValues, "additionalValues");
+        return new ClientFactoryOptions(baseOptions, additionalValues);
     }
 
-    /**
-     * Merges the specified two {@link ClientFactoryOptions}s.
-     *
-     * @return the merged {@link ClientFactoryOptions}
-     */
-    public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
-                                          ClientFactoryOptions additionalOptions) {
-        // TODO: Reduce the cost of creating a derived ClientFactoryOptions.
-        requireNonNull(baseOptions, "baseOptions");
-        requireNonNull(additionalOptions, "additionalOptions");
-        return new ClientFactoryOptions(baseOptions, additionalOptions);
-    }
-
-    private static Map<ChannelOption<?>, Object> filterChannelOptions(
-            Map<ChannelOption<?>, Object> channelOptions) {
-
-        channelOptions = Collections.unmodifiableMap(requireNonNull(channelOptions, "channelOptions"));
-
-        for (ChannelOption<?> channelOption : PROHIBITED_SOCKET_OPTIONS) {
-            if (channelOptions.containsKey(channelOption)) {
-                throw new IllegalArgumentException("unallowed channelOption: " + channelOption);
-            }
-        }
-
-        return channelOptions;
-    }
-
-    private ClientFactoryOptions(ClientFactoryOptionValue<?>... options) {
-        super(options);
+    private ClientFactoryOptions(Iterable<? extends ClientFactoryOptionValue<?>> values) {
+        super(values);
     }
 
     private ClientFactoryOptions(ClientFactoryOptions baseOptions,
-                                 ClientFactoryOptionValue<?>... additionalOptions) {
+                                 Iterable<? extends ClientFactoryOptionValue<?>> additionalValues) {
 
-        super(baseOptions, additionalOptions);
-    }
-
-    private ClientFactoryOptions(ClientFactoryOptions baseOptions,
-                                 Iterable<ClientFactoryOptionValue<?>> additionalOptions) {
-
-        super(baseOptions, additionalOptions);
-    }
-
-    private ClientFactoryOptions(ClientFactoryOptions baseOptions,
-                                 ClientFactoryOptions additionalOptions) {
-
-        super(baseOptions, additionalOptions);
-    }
-
-    /**
-     * Returns the value of the specified {@link ClientFactoryOption}.
-     *
-     * @return the value of the specified {@link ClientFactoryOption}
-     *
-     * @throws NoSuchElementException if no value is set for the specified {@link ClientFactoryOption}.
-     */
-    public <T> T get(ClientFactoryOption<T> option) {
-        return get(this, DEFAULT, option);
-    }
-
-    /**
-     * Returns the value of the specified {@link ClientFactoryOption}.
-     *
-     * @return the value of the {@link ClientFactoryOption}, or
-     *         {@code null} if the specified {@link ClientFactoryOption} is not set.
-     */
-    @Nullable
-    public <T> T getOrNull(ClientFactoryOption<T> option) {
-        return getOrNull(this, DEFAULT, option);
-    }
-
-    /**
-     * Returns the value of the specified {@link ClientFactoryOption}.
-     *
-     * @return the value of the {@link ClientFactoryOption}, or
-     *         {@code defaultValue} if the specified {@link ClientFactoryOption} is not set.
-     */
-    public <T> T getOrElse(ClientFactoryOption<T> option, T defaultValue) {
-        requireNonNull(defaultValue, "defaultValue");
-        return getOrElse(this, DEFAULT, option, defaultValue);
-    }
-
-    /**
-     * Converts this {@link ClientFactoryOptions} to a {@link Map}.
-     */
-    @SuppressWarnings("unchecked")
-    public Map<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>> asMap() {
-        return (Map<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>>) asMap0();
+        super(baseOptions, additionalValues);
     }
 
     /**
@@ -396,45 +256,5 @@ public final class ClientFactoryOptions extends AbstractOptions<ClientFactoryOpt
      */
     public MeterRegistry meterRegistry() {
         return get(ClientFactoryOption.METER_REGISTRY);
-    }
-
-    @Override
-    protected ClientFactoryOptionValue<?> filterValue(ClientFactoryOptionValue<?> optionValue) {
-        if (optionValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
-            @SuppressWarnings("unchecked")
-            final ClientFactoryOptionValue<Map<ChannelOption<?>, Object>> cast =
-                    (ClientFactoryOptionValue<Map<ChannelOption<?>, Object>>) optionValue;
-            return cast.option().newValue(filterChannelOptions(cast.value()));
-        }
-        return optionValue;
-    }
-
-    @Override
-    protected ClientFactoryOptionValue<?> mergeValue(ClientFactoryOptionValue<?> oldValue,
-                                                     ClientFactoryOptionValue<?> newValue) {
-        if (oldValue.option() == ClientFactoryOption.CHANNEL_OPTIONS) {
-            @SuppressWarnings("unchecked")
-            final Map<ChannelOption<?>, Object> castOldValue = (Map<ChannelOption<?>, Object>) oldValue.value();
-            @SuppressWarnings("unchecked")
-            final Map<ChannelOption<?>, Object> castNewValue = (Map<ChannelOption<?>, Object>) newValue.value();
-            if (castOldValue.isEmpty()) {
-                return newValue;
-            }
-            if (castNewValue.isEmpty()) {
-                return oldValue;
-            }
-
-            final ImmutableMap.Builder<ChannelOption<?>, Object> builder =
-                    ImmutableMap.builderWithExpectedSize(castOldValue.size() + castNewValue.size());
-            castOldValue.forEach((channelOption, value) -> {
-                if (!castNewValue.containsKey(channelOption)) {
-                    builder.put(channelOption, value);
-                }
-            });
-            builder.putAll(castNewValue);
-            return ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build());
-        }
-
-        return newValue;
     }
 }
