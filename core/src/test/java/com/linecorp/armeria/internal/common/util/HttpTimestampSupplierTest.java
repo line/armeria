@@ -19,49 +19,36 @@ package com.linecorp.armeria.internal.common.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 class HttpTimestampSupplierTest {
 
     private static final Instant TIME0 = Instant.parse("2019-10-18T10:15:30.05Z");
     private static final Instant TIME1 = Instant.parse("2019-10-18T10:15:31.25Z");
 
+    @Mock
+    Supplier<Instant> instantSupplier;
+
+    @Mock
+    LongSupplier nanoTimeSupplier;
+
     @Test
     void normal() {
-        final AtomicReference<Instant> instantHolder = new AtomicReference<>(TIME0);
-        final AtomicLong nanoTimeHolder = new AtomicLong(TimeUnit.MILLISECONDS.toNanos(-500));
-
-        // Create delegating mock suppliers.
-        // Note that we can't use method references or lambda expressions because they generate final classes.
-        @SuppressWarnings({ "Convert2Lambda", "Anonymous2MethodRef" })
-        final Supplier<Instant> instantSupplier = spy(new Supplier<Instant>() {
-            @Override
-            public Instant get() {
-                return instantHolder.get();
-            }
-        });
-        @SuppressWarnings({ "Convert2Lambda", "Anonymous2MethodRef" })
-        final LongSupplier nanoTimeSupplier = spy(new LongSupplier() {
-            @Override
-            public long getAsLong() {
-                return nanoTimeHolder.get();
-            }
-        });
-
-        final HttpTimestampSupplier supplier = new HttpTimestampSupplier(instantSupplier, nanoTimeSupplier);
+        when(nanoTimeSupplier.getAsLong()).thenReturn(TimeUnit.MILLISECONDS.toNanos(-500));
+        when(instantSupplier.get()).thenReturn(TIME0);
 
         // On instantiation, the current nano time must be read and cached.
+        final HttpTimestampSupplier supplier = new HttpTimestampSupplier(instantSupplier, nanoTimeSupplier);
         verify(instantSupplier, never()).get();
         verify(nanoTimeSupplier, times(1)).getAsLong();
         clearInvocations(instantSupplier, nanoTimeSupplier);
@@ -77,8 +64,8 @@ class HttpTimestampSupplierTest {
         // Advance nano time by tad bit less than 950 milliseconds.
         // This time, only the current nano time must be read.
         // Therefore instantHolder will never be accessed.
-        nanoTimeHolder.addAndGet(TimeUnit.MILLISECONDS.toNanos(950) - 1);
-        instantHolder.set(null);
+        when(nanoTimeSupplier.getAsLong()).thenReturn(TimeUnit.MILLISECONDS.toNanos(-500 + 950) - 1);
+        when(instantSupplier.get()).thenReturn(null);
         final String timestamp2 = supplier.currentTimestamp();
         assertThat(timestamp2).isSameAs(timestamp1);
 
@@ -88,8 +75,8 @@ class HttpTimestampSupplierTest {
 
         // Advance nano time by 1 nanosecond.
         // Then, both the instant and nano time will be read.
-        nanoTimeHolder.incrementAndGet();
-        instantHolder.set(TIME1);
+        when(nanoTimeSupplier.getAsLong()).thenReturn(TimeUnit.MILLISECONDS.toNanos(-500 + 950));
+        when(instantSupplier.get()).thenReturn(TIME1);
         assertThat(supplier.currentTimestamp()).isEqualTo("Fri, 18 Oct 2019 10:15:31 GMT");
     }
 }
