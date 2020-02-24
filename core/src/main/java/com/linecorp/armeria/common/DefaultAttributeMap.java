@@ -31,6 +31,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -44,6 +45,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterators;
 
 import io.netty.util.AttributeKey;
 
@@ -285,6 +287,16 @@ final class DefaultAttributeMap {
         return new OwnIterator(attributes);
     }
 
+    @SuppressWarnings("unchecked")
+    private static <T> T convert(Object o) {
+        return (T) o;
+    }
+
+    @Override
+    public String toString() {
+        return Iterators.toString(attrs());
+    }
+
     @VisibleForTesting
     static final class DefaultAttribute<T> implements Entry<AttributeKey<T>, T> {
 
@@ -326,6 +338,11 @@ final class DefaultAttributeMap {
             final T old = this.value;
             this.value = value;
             return old;
+        }
+
+        @Override
+        public String toString() {
+            return key == null ? "<HEAD>" : key + "=" + value;
         }
     }
 
@@ -383,11 +400,6 @@ final class DefaultAttributeMap {
                 return next;
             }
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> T convert(Object o) {
-        return (T) o;
     }
 
     private class CopyOnWriteIterator implements Iterator<Entry<AttributeKey<?>, Object>> {
@@ -501,6 +513,11 @@ final class DefaultAttributeMap {
             final T old = childAttr.getValue();
             childAttr.setValue(value);
             return old;
+        }
+
+        @Override
+        public String toString() {
+            return firstNonNull(childAttr, rootAttr).toString();
         }
     }
 }
