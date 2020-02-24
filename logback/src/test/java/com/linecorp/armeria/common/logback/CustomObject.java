@@ -15,11 +15,22 @@
  */
 package com.linecorp.armeria.common.logback;
 
-import java.util.function.Function;
+import com.google.common.base.MoreObjects;
 
-public final class CustomValueStringifier implements Function<CustomValue, String> {
+public class CustomObject {
+
+    final String name;
+    final String value;
+
+    public CustomObject(String name, String value) {
+        this.name = name;
+        this.value = value;
+    }
+
     @Override
-    public String apply(CustomValue o) {
-        return o.value;
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("name", name)
+                          .add("value", value).toString();
     }
 }
