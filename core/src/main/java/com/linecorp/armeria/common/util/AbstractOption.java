@@ -165,7 +165,8 @@ public abstract class AbstractOption<
      * @param newValue the new option value.
      * @return the merged option value.
      */
-    final U merge(@SuppressWarnings("unused") U oldValue, U newValue) {
+    final U merge(U oldValue, U newValue) {
+        requireNonNull(oldValue, "oldValue");
         requireNonNull(newValue, "newValue");
         final U merged = mergeFunction.apply(oldValue, newValue);
         checkState(merged != null, "mergeFunction must not return null: %s, %s, %s", this, oldValue, newValue);

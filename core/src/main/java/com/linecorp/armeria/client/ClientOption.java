@@ -110,8 +110,7 @@ public final class ClientOption<T> extends AbstractOption<ClientOption<T>, Clien
             ExtensionHeaderNames.STREAM_PROMISE_ID.text());
 
     /**
-     * The additional HTTP headers to send with requests. Used only when the underlying
-     * {@link SessionProtocol} is HTTP.
+     * The additional HTTP headers to send with requests.
      */
     public static final ClientOption<HttpHeaders> HTTP_HEADERS =
             define("HTTP_HEADERS", HttpHeaders.of(), newHeaders -> {
@@ -199,7 +198,7 @@ public final class ClientOption<T> extends AbstractOption<ClientOption<T>, Clien
      *
      * @param name the name of the option.
      * @param defaultValue the default value of the option, which will be used when unspecified.
-     * @param validator the {@link Function} which is used for validating ane normalizing an option value.
+     * @param validator the {@link Function} which is used for validating and normalizing an option value.
      * @param mergeFunction the {@link BiFunction} which is used for merging old and new option values.
      *
      * @throws IllegalStateException if an option with the specified name exists already.

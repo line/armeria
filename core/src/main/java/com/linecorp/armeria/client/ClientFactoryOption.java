@@ -247,7 +247,7 @@ public final class ClientFactoryOption<T>
      *
      * @param name the name of the option.
      * @param defaultValue the default value of the option, which will be used when unspecified.
-     * @param validator the {@link Function} which is used for validating ane normalizing an option value.
+     * @param validator the {@link Function} which is used for validating and normalizing an option value.
      * @param mergeFunction the {@link BiFunction} which is used for merging old and new option values.
      *
      * @throws IllegalStateException if an option with the specified name exists already.
