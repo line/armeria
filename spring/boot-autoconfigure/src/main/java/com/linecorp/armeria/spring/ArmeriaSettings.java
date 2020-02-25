@@ -61,7 +61,7 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
  *     mime-types: text/*, application/json
  *     excluded-user-agents: some-user-agent, another-user-agent
  *     min-response-size: 1KB
- *   secure:
+ *   security:
  *     enabled: true
  *     ports: 8080
  * }</pre>
@@ -168,6 +168,15 @@ public class ArmeriaSettings {
             protocols = ImmutableList.of(protocol);
             return this;
         }
+
+        /**
+         * TODO(heowc): TBD.
+         */
+        public static Port of(int port) {
+            final Port p = new Port();
+            p.port = port;
+            return p;
+        }
     }
 
     /**
@@ -258,44 +267,46 @@ public class ArmeriaSettings {
     }
 
     /**
-     * TBD.
+     * Configurations for the internal service security.
      */
-    public static class Secure {
+    public static class Security {
 
         /**
-         * TBD.
+         * Specifies whether the internal service security is enabled.
          */
         private boolean enabled;
 
         /**
-         * TBD.
+         * Ports that applied to be security.
+         * If not set, check `management.server.port` and use it as the default if it is not null.
          */
         @Nullable
         private List<Integer> ports;
 
         /**
-         * TBD.
+         * Returns {@code true} if the internal service security is enabled.
          */
         public boolean isEnabled() {
             return enabled;
         }
 
         /**
-         * TBD.
+         * Sets whether the internal service security is enabled.
          */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
         /**
-         * TBD.
+         * Returns the ports to be applied security.
          */
+        @Nullable
         public List<Integer> getPorts() {
             return ports;
         }
 
         /**
-         * TBD.
+         * Sets the ports to be applied security.
          */
         public void setPorts(List<Integer> ports) {
             this.ports = ports;
@@ -367,8 +378,11 @@ public class ArmeriaSettings {
     @Nullable
     private Compression compression;
 
+    /**
+     * Security configuration that the {@link Server} uses.
+     */
     @Nullable
-    private Secure secure;
+    private Security security;
 
     /**
      * Returns the {@link Port}s of the {@link Server}.
@@ -520,17 +534,17 @@ public class ArmeriaSettings {
     }
 
     /**
-     * TBD.
+     * Returns the internal service security configuration that the {@link Server} uses.
      */
     @Nullable
-    public Secure getSecure() {
-        return secure;
+    public Security getSecurity() {
+        return security;
     }
 
     /**
-     * TBD.
+     * Sets the internal service security configuration that the {@link Server} uses.
      */
-    public void setSecure(Secure secure) {
-        this.secure = secure;
+    public void setSecurity(Security security) {
+        this.security = security;
     }
 }

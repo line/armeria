@@ -18,8 +18,8 @@ package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 
-import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +28,7 @@ import java.util.Set;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
+import org.springframework.boot.actuate.autoconfigure.web.server.ManagementServerProperties;
 import org.springframework.boot.actuate.endpoint.EndpointFilter;
 import org.springframework.boot.actuate.endpoint.http.ActuatorMediaType;
 import org.springframework.boot.actuate.endpoint.invoke.OperationInvokerAdvisor;
@@ -63,12 +64,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
+import com.linecorp.armeria.internal.spring.SecurityInternalService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 /**
  * A {@link Configuration} to enable actuator endpoints on an Armeria server. Corresponds to
@@ -76,8 +79,10 @@ import com.linecorp.armeria.spring.ArmeriaSettings;
  */
 @Configuration
 @AutoConfigureAfter(EndpointAutoConfiguration.class)
-@EnableConfigurationProperties(
-        { WebEndpointProperties.class, CorsEndpointProperties.class, ArmeriaSettings.class })
+@EnableConfigurationProperties({
+        WebEndpointProperties.class, CorsEndpointProperties.class, ManagementServerProperties.class,
+        ArmeriaSettings.class
+})
 public class ArmeriaSpringActuatorAutoConfiguration {
 
     @VisibleForTesting
@@ -124,11 +129,18 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             WebEndpointProperties properties,
             HealthStatusHttpMapper healthMapper,
             CorsEndpointProperties corsProperties,
+            ManagementServerProperties serverProperties,
             ArmeriaSettings settings) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
         return sb -> {
+            final Integer actuatorPort = serverProperties.getPort();
+            if (actuatorPort != null) {
+                final Port port = Port.of(actuatorPort);
+                configurePorts(sb, ImmutableList.of(port));
+            }
+
             final CorsServiceBuilder cors;
             if (!corsProperties.getAllowedOrigins().isEmpty()) {
                 cors = CorsService.builder(corsProperties.getAllowedOrigins());
@@ -201,22 +213,19 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 sb.routeDecorator().pathPrefix("/").build(cors.newDecorator());
             }
 
-            final ArmeriaSettings.Secure secure = settings.getSecure();
-            if (secure != null && secure.isEnabled() && !CollectionUtils.isEmpty(secure.getPorts())) {
-                final List<Integer> ports = secure.getPorts();
+            final ArmeriaSettings.Security security = settings.getSecurity();
+            if (security != null && security.isEnabled()) {
+                final List<Integer> ports = ports(security.getPorts(), serverProperties.getPort());
+                if (CollectionUtils.isEmpty(ports)) {
+                    return;
+                }
+
                 final String basePath = properties.getBasePath();
                 if (!StringUtils.isEmpty(basePath)) {
                     sb.routeDecorator()
                       .path(basePath)
                       .pathPrefix(basePath)
-                      .build((delegate, ctx, req) -> {
-                          final InetSocketAddress laddr = ctx.localAddress();
-                          if (ports.contains(laddr.getPort())) {
-                              return HttpResponse.of(404);
-                          } else {
-                              return delegate.serve(ctx, req);
-                          }
-                      });
+                      .build(SecurityInternalService.newDecorator(ports));
                 }
             }
         };
@@ -234,5 +243,23 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static Set<MediaType> convertMediaTypes(Iterable<String> mediaTypes) {
         return Streams.stream(mediaTypes).map(MediaType::parse).collect(toImmutableSet());
+    }
+
+    private static List<Integer> ports(List<Integer> ports, Integer port) {
+        if (CollectionUtils.isEmpty(ports)) {
+            if (port == null) {
+                return ImmutableList.of();
+            } else {
+                return ImmutableList.of(port);
+            }
+        } else {
+            if (port == null) {
+                return ports;
+            } else {
+                return ImmutableList.<Integer>builder()
+                        .addAll(ports)
+                        .add(port).build();
+            }
+        }
     }
 }

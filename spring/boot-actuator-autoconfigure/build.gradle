@@ -18,8 +18,10 @@ dependencies {
 task copyFiles(type: Copy) {
     from "${rootProject.projectDir}/spring/boot-autoconfigure/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
+    include '**/ArmeriaConfigurationNetUtil.java'
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
+    include '**/SecurityInternalService.java'
     include '**/Ssl.java'
 }
 

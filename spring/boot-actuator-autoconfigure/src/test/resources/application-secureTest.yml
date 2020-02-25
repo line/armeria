@@ -2,12 +2,14 @@ armeria:
   ports:
     - port: 8080
     - port: 8081
-  secure:
+  security:
     enabled: true
     ports: 8080
 
 management:
+  server:
+    port: 8082
   endpoints:
     web:
       exposure:
-        include: health, heapdump, loggers, prometheus
+        include: health, loggers, prometheus
