@@ -31,9 +31,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
-import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -75,11 +75,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final InboundTrafficController inboundTrafficController;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
+    @Nullable
     private final Http2KeepAliveHandler keepAlive;
     private int nextId;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme,
-                        Http2KeepAliveHandler keepAlive) {
+                        @Nullable Http2KeepAliveHandler keepAlive) {
         this.cfg = cfg;
         this.channel = channel;
         this.writer = writer;
@@ -323,6 +324,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onPingAckRead(final ChannelHandlerContext ctx, final long data) throws Http2Exception {
-        keepAlive.onPingAck(data);
+        if (keepAlive != null) {
+            keepAlive.onPingAck(data);
+        }
     }
 }

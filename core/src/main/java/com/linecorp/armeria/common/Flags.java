@@ -253,6 +253,10 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
+    private static final boolean DEFAULT_USE_HTTP2_PING_ON_IDLE =
+            getBoolean("defaultUseHttp2PingOnIdle", false);
+    private static final boolean DEFAULT_USE_HTTP2_PING_ON_NO_ACTIVE_STREAMS =
+            getBoolean("defaultUseHttp2PingOnNoActiveStreams", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";
@@ -679,6 +683,27 @@ public final class Flags {
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
+    }
+
+    /**
+     * Returns the default value. If true then HTTP 2.0 PING frames are sent on connection, no otherwise.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingOnIdle=true} JVM option to enable it.
+     */
+    public static boolean defaultUseHttp2PingOnIdle() {
+        return DEFAULT_USE_HTTP2_PING_ON_IDLE;
+    }
+
+    /**
+     * Returns the default value. If true then HTTP 2.0 PING frames are sent even there are no active
+     * HTTP 2.0 stream, no otherwise.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingOnNoActiveStreams=true} JVM option to enable it.
+     */
+    public static boolean defaultUseHttp2PingOnNoActiveStreams() {
+        return DEFAULT_USE_HTTP2_PING_ON_NO_ACTIVE_STREAMS;
     }
 
     /**

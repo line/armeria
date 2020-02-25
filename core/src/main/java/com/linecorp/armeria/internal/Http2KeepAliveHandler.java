@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.concurrent.Future;
@@ -31,11 +32,14 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 
+import com.linecorp.armeria.common.Flags;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameWriter;
@@ -60,7 +64,8 @@ public class Http2KeepAliveHandler {
     private final Http2FrameWriter frameWriter;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
     private final Stopwatch stopwatch = Stopwatch.createUnstarted();
-
+    private final Http2Connection http2Connection;
+    private final boolean sendPingOnNoActiveStream;
     @Nullable
     private ChannelFuture pingWriteFuture;
     @Nullable
@@ -68,17 +73,7 @@ public class Http2KeepAliveHandler {
     private long pingTimeoutInMs;
     private State state = State.IDLE;
     private Channel channel;
-    private final Runnable shutdownRunnable = () -> {
-        logger.debug("{} Closing channel due to PING timeout", channel);
-        channel.close().addListener(future -> {
-            if (future.isSuccess()) {
-                logger.debug("{} Closed channel due to PING timeout", channel);
-            } else {
-                logger.debug("{} Channel cannot be closed", channel, future.cause());
-            }
-            state = State.SHUTDOWN;
-        });
-    };
+    private final Runnable shutdownRunnable = this::closeChannel;
     private final ChannelFutureListener pingWriteListener = future -> {
         if (future.isSuccess()) {
             final EventLoop el = channel.eventLoop();
@@ -94,10 +89,20 @@ public class Http2KeepAliveHandler {
     };
     private long lastPingPayload;
 
-    public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, long pingTimeoutInMs) {
+    public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
+                                 Http2Connection http2Connection) {
+        this(channel, frameWriter, http2Connection, Flags.defaultHttp2PingTimeoutMillis(),
+             Flags.defaultUseHttp2PingOnNoActiveStreams());
+    }
+
+    public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Http2Connection http2Connection,
+                                 long pingTimeoutInMs, boolean sendPingOnNoActiveStream) {
+        checkArgument(pingTimeoutInMs > 0, pingTimeoutInMs);
         this.channel = channel;
         this.frameWriter = frameWriter;
         this.pingTimeoutInMs = pingTimeoutInMs;
+        this.http2Connection = http2Connection;
+        this.sendPingOnNoActiveStream = sendPingOnNoActiveStream;
     }
 
     private static void throwProtocolErrorException(String msg, Object... args) throws Http2Exception {
@@ -122,15 +127,22 @@ public class Http2KeepAliveHandler {
             return;
         }
 
+        if (http2Connection.numActiveStreams() == 0 && !sendPingOnNoActiveStream) {
+            // The default behaviour is to shutdown the channel on idle timeout.
+            // So preserving the behaviour.
+            closeChannel();
+            return;
+        }
+
         logger.debug("{} {} event triggered on channel. Sending PING(ACK=0)", channel, event);
         writePing(ctx);
     }
 
     private void writePing(ChannelHandlerContext ctx) {
         lastPingPayload = random.nextLong();
+        state = State.PING_SCHEDULED;
         pingWriteFuture = frameWriter.writePing(ctx, false, lastPingPayload, ctx.newPromise())
                                      .addListener(pingWriteListener);
-        state = State.PING_SCHEDULED;
         ctx.flush();
     }
 
@@ -183,6 +195,18 @@ public class Http2KeepAliveHandler {
     @VisibleForTesting
     long getLastPingPayload() {
         return lastPingPayload;
+    }
+
+    private void closeChannel() {
+        logger.debug("{} Closing channel", channel);
+        channel.close().addListener(future -> {
+            if (future.isSuccess()) {
+                logger.debug("{} Closed channel", channel);
+            } else {
+                logger.debug("{} Channel cannot be closed", channel, future.cause());
+            }
+            state = State.SHUTDOWN;
+        });
     }
 
     /**

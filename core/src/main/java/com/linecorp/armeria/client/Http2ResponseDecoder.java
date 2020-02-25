@@ -28,9 +28,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
-import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -56,10 +56,11 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private final Http2Connection conn;
     private final Http2ConnectionEncoder encoder;
     private final Http2GoAwayHandler goAwayHandler;
+    @Nullable
     private final Http2KeepAliveHandler keepAlive;
 
     Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory,
-                         Http2KeepAliveHandler keepAlive) {
+                         @Nullable Http2KeepAliveHandler keepAlive) {
         super(channel,
               InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
@@ -292,7 +293,9 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
-        keepAlive.onPingAck(data);
+        if (keepAlive != null) {
+            keepAlive.onPingAck(data);
+        }
     }
 
     @Override

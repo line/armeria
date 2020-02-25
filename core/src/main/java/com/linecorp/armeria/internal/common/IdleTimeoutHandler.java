@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.common.Flags.defaultUseHttp2PingOnIdle;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -43,12 +45,13 @@ public abstract class IdleTimeoutHandler extends IdleStateHandler {
     }
 
     /**
-     * If the channel is serving HTTP/2 the we will leverage sending PING's using {@link Http2KeepAliveHandler}
-     * but if it is HTTP/1.1 channel then we will close the channel
+     * If the channel is serving HTTP/2 and {@link Flags#defaultUseHttp2PingOnIdle()}
+     * then we will leverage sending PING's using {@link Http2KeepAliveHandler}
+     * but if it is HTTP/1.1 channel then we will close the channel.
      */
     @Override
     protected final void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
-        if (isHttp2) {
+        if (isHttp2 && defaultUseHttp2PingOnIdle()) {
             ctx.fireUserEventTriggered(evt);
             return;
         }

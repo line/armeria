@@ -53,7 +53,7 @@ class Http2KeepAliveHandlerTest {
     public void setup() throws Exception {
         ch = new EmbeddedChannel();
         promise = ch.newPromise();
-        keepAlive = new Http2KeepAliveHandler(ch, frameWriter, pingTimeout);
+        keepAlive = new Http2KeepAliveHandler(ch, frameWriter, null, pingTimeout, false);
 
         ch.pipeline().addLast(new TestIdleStateHandler(keepAlive));
 
