@@ -127,8 +127,7 @@ public final class RequestContextAssembly {
                                     return new RequestContextCompletable(c, ctx);
                                 }
                                 if (c instanceof ScalarCallable) {
-                                    return new RequestContextScalarCallableCompletable(
-                                            c, ctx);
+                                    return new RequestContextScalarCallableCompletable(c, ctx);
                                 }
                                 return new RequestContextCallableCompletable(c, ctx);
                             }
@@ -187,8 +186,7 @@ public final class RequestContextAssembly {
                             ConnectableFlowable applyActual(
                                     ConnectableFlowable cf,
                                     RequestContext ctx) {
-                                return new RequestContextConnectableFlowable(
-                                        cf, ctx);
+                                return new RequestContextConnectableFlowable(cf, ctx);
                             }
                         }
                 ));
