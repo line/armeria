@@ -53,8 +53,6 @@ final class RequestContextScalarCallableFlowable<T> extends Flowable<T>
     @SuppressWarnings("unchecked")
     @Override
     public T call() {
-        try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((ScalarCallable<T>) source).call();
-        }
+        return ((ScalarCallable<T>) source).call();
     }
 }

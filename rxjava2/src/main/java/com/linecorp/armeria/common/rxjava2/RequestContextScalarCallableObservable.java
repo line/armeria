@@ -44,8 +44,6 @@ final class RequestContextScalarCallableObservable<T> extends Observable<T> impl
     @SuppressWarnings("unchecked")
     @Override
     public T call() {
-        try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((ScalarCallable<T>) source).call();
-        }
+        return ((ScalarCallable<T>) source).call();
     }
 }

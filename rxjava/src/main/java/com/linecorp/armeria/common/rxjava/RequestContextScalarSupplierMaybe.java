@@ -44,8 +44,6 @@ final class RequestContextScalarSupplierMaybe<T> extends Maybe<T>
     @Override
     @SuppressWarnings("unchecked")
     public T get() {
-        try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((ScalarSupplier<T>) source).get();
-        }
+        return ((ScalarSupplier<T>) source).get();
     }
 }
