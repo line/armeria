@@ -110,13 +110,14 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param query the query part of the {@link Request} URI
      * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
-     * @param fallback the fallback response {@link BiFunction} to use when
-     *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
-     *                 an exception instead of returning an error response
+     * @param fallbackResponseFactory the fallback response {@link BiFunction} to use when
+     *                                {@link Client#execute(ClientRequestContext, Request)} of
+     *                                {@link #delegate()} throws an exception instead of returning
+     *                                an error response
      */
     protected final O execute(HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
-                              I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
-        return execute(endpointGroup(), method, path, query, fragment, req, fallback);
+                              I req, BiFunction<ClientRequestContext, Throwable, O> fallbackResponseFactory) {
+        return execute(endpointGroup(), method, path, query, fragment, req, fallbackResponseFactory);
     }
 
     /**
@@ -127,12 +128,14 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param query the query part of the {@link Request} URI
      * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
-     * @param fallback the fallback response {@link BiFunction} to use when
-     *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
+     * @param fallbackResponseFactory the fallback response {@link BiFunction} to use when
+     *                                {@link Client#execute(ClientRequestContext, Request)} of
+     *                                {@link #delegate()} throws an exception instead of returning
+     *                                an error response
      */
     protected final O execute(EndpointGroup endpointGroup,
                               HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
-                              I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
+                              I req, BiFunction<ClientRequestContext, Throwable, O> fallbackResponseFactory) {
 
         final HttpRequest httpReq;
         final RpcRequest rpcReq;
@@ -151,7 +154,7 @@ public abstract class UserClient<I extends Request, O extends Response>
                                                 id, method, path, query, fragment, options(), httpReq, rpcReq,
                                                 System.nanoTime(), SystemInfo.currentTimeMicros());
 
-        return initContextAndExecuteWithFallback(delegate(), ctx, endpointGroup, fallback);
+        return initContextAndExecuteWithFallback(delegate(), ctx, endpointGroup, fallbackResponseFactory);
     }
 
     private RequestId nextRequestId() {

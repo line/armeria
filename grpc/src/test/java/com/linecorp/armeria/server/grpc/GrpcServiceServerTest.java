@@ -78,6 +78,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -123,7 +124,6 @@ import io.grpc.reflection.v1alpha.ServerReflectionRequest;
 import io.grpc.reflection.v1alpha.ServerReflectionResponse;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
@@ -809,8 +809,7 @@ class GrpcServiceServerTest {
     @Test
     void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp2() throws Exception {
         final RequestLog log = clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H2C);
-        assertThat(log.responseCause()).isInstanceOf(Http2Exception.StreamException.class)
-                                       .hasMessageContaining("received a RST_STREAM frame");
+        assertThat(log.responseCause()).isInstanceOf(ClosedStreamException.class);
     }
 
     @Test

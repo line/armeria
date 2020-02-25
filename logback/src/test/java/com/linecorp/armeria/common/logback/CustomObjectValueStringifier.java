@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,18 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.common.logback;
 
-import com.linecorp.armeria.common.util.AbstractOptionValue;
+import java.util.function.Function;
 
-/**
- * A value of a {@link ClientOption}.
- *
- * @param <T> the type of the option value
- */
-public final class ClientOptionValue<T> extends AbstractOptionValue<ClientOptionValue<T>, ClientOption<T>, T> {
-
-    ClientOptionValue(ClientOption<T> option, T value) {
-        super(option, value);
+public final class CustomObjectValueStringifier implements Function<CustomObject, String> {
+    @Override
+    public String apply(CustomObject o) {
+        return o.value;
     }
 }

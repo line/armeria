@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -201,26 +202,30 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
 
-        if (content.isEmpty()) {
-            final RequestHeadersBuilder builder = headers.toBuilder();
-            builder.remove(CONTENT_LENGTH);
-            headers = builder.build();
-        } else {
+        final int contentLength = content.length();
+        if (contentLength == 0) {
+            ReferenceCountUtil.release(content);
+
             headers = headers.toBuilder()
-                             .setInt(CONTENT_LENGTH, content.length())
+                             .removeAndThen(CONTENT_LENGTH)
                              .build();
+
+            if (!trailers.isEmpty()) {
+                return new OneElementFixedHttpRequest(headers, trailers);
+            } else {
+                return new EmptyFixedHttpRequest(headers);
+            }
         }
 
-        if (!content.isEmpty()) {
-            if (trailers.isEmpty()) {
-                return new OneElementFixedHttpRequest(headers, content);
-            } else {
-                return new TwoElementFixedHttpRequest(headers, content, trailers);
-            }
-        } else if (!trailers.isEmpty()) {
-            return new OneElementFixedHttpRequest(headers, trailers);
+        // `content` is not empty.
+        headers = headers.toBuilder()
+                         .setInt(CONTENT_LENGTH, contentLength)
+                         .build();
+
+        if (trailers.isEmpty()) {
+            return new OneElementFixedHttpRequest(headers, content);
         } else {
-            return new EmptyFixedHttpRequest(headers);
+            return new TwoElementFixedHttpRequest(headers, content, trailers);
         }
     }
 

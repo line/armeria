@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -175,12 +176,13 @@ public final class Exceptions {
             cause = cause.getCause();
         }
 
-        return (cause instanceof Http2Exception.StreamException &&
-                ((Http2Exception.StreamException) cause).error() == Http2Error.CANCEL) ||
+        return cause instanceof ClosedStreamException ||
                cause instanceof ClosedSessionException ||
                cause instanceof CancelledSubscriptionException ||
                cause instanceof WriteTimeoutException ||
-               cause instanceof AbortedStreamException;
+               cause instanceof AbortedStreamException ||
+               (cause instanceof Http2Exception.StreamException &&
+                ((Http2Exception.StreamException) cause).error() == Http2Error.CANCEL);
     }
 
     /**

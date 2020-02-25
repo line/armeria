@@ -17,15 +17,17 @@
 package com.linecorp.armeria.internal.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
@@ -34,26 +36,47 @@ class HttpTimestampSupplierTest {
     private static final Instant TIME0 = Instant.parse("2019-10-18T10:15:30.05Z");
     private static final Instant TIME1 = Instant.parse("2019-10-18T10:15:31.25Z");
 
-    @Mock private Clock clock;
+    @Mock
+    Supplier<Instant> instantSupplier;
 
-    private HttpTimestampSupplier supplier;
-
-    @BeforeEach
-    void setUp() {
-        supplier = new HttpTimestampSupplier(clock);
-        when(clock.getZone()).thenReturn(ZoneOffset.UTC);
-    }
+    @Mock
+    LongSupplier nanoTimeSupplier;
 
     @Test
     void normal() {
-        when(clock.instant()).thenReturn(TIME0);
+        when(nanoTimeSupplier.getAsLong()).thenReturn(TimeUnit.MILLISECONDS.toNanos(-500));
+        when(instantSupplier.get()).thenReturn(TIME0);
+
+        // On instantiation, the current nano time must be read and cached.
+        final HttpTimestampSupplier supplier = new HttpTimestampSupplier(instantSupplier, nanoTimeSupplier);
+        verify(instantSupplier, never()).get();
+        verify(nanoTimeSupplier, times(1)).getAsLong();
+        clearInvocations(instantSupplier, nanoTimeSupplier);
+
+        // On first generation, both the current instant and nano time must be read.
         final String timestamp1 = supplier.currentTimestamp();
-        final String timestamp2 = supplier.currentTimestamp();
         assertThat(timestamp1).isEqualTo("Fri, 18 Oct 2019 10:15:30 GMT");
-        assertThat(timestamp1).isSameAs(timestamp2);
-        when(clock.instant()).thenReturn(TIME1);
-        await().atMost(Duration.ofSeconds(2)).untilAsserted(
-                () -> assertThat(supplier.currentTimestamp())
-                        .isEqualTo("Fri, 18 Oct 2019 10:15:31 GMT"));
+
+        verify(instantSupplier, times(1)).get();
+        verify(nanoTimeSupplier, times(1)).getAsLong();
+        clearInvocations(instantSupplier, nanoTimeSupplier);
+
+        // Advance the current nano time by (950 milliseconds - 1 nanosecond).
+        // This time, only the current nano time must be read.
+        // Therefore instantSupplier will never be accessed.
+        when(nanoTimeSupplier.getAsLong()).thenReturn(TimeUnit.MILLISECONDS.toNanos(-500 + 950) - 1);
+        when(instantSupplier.get()).thenReturn(null);
+        final String timestamp2 = supplier.currentTimestamp();
+        assertThat(timestamp2).isSameAs(timestamp1);
+
+        verify(instantSupplier, never()).get();
+        verify(nanoTimeSupplier, times(1)).getAsLong();
+        clearInvocations(instantSupplier, nanoTimeSupplier);
+
+        // Advance the current nano time by 1 nanosecond.
+        // Then, both the current instant and nano time will be read.
+        when(nanoTimeSupplier.getAsLong()).thenReturn(TimeUnit.MILLISECONDS.toNanos(-500 + 950));
+        when(instantSupplier.get()).thenReturn(TIME1);
+        assertThat(supplier.currentTimestamp()).isEqualTo("Fri, 18 Oct 2019 10:15:31 GMT");
     }
 }

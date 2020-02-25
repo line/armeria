@@ -95,8 +95,10 @@ public final class ClientConnectionTimingsBuilder {
      * in order to use one connection for HTTP/2.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionStart() {
-        pendingAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
-        pendingAcquisitionStartNanos = System.nanoTime();
+        if (pendingAcquisitionStartTimeMicros == 0 && !pendingAcquisitionEndSet) {
+            pendingAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
+            pendingAcquisitionStartNanos = System.nanoTime();
+        }
         return this;
     }
 
@@ -108,7 +110,6 @@ public final class ClientConnectionTimingsBuilder {
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionEnd() {
         checkState(pendingAcquisitionStartTimeMicros >= 0, "pendingAcquisitionStart() is not called yet.");
-        checkState(!pendingAcquisitionEndSet, "pendingAcquisitionEnd() is already called.");
         pendingAcquisitionEndNanos = System.nanoTime();
         pendingAcquisitionEndSet = true;
         return this;

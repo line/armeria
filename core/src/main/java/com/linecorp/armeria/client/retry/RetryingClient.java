@@ -236,10 +236,6 @@ public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResp
         rootReqDuplicator.abort(cause);
     }
 
-    private ContentPreviewResponse contentPreviewResponse(HttpResponseDuplicator resDuplicator) {
-        return new ContentPreviewResponse(resDuplicator.duplicate(), contentPreviewLength);
-    }
-
     private BiFunction<Backoff, Throwable, Void> handleBackoff(ClientRequestContext ctx,
                                                                ClientRequestContext derivedCtx,
                                                                HttpRequestDuplicator rootReqDuplicator,

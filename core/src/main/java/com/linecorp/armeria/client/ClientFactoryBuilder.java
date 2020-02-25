@@ -276,17 +276,21 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
-        final ClientFactoryOptionValue<?> oldTlsCustomizerValue =
-                options.get(ClientFactoryOption.TLS_CUSTOMIZER);
-
         @SuppressWarnings("unchecked")
-        final Consumer<SslContextBuilder> oldTlsCustomizer =
-                oldTlsCustomizerValue == null ? ClientFactoryOptions.DEFAULT_TLS_CUSTOMIZER
-                                              : (Consumer<SslContextBuilder>) oldTlsCustomizerValue.value();
-        if (oldTlsCustomizer == ClientFactoryOptions.DEFAULT_TLS_CUSTOMIZER) {
+        final ClientFactoryOptionValue<Consumer<? super SslContextBuilder>> oldTlsCustomizerValue =
+                (ClientFactoryOptionValue<Consumer<? super SslContextBuilder>>)
+                        options.get(ClientFactoryOption.TLS_CUSTOMIZER);
+
+        final Consumer<? super SslContextBuilder> oldTlsCustomizer =
+                oldTlsCustomizerValue == null ? ClientFactoryOption.TLS_CUSTOMIZER.defaultValue()
+                                              : oldTlsCustomizerValue.value();
+        if (oldTlsCustomizer == ClientFactoryOption.TLS_CUSTOMIZER.defaultValue()) {
             option(ClientFactoryOption.TLS_CUSTOMIZER, tlsCustomizer);
         } else {
-            option(ClientFactoryOption.TLS_CUSTOMIZER, oldTlsCustomizer.andThen(tlsCustomizer));
+            option(ClientFactoryOption.TLS_CUSTOMIZER, b -> {
+                oldTlsCustomizer.accept(b);
+                tlsCustomizer.accept(b);
+            });
         }
         return this;
     }
@@ -505,7 +509,7 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder options(ClientFactoryOptions options) {
         requireNonNull(options, "options");
-        options.asMap().values().forEach(this::option);
+        options.forEach(this::option);
         return this;
     }
 

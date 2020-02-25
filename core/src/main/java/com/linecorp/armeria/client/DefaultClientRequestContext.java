@@ -179,7 +179,7 @@ public final class DefaultClientRequestContext
         writeTimeoutMillis = options.writeTimeoutMillis();
         responseTimeoutMillis = options.responseTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
-        additionalRequestHeaders = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.of());
+        additionalRequestHeaders = options.get(ClientOption.HTTP_HEADERS);
         customizers = copyThreadLocalCustomizers();
     }
 
@@ -257,16 +257,16 @@ public final class DefaultClientRequestContext
     }
 
     private void failEarly(Throwable cause) {
-        final RequestLogBuilder logBuilder = logBuilder();
-        final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
-        logBuilder.endRequest(wrapped);
-        logBuilder.endResponse(wrapped);
-
         final HttpRequest req = request();
         if (req != null) {
             autoFillSchemeAndAuthority();
             req.abort(cause);
         }
+
+        final RequestLogBuilder logBuilder = logBuilder();
+        final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
+        logBuilder.endRequest(wrapped);
+        logBuilder.endResponse(wrapped);
     }
 
     private void autoFillSchemeAndAuthority() {

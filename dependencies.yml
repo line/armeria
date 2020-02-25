@@ -4,12 +4,12 @@
 
 boms:
   - com.fasterxml.jackson:jackson-bom:2.10.2.20200130
-  - io.dropwizard.metrics:metrics-bom:4.1.2
-  - io.grpc:grpc-bom:1.27.0
-  - io.micrometer:micrometer-bom:1.3.3
+  - io.dropwizard.metrics:metrics-bom:4.1.3
+  - io.grpc:grpc-bom:1.27.1
+  - io.micrometer:micrometer-bom:1.3.5
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.45.Final
-  - io.zipkin.brave:brave-bom:5.9.4
+  - io.zipkin.brave:brave-bom:5.9.5
   - org.eclipse.jetty:jetty-bom:9.4.26.v20200117
   - org.junit:junit-bom:5.6.0
 
@@ -24,9 +24,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.9.0'
+    version: '3.10.0'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.9.0/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.10.0/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -54,7 +54,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.2.0' }
 
 com.github.node-gradle:
-  gradle-node-plugin: { version: '2.2.1' }
+  gradle-node-plugin: { version: '2.2.2' }
 
 com.google.api:
   gax-grpc: { version: '1.53.1' }
@@ -103,8 +103,8 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protoc: { version: '3.11.3' }
-  protobuf-java: { version: &PROTOBUF_VERSION '3.11.3' }
+  protoc: { version: '3.11.4' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.11.4' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
@@ -138,7 +138,7 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '1.3.18'
+    version: &DROPWIZARD_VERSION '1.3.19'
     javadocs:
     - https://static.javadoc.io/io.dropwizard/dropwizard-core/1.3.18/
   dropwizard-jackson:
@@ -237,7 +237,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.17'
+    version: '2.2.18'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -250,7 +250,7 @@ io.zipkin.brave:
 
 it.unimi.dsi:
   fastutil:
-    version: '8.3.0'
+    version: '8.3.1'
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
@@ -299,7 +299,7 @@ net.javacrumbs.json-unit:
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
-  proguard-gradle: { version: '6.2.0' }
+  proguard-gradle: { version: '6.2.2' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.5.0' }
@@ -345,7 +345,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.30'
+    version: &TOMCAT_VERSION '9.0.31'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -353,7 +353,7 @@ org.apache.tomcat.embed:
 
 org.apache.zookeeper:
   zookeeper:
-    version: '3.5.6'
+    version: '3.5.7'
     exclusions:
     - io.netty:netty-all
     - log4j:log4j
@@ -423,7 +423,7 @@ org.jetbrains.kotlinx:
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
 org.jlleitschuh.gradle:
-  ktlint-gradle: { version: '9.1.1' }
+  ktlint-gradle: { version: '9.2.1' }
 
 org.jsoup:
   jsoup: { version: '1.12.2' }
@@ -457,7 +457,8 @@ org.reactivestreams:
 
 org.reflections:
   reflections:
-    version: '0.9.12'
+    # Upgrade once https://github.com/ronmamo/reflections/issues/279 is fixed.
+    version: '0.9.11'
     exclusions:
       - com.google.errorprone:error_prone_annotations
       - com.google.j2objc:j2objc-annotations

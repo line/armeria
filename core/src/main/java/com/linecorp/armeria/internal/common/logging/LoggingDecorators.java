@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.common.logging;
 
 import java.util.function.Function;
@@ -27,6 +26,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
  * Utilities for logging decorators.
@@ -50,9 +50,13 @@ public final class LoggingDecorators {
 
         final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
         if (requestLogLevel.isEnabled(logger)) {
-            requestLogLevel.log(logger, REQUEST_FORMAT, log.context(),
-                                log.toStringRequestOnly(requestHeadersSanitizer, requestContentSanitizer,
-                                                        requestTrailersSanitizer));
+            final RequestContext ctx = log.context();
+            final String requestStr = log.toStringRequestOnly(requestHeadersSanitizer,
+                                                              requestContentSanitizer,
+                                                              requestTrailersSanitizer);
+            try (SafeCloseable ignored = ctx.push()) {
+                requestLogLevel.log(logger, REQUEST_FORMAT, ctx, requestStr);
+            }
         }
     }
 
@@ -78,13 +82,16 @@ public final class LoggingDecorators {
             final String responseStr = log.toStringResponseOnly(responseHeadersSanitizer,
                                                                 responseContentSanitizer,
                                                                 responseTrailersSanitizer);
-            if (responseCause == null) {
-                responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
-            } else {
+            try (SafeCloseable ignored = ctx.push()) {
+                if (responseCause == null) {
+                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
+                    return;
+                }
+
                 final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
                 if (!requestLogLevel.isEnabled(logger)) {
-                    // Request wasn't logged but this is an unsuccessful response, log the request too to help
-                    // debugging.
+                    // Request wasn't logged, but this is an unsuccessful response,
+                    // so we log the request too to help debugging.
                     responseLogLevel.log(logger, REQUEST_FORMAT, ctx,
                                          log.toStringRequestOnly(requestHeadersSanitizer,
                                                                  requestContentSanitizer,
@@ -92,16 +99,17 @@ public final class LoggingDecorators {
                 }
 
                 final Object sanitizedResponseCause = responseCauseSanitizer.apply(responseCause);
-                if (sanitizedResponseCause != null) {
-                    if (sanitizedResponseCause instanceof Throwable) {
-                        responseLogLevel.log(logger, RESPONSE_FORMAT, ctx,
-                                             responseStr, sanitizedResponseCause);
-                    } else {
-                        responseLogLevel.log(logger, RESPONSE_FORMAT2, ctx,
-                                             responseStr, sanitizedResponseCause);
-                    }
-                } else {
+                if (sanitizedResponseCause == null) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
+                    return;
+                }
+
+                if (sanitizedResponseCause instanceof Throwable) {
+                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx,
+                                         responseStr, sanitizedResponseCause);
+                } else {
+                    responseLogLevel.log(logger, RESPONSE_FORMAT2, ctx,
+                                         responseStr, sanitizedResponseCause);
                 }
             }
         }
