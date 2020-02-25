@@ -75,7 +75,7 @@ class Http2KeepAliveHandlerTest {
 
         verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
         assertThat(ch.isOpen()).isFalse();
-        assertThat(keepAlive.getState()).isEqualTo(State.SHUTDOWN);
+        assertThat(keepAlive.state()).isEqualTo(State.SHUTDOWN);
     }
 
     @Test
@@ -87,7 +87,7 @@ class Http2KeepAliveHandlerTest {
 
         verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
         assertThat(ch.isOpen()).isFalse();
-        assertThat(keepAlive.getState()).isEqualTo(State.SHUTDOWN);
+        assertThat(keepAlive.state()).isEqualTo(State.SHUTDOWN);
     }
 
     @Test
@@ -97,11 +97,11 @@ class Http2KeepAliveHandlerTest {
 
         ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
         promise.setSuccess();
-        keepAlive.onPingAck(keepAlive.getLastPingPayload());
+        keepAlive.onPingAck(keepAlive.lastPingPayload());
 
         verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
         assertThat(ch.isOpen()).isTrue();
-        assertThat(keepAlive.getState()).isEqualTo(State.IDLE);
+        assertThat(keepAlive.state()).isEqualTo(State.IDLE);
     }
 
     private void waitUntilPingTimeout() throws InterruptedException {
