@@ -95,6 +95,8 @@ public class Http2KeepAliveHandler {
     }
 
     public void onChannelIdle(ChannelHandlerContext ctx, IdleStateEvent event) {
+        logger.debug("{} {} event triggered on channel.", channel, event);
+
         if (!sendPingsOnNoActiveStreams()) {
             // The default behaviour is to shutdown the channel on idle timeout if not HTTP 2.0 conn.
             // So preserving the behaviour.
@@ -109,7 +111,6 @@ public class Http2KeepAliveHandler {
             return;
         }
 
-        logger.debug("{} {} event triggered on channel. Sending PING(ACK=0)", channel, event);
         writePing(ctx);
     }
 
