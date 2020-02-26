@@ -67,7 +67,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
     public static Function<? super HttpClient, BraveClient> newDecorator(
             Tracing tracing, @Nullable String remoteServiceName) {
         HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
-                                             .clientParser(ArmeriaHttpClientParser.get())
+                                             .clientRequestParser(ArmeriaHttpClientParser.get())
+                                             .clientResponseParser(ArmeriaHttpClientParser.get())
                                              .build();
         if (remoteServiceName != null) {
             httpTracing = httpTracing.clientOf(remoteServiceName);

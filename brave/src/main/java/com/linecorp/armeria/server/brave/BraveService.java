@@ -48,7 +48,8 @@ public final class BraveService extends SimpleDecoratingHttpService {
     public static Function<? super HttpService, BraveService>
     newDecorator(Tracing tracing) {
         return newDecorator(HttpTracing.newBuilder(tracing)
-                                       .serverParser(ArmeriaHttpServerParser.get())
+                                       .serverRequestParser(ArmeriaHttpServerParser.get())
+                                       .serverResponseParser(ArmeriaHttpServerParser.get())
                                        .build());
     }
 

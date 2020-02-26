@@ -9,7 +9,7 @@ boms:
   - io.micrometer:micrometer-bom:1.3.5
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.45.Final
-  - io.zipkin.brave:brave-bom:5.9.5
+  - io.zipkin.brave:brave-bom:5.10.0
   - org.eclipse.jetty:jetty-bom:9.4.26.v20200117
   - org.junit:junit-bom:5.6.0
 

@@ -83,6 +83,24 @@ final class ServiceRequestContextAdapter {
 
         @Override
         @Nullable
+        public String route() {
+            final Route route = ctx.route();
+            final List<String> paths = route.paths();
+            switch (route.pathType()) {
+                case EXACT:
+                case PREFIX:
+                case PARAMETERIZED:
+                    return paths.get(1);
+                case REGEX:
+                    return paths.get(paths.size() - 1);
+                case REGEX_WITH_PREFIX:
+                    return paths.get(1) + paths.get(0);
+            }
+            return null;
+        }
+
+        @Override
+        @Nullable
         public String url() {
             return ctx.request().uri().toString();
         }
@@ -109,6 +127,7 @@ final class ServiceRequestContextAdapter {
     @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpServerResponse extends brave.http.HttpServerResponse {
         private final RequestLog log;
+        brave.http.HttpServerRequest request;
 
         HttpServerResponse(RequestLog log) {
             assert log.isComplete() : log;
@@ -126,26 +145,11 @@ final class ServiceRequestContextAdapter {
         }
 
         @Override
-        public String method() {
-            return log.requestHeaders().method().name();
-        }
-
-        @Override
-        @Nullable
-        public String route() {
-            final Route route = ((ServiceRequestContext) log.context()).route();
-            final List<String> paths = route.paths();
-            switch (route.pathType()) {
-                case EXACT:
-                case PREFIX:
-                case PARAMETERIZED:
-                    return paths.get(1);
-                case REGEX:
-                    return paths.get(paths.size() - 1);
-                case REGEX_WITH_PREFIX:
-                    return paths.get(1) + paths.get(0);
+        public brave.http.HttpServerRequest request() {
+            if (request == null) {
+                request = new ServiceRequestContextAdapter.HttpServerRequest(unwrap());
             }
-            return null;
+            return request;
         }
 
         @Override

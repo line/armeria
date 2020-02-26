@@ -44,9 +44,9 @@ final class ClientRequestContextAdapter {
     @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpClientRequest extends brave.http.HttpClientRequest {
         private final ClientRequestContext ctx;
-        private final RequestHeadersBuilder headersBuilder;
+        @Nullable private final RequestHeadersBuilder headersBuilder;
 
-        HttpClientRequest(ClientRequestContext ctx, RequestHeadersBuilder headersBuilder) {
+        HttpClientRequest(ClientRequestContext ctx, @Nullable RequestHeadersBuilder headersBuilder) {
             this.ctx = ctx;
             this.headersBuilder = headersBuilder;
         }
@@ -89,7 +89,9 @@ final class ClientRequestContextAdapter {
 
         @Override
         public void header(String name, String value) {
-            headersBuilder.set(name, value);
+            if (headersBuilder != null) {
+                headersBuilder.set(name, value);
+            }
         }
 
         @Override
@@ -113,6 +115,7 @@ final class ClientRequestContextAdapter {
     @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpClientResponse extends brave.http.HttpClientResponse {
         private final RequestLog log;
+        private brave.http.HttpClientRequest request;
 
         HttpClientResponse(RequestLog log) {
             assert log.isComplete() : log;
@@ -122,6 +125,14 @@ final class ClientRequestContextAdapter {
         @Override
         public ClientRequestContext unwrap() {
             return (ClientRequestContext) log.context();
+        }
+
+        @Override
+        public brave.http.HttpClientRequest request() {
+            if (request == null) {
+                request = new ClientRequestContextAdapter.HttpClientRequest(unwrap(), null);
+            }
+            return request;
         }
 
         @Override
