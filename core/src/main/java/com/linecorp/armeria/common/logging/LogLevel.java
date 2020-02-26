@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common.logging;
 
 import javax.annotation.Nullable;
@@ -24,6 +23,10 @@ import org.slf4j.Logger;
  * Log level.
  */
 public enum LogLevel {
+    /**
+     * OFF log level.
+     */
+    OFF,
     /**
      * TRACE log level.
      */
@@ -50,6 +53,8 @@ public enum LogLevel {
      */
     public boolean isEnabled(Logger logger) {
         switch (this) {
+            case OFF:
+                return false;
             case TRACE:
                 return logger.isTraceEnabled();
             case DEBUG:
@@ -70,6 +75,8 @@ public enum LogLevel {
      */
     public void log(Logger logger, String message) {
         switch (this) {
+            case OFF:
+                break;
             case TRACE:
                 logger.trace(message);
                 break;
@@ -96,6 +103,8 @@ public enum LogLevel {
     @SuppressWarnings("MethodParameterNamingConvention")
     public void log(Logger logger, String format, Object arg1) {
         switch (this) {
+            case OFF:
+                break;
             case TRACE:
                 logger.trace(format, arg1);
                 break;
@@ -122,6 +131,8 @@ public enum LogLevel {
     @SuppressWarnings("MethodParameterNamingConvention")
     public void log(Logger logger, String format, @Nullable Object arg1, @Nullable Object arg2) {
         switch (this) {
+            case OFF:
+                break;
             case TRACE:
                 logger.trace(format, arg1, arg2);
                 break;
@@ -149,6 +160,8 @@ public enum LogLevel {
     public void log(Logger logger, String format,
                     @Nullable Object arg1, @Nullable Object arg2, @Nullable Object arg3) {
         switch (this) {
+            case OFF:
+                break;
             case TRACE:
                 logger.trace(format, arg1, arg2, arg3);
                 break;
@@ -163,6 +176,33 @@ public enum LogLevel {
                 break;
             case ERROR:
                 logger.error(format, arg1, arg2, arg3);
+                break;
+            default:
+                throw new Error();
+        }
+    }
+
+    /**
+     * Logs a message at this level.
+     */
+    public void log(Logger logger, String format, Object... args) {
+        switch (this) {
+            case OFF:
+                break;
+            case TRACE:
+                logger.trace(format, args);
+                break;
+            case DEBUG:
+                logger.debug(format, args);
+                break;
+            case INFO:
+                logger.info(format, args);
+                break;
+            case WARN:
+                logger.warn(format, args);
+                break;
+            case ERROR:
+                logger.error(format, args);
                 break;
             default:
                 throw new Error();
