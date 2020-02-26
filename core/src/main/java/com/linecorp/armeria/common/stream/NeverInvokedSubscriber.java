@@ -18,12 +18,8 @@ package com.linecorp.armeria.common.stream;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 final class NeverInvokedSubscriber<T> implements Subscriber<T> {
-
-    private static final Logger logger = LoggerFactory.getLogger(NeverInvokedSubscriber.class);
 
     private static final NeverInvokedSubscriber<Object> INSTANCE = new NeverInvokedSubscriber<>();
 
@@ -34,22 +30,21 @@ final class NeverInvokedSubscriber<T> implements Subscriber<T> {
 
     @Override
     public void onSubscribe(Subscription s) {
-        s.cancel();
-        logger.warn("onSubscribe({}) is invoked.", s);
+        throw new IllegalStateException("onSubscribe(" + s + ')');
     }
 
     @Override
     public void onNext(T t) {
-        logger.warn("onNext({}) is invoked.", t);
+        throw new IllegalStateException("onNext(" + t + ')');
     }
 
     @Override
     public void onError(Throwable t) {
-        logger.warn("onError() is invoked with:", t);
+        throw new IllegalStateException("onError(" + t + ')', t);
     }
 
     @Override
     public void onComplete() {
-        logger.warn("onComplete() is invoked.");
+        throw new IllegalStateException("onComplete()");
     }
 }

@@ -252,9 +252,7 @@ public final class ResponseConversionUtil {
                 return;
             }
             if (!trailers.isEmpty()) {
-                if (!writer.tryWrite(trailers)) {
-                    logger.warn("Failed to write a trailers: {}", trailers);
-                }
+                writer.tryWrite(trailers);
             }
             writer.close();
         }
