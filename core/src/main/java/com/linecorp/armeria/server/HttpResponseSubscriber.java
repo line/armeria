@@ -62,9 +62,9 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
-    private static final AggregatedHttpResponse INTERNAL_SERVER_ERROR_MESSAGE =
+    private static final AggregatedHttpResponse internalServerErrorResponse =
             AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-    private static final AggregatedHttpResponse SERVICE_UNAVAILABLE_MESSAGE =
+    private static final AggregatedHttpResponse serviceUnavailableResponse =
             AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
 
     private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
@@ -133,9 +133,10 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     @Override
     public void onNext(HttpObject o) {
         if (!(o instanceof HttpData) && !(o instanceof HttpHeaders)) {
-            throw newIllegalStateException(
+            failAndRespond(new IllegalArgumentException(
                     "published an HttpObject that's neither HttpHeaders nor HttpData: " + o +
-                    " (service: " + service() + ')');
+                    " (service: " + service() + ')'));
+            return;
         }
 
         boolean endOfStream = o.isEndOfStream();
@@ -143,9 +144,10 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             case NEEDS_HEADERS: {
                 logBuilder().startResponse();
                 if (!(o instanceof ResponseHeaders)) {
-                    throw newIllegalStateException(
+                    failAndRespond(new IllegalStateException(
                             "published an HttpData without a preceding ResponseHeaders: " + o +
-                            " (service: " + service() + ')');
+                            " (service: " + service() + ')'));
+                    return;
                 }
 
                 ResponseHeaders headers = (ResponseHeaders) o;
@@ -198,9 +200,10 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 if (o instanceof HttpHeaders) {
                     final HttpHeaders trailers = (HttpHeaders) o;
                     if (trailers.contains(HttpHeaderNames.STATUS)) {
-                        throw newIllegalStateException(
+                        failAndRespond(new IllegalArgumentException(
                                 "published an HTTP trailers with status: " + o +
-                                " (service: " + service() + ')');
+                                " (service: " + service() + ')'));
+                        return;
                     }
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
                     final HttpHeaders addedTrailers = fillAdditionalTrailers(trailers, additionalTrailers);
@@ -213,7 +216,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
                     if (!additionalTrailers.isEmpty()) {
                         write(o, false);
-
                         o = additionalTrailers;
                     }
                 }
@@ -240,7 +242,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                                            .handleAsync((res, throwable) -> {
                                                if (throwable != null) {
                                                    failAndRespond(throwable,
-                                                                  INTERNAL_SERVER_ERROR_MESSAGE,
+                                                                  internalServerErrorResponse,
                                                                   Http2Error.CANCEL);
                                                } else {
                                                    failAndRespond(cause, res, Http2Error.CANCEL);
@@ -257,7 +259,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             logger.warn("{} Unexpected exception from a service or a response publisher: {}",
                         ctx.channel(), service(), cause);
 
-            failAndRespond(cause, INTERNAL_SERVER_ERROR_MESSAGE, Http2Error.INTERNAL_ERROR);
+            failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR);
         }
     }
 
@@ -376,6 +378,10 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             subscription.cancel();
             reqCtx.log().whenComplete().thenAccept(reqCtx.accessLogWriter()::log);
         }
+    }
+
+    private void failAndRespond(Throwable cause) {
+        failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR);
     }
 
     private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error) {
@@ -500,12 +506,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         return builder;
     }
 
-    private IllegalStateException newIllegalStateException(String msg) {
-        final IllegalStateException cause = new IllegalStateException(msg);
-        failAndRespond(cause, INTERNAL_SERVER_ERROR_MESSAGE, Http2Error.INTERNAL_ERROR);
-        return cause;
-    }
-
     private TimeoutTask newTimeoutTask() {
         return new TimeoutTask() {
             @Override
@@ -521,8 +521,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     if (requestTimeoutHandler != null) {
                         requestTimeoutHandler.run();
                     } else {
-                        failAndRespond(RequestTimeoutException.get(),
-                                       SERVICE_UNAVAILABLE_MESSAGE, Http2Error.INTERNAL_ERROR);
+                        failAndRespond(RequestTimeoutException.get(), serviceUnavailableResponse,
+                                       Http2Error.INTERNAL_ERROR);
                     }
                 }
             }

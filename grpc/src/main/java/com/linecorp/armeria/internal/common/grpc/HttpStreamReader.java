@@ -24,8 +24,6 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -46,8 +44,6 @@ import io.grpc.Status;
  * A {@link Subscriber} to read HTTP messages and pass to gRPC business logic.
  */
 public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
-
-    private static final Logger logger = LoggerFactory.getLogger(HttpStreamReader.class);
 
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
@@ -144,7 +140,12 @@ public final class HttpStreamReader implements Subscriber<HttpObject>, BiFunctio
                             "Can't find decompressor for " + grpcEncoding));
                     return;
                 }
-                deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                try {
+                    deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                } catch (Throwable t) {
+                    transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(t));
+                    return;
+                }
             }
             requestHttpFrame();
             return;
