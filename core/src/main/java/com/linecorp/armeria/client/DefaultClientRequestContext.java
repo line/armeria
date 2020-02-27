@@ -459,6 +459,11 @@ public final class DefaultClientRequestContext
             clearResponseTimeout();
         }
 
+        if (this.responseTimeoutMillis == 0 && responseTimeoutMillis > 0) {
+            setResponseTimeoutAfterMillis(responseTimeoutMillis);
+            return;
+        }
+
         final long adjustmentMillis =
                 LongMath.saturatedSubtract(responseTimeoutMillis, this.responseTimeoutMillis);
         extendResponseTimeoutMillis(adjustmentMillis);

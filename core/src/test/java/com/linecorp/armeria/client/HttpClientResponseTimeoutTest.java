@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
@@ -62,6 +63,25 @@ class HttpClientResponseTimeoutTest {
         assertThatThrownBy(() -> client.get(server.httpUri() + "/no-timeout").aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
+    }
+
+    @Test
+    void shouldSetResponseTimeoutWithNoTimeout() {
+        final WebClient client = WebClient
+                .builder(server.httpUri())
+                .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                .decorator((delegate, ctx, req) -> {
+                    ctx.setResponseTimeoutMillis(1000);
+                    assertThat(ctx.responseTimeoutMillis()).isEqualTo(1000);
+                    return delegate.execute(ctx, req);
+                })
+                .build();
+        await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get(server.httpUri() + "/no-timeout")
+                                           .aggregate().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(ResponseTimeoutException.class);
+        });
     }
 
     @ParameterizedTest

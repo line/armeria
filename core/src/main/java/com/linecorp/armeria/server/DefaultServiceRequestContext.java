@@ -339,6 +339,11 @@ public final class DefaultServiceRequestContext
             clearRequestTimeout();
         }
 
+        if (this.requestTimeoutMillis == 0 && requestTimeoutMillis > 0) {
+            setRequestTimeoutAfterMillis(requestTimeoutMillis);
+            return;
+        }
+
         final long adjustmentMillis =
                 LongMath.saturatedSubtract(requestTimeoutMillis, this.requestTimeoutMillis);
         extendRequestTimeoutMillis(adjustmentMillis);

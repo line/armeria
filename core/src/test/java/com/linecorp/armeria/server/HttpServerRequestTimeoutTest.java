@@ -113,7 +113,12 @@ class HttpServerRequestTimeoutTest {
               .decorator("/timeout-by-decorator/after", (delegate, ctx, req) -> {
                   ctx.setRequestTimeoutAfter(Duration.ofSeconds(1));
                   return delegate.serve(ctx, req);
-              });
+              })
+              .decorator("/timeout-by-decorator/set", (delegate, ctx, req) -> {
+                ctx.setRequestTimeout(Duration.ofSeconds(1));
+                  assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
+                  return delegate.serve(ctx, req);
+            });
         }
     };
 
@@ -174,6 +179,7 @@ class HttpServerRequestTimeoutTest {
     @CsvSource({
             "/timeout-by-decorator/deadline",
             "/timeout-by-decorator/after",
+            "/timeout-by-decorator/set",
     })
     void limitRequestTimeoutByDecorator(String path) {
         final AggregatedHttpResponse response =
