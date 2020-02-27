@@ -368,7 +368,8 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * and base {@link EndpointGroup}.
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the fields
-     *                                  in {@link SessionProtocol}
+     *                                  in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}
+
      */
     static WebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup, null);
