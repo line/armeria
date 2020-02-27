@@ -217,17 +217,17 @@ public final class ClientFactoryOption<T>
             define("METER_REGISTRY", Metrics.globalRegistry);
 
     /**
+     * TODO: add javadoc comment.
+     */
+    public static final ClientFactoryOption<Optional<? extends ProxyHandler>> PROXY_HANDLER =
+            define("PROXY_HANDLER", Optional.empty());
+
+    /**
      * Returns the all available {@link ClientFactoryOption}s.
      */
     public static Set<ClientFactoryOption<?>> allOptions() {
         return allOptions(ClientFactoryOption.class);
     }
-
-    /**
-     * TODO: add javadoc comment.
-     */
-    public static final ClientFactoryOption<Optional<? extends ProxyHandler>> PROXY_HANDLER =
-            valueOf("PROXY_HANDLER");
 
     /**
      * Returns the {@link ClientFactoryOption} with the specified {@code name}.

@@ -54,8 +54,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.handler.proxy.ProxyHandler;
-import io.netty.handler.proxy.Socks4ProxyHandler;
-import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
@@ -110,7 +108,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            addSocksProxyHandlerIfPossible(ch.pipeline(), clientFactory.proxyHandler());
+                            addProxyHandlerIfPossible(ch.pipeline(), clientFactory.proxyHandler());
                             ch.pipeline().addLast(
                                     new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                         }
@@ -124,10 +122,9 @@ final class HttpChannelPool implements AsyncCloseable {
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
     }
 
-    private static void addSocksProxyHandlerIfPossible(
+    private static void addProxyHandlerIfPossible(
             ChannelPipeline pipeline, Optional<? extends ProxyHandler> proxyHandler) {
-        if (proxyHandler.isPresent() && (proxyHandler.get() instanceof Socks4ProxyHandler ||
-                                         proxyHandler.get() instanceof Socks5ProxyHandler)) {
+        if (proxyHandler.isPresent()) {
             pipeline.addLast(proxyHandler.get());
         }
     }
