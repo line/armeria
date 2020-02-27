@@ -222,6 +222,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                         cause = ClosedStreamException.get();
                     }
                     ((CompletableFuture<?>) e).completeExceptionally(cause);
+                    continue;
                 }
 
                 try {
@@ -459,6 +460,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     cause = ClosedStreamException.get();
                 }
                 ((CompletableFuture<?>) e).completeExceptionally(cause);
+                continue;
             }
 
             try {
