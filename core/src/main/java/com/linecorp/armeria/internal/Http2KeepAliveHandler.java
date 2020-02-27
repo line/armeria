@@ -97,7 +97,7 @@ public class Http2KeepAliveHandler {
     public void onChannelIdle(ChannelHandlerContext ctx, IdleStateEvent event) {
         logger.debug("{} {} event triggered on channel.", channel, event);
 
-        if (!sendPingsOnNoActiveStreams()) {
+        if (!canSendPing()) {
             // The default behaviour is to shutdown the channel on idle timeout if not HTTP 2.0 conn.
             // So preserving the behaviour.
             closeChannelAndLog();
@@ -114,8 +114,12 @@ public class Http2KeepAliveHandler {
         writePing(ctx);
     }
 
-    private boolean sendPingsOnNoActiveStreams() {
-        return http2Connection.numActiveStreams() == 0 && sendPingsOnNoActiveStreams;
+    private boolean canSendPing() {
+        if (http2Connection.numActiveStreams() == 0) {
+            return sendPingsOnNoActiveStreams;
+        } else {
+            return true;
+        }
     }
 
     private void writePing(ChannelHandlerContext ctx) {
@@ -226,7 +230,7 @@ public class Http2KeepAliveHandler {
                 // Mostly because the channel is already closed. So ignore and change state to IDLE.
                 // If the channel is closed, we change state to SHUTDOWN on onChannelInactive.
                 logger.debug("{} Channel PING write failed", channel);
-                state = State.IDLE;
+                state = state == State.SHUTDOWN ? State.SHUTDOWN : State.IDLE;
             }
         }
     }

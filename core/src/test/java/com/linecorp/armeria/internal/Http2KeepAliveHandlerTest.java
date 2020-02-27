@@ -18,16 +18,18 @@ package com.linecorp.armeria.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mock;
 
 import com.linecorp.armeria.internal.Http2KeepAliveHandler.State;
@@ -36,28 +38,35 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.timeout.IdleStateEvent;
 
 class Http2KeepAliveHandlerTest {
 
+    private static final String sendPingsOnNoActiveStreams = "sendPingsOnNoActiveStreams";
+
     private static final long pingTimeout = 100;
     @Mock
     private Http2FrameWriter frameWriter;
+    @Mock
+    private Http2Connection connection;
     private EmbeddedChannel ch;
     private ChannelPromise promise;
 
     private Http2KeepAliveHandler keepAlive;
 
     @BeforeEach
-    public void setup() throws Exception {
+    public void setup(TestInfo testInfo) throws Exception {
         ch = new EmbeddedChannel();
         promise = ch.newPromise();
-        keepAlive = new Http2KeepAliveHandler(ch, frameWriter, null, pingTimeout, false);
+        keepAlive = new Http2KeepAliveHandler(ch, frameWriter, connection, pingTimeout,
+                                              !testInfo.getTags().contains(sendPingsOnNoActiveStreams));
 
         ch.pipeline().addLast(new TestIdleStateHandler(keepAlive));
 
         assertThat(ch.isOpen()).isTrue();
+        assertThat(keepAlive.state()).isEqualTo(State.IDLE);
     }
 
     @AfterEach
@@ -66,42 +75,97 @@ class Http2KeepAliveHandlerTest {
     }
 
     @Test
-    void testOnChannelIdle_WhenPingTimesOut_ShouldCloseConnection() throws InterruptedException {
+    void testOnChannelIdle_WhenPingTimesOut_ShouldCloseConnection() throws Exception {
         when(frameWriter.writePing(any(), eq(false), anyLong(), any())).thenReturn(promise);
         ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
+        assertThat(keepAlive.state()).isEqualTo(State.PING_SCHEDULED);
 
         promise.setSuccess();
+        assertThat(keepAlive.state()).isEqualTo(State.PENDING_PING_ACK);
         waitUntilPingTimeout();
+        assertThat(keepAlive.state()).isEqualTo(State.SHUTDOWN);
 
         verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
         assertThat(ch.isOpen()).isFalse();
-        assertThat(keepAlive.state()).isEqualTo(State.SHUTDOWN);
     }
 
     @Test
-    void testOnChannelIdle_WhenWritePingFails_ShouldCloseConnection() throws InterruptedException {
+    void testOnChannelIdle_WhenWritePingFailsBecauseChannelIsClosed_ShouldSetStateToShutdown() throws
+                                                                                               Exception {
         when(frameWriter.writePing(any(), eq(false), anyLong(), any())).thenReturn(promise);
 
         ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
-        promise.setFailure(new IOException());
+        assertThat(keepAlive.state()).isEqualTo(State.PING_SCHEDULED);
+
+        ch.close();
+        assertThat(keepAlive.state()).isEqualTo(State.SHUTDOWN);
 
         verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
         assertThat(ch.isOpen()).isFalse();
-        assertThat(keepAlive.state()).isEqualTo(State.SHUTDOWN);
     }
 
     @Test
-    void testOnChannelIdle_WhenPingAckIsReceivedWithinTimeout_ShouldNotCloseConnection()
-            throws Exception {
+    void testOnChannelIdle_WhenWritePingFailsOfUnknownReason_ShouldSetStateToIdle() throws Exception {
         when(frameWriter.writePing(any(), eq(false), anyLong(), any())).thenReturn(promise);
 
         ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
-        promise.setSuccess();
-        keepAlive.onPingAck(keepAlive.lastPingPayload());
+        assertThat(keepAlive.state()).isEqualTo(State.PING_SCHEDULED);
+
+        promise.setFailure(new Exception("Unknown reason"));
+        assertThat(keepAlive.state()).isEqualTo(State.IDLE);
 
         verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
         assertThat(ch.isOpen()).isTrue();
+    }
+
+    @Test
+    void testOnChannelIdle_WhenPingAckIsReceivedWithinTimeout_ShouldResetStateToIdle() throws Exception {
+        when(frameWriter.writePing(any(), eq(false), anyLong(), any())).thenReturn(promise);
+
+        ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
+        assertThat(keepAlive.state()).isEqualTo(State.PING_SCHEDULED);
+
+        promise.setSuccess();
+        assertThat(keepAlive.state()).isEqualTo(State.PENDING_PING_ACK);
+
+        keepAlive.onPingAck(keepAlive.lastPingPayload());
         assertThat(keepAlive.state()).isEqualTo(State.IDLE);
+
+        verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
+        assertThat(ch.isOpen()).isTrue();
+    }
+
+    @Test
+    @Tag("sendPingsOnNoActiveStreams")
+    void testOnChannelIdle_WhenShouldNotSendPingsOnIdleAndActiveStreamsAreZero_ShouldCloseConnection()
+            throws Exception {
+        when(connection.numActiveStreams()).thenReturn(0);
+        ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
+
+        assertThat(keepAlive.state()).isEqualTo(State.SHUTDOWN);
+
+        verify(frameWriter, never()).writePing(any(), anyBoolean(), anyLong(), any());
+        assertThat(ch.isOpen()).isFalse();
+    }
+
+    @Test
+    @Tag("sendPingsOnNoActiveStreams")
+    void testOnChannelIdle_WhenShouldNotSendPingsOnIdleWithActiveStreams_ShouldCloseConnection()
+            throws Exception {
+        when(connection.numActiveStreams()).thenReturn(1);
+        when(frameWriter.writePing(any(), eq(false), anyLong(), any())).thenReturn(promise);
+
+        ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
+        assertThat(keepAlive.state()).isEqualTo(State.PING_SCHEDULED);
+
+        promise.setSuccess();
+        assertThat(keepAlive.state()).isEqualTo(State.PENDING_PING_ACK);
+
+        keepAlive.onPingAck(keepAlive.lastPingPayload());
+        assertThat(keepAlive.state()).isEqualTo(State.IDLE);
+
+        verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
+        assertThat(ch.isOpen()).isTrue();
     }
 
     private void waitUntilPingTimeout() throws InterruptedException {
@@ -119,6 +183,11 @@ class Http2KeepAliveHandlerTest {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             keepAlive.onChannelIdle(ctx, (IdleStateEvent) evt);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            keepAlive.onChannelInactive();
         }
     }
 }
