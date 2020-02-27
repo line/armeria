@@ -236,8 +236,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Override
     public void onNext(HttpObject o) {
         if (!(o instanceof HttpData) && !(o instanceof HttpHeaders)) {
-            throw newIllegalStateException(
-                    "published an HttpObject that's neither Http2Headers nor Http2Data: " + o);
+            fail(new IllegalArgumentException(
+                    "published an HttpObject that's neither Http2Headers nor Http2Data: " + o));
+            return;
         }
 
         boolean endOfStream = o.isEndOfStream();
@@ -246,7 +247,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 if (o instanceof HttpHeaders) {
                     final HttpHeaders trailers = (HttpHeaders) o;
                     if (trailers.contains(HttpHeaderNames.STATUS)) {
-                        throw newIllegalStateException("published a trailers with status: " + o);
+                        fail(new IllegalArgumentException("published a trailers with status: " + o));
+                        return;
                     }
                     // Trailers always end the stream even if not explicitly set.
                     endOfStream = true;
@@ -373,11 +375,5 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         this.timeoutFuture = null;
         return timeoutFuture.cancel(false);
-    }
-
-    private IllegalStateException newIllegalStateException(String msg) {
-        final IllegalStateException cause = new IllegalStateException(msg);
-        fail(cause);
-        return cause;
     }
 }

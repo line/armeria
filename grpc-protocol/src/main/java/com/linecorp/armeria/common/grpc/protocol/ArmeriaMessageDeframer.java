@@ -247,7 +247,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     /**
-     * Indicates whether delivery is currently stalled, pending receipt of more data.  This means
+     * Indicates whether delivery is currently stalled, pending receipt of more data. This means
      * that no additional data can be delivered to the application.
      */
     public boolean isStalled() {
@@ -289,7 +289,9 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         deliver();
     }
 
-    /** Requests closing this deframer when any messages currently queued have been requested and delivered. */
+    /**
+     * Requests closing this deframer when any messages currently queued have been requested and delivered.
+     */
     public void closeWhenComplete() {
         if (isClosed()) {
             return;
