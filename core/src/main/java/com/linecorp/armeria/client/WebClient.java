@@ -394,7 +394,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    static WebClientBuilder builder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
+    static WebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup,
                                     @Nullable String path) {
         return new WebClientBuilder(sessionProtocol, endpointGroup, path);
     }
