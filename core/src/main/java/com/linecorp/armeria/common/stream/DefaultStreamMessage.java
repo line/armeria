@@ -212,19 +212,19 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     break;
                 }
 
+                // We already notified to the subscriber so skip.
+                if (e instanceof CloseEvent) {
+                    continue;
+                }
+
+                if (e instanceof CompletableFuture) {
+                    if (cause == null) {
+                        cause = ClosedStreamException.get();
+                    }
+                    ((CompletableFuture<?>) e).completeExceptionally(cause);
+                }
+
                 try {
-                    // We already notified to the subscriber so skip.
-                    if (e instanceof CloseEvent) {
-                        continue;
-                    }
-
-                    if (e instanceof CompletableFuture) {
-                        if (cause == null) {
-                            cause = ClosedStreamException.get();
-                        }
-                        ((CompletableFuture<?>) e).completeExceptionally(cause);
-                    }
-
                     @SuppressWarnings("unchecked")
                     final T obj = (T) e;
                     onRemoval(obj);
@@ -436,32 +436,32 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 break;
             }
 
+            // Just skip SUCCESSFUL_CLOSE because being in cleanup() means one of the following:
+            // - All elements have been consumed already
+            // - cancel() or abort() has been invoked after successful close().
+            if (e == SUCCESSFUL_CLOSE) {
+                continue;
+            }
+
+            if (e instanceof CloseEvent) {
+                final SubscriptionImpl subscription = this.subscription;
+                assert subscription != null;
+                try {
+                    ((CloseEvent) e).notifySubscriber(subscription, whenComplete());
+                } finally {
+                    subscription.clearSubscriber();
+                }
+                continue;
+            }
+
+            if (e instanceof CompletableFuture) {
+                if (cause == null) {
+                    cause = ClosedStreamException.get();
+                }
+                ((CompletableFuture<?>) e).completeExceptionally(cause);
+            }
+
             try {
-                // Just skip SUCCESSFUL_CLOSE because being in cleanup() means one of the following:
-                // - All elements have been consumed already
-                // - cancel() or abort() has been invoked after successful close().
-                if (e == SUCCESSFUL_CLOSE) {
-                    continue;
-                }
-
-                if (e instanceof CloseEvent) {
-                    final SubscriptionImpl subscription = this.subscription;
-                    assert subscription != null;
-                    try {
-                        ((CloseEvent) e).notifySubscriber(subscription, whenComplete());
-                    } finally {
-                        subscription.clearSubscriber();
-                    }
-                    continue;
-                }
-
-                if (e instanceof CompletableFuture) {
-                    if (cause == null) {
-                        cause = ClosedStreamException.get();
-                    }
-                    ((CompletableFuture<?>) e).completeExceptionally(cause);
-                }
-
                 @SuppressWarnings("unchecked")
                 final T obj = (T) e;
                 onRemoval(obj);
