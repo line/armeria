@@ -323,8 +323,8 @@ public class RequestContextExportingAppenderTest {
                 a.addBuiltIn(p);
             }
             // .. and an attribute.
-            a.addAttribute("my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
-            a.addAttribute("my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
+            a.addAttribute("attrs.my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
+            a.addAttribute("attrs.my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
             // .. and some HTTP headers.
             a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
             a.addHttpResponseHeader(HttpHeaderNames.DATE);
@@ -460,8 +460,8 @@ public class RequestContextExportingAppenderTest {
                 a.addBuiltIn(p);
             }
             // .. and an attribute.
-            a.addAttribute("my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
-            a.addAttribute("my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
+            a.addAttribute("attrs.my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
+            a.addAttribute("attrs.my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
             // .. and some HTTP headers.
             a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
             a.addHttpResponseHeader(HttpHeaderNames.DATE);

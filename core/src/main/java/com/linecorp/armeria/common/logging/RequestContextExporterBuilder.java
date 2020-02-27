@@ -93,39 +93,21 @@ public final class RequestContextExporterBuilder {
 
     /**
      * Adds the specified {@link AttributeKey} to the export list.
-     * The specified {@code alias} prefixed with {@value PREFIX_ATTRS} is used for the export key.
-     * This method is a shortcut for {@code addAttribute(alias, attrKey, true)}.
+     * The specified {@code alias} is used for the export key.
      *
      * @param alias the alias of the attribute to export
      * @param attrKey the key of the attribute to export
      */
     public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey) {
-        return addAttribute(alias, attrKey, true);
-    }
-
-    /**
-     * Adds the specified {@link AttributeKey} to the export list.
-     * If the specified {@code usePrefix} is {@code true}, the specified {@code alias} prefixed with
-     * {@value PREFIX_ATTRS} is used for the export key.
-     * Otherwise only the specified {@code alias} is used.
-     *
-     * @param alias the alias of the attribute to export
-     * @param attrKey the key of the attribute to export
-     * @param usePrefix whether to use the default attribute prefix or not
-     */
-    public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey,
-                                                      boolean usePrefix) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
-        final String exportKey = usePrefix ? PREFIX_ATTRS + alias : alias;
-        attrs.add(new ExportEntry<>(attrKey, exportKey));
+        attrs.add(new ExportEntry<>(attrKey, alias));
         return this;
     }
 
     /**
      * Adds the specified {@link AttributeKey} to the export list.
-     * The specified {@code alias} prefixed with {@value PREFIX_ATTRS} is used for the export key.
-     * This method is a shortcut for {@code addAttribute(alias, attrKey, stringifier, true)}.
+     * The specified {@code alias} is used for the export key.
      *
      * @param alias the alias of the attribute to export
      * @param attrKey the key of the attribute to export
@@ -133,27 +115,10 @@ public final class RequestContextExporterBuilder {
      */
     public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey,
                                                       Function<?, String> stringifier) {
-        return addAttribute(alias, attrKey, stringifier, true);
-    }
-
-    /**
-     * Adds the specified {@link AttributeKey} to the export list.
-     * If the specified {@code usePrefix} is {@code true}, the specified {@code alias} prefixed with
-     * {@value PREFIX_ATTRS} is used for the export key.
-     * Otherwise only the {@code alias} is used.
-     *
-     * @param alias the alias of the attribute to export
-     * @param attrKey the key of the attribute to export
-     * @param stringifier the {@link Function} that converts the attribute value into a {@link String}
-     * @param usePrefix whether to use the default attribute prefix or not
-     */
-    public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey,
-                                                      Function<?, String> stringifier, boolean usePrefix) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         requireNonNull(stringifier, "stringifier");
-        final String exportKey = usePrefix ? PREFIX_ATTRS + alias : alias;
-        attrs.add(new ExportEntry<>(attrKey, exportKey, stringifier));
+        attrs.add(new ExportEntry<>(attrKey, alias, stringifier));
         return this;
     }
 

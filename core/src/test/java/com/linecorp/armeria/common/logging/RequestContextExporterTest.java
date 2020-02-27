@@ -50,8 +50,8 @@ class RequestContextExporterTest {
         final RequestContextExporter exporter =
                 RequestContextExporter.builder()
                                       .addKeyPattern("*")
-                                      .addAttribute("attr1", ATTR1)
-                                      .addAttribute("attr2", ATTR2)
+                                      .addAttribute("attrs.attr1", ATTR1)
+                                      .addAttribute("attrs.attr2", ATTR2)
                                       .build();
 
         assertThat(exporter.export(ctx)).containsOnlyKeys(
@@ -80,7 +80,7 @@ class RequestContextExporterTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final RequestContextExporter exporter =
                 RequestContextExporter.builder()
-                                      .addAttribute("attr1", ATTR1)
+                                      .addAttribute("attrs.attr1", ATTR1)
                                       .build();
 
         assertThat(exporter.export(ctx)).doesNotContainKeys("attrs.attr1");
@@ -128,9 +128,9 @@ class RequestContextExporterTest {
         ctx.setAttr(ATTR2, "2");
         final RequestContextExporter exporter =
                 RequestContextExporter.builder()
-                                      .addAttribute("attr1-1", ATTR1)
-                                      .addAttribute("attr1-2", ATTR1)
-                                      .addAttribute("attr2", ATTR2)
+                                      .addAttribute("attrs.attr1-1", ATTR1)
+                                      .addAttribute("attrs.attr1-2", ATTR1)
+                                      .addAttribute("attrs.attr2", ATTR2)
                                       .build();
 
         assertThat(exporter.export(ctx)).containsOnlyKeys(
@@ -146,8 +146,8 @@ class RequestContextExporterTest {
         ctx.setAttr(ATTR3, new Foo("foo"));
         final RequestContextExporter exporter = RequestContextExporter
                 .builder()
-                .addAttribute("attr1", ATTR1)
-                .addAttribute("my_attr2", ATTR1, false)
+                .addAttribute("attrs.attr1", ATTR1)
+                .addAttribute("my_attr2", ATTR1)
                 .addHttpRequestHeader(HttpHeaderNames.METHOD, "request_method")
                 .addKeyPattern("request_id=req.id")
                 .addKeyPattern("foo=attr:" + Foo.class.getName() + "#ATTR3")

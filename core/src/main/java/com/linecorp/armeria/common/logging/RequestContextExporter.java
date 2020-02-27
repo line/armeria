@@ -59,8 +59,10 @@ public final class RequestContextExporter {
         return new RequestContextExporterBuilder();
     }
 
-    private final ImmutableSet<ExportEntry<BuiltInProperty>> builtInPropertySet;
+    @Nullable
     private final BuiltInProperties builtInProperties;
+    @Nullable
+    private final ExportEntry<BuiltInProperty>[] builtInPropertyArray;
     @Nullable
     private final ExportEntry<AttributeKey<?>>[] attrs;
     private final int numAttrs;
@@ -74,9 +76,16 @@ public final class RequestContextExporter {
                            Set<ExportEntry<AsciiString>> httpReqHeaders,
                            Set<ExportEntry<AsciiString>> httpResHeaders) {
 
-        this.builtInPropertySet = ImmutableSet.copyOf(builtInPropertySet);
-        builtInProperties = new BuiltInProperties();
-        builtInPropertySet.forEach(entry -> builtInProperties.add(entry.key));
+        if (!builtInPropertySet.isEmpty()) {
+            builtInProperties = new BuiltInProperties();
+            builtInPropertyArray = builtInPropertySet.toArray(EMPTY_EXPORT_ENTRIES);
+            for (ExportEntry<BuiltInProperty> entry : builtInPropertyArray) {
+                builtInProperties.add(entry.key);
+            }
+        } else {
+            builtInProperties = null;
+            builtInPropertyArray = null;
+        }
 
         if (!attrs.isEmpty()) {
             this.attrs = attrs.toArray(EMPTY_EXPORT_ENTRIES);
@@ -136,15 +145,21 @@ public final class RequestContextExporter {
      * Returns {@code true} if the specified {@link BuiltInProperty} is in the export list.
      */
     public boolean containsBuiltIn(BuiltInProperty property) {
-        return builtInProperties.contains(requireNonNull(property, "property"));
+        requireNonNull(property, "property");
+        if (builtInProperties == null) {
+            return false;
+        }
+        return builtInProperties.contains(property);
     }
 
     /**
      * Returns all {@link BuiltInProperty}s in the export list.
      */
     public Set<BuiltInProperty> builtIns() {
-        return builtInPropertySet.stream().map(entry -> entry.key)
-                                 .collect(toImmutableSet());
+        if (builtInPropertyArray == null) {
+            return ImmutableSet.of();
+        }
+        return Arrays.stream(builtInPropertyArray).map(entry -> entry.key).collect(toImmutableSet());
     }
 
     /**
@@ -241,10 +256,12 @@ public final class RequestContextExporter {
     }
 
     private void exportBuiltIns(State state, RequestLog log) {
-        for (final ExportEntry<BuiltInProperty> entry : builtInPropertySet) {
-            final String value = entry.key.converter.apply(log);
-            if (value != null) {
-                state.put(entry.exportKey, value);
+        if (builtInPropertyArray != null) {
+            for (final ExportEntry<BuiltInProperty> entry : builtInPropertyArray) {
+                final String value = entry.key.converter.apply(log);
+                if (value != null) {
+                    state.put(entry.exportKey, value);
+                }
             }
         }
     }

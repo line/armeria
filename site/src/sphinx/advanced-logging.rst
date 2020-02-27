@@ -140,10 +140,9 @@ as the 3rd component of the ``<export />`` element in the XML configuration:
       ...
     </configuration>
 
-Customize MDC key
------------------
-You can override the pre-defined the MDC key by adding an alias in front of it.
-Note that this cannot be used with wildcard expressions ``*`` or ``req. *``.
+Customizing MDC keys
+--------------------
+You can override the pre-defined the MDC key by prepending an alias and a equals sign (=) to it.
 For example, if you want to change ``req.id`` to ``request_id``, use ``request_id=req.id``.
 
 .. code-block:: xml
@@ -160,3 +159,5 @@ For example, if you want to change ``req.id`` to ``request_id``, use ``request_i
       </appender>
       ...
     </configuration>
+
+Note that this cannot be used with wildcard expressions ``*`` or ``req. *``.
