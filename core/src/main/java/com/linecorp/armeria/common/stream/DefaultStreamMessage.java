@@ -242,7 +242,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             case CLOSED:
                 // close() has been called before cancel() or abort() is called.
                 // We just push the new CloseEvent so that SUCCESSFUL_CLOSE, which was pushed by close(), is
-                // ignored and cancel() or abort() call works?
+                // ignored and cancel() or abort() call has effect.
                 if (setState(State.CLOSED, State.CLEANUP)) {
                     addObjectOrEvent(newCloseEvent(cause));
                     return;
@@ -426,7 +426,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void cleanup() {
-        final Throwable cause = ClosedStreamException.get();
+        Throwable cause = null;
         for (;;) {
             final Object e = queue.poll();
             if (e == null) {
@@ -434,8 +434,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             }
 
             try {
-                // Just skip SUCCESSFUL_CLOSE because cancel() or abort() is called so
-                // we need to handle the subscriber with the event.
+                // Just skip SUCCESSFUL_CLOSE because being in cleanup() means one of the following:
+                // - All elements have been consumed already
+                // - cancel() or abort() has been invoked after successful close().
                 if (e == SUCCESSFUL_CLOSE) {
                     continue;
                 }
@@ -452,6 +453,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 }
 
                 if (e instanceof CompletableFuture) {
+                    if (cause == null) {
+                        cause = ClosedStreamException.get();
+                    }
                     ((CompletableFuture<?>) e).completeExceptionally(cause);
                 }
 
