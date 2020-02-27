@@ -30,6 +30,7 @@ import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.util.UnstableApi;
 
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -204,7 +205,30 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
-            cleanup();
+            final Throwable cause = ClosedStreamException.get();
+            for (;;) {
+                final Object e = queue.poll();
+                if (e == null) {
+                    break;
+                }
+
+                try {
+                    // We already notified to the subscriber so skip.
+                    if (e instanceof CloseEvent) {
+                        continue;
+                    }
+
+                    if (e instanceof CompletableFuture) {
+                        ((CompletableFuture<?>) e).completeExceptionally(cause);
+                    }
+
+                    @SuppressWarnings("unchecked")
+                    final T obj = (T) e;
+                    onRemoval(obj);
+                } finally {
+                    ReferenceCountUtil.safeRelease(e);
+                }
+            }
         }
     }
 
@@ -216,13 +240,12 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         switch (state) {
             case CLOSED:
-                // close() has been called before cancel(). There's no need to push a CloseEvent,
-                // but we need to ensure the completionFuture is notified and any pending objects
-                // are removed.
+                // close() has been called before cancel() or abort() is called.
+                // We just push the new CloseEvent so that SUCCESSFUL_CLOSE, which was pushed by close(), is
+                // ignored and cancel() or abort() call works?
                 if (setState(State.CLOSED, State.CLEANUP)) {
-                    // TODO(anuraag): Consider pushing a cleanup event instead of serializing the activity
-                    // through the event loop.
-                    subscription.executor().execute(this::cleanup);
+                    addObjectOrEvent(newCloseEvent(cause));
+                    return;
                 } else {
                     // Other thread set the state to CLEANUP already and will call cleanup().
                 }
@@ -361,8 +384,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void handleCloseEvent(SubscriptionImpl subscription, CloseEvent o) {
-        setState(State.OPEN, State.CLEANUP);
-        notifySubscriberOfCloseEvent(subscription, o);
+        if (setState(State.CLOSED, State.CLEANUP)) {
+            notifySubscriberOfCloseEvent(subscription, o);
+        }
     }
 
     @Override
@@ -402,6 +426,41 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void cleanup() {
-        cleanupQueue(subscription, queue);
+        final Throwable cause = ClosedStreamException.get();
+        for (;;) {
+            final Object e = queue.poll();
+            if (e == null) {
+                break;
+            }
+
+            try {
+                // Just skip SUCCESSFUL_CLOSE because cancel() or abort() is called so
+                // we need to handle the subscriber with the event.
+                if (e == SUCCESSFUL_CLOSE) {
+                    continue;
+                }
+
+                if (e instanceof CloseEvent) {
+                    final SubscriptionImpl subscription = this.subscription;
+                    assert subscription != null;
+                    try {
+                        ((CloseEvent) e).notifySubscriber(subscription, whenComplete());
+                    } finally {
+                        subscription.clearSubscriber();
+                    }
+                    continue;
+                }
+
+                if (e instanceof CompletableFuture) {
+                    ((CompletableFuture<?>) e).completeExceptionally(cause);
+                }
+
+                @SuppressWarnings("unchecked")
+                final T obj = (T) e;
+                onRemoval(obj);
+            } finally {
+                ReferenceCountUtil.safeRelease(e);
+            }
+        }
     }
 }

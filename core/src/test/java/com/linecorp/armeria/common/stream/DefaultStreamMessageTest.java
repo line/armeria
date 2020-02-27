@@ -19,10 +19,12 @@ package com.linecorp.armeria.common.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -38,6 +40,7 @@ import io.netty.channel.EventLoop;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 class DefaultStreamMessageTest {
 
@@ -151,6 +154,38 @@ class DefaultStreamMessageTest {
         assertThat(stream.tryWrite(() -> data)).isFalse();
         assertThat(data.refCnt()).isOne();
         assertThatThrownBy(() -> stream.write(() -> data)).isInstanceOf(ClosedStreamException.class);
+        assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    void abortedStreamCallOnErrorAfterCloseIsCalled() throws InterruptedException {
+        final StreamMessageAndWriter<Object> stream = new DefaultStreamMessage<>();
+        final ByteBufHttpData data = new ByteBufHttpData(
+                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0), true);
+        stream.write(data);
+        stream.close();
+
+        final AtomicReference<Throwable> throwableCaptor = new AtomicReference<>();
+        stream.subscribe(new Subscriber<Object>() {
+            @Override
+            public void onSubscribe(Subscription s) {}
+
+            @Override
+            public void onNext(Object o) {}
+
+            @Override
+            public void onError(Throwable t) {
+                throwableCaptor.set(t);
+            }
+
+            @Override
+            public void onComplete() {
+                fail();
+            }
+        }, ImmediateEventExecutor.INSTANCE);
+
+        stream.abort();
+        assertThat(throwableCaptor.get()).isInstanceOf(AbortedStreamException.class);
         assertThat(data.refCnt()).isZero();
     }
 }

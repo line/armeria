@@ -22,7 +22,6 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithP
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -169,36 +168,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             o = PooledObjects.toUnpooled(o);
         }
         return o;
-    }
-
-    /**
-     * Helper method for the common case of cleaning up all elements in a queue when shutting down the stream.
-     */
-    void cleanupQueue(SubscriptionImpl subscription, Queue<Object> queue) {
-        final Throwable cause = ClosedStreamException.get();
-        for (;;) {
-            final Object e = queue.poll();
-            if (e == null) {
-                break;
-            }
-
-            try {
-                if (e instanceof CloseEvent) {
-                    notifySubscriberOfCloseEvent(subscription, (CloseEvent) e);
-                    continue;
-                }
-
-                if (e instanceof CompletableFuture) {
-                    ((CompletableFuture<?>) e).completeExceptionally(cause);
-                }
-
-                @SuppressWarnings("unchecked")
-                final T obj = (T) e;
-                onRemoval(obj);
-            } finally {
-                ReferenceCountUtil.safeRelease(e);
-            }
-        }
     }
 
     /**

@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class HttpServerHandlerTest {
@@ -103,6 +104,6 @@ class HttpServerHandlerTest {
         await().untilAsserted(() -> {
             assertThat(logHolder.get().requestHeaders().path()).isEqualTo("/httpResponseException");
         });
-        assertThat(logHolder.get().requestCause()).isNull();
+        assertThat(logHolder.get().requestCause()).isInstanceOf(AbortedStreamException.class);
     }
 }
