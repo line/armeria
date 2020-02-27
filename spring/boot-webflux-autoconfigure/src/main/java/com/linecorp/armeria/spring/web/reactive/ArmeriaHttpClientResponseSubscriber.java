@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -90,11 +88,22 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
         }
 
         if (!headersFuture.isDone()) {
-            upstreamSubscription().request(1);
+            final Subscription subscription = this.subscription;
+            assert subscription != null;
+            subscription.request(1);
             return;
         }
 
-        bodyPublisher.relayOnNext(httpObject);
+        final Subscriber<? super HttpObject> subscriber = bodyPublisher.subscriber;
+        if (subscriber == null) {
+            onError(new IllegalStateException(
+                    "HttpObject was relayed downstream when there's no subscriber: " + httpObject));
+            final Subscription subscription = this.subscription;
+            assert subscription != null;
+            subscription.cancel();
+            return;
+        }
+        subscriber.onNext(httpObject);
     }
 
     @Override
@@ -196,13 +205,6 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
         @Override
         public void cancel() {
             parent.upstreamSubscription().cancel();
-        }
-
-        private void relayOnNext(HttpObject obj) {
-            final Subscriber<? super HttpObject> subscriber = this.subscriber;
-            checkState(subscriber != null,
-                       "HttpObject was relayed downstream when there's no subscriber: %s", obj);
-            subscriber.onNext(obj);
         }
 
         private void relayOnComplete() {

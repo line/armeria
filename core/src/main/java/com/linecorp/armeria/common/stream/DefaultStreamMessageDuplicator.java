@@ -209,9 +209,6 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         @Override
         public void onError(Throwable cause) {
-            if (cause == null) {
-                cause = new IllegalStateException("onError() was invoked with null cause.");
-            }
             pushSignal(new CloseEvent(cause));
         }
 
@@ -240,7 +237,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     if (dataLength > allowedMaxSignalLength) {
                         final ContentTooLargeException cause = ContentTooLargeException.get();
                         upstream.abort(cause);
-                        throw cause;
+                        return;
                     }
                     signalLength += dataLength;
                 }
@@ -251,7 +248,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 signalLength -= removedLength;
             } catch (IllegalStateException e) {
                 upstream.abort(e);
-                throw e;
+                return;
             }
 
             upstreamOffset++;
