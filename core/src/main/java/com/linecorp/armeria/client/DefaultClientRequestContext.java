@@ -457,9 +457,10 @@ public final class DefaultClientRequestContext
                       "responseTimeoutMillis: %s (expected: >= 0)", responseTimeoutMillis);
         if (responseTimeoutMillis == 0) {
             clearResponseTimeout();
+            return;
         }
 
-        if (this.responseTimeoutMillis == 0 && responseTimeoutMillis > 0) {
+        if (this.responseTimeoutMillis == 0) {
             setResponseTimeoutAfterMillis(responseTimeoutMillis);
             return;
         }

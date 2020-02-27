@@ -337,9 +337,10 @@ public final class DefaultServiceRequestContext
                       "requestTimeoutMillis: %s (expected: >= 0)", requestTimeoutMillis);
         if (requestTimeoutMillis == 0) {
             clearRequestTimeout();
+            return;
         }
 
-        if (this.requestTimeoutMillis == 0 && requestTimeoutMillis > 0) {
+        if (this.requestTimeoutMillis == 0) {
             setRequestTimeoutAfterMillis(requestTimeoutMillis);
             return;
         }
