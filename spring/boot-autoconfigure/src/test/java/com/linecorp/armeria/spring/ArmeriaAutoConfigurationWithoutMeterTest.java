@@ -17,21 +17,14 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.TimeUnit;
-
 import javax.inject.Inject;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -44,18 +37,15 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithoutMeterTest.NoMe
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = NoMeterTestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
-public class ArmeriaAutoConfigurationWithoutMeterTest {
+@Timeout(10)
+class ArmeriaAutoConfigurationWithoutMeterTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
-    public static class NoMeterTestConfiguration {
+    static class NoMeterTestConfiguration {
     }
-
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @Inject
     private Server server;
@@ -66,7 +56,7 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
     }
 
     @Test
-    public void testHttpServiceRegistrationBean() throws Exception {
+    void testHttpServiceRegistrationBean() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         final HttpResponse response = client.get("/ok");

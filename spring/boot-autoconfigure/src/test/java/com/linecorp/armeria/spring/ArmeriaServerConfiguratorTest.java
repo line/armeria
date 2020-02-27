@@ -21,17 +21,19 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.annotation.DirtiesContext;
 
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.spring.ArmeriaServerConfiguratorTest.TestConfiguration;
 
-@RunWith(SpringJUnit4ClassRunner.class)
-public class ArmeriaServerConfiguratorTest {
+@SpringBootTest(classes = TestConfiguration.class)
+@DirtiesContext
+class ArmeriaServerConfiguratorTest {
 
     @Configuration
     static class TestConfiguration {
@@ -73,7 +75,7 @@ public class ArmeriaServerConfiguratorTest {
     List<ArmeriaServerConfigurator> configurators;
 
     @Test
-    public void ordering() {
+    void ordering() {
         // We cannot check ArmeriaServerConfigurator#getOrder here because we didn't override it
         // so it always returns 0.
         assertThat(configurators.get(0).toString()).isEqualTo("order:-1");
