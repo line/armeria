@@ -46,8 +46,8 @@ public final class Clients {
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      *
-     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is invalid or
-     *                                  the specified {@code clientType} is unsupported for the scheme
+     * @throws IllegalArgumentException if the specified {@code uri} is invalid, or the specified
+     *                                  {@code clientType} is unsupported for the {@code uri}'s scheme
      */
     public static <T> T newClient(String uri, Class<T> clientType) {
         return builder(uri).build(clientType);
@@ -60,8 +60,8 @@ public final class Clients {
      * @param uri the {@link URI} of the server endpoint
      * @param clientType the type of the new client
      *
-     * @throws IllegalArgumentException if the scheme of the specified {@link URI} is invalid or
-     *                                  the specified {@code clientType} is unsupported for the scheme
+     * @throws IllegalArgumentException if the specified {@link URI} is invalid, or the specified
+     *                                  {@code clientType} is unsupported for the {@link URI}'s scheme
      */
     public static <T> T newClient(URI uri, Class<T> clientType) {
         return builder(uri).build(clientType);
@@ -96,7 +96,7 @@ public final class Clients {
      *                                  the specified {@code clientType} is unsupported for
      *                                  the specified {@code scheme}.
      */
-    public static <T> T newClient(String scheme, EndpointGroup endpointGroup, @Nullable String path,
+    public static <T> T newClient(String scheme, EndpointGroup endpointGroup, String path,
                                   Class<T> clientType) {
         return builder(scheme, endpointGroup, path).build(clientType);
     }
@@ -128,7 +128,7 @@ public final class Clients {
      * @throws IllegalArgumentException if the specified {@code clientType} is unsupported for
      *                                  the specified {@link Scheme}.
      */
-    public static <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path,
+    public static <T> T newClient(Scheme scheme, EndpointGroup endpointGroup, String path,
                                   Class<T> clientType) {
         return builder(scheme, endpointGroup, path).build(clientType);
     }
@@ -162,8 +162,8 @@ public final class Clients {
      *                                  the specified {@link SessionProtocol} or
      *                                  {@link SerializationFormat} is required.
      */
-    public static <T> T newClient(SessionProtocol protocol, EndpointGroup endpointGroup,
-                                  @Nullable String path, Class<T> clientType) {
+    public static <T> T newClient(SessionProtocol protocol, EndpointGroup endpointGroup, String path,
+                                  Class<T> clientType) {
         return builder(protocol, endpointGroup, path).build(clientType);
     }
 
@@ -515,6 +515,9 @@ public final class Clients {
 
     /**
      * Returns a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
+     *
+     * @throws IllegalArgumentException if the specified {@code uri} is invalid, or the specified
+     *                                  {@code clientType} is unsupported for the {@code uri}'s scheme
      */
     public static ClientBuilder builder(String uri) {
         return builder(URI.create(requireNonNull(uri, "uri")));
@@ -522,6 +525,9 @@ public final class Clients {
 
     /**
      * Returns a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
+     *
+     * @throws IllegalArgumentException if the specified {@link URI} is invalid, or the specified
+     *                                  {@code clientType} is unsupported for the {@link URI}'s scheme
      */
     public static ClientBuilder builder(URI uri) {
         return new ClientBuilder(requireNonNull(uri, "uri"));
@@ -530,16 +536,20 @@ public final class Clients {
     /**
      * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link EndpointGroup} with the specified {@code scheme}.
+     *
+     * @throws IllegalArgumentException if the {@code scheme} is invalid.
      */
     public static ClientBuilder builder(String scheme, EndpointGroup endpointGroup) {
-        return builder(scheme, endpointGroup, null);
+        return builder(Scheme.parse(requireNonNull(scheme, "scheme")), endpointGroup);
     }
 
     /**
      * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link EndpointGroup} with the specified {@code scheme} and {@code path}.
+     *
+     * @throws IllegalArgumentException if the {@code scheme} is invalid.
      */
-    public static ClientBuilder builder(String scheme, EndpointGroup endpointGroup, @Nullable String path) {
+    public static ClientBuilder builder(String scheme, EndpointGroup endpointGroup, String path) {
         return builder(Scheme.parse(requireNonNull(scheme, "scheme")), endpointGroup, path);
     }
 
@@ -548,7 +558,8 @@ public final class Clients {
      * {@link EndpointGroup} with the specified {@link SessionProtocol}.
      */
     public static ClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
-        return builder(protocol, endpointGroup, null);
+        return builder(Scheme.of(SerializationFormat.NONE, requireNonNull(protocol, "protocol")),
+                       endpointGroup);
     }
 
     /**
@@ -556,7 +567,7 @@ public final class Clients {
      * {@link EndpointGroup} with the specified {@link SessionProtocol} and {@code path}.
      */
     public static ClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup,
-                                        @Nullable String path) {
+                                        String path) {
         return builder(Scheme.of(SerializationFormat.NONE, requireNonNull(protocol, "protocol")),
                        endpointGroup, path);
     }
@@ -566,16 +577,20 @@ public final class Clients {
      * {@link EndpointGroup} with the specified {@link Scheme}.
      */
     public static ClientBuilder builder(Scheme scheme, EndpointGroup endpointGroup) {
-        return builder(scheme, endpointGroup, null);
+        requireNonNull(scheme, "scheme");
+        requireNonNull(endpointGroup, "endpointGroup");
+        return new ClientBuilder(scheme, endpointGroup, null);
     }
 
     /**
      * Returns a new {@link ClientBuilder} that builds the client that connects to the specified
      * {@link EndpointGroup} with the specified {@link Scheme} and {@code path}.
      */
-    public static ClientBuilder builder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path) {
-        return new ClientBuilder(requireNonNull(scheme, "scheme"),
-                                 requireNonNull(endpointGroup, "endpointGroup"), path);
+    public static ClientBuilder builder(Scheme scheme, EndpointGroup endpointGroup, String path) {
+        requireNonNull(scheme, "scheme");
+        requireNonNull(endpointGroup, "endpointGroup");
+        requireNonNull(path, "path");
+        return new ClientBuilder(scheme, endpointGroup, path);
     }
 
     /**

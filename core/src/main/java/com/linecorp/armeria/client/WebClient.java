@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -51,7 +49,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      *
      * @param uri the URI of the server endpoint
      *
-     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
+     *                                  in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClient of(String uri) {
         return builder(uri).build();
@@ -62,7 +62,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      *
      * @param uri the {@link URI} of the server endpoint
      *
-     * @throws IllegalArgumentException if the scheme of the specified {@link URI} is not an HTTP scheme
+     * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
+     *                                  in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClient of(URI uri) {
         return builder(uri).build();
@@ -75,6 +77,10 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      *
      * @param protocol the session protocol of the {@link EndpointGroup}
      * @param endpointGroup the server {@link EndpointGroup}
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClient of(String protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
@@ -87,6 +93,10 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      *
      * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
      * @param endpointGroup the server {@link EndpointGroup}
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClient of(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
@@ -100,8 +110,12 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param protocol the session protocol of the {@link EndpointGroup}
      * @param endpointGroup the server {@link EndpointGroup}
      * @param path the path to the endpoint
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebClient of(String protocol, EndpointGroup endpointGroup, @Nullable String path) {
+    static WebClient of(String protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
     }
 
@@ -113,8 +127,12 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
      * @param endpointGroup the server {@link EndpointGroup}
      * @param path the path to the endpoint
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebClient of(SessionProtocol protocol, EndpointGroup endpointGroup, @Nullable String path) {
+    static WebClient of(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
     }
 
@@ -375,7 +393,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
-        return builder(protocol, endpointGroup, null);
+        requireNonNull(protocol, "protocol");
+        requireNonNull(endpointGroup, "endpointGroup");
+        return new WebClientBuilder(protocol, endpointGroup, null);
     }
 
     /**
@@ -386,9 +406,11 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebClientBuilder builder(String protocol, EndpointGroup endpointGroup, @Nullable String path) {
-        return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")),
-                       endpointGroup, path);
+    static WebClientBuilder builder(String protocol, EndpointGroup endpointGroup, String path) {
+        requireNonNull(protocol, "protocol");
+        requireNonNull(endpointGroup, "endpointGroup");
+        requireNonNull(path, "path");
+        return builder(SessionProtocol.of(protocol), endpointGroup, path);
     }
 
     /**
@@ -399,8 +421,10 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup,
-                                    @Nullable String path) {
+    static WebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
+        requireNonNull(protocol, "protocol");
+        requireNonNull(endpointGroup, "endpointGroup");
+        requireNonNull(path, "path");
         return new WebClientBuilder(protocol, endpointGroup, path);
     }
 
