@@ -94,7 +94,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
      * Sets the {@link SerializationFormat} of the client from the specified {@code String}.
      */
     public ClientBuilder serializationFormat(String format) {
-        return serializationFormat(SerializationFormat.of(format));
+        return serializationFormat(SerializationFormat.of(requireNonNull(format, "format")));
     }
 
     /**
