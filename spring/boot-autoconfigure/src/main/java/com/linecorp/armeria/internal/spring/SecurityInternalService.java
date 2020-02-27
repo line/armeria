@@ -31,22 +31,32 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
- * TODO(heowc): TBD.
+ * Decorates an {@link HttpService} to provide security functionality of internal service.
  */
 public class SecurityInternalService extends SimpleDecoratingHttpService {
 
+    /**
+     * Creates security {@link HttpService} decorator using the specified ports.
+     *
+     * @param ports the array of ports.
+     */
     public static Function<? super HttpService, SecurityInternalService> newDecorator(
-            Integer... port) {
-        return newDecorator(ImmutableList.copyOf(port));
+            Integer... ports) {
+        return newDecorator(ImmutableList.copyOf(ports));
     }
 
+    /**
+     * Creates security {@link HttpService} decorator using the specified ports.
+     *
+     * @param ports a list of ports.
+     */
     public static Function<? super HttpService, SecurityInternalService> newDecorator(
-            Iterable<Integer> port) {
-        requireNonNull(port, "port");
-        return delegate -> new SecurityInternalService(delegate, port);
+            Iterable<Integer> ports) {
+        requireNonNull(ports, "ports");
+        return delegate -> new SecurityInternalService(delegate, ports);
     }
 
-    private List<Integer> ports;
+    private final List<Integer> ports;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.

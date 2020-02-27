@@ -170,7 +170,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * TODO(heowc): TBD.
+         * Creates a new {@link Port} with the specified port without ip and iface.
          */
         public static Port of(int port) {
             final Port p = new Port();
