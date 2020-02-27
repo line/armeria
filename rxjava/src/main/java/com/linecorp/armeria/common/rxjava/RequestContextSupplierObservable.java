@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,34 +19,34 @@ package com.linecorp.armeria.common.rxjava;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Completable;
-import io.reactivex.CompletableObserver;
-import io.reactivex.CompletableSource;
-import io.reactivex.internal.fuseable.ScalarCallable;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.ObservableSource;
+import io.reactivex.rxjava3.core.Observer;
+import io.reactivex.rxjava3.functions.Supplier;
 
-final class RequestContextScalarCallableCompletable<T> extends Completable
-        implements ScalarCallable<T> {
+final class RequestContextSupplierObservable<T> extends Observable<T>
+        implements Supplier<T> {
 
-    private final CompletableSource source;
+    private final ObservableSource<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextScalarCallableCompletable(CompletableSource source, RequestContext assemblyContext) {
+    RequestContextSupplierObservable(ObservableSource<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
 
     @Override
-    protected void subscribeActual(CompletableObserver s) {
+    protected void subscribeActual(Observer<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            source.subscribe(new RequestContextCompletableObserver(s, assemblyContext));
+            source.subscribe(new RequestContextObserver<>(s, assemblyContext));
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public T call() {
+    public T get() throws Throwable {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((ScalarCallable<T>) source).call();
+            return ((Supplier<T>) source).get();
         }
     }
 }

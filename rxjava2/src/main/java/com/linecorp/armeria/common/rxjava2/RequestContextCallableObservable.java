@@ -14,30 +14,32 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.rxjava;
+package com.linecorp.armeria.common.rxjava2;
 
 import java.util.concurrent.Callable;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Single;
-import io.reactivex.SingleObserver;
-import io.reactivex.SingleSource;
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
+import io.reactivex.Observer;
 
-final class RequestContextCallableSingle<T> extends Single<T> implements Callable<T> {
-    private final SingleSource<T> source;
+final class RequestContextCallableObservable<T> extends Observable<T>
+        implements Callable<T> {
+
+    private final ObservableSource<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextCallableSingle(SingleSource<T> source, RequestContext assemblyContext) {
+    RequestContextCallableObservable(ObservableSource<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
 
     @Override
-    protected void subscribeActual(SingleObserver<? super T> s) {
+    protected void subscribeActual(Observer<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            source.subscribe(new RequestContextSingleObserver<>(s, assemblyContext));
+            source.subscribe(new RequestContextObserver<>(s, assemblyContext));
         }
     }
 

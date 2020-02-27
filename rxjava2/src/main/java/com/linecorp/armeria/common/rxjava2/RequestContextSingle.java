@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.rxjava;
+package com.linecorp.armeria.common.rxjava2;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -22,14 +22,13 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.reactivex.Single;
 import io.reactivex.SingleObserver;
 import io.reactivex.SingleSource;
-import io.reactivex.internal.fuseable.ScalarCallable;
 
-final class RequestContextScalarCallableSingle<T> extends Single<T>
-        implements ScalarCallable<T> {
+final class RequestContextSingle<T> extends Single<T> {
+
     private final SingleSource<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextScalarCallableSingle(SingleSource<T> source, RequestContext assemblyContext) {
+    RequestContextSingle(SingleSource<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
@@ -38,14 +37,6 @@ final class RequestContextScalarCallableSingle<T> extends Single<T>
     protected void subscribeActual(SingleObserver<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
             source.subscribe(new RequestContextSingleObserver<>(s, assemblyContext));
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public T call() {
-        try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((ScalarCallable<T>) source).call();
         }
     }
 }

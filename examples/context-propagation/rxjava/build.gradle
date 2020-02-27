@@ -5,8 +5,6 @@ plugins {
 dependencies {
     implementation project(':core')
     implementation project(':rxjava')
-
-    implementation 'net.javacrumbs.future-converter:future-converter-rxjava2-java8'
 }
 
 application {

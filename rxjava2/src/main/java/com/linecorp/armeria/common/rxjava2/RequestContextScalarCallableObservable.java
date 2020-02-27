@@ -14,47 +14,36 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.rxjava;
-
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
+package com.linecorp.armeria.common.rxjava2;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Flowable;
-import io.reactivex.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
+import io.reactivex.Observer;
 import io.reactivex.internal.fuseable.ScalarCallable;
 
-final class RequestContextScalarCallableFlowable<T> extends Flowable<T>
-        implements ScalarCallable<T> {
-    private final Publisher<T> source;
+final class RequestContextScalarCallableObservable<T> extends Observable<T> implements ScalarCallable<T> {
+
+    private final ObservableSource<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextScalarCallableFlowable(Publisher<T> source, RequestContext assemblyContext) {
+    RequestContextScalarCallableObservable(ObservableSource<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    protected void subscribeActual(Subscriber<? super T> s) {
+    protected void subscribeActual(Observer<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            if (s instanceof ConditionalSubscriber) {
-                source.subscribe(new RequestContextConditionalSubscriber<>(
-                        (ConditionalSubscriber<? super T>) s, assemblyContext
-                ));
-            } else {
-                source.subscribe(new RequestContextSubscriber<>(s, assemblyContext));
-            }
+            source.subscribe(new RequestContextObserver<>(s, assemblyContext));
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public T call() {
-        try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((ScalarCallable<T>) source).call();
-        }
+        return ((ScalarCallable<T>) source).call();
     }
 }

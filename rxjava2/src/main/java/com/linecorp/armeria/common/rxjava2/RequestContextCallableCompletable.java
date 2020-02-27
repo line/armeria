@@ -14,38 +14,39 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.rxjava;
+package com.linecorp.armeria.common.rxjava2;
+
+import java.util.concurrent.Callable;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Maybe;
-import io.reactivex.MaybeObserver;
-import io.reactivex.MaybeSource;
-import io.reactivex.internal.fuseable.ScalarCallable;
+import io.reactivex.Completable;
+import io.reactivex.CompletableObserver;
+import io.reactivex.CompletableSource;
 
-final class RequestContextScalarCallableMaybe<T> extends Maybe<T>
-        implements ScalarCallable<T> {
-    private final MaybeSource<T> source;
+final class RequestContextCallableCompletable<T> extends Completable
+        implements Callable<T> {
+    private final CompletableSource source;
     private final RequestContext assemblyContext;
 
-    RequestContextScalarCallableMaybe(MaybeSource<T> source, RequestContext assemblyContext) {
+    RequestContextCallableCompletable(CompletableSource source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
 
     @Override
-    protected void subscribeActual(MaybeObserver<? super T> s) {
+    protected void subscribeActual(CompletableObserver s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            source.subscribe(new RequestContextMaybeObserver<>(s, assemblyContext));
+            source.subscribe(new RequestContextCompletableObserver(s, assemblyContext));
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public T call() {
+    public T call() throws Exception {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((ScalarCallable<T>) source).call();
+            return ((Callable<T>) source).call();
         }
     }
 }

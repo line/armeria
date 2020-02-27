@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,8 +22,8 @@ import org.reactivestreams.Subscriber;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Flowable;
-import io.reactivex.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
 
 final class RequestContextFlowable<T> extends Flowable<T> {
 

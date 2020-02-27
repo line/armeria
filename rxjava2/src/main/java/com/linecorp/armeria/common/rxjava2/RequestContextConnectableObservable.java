@@ -14,24 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.rxjava;
-
-import java.util.concurrent.Callable;
+package com.linecorp.armeria.common.rxjava2;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
 import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.observables.ConnectableObservable;
 
-final class RequestContextCallableObservable<T> extends Observable<T>
-        implements Callable<T> {
+final class RequestContextConnectableObservable<T> extends ConnectableObservable<T> {
 
-    private final ObservableSource<T> source;
+    private final ConnectableObservable<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextCallableObservable(ObservableSource<T> source, RequestContext assemblyContext) {
+    RequestContextConnectableObservable(ConnectableObservable<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
@@ -43,11 +41,10 @@ final class RequestContextCallableObservable<T> extends Observable<T>
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public T call() throws Exception {
+    public void connect(Consumer<? super Disposable> connection) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((Callable<T>) source).call();
+            source.connect(connection);
         }
     }
 }

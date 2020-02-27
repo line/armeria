@@ -7,8 +7,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.javacrumbs.futureconverter.java8rx2.FutureConverter;
-
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -21,10 +19,10 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.reactivex.Flowable;
-import io.reactivex.Scheduler;
-import io.reactivex.Single;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Scheduler;
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class MainService implements HttpService {
 
@@ -60,7 +58,7 @@ public class MainService implements HttpService {
                       .flattenAsFlowable(l -> l);
 
         final Flowable<Long> extractNumsFromRequest =
-                FutureConverter.toSingle(req.aggregate())
+                Single.fromCompletionStage(req.aggregate())
                                // Unless you know what you're doing, always use subscribeOn with the context
                                // executor to have the context mounted and stay on a single thread to reduce
                                // concurrency issues.
@@ -96,13 +94,13 @@ public class MainService implements HttpService {
                             checkState(ServiceRequestContext.current() == ctx);
                             checkState(ctx.eventLoop().inEventLoop());
 
-                            return FutureConverter.toSingle(backendClient.get("/square/" + num).aggregate());
+                            return Single.fromCompletionStage(backendClient.get("/square/" + num).aggregate());
                         })
                         .map(AggregatedHttpResponse::contentUtf8)
                         .collectInto(new StringBuilder(), (current, item) -> current.append(item).append('\n'))
                         .map(content -> HttpResponse.of(content.toString()))
                         .onErrorReturn(HttpResponse::ofFailure);
 
-        return HttpResponse.from(FutureConverter.toCompletableFuture(response));
+        return HttpResponse.from(response.toCompletionStage());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,45 +16,35 @@
 
 package com.linecorp.armeria.common.rxjava;
 
-import java.util.concurrent.Callable;
-
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Flowable;
-import io.reactivex.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.core.MaybeObserver;
+import io.reactivex.rxjava3.core.MaybeSource;
+import io.reactivex.rxjava3.functions.Supplier;
 
-final class RequestContextCallableFlowable<T> extends Flowable<T> implements Callable<T> {
-    private final Publisher<T> source;
+final class RequestContextSupplierMaybe<T> extends Maybe<T> implements Supplier<T> {
+    private final MaybeSource<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextCallableFlowable(Publisher<T> source, RequestContext assemblyContext) {
+    RequestContextSupplierMaybe(MaybeSource<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    protected void subscribeActual(Subscriber<? super T> s) {
+    protected void subscribeActual(MaybeObserver<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            if (s instanceof ConditionalSubscriber) {
-                source.subscribe(new RequestContextConditionalSubscriber<>(
-                        (ConditionalSubscriber<? super T>) s, assemblyContext
-                ));
-            } else {
-                source.subscribe(new RequestContextSubscriber<>(s, assemblyContext));
-            }
+            source.subscribe(new RequestContextMaybeObserver<>(s, assemblyContext));
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public T call() throws Exception {
+    public T get() throws Throwable {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((Callable<T>) source).call();
+            return ((Supplier<T>) source).get();
         }
     }
 }

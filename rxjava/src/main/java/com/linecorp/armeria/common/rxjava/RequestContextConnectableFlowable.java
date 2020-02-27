@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,10 +21,10 @@ import org.reactivestreams.Subscriber;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.disposables.Disposable;
-import io.reactivex.flowables.ConnectableFlowable;
-import io.reactivex.functions.Consumer;
-import io.reactivex.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.flowables.ConnectableFlowable;
+import io.reactivex.rxjava3.functions.Consumer;
+import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
 
 final class RequestContextConnectableFlowable<T> extends ConnectableFlowable<T> {
     private final ConnectableFlowable<T> source;
@@ -40,9 +40,8 @@ final class RequestContextConnectableFlowable<T> extends ConnectableFlowable<T> 
     protected void subscribeActual(Subscriber<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
             if (s instanceof ConditionalSubscriber) {
-                source.subscribe(new RequestContextConditionalSubscriber<>(
-                        (ConditionalSubscriber<? super T>) s, assemblyContext
-                ));
+                source.subscribe(new RequestContextConditionalSubscriber<>((ConditionalSubscriber<? super T>) s,
+                                                                           assemblyContext));
             } else {
                 source.subscribe(new RequestContextSubscriber<>(s, assemblyContext));
             }
@@ -54,5 +53,10 @@ final class RequestContextConnectableFlowable<T> extends ConnectableFlowable<T> 
         try (SafeCloseable ignored = assemblyContext.push()) {
             source.connect(connection);
         }
+    }
+
+    @Override
+    public void reset() {
+        source.reset();
     }
 }

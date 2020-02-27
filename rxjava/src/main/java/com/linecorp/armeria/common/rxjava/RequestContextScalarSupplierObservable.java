@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,36 +16,34 @@
 
 package com.linecorp.armeria.common.rxjava;
 
-import java.util.concurrent.Callable;
-
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.Maybe;
-import io.reactivex.MaybeObserver;
-import io.reactivex.MaybeSource;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.ObservableSource;
+import io.reactivex.rxjava3.core.Observer;
+import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
 
-final class RequestContextCallableMaybe<T> extends Maybe<T> implements Callable<T> {
-    private final MaybeSource<T> source;
+final class RequestContextScalarSupplierObservable<T> extends Observable<T> implements ScalarSupplier<T> {
+
+    private final ObservableSource<T> source;
     private final RequestContext assemblyContext;
 
-    RequestContextCallableMaybe(MaybeSource<T> source, RequestContext assemblyContext) {
+    RequestContextScalarSupplierObservable(ObservableSource<T> source, RequestContext assemblyContext) {
         this.source = source;
         this.assemblyContext = assemblyContext;
     }
 
     @Override
-    protected void subscribeActual(MaybeObserver<? super T> s) {
+    protected void subscribeActual(Observer<? super T> s) {
         try (SafeCloseable ignored = assemblyContext.push()) {
-            source.subscribe(new RequestContextMaybeObserver<>(s, assemblyContext));
+            source.subscribe(new RequestContextObserver<>(s, assemblyContext));
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public T call() throws Exception {
-        try (SafeCloseable ignored = assemblyContext.push()) {
-            return ((Callable<T>) source).call();
-        }
+    public T get() {
+        return ((ScalarSupplier<T>) source).get();
     }
 }
