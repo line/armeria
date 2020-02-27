@@ -335,8 +335,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Returns a new {@link WebClientBuilder} created with the specified base {@code uri}.
      *
-     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
-     *                                  in {@link SessionProtocol} or the uri violates RFC 2396
+     * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
+     *                                  in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClientBuilder builder(String uri) {
         return builder(URI.create(requireNonNull(uri, "uri")));
@@ -345,8 +346,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Returns a new {@link WebClientBuilder} created with the specified base {@link URI}.
      *
-     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
-     *                                  in {@link SessionProtocol}
+     * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
+     *                                  in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClientBuilder builder(URI uri) {
         return new WebClientBuilder(uri);
@@ -356,8 +358,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Returns a new {@link WebClientBuilder} created with the specified {@code protocol}
      * and base {@link EndpointGroup}.
      *
-     * @throws IllegalArgumentException if the {@code protocol} is not one of the fields
-     *                                  in {@link SessionProtocol}
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClientBuilder builder(String protocol, EndpointGroup endpointGroup) {
         return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")), endpointGroup);
@@ -367,9 +370,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Returns a new {@link WebClientBuilder} created with the specified {@link SessionProtocol}
      * and base {@link EndpointGroup}.
      *
-     * @throws IllegalArgumentException if the {@code protocol} is not one of the fields
-     *                                  in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}
-
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup, null);
@@ -379,8 +382,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Returns a new {@link WebClientBuilder} created with the specified {@code protocol}.
      * base {@link EndpointGroup} and path.
      *
-     * @throws IllegalArgumentException if the {@code protocol} is not one of the fields
-     *                                  in {@link SessionProtocol}
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClientBuilder builder(String protocol, EndpointGroup endpointGroup, @Nullable String path) {
         return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")),
@@ -391,12 +395,13 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Returns a new {@link WebClientBuilder} created with the specified {@link SessionProtocol},
      * base {@link EndpointGroup} and path.
      *
-     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
-     *                                  in {@link SessionProtocol}
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup,
                                     @Nullable String path) {
-        return new WebClientBuilder(sessionProtocol, endpointGroup, path);
+        return new WebClientBuilder(protocol, endpointGroup, path);
     }
 
     /**
