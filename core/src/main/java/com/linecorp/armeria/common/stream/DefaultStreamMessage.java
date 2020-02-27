@@ -205,7 +205,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
-            final Throwable cause = ClosedStreamException.get();
+            Throwable cause = null;
             for (;;) {
                 final Object e = queue.poll();
                 if (e == null) {
@@ -219,6 +219,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     }
 
                     if (e instanceof CompletableFuture) {
+                        if (cause == null) {
+                            cause = ClosedStreamException.get();
+                        }
                         ((CompletableFuture<?>) e).completeExceptionally(cause);
                     }
 
