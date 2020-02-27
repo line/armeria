@@ -444,7 +444,7 @@ class ArmeriaCallFactoryTest {
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", server.httpPort()),
                                                      Endpoint.of("127.0.0.1", server.httpPort()));
 
-        final Service service = ArmeriaRetrofit.builder(SessionProtocol.HTTP, group)
+        final Service service = ArmeriaRetrofit.builder("http", group)
                                                .addConverterFactory(converterFactory)
                                                .build()
                                                .create(Service.class);

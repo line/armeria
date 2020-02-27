@@ -30,7 +30,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -67,96 +66,43 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Nullable
     private final EndpointGroup endpointGroup;
     @Nullable
-    private final Scheme scheme;
-    @Nullable
-    private final SessionProtocol protocol;
-    @Nullable
-    private String path;
+    private final String path;
+    private Scheme scheme;
+    private boolean updatedScheme;
 
-    private SerializationFormat format = SerializationFormat.NONE;
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
-     *
-     * @deprecated Use {@link Clients#builder(String)}.
-     */
-    @Deprecated
-    public ClientBuilder(String uri) {
-        this(URI.create(requireNonNull(uri, "uri")));
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
-     *
-     * @deprecated Use {@link Clients#builder(URI)}.
-     */
-    @Deprecated
-    public ClientBuilder(URI uri) {
-        this(requireNonNull(uri, "uri"), null, null, null);
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@code scheme}.
-     *
-     * @deprecated Use {@link Clients#builder(String, EndpointGroup)}.
-     */
-    @Deprecated
-    public ClientBuilder(String scheme, Endpoint endpoint) {
-        this(Scheme.parse(requireNonNull(scheme, "scheme")), requireNonNull(endpoint, "endpoint"));
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@link Scheme}.
-     *
-     * @deprecated Use {@link Clients#builder(Scheme, EndpointGroup)}.
-     */
-    @Deprecated
-    public ClientBuilder(Scheme scheme, Endpoint endpoint) {
-        this(null, requireNonNull(scheme, "scheme"), null, requireNonNull(endpoint, "endpoint"));
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@link SessionProtocol}.
-     *
-     * @deprecated Use {@link Clients#builder(SessionProtocol, EndpointGroup)}.
-     */
-    @Deprecated
-    public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
-        this(null, null, requireNonNull(protocol, "protocol"), requireNonNull(endpoint, "endpoint"));
-    }
-
-    ClientBuilder(@Nullable URI uri, @Nullable Scheme scheme, @Nullable SessionProtocol protocol,
-                  @Nullable EndpointGroup endpointGroup) {
+    ClientBuilder(URI uri) {
+        checkArgument(uri.getScheme() != null, "uri must have scheme: %s", uri);
+        checkArgument(uri.getRawAuthority() != null, "uri must have authority: %s", uri);
         this.uri = uri;
-        this.scheme = scheme;
-        this.protocol = protocol;
+        endpointGroup = null;
+        path = null;
+        scheme = Scheme.parse(uri.getScheme());
+    }
+
+    ClientBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path) {
+        if (path != null) {
+            checkArgument(path.startsWith("/"),
+                          "path: %s (expected: an absolute path starting with '/')", path);
+        }
+        uri = null;
         this.endpointGroup = endpointGroup;
-    }
-
-    /**
-     * Sets the {@code path} of the client.
-     */
-    public ClientBuilder path(String path) {
-        ensureEndpointGroup();
-        requireNonNull(path, "path");
-        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path starting with '/')", path);
         this.path = path;
-        return this;
+        this.scheme = scheme;
     }
 
     /**
-     * Sets the {@link SerializationFormat} of the client. The default is {@link SerializationFormat#NONE}.
+     * Sets the {@link SerializationFormat} of the client from the specified {@code String}.
+     */
+    public ClientBuilder serializationFormat(String format) {
+        return serializationFormat(SerializationFormat.of(format));
+    }
+
+    /**
+     * Sets the {@link SerializationFormat} of the client.
      */
     public ClientBuilder serializationFormat(SerializationFormat format) {
-        ensureEndpointGroup();
-        if (scheme != null) {
-            throw new IllegalStateException("scheme is already given");
-        }
-
-        this.format = requireNonNull(format, "format");
+        scheme = Scheme.of(requireNonNull(format, "format"), scheme.sessionProtocol());
+        updatedScheme = true;
         return this;
     }
 
@@ -175,28 +121,23 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
         final ClientOptions options = buildOptions();
         final ClientFactory factory = options.factory();
         if (uri != null) {
+            final URI uri;
+            if (updatedScheme) {
+                uri = URI.create(scheme.uriText() +
+                                 this.uri.toString().substring(this.uri.getScheme().length()));
+            } else {
+                uri = this.uri;
+            }
             client = factory.newClient(ClientBuilderParams.of(uri, clientType, options));
         } else {
             assert endpointGroup != null;
-            client = factory.newClient(ClientBuilderParams.of(scheme(), endpointGroup,
+            client = factory.newClient(ClientBuilderParams.of(scheme, endpointGroup,
                                                               path, clientType, options));
         }
 
         @SuppressWarnings("unchecked")
         final T cast = (T) client;
         return cast;
-    }
-
-    private Scheme scheme() {
-        return scheme == null ? Scheme.of(format, protocol) : scheme;
-    }
-
-    private void ensureEndpointGroup() {
-        if (endpointGroup == null) {
-            throw new IllegalStateException(
-                    getClass().getSimpleName() + " must be created with an " +
-                    EndpointGroup.class.getSimpleName() + " to call this method.");
-        }
     }
 
     // Override the return type of the chaining methods in the superclass.

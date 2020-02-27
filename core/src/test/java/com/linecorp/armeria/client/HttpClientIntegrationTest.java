@@ -76,8 +76,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -636,83 +634,6 @@ class HttpClientIntegrationTest {
         final AggregatedHttpResponse response = client.get("/oneparam/foo%2Fbar").aggregate().get();
 
         assertThat(response.contentUtf8()).isEqualTo("routed");
-    }
-
-    @Test
-    void givenClients_thenBuildClient() throws Exception {
-        final Endpoint endpoint = server.httpEndpoint();
-        final ClientFactory factory = ClientFactory.builder().build();
-
-        WebClient client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE,
-                                             endpoint, WebClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
-                                   WebClient.class, ClientOptions.of());
-        checkGetRequest("/hello/world", client);
-
-        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
-                                   WebClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
-                                   WebClient.class,
-                                   ClientOptions.of());
-        checkGetRequest("/hello/world", client);
-    }
-
-    @Test
-    void givenHttpClient_thenBuildClient() throws Exception {
-        final Endpoint endpoint = server.httpEndpoint();
-        final ClientFactory factory = ClientFactory.builder().build();
-
-        WebClient client = WebClient.of(factory, SessionProtocol.HTTP, endpoint);
-        checkGetRequest("/hello/world", client);
-
-        client = WebClient.of(factory, SessionProtocol.HTTP, endpoint, ClientOptions.of());
-        checkGetRequest("/hello/world", client);
-
-        client = WebClient.of(SessionProtocol.HTTP, endpoint);
-        checkGetRequest("/hello/world", client);
-
-        client = WebClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.of());
-        checkGetRequest("/hello/world", client);
-    }
-
-    @Test
-    void givenClientBuilder_thenBuildClient() throws Exception {
-        final Endpoint endpoint = server.httpEndpoint();
-        final ClientFactory factory = ClientFactory.builder().build();
-
-        WebClient client = Clients.builder(SessionProtocol.HTTP, endpoint)
-                                  .serializationFormat(SerializationFormat.NONE)
-                                  .factory(factory)
-                                  .build(WebClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = Clients.builder(SessionProtocol.HTTP, endpoint)
-                        .build(WebClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = Clients.builder("none+http", endpoint)
-                        .path("/hello")
-                        .build(WebClient.class);
-        checkGetRequest("/world", client);
-
-        client = Clients.builder(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP), endpoint)
-                        .path("/hello")
-                        .build(WebClient.class);
-        checkGetRequest("/world", client);
-
-        client = Clients.builder(SessionProtocol.HTTP, endpoint)
-                        .serializationFormat(SerializationFormat.NONE)
-                        .path("/hello")
-                        .build(WebClient.class);
-        checkGetRequest("/world", client);
-
-        assertThatThrownBy(() -> Clients.builder("none+http", endpoint)
-                                        .serializationFormat(SerializationFormat.NONE)
-                                        .build(WebClient.class));
     }
 
     @Test

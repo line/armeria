@@ -164,14 +164,12 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void givenClients_whenBinary_thenBuildClient() throws Exception {
         HelloService.Iface client =
-                Clients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), server.httpEndpoint())
-                       .path("/hello")
-                       .build(HelloService.Iface.class);
+                Clients.newClient(Scheme.of(BINARY, SessionProtocol.HTTP), server.httpEndpoint(), "/hello",
+                                  HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
 
-        client = Clients.builder(Scheme.of(TEXT, SessionProtocol.HTTP), server.httpEndpoint())
-                        .path("/hello")
-                        .build(HelloService.Iface.class);
+        client = Clients.newClient(Scheme.of(TEXT, SessionProtocol.HTTP), server.httpEndpoint(), "/hello",
+                                   HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 }

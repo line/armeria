@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
@@ -49,10 +51,34 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
+     * the specified {@code protocol}.
+     */
+    public static Retrofit of(String protocol, EndpointGroup endpointGroup) {
+        return builder(protocol, endpointGroup).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
      * the specified {@link SessionProtocol}.
      */
     public static Retrofit of(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
+     * the specified {@code protocol} and {@code path}.
+     */
+    public static Retrofit of(String protocol, EndpointGroup endpointGroup, @Nullable String path) {
+        return builder(protocol, endpointGroup, path).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
+     * the specified {@link SessionProtocol} and {@code path}.
+     */
+    public static Retrofit of(SessionProtocol protocol, EndpointGroup endpointGroup, @Nullable String path) {
+        return builder(protocol, endpointGroup, path).build();
     }
 
     /**
@@ -80,12 +106,38 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
+     * the specified {@link EndpointGroup} using the specified {@code protocol}.
+     */
+    public static ArmeriaRetrofitBuilder builder(String protocol, EndpointGroup endpointGroup) {
+        return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")), endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
      * the specified {@link EndpointGroup} using the specified {@link SessionProtocol}.
      */
     public static ArmeriaRetrofitBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
+        return builder(protocol, endpointGroup, null);
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
+     * the specified {@link EndpointGroup} using the specified {@link SessionProtocol} and {@code path}.
+     */
+    public static ArmeriaRetrofitBuilder builder(String protocol, EndpointGroup endpointGroup,
+                                                 @Nullable String path) {
+        return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")), endpointGroup, path);
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
+     * the specified {@link EndpointGroup} using the specified {@link SessionProtocol} and {@code path}.
+     */
+    public static ArmeriaRetrofitBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup,
+                                                 @Nullable String path) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
-        return builder(WebClient.of(protocol, endpointGroup));
+        return builder(WebClient.of(protocol, endpointGroup, path));
     }
 
     /**
