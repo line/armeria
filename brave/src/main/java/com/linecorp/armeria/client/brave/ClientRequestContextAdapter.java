@@ -105,8 +105,9 @@ final class ClientRequestContextAdapter {
         }
     }
 
-    static brave.http.HttpClientResponse asHttpClientResponse(RequestLog log) {
-        return new HttpClientResponse(log);
+    static brave.http.HttpClientResponse asHttpClientResponse(RequestLog log,
+        brave.http.HttpClientRequest request) {
+        return new HttpClientResponse(log, request);
     }
 
     /**
@@ -115,11 +116,12 @@ final class ClientRequestContextAdapter {
     @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpClientResponse extends brave.http.HttpClientResponse {
         private final RequestLog log;
-        private brave.http.HttpClientRequest request;
+        private final brave.http.HttpClientRequest request;
 
-        HttpClientResponse(RequestLog log) {
+        HttpClientResponse(RequestLog log, brave.http.HttpClientRequest request) {
             assert log.isComplete() : log;
             this.log = log;
+            this.request = request;
         }
 
         @Override
@@ -129,10 +131,13 @@ final class ClientRequestContextAdapter {
 
         @Override
         public brave.http.HttpClientRequest request() {
-            if (request == null) {
-                request = new ClientRequestContextAdapter.HttpClientRequest(unwrap(), null);
-            }
             return request;
+        }
+
+        @Override
+        @Nullable
+        public Throwable error() {
+            return log.responseCause();
         }
 
         @Override

@@ -16,16 +16,16 @@
 
 package com.linecorp.armeria.server.brave;
 
-import brave.http.HttpRequestParser;
-import brave.http.HttpResponse;
-import brave.http.HttpResponseParser;
-import brave.propagation.TraceContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.SpanCustomizer;
+import brave.http.HttpRequestParser;
+import brave.http.HttpResponse;
+import brave.http.HttpResponseParser;
+import brave.propagation.TraceContext;
 
 /**
  * Default implementation of {@link HttpRequestParser} and {@link HttpResponseParser} for servers.

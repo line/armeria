@@ -76,7 +76,8 @@ public final class BraveService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Span span = handler.handleReceive(ServiceRequestContextAdapter.asHttpServerRequest(ctx));
+        final HttpServerRequest request = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
+        final Span span = handler.handleReceive(request);
 
         // For no-op spans, nothing special to do.
         if (span.isNoop()) {
@@ -99,9 +100,9 @@ public final class BraveService extends SimpleDecoratingHttpService {
                 // If the client timed-out the request, we will have never sent any response data at all.
             }
 
-            final HttpServerResponse response = ServiceRequestContextAdapter.asHttpServerResponse(log);
+            final HttpServerResponse response = ServiceRequestContextAdapter.asHttpServerResponse(log, request);
             try (SafeCloseable ignored = ctx.push()) {
-                handler.handleSend(response, log.responseCause(), span);
+                handler.handleSend(response, response.error(), span);
             }
         });
 

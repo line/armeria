@@ -16,10 +16,6 @@
 
 package com.linecorp.armeria.client.brave;
 
-import brave.http.HttpRequestParser;
-import brave.http.HttpResponse;
-import brave.http.HttpResponseParser;
-import brave.propagation.TraceContext;
 import java.net.SocketAddress;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -29,6 +25,10 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 
 import brave.SpanCustomizer;
+import brave.http.HttpRequestParser;
+import brave.http.HttpResponse;
+import brave.http.HttpResponseParser;
+import brave.propagation.TraceContext;
 
 /**
  * Default implementation of {@link HttpRequestParser} and {@link HttpResponseParser} for clients.

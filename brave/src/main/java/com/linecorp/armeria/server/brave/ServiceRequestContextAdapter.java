@@ -52,11 +52,12 @@ final class ServiceRequestContextAdapter {
 
         /**
          * This sets the client IP:port to the {@link RequestContext#remoteAddress()}
-         * if the {@linkplain HttpServerAdapter#parseClientIpAndPort default parsing} fails.
+         * if the {@linkplain #parseClientIpFromXForwardedFor default parsing} fails.
          */
         @Override
         public boolean parseClientIpAndPort(Span span) {
-            return SpanTags.updateRemoteEndpoint(span, ctx);
+            return parseClientIpFromXForwardedFor(span) ||
+                SpanTags.updateRemoteEndpoint(span, ctx);
         }
 
         @Override
@@ -117,8 +118,9 @@ final class ServiceRequestContextAdapter {
         }
     }
 
-    static brave.http.HttpServerResponse asHttpServerResponse(RequestLog log) {
-        return new HttpServerResponse(log);
+    static brave.http.HttpServerResponse asHttpServerResponse(RequestLog log,
+        brave.http.HttpServerRequest request) {
+        return new HttpServerResponse(log, request);
     }
 
     /**
@@ -127,16 +129,23 @@ final class ServiceRequestContextAdapter {
     @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpServerResponse extends brave.http.HttpServerResponse {
         private final RequestLog log;
-        brave.http.HttpServerRequest request;
+        private final brave.http.HttpServerRequest request;
 
-        HttpServerResponse(RequestLog log) {
+        HttpServerResponse(RequestLog log, brave.http.HttpServerRequest request) {
             assert log.isComplete() : log;
             this.log = log;
+            this.request = request;
         }
 
         @Override
         public ServiceRequestContext unwrap() {
             return (ServiceRequestContext) log.context();
+        }
+
+        @Override
+        @Nullable
+        public Throwable error() {
+            return log.responseCause();
         }
 
         @Override
@@ -146,9 +155,6 @@ final class ServiceRequestContextAdapter {
 
         @Override
         public brave.http.HttpServerRequest request() {
-            if (request == null) {
-                request = new ServiceRequestContextAdapter.HttpServerRequest(unwrap());
-            }
             return request;
         }
 

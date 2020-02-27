@@ -160,9 +160,9 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                 }
             }
 
-            final HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(log);
+            final HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(log, request);
             try (SafeCloseable ignored = ctx.push()) {
-                handler.handleReceive(response, log.responseCause(), span);
+                handler.handleReceive(response, response.error(), span);
             }
         });
 

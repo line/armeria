@@ -56,7 +56,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     }
 
     @Override
-    protected void init() throws Exception {
+    protected void init() {
         final ServerBuilder sb = Server.builder();
         sb.service("/", (ctx, req) -> {
             if (req.method() == HttpMethod.OPTIONS) {
@@ -74,7 +74,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
             return HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "happy");
         });
         sb.service("/exception", (ctx, req) -> {
-            throw new Exception();
+            throw new Exception("not ready");
         });
         sb.decorator(BraveService.newDecorator(httpTracing));
 

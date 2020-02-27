@@ -179,7 +179,7 @@ class BraveClientTest {
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
-        assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(3);
+        assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(1);
     }
 
     @Test
