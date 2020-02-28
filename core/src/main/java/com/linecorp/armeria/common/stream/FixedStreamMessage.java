@@ -120,7 +120,6 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
         return subscription;
     }
 
-    @Override
     final void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
         try {
             event.notifySubscriber(subscription, whenComplete());
