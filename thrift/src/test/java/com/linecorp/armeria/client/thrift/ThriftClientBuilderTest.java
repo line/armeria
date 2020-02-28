@@ -37,16 +37,6 @@ class ThriftClientBuilderTest {
     }
 
     @Test
-    void uriWithoutSerializationFormat() {
-        final HelloService.Iface client = Clients.builder("https://google.com/")
-                                                 .serializationFormat("tbinary")
-                                                 .build(HelloService.Iface.class);
-        final ClientBuilderParams params = Clients.unwrap(client, ClientBuilderParams.class);
-        assertThat(params).isNotNull();
-        assertThat(params.uri().toString()).isEqualTo("tbinary+https://google.com/");
-    }
-
-    @Test
     void endpointWithoutPath() {
         final HelloService.Iface client = Clients.builder("tbinary+http", Endpoint.of("127.0.0.1"))
                                                  .build(HelloService.Iface.class);
@@ -63,27 +53,5 @@ class ThriftClientBuilderTest {
         assertThat(params).isNotNull();
         assertThat(params.uri().toString()).isEqualTo("tbinary+http://127.0.0.1/foo");
         assertThat(params.scheme().serializationFormat()).isSameAs(ThriftSerializationFormats.BINARY);
-    }
-
-    @Test
-    void endpointWithoutPathAndSerializationFormat() {
-        final HelloService.Iface client = Clients.builder("http", Endpoint.of("127.0.0.1"))
-                                                 .serializationFormat("tcompact")
-                                                 .build(HelloService.Iface.class);
-        final ClientBuilderParams params = Clients.unwrap(client, ClientBuilderParams.class);
-        assertThat(params).isNotNull();
-        assertThat(params.uri().toString()).isEqualTo("tcompact+http://127.0.0.1/");
-        assertThat(params.scheme().serializationFormat()).isSameAs(ThriftSerializationFormats.COMPACT);
-    }
-
-    @Test
-    void endpointWithPathAndWithoutSerializationFormat() {
-        final HelloService.Iface client = Clients.builder("http", Endpoint.of("127.0.0.1"), "/foo")
-                                                 .serializationFormat("ttext")
-                                                 .build(HelloService.Iface.class);
-        final ClientBuilderParams params = Clients.unwrap(client, ClientBuilderParams.class);
-        assertThat(params).isNotNull();
-        assertThat(params.uri().toString()).isEqualTo("ttext+http://127.0.0.1/foo");
-        assertThat(params.scheme().serializationFormat()).isSameAs(ThriftSerializationFormats.TEXT);
     }
 }

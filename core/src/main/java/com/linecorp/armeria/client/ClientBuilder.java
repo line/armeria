@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -67,8 +66,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     private final EndpointGroup endpointGroup;
     @Nullable
     private final String path;
-    private Scheme scheme;
-    private boolean updatedScheme;
+    private final Scheme scheme;
 
     ClientBuilder(URI uri) {
         checkArgument(uri.getScheme() != null, "uri must have scheme: %s", uri);
@@ -91,22 +89,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the {@link SerializationFormat} of the client from the specified {@code format}.
-     */
-    public ClientBuilder serializationFormat(String format) {
-        return serializationFormat(SerializationFormat.of(requireNonNull(format, "format")));
-    }
-
-    /**
-     * Sets the {@link SerializationFormat} of the client.
-     */
-    public ClientBuilder serializationFormat(SerializationFormat format) {
-        scheme = Scheme.of(requireNonNull(format, "format"), scheme.sessionProtocol());
-        updatedScheme = true;
-        return this;
-    }
-
-    /**
      * Returns a newly-created client which implements the specified {@code clientType}, based on the
      * properties of this builder.
      *
@@ -121,13 +103,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
         final ClientOptions options = buildOptions();
         final ClientFactory factory = options.factory();
         if (uri != null) {
-            final URI uri;
-            if (updatedScheme) {
-                uri = URI.create(scheme.uriText() +
-                                 this.uri.toString().substring(this.uri.getScheme().length()));
-            } else {
-                uri = this.uri;
-            }
             client = factory.newClient(ClientBuilderParams.of(uri, clientType, options));
         } else {
             assert endpointGroup != null;
