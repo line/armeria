@@ -152,8 +152,8 @@ class RequestContextExportingAppenderTest {
         // Ensure mutability before start.
         a.addBuiltIn(BuiltInProperty.ELAPSED_NANOS);
         a.addAttribute("some-attr", someAttr);
-        a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
-        a.addHttpResponseHeader(HttpHeaderNames.SET_COOKIE);
+        a.addRequestHeader(HttpHeaderNames.USER_AGENT);
+        a.addResponseHeader(HttpHeaderNames.SET_COOKIE);
 
         final ListAppender<ILoggingEvent> la = new ListAppender<>();
         a.addAppender(la);
@@ -167,10 +167,10 @@ class RequestContextExportingAppenderTest {
         assertThatThrownBy(() -> a.addAttribute("my-attr", MY_ATTR))
                 .isExactlyInstanceOf(IllegalStateException.class);
 
-        assertThatThrownBy(() -> a.addHttpRequestHeader(HttpHeaderNames.ACCEPT))
+        assertThatThrownBy(() -> a.addRequestHeader(HttpHeaderNames.ACCEPT))
                 .isExactlyInstanceOf(IllegalStateException.class);
 
-        assertThatThrownBy(() -> a.addHttpResponseHeader(HttpHeaderNames.DATE))
+        assertThatThrownBy(() -> a.addResponseHeader(HttpHeaderNames.DATE))
                 .isExactlyInstanceOf(IllegalStateException.class);
     }
 
@@ -318,8 +318,8 @@ class RequestContextExportingAppenderTest {
             a.addAttribute("attrs.my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
             a.addAttribute("attrs.my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
             // .. and some HTTP headers.
-            a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
-            a.addHttpResponseHeader(HttpHeaderNames.DATE);
+            a.addRequestHeader(HttpHeaderNames.USER_AGENT);
+            a.addResponseHeader(HttpHeaderNames.DATE);
         });
 
         final ServiceRequestContext ctx = newServiceContext("/foo", "bar=baz");
@@ -359,8 +359,8 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
                            .containsEntry("res.content", "Hello, world!")
-                           .containsEntry("req.http_headers.user-agent", "some-client")
-                           .containsEntry("res.http_headers.date", "some-date")
+                           .containsEntry("req.headers.user-agent", "some-client")
+                           .containsEntry("res.headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
@@ -455,8 +455,8 @@ class RequestContextExportingAppenderTest {
             a.addAttribute("attrs.my_attr_name", MY_ATTR, new CustomObjectNameStringifier());
             a.addAttribute("attrs.my_attr_value", MY_ATTR, new CustomObjectValueStringifier());
             // .. and some HTTP headers.
-            a.addHttpRequestHeader(HttpHeaderNames.USER_AGENT);
-            a.addHttpResponseHeader(HttpHeaderNames.DATE);
+            a.addRequestHeader(HttpHeaderNames.USER_AGENT);
+            a.addResponseHeader(HttpHeaderNames.DATE);
         });
 
         final ClientRequestContext ctx = newClientContext("/bar", null);
@@ -494,8 +494,8 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
                            .containsEntry("res.content", "Hello, world!")
-                           .containsEntry("req.http_headers.user-agent", "some-client")
-                           .containsEntry("res.http_headers.date", "some-date")
+                           .containsEntry("req.headers.user-agent", "some-client")
+                           .containsEntry("res.headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")

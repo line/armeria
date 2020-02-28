@@ -36,13 +36,14 @@ public final class RequestContextExporterBuilder {
 
     static final String PREFIX_ATTRS = "attrs.";
     private static final String ATTR_NAMESPACE = "attr:";
-    private static final String PREFIX_HTTP_REQ_HEADERS = "req.http_headers.";
-    private static final String PREFIX_HTTP_RES_HEADERS = "res.http_headers.";
+    private static final String PREFIX_REQ_HEADERS = "req.headers.";
+    private static final String PREFIX_RES_HEADERS = "res.headers.";
+
 
     private final Set<ExportEntry<BuiltInProperty>> builtIns = new HashSet<>();
     private final Set<ExportEntry<AttributeKey<?>>> attrs = new HashSet<>();
-    private final Set<ExportEntry<AsciiString>> httpReqHeaders = new HashSet<>();
-    private final Set<ExportEntry<AsciiString>> httpResHeaders = new HashSet<>();
+    private final Set<ExportEntry<AsciiString>> reqHeaders = new HashSet<>();
+    private final Set<ExportEntry<AsciiString>> resHeaders = new HashSet<>();
 
     RequestContextExporterBuilder() {}
 
@@ -99,46 +100,46 @@ public final class RequestContextExporterBuilder {
     /**
      * Adds the specified HTTP request header name to the export list.
      */
-    public RequestContextExporterBuilder addHttpRequestHeader(CharSequence headerName) {
+    public RequestContextExporterBuilder addRequestHeader(CharSequence headerName) {
         final AsciiString key = toHeaderName(requireNonNull(headerName, "headerName"));
-        return addHttpRequestHeader0(key, PREFIX_HTTP_REQ_HEADERS + key);
+        return addRequestHeader0(key, PREFIX_REQ_HEADERS + key);
     }
 
     /**
      * Adds the specified HTTP request header name to the export list.
      * The specified {@code alias} is used for the export key.
      */
-    public RequestContextExporterBuilder addHttpRequestHeader(CharSequence headerName, String alias) {
+    public RequestContextExporterBuilder addRequestHeader(CharSequence headerName, String alias) {
         requireNonNull(headerName, "headerName");
         requireNonNull(alias, "alias");
-        return addHttpRequestHeader0(toHeaderName(headerName), alias);
+        return addRequestHeader0(toHeaderName(headerName), alias);
     }
 
-    private RequestContextExporterBuilder addHttpRequestHeader0(AsciiString headerKey, String alias) {
-        httpReqHeaders.add(new ExportEntry<>(headerKey, alias));
+    private RequestContextExporterBuilder addRequestHeader0(AsciiString headerKey, String alias) {
+        reqHeaders.add(new ExportEntry<>(headerKey, alias));
         return this;
     }
 
     /**
      * Adds the specified HTTP response header name to the export list.
      */
-    public RequestContextExporterBuilder addHttpResponseHeader(CharSequence headerName) {
+    public RequestContextExporterBuilder addResponseHeader(CharSequence headerName) {
         final AsciiString key = toHeaderName(requireNonNull(headerName, "headerName"));
-        return addHttpResponseHeader0(key, PREFIX_HTTP_RES_HEADERS + key);
+        return addResponseHeader0(key, PREFIX_RES_HEADERS + key);
     }
 
     /**
      * Adds the specified HTTP response header name to the export list.
      * The specified {@code alias} is used for the export key.
      */
-    public RequestContextExporterBuilder addHttpResponseHeader(CharSequence headerName, String alias) {
+    public RequestContextExporterBuilder addResponseHeader(CharSequence headerName, String alias) {
         requireNonNull(headerName, "headerName");
         requireNonNull(alias, "alias");
-        return addHttpResponseHeader0(toHeaderName(headerName), alias);
+        return addResponseHeader0(toHeaderName(headerName), alias);
     }
 
-    private RequestContextExporterBuilder addHttpResponseHeader0(AsciiString headerKey, String alias) {
-        httpResHeaders.add(new ExportEntry<>(headerKey, alias));
+    private RequestContextExporterBuilder addResponseHeader0(AsciiString headerKey, String alias) {
+        resHeaders.add(new ExportEntry<>(headerKey, alias));
         return this;
     }
 
@@ -185,20 +186,20 @@ public final class RequestContextExporterBuilder {
             return this;
         }
 
-        if (keyPattern.startsWith(PREFIX_HTTP_REQ_HEADERS)) {
+        if (keyPattern.startsWith(PREFIX_REQ_HEADERS)) {
             if (exportKey == null) {
-                addHttpRequestHeader(keyPattern.substring(PREFIX_HTTP_REQ_HEADERS.length()));
+                addRequestHeader(keyPattern.substring(PREFIX_REQ_HEADERS.length()));
             } else {
-                addHttpRequestHeader(keyPattern.substring(PREFIX_HTTP_REQ_HEADERS.length()), exportKey);
+                addRequestHeader(keyPattern.substring(PREFIX_REQ_HEADERS.length()), exportKey);
             }
             return this;
         }
 
-        if (keyPattern.startsWith(PREFIX_HTTP_RES_HEADERS)) {
+        if (keyPattern.startsWith(PREFIX_RES_HEADERS)) {
             if (exportKey == null) {
-                addHttpResponseHeader(keyPattern.substring(PREFIX_HTTP_RES_HEADERS.length()));
+                addResponseHeader(keyPattern.substring(PREFIX_RES_HEADERS.length()));
             } else {
-                addHttpResponseHeader(keyPattern.substring(PREFIX_HTTP_RES_HEADERS.length()), exportKey);
+                addResponseHeader(keyPattern.substring(PREFIX_RES_HEADERS.length()), exportKey);
             }
             return this;
         }
@@ -250,6 +251,6 @@ public final class RequestContextExporterBuilder {
      * Returns a newly-created {@link RequestContextExporter} instance.
      */
     public RequestContextExporter build() {
-        return new RequestContextExporter(builtIns, attrs, httpReqHeaders, httpResHeaders);
+        return new RequestContextExporter(builtIns, attrs, reqHeaders, resHeaders);
     }
 }

@@ -112,19 +112,19 @@ public final class RequestContextExportingAppender
     /**
      * Adds the specified HTTP request header name to the export list.
      */
-    public void addHttpRequestHeader(CharSequence name) {
+    public void addRequestHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.addHttpRequestHeader(name);
+        builder.addRequestHeader(name);
     }
 
     /**
      * Adds the specified HTTP response header name to the export list.
      */
-    public void addHttpResponseHeader(CharSequence name) {
+    public void addResponseHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.addHttpResponseHeader(name);
+        builder.addResponseHeader(name);
     }
 
     /**

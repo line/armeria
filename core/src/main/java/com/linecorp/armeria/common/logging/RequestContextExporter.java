@@ -122,7 +122,7 @@ public final class RequestContextExporter {
     /**
      * Returns {@code true} if the specified HTTP request header name is in the export list.
      */
-    public boolean containsHttpRequestHeader(CharSequence name) {
+    public boolean containsRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
         if (reqHeaders == null) {
             return false;
@@ -133,7 +133,7 @@ public final class RequestContextExporter {
     /**
      * Returns {@code true} if the specified HTTP response header name is in the export list.
      */
-    public boolean containsHttpResponseHeader(CharSequence name) {
+    public boolean containsResponseHeader(CharSequence name) {
         requireNonNull(name, "name");
         if (resHeaders == null) {
             return false;
@@ -172,7 +172,8 @@ public final class RequestContextExporter {
             return ImmutableMap.of();
         }
         return Arrays.stream(attrs).collect(
-                toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key));
+                toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()),
+                               e -> e.key));
     }
 
     /**
@@ -251,8 +252,8 @@ public final class RequestContextExporter {
     private void export(State state, RequestContext ctx, RequestLog log) {
         exportBuiltIns(state, log);
         exportAttributes(state);
-        exportHttpRequestHeaders(state, log);
-        exportHttpResponseHeaders(state, log);
+        exportRequestHeaders(state, log);
+        exportResponseHeaders(state, log);
     }
 
     private void exportBuiltIns(State state, RequestLog log) {
@@ -278,24 +279,24 @@ public final class RequestContextExporter {
         }
     }
 
-    private void exportHttpRequestHeaders(State state, RequestLog log) {
+    private void exportRequestHeaders(State state, RequestLog log) {
         if (reqHeaders == null || !log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
             return;
         }
 
-        exportHttpHeaders(state, log.requestHeaders(), reqHeaders);
+        exportHeaders(state, log.requestHeaders(), reqHeaders);
     }
 
-    private void exportHttpResponseHeaders(State state, RequestLog log) {
+    private void exportResponseHeaders(State state, RequestLog log) {
         if (resHeaders == null || !log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
             return;
         }
 
-        exportHttpHeaders(state, log.responseHeaders(), resHeaders);
+        exportHeaders(state, log.responseHeaders(), resHeaders);
     }
 
-    private static void exportHttpHeaders(State state, HttpHeaders headers,
-                                          ExportEntry<AsciiString>[] requiredHeaderNames) {
+    private static void exportHeaders(State state, HttpHeaders headers,
+                                      ExportEntry<AsciiString>[] requiredHeaderNames) {
         for (ExportEntry<AsciiString> e : requiredHeaderNames) {
             putStringifiedProperty(state, e, headers.get(e.key));
         }
