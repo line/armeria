@@ -38,7 +38,9 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
@@ -171,40 +173,41 @@ public enum BuiltInProperty {
     REQ_NAME("req.name", log -> log.isAvailable(RequestLogProperty.NAME) ? log.name() : null),
 
     /**
-     * {@code "req.rpc_method"} - the RPC method name of the request. Unavailable if the current request is not
-     * an RPC request or is not decoded yet.
-     */
-    REQ_RPC_METHOD("req.rpc_method", log -> {
-        if (log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-            final Object requestContent = log.requestContent();
-            if (requestContent instanceof RpcRequest) {
-                return ((RpcRequest) requestContent).method();
-            }
-        }
-        return null;
-    }),
-
-    /**
-     * {@code "req.rpc_params"} - the RPC parameter list, represented by {@link Arrays#toString(Object...)}.
-     * Unavailable if the current request is not an RPC request or is not decoded yet.
-     */
-    REQ_RPC_PARAMS("req.rpc_params", log -> {
-        if (log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-            final Object requestContent = log.requestContent();
-            if (requestContent instanceof RpcRequest) {
-                return String.valueOf(((RpcRequest) requestContent).params());
-            }
-        }
-        return null;
-    }),
-
-    /**
      * {@code "req.content_length"} - the byte-length of the request content. Unavailable if the current
      * request is not fully received yet.
      */
     REQ_CONTENT_LENGTH("req.content_length", log -> {
         if (log.isAvailable(RequestLogProperty.REQUEST_LENGTH)) {
             return String.valueOf(log.requestLength());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "req.content"} - the content of the request. The content may have one of the following:
+     *
+     * <table summary="The content of the request">
+     * <tr><th>request type</th><th>description</th></tr>
+     *
+     * <tr><td>RPC</td>
+     * <td>The RPC parameter list, represented by {@link Arrays#toString(Object...)} for the {@link RpcRequest}.
+     * Unavailable if the current request is not an RPC request or is not decoded yet.</td></tr>
+     *
+     * <tr><td>HTTP</td>
+     * <td>The preview of request content of the {@link Request}.
+     * Unavailable if the preview is disabled or not fully received yet.</td></tr>
+     *
+     * </table>
+     */
+    REQ_CONTENT("req.content", log -> {
+        if (log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
+            final Object requestContent = log.requestContent();
+            if (requestContent instanceof RpcRequest) {
+                return String.valueOf(((RpcRequest) requestContent).params());
+            }
+        }
+        if (log.isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+            return log.requestContentPreview();
         }
         return null;
     }),
@@ -221,10 +224,33 @@ public enum BuiltInProperty {
     }),
 
     /**
-     * {@code "res.rpc_result"} - the RPC result value of the response. Unavailable if the current response
-     * is not fully sent yet.
+     * {@code "res.content_length"} - the byte-length of the response content. Unavailable if the current
+     * response is not fully sent yet.
      */
-    RES_RPC_RESULT("res.rpc_result", log -> {
+    RES_CONTENT_LENGTH("res.content_length", log -> {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_LENGTH)) {
+            return String.valueOf(log.responseLength());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "res.content"} - the content of the request. The content may have one of the following:
+     *
+     * <table>
+     * <tr><th>response type</th><th>description</th></tr>
+     *
+     * <tr><td>RPC</td>
+     * <td>The RPC result value of the {@link RpcResponse}.
+     * Unavailable if the current response is not fully sent yet.</td></tr>
+     *
+     * <tr><td>HTTP</td>
+     * <td>The preview of response content of the {@link Response}.
+     * Unavailable if the preview is disabled or not fully produced yet.</td></tr>
+     *
+     * </table>
+     */
+    RES_CONTENT("res.content", log -> {
         if (log.isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
             final Object responseContent = log.responseContent();
             if (responseContent instanceof RpcResponse) {
@@ -234,16 +260,8 @@ public enum BuiltInProperty {
                 }
             }
         }
-        return null;
-    }),
-
-    /**
-     * {@code "res.content_length"} - the byte-length of the response content. Unavailable if the current
-     * response is not fully sent yet.
-     */
-    RES_CONTENT_LENGTH("res.content_length", log -> {
-        if (log.isAvailable(RequestLogProperty.RESPONSE_LENGTH)) {
-            return String.valueOf(log.responseLength());
+        if (log.isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+            return log.responseContentPreview();
         }
         return null;
     }),
