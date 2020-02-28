@@ -54,9 +54,7 @@ public final class RequestContextExporterBuilder {
      * The {@link BuiltInProperty#key} will be used for the export key.
      */
     public RequestContextExporterBuilder addBuiltIn(BuiltInProperty property) {
-        requireNonNull(property, "property");
-        builtIns.add(new ExportEntry<>(property, property.key));
-        return this;
+        return addBuiltIn(property, property.key);
     }
 
     /**
@@ -154,8 +152,8 @@ public final class RequestContextExporterBuilder {
     /**
      * Adds the specified HTTP request header name to the export list.
      */
-    public RequestContextExporterBuilder addHttpRequestHeader(CharSequence name) {
-        final AsciiString key = toHeaderName(requireNonNull(name, "name"));
+    public RequestContextExporterBuilder addHttpRequestHeader(CharSequence headerName) {
+        final AsciiString key = toHeaderName(requireNonNull(headerName, "headerName"));
         final String exportKey = PREFIX_HTTP_REQ_HEADERS + key;
         httpReqHeaders.add(new ExportEntry<>(key, exportKey));
         return this;
@@ -175,8 +173,8 @@ public final class RequestContextExporterBuilder {
     /**
      * Adds the specified HTTP response header name to the export list.
      */
-    public RequestContextExporterBuilder addHttpResponseHeader(CharSequence name) {
-        final AsciiString key = toHeaderName(requireNonNull(name, "name"));
+    public RequestContextExporterBuilder addHttpResponseHeader(CharSequence headerName) {
+        final AsciiString key = toHeaderName(requireNonNull(headerName, "headerName"));
         final String exportKey = PREFIX_HTTP_RES_HEADERS + key;
         httpResHeaders.add(new ExportEntry<>(key, exportKey));
         return this;
@@ -199,9 +197,9 @@ public final class RequestContextExporterBuilder {
      * @deprecated This method will be removed without a replacement.
      */
     @Deprecated
-    public boolean containsHttpRequestHeader(CharSequence name) {
-        requireNonNull(name, "name");
-        return httpReqHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
+    public boolean containsHttpRequestHeader(CharSequence headerName) {
+        requireNonNull(headerName, "headerName");
+        return httpReqHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(headerName));
     }
 
     /**
@@ -210,9 +208,9 @@ public final class RequestContextExporterBuilder {
      * @deprecated This method will be removed without a replacement.
      */
     @Deprecated
-    public boolean containsHttpResponseHeader(CharSequence name) {
-        requireNonNull(name, "name");
-        return httpResHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
+    public boolean containsHttpResponseHeader(CharSequence headerName) {
+        requireNonNull(headerName, "headerName");
+        return httpResHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(headerName));
     }
 
     private static AsciiString toHeaderName(CharSequence name) {
