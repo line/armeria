@@ -39,7 +39,6 @@ public final class RequestContextExporterBuilder {
     private static final String PREFIX_REQ_HEADERS = "req.headers.";
     private static final String PREFIX_RES_HEADERS = "res.headers.";
 
-
     private final Set<ExportEntry<BuiltInProperty>> builtIns = new HashSet<>();
     private final Set<ExportEntry<AttributeKey<?>>> attrs = new HashSet<>();
     private final Set<ExportEntry<AsciiString>> reqHeaders = new HashSet<>();

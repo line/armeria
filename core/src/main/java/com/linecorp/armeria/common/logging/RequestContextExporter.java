@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.logging;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.common.logging.RequestContextExporterBuilder.PREFIX_ATTRS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
