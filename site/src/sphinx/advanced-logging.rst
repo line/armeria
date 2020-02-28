@@ -27,11 +27,11 @@ For example, the following configuration:
         <export>remote.ip</export>
         <export>tls.cipher</export>
         <export>req.http_headers.user-agent</export>
-        <export>attrs.some_value:com.example.AttrKeys#SOME_VALUE</export>
+        <export>attrs.some_value:com.example.AttrKeys#SOME_KEY</export>
         <!-- ... or alternatively:
         <exports>remote.ip, remote.port, tls.cipher,
                  req.http_headers.user-agent,
-                 attrs.some_value:com.example.AttrKeys#SOME_VALUE</exports>
+                 attrs.some_value:com.example.AttrKeys#SOME_KEY</exports>
         -->
         <!-- ... or with wildcard:
         <export>req.*</export>
@@ -39,7 +39,7 @@ For example, the following configuration:
         <!-- ... or with custom MDC key:
         <export>remote_id=remote.id</export>
         <export>UA=req.http_headers.user-agent</export>
-        <export>some_value=attr:com.example.AttrKeys#SOME_VALUE</exports>
+        <export>some_value=attr:com.example.AttrKeys#SOME_KEY</exports>
         -->
       </appender>
       ...
@@ -134,7 +134,7 @@ as the 3rd component of the ``<export />`` element in the XML configuration:
       ...
       <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
         ...
-        <export>attrs.some_value:com.example.AttrKeys#SOME_VALUE:com.example.MyStringifier</export>
+        <export>attrs.some_value:com.example.AttrKeys#SOME_KEY:com.example.MyStringifier</export>
         ...
       </appender>
       ...
@@ -154,7 +154,7 @@ For example, if you want to change ``req.id`` to ``request_id``, use ``request_i
         ...
         <export>remote_id=remote.id</export>
         <export>UA=req.http_headers.user-agent</export>
-        <export>some_value=attr:com.example.AttrKeys#SOME_VALUE</exports>
+        <export>some_value=attr:com.example.AttrKeys#SOME_KEY</exports>
         ...
       </appender>
       ...
