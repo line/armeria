@@ -23,6 +23,32 @@ import org.junit.jupiter.api.Test;
 class WebClientBuilderTest {
 
     @Test
+    void uriWithNonePlusProtocol() throws Exception {
+        final WebClient client = WebClient.builder("none+https://google.com/").build();
+        assertThat(client.uri().toString()).isEqualTo("https://google.com/");
+    }
+
+    @Test
+    void uriWithoutNone() {
+        final WebClient client = WebClient.builder("https://google.com/").build();
+        assertThat(client.uri().toString()).isEqualTo("https://google.com/");
+    }
+
+    @Test
+    void endpointWithoutPath() {
+        final WebClient client = WebClient.builder("http", Endpoint.of("127.0.0.1"))
+                                          .build();
+        assertThat(client.uri().toString()).isEqualTo("http://127.0.0.1/");
+    }
+
+    @Test
+    void endpointWithPath() {
+        final WebClient client = WebClient.builder("http", Endpoint.of("127.0.0.1"), "/foo")
+                                          .build();
+        assertThat(client.uri().toString()).isEqualTo("http://127.0.0.1/foo");
+    }
+
+    @Test
     void keepCustomFactory() {
         final ClientFactory factory = ClientFactory.builder()
                                                    .option(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, 100)
