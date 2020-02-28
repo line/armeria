@@ -142,7 +142,7 @@ as the 3rd component of the ``<export />`` element in the XML configuration:
 
 Customizing MDC keys
 --------------------
-You can override the pre-defined MDC key by prepending an alias and a equals sign (=) to it.
+You can override the pre-defined MDC key by prepending an alias and an equals sign (=) to it.
 For example, if you want to change ``req.id`` to ``request_id``, use ``request_id=req.id``.
 
 .. code-block:: xml

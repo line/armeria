@@ -194,7 +194,7 @@ public enum BuiltInProperty {
      * Unavailable if the current request is not an RPC request or is not decoded yet.</td></tr>
      *
      * <tr><td>HTTP</td>
-     * <td>The preview of request content of the {@link Request}.
+     * <td>The preview content of request content of the {@link Request}.
      * Unavailable if the preview is disabled or not fully produced yet.</td></tr>
      *
      * </table>
@@ -245,7 +245,7 @@ public enum BuiltInProperty {
      * Unavailable if the current response is not fully sent yet.</td></tr>
      *
      * <tr><td>HTTP</td>
-     * <td>The preview of response content of the {@link Response}.
+     * <td>The preview content of response content of the {@link Response}.
      * Unavailable if the preview is disabled or not fully produced yet.</td></tr>
      *
      * </table>
