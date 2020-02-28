@@ -22,8 +22,6 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.Maps;
-
 class RequestContextExporterBuilderTest {
 
     @Test
