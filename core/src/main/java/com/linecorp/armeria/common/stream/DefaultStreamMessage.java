@@ -224,7 +224,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
     }
 
-    void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
+    private void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
         if (subscription.needsDirectInvocation()) {
             notifySubscriberOfCloseEvent0(subscription, event);
         } else {
@@ -232,7 +232,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
     }
 
-    void notifySubscriberOfCloseEvent0(SubscriptionImpl subscription, CloseEvent event) {
+    private void notifySubscriberOfCloseEvent0(SubscriptionImpl subscription, CloseEvent event) {
         try {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
