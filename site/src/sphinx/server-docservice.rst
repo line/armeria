@@ -219,3 +219,21 @@ For gRPC:
         </execution>
       </executions>
     </plugin>
+
+For Annotated services:
+
+- Use :api:`@Description` annotation to where you want to describe.
+
+  .. code-block:: java
+
+      import com.linecorp.armeria.server.annotation;
+
+      @Description("A service that provides user information.")
+      public class UserService {
+
+          @Description("get a user by his or her id")
+          @Get("/users/{id}")
+          public User getUser(@Param("id") @Description("the id of a user") String id) { ... }
+
+          ...
+      }
