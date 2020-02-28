@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;

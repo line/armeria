@@ -13,26 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
-import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
  * Default {@link HttpResponse} instance.
  */
-@UnstableApi
-public class DefaultHttpResponse
-        extends DefaultStreamMessage<HttpObject> implements HttpResponseWriter {
-
-    /**
-     * Creates a new instance.
-     */
-    protected DefaultHttpResponse() {}
-
+public class DefaultHttpResponse extends DefaultStreamMessage<HttpObject> implements HttpResponseWriter {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).toString();
