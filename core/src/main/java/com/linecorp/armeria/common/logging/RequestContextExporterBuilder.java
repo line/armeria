@@ -154,9 +154,7 @@ public final class RequestContextExporterBuilder {
      */
     public RequestContextExporterBuilder addHttpRequestHeader(CharSequence headerName) {
         final AsciiString key = toHeaderName(requireNonNull(headerName, "headerName"));
-        final String exportKey = PREFIX_HTTP_REQ_HEADERS + key;
-        httpReqHeaders.add(new ExportEntry<>(key, exportKey));
-        return this;
+        return addHttpRequestHeader0(key, PREFIX_HTTP_REQ_HEADERS + key);
     }
 
     /**
@@ -166,7 +164,11 @@ public final class RequestContextExporterBuilder {
     public RequestContextExporterBuilder addHttpRequestHeader(CharSequence headerName, String alias) {
         requireNonNull(headerName, "headerName");
         requireNonNull(alias, "alias");
-        httpReqHeaders.add(new ExportEntry<>(toHeaderName(headerName), alias));
+        return addHttpRequestHeader0(toHeaderName(headerName), alias);
+    }
+
+    private RequestContextExporterBuilder addHttpRequestHeader0(AsciiString headerKey, String alias) {
+        httpReqHeaders.add(new ExportEntry<>(headerKey, alias));
         return this;
     }
 
@@ -175,9 +177,7 @@ public final class RequestContextExporterBuilder {
      */
     public RequestContextExporterBuilder addHttpResponseHeader(CharSequence headerName) {
         final AsciiString key = toHeaderName(requireNonNull(headerName, "headerName"));
-        final String exportKey = PREFIX_HTTP_RES_HEADERS + key;
-        httpResHeaders.add(new ExportEntry<>(key, exportKey));
-        return this;
+        return addHttpResponseHeader0(key, PREFIX_HTTP_RES_HEADERS + key);
     }
 
     /**
@@ -187,7 +187,11 @@ public final class RequestContextExporterBuilder {
     public RequestContextExporterBuilder addHttpResponseHeader(CharSequence headerName, String alias) {
         requireNonNull(headerName, "headerName");
         requireNonNull(alias, "alias");
-        httpResHeaders.add(new ExportEntry<>(toHeaderName(headerName), alias));
+        return addHttpResponseHeader0(toHeaderName(headerName), alias);
+    }
+
+    private RequestContextExporterBuilder addHttpResponseHeader0(AsciiString headerKey, String alias) {
+        httpResHeaders.add(new ExportEntry<>(headerKey, alias));
         return this;
     }
 
