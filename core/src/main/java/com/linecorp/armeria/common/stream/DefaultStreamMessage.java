@@ -172,8 +172,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 return;
             }
 
-            // We just push the new CloseEvent so that SUCCESSFUL_CLOSE, which was pushed by close(), is
-            // ignored and cancel() or abort() call has effect.
             notifySubscriberOfCloseEvent(subscription, newCloseEvent(cause));
         }
     }
