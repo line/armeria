@@ -171,9 +171,7 @@ public final class RequestContextExporter {
         if (attrs == null) {
             return ImmutableMap.of();
         }
-        return Arrays.stream(attrs).collect(
-                toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()),
-                               e -> e.key));
+        return Arrays.stream(attrs).collect(toImmutableMap(e -> e.exportKey, e -> e.key));
     }
 
     /**

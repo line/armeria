@@ -222,7 +222,7 @@ public final class RequestContextExporterBuilder {
         }
 
         if (exportKey == null) {
-            exportKey = components[0].substring(PREFIX_ATTRS.length());
+            exportKey = components[0];
         }
         final AttributeKey<Object> attributeKey = AttributeKey.valueOf(components[1]);
         if (components.length == 3) {

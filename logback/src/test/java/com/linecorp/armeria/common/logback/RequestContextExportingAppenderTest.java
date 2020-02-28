@@ -195,9 +195,9 @@ class RequestContextExportingAppenderTest {
 
             final AttributeKey<Object> fooAttr = AttributeKey.valueOf("com.example.AttrKeys#FOO");
             final AttributeKey<Object> barAttr = AttributeKey.valueOf("com.example.AttrKeys#BAR");
-            assertThat(rcea.exporter().attributes()).containsOnly(new SimpleEntry<>("foo", fooAttr),
-                                                                  new SimpleEntry<>("bar", barAttr),
-                                                                  new SimpleEntry<>("qux", barAttr));
+            assertThat(rcea.exporter().attributes()).containsOnly(new SimpleEntry<>("attrs.foo", fooAttr),
+                                                                  new SimpleEntry<>("attrs.bar", barAttr),
+                                                                  new SimpleEntry<>("attrs.qux", barAttr));
         } finally {
             // Revert to the original configuration.
             final JoranConfigurator configurator = new JoranConfigurator();

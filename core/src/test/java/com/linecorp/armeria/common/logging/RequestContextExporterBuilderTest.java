@@ -22,6 +22,8 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.Maps;
+
 class RequestContextExporterBuilderTest {
 
     @Test
@@ -38,6 +40,14 @@ class RequestContextExporterBuilderTest {
         final RequestContextExporterBuilder builder = RequestContextExporter.builder();
         builder.addKeyPattern(BuiltInProperty.REMOTE_HOST.key);
         assertThat(builder.build().builtIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
+    }
+
+    @Test
+    void addAttribute() {
+        final RequestContextExporterBuilder builder = RequestContextExporter.builder();
+        builder.addKeyPattern("attrs.foo:com.example.AttrKey#KEY");
+        builder.addKeyPattern("bar=attr:com.example.AttrKey#KEY");
+        assertThat(builder.build().attributes()).containsOnlyKeys("attrs.foo", "bar");
     }
 
     @Test
