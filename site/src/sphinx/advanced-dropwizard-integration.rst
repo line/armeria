@@ -5,7 +5,7 @@ Using Armeria with Dropwizard
 
 .. note::
 
-    Visit `armeria examples <https://github.com/line/armeria/examples/dropwizard>`_ to find a fully working example.
+    Visit `armeria examples <https://github.com/line/armeria/tree/master/examples/dropwizard>`_ to find a fully working example.
 
 Dropwizard provides many features which are necessary for building a web application, such as
 metrics, model validation, externalized and extensible configuration, etc. In addition, if your Dropwizard application integrates
