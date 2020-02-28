@@ -309,6 +309,7 @@ public enum BuiltInProperty {
                         .collect(toImmutableList());
     }
 
+    @Nullable
     static BuiltInProperty findByKey(String key) {
         return keyToEnum.entrySet().stream()
                         .filter(e -> e.getKey().equals(key))
