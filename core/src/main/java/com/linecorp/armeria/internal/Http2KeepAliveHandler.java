@@ -81,7 +81,7 @@ public class Http2KeepAliveHandler {
     public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
                                  Http2Connection http2Connection) {
         this(channel, frameWriter, http2Connection, Flags.defaultHttp2PingTimeoutMillis(),
-                Flags.defaultUseHttp2PingOnNoActiveStreams());
+                Flags.defaultUseHttp2PingOnIdleStream());
     }
 
     public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Http2Connection http2Connection,

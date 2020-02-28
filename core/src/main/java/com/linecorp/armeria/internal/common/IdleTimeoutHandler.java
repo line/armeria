@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.common.Flags.defaultUseHttp2PingOnIdle;
+import static com.linecorp.armeria.common.Flags.defaultUseHttp2PingOnIdleConnection;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
@@ -45,13 +45,13 @@ public abstract class IdleTimeoutHandler extends IdleStateHandler {
     }
 
     /**
-     * If the channel is serving HTTP/2 and {@link Flags#defaultUseHttp2PingOnIdle()} is set
+     * If the channel is serving HTTP/2 and {@link Flags#defaultUseHttp2PingOnIdleConnection()} is set
      * then we will forward event to {@link Http2KeepAliveHandler} to start sending PING's.
      * But if it is HTTP/1.1 channel then we will close the channel.
      */
     @Override
     protected final void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
-        if (isHttp2 && defaultUseHttp2PingOnIdle()) {
+        if (isHttp2 && defaultUseHttp2PingOnIdleConnection()) {
             ctx.fireUserEventTriggered(evt);
             return;
         }

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.common.Flags.defaultUseHttp2PingOnIdle;
+import static com.linecorp.armeria.common.Flags.defaultUseHttp2PingOnIdleConnection;
 
 import javax.annotation.Nullable;
 
@@ -44,7 +44,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.clientFactory = clientFactory;
 
-        if (defaultUseHttp2PingOnIdle()) {
+        if (defaultUseHttp2PingOnIdleConnection()) {
             keepAlive = new Http2KeepAliveHandler(channel, encoder.frameWriter(), connection());
         }
         responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAlive);
