@@ -226,7 +226,7 @@ For Annotated services:
 
   .. code-block:: java
 
-      import com.linecorp.armeria.server.annotation;
+      import com.linecorp.armeria.server.annotation.Description;
 
       @Description("A service that provides user information.")
       public class UserService {
