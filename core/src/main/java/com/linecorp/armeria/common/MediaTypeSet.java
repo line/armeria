@@ -39,7 +39,7 @@ import com.google.common.collect.Lists;
  * <p>This {@link Set} provides {@link #match(MediaType)} and {@link #matchHeaders(CharSequence...)}
  * so that a user can find the preferred {@link MediaType} that matches the specified media ranges. For example:
  * <pre>{@code
- * MediaTypeSet set = new MediaTypeSet(MediaType.HTML_UTF_8, MediaType.PLAIN_TEXT_UTF_8);
+ * MediaTypeSet set = MediaTypeSet.of(MediaType.HTML_UTF_8, MediaType.PLAIN_TEXT_UTF_8);
  *
  * MediaType negotiated1 = set.matchHeaders("text/html; q=0.5, text/plain");
  * assert negotiated1 != null;
