@@ -186,7 +186,7 @@ public enum BuiltInProperty {
     /**
      * {@code "req.content"} - the content of the request. The content may have one of the following:
      *
-     * <table summary="The content of the request">
+     * <table>
      * <tr><th>request type</th><th>description</th></tr>
      *
      * <tr><td>RPC</td>
