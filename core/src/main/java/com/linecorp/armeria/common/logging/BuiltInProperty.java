@@ -195,7 +195,7 @@ public enum BuiltInProperty {
      *
      * <tr><td>HTTP</td>
      * <td>The preview of request content of the {@link Request}.
-     * Unavailable if the preview is disabled or not fully received yet.</td></tr>
+     * Unavailable if the preview is disabled or not fully produced yet.</td></tr>
      *
      * </table>
      */
