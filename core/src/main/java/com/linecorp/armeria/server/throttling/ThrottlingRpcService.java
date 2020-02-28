@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -37,7 +37,7 @@ public final class ThrottlingRpcService extends AbstractThrottlingService<RpcReq
     public static Function<? super RpcService, ThrottlingRpcService>
     newDecorator(ThrottlingStrategy<RpcRequest> strategy,
                  ThrottlingRejectHandler<RpcRequest, RpcResponse> rejectHandler) {
-        return builder().strategy(strategy).onRejectedRequest(rejectHandler).newDecorator();
+        return builder(strategy).onRejectedRequest(rejectHandler).newDecorator();
     }
 
     /**
@@ -47,14 +47,14 @@ public final class ThrottlingRpcService extends AbstractThrottlingService<RpcReq
      */
     public static Function<? super RpcService, ThrottlingRpcService>
     newDecorator(ThrottlingStrategy<RpcRequest> strategy) {
-        return builder().strategy(strategy).newDecorator();
+        return builder(strategy).newDecorator();
     }
 
     /**
      * Returns a new {@link ThrottlingRpcServiceBuilder}.
      */
-    public static ThrottlingRpcServiceBuilder builder() {
-        return new ThrottlingRpcServiceBuilder();
+    public static ThrottlingRpcServiceBuilder builder(ThrottlingStrategy<RpcRequest> strategy) {
+        return new ThrottlingRpcServiceBuilder(strategy);
     }
 
     /**

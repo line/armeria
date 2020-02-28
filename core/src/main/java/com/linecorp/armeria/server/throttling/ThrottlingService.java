@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -36,7 +36,7 @@ public final class ThrottlingService extends AbstractThrottlingService<HttpReque
     public static Function<? super HttpService, ThrottlingService>
     newDecorator(ThrottlingStrategy<HttpRequest> strategy,
                  ThrottlingRejectHandler<HttpRequest, HttpResponse> rejectHandler) {
-        return builder().strategy(strategy).onRejectedRequest(rejectHandler).newDecorator();
+        return builder(strategy).onRejectedRequest(rejectHandler).newDecorator();
     }
 
     /**
@@ -46,14 +46,14 @@ public final class ThrottlingService extends AbstractThrottlingService<HttpReque
      */
     public static Function<? super HttpService, ThrottlingService>
     newDecorator(ThrottlingStrategy<HttpRequest> strategy) {
-        return builder().strategy(strategy).newDecorator();
+        return builder(strategy).newDecorator();
     }
 
     /**
      * Returns a new {@link ThrottlingServiceBuilder}.
      */
-    public static ThrottlingServiceBuilder builder() {
-        return new ThrottlingServiceBuilder();
+    public static ThrottlingServiceBuilder builder(ThrottlingStrategy<HttpRequest> strategy) {
+        return new ThrottlingServiceBuilder(strategy);
     }
 
     /**

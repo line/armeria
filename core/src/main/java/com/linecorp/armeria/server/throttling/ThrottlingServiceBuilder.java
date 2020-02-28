@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,14 +30,11 @@ import com.linecorp.armeria.server.Service;
  */
 public class ThrottlingServiceBuilder extends AbstractThrottlingServiceBuilder<HttpRequest, HttpResponse> {
 
-    ThrottlingServiceBuilder() {}
+    private static final ThrottlingRejectHandler<HttpRequest, HttpResponse> DEFAULT_REJECT_HANDLER =
+            (delegate, ctx, req, cause) -> HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS);
 
-    /**
-     * Sets {@link ThrottlingStrategy}.
-     */
-    public ThrottlingServiceBuilder strategy(ThrottlingStrategy<HttpRequest> strategy) {
-        setStrategy(strategy);
-        return this;
+    ThrottlingServiceBuilder(ThrottlingStrategy<HttpRequest> strategy) {
+        super(strategy);
     }
 
     /**
@@ -63,8 +60,8 @@ public class ThrottlingServiceBuilder extends AbstractThrottlingServiceBuilder<H
      * Returns an {@link HttpResponse} with {@link HttpStatus#TOO_MANY_REQUESTS}.
      */
     @Override
-    protected ThrottlingRejectHandler<HttpRequest, HttpResponse> defaultRejectHandler() {
-        return (delegate, ctx, req, cause) -> HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS);
+    ThrottlingRejectHandler<HttpRequest, HttpResponse> defaultRejectHandler() {
+        return DEFAULT_REJECT_HANDLER;
     }
 
     /**

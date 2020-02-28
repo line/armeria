@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -31,11 +31,12 @@ import com.linecorp.armeria.server.Service;
 abstract class AbstractThrottlingServiceBuilder<I extends Request, O extends Response> {
 
     @Nullable
-    private ThrottlingStrategy<I> strategy;
+    private final ThrottlingStrategy<I> strategy;
     private ThrottlingAcceptHandler<I, O> acceptHandler;
     private ThrottlingRejectHandler<I, O> rejectHandler;
 
-    AbstractThrottlingServiceBuilder() {
+    AbstractThrottlingServiceBuilder(ThrottlingStrategy<I> strategy) {
+        this.strategy = requireNonNull(strategy, "strategy");
         acceptHandler = requireNonNull(defaultAcceptHandler(), "defaultAcceptHandler");
         rejectHandler = requireNonNull(defaultRejectHandler(), "defaultRejectHandler");
     }
@@ -43,23 +44,16 @@ abstract class AbstractThrottlingServiceBuilder<I extends Request, O extends Res
     /**
      * Provides default request accept handler.
      */
-    protected ThrottlingAcceptHandler<I, O> defaultAcceptHandler() {
+    ThrottlingAcceptHandler<I, O> defaultAcceptHandler() {
         return Service::serve;
     }
 
     /**
      * Provides default request reject handler.
      */
-    protected abstract ThrottlingRejectHandler<I, O> defaultRejectHandler();
+    abstract ThrottlingRejectHandler<I, O> defaultRejectHandler();
 
-    /**
-     * Sets {@link ThrottlingStrategy}.
-     */
-    protected void setStrategy(ThrottlingStrategy<I> strategy) {
-        this.strategy = requireNonNull(strategy, "strategy");
-    }
-
-    protected ThrottlingStrategy<I> getStrategy() {
+    final ThrottlingStrategy<I> getStrategy() {
         if (strategy == null) {
             throw new IllegalStateException("no " + ThrottlingStrategy.class.getSimpleName() + " was added.");
         }
@@ -69,24 +63,24 @@ abstract class AbstractThrottlingServiceBuilder<I extends Request, O extends Res
     /**
      * Sets {@link ThrottlingAcceptHandler}.
      */
-    protected void setAcceptHandler(
+    final void setAcceptHandler(
             ThrottlingAcceptHandler<I, O> acceptHandler) {
         this.acceptHandler = requireNonNull(acceptHandler, "acceptHandler");
     }
 
-    protected ThrottlingAcceptHandler<I, O> getAcceptHandler() {
+    final ThrottlingAcceptHandler<I, O> getAcceptHandler() {
         return acceptHandler;
     }
 
     /**
      * Sets {@link ThrottlingRejectHandler}.
      */
-    protected void setRejectHandler(
+    final void setRejectHandler(
             ThrottlingRejectHandler<I, O> rejectHandler) {
         this.rejectHandler = requireNonNull(rejectHandler, "rejectHandler");
     }
 
-    protected ThrottlingRejectHandler<I, O> getRejectHandler() {
+    final ThrottlingRejectHandler<I, O> getRejectHandler() {
         return rejectHandler;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -31,14 +31,12 @@ import com.linecorp.armeria.server.Service;
  */
 public class ThrottlingRpcServiceBuilder extends AbstractThrottlingServiceBuilder<RpcRequest, RpcResponse> {
 
-    ThrottlingRpcServiceBuilder() {}
+    private static final ThrottlingRejectHandler<RpcRequest, RpcResponse> DEFAULT_REJECT_HANDLER =
+            (delegate, ctx, req, cause) ->
+                    RpcResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE));
 
-    /**
-     * Sets {@link ThrottlingStrategy}.
-     */
-    public ThrottlingRpcServiceBuilder strategy(ThrottlingStrategy<RpcRequest> strategy) {
-        setStrategy(strategy);
-        return this;
+    ThrottlingRpcServiceBuilder(ThrottlingStrategy<RpcRequest> strategy) {
+        super(strategy);
     }
 
     /**
@@ -64,9 +62,8 @@ public class ThrottlingRpcServiceBuilder extends AbstractThrottlingServiceBuilde
      * Responds with {@link HttpStatusException} with {@code 503 Service Unavailable}.
      */
     @Override
-    protected ThrottlingRejectHandler<RpcRequest, RpcResponse> defaultRejectHandler() {
-        return (delegate, ctx, req, cause) ->
-                RpcResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE));
+    ThrottlingRejectHandler<RpcRequest, RpcResponse> defaultRejectHandler() {
+        return DEFAULT_REJECT_HANDLER;
     }
 
     /**
