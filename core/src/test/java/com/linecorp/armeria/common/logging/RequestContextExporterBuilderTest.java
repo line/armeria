@@ -67,6 +67,6 @@ class RequestContextExporterBuilderTest {
         final RequestContextExporterBuilder builder = RequestContextExporter.builder();
         builder.addKeyPattern("attrs.*");
         builder.addKeyPattern("attrs.my_attrs:MyAttribute");
-        assertThat(1).isEqualTo(builder.build().attributes().size());
+        assertThat(builder.build().attributes()).hasSize(1);
     }
 }
