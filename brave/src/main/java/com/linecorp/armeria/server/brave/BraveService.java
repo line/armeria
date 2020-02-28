@@ -22,7 +22,6 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -48,7 +47,8 @@ public final class BraveService extends SimpleDecoratingHttpService {
     public static Function<? super HttpService, BraveService>
     newDecorator(Tracing tracing) {
         return newDecorator(HttpTracing.newBuilder(tracing)
-                                       .serverParser(ArmeriaHttpServerParser.get())
+                                       .serverRequestParser(ArmeriaHttpServerParser.get())
+                                       .serverResponseParser(ArmeriaHttpServerParser.get())
                                        .build());
     }
 
@@ -75,7 +75,8 @@ public final class BraveService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Span span = handler.handleReceive(ServiceRequestContextAdapter.asHttpServerRequest(ctx));
+        final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
+        final Span span = handler.handleReceive(braveReq);
 
         // For no-op spans, nothing special to do.
         if (span.isNoop()) {
@@ -98,10 +99,9 @@ public final class BraveService extends SimpleDecoratingHttpService {
                 // If the client timed-out the request, we will have never sent any response data at all.
             }
 
-            final HttpServerResponse response = ServiceRequestContextAdapter.asHttpServerResponse(log);
-            try (SafeCloseable ignored = ctx.push()) {
-                handler.handleSend(response, log.responseCause(), span);
-            }
+            final HttpServerResponse braveRes =
+                ServiceRequestContextAdapter.asHttpServerResponse(log, braveReq);
+            handler.handleSend(braveRes, braveRes.error(), span);
         });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {

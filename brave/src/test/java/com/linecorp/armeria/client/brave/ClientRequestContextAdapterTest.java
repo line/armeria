@@ -78,7 +78,7 @@ class ClientRequestContextAdapterTest {
         ctx.logBuilder().endResponse();
 
         final HttpClientResponse res =
-                ClientRequestContextAdapter.asHttpClientResponse(ctx.log().ensureComplete());
+                ClientRequestContextAdapter.asHttpClientResponse(ctx.log().ensureComplete(), null);
 
         assertThat(res.statusCode()).isEqualTo(200);
     }

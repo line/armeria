@@ -179,7 +179,8 @@ class BraveClientTest {
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
-        assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(3);
+        // check the client invocation had the current span in scope.
+        assertThat(scopeDecoratorCallingCounter.get()).isOne();
     }
 
     @Test
@@ -199,7 +200,8 @@ class BraveClientTest {
             throws Exception {
 
         HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
-                                             .clientParser(ArmeriaHttpClientParser.get())
+                                             .clientRequestParser(ArmeriaHttpClientParser.get())
+                                             .clientResponseParser(ArmeriaHttpClientParser.get())
                                              .build();
         if (remoteServiceName != null) {
             httpTracing = httpTracing.clientOf(remoteServiceName);
