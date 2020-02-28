@@ -142,18 +142,40 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void abort0(Throwable cause) {
-        final SubscriptionImpl currentSubscription = subscription;
-        if (currentSubscription != null) {
-            cancelOrAbort(cause);
+        SubscriptionImpl subscription = this.subscription;
+        if (subscription == null) {
+            final SubscriptionImpl newSubscription = new SubscriptionImpl(
+                    this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
+            if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
+                // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
+                invokedOnSubscribe = true;
+                subscription = newSubscription;
+            } else {
+                subscription = this.subscription;
+            }
+        }
+        assert subscription != null;
+
+        if (setState(State.OPEN, State.CLEANUP)) {
+            notifySubscriberOfCloseEvent(subscription, newCloseEvent(cause));
             return;
         }
-        final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
-        if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
-            // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
-            invokedOnSubscribe = true;
+
+        if (setState(State.CLOSED, State.CLEANUP)) {
+            // close() or close(cause) has been called before cancel() or abort() is called.
+
+            final Object o = queue.peek();
+            // If there's no data pushed (i.e empty stream), notify subscriber with the event pushed by
+            // close() or close(cause).
+            if (!wroteAny && o instanceof CloseEvent) {
+                notifySubscriberOfCloseEvent(subscription, (CloseEvent) queue.remove());
+                return;
+            }
+
+            // We just push the new CloseEvent so that SUCCESSFUL_CLOSE, which was pushed by close(), is
+            // ignored and cancel() or abort() call has effect.
+            notifySubscriberOfCloseEvent(subscription, newCloseEvent(cause));
         }
-        cancelOrAbort(cause);
     }
 
     @Override
@@ -195,17 +217,29 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @Override
     void cancel() {
-        cancelOrAbort(CancelledSubscriptionException.get());
+        if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
+            // It the state was CLOSED, close() or close(cause) has been called before cancel() or abort()
+            // is called. We just ignore the previously pushed event and deal with CANCELLED_CLOSE.
+            final SubscriptionImpl subscription = this.subscription;
+            assert subscription != null;
+            notifySubscriberOfCloseEvent(subscription, CANCELLED_CLOSE);
+        }
     }
 
-    @Override
     void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
-        // Always called from the subscriber thread.
+        if (subscription.needsDirectInvocation()) {
+            notifySubscriberOfCloseEvent0(subscription, event);
+        } else {
+            subscription.executor().execute(() -> notifySubscriberOfCloseEvent0(subscription, event));
+        }
+    }
+
+    void notifySubscriberOfCloseEvent0(SubscriptionImpl subscription, CloseEvent event) {
         try {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
-            Throwable cause = null;
+            Throwable cause = event.cause;
             for (;;) {
                 final Object e = queue.poll();
                 if (e == null) {
@@ -233,32 +267,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     ReferenceCountUtil.safeRelease(e);
                 }
             }
-        }
-    }
-
-    private void cancelOrAbort(Throwable cause) {
-        if (setState(State.OPEN, State.CLEANUP)) {
-            addObjectOrEvent(newCloseEvent(cause));
-            return;
-        }
-
-        switch (state) {
-            case CLOSED:
-                // close() has been called before cancel() or abort() is called.
-                // We just push the new CloseEvent so that SUCCESSFUL_CLOSE, which was pushed by close(), is
-                // ignored and cancel() or abort() call has effect.
-                if (setState(State.CLOSED, State.CLEANUP)) {
-                    addObjectOrEvent(newCloseEvent(cause));
-                    return;
-                } else {
-                    // Other thread set the state to CLEANUP already and will call cleanup().
-                }
-                break;
-            case CLEANUP:
-                // Cleaned up already.
-                break;
-            default: // OPEN: should never reach here.
-                throw new Error();
         }
     }
 
@@ -437,21 +445,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 break;
             }
 
-            // Just skip SUCCESSFUL_CLOSE because being in cleanup() means one of the following:
-            // - All elements have been consumed already
-            // - cancel() or abort() has been invoked after successful close().
-            if (e == SUCCESSFUL_CLOSE) {
-                continue;
-            }
-
             if (e instanceof CloseEvent) {
-                final SubscriptionImpl subscription = this.subscription;
-                assert subscription != null;
-                try {
-                    ((CloseEvent) e).notifySubscriber(subscription, whenComplete());
-                } finally {
-                    subscription.clearSubscriber();
-                }
                 continue;
             }
 

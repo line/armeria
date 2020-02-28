@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
@@ -155,6 +156,34 @@ class DefaultStreamMessageTest {
         assertThat(data.refCnt()).isOne();
         assertThatThrownBy(() -> stream.write(() -> data)).isInstanceOf(ClosedStreamException.class);
         assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    void abortedStreamCallOnCompleteIfNoData() throws InterruptedException {
+        final StreamMessageAndWriter<Object> stream = new DefaultStreamMessage<>();
+        stream.close();
+
+        final AtomicBoolean onCompleteCalled = new AtomicBoolean();
+        stream.subscribe(new Subscriber<Object>() {
+            @Override
+            public void onSubscribe(Subscription s) {}
+
+            @Override
+            public void onNext(Object o) {}
+
+            @Override
+            public void onError(Throwable t) {
+                fail();
+            }
+
+            @Override
+            public void onComplete() {
+                onCompleteCalled.set(true);
+            }
+        }, ImmediateEventExecutor.INSTANCE);
+
+        stream.abort();
+        assertThat(onCompleteCalled.get()).isTrue();
     }
 
     @Test

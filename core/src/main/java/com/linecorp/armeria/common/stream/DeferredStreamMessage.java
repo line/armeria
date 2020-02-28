@@ -227,11 +227,6 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
-        // Delegate will notify, don't need to do anything special here.
-    }
-
-    @Override
     SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
             final SubscriptionImpl oldSubscription = this.subscription;

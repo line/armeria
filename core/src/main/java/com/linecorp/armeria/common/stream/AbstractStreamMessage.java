@@ -133,12 +133,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     abstract void cancel();
 
     /**
-     * Callback invoked to notify a {@link Subscriber} of a {@link CloseEvent}. The
-     * {@link AbstractStreamMessage} needs to ensure the notification happens on the correct thread.
-     */
-    abstract void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event);
-
-    /**
      * Invoked after an element is removed from the {@link StreamMessage} and before
      * {@link Subscriber#onNext(Object)} is invoked.
      *
@@ -276,7 +270,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     static final class CloseEvent {
         @Nullable
-        private final Throwable cause;
+        final Throwable cause;
 
         CloseEvent(@Nullable Throwable cause) {
             this.cause = cause;
