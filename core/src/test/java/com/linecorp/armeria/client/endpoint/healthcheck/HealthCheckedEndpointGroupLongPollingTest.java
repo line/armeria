@@ -65,7 +65,7 @@ class HealthCheckedEndpointGroupLongPollingTest {
             // to send a health check response when the server is shutting down.
             // Without graceful shutdown, the health check request will be aborted
             // with GOAWAY or disconnection.
-            sb.gracefulShutdownTimeout(3000, 10000);
+            sb.gracefulShutdownTimeoutMillis(3000, 10000);
         }
     };
 

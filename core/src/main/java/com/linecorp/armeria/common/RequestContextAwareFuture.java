@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -51,44 +50,49 @@ final class RequestContextAwareFuture<T> implements Future<T> {
     @Override
     public Future<T> addListener(
             GenericFutureListener<? extends Future<? super T>> listener) {
-        return delegate.addListener(context.makeContextAware(listener));
+        delegate.addListener(RequestContextAwareFutureListener.of(context, listener));
+        return this;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public Future<T> addListeners(
+    @SafeVarargs
+    public final Future<T> addListeners(
             GenericFutureListener<? extends Future<? super T>>... listeners) {
-        return delegate.addListeners(Stream.of(listeners)
-                                           .map(context::makeContextAware)
-                                           .toArray(GenericFutureListener[]::new));
+        for (GenericFutureListener<? extends Future<? super T>> l : listeners) {
+            delegate.addListener(RequestContextAwareFutureListener.of(context, l));
+        }
+        return this;
     }
 
     @Override
     public Future<T> removeListener(
             GenericFutureListener<? extends Future<? super T>> listener) {
-        return delegate.removeListener(listener);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     @SafeVarargs
     public final Future<T> removeListeners(
             GenericFutureListener<? extends Future<? super T>>... listeners) {
-        return delegate.removeListeners(listeners);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Future<T> sync() throws InterruptedException {
-        return delegate.sync();
+        delegate.sync();
+        return this;
     }
 
     @Override
     public Future<T> syncUninterruptibly() {
-        return delegate.syncUninterruptibly();
+        delegate.syncUninterruptibly();
+        return this;
     }
 
     @Override
     public Future<T> await() throws InterruptedException {
-        return delegate.await();
+        delegate.await();
+        return this;
     }
 
     @Override
@@ -103,7 +107,8 @@ final class RequestContextAwareFuture<T> implements Future<T> {
 
     @Override
     public Future<T> awaitUninterruptibly() {
-        return delegate.awaitUninterruptibly();
+        delegate.awaitUninterruptibly();
+        return this;
     }
 
     @Override

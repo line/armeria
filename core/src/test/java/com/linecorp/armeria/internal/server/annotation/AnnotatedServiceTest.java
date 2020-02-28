@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.server.annotation;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,7 +54,6 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -421,23 +419,9 @@ class AnnotatedServiceTest {
             return params.get("username") + '/' + params.get("password");
         }
 
-        @Get
-        @Path("/map/get_deprecated")
-        public String mapGet(RequestContext ctx, HttpParameters params) {
-            validateContext(ctx);
-            return params.get("username") + '/' + params.get("password");
-        }
-
         @Post
         @Path("/map/post")
         public String mapPost(RequestContext ctx, QueryParams params) {
-            validateContext(ctx);
-            return params.get("username") + '/' + params.get("password");
-        }
-
-        @Post
-        @Path("/map/post_deprecated")
-        public String mapPost(RequestContext ctx, HttpParameters params) {
             validateContext(ctx);
             return params.get("username") + '/' + params.get("password");
         }
@@ -821,10 +805,7 @@ class AnnotatedServiceTest {
                      StandardCharsets.UTF_8);
 
             testBody(hc, get("/7/map/get?username=line3&password=armeria3"), "line3/armeria3");
-            testBody(hc, get("/7/map/get_deprecated?username=line3&password=armeria3"), "line3/armeria3");
             testBody(hc, form("/7/map/post", null,
-                              "username", "line4", "password", "armeria4"), "line4/armeria4");
-            testBody(hc, form("/7/map/post_deprecated", null,
                               "username", "line4", "password", "armeria4"), "line4/armeria4");
 
             testBody(hc, get("/7/param/enum?username=line5&level=LV1"), "line5/LV1");

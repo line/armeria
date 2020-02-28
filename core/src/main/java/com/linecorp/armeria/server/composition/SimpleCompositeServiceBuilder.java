@@ -25,13 +25,7 @@ import com.linecorp.armeria.server.Route;
  */
 public final class SimpleCompositeServiceBuilder extends AbstractCompositeServiceBuilder<HttpService> {
 
-    /**
-     * Creates a new {@link SimpleCompositeServiceBuilder}.
-     *
-     * @deprecated Use {@link SimpleCompositeService#builder()}.
-     */
-    @Deprecated
-    public SimpleCompositeServiceBuilder() {}
+    SimpleCompositeServiceBuilder() {}
 
     @Override
     public SimpleCompositeServiceBuilder serviceUnder(String pathPrefix, HttpService  service) {

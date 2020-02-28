@@ -53,7 +53,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.common.stream.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -105,7 +105,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     static final ChannelFutureListener CLOSE_ON_FAILURE = future -> {
         final Throwable cause = future.cause();
-        if (cause != null && !(cause instanceof ClosedPublisherException)) {
+        if (cause != null && !(cause instanceof ClosedStreamException)) {
             final Channel ch = future.channel();
             logException(ch, cause);
             safeClose(ch);

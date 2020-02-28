@@ -18,9 +18,6 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.Constructor;
-import java.util.function.Function;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -77,42 +74,6 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
     default <T> T as(Class<T> type) {
         requireNonNull(type, "type");
         return Unwrappable.super.as(type);
-    }
-
-    /**
-     * Creates a new {@link Service} that decorates this {@link Service} with a new {@link Service} instance
-     * of the specified {@code serviceType}. The specified {@link Class} must have a single-parameter
-     * constructor which accepts this {@link Service}.
-     *
-     * @deprecated Use {@link HttpService#decorate(Function)},
-     *             {@link HttpService#decorate(DecoratingHttpServiceFunction)},
-     *             {@link RpcService#decorate(Function)} and
-     *             {@link RpcService#decorate(DecoratingRpcServiceFunction)}.
-     */
-    @Deprecated
-    default <R extends Service<?, ?>> R decorate(Class<R> serviceType) {
-        requireNonNull(serviceType, "serviceType");
-
-        Constructor<?> constructor = null;
-        for (Constructor<?> c : serviceType.getConstructors()) {
-            if (c.getParameterCount() != 1) {
-                continue;
-            }
-            if (c.getParameterTypes()[0].isAssignableFrom(getClass())) {
-                constructor = c;
-                break;
-            }
-        }
-
-        if (constructor == null) {
-            throw new IllegalArgumentException("cannot find a matching constructor: " + serviceType.getName());
-        }
-
-        try {
-            return (R) constructor.newInstance(this);
-        } catch (Exception e) {
-            throw new IllegalStateException("failed to instantiate: " + serviceType.getName(), e);
-        }
     }
 
     /**

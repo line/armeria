@@ -167,57 +167,6 @@ public final class HealthCheckServiceBuilder {
      *                                     timeout specified in the {@code "prefer: wait=<n>"} header.
      * @return {@code this}
      * @see #longPolling(Duration)
-     *
-     * @deprecated Use {@link #longPolling(Duration, double, Duration)}.
-     */
-    @Deprecated
-    public HealthCheckServiceBuilder longPolling(Duration maxLongPollingTimeout,
-                                                 double longPollingTimeoutJitterRate) {
-        return longPolling(maxLongPollingTimeout, longPollingTimeoutJitterRate,
-                           Duration.ofMillis(pingIntervalMillis));
-    }
-
-    /**
-     * Enables or disables long-polling support. By default, long-polling support is enabled with
-     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_SECONDS} seconds and
-     * the jitter rate of {@value #DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE}.
-     *
-     * @param maxLongPollingTimeoutMillis A positive maximum allowed timeout value which is specified by
-     *                                    a client in the {@code "prefer: wait=<n>"} request header.
-     *                                    Specify {@code 0} to disable long-polling support.
-     * @param longPollingTimeoutJitterRate The jitter rate which adds a random variation to the long-polling
-     *                                     timeout specified in the {@code "prefer: wait=<n>"} header.
-     * @return {@code this}
-     * @see #longPolling(long)
-     *
-     * @deprecated Use {@link #longPolling(long, double, long)}.
-     */
-    @Deprecated
-    public HealthCheckServiceBuilder longPolling(long maxLongPollingTimeoutMillis,
-                                                 double longPollingTimeoutJitterRate) {
-        checkArgument(maxLongPollingTimeoutMillis >= 0,
-                      "maxLongPollingTimeoutMillis: %s (expected: >= 0)",
-                      maxLongPollingTimeoutMillis);
-        checkArgument(longPollingTimeoutJitterRate >= 0 && longPollingTimeoutJitterRate <= 1,
-                      "longPollingTimeoutJitterRate: %s (expected: >= 0 && <= 1)",
-                      longPollingTimeoutJitterRate);
-        this.maxLongPollingTimeoutMillis = maxLongPollingTimeoutMillis;
-        this.longPollingTimeoutJitterRate = longPollingTimeoutJitterRate;
-        return this;
-    }
-
-    /**
-     * Enables or disables long-polling support. By default, long-polling support is enabled with
-     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_SECONDS} seconds and
-     * the jitter rate of {@value #DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE}.
-     *
-     * @param maxLongPollingTimeout A positive maximum allowed timeout value which is specified by a client
-     *                              in the {@code "prefer: wait=<n>"} request header.
-     *                              Specify {@code 0} to disable long-polling support.
-     * @param longPollingTimeoutJitterRate The jitter rate which adds a random variation to the long-polling
-     *                                     timeout specified in the {@code "prefer: wait=<n>"} header.
-     * @return {@code this}
-     * @see #longPolling(Duration)
      */
     public HealthCheckServiceBuilder longPolling(Duration maxLongPollingTimeout,
                                                  double longPollingTimeoutJitterRate,

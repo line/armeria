@@ -75,59 +75,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
 
     private SerializationFormat format = SerializationFormat.NONE;
 
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
-     *
-     * @deprecated Use {@link Clients#builder(String)}.
-     */
-    @Deprecated
-    public ClientBuilder(String uri) {
-        this(URI.create(requireNonNull(uri, "uri")));
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
-     *
-     * @deprecated Use {@link Clients#builder(URI)}.
-     */
-    @Deprecated
-    public ClientBuilder(URI uri) {
-        this(requireNonNull(uri, "uri"), null, null, null);
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@code scheme}.
-     *
-     * @deprecated Use {@link Clients#builder(String, EndpointGroup)}.
-     */
-    @Deprecated
-    public ClientBuilder(String scheme, Endpoint endpoint) {
-        this(Scheme.parse(requireNonNull(scheme, "scheme")), requireNonNull(endpoint, "endpoint"));
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@link Scheme}.
-     *
-     * @deprecated Use {@link Clients#builder(Scheme, EndpointGroup)}.
-     */
-    @Deprecated
-    public ClientBuilder(Scheme scheme, Endpoint endpoint) {
-        this(null, requireNonNull(scheme, "scheme"), null, requireNonNull(endpoint, "endpoint"));
-    }
-
-    /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@link SessionProtocol}.
-     *
-     * @deprecated Use {@link Clients#builder(SessionProtocol, EndpointGroup)}.
-     */
-    @Deprecated
-    public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
-        this(null, null, requireNonNull(protocol, "protocol"), requireNonNull(endpoint, "endpoint"));
-    }
-
     ClientBuilder(@Nullable URI uri, @Nullable Scheme scheme, @Nullable SessionProtocol protocol,
                   @Nullable EndpointGroup endpointGroup) {
         this.uri = uri;
@@ -232,18 +179,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ClientBuilder defaultWriteTimeout(Duration writeTimeout) {
-        return (ClientBuilder) super.defaultWriteTimeout(writeTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ClientBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
-        return (ClientBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
-    }
-
-    @Override
     public ClientBuilder writeTimeout(Duration writeTimeout) {
         return (ClientBuilder) super.writeTimeout(writeTimeout);
     }
@@ -254,18 +189,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ClientBuilder defaultResponseTimeout(Duration responseTimeout) {
-        return (ClientBuilder) super.defaultResponseTimeout(responseTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ClientBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
-        return (ClientBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
     public ClientBuilder responseTimeout(Duration responseTimeout) {
         return (ClientBuilder) super.responseTimeout(responseTimeout);
     }
@@ -273,12 +196,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return (ClientBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    @Deprecated
-    public ClientBuilder defaultMaxResponseLength(long maxResponseLength) {
-        return (ClientBuilder) super.defaultMaxResponseLength(maxResponseLength);
     }
 
     @Override

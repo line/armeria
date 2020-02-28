@@ -90,13 +90,7 @@ public final class GrpcServiceBuilder {
     @Nullable
     private ProtoReflectionService protoReflectionService;
 
-    /**
-     * Creates a new {@link GrpcServiceBuilder}.
-     *
-     * @deprecated Use {@link GrpcService}.
-     */
-    @Deprecated
-    public GrpcServiceBuilder() {}
+    GrpcServiceBuilder() {}
 
     /**
      * Adds a gRPC {@link ServerServiceDefinition} to this {@link GrpcServiceBuilder}, such as

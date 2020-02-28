@@ -58,13 +58,7 @@ public final class DocServiceBuilder {
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers =
             new ArrayList<>();
 
-    /**
-     * Creates a new {@link DocServiceBuilder}.
-     *
-     * @deprecated Use {@link DocService#builder()}.
-     */
-    @Deprecated
-    public DocServiceBuilder() {}
+    DocServiceBuilder() {}
 
     /**
      * Adds the example {@link HttpHeaders} which are applicable to any services.

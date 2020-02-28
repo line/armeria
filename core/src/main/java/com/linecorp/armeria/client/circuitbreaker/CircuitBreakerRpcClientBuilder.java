@@ -27,13 +27,7 @@ import com.linecorp.armeria.common.RpcResponse;
 public final class CircuitBreakerRpcClientBuilder
         extends AbstractCircuitBreakerClientBuilder<RpcResponse> {
 
-    /**
-     * Creates a new builder with the specified {@link CircuitBreakerStrategyWithContent}.
-     *
-     * @deprecated {@link CircuitBreakerRpcClient#builder(CircuitBreakerStrategyWithContent)}.
-     */
-    @Deprecated
-    public CircuitBreakerRpcClientBuilder(CircuitBreakerStrategyWithContent<RpcResponse> strategyWithContent) {
+    CircuitBreakerRpcClientBuilder(CircuitBreakerStrategyWithContent<RpcResponse> strategyWithContent) {
         super(strategyWithContent);
     }
 
@@ -53,12 +47,6 @@ public final class CircuitBreakerRpcClientBuilder
     }
 
     // Methods that were overridden to change the return type.
-
-    @Override
-    @Deprecated
-    public CircuitBreakerRpcClientBuilder circuitBreakerMapping(CircuitBreakerMapping mapping) {
-        return mapping(mapping);
-    }
 
     @Override
     public CircuitBreakerRpcClientBuilder mapping(CircuitBreakerMapping mapping) {

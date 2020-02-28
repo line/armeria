@@ -46,7 +46,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -96,7 +96,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         final int seqId = nextSeqId.incrementAndGet();
         final String method = call.method();
         final List<Object> args = call.params();
-        final DefaultRpcResponse reply = new DefaultRpcResponse();
+        final CompletableRpcResponse reply = new CompletableRpcResponse();
 
         ctx.logBuilder().name(call.method());
         ctx.logBuilder().serializationFormat(serializationFormat);
@@ -198,7 +198,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         return metadataMap.computeIfAbsent(serviceType, ThriftServiceMetadata::new);
     }
 
-    private void handle(ClientRequestContext ctx, int seqId, DefaultRpcResponse reply,
+    private void handle(ClientRequestContext ctx, int seqId, CompletableRpcResponse reply,
                         ThriftFunction func, HttpData content) throws TException {
 
         if (func.isOneWay()) {
@@ -279,19 +279,19 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         return null;
     }
 
-    private static void handleSuccess(ClientRequestContext ctx, DefaultRpcResponse reply,
+    private static void handleSuccess(ClientRequestContext ctx, CompletableRpcResponse reply,
                                       @Nullable Object returnValue, @Nullable ThriftReply rawResponseContent) {
         reply.complete(returnValue);
         ctx.logBuilder().responseContent(reply, rawResponseContent);
     }
 
-    private static void handleException(ClientRequestContext ctx, DefaultRpcResponse reply,
+    private static void handleException(ClientRequestContext ctx, CompletableRpcResponse reply,
                                         @Nullable ThriftReply rawResponseContent, Exception cause) {
         reply.completeExceptionally(cause);
         ctx.logBuilder().responseContent(reply, rawResponseContent);
     }
 
-    private static void handlePreDecodeException(ClientRequestContext ctx, DefaultRpcResponse reply,
+    private static void handlePreDecodeException(ClientRequestContext ctx, CompletableRpcResponse reply,
                                                  ThriftFunction thriftMethod, Throwable cause) {
         handleException(ctx, reply, null,
                         decodeException(cause, thriftMethod.declaredExceptions()));

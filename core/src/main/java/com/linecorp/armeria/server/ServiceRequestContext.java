@@ -303,18 +303,6 @@ public interface ServiceRequestContext extends RequestContext {
     MediaType negotiatedResponseMediaType();
 
     /**
-     * Returns the negotiated producible media type. If the media type negotiation is not used for the
-     * {@link Service}, {@code null} would be returned.
-     *
-     * @deprecated Use {@link #negotiatedResponseMediaType()}.
-     */
-    @Deprecated
-    @Nullable
-    default MediaType negotiatedProduceType() {
-        return negotiatedResponseMediaType();
-    }
-
-    /**
      * Returns the amount of time allowed from the start time of the {@link Request} until receiving
      * the current {@link Request} and sending the corresponding {@link Response} completely.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.

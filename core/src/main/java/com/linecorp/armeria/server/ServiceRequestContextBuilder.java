@@ -60,16 +60,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
     };
 
-    /**
-     * Returns a new {@link ServiceRequestContextBuilder} created from the specified {@link HttpRequest}.
-     *
-     * @deprecated Use {@link ServiceRequestContext#builder(HttpRequest)}.
-     */
-    @Deprecated
-    public static ServiceRequestContextBuilder of(HttpRequest request) {
-        return new ServiceRequestContextBuilder(request);
-    }
-
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
 
     private HttpService service = fakeService;

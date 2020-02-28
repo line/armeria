@@ -53,10 +53,11 @@ public abstract class SerializationFormatProvider {
         public Entry(String uriText, MediaType primaryMediaType, MediaType... alternativeMediaTypes) {
             this.uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
             this.primaryMediaType = requireNonNull(primaryMediaType, "primaryMediaType");
-            mediaTypes = new MediaTypeSet(ImmutableList.<MediaType>builder()
-                    .add(primaryMediaType)
-                    .add(requireNonNull(alternativeMediaTypes, "alternativeMediaTypes"))
-                    .build());
+            requireNonNull(alternativeMediaTypes, "alternativeMediaTypes");
+            mediaTypes = MediaTypeSet.of(ImmutableList.<MediaType>builder()
+                                                 .add(primaryMediaType)
+                                                 .add(alternativeMediaTypes)
+                                                 .build());
         }
 
         @Override

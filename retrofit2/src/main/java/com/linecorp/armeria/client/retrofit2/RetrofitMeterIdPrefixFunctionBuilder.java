@@ -19,8 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
-
 /**
  * Builds a {@link RetrofitMeterIdPrefixFunction}.
  *
@@ -32,29 +30,12 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
     @Nullable
     private String serviceTagName;
     @Nullable
-    private String defaultServiceName;
-    @Nullable
     private String serviceName;
     @Nullable
     private Class<?> serviceClass;
 
     RetrofitMeterIdPrefixFunctionBuilder(String name) {
         this.name = name;
-    }
-
-    /**
-     * Adds a tag that signifies the service name to the generated {@link MeterIdPrefix}es.
-     *
-     * @param serviceTagName the name of the tag to be added, e.g. {@code "service.name"}
-     * @param defaultServiceName the default value of the tag, e.g. {@code "myService"}
-     * @deprecated Please use {@link #serviceTag(String)} and {@link #serviceName(String)} instead.
-     */
-    @Deprecated
-    public RetrofitMeterIdPrefixFunctionBuilder withServiceTag(String serviceTagName,
-                                                               String defaultServiceName) {
-        this.serviceTagName = requireNonNull(serviceTagName, "serviceTagName");
-        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
-        return this;
     }
 
     /**
@@ -97,7 +78,7 @@ public final class RetrofitMeterIdPrefixFunctionBuilder {
      */
     public RetrofitMeterIdPrefixFunction build() {
         if (serviceClass == null) {
-            return new RetrofitMeterIdPrefixFunction(name, serviceTagName, serviceName, defaultServiceName);
+            return new RetrofitMeterIdPrefixFunction(name, serviceTagName, serviceName);
         }
         return new RetrofitClassAwareMeterIdPrefixFunction(name, serviceTagName, serviceName, serviceClass);
     }

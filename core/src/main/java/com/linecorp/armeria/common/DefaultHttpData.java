@@ -20,24 +20,15 @@ import com.google.common.base.MoreObjects;
 
 /**
  * Default {@link HttpData} implementation.
- *
- * @deprecated Use the factory methods in {@link HttpData}.
  */
-@Deprecated
-public final class DefaultHttpData extends AbstractHttpData {
+final class DefaultHttpData extends AbstractHttpData {
 
     static final HttpData EMPTY = new DefaultHttpData(new byte[0], false);
 
     private final byte[] data;
     private final boolean endOfStream;
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use the factory methods in {@link HttpData}.
-     */
-    @Deprecated
-    public DefaultHttpData(byte[] data, boolean endOfStream) {
+    DefaultHttpData(byte[] data, boolean endOfStream) {
         this.data = data;
         this.endOfStream = endOfStream;
     }

@@ -26,13 +26,7 @@ import com.google.common.collect.ImmutableList;
  */
 public final class ClientDecoration {
 
-    /**
-     * A {@link ClientDecoration} that decorates no {@link Client}.
-     *
-     * @deprecated Use {@link #of()}.
-     */
-    @Deprecated
-    public static final ClientDecoration NONE = new ClientDecoration(ImmutableList.of(), ImmutableList.of());
+    private static final ClientDecoration NONE = new ClientDecoration(ImmutableList.of(), ImmutableList.of());
 
     /**
      * Returns an empty {@link ClientDecoration} which does not decorate a {@link Client}.

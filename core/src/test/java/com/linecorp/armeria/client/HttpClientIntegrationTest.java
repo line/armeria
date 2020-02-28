@@ -639,47 +639,6 @@ class HttpClientIntegrationTest {
     }
 
     @Test
-    void givenClients_thenBuildClient() throws Exception {
-        final Endpoint endpoint = server.httpEndpoint();
-        final ClientFactory factory = ClientFactory.builder().build();
-
-        WebClient client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE,
-                                             endpoint, WebClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
-                                   WebClient.class, ClientOptions.of());
-        checkGetRequest("/hello/world", client);
-
-        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
-                                   WebClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
-                                   WebClient.class,
-                                   ClientOptions.of());
-        checkGetRequest("/hello/world", client);
-    }
-
-    @Test
-    void givenHttpClient_thenBuildClient() throws Exception {
-        final Endpoint endpoint = server.httpEndpoint();
-        final ClientFactory factory = ClientFactory.builder().build();
-
-        WebClient client = WebClient.of(factory, SessionProtocol.HTTP, endpoint);
-        checkGetRequest("/hello/world", client);
-
-        client = WebClient.of(factory, SessionProtocol.HTTP, endpoint, ClientOptions.of());
-        checkGetRequest("/hello/world", client);
-
-        client = WebClient.of(SessionProtocol.HTTP, endpoint);
-        checkGetRequest("/hello/world", client);
-
-        client = WebClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.of());
-        checkGetRequest("/hello/world", client);
-    }
-
-    @Test
     void givenClientBuilder_thenBuildClient() throws Exception {
         final Endpoint endpoint = server.httpEndpoint();
         final ClientFactory factory = ClientFactory.builder().build();

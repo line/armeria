@@ -150,19 +150,12 @@ class RetrofitClassAwareMeterIdPrefixFunctionTest {
                 Arguments.of(RetrofitMeterIdPrefixFunction
                                      .builder("foo")
                                      .serviceClass(Example.class)
-                                     .withServiceTag("tservice", "fallbackService")
-                                     .build(),
-                             "tservice=Example"),
-                Arguments.of(RetrofitMeterIdPrefixFunction
-                                     .builder("foo")
-                                     .serviceClass(Example.class)
                                      .serviceTag("tservice")
                                      .build(),
                              "tservice=Example"),
                 Arguments.of(RetrofitMeterIdPrefixFunction
                                      .builder("foo")
                                      .serviceClass(Example.class)
-                                     .withServiceTag("serviceTagName", "defaultServiceName")
                                      .serviceTag("tservice")
                                      .serviceName("serviceName")
                                      .build(),

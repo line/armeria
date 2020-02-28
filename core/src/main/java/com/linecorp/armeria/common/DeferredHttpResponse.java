@@ -16,33 +16,27 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.concurrent.EventExecutor;
 
 /**
  * An {@link HttpResponse} whose stream is published later by another {@link HttpResponse}. It is used when
  * an {@link HttpResponse} will not be instantiated early.
- *
- * @deprecated Use {@link HttpResponse#from(CompletionStage)}.
  */
-@Deprecated
-public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
+final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
 
     @Nullable
     private final EventExecutor executor;
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link HttpResponse#from(CompletionStage)}.
-     */
-    @Deprecated
-    public DeferredHttpResponse() {
+    DeferredHttpResponse() {
         executor = null;
     }
 
@@ -50,14 +44,22 @@ public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> impl
         this.executor = executor;
     }
 
-    /**
-     * Sets the delegate {@link HttpResponse} which will publish the stream actually.
-     *
-     * @throws IllegalStateException if the delegate has been set already or
-     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
-     */
-    public void delegate(HttpResponse delegate) {
+    void delegate(HttpResponse delegate) {
         super.delegate(delegate);
+    }
+
+    void delegateWhenComplete(CompletionStage<? extends HttpResponse> stage) {
+        requireNonNull(stage, "stage");
+        stage.handle((delegate, thrown) -> {
+            if (thrown != null) {
+                close(Exceptions.peel(thrown));
+            } else if (delegate == null) {
+                close(new NullPointerException("delegate stage produced a null response: " + stage));
+            } else {
+                delegate(delegate);
+            }
+            return null;
+        });
     }
 
     @Override

@@ -255,35 +255,10 @@ public final class VirtualHost {
     /**
      * Returns the timeout of a request.
      *
-     * @deprecated Use {@link #requestTimeoutMillis()}.
-     *
-     * @see ServiceConfig#requestTimeoutMillis()
-     */
-    @Deprecated
-    public long defaultRequestTimeoutMillis() {
-        return requestTimeoutMillis;
-    }
-
-    /**
-     * Returns the timeout of a request.
-     *
      * @see ServiceConfig#requestTimeoutMillis()
      */
     public long requestTimeoutMillis() {
         return requestTimeoutMillis;
-    }
-
-    /**
-     * Returns the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
-     *
-     * @deprecated Use {@link #maxRequestLength()}.
-     *
-     * @see ServiceConfig#maxRequestLength()
-     */
-    @Deprecated
-    public long defaultMaxRequestLength() {
-        return maxRequestLength;
     }
 
     /**

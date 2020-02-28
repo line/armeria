@@ -126,16 +126,6 @@ public final class ClientOptions
 
     /**
      * Returns the timeout of a socket write.
-     *
-     * @deprecated Use {@link #writeTimeoutMillis()}.
-     */
-    @Deprecated
-    public long defaultWriteTimeoutMillis() {
-        return writeTimeoutMillis();
-    }
-
-    /**
-     * Returns the timeout of a socket write.
      */
     public long writeTimeoutMillis() {
         return get(WRITE_TIMEOUT_MILLIS);
@@ -143,29 +133,9 @@ public final class ClientOptions
 
     /**
      * Returns the timeout of a server reply to a client call.
-     *
-     * @deprecated Use {@link #responseTimeoutMillis()}.
-     */
-    @Deprecated
-    public long defaultResponseTimeoutMillis1() {
-        return responseTimeoutMillis();
-    }
-
-    /**
-     * Returns the timeout of a server reply to a client call.
      */
     public long responseTimeoutMillis() {
         return get(RESPONSE_TIMEOUT_MILLIS);
-    }
-
-    /**
-     * Returns the maximum allowed length of a server response.
-     *
-     * @deprecated Use {@link #maxResponseLength()}.
-     */
-    @Deprecated
-    public long defaultMaxResponseLength() {
-        return maxResponseLength();
     }
 
     /**

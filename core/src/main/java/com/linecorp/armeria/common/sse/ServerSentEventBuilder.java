@@ -37,13 +37,7 @@ public final class ServerSentEventBuilder {
     @Nullable
     private String data;
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link ServerSentEvent#builder()}.
-     */
-    @Deprecated
-    public ServerSentEventBuilder() {}
+    ServerSentEventBuilder() {}
 
     /**
      * Sets the specified {@code id}.

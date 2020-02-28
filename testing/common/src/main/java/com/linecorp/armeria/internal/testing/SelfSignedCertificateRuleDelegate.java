@@ -65,21 +65,6 @@ public final class SelfSignedCertificateRuleDelegate {
     /**
      * Creates a new instance.
      *
-     * @deprecated Use {@link #SelfSignedCertificateRuleDelegate(TemporalAccessor, TemporalAccessor)}.
-     *
-     * @param notBefore {@link Certificate} is not valid before this time
-     * @param notAfter {@link Certificate} is not valid after this time
-     */
-    @Deprecated
-    @SuppressWarnings("UseOfObsoleteDateTimeApi")
-    public SelfSignedCertificateRuleDelegate(Date notBefore, Date notAfter) {
-        this(Instant.ofEpochMilli(requireNonNull(notBefore, "notBefore").getTime()),
-             Instant.ofEpochMilli(requireNonNull(notAfter, "notAfter").getTime()));
-    }
-
-    /**
-     * Creates a new instance.
-     *
      * @param notBefore {@link Certificate} is not valid before this time
      * @param notAfter {@link Certificate} is not valid after this time
      */
@@ -102,23 +87,6 @@ public final class SelfSignedCertificateRuleDelegate {
         bits = null;
         notBefore = null;
         notAfter = null;
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link #SelfSignedCertificateRuleDelegate(String, TemporalAccessor, TemporalAccessor)}.
-     *
-     * @param fqdn a fully qualified domain name
-     * @param notBefore {@link Certificate} is not valid before this time
-     * @param notAfter {@link Certificate} is not valid after this time
-     */
-    @Deprecated
-    @SuppressWarnings("UseOfObsoleteDateTimeApi")
-    public SelfSignedCertificateRuleDelegate(String fqdn, Date notBefore, Date notAfter) {
-        this(fqdn,
-             Instant.ofEpochMilli(requireNonNull(notBefore, "notBefore").getTime()),
-             Instant.ofEpochMilli(requireNonNull(notAfter, "notAfter").getTime()));
     }
 
     /**
@@ -150,27 +118,6 @@ public final class SelfSignedCertificateRuleDelegate {
         this.bits = Integer.valueOf(bits);
         notBefore = null;
         notAfter = null;
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use
-     * {@link #SelfSignedCertificateRuleDelegate(String, SecureRandom, int, TemporalAccessor, TemporalAccessor)}
-     *
-     * @param fqdn a fully qualified domain name
-     * @param random the {@link SecureRandom} to use
-     * @param bits the number of bits of the generated private key
-     * @param notBefore {@link Certificate} is not valid before this time
-     * @param notAfter {@link Certificate} is not valid after this time
-     */
-    @Deprecated
-    @SuppressWarnings("UseOfObsoleteDateTimeApi")
-    public SelfSignedCertificateRuleDelegate(String fqdn, SecureRandom random, int bits,
-                                             Date notBefore, Date notAfter) {
-        this(fqdn, random, bits,
-             Instant.ofEpochMilli(requireNonNull(notBefore, "notBefore").getTime()),
-             Instant.ofEpochMilli(requireNonNull(notAfter, "notAfter").getTime()));
     }
 
     /**

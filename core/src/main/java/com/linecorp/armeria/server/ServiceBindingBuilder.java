@@ -68,12 +68,6 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    @Deprecated
-    public ServiceBindingBuilder pathUnder(String prefix) {
-        return (ServiceBindingBuilder) super.pathPrefix(prefix);
-    }
-
-    @Override
     public ServiceBindingBuilder pathPrefix(String prefix) {
         return (ServiceBindingBuilder) super.pathPrefix(prefix);
     }

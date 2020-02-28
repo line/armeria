@@ -54,42 +54,10 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
     }
 
     /**
-     * Returns a new {@link HttpClient} decorator that logs {@link Request}s and {@link Response}s.
-     *
-     * @param level the log level
-     * @deprecated Use {@link LoggingClient#builder()}.
-     */
-    @Deprecated
-    public static Function<? super HttpClient, LoggingClient> newDecorator(LogLevel level) {
-        return delegate -> new LoggingClient(delegate, level);
-    }
-
-    /**
      * Returns a newly created {@link LoggingClientBuilder}.
      */
     public static LoggingClientBuilder builder() {
         return new LoggingClientBuilder();
-    }
-
-    /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
-     *
-     * @deprecated Use {@link LoggingClient#newDecorator()}.
-     */
-    @Deprecated
-    public LoggingClient(HttpClient delegate) {
-        this(delegate, LogLevel.INFO);
-    }
-
-    /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}.
-     *
-     * @deprecated Use {@link LoggingClientBuilder}.
-     */
-    @Deprecated
-    public LoggingClient(HttpClient delegate, LogLevel level) {
-        super(delegate, level);
     }
 
     /**

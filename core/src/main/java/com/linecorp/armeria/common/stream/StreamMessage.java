@@ -176,37 +176,6 @@ public interface StreamMessage<T> extends Publisher<T> {
     CompletableFuture<Void> whenComplete();
 
     /**
-     * Returns a {@link CompletableFuture} that completes when this stream is complete,
-     * either successfully or exceptionally, including cancellation and abortion.
-     *
-     * <p>A {@link StreamMessage} is <em>complete</em>
-     * (or 'fully consumed') when:
-     * <ul>
-     *   <li>the {@link Subscriber} consumes all elements and {@link Subscriber#onComplete()} is invoked,</li>
-     *   <li>an error occurred and {@link Subscriber#onError(Throwable)} is invoked,</li>
-     *   <li>the {@link Subscription} has been cancelled or</li>
-     *   <li>{@link #abort()} has been requested.</li>
-     * </ul>
-     *
-     * @deprecated Use {@link #whenComplete()}.
-     */
-    @Deprecated
-    default CompletableFuture<Void> completionFuture() {
-        return whenComplete();
-    }
-
-    /**
-     * Returns a {@link CompletableFuture} that completes when this stream is complete,
-     * either successfully or exceptionally, including cancellation and abortion.
-     *
-     * @deprecated Use {@link #whenComplete()} instead.
-     */
-    @Deprecated
-    default CompletableFuture<Void> closeFuture() {
-        return whenComplete();
-    }
-
-    /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
      * {@link Subscriber#onError(Throwable)} will be invoked with one of the following exceptions:
      * <ul>

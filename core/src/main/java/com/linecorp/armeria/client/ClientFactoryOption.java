@@ -118,16 +118,6 @@ public final class ClientFactoryOption<T>
             define("TLS_CUSTOMIZER", b -> { /* no-op */ });
 
     /**
-     * The {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
-     * applied to the SSL session.
-     *
-     * @deprecated Use {@link #TLS_CUSTOMIZER}.
-     */
-    @Deprecated
-    public static final ClientFactoryOption<Consumer<? super SslContextBuilder>> SSL_CONTEXT_CUSTOMIZER =
-            TLS_CUSTOMIZER;
-
-    /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      */

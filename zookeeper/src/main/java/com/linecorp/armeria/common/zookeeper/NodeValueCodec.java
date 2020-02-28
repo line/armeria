@@ -30,24 +30,6 @@ import com.linecorp.armeria.client.Endpoint;
 public interface NodeValueCodec {
 
     /**
-     * Default {@link NodeValueCodec} implementation which assumes zNode value is a comma-separated
-     * string. Each element of the zNode value represents an endpoint whose format is
-     * {@code <host>[:<port_number>[:weight]]}, such as:
-     * <ul>
-     *   <li>{@code "foo.com"} - default port number, default weight (1000)</li>
-     *   <li>{@code "bar.com:8080} - port number 8080, default weight (1000)</li>
-     *   <li>{@code "10.0.2.15:0:500} - default port number, weight 500</li>
-     *   <li>{@code "192.168.1.2:8443:700} - port number 8443, weight 700</li>
-     * </ul>
-     * the segment and field delimiter can be specified, default will be "," and ":"
-     * Note that the port number must be specified when you want to specify the weight.
-     *
-     * @deprecated Use {@link #ofDefault()}.
-     */
-    @Deprecated
-    NodeValueCodec DEFAULT = DefaultNodeValueCodec.INSTANCE;
-
-    /**
      * Returns the default {@link NodeValueCodec} implementation which assumes zNode value is a comma-separated
      * string. Each element of the zNode value represents an endpoint whose format is
      * {@code <host>[:<port_number>[:weight]]}, such as:

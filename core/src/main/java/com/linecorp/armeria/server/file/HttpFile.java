@@ -98,31 +98,6 @@ public interface HttpFile {
     }
 
     /**
-     * Creates a new {@link HttpFile} which streams the resource at the specified {@code path}. This method is
-     * a shortcut for {@code HttpFile.of(HttpFile.class.getClassLoader(), path)}.
-     *
-     * @deprecated Use {@link #of(ClassLoader, String)}.
-     */
-    @Deprecated
-    static HttpFile ofResource(String path) {
-        return of(HttpFile.class.getClassLoader(), path);
-    }
-
-    /**
-     * Creates a new {@link HttpFile} which streams the resource at the specified {@code path}, loaded by
-     * the specified {@link ClassLoader}.
-     *
-     * @param classLoader the {@link ClassLoader} which will load the resource at the {@code path}
-     * @param path the path to the resource
-     *
-     * @deprecated Use {@link #of(ClassLoader, String)}.
-     */
-    @Deprecated
-    static HttpFile ofResource(ClassLoader classLoader, String path) {
-        return of(classLoader, path);
-    }
-
-    /**
      * Creates a new {@link HttpFile} which caches the content and attributes of the specified {@link HttpFile}.
      * The cache is automatically invalidated when the {@link HttpFile} is updated.
      *

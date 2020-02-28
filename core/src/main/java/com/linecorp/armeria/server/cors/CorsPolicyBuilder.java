@@ -36,31 +36,13 @@ import com.linecorp.armeria.common.HttpMethod;
  */
 public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder {
 
-    /**
-     * Creates a new instance {@link CorsPolicyBuilder}.
-     *
-     * @deprecated Use {@link CorsPolicy#builder()}.
-     */
-    @Deprecated
-    public CorsPolicyBuilder() {}
+    CorsPolicyBuilder() {}
 
-    /**
-     * Creates a new instance with the specified {@code origins}.
-     *
-     * @deprecated Use {@link CorsPolicy#builder(String...)}.
-     */
-    @Deprecated
-    public CorsPolicyBuilder(String... origins) {
+    CorsPolicyBuilder(String... origins) {
         super(ImmutableList.copyOf(origins));
     }
 
-    /**
-     * Creates a new instance with the specified {@code origins}.
-     *
-     * @deprecated Use {@link CorsPolicy#builder(Iterable)}.
-     */
-    @Deprecated
-    public CorsPolicyBuilder(Iterable<String> origins) {
+    CorsPolicyBuilder(Iterable<String> origins) {
         super(ImmutableList.copyOf(origins));
     }
 

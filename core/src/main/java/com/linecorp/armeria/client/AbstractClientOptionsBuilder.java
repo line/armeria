@@ -124,30 +124,6 @@ public class AbstractClientOptionsBuilder {
      * Sets the timeout of a socket write attempt.
      *
      * @param writeTimeout the timeout. {@code 0} disables the timeout.
-     *
-     * @deprecated Use {@link #writeTimeout(Duration)}.
-     */
-    @Deprecated
-    public AbstractClientOptionsBuilder defaultWriteTimeout(Duration writeTimeout) {
-        return writeTimeoutMillis(requireNonNull(writeTimeout, "writeTimeout").toMillis());
-    }
-
-    /**
-     * Sets the timeout of a socket write attempt in milliseconds.
-     *
-     * @param writeTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
-     *
-     * @deprecated Use {@link #writeTimeoutMillis(long)}.
-     */
-    @Deprecated
-    public AbstractClientOptionsBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
-        return writeTimeoutMillis(writeTimeoutMillis);
-    }
-
-    /**
-     * Sets the timeout of a socket write attempt.
-     *
-     * @param writeTimeout the timeout. {@code 0} disables the timeout.
      */
     public AbstractClientOptionsBuilder writeTimeout(Duration writeTimeout) {
         return writeTimeoutMillis(requireNonNull(writeTimeout, "writeTimeout").toMillis());
@@ -166,30 +142,6 @@ public class AbstractClientOptionsBuilder {
      * Sets the timeout of a response.
      *
      * @param responseTimeout the timeout. {@code 0} disables the timeout.
-     *
-     * @deprecated Use {@link #responseTimeout(Duration)}.
-     */
-    @Deprecated
-    public AbstractClientOptionsBuilder defaultResponseTimeout(Duration responseTimeout) {
-        return responseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
-    }
-
-    /**
-     * Sets the timeout of a response in milliseconds.
-     *
-     * @param responseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
-     *
-     * @deprecated Use {@link #responseTimeoutMillis(long)}.
-     */
-    @Deprecated
-    public AbstractClientOptionsBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
-        return responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    /**
-     * Sets the timeout of a response.
-     *
-     * @param responseTimeout the timeout. {@code 0} disables the timeout.
      */
     public AbstractClientOptionsBuilder responseTimeout(Duration responseTimeout) {
         return responseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
@@ -202,18 +154,6 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return option(ClientOption.RESPONSE_TIMEOUT_MILLIS, responseTimeoutMillis);
-    }
-
-    /**
-     * Sets the maximum allowed length of a server response in bytes.
-     *
-     * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
-     *
-     * @deprecated Use {@link #maxResponseLength(long)}.
-     */
-    @Deprecated
-    public AbstractClientOptionsBuilder defaultMaxResponseLength(long maxResponseLength) {
-        return maxResponseLength(maxResponseLength);
     }
 
     /**

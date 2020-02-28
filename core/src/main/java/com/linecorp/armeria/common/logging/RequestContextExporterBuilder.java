@@ -15,18 +15,13 @@
  */
 package com.linecorp.armeria.common.logging;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.logging.RequestContextExporter.ExportEntry;
@@ -59,26 +54,6 @@ public final class RequestContextExporterBuilder {
     }
 
     /**
-     * Returns {@code true} if the specified {@link BuiltInProperty} is in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public boolean containsBuiltIn(BuiltInProperty property) {
-        return builtIns.contains(requireNonNull(property, "property"));
-    }
-
-    /**
-     * Returns all {@link BuiltInProperty}s in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public Set<BuiltInProperty> getBuiltIns() {
-        return ImmutableSet.copyOf(builtIns);
-    }
-
-    /**
      * Adds the specified {@link AttributeKey} to the export list.
      *
      * @param alias the alias of the attribute to export
@@ -108,30 +83,6 @@ public final class RequestContextExporterBuilder {
     }
 
     /**
-     * Returns {@code true} if the specified {@link AttributeKey} is in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public boolean containsAttribute(AttributeKey<?> key) {
-        requireNonNull(key, "key");
-        return attrs.stream().anyMatch(e -> e.key.equals(key));
-    }
-
-    /**
-     * Returns all {@link AttributeKey}s in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     *
-     * @return the {@link Map} whose key is an alias and value is an {@link AttributeKey}
-     */
-    @Deprecated
-    public Map<String, AttributeKey<?>> getAttributes() {
-        return attrs.stream().collect(
-                toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key));
-    }
-
-    /**
      * Adds the specified HTTP request header name to the export list.
      */
     public RequestContextExporterBuilder addHttpRequestHeader(CharSequence name) {
@@ -154,50 +105,8 @@ public final class RequestContextExporterBuilder {
         httpHeaders.add(new ExportEntry<>(key, value, null));
     }
 
-    /**
-     * Returns {@code true} if the specified HTTP request header name is in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public boolean containsHttpRequestHeader(CharSequence name) {
-        requireNonNull(name, "name");
-        return httpReqHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
-    }
-
-    /**
-     * Returns {@code true} if the specified HTTP response header name is in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public boolean containsHttpResponseHeader(CharSequence name) {
-        requireNonNull(name, "name");
-        return httpResHeaders.stream().anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
-    }
-
     private static AsciiString toHeaderName(CharSequence name) {
         return HttpHeaderNames.of(requireNonNull(name, "name").toString());
-    }
-
-    /**
-     * Returns all HTTP request header names in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public Set<AsciiString> getHttpRequestHeaders() {
-        return httpReqHeaders.stream().map(e -> e.key).collect(toImmutableSet());
-    }
-
-    /**
-     * Returns all HTTP response header names in the export list.
-     *
-     * @deprecated This method will be removed without a replacement.
-     */
-    @Deprecated
-    public Set<AsciiString> getHttpResponseHeaders() {
-        return httpResHeaders.stream().map(e -> e.key).collect(toImmutableSet());
     }
 
     /**

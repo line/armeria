@@ -64,7 +64,7 @@ import io.netty.buffer.ByteBufHolder;
  *
  * @see FileServiceBuilder
  */
-public class FileService extends AbstractHttpService {
+public final class FileService extends AbstractHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(FileService.class);
 

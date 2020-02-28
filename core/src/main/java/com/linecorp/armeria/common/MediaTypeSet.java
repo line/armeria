@@ -77,23 +77,7 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
         return new MediaTypeSet(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
     }
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link #of(MediaType...)}.
-     */
-    @Deprecated
-    public MediaTypeSet(MediaType... mediaTypes) {
-        this(ImmutableList.copyOf(requireNonNull(mediaTypes, "mediaTypes")));
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link #of(Iterable)}.
-     */
-    @Deprecated
-    public MediaTypeSet(Iterable<MediaType> mediaTypes) {
+    private MediaTypeSet(Iterable<MediaType> mediaTypes) {
         final Set<MediaType> mediaTypesCopy = new LinkedHashSet<>(); // Using a Set to deduplicate
         for (MediaType mediaType : requireNonNull(mediaTypes, "mediaTypes")) {
             requireNonNull(mediaType, "mediaTypes contains null.");

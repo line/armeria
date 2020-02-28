@@ -248,17 +248,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Converts the {@link AggregatedHttpRequest} into a new complete {@link HttpRequest}.
-     *
-     * @deprecated Use {@link AggregatedHttpRequest#toHttpRequest()}.
-     */
-    @Deprecated
-    static HttpRequest of(AggregatedHttpRequest request) {
-        requireNonNull(request, "request");
-        return request.toHttpRequest();
-    }
-
-    /**
      * Creates a new instance from an existing {@link RequestHeaders} and {@link Publisher}.
      */
     static HttpRequest of(RequestHeaders headers, Publisher<? extends HttpObject> publisher) {
@@ -269,43 +258,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         } else {
             return new PublisherBasedHttpRequest(headers, publisher);
         }
-    }
-
-    /**
-     * Returns a new {@link HttpRequest} derived from an existing {@link HttpRequest} by replacing its
-     * {@link RequestHeaders} with the specified {@code newHeaders}. Note that the content stream and trailers
-     * of the specified {@link HttpRequest} is not duplicated, which means you can subscribe to only one of
-     * the two {@link HttpRequest}s.
-     *
-     * <p>If you are using this method for intercepting an {@link HttpRequest} in a decorator, make sure to
-     * update {@link RequestContext#request()} with {@link RequestContext#updateRequest(HttpRequest)}, e.g.
-     * <pre>{@code
-     * > public class MyService extends SimpleDecoratingHttpService {
-     * >     @Override
-     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-     * >         // Create a new request with an additional header.
-     * >         final HttpRequest newReq =
-     * >                 HttpRequest.of(req,
-     * >                                req.headers().toBuilder()
-     * >                                   .set("x-custom-header", "value")
-     * >                                   .build());
-     * >
-     * >         // Update the ctx.request.
-     * >         ctx.updateRequest(newReq);
-     * >
-     * >         // Delegate the new request with the updated context.
-     * >         return delegate().serve(ctx, newReq);
-     * >     }
-     * > }
-     * }</pre>
-     *
-     * @deprecated Use {@link #withHeaders(RequestHeaders)} or {@link #withHeaders(RequestHeadersBuilder)}.
-     */
-    @Deprecated
-    static HttpRequest of(HttpRequest request, RequestHeaders newHeaders) {
-        requireNonNull(request, "request");
-        requireNonNull(newHeaders, "newHeaders");
-        return request.withHeaders(newHeaders);
     }
 
     /**

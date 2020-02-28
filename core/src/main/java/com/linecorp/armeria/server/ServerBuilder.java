@@ -141,7 +141,7 @@ public final class ServerBuilder {
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
 
-    // Prohibit deprecate option
+    // Prohibit deprecated options
     @SuppressWarnings("deprecation")
     private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
             ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
@@ -186,13 +186,7 @@ public final class ServerBuilder {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
 
-    /**
-     * Returns a new {@link ServerBuilder}.
-     *
-     * @deprecated Use {@link Server#builder()}.
-     */
-    @Deprecated
-    public ServerBuilder() {
+    ServerBuilder() {
         // Set the default host-level properties.
         virtualHostTemplate.accessLogWriter(AccessLogWriter.disabled(), true);
         virtualHostTemplate.rejectedRouteHandler(RejectedRouteHandler.WARN);
@@ -200,7 +194,7 @@ public final class ServerBuilder {
         virtualHostTemplate.maxRequestLength(Flags.defaultMaxRequestLength());
         virtualHostTemplate.verboseResponses(Flags.verboseResponses());
         virtualHostTemplate.accessLogger(
-                    host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
+                host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
@@ -273,18 +267,6 @@ public final class ServerBuilder {
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
-     * interfaces using the specified protocol.
-     *
-     * @deprecated Use {@link #http(int)} or {@link #https(int)}.
-     * @see <a href="#no_port_specified">What happens if no HTTP(S) port is specified?</a>
-     */
-    @Deprecated
-    public ServerBuilder port(int port, String protocol) {
-        return port(port, SessionProtocol.of(requireNonNull(protocol, "protocol")));
-    }
-
-    /**
-     * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
      * interfaces using the specified {@link SessionProtocol}s. Specify multiple protocols to serve more than
      * one protocol on the same port:
      *
@@ -323,17 +305,6 @@ public final class ServerBuilder {
      */
     public ServerBuilder port(int port, Iterable<SessionProtocol> protocols) {
         return port(new ServerPort(port, protocols));
-    }
-
-    /**
-     * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
-     * protocol.
-     *
-     * @deprecated Use {@link #http(InetSocketAddress)} or {@link #https(InetSocketAddress)}.
-     */
-    @Deprecated
-    public ServerBuilder port(InetSocketAddress localAddress, String protocol) {
-        return port(localAddress, SessionProtocol.of(requireNonNull(protocol, "protocol")));
     }
 
     /**
@@ -602,24 +573,6 @@ public final class ServerBuilder {
      * Sets the amount of time to wait after calling {@link Server#stop()} for
      * requests to go away before actually shutting down.
      *
-     * @param quietPeriodMillis the number of milliseconds to wait for active
-     *                          requests to go end before shutting down. 0 means the server will
-     *                          stop right away without waiting.
-     * @param timeoutMillis the number of milliseconds to wait before shutting down the server regardless of
-     *                      active requests. This should be set to a time greater than {@code quietPeriodMillis}
-     *                      to ensure the server shuts down even if there is a stuck request.
-     *
-     * @deprecated Use {@link #gracefulShutdownTimeoutMillis(long, long)}.
-     */
-    @Deprecated
-    public ServerBuilder gracefulShutdownTimeout(long quietPeriodMillis, long timeoutMillis) {
-        return gracefulShutdownTimeoutMillis(quietPeriodMillis, timeoutMillis);
-    }
-
-    /**
-     * Sets the amount of time to wait after calling {@link Server#stop()} for
-     * requests to go away before actually shutting down.
-     *
      * @param quietPeriod the number of milliseconds to wait for active
      *                    requests to go end before shutting down. {@link Duration#ZERO} means
      *                    the server will stop right away without waiting.
@@ -694,18 +647,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link SslContext} of the {@link Server}.
-     *
-     * @deprecated This method has been deprecated because an incorrectly built {@link SslContext} can cause
-     *             a {@link Server} to malfunction. Use other {@code tls()} methods.
-     */
-    @Deprecated
-    public ServerBuilder tls(SslContext sslContext) {
-        virtualHostTemplate.tls(sslContext);
-        return this;
-    }
-
-    /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
      *
@@ -718,19 +659,6 @@ public final class ServerBuilder {
 
     /**
      * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
-     * cleartext {@code keyFile} and {@code tlsCustomizer}.
-     *
-     * @deprecated Use {@link #tls(File, File)} and {@link #tlsCustomizer(Consumer)}.
-     */
-    @Deprecated
-    public ServerBuilder tls(File keyCertChainFile, File keyFile,
-                             Consumer<SslContextBuilder> tlsCustomizer) {
-        virtualHostTemplate.tls(keyCertChainFile, keyFile, tlsCustomizer);
-        return this;
-    }
-
-    /**
-     * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
      *
      * @see #tlsCustomizer(Consumer)
@@ -738,20 +666,6 @@ public final class ServerBuilder {
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword);
-        return this;
-    }
-
-    /**
-     * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
-     * {@code keyFile}, {@code keyPassword} and {@code tlsCustomizer}.
-     *
-     * @deprecated Use {@link #tls(File, File, String)} and {@link #tlsCustomizer(Consumer)}.
-     */
-    @Deprecated
-    public ServerBuilder tls(
-            File keyCertChainFile, File keyFile, @Nullable String keyPassword,
-            Consumer<SslContextBuilder> tlsCustomizer) {
-        virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword, tlsCustomizer);
         return this;
     }
 
@@ -834,19 +748,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Configures SSL or TLS of the {@link Server} from the specified {@code keyManagerFactory}
-     * and {@code tlsCustomizer}.
-     *
-     * @deprecated Use {@link #tls(KeyManagerFactory)} and {@link #tlsCustomizer(Consumer)}.
-     */
-    @Deprecated
-    public ServerBuilder tls(KeyManagerFactory keyManagerFactory,
-                             Consumer<SslContextBuilder> tlsCustomizer) {
-        virtualHostTemplate.tls(keyManagerFactory, tlsCustomizer);
-        return this;
-    }
-
-    /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
@@ -898,16 +799,6 @@ public final class ServerBuilder {
      */
     public DecoratingServiceBindingBuilder routeDecorator() {
         return new DecoratingServiceBindingBuilder(this);
-    }
-
-    /**
-     * Binds the specified {@link HttpService} at the specified path pattern of the default {@link VirtualHost}.
-     *
-     * @deprecated Use {@link #service(String, HttpService)} instead.
-     */
-    @Deprecated
-    public ServerBuilder serviceAt(String pathPattern, HttpService service) {
-        return service(pathPattern, service);
     }
 
     /**
@@ -1167,17 +1058,6 @@ public final class ServerBuilder {
     /**
      * Returns the {@link VirtualHostBuilder} for building the default
      * <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
-     *
-     * @deprecated Use {@link #defaultVirtualHost()}.
-     */
-    @Deprecated
-    public VirtualHostBuilder withDefaultVirtualHost() {
-        return defaultVirtualHostBuilder;
-    }
-
-    /**
-     * Returns the {@link VirtualHostBuilder} for building the default
-     * <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
      */
     public VirtualHostBuilder defaultVirtualHost() {
         return defaultVirtualHostBuilder;
@@ -1191,40 +1071,6 @@ public final class ServerBuilder {
         customizer.accept(virtualHostBuilder);
         virtualHostBuilders.add(virtualHostBuilder);
         return this;
-    }
-
-    /**
-     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
-     *
-     * @deprecated Use {@link #virtualHost(String)}.
-     *
-     * @param hostnamePattern virtual host name regular expression
-     * @return {@link VirtualHostBuilder} for building the virtual host
-     */
-    @Deprecated
-    public VirtualHostBuilder withVirtualHost(String hostnamePattern) {
-        final VirtualHostBuilder virtualHostBuilder =
-                new VirtualHostBuilder(this, false).hostnamePattern(hostnamePattern);
-        virtualHostBuilders.add(virtualHostBuilder);
-        return virtualHostBuilder;
-    }
-
-    /**
-     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
-     *
-     * @deprecated Use {@link #virtualHost(String, String)}.
-     *
-     * @param defaultHostname default hostname of this virtual host
-     * @param hostnamePattern virtual host name regular expression
-     * @return {@link VirtualHostBuilder} for building the virtual host
-     */
-    @Deprecated
-    public VirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
-        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
-                .defaultHostname(defaultHostname)
-                .hostnamePattern(hostnamePattern);
-        virtualHostBuilders.add(virtualHostBuilder);
-        return virtualHostBuilder;
     }
 
     /**
@@ -1462,28 +1308,6 @@ public final class ServerBuilder {
     /**
      * Sets the timeout of a request.
      *
-     * @deprecated Use {@link #requestTimeout(Duration)}.
-     * @param requestTimeout the timeout. {@code 0} disables the timeout.
-     */
-    @Deprecated
-    public ServerBuilder defaultRequestTimeout(Duration requestTimeout) {
-        return requestTimeout(requestTimeout);
-    }
-
-    /**
-     * Sets the timeout of a request in milliseconds.
-     *
-     * @deprecated Use {@link #requestTimeoutMillis(long)}.
-     * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
-     */
-    @Deprecated
-    public ServerBuilder defaultRequestTimeoutMillis(long requestTimeoutMillis) {
-        return requestTimeoutMillis(requestTimeoutMillis);
-    }
-
-    /**
-     * Sets the timeout of a request.
-     *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
      */
     public ServerBuilder requestTimeout(Duration requestTimeout) {
@@ -1498,19 +1322,6 @@ public final class ServerBuilder {
     public ServerBuilder requestTimeoutMillis(long requestTimeoutMillis) {
         virtualHostTemplate.requestTimeoutMillis(requestTimeoutMillis);
         return this;
-    }
-
-    /**
-     * Sets the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
-     *
-     * @deprecated Use {@link #maxRequestLength(long)}.
-     *
-     * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
-     */
-    @Deprecated
-    public ServerBuilder defaultMaxRequestLength(long maxRequestLength) {
-        return maxRequestLength(maxRequestLength);
     }
 
     /**

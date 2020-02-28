@@ -21,29 +21,25 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
  * Default {@link HttpRequest} implementation.
- *
- * @deprecated Use {@link HttpRequest#streaming(RequestHeaders)}.
  */
-@Deprecated
+@UnstableApi
 public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> implements HttpRequestWriter {
 
     private final RequestHeaders headers;
 
     /**
      * Creates a new instance with the specified headers.
-     *
-     * @deprecated Use {@link HttpRequest#streaming(RequestHeaders)}.
      */
-    @Deprecated
-    public DefaultHttpRequest(RequestHeaders headers) {
+    protected DefaultHttpRequest(RequestHeaders headers) {
         this.headers = requireNonNull(headers, "headers");
     }
 
     @Override
-    public RequestHeaders headers() {
+    public final RequestHeaders headers() {
         return headers;
     }
 

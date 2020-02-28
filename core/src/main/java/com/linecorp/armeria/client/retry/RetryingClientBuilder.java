@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * Builds a new {@link RetryingClient} or its decorator function.
  */
-public class RetryingClientBuilder extends AbstractRetryingClientBuilder<HttpResponse> {
+public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<HttpResponse> {
 
     private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = Integer.MAX_VALUE;
 

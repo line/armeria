@@ -68,12 +68,6 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
-    @Deprecated
-    public VirtualHostServiceBindingBuilder pathUnder(String prefix) {
-        return (VirtualHostServiceBindingBuilder) super.pathPrefix(prefix);
-    }
-
-    @Override
     public VirtualHostServiceBindingBuilder pathPrefix(String prefix) {
         return (VirtualHostServiceBindingBuilder) super.pathPrefix(prefix);
     }

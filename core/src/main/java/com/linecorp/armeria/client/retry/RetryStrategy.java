@@ -39,14 +39,6 @@ import com.linecorp.armeria.common.util.Exceptions;
 public interface RetryStrategy {
 
     /**
-     * The default {@link Backoff} implementation.
-     *
-     * @deprecated Use {@link Backoff#ofDefault()}.
-     */
-    @Deprecated
-    Backoff defaultBackoff = Backoff.ofDefault();
-
-    /**
      * A {@link RetryStrategy} that defines a retry should not be performed.
      */
     static RetryStrategy never() {

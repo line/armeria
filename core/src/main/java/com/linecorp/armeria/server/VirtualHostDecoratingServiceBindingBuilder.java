@@ -60,12 +60,6 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     }
 
     @Override
-    @Deprecated
-    public VirtualHostDecoratingServiceBindingBuilder pathUnder(String prefix) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.pathPrefix(prefix);
-    }
-
-    @Override
     public VirtualHostDecoratingServiceBindingBuilder pathPrefix(String prefix) {
         return (VirtualHostDecoratingServiceBindingBuilder) super.pathPrefix(prefix);
     }

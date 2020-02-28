@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.HttpResponseUtil.delegateWhenStageComplete;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
@@ -68,8 +67,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
      */
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
+        requireNonNull(stage, "stage");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        delegateWhenStageComplete(stage, res);
+        res.delegateWhenComplete(stage);
         return res;
     }
 
@@ -85,9 +85,10 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage,
                              EventExecutor subscriberExecutor) {
+        requireNonNull(stage, "stage");
         requireNonNull(subscriberExecutor, "subscriberExecutor");
         final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
-        delegateWhenStageComplete(stage, res);
+        res.delegateWhenComplete(stage);
         return res;
     }
 
@@ -338,17 +339,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Converts the {@link AggregatedHttpResponse} into a new complete {@link HttpResponse}.
-     *
-     * @deprecated Use {@link AggregatedHttpResponse#toHttpResponse()}.
-     */
-    @Deprecated
-    static HttpResponse of(AggregatedHttpResponse res) {
-        requireNonNull(res, "res");
-        return res.toHttpResponse();
-    }
-
-    /**
      * Creates a new HTTP response whose stream is produced from an existing {@link Publisher}.
      */
     static HttpResponse of(Publisher<? extends HttpObject> publisher) {
@@ -367,28 +357,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final HttpResponseWriter res = streaming();
         res.close(cause);
         return res;
-    }
-
-    /**
-     * Creates a new failed HTTP response.
-     *
-     * @deprecated Use {@link #ofFailure(Throwable)}.
-     */
-    @Deprecated
-    static HttpResponse ofFailed(Throwable cause) {
-        return ofFailure(cause);
-    }
-
-    @Override
-    @Deprecated
-    default CompletableFuture<Void> closeFuture() {
-        return whenComplete();
-    }
-
-    @Override
-    @Deprecated
-    default CompletableFuture<Void> completionFuture() {
-        return whenComplete();
     }
 
     @Override

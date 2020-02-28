@@ -62,7 +62,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, Throwable>
             abortCauseUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                    DeferredStreamMessage.class, Throwable.class, "abortCause");
+            DeferredStreamMessage.class, Throwable.class, "abortCause");
 
     @Nullable
     @SuppressWarnings("unused") // Updated only via delegateUpdater
