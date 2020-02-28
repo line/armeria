@@ -42,6 +42,7 @@ public abstract class SerializationFormatProvider {
     /**
      * A registration entry of a {@link SerializationFormat}.
      */
+    @UnstableApi
     protected static final class Entry implements Comparable<Entry> {
         final String uriText;
         final MediaType primaryMediaType;
