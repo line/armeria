@@ -362,11 +362,11 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.query", "bar=baz")
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.content_length", "64")
-                           .containsEntry("req.rpc_method", "hello")
-                           .containsEntry("req.rpc_params", "[world]")
+                           .containsEntry("req.name", "hello")
+                           .containsEntry("req.content", "[world]")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
-                           .containsEntry("res.rpc_result", "Hello, world!")
+                           .containsEntry("res.content", "Hello, world!")
                            .containsEntry("req.http_headers.user-agent", "some-client")
                            .containsEntry("res.http_headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")
@@ -376,7 +376,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("attrs.my_attr_value", "some-value")
                            .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(29);
+                           .hasSize(28);
         }
     }
 
@@ -497,11 +497,11 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.name", "hello")
                            .containsEntry("req.content_length", "64")
-                           .containsEntry("req.rpc_method", "hello")
-                           .containsEntry("req.rpc_params", "[world]")
+                           .containsEntry("req.name", "hello")
+                           .containsEntry("req.content", "[world]")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
-                           .containsEntry("res.rpc_result", "Hello, world!")
+                           .containsEntry("res.content", "Hello, world!")
                            .containsEntry("req.http_headers.user-agent", "some-client")
                            .containsEntry("res.http_headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")
@@ -511,7 +511,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("attrs.my_attr_value", "some-value")
                            .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(27);
+                           .hasSize(26);
         }
     }
 
