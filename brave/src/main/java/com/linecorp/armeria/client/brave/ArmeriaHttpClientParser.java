@@ -58,12 +58,12 @@ final class ArmeriaHttpClientParser implements HttpRequestParser, HttpResponsePa
     public void parse(brave.http.HttpRequest request, TraceContext context, SpanCustomizer span) {
         HttpRequestParser.DEFAULT.parse(request, context, span);
 
-        final Object req = request.unwrap();
-        if (!(req instanceof ClientRequestContext)) {
+        final Object unwrapped = request.unwrap();
+        if (!(unwrapped instanceof ClientRequestContext)) {
             return;
         }
 
-        final ClientRequestContext ctx = (ClientRequestContext) req;
+        final ClientRequestContext ctx = (ClientRequestContext) unwrapped;
         final HttpRequest httpReq = ctx.request();
         if (httpReq == null) {
             // Should never reach here because BraveClient is an HTTP-level decorator.

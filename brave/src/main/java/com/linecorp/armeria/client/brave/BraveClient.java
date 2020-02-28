@@ -105,8 +105,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
-        final HttpClientRequest request = ClientRequestContextAdapter.asHttpClientRequest(ctx, newHeaders);
-        final Span span = handler.handleSend(request);
+        final HttpClientRequest braveReq = ClientRequestContextAdapter.asHttpClientRequest(ctx, newHeaders);
+        final Span span = handler.handleSend(braveReq);
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
 
@@ -159,8 +159,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                 }
             }
 
-            final HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(log, request);
-            handler.handleReceive(response, response.error(), span);
+            final HttpClientResponse braveRes = ClientRequestContextAdapter.asHttpClientResponse(log, braveReq);
+            handler.handleReceive(braveRes, braveRes.error(), span);
         });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {

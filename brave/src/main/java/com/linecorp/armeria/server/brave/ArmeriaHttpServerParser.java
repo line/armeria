@@ -56,12 +56,12 @@ final class ArmeriaHttpServerParser implements HttpRequestParser, HttpResponsePa
     public void parse(brave.http.HttpRequest request, TraceContext context, SpanCustomizer span) {
         HttpRequestParser.DEFAULT.parse(request, context, span);
 
-        final Object req = request.unwrap();
-        if (!(req instanceof ServiceRequestContext)) {
+        final Object unwrapped = request.unwrap();
+        if (!(unwrapped instanceof ServiceRequestContext)) {
             return;
         }
 
-        final ServiceRequestContext ctx = (ServiceRequestContext) req;
+        final ServiceRequestContext ctx = (ServiceRequestContext) unwrapped;
         span.tag(SpanTags.TAG_HTTP_HOST, ctx.request().authority())
             .tag(SpanTags.TAG_HTTP_URL, ctx.request().uri().toString())
             .tag(SpanTags.TAG_HTTP_PROTOCOL, ctx.sessionProtocol().uriText())

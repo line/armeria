@@ -180,7 +180,7 @@ class BraveClientTest {
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
         // check the client invocation had the current span in scope.
-        assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(1);
+        assertThat(scopeDecoratorCallingCounter.get()).isOne();
     }
 
     @Test
