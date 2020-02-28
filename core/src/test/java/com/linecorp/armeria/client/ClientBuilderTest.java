@@ -18,9 +18,6 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -29,20 +26,28 @@ import org.junit.jupiter.api.Test;
 class ClientBuilderTest {
 
     @Test
-    void nonePlusSchemeProvided() {
+    void uriWithNonePlusProtocol() throws Exception {
         final WebClient client = Clients.builder("none+https://google.com/").build(WebClient.class);
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
     }
 
     @Test
-    void nonePlusSchemeUriToUrl() throws MalformedURLException {
-        final WebClient client = Clients.builder("none+https://google.com/").build(WebClient.class);
-        assertThat(client.uri().toURL()).isEqualTo(URI.create("https://google.com/").toURL());
-    }
-
-    @Test
-    void noSchemeShouldDefaultToNone() {
+    void uriWithoutNone() {
         final WebClient client = Clients.builder("https://google.com/").build(WebClient.class);
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
+    }
+
+    @Test
+    void endpointWithoutPath() {
+        final WebClient client = Clients.builder("http", Endpoint.of("127.0.0.1"))
+                                        .build(WebClient.class);
+        assertThat(client.uri().toString()).isEqualTo("http://127.0.0.1/");
+    }
+
+    @Test
+    void endpointWithPath() {
+        final WebClient client = Clients.builder("http", Endpoint.of("127.0.0.1"), "/foo")
+                                        .build(WebClient.class);
+        assertThat(client.uri().toString()).isEqualTo("http://127.0.0.1/foo");
     }
 }

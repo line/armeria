@@ -61,7 +61,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     @Nullable
     private final Scheme scheme;
     @Nullable
-    private String path;
+    private final String path;
 
     /**
      * Creates a new instance.
@@ -70,6 +70,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
         uri = UNDEFINED_URI;
         scheme = null;
         endpointGroup = null;
+        path = null;
     }
 
     /**
@@ -96,6 +97,7 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
         }
         scheme = null;
         endpointGroup = null;
+        path = null;
     }
 
     /**
@@ -104,12 +106,17 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    WebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup) {
+    WebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup, @Nullable String path) {
         validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
+        if (path != null) {
+            checkArgument(path.startsWith("/"),
+                          "path: %s (expected: an absolute path starting with '/')", path);
+        }
 
         uri = null;
         scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
+        this.path = path;
     }
 
     private static Scheme validateScheme(String scheme) {
@@ -123,22 +130,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
 
         throw new IllegalArgumentException("scheme : " + scheme +
                                            " (expected: one of " + SUPPORTED_PROTOCOLS + ')');
-    }
-
-    /**
-     * Sets the {@code path} of the client.
-     */
-    public WebClientBuilder path(String path) {
-        if (endpointGroup == null) {
-            throw new IllegalStateException(
-                    getClass().getSimpleName() + " must be created with an " +
-                    EndpointGroup.class.getSimpleName() + " to call this method.");
-        }
-
-        requireNonNull(path, "path");
-        checkArgument(path.startsWith("/"), "path: %s (expected: an absolute path starting with '/')", path);
-        this.path = path;
-        return this;
     }
 
     /**

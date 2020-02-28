@@ -30,7 +30,7 @@ class RequestContextExporterBuilderTest {
         for (BuiltInProperty property : BuiltInProperty.values()) {
             builder.addKeyPattern(property.key);
         }
-        assertThat(builder.build().builtIns()).containsExactly(BuiltInProperty.values());
+        assertThat(builder.build().builtIns()).containsOnly(BuiltInProperty.values());
     }
 
     @Test
@@ -48,7 +48,7 @@ class RequestContextExporterBuilderTest {
                       .filter(p -> p.key.startsWith("req."))
                       .toArray(BuiltInProperty[]::new);
         builder.addKeyPattern("req.*");
-        assertThat(builder.build().builtIns()).containsExactly(expectedProperties);
+        assertThat(builder.build().builtIns()).containsOnly(expectedProperties);
     }
 
     @Test
@@ -59,7 +59,7 @@ class RequestContextExporterBuilderTest {
                       .filter(p -> p.key.contains("rpc"))
                       .toArray(BuiltInProperty[]::new);
         builder.addKeyPattern("*rpc*");
-        assertThat(builder.build().builtIns()).containsExactly(expectedProperties);
+        assertThat(builder.build().builtIns()).containsOnly(expectedProperties);
     }
 
     @Test

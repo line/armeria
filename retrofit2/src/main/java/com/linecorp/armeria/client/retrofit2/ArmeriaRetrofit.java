@@ -35,6 +35,10 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link Retrofit} with the specified {@code baseUrl}.
+     *
+     * @throws IllegalArgumentException if the {@code baseUrl} is not valid or its scheme is not one of
+     *                                  the values in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     public static Retrofit of(String baseUrl) {
         return builder(baseUrl).build();
@@ -42,6 +46,10 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link Retrofit} with the specified {@code baseUrl}.
+     *
+     * @throws IllegalArgumentException if the {@code baseUrl} is not valid or its scheme is not one of
+     *                                  the values in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     public static Retrofit of(URI baseUrl) {
         return builder(baseUrl).build();
@@ -49,10 +57,50 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
+     * the specified {@code protocol}.
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
+     */
+    public static Retrofit of(String protocol, EndpointGroup endpointGroup) {
+        return builder(protocol, endpointGroup).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
      * the specified {@link SessionProtocol}.
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     public static Retrofit of(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
+     * the specified {@code protocol} and {@code path}.
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
+     */
+    public static Retrofit of(String protocol, EndpointGroup endpointGroup, String path) {
+        return builder(protocol, endpointGroup, path).build();
+    }
+
+    /**
+     * Returns a new {@link Retrofit} which sends requests to the specified {@link Endpoint} using
+     * the specified {@link SessionProtocol} and {@code path}.
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
+     */
+    public static Retrofit of(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
+        return builder(protocol, endpointGroup, path).build();
     }
 
     /**
@@ -64,6 +112,10 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link ArmeriaRetrofitBuilder} created with the specified {@code baseUrl}.
+     *
+     * @throws IllegalArgumentException if the {@code baseUrl} is not valid or its scheme is not one of
+     *                                  the values in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     public static ArmeriaRetrofitBuilder builder(String baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
@@ -72,6 +124,10 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link ArmeriaRetrofitBuilder} created with the specified {@code baseUrl}.
+     *
+     * @throws IllegalArgumentException if the {@code baseUrl} is not valid or its scheme is not one of
+     *                                  the values in {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     public static ArmeriaRetrofitBuilder builder(URI baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
@@ -80,12 +136,57 @@ public final class ArmeriaRetrofit {
 
     /**
      * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
+     * the specified {@link EndpointGroup} using the specified {@code protocol}.
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
+     */
+    public static ArmeriaRetrofitBuilder builder(String protocol, EndpointGroup endpointGroup) {
+        return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")), endpointGroup);
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
      * the specified {@link EndpointGroup} using the specified {@link SessionProtocol}.
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
      */
     public static ArmeriaRetrofitBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
         return builder(WebClient.of(protocol, endpointGroup));
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
+     * the specified {@link EndpointGroup} using the specified {@link SessionProtocol} and {@code path}.
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
+     */
+    public static ArmeriaRetrofitBuilder builder(String protocol, EndpointGroup endpointGroup,
+                                                 String path) {
+        return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")), endpointGroup, path);
+    }
+
+    /**
+     * Returns a new {@link ArmeriaRetrofitBuilder} that builds a client that sends requests to
+     * the specified {@link EndpointGroup} using the specified {@link SessionProtocol} and {@code path}.
+     *
+     * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
+     *                                  {@link SessionProtocol#httpValues()} or
+     *                                  {@link SessionProtocol#httpsValues()}.
+     */
+    public static ArmeriaRetrofitBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup,
+                                                 String path) {
+        requireNonNull(protocol, "protocol");
+        requireNonNull(endpointGroup, "endpointGroup");
+        requireNonNull(path, "path");
+        return builder(WebClient.of(protocol, endpointGroup, path));
     }
 
     /**

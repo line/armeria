@@ -154,14 +154,14 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
     }
 
     @Override
-    protected void getAsync(WebClient client, String path, Callback<Void> callback) throws Exception {
+    protected void getAsync(WebClient client, String path, Callback<Integer> callback) throws Exception {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             final HttpResponse res = client.get(path);
             final ClientRequestContext ctx = ctxCaptor.get();
-            res.aggregate().handle((unused, cause) -> {
+            res.aggregate().handle((response, cause) -> {
                 try (SafeCloseable ignored = ctx.push()) {
                     if (cause == null) {
-                        callback.onSuccess(null);
+                        callback.onSuccess(response.status().code());
                     } else {
                         callback.onError(cause);
                     }

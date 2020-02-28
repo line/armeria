@@ -17,9 +17,13 @@ package com.linecorp.armeria.common.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
+import java.util.function.Function;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -33,6 +37,8 @@ class RequestContextExporterTest {
             AttributeKey.valueOf(RequestContextExporterTest.class, "ATTR1");
     private static final AttributeKey<String> ATTR2 =
             AttributeKey.valueOf(RequestContextExporterTest.class, "ATTR2");
+    private static final AttributeKey<Foo> ATTR3 =
+            AttributeKey.valueOf(Foo.class, "ATTR3");
 
     @Test
     void shouldNotExportNullValue() {
@@ -44,8 +50,8 @@ class RequestContextExporterTest {
         final RequestContextExporter exporter =
                 RequestContextExporter.builder()
                                       .addKeyPattern("*")
-                                      .addAttribute("attr1", ATTR1)
-                                      .addAttribute("attr2", ATTR2)
+                                      .addAttribute("attrs.attr1", ATTR1)
+                                      .addAttribute("attrs.attr2", ATTR2)
                                       .build();
 
         assertThat(exporter.export(ctx)).containsOnlyKeys(
@@ -74,7 +80,7 @@ class RequestContextExporterTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final RequestContextExporter exporter =
                 RequestContextExporter.builder()
-                                      .addAttribute("attr1", ATTR1)
+                                      .addAttribute("attrs.attr1", ATTR1)
                                       .build();
 
         assertThat(exporter.export(ctx)).doesNotContainKeys("attrs.attr1");
@@ -122,14 +128,53 @@ class RequestContextExporterTest {
         ctx.setAttr(ATTR2, "2");
         final RequestContextExporter exporter =
                 RequestContextExporter.builder()
-                                      .addAttribute("attr1-1", ATTR1)
-                                      .addAttribute("attr1-2", ATTR1)
-                                      .addAttribute("attr2", ATTR2)
+                                      .addAttribute("attrs.attr1-1", ATTR1)
+                                      .addAttribute("attrs.attr1-2", ATTR1)
+                                      .addAttribute("attrs.attr2", ATTR2)
                                       .build();
 
         assertThat(exporter.export(ctx)).containsOnlyKeys(
                 "attrs.attr1-1",
                 "attrs.attr1-2",
                 "attrs.attr2");
+    }
+
+    @Test
+    void customExportKey() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx.setAttr(ATTR1, "1");
+        ctx.setAttr(ATTR3, new Foo("foo"));
+        final RequestContextExporter exporter = RequestContextExporter
+                .builder()
+                .addAttribute("attrs.attr1", ATTR1)
+                .addAttribute("my_attr2", ATTR1)
+                .addHttpRequestHeader(HttpHeaderNames.METHOD, "request_method")
+                .addKeyPattern("request_id=req.id")
+                .addKeyPattern("foo=attr:" + Foo.class.getName() + "#ATTR3")
+                .addKeyPattern("bar=attr:" + Foo.class.getName() + "#ATTR3:" + FooStringifier.class.getName())
+                .build();
+        final Map<String, String> export;
+        try (SafeCloseable ignored = ctx.push()) {
+            export = exporter.export();
+        }
+        assertThat(export).containsOnlyKeys("request_id", "request_method",
+                                            "attrs.attr1", "my_attr2",
+                                            "foo", "bar");
+    }
+
+    static final class Foo {
+        final String value;
+
+        Foo(final String value) {
+            this.value = value;
+        }
+    }
+
+    static final class FooStringifier implements Function<Foo, String> {
+
+        @Override
+        public String apply(final Foo foo) {
+            return foo.value;
+        }
     }
 }

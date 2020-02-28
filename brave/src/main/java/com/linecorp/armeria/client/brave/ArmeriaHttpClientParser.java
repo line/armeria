@@ -25,11 +25,13 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 
 import brave.SpanCustomizer;
-import brave.http.HttpAdapter;
-import brave.http.HttpClientParser;
+import brave.http.HttpRequestParser;
+import brave.http.HttpResponse;
+import brave.http.HttpResponseParser;
+import brave.propagation.TraceContext;
 
 /**
- * Default implementation of {@link HttpClientParser}.
+ * Default implementation of {@link HttpRequestParser} and {@link HttpResponseParser} for clients.
  * This parser adds some custom tags and overwrites the name of span if {@link RequestLog#requestContent()}
  * is {@link RpcRequest}.
  * The following tags become available:
@@ -42,7 +44,7 @@ import brave.http.HttpClientParser;
  *   <li>address.local</li>
  * </ul>
  */
-final class ArmeriaHttpClientParser extends HttpClientParser {
+final class ArmeriaHttpClientParser implements HttpRequestParser, HttpResponseParser {
 
     private static final ArmeriaHttpClientParser INSTANCE = new ArmeriaHttpClientParser();
 
@@ -53,52 +55,56 @@ final class ArmeriaHttpClientParser extends HttpClientParser {
     private ArmeriaHttpClientParser() {}
 
     @Override
-    public <T> void request(HttpAdapter<T, ?> rawAdapter, T req, SpanCustomizer customizer) {
-        super.request(rawAdapter, req, customizer);
-        if (!(req instanceof ClientRequestContext)) {
+    public void parse(brave.http.HttpRequest request, TraceContext context, SpanCustomizer span) {
+        HttpRequestParser.DEFAULT.parse(request, context, span);
+
+        final Object unwrapped = request.unwrap();
+        if (!(unwrapped instanceof ClientRequestContext)) {
             return;
         }
 
-        final ClientRequestContext ctx = (ClientRequestContext) req;
+        final ClientRequestContext ctx = (ClientRequestContext) unwrapped;
         final HttpRequest httpReq = ctx.request();
         if (httpReq == null) {
             // Should never reach here because BraveClient is an HTTP-level decorator.
             return;
         }
 
-        customizer.tag(SpanTags.TAG_HTTP_HOST, httpReq.authority())
-                  .tag(SpanTags.TAG_HTTP_URL, httpReq.uri().toString());
+        span.tag(SpanTags.TAG_HTTP_HOST, httpReq.authority())
+            .tag(SpanTags.TAG_HTTP_URL, httpReq.uri().toString());
     }
 
     @Override
-    public <T> void response(HttpAdapter<?, T> rawAdapter, T res, Throwable error, SpanCustomizer customizer) {
-        super.response(rawAdapter, res, error, customizer);
+    public void parse(HttpResponse response, TraceContext context, SpanCustomizer span) {
+        HttpResponseParser.DEFAULT.parse(response, context, span);
+
+        final Object res = response.unwrap();
         if (!(res instanceof ClientRequestContext)) {
             return;
         }
 
         final ClientRequestContext ctx = (ClientRequestContext) res;
         final RequestLog log = ctx.log().ensureComplete();
-        customizer.tag(SpanTags.TAG_HTTP_PROTOCOL, ClientRequestContextAdapter.protocol(log));
+        span.tag(SpanTags.TAG_HTTP_PROTOCOL, ClientRequestContextAdapter.protocol(log));
 
         final String serFmt = ClientRequestContextAdapter.serializationFormat(log);
         if (serFmt != null) {
-            customizer.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
+            span.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
         }
 
         final SocketAddress raddr = ctx.remoteAddress();
         if (raddr != null) {
-            customizer.tag(SpanTags.TAG_ADDRESS_REMOTE, raddr.toString());
+            span.tag(SpanTags.TAG_ADDRESS_REMOTE, raddr.toString());
         }
 
         final SocketAddress laddr = ctx.localAddress();
         if (laddr != null) {
-            customizer.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
+            span.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
         }
 
         final String name = log.name();
         if (name != null) {
-            customizer.name(name);
+            span.name(name);
         }
     }
 }

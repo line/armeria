@@ -51,9 +51,8 @@ public class StaticEndpointGroupIntegrationTest {
                 Endpoint.of("127.0.0.1", serverTwo.httpPort()).withWeight(2),
                 Endpoint.of("127.0.0.1", serverThree.httpPort()).withWeight(3));
 
-        HelloService.Iface ipService = Clients.builder("ttext+http", endpointGroup)
-                                              .path("/serverIp")
-                                              .build(HelloService.Iface.class);
+        HelloService.Iface ipService = Clients.newClient("ttext+http", endpointGroup, "/serverIp",
+                                                         HelloService.Iface.class);
         assertThat(ipService.hello("ip")).isEqualTo(
                 "host:127.0.0.1:" + serverOne.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo(
@@ -65,9 +64,8 @@ public class StaticEndpointGroupIntegrationTest {
                 Endpoint.of("127.0.0.1", serverTwo.httpPort()).withWeight(4),
                 Endpoint.of("127.0.0.1", serverThree.httpPort()).withWeight(3));
 
-        ipService = Clients.builder("tbinary+http", serverGroup2)
-                           .path("/serverIp")
-                           .build(HelloService.Iface.class);
+        ipService = Clients.newClient("tbinary+http", serverGroup2, "/serverIp",
+                                      HelloService.Iface.class);
 
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverOne.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverThree.httpPort());
