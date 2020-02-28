@@ -119,24 +119,46 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
 
     @Override
     public boolean setStatusCode(@Nullable HttpStatus status) {
-        if (state != State.COMMITTED) {
-            if (status != null) {
-                armeriaHeaders.status(status.value());
-            }
-            return true;
-        } else {
+        if (state == State.COMMITTED) {
             return false;
         }
+
+        if (status != null) {
+            armeriaHeaders.status(status.value());
+        }
+        return true;
     }
 
     @Nullable
     @Override
     public HttpStatus getStatusCode() {
-        final String status = armeriaHeaders.get(HttpHeaderNames.STATUS);
-        if (status == null) {
+        final String statusCode = armeriaHeaders.get(HttpHeaderNames.STATUS);
+        if (statusCode == null) {
             return null;
         }
-        return HttpStatus.resolve(com.linecorp.armeria.common.HttpStatus.valueOf(status).code());
+        return HttpStatus.resolve(com.linecorp.armeria.common.HttpStatus.valueOf(statusCode).code());
+    }
+
+    @Override
+    public boolean setRawStatusCode(@Nullable Integer statusCode) {
+        if (state == State.COMMITTED) {
+            return false;
+        }
+
+        if (statusCode != null) {
+            armeriaHeaders.status(statusCode);
+        }
+        return true;
+    }
+
+    @Nullable
+    @Override
+    public Integer getRawStatusCode() {
+        final String statusCode = armeriaHeaders.get(HttpHeaderNames.STATUS);
+        if (statusCode == null) {
+            return null;
+        }
+        return com.linecorp.armeria.common.HttpStatus.valueOf(statusCode).code();
     }
 
     @Override
