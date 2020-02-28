@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 
 import brave.Span;
@@ -161,9 +160,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             }
 
             final HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(log, request);
-            try (SafeCloseable ignored = ctx.push()) {
-                handler.handleReceive(response, response.error(), span);
-            }
+            handler.handleReceive(response, response.error(), span);
         });
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {

@@ -148,6 +148,7 @@ class BraveServiceTest {
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
+        // check the service invocation had the current span in scope.
         assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(1);
     }
 

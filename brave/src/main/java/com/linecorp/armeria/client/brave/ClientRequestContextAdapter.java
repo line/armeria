@@ -44,9 +44,9 @@ final class ClientRequestContextAdapter {
     @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpClientRequest extends brave.http.HttpClientRequest {
         private final ClientRequestContext ctx;
-        @Nullable private final RequestHeadersBuilder headersBuilder;
+        private final RequestHeadersBuilder headersBuilder;
 
-        HttpClientRequest(ClientRequestContext ctx, @Nullable RequestHeadersBuilder headersBuilder) {
+        HttpClientRequest(ClientRequestContext ctx, RequestHeadersBuilder headersBuilder) {
             this.ctx = ctx;
             this.headersBuilder = headersBuilder;
         }
@@ -89,9 +89,7 @@ final class ClientRequestContextAdapter {
 
         @Override
         public void header(String name, String value) {
-            if (headersBuilder != null) {
-                headersBuilder.set(name, value);
-            }
+            headersBuilder.set(name, value);
         }
 
         @Override
