@@ -61,28 +61,28 @@ public class Http2KeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandler.class);
 
+    @Nullable
+    private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
     private final boolean sendPingsOnNoActiveStreams;
     private final long pingTimeoutMillis;
     private final Http2FrameWriter frameWriter;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
-    @Nullable
-    private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
     private final Http2Connection http2Connection;
     private final Channel channel;
     private final ChannelFutureListener pingWriteListener = new PingWriteListener();
     private final Runnable shutdownRunnable = this::closeChannelAndLog;
 
-    private State state = State.IDLE;
-    private long lastPingPayload;
     @Nullable
     private ChannelFuture pingWriteFuture;
     @Nullable
     private Future<?> shutdownFuture;
+    private long lastPingPayload;
+    private State state = State.IDLE;
 
     public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
                                  Http2Connection http2Connection) {
         this(channel, frameWriter, http2Connection, Flags.defaultHttp2PingTimeoutMillis(),
-                Flags.useHttp2PingOnNoActiveStreams());
+             Flags.useHttp2PingOnNoActiveStreams());
     }
 
     public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Http2Connection http2Connection,
@@ -127,7 +127,7 @@ public class Http2KeepAliveHandler {
         lastPingPayload = random.nextLong();
         state = State.PING_SCHEDULED;
         pingWriteFuture = frameWriter.writePing(ctx, false, lastPingPayload, ctx.newPromise())
-                .addListener(pingWriteListener);
+                                     .addListener(pingWriteListener);
         ctx.flush();
     }
 
@@ -169,7 +169,7 @@ public class Http2KeepAliveHandler {
         }
         if (lastPingPayload != data) {
             logger.debug("{} Unexpected PING(ACK=1, DATA={}) received, " +
-                    "but expecting PING(ACK=1, DATA={})", channel, data, lastPingPayload);
+                         "but expecting PING(ACK=1, DATA={})", channel, data, lastPingPayload);
             return false;
         }
         return true;
@@ -198,6 +198,13 @@ public class Http2KeepAliveHandler {
             }
             state = State.SHUTDOWN;
         });
+    }
+
+    private long getStopwatchElapsedInNanos() {
+        if (stopwatch == null) {
+            return -1;
+        }
+        return stopwatch.elapsed(TimeUnit.NANOSECONDS);
     }
 
     /**
@@ -244,12 +251,5 @@ public class Http2KeepAliveHandler {
                 stopwatch.reset().start();
             }
         }
-    }
-
-    private long getStopwatchElapsedInNanos() {
-        if (stopwatch == null) {
-            return -1;
-        }
-        return stopwatch.elapsed(TimeUnit.NANOSECONDS);
     }
 }
