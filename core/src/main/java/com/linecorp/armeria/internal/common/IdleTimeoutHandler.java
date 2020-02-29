@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.common.Flags.defaultUseHttp2PingOnIdleConnection;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
@@ -51,7 +50,7 @@ public abstract class IdleTimeoutHandler extends IdleStateHandler {
      */
     @Override
     protected final void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
-        if (isHttp2 && defaultUseHttp2PingOnIdleConnection()) {
+        if (isHttp2 && Flags.defaultUseHttp2PingOnIdleConnection()) {
             ctx.fireUserEventTriggered(evt);
             return;
         }

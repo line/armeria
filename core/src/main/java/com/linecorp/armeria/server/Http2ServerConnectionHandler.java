@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.common.Flags.defaultUseHttp2PingOnIdleConnection;
-
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.IdleTimeoutHandler;
@@ -46,7 +45,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.gracefulShutdownSupport = gracefulShutdownSupport;
 
-        if (defaultUseHttp2PingOnIdleConnection()) {
+        if (Flags.defaultUseHttp2PingOnIdleConnection()) {
             keepAlive = new Http2KeepAliveHandler(channel, encoder().frameWriter(), connection());
         }
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAlive);

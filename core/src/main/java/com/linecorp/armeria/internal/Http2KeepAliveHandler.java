@@ -33,6 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -40,7 +41,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2PingFrame;
 import io.netty.handler.timeout.IdleState;
@@ -48,7 +48,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 
 /**
- * This will send {@link Http2PingFrame} when an {@link IdleStateEvent} is emitted by {@link
+ * This will sends an {@link Http2PingFrame} when an {@link IdleStateEvent} is emitted by {@link
  * IdleStateHandler}. Specifically, it will write a PING frame to remote and then expects an ACK
  * back within configured {@code pingTimeoutMillis}. If no valid response is received in time, then
  * channel will be closed.
@@ -65,7 +65,8 @@ public class Http2KeepAliveHandler {
     private final long pingTimeoutMillis;
     private final Http2FrameWriter frameWriter;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
-    private final Stopwatch stopwatch = Stopwatch.createUnstarted();
+    @Nullable
+    private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
     private final Http2Connection http2Connection;
     private final Channel channel;
     private final ChannelFutureListener pingWriteListener = new PingWriteListener();
@@ -95,7 +96,7 @@ public class Http2KeepAliveHandler {
     }
 
     public void onChannelIdle(ChannelHandlerContext ctx, IdleStateEvent event) {
-        logger.debug("{} {} event triggered on channel.", channel, event);
+        logger.debug("{} {} triggered.", channel, event);
 
         if (!canSendPing()) {
             // The default behaviour is to shutdown the channel on idle timeout if not HTTP 2.0 conn.
@@ -145,8 +146,8 @@ public class Http2KeepAliveHandler {
         }
     }
 
-    public void onPingAck(long data) throws Http2Exception {
-        final long elapsed = stopwatch.elapsed(TimeUnit.NANOSECONDS);
+    public void onPingAck(long data) {
+        final long elapsed = getStopwatchElapsedInNanos();
         if (!isGoodPingAck(data)) {
             return;
         }
@@ -163,12 +164,12 @@ public class Http2KeepAliveHandler {
 
     private boolean isGoodPingAck(long data) {
         if (state != State.PENDING_PING_ACK) {
-            logger.warn("Unexpected PING(ACK=1, DATA={}) received", data);
+            logger.debug("{} Unexpected PING(ACK=1, DATA={}) received", channel, data);
             return false;
         }
         if (lastPingPayload != data) {
-            logger.warn("Unexpected PING(ACK=1, DATA={}) received, " +
-                    "but expecting PING(ACK=1, DATA={})", data, lastPingPayload);
+            logger.debug("{} Unexpected PING(ACK=1, DATA={}) received, " +
+                    "but expecting PING(ACK=1, DATA={})", channel, data, lastPingPayload);
             return false;
         }
         return true;
@@ -188,12 +189,12 @@ public class Http2KeepAliveHandler {
         if (state == State.SHUTDOWN) {
             return;
         }
-        logger.debug("{} Closing channel", channel);
+        logger.debug("{} Closing an idle channel", channel);
         channel.close().addListener(future -> {
             if (future.isSuccess()) {
-                logger.debug("{} Closed channel", channel);
+                logger.debug("{} Closed an channel", channel);
             } else {
-                logger.debug("{} Channel cannot be closed", channel, future.cause());
+                logger.debug("{} Failed to close an idle channel", channel, future.cause());
             }
             state = State.SHUTDOWN;
         });
@@ -225,13 +226,30 @@ public class Http2KeepAliveHandler {
                 final EventLoop el = channel.eventLoop();
                 shutdownFuture = el.schedule(shutdownRunnable, pingTimeoutMillis, TimeUnit.MILLISECONDS);
                 state = State.PENDING_PING_ACK;
-                stopwatch.reset().start();
+                resetStopwatch();
             } else {
                 // Mostly because the channel is already closed. So ignore and change state to IDLE.
                 // If the channel is closed, we change state to SHUTDOWN on onChannelInactive.
-                logger.debug("{} Channel PING write failed", channel);
-                state = state == State.SHUTDOWN ? State.SHUTDOWN : State.IDLE;
+                if (Exceptions.isExpected(future.cause())) {
+                    logger.debug("{} Channel PING write failed", channel, future.cause());
+                }
+                if (state != State.SHUTDOWN) {
+                    state = State.IDLE;
+                }
             }
         }
+
+        private void resetStopwatch() {
+            if (stopwatch != null) {
+                stopwatch.reset().start();
+            }
+        }
+    }
+
+    private long getStopwatchElapsedInNanos() {
+        if (stopwatch == null) {
+            return -1;
+        }
+        return stopwatch.elapsed(TimeUnit.NANOSECONDS);
     }
 }

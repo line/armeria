@@ -686,9 +686,11 @@ public final class Flags {
     }
 
     /**
-     * Returns the default value. If true then HTTP 2.0 PING frames are sent on connection, no otherwise.
-     * Note that if this is set to true, you may use {@link Flags#defaultHttp2PingTimeoutMillis()} to tune
-     * the timeout interval. The default is 3 seconds.
+     * Returns a boolean indicating whether to send <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
+     * frames on an idle HTTP/2 connection.
+     * If true, then PINGs are send when the connection is idle, no otherwise. Connection is considered idle
+     * when there is no read or write for at least {@link Flags#defaultClientIdleTimeoutMillis()} for client and
+     * {@link Flags#defaultServerIdleTimeoutMillis()} ()} for server.
      *
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingOnIdleConnection=true} JVM option to enable it.
@@ -698,8 +700,11 @@ public final class Flags {
     }
 
     /**
-     * Returns the default value. If true then HTTP 2.0 PING frames are sent even there are no active
-     * HTTP 2.0 stream, no otherwise.
+     * Returns a boolean indicating whether to <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
+     * frames on a HTTP/2 connection when it is idle and there are no active HTTP/2 stream.
+     * A connection is considered having no active streams means that are no requests and responses pending.
+     * This does not necessarily indicate end of life of a HTTP/2 connection.
+     * \A client could create a new stream if it intends to use the same connection.
      *
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingOnIdleStream=true} JVM option to enable it.
