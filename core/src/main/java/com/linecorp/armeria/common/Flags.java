@@ -195,7 +195,7 @@ public final class Flags {
 
     private static final long DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS = 3000; // 3 seconds
     private static final long DEFAULT_HTTP2_PING_TIMEOUT_MILLIS =
-            getLong("defaultHttp2PingTimeoutNanos",
+            getLong("defaultHttp2PingTimeoutMillis",
                     DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS,
                     value -> value >= 0);
 

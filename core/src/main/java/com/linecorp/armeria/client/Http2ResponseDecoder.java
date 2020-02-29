@@ -297,7 +297,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     }
 
     @Override
-    public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+    public void onPingAckRead(ChannelHandlerContext ctx, long data) {
         if (keepAlive != null) {
             keepAlive.onPingAck(data);
         }
