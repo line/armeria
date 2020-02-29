@@ -119,7 +119,7 @@ class Http2KeepAliveHandlerTest {
     }
 
     @Test
-    void testOnChannelIdle_WhenPingAckIsReceivedWithinTimeout_ShouldResetStateToIdle() throws Exception {
+    void testOnChannelIdle_WhenPingAckIsReceivedBeforeTimeout_ShouldResetStateToIdle() throws Exception {
         when(frameWriter.writePing(any(), eq(false), anyLong(), any())).thenReturn(promise);
 
         ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
@@ -129,6 +129,23 @@ class Http2KeepAliveHandlerTest {
         assertThat(keepAlive.state()).isEqualTo(State.PENDING_PING_ACK);
 
         keepAlive.onPingAck(keepAlive.lastPingPayload());
+        assertThat(keepAlive.state()).isEqualTo(State.IDLE);
+
+        verify(frameWriter).writePing(any(), eq(false), anyLong(), any());
+        assertThat(ch.isOpen()).isTrue();
+    }
+
+    @Test
+    void testOnChannelIdle_WhenAnyDataReadBeforeTimeout_ShouldResetStateToIdle() throws Exception {
+        when(frameWriter.writePing(any(), eq(false), anyLong(), any())).thenReturn(promise);
+
+        ch.pipeline().fireUserEventTriggered(IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
+        assertThat(keepAlive.state()).isEqualTo(State.PING_SCHEDULED);
+
+        promise.setSuccess();
+        assertThat(keepAlive.state()).isEqualTo(State.PENDING_PING_ACK);
+
+        keepAlive.onChannelRead();
         assertThat(keepAlive.state()).isEqualTo(State.IDLE);
 
         verify(frameWriter).writePing(any(), eq(false), anyLong(), any());

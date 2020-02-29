@@ -256,7 +256,7 @@ public final class Flags {
     private static final boolean USE_HTTP2_PING_ON_IDLE =
             getBoolean("useHttp2PingOnIdle", false);
     private static final boolean USE_HTTP2_PING_ON_NO_ACTIVE_STREAMS =
-            getBoolean("useHttp2PingOnIdleStreams", false);
+            getBoolean("useHttp2PingOnNoActiveStreams", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";

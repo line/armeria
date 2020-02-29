@@ -106,8 +106,8 @@ public class Http2KeepAliveHandler {
         }
 
         // Only interested in ALL_IDLE event and when Http2KeepAliveHandler is ready.
-        // Http2KeepAliveHandler will not be ready because IdleStateEvent events are emitted
-        // more faster than ping acks are received.
+        // Http2KeepAliveHandler may not be ready because it is currently handling
+        // sending a PING or expecting a PING ACK on channel.
         if (state != State.IDLE || event.state() != IdleState.ALL_IDLE) {
             return;
         }
@@ -136,6 +136,15 @@ public class Http2KeepAliveHandler {
      */
     public void onChannelInactive() {
         state = State.SHUTDOWN;
+        cancelFutures();
+    }
+
+    public void onChannelRead() {
+        state = State.IDLE;
+        cancelFutures();
+    }
+
+    private void cancelFutures() {
         if (shutdownFuture != null) {
             shutdownFuture.cancel(false);
             shutdownFuture = null;
@@ -163,8 +172,10 @@ public class Http2KeepAliveHandler {
     }
 
     private boolean isGoodPingAck(long data) {
+        // This condition can be true when channel read some data other than PING ACK frame
+        // or a PING ACK is received without sending PING in first place.
         if (state != State.PENDING_PING_ACK) {
-            logger.debug("{} Unexpected PING(ACK=1, DATA={}) received", channel, data);
+            logger.debug("{} Ignoring PING(ACK=1, DATA={}) received", channel, data);
             return false;
         }
         if (lastPingPayload != data) {

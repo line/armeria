@@ -103,6 +103,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             // Validate the method.
@@ -171,7 +172,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding,
             boolean endOfStream) throws Http2Exception {
-
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
@@ -213,6 +213,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     public int onDataRead(
             ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
 
         final DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
@@ -297,6 +298,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+        keepAliveChannelRead();
         final DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             throw connectionError(PROTOCOL_ERROR,
@@ -326,6 +328,17 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     public void onPingAckRead(final ChannelHandlerContext ctx, final long data) throws Http2Exception {
         if (keepAlive != null) {
             keepAlive.onPingAck(data);
+        }
+    }
+
+    @Override
+    public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+        keepAliveChannelRead();
+    }
+
+    private void keepAliveChannelRead() {
+        if (keepAlive != null) {
+            keepAlive.onChannelRead();
         }
     }
 }

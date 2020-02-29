@@ -180,6 +180,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
         final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
@@ -222,6 +223,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public int onDataRead(
             ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
 
         final int dataLength = data.readableBytes();
         final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
@@ -263,6 +265,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+        keepAliveChannelRead();
         final HttpResponseWrapper res = removeResponse(streamIdToId(streamId));
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
@@ -289,7 +292,9 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                                boolean exclusive) {}
 
     @Override
-    public void onPingRead(ChannelHandlerContext ctx, long data) {}
+    public void onPingRead(ChannelHandlerContext ctx, long data) {
+        keepAliveChannelRead();
+    }
 
     @Override
     public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
@@ -307,6 +312,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                ByteBuf payload) {}
+
+    private void keepAliveChannelRead() {
+        if (keepAlive != null) {
+            keepAlive.onChannelRead();
+        }
+    }
 
     private static int streamIdToId(int streamId) {
         return streamId - 1 >>> 1;
