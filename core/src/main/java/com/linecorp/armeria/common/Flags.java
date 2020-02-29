@@ -253,10 +253,10 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
-    private static final boolean DEFAULT_USE_HTTP2_PING_ON_IDLE_CONNECTION =
-            getBoolean("defaultUseHttp2PingOnIdleConnection", false);
-    private static final boolean DEFAULT_USE_HTTP2_PING_ON_IDLE_STREAM =
-            getBoolean("defaultUseHttp2PingOnIdleStream", false);
+    private static final boolean DEFAULT_USE_HTTP2_PING_ON_IDLE =
+            getBoolean("defaultUseHttp2PingOnIdle", false);
+    private static final boolean DEFAULT_USE_HTTP2_PING_ON_NO_ACTIVE_STREAMS =
+            getBoolean("defaultUseHttp2PingOnIdleStreams", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";
@@ -693,10 +693,10 @@ public final class Flags {
      * {@link Flags#defaultServerIdleTimeoutMillis()} ()} for server.
      *
      * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingOnIdleConnection=true} JVM option to enable it.
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingOnIdle=true} JVM option to enable it.
      */
-    public static boolean defaultUseHttp2PingOnIdleConnection() {
-        return DEFAULT_USE_HTTP2_PING_ON_IDLE_CONNECTION;
+    public static boolean defaultUseHttp2PingOnIdle() {
+        return DEFAULT_USE_HTTP2_PING_ON_IDLE;
     }
 
     /**
@@ -707,10 +707,10 @@ public final class Flags {
      * \A client could create a new stream if it intends to use the same connection.
      *
      * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingOnIdleStream=true} JVM option to enable it.
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingOnNoActiveStreams=true} JVM option to enable it.
      */
-    public static boolean defaultUseHttp2PingOnIdleStream() {
-        return DEFAULT_USE_HTTP2_PING_ON_IDLE_STREAM;
+    public static boolean defaultUseHttp2PingOnNoActiveStreams() {
+        return DEFAULT_USE_HTTP2_PING_ON_NO_ACTIVE_STREAMS;
     }
 
     /**

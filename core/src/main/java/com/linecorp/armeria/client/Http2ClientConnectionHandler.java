@@ -43,7 +43,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.clientFactory = clientFactory;
 
-        if (Flags.defaultUseHttp2PingOnIdleConnection()) {
+        if (Flags.defaultUseHttp2PingOnIdle()) {
             keepAlive = new Http2KeepAliveHandler(channel, encoder.frameWriter(), connection());
         }
         responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAlive);
