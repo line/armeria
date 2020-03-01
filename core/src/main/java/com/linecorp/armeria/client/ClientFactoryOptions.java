@@ -22,17 +22,16 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.proxy.Proxy;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
@@ -263,7 +262,7 @@ public final class ClientFactoryOptions
     /**
      * TODO: add javadoc comment.
      */
-    public Supplier<? extends ProxyHandler> getProxyHandler() {
-        return get(ClientFactoryOption.PROXY_HANDLER);
+    public Proxy getProxy() {
+        return get(ClientFactoryOption.PROXY);
     }
 }

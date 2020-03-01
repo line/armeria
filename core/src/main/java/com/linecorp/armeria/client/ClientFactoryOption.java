@@ -25,12 +25,12 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.client.proxy.Proxy;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.AbstractOption;
@@ -41,7 +41,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
-import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
@@ -219,8 +218,8 @@ public final class ClientFactoryOption<T>
     /**
      * TODO: add javadoc comment.
      */
-    public static final ClientFactoryOption<Supplier<? extends ProxyHandler>> PROXY_HANDLER =
-            define("PROXY_HANDLER", () -> null);
+    public static final ClientFactoryOption<Proxy> PROXY =
+            define("PROXY", Proxy.DEFAULT);
 
     /**
      * Returns the all available {@link ClientFactoryOption}s.

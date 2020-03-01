@@ -37,6 +37,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 
+import com.linecorp.armeria.client.proxy.Proxy;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -52,7 +53,6 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
@@ -91,7 +91,7 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
     private MeterRegistry meterRegistry;
-    private final Supplier<? extends ProxyHandler> proxyHandler;
+    private final Proxy proxy;
 
     private final ConcurrentMap<EventLoop, HttpChannelPool> pools = new MapMaker().weakKeys().makeMap();
     private final HttpClientDelegate clientDelegate;
@@ -141,7 +141,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
         meterRegistry = options.meterRegistry();
-        proxyHandler = options.getProxyHandler();
+        proxy = options.getProxy();
 
         this.options = options;
 
@@ -200,6 +200,10 @@ final class HttpClientFactory implements ClientFactory {
         return connectionPoolListener;
     }
 
+    Proxy proxy() {
+        return proxy;
+    }
+
     @VisibleForTesting
     AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
         return addressResolverGroup;
@@ -233,10 +237,6 @@ final class HttpClientFactory implements ClientFactory {
     @Override
     public void setMeterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-    }
-
-    Supplier<? extends ProxyHandler> proxyHandler() {
-        return proxyHandler;
     }
 
     @Override

@@ -30,7 +30,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -39,6 +38,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.proxy.Proxy;
+import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
@@ -53,7 +54,10 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyHandler;
+import io.netty.handler.proxy.Socks4ProxyHandler;
+import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
@@ -108,7 +112,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            addProxyHandlerIfPossible(ch.pipeline(), clientFactory.proxyHandler());
+                            applyProxy(ch.pipeline(), clientFactory.proxy());
                             ch.pipeline().addLast(
                                     new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                         }
@@ -122,11 +126,27 @@ final class HttpChannelPool implements AsyncCloseable {
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
     }
 
-    private static void addProxyHandlerIfPossible(
-            ChannelPipeline pipeline, Supplier<? extends ProxyHandler> proxyHandler) {
-        if (proxyHandler.get() != null) {
-            pipeline.addLast(proxyHandler.get());
+    private static void applyProxy(ChannelPipeline pipeline, Proxy proxy) {
+        if (proxy.getProxyType() == ProxyType.NONE) {
+            return;
         }
+        final ProxyHandler proxyHandler;
+        switch (proxy.getProxyType()) {
+            case SOCKS4:
+                proxyHandler = new Socks4ProxyHandler(proxy.getProxyAddress());
+                break;
+            case SOCKS5:
+                proxyHandler = new Socks5ProxyHandler(proxy.getProxyAddress());
+                break;
+            case CONNECT:
+                proxyHandler = new HttpProxyHandler(proxy.getProxyAddress());
+                break;
+            default:
+                logger.warn("Unknown proxy type not applied: {}.", proxy.getProxyType());
+                return;
+        }
+        proxyHandler.setConnectTimeoutMillis(proxy.getConnectionTimeoutMillis());
+        pipeline.addLast(proxyHandler);
     }
 
     /**

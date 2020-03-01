@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
 import javax.annotation.Nullable;
@@ -44,6 +43,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.client.proxy.Proxy;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -53,7 +53,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2CodecUtil;
-import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.resolver.AddressResolverGroup;
@@ -484,8 +483,8 @@ public final class ClientFactoryBuilder {
     /**
      * TODO: add javadoc comment.
      */
-    public ClientFactoryBuilder proxyHandler(Supplier<ProxyHandler> proxyHandlerCustomizer) {
-        option(ClientFactoryOption.PROXY_HANDLER, proxyHandlerCustomizer);
+    public ClientFactoryBuilder proxy(Proxy proxy) {
+        option(ClientFactoryOption.PROXY, proxy);
         return this;
     }
 
