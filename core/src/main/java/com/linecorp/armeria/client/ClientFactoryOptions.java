@@ -25,7 +25,6 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.proxy.Proxy;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;

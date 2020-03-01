@@ -38,8 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.proxy.Proxy;
-import com.linecorp.armeria.client.proxy.ProxyType;
+import com.linecorp.armeria.client.Proxy.ProxyType;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
@@ -126,7 +125,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
     }
 
-    private static void applyProxy(ChannelPipeline pipeline, Proxy proxy) {
+    private void applyProxy(ChannelPipeline pipeline, Proxy proxy) {
         if (proxy.getProxyType() == ProxyType.NONE) {
             return;
         }
@@ -145,7 +144,9 @@ final class HttpChannelPool implements AsyncCloseable {
                 logger.warn("Unknown proxy type not applied: {}.", proxy.getProxyType());
                 return;
         }
-        proxyHandler.setConnectTimeoutMillis(proxy.getConnectionTimeoutMillis());
+        final long proxyConnectTimeoutMillis = proxy.getConnectTimeoutMillis() > 0 ?
+                                               proxy.getConnectTimeoutMillis() : connectTimeoutMillis;
+        proxyHandler.setConnectTimeoutMillis(proxyConnectTimeoutMillis);
         pipeline.addLast(proxyHandler);
     }
 
