@@ -21,25 +21,31 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.client.ProxyBuilder.ConnectProxyBuilder;
+import com.linecorp.armeria.client.ProxyBuilder.Socks4ProxyBuilder;
+import com.linecorp.armeria.client.ProxyBuilder.Socks5ProxyBuilder;
+
 /**
  * TODO: Update javadoc.
  */
 public final class Proxy {
 
     private static final long USE_DEFAULT_TIMEOUT_MILLIS = -1;
-    static final Proxy DEFAULT = new Proxy(ProxyType.NONE, new InetSocketAddress(0));
+    static final Proxy DEFAULT =
+            new Proxy(ProxyType.NONE, new InetSocketAddress(0), USE_DEFAULT_TIMEOUT_MILLIS);
 
     private final ProxyType proxyType;
     private final InetSocketAddress proxyAddress;
     private final long connectTimeoutMillis;
 
-    private Proxy(ProxyType proxyType, InetSocketAddress proxyAddress) {
-        this.proxyType = proxyType;
-        this.proxyAddress = proxyAddress;
-        connectTimeoutMillis = USE_DEFAULT_TIMEOUT_MILLIS;
-    }
+    @Nullable
+    private String userName;
+    @Nullable
+    private String password;
 
-    private Proxy(ProxyType proxyType, InetSocketAddress proxyAddress, long connectTimeoutMillis) {
+    Proxy(ProxyType proxyType, InetSocketAddress proxyAddress, long connectTimeoutMillis) {
         this.proxyType = proxyType;
         this.proxyAddress = proxyAddress;
         this.connectTimeoutMillis = connectTimeoutMillis;
@@ -48,64 +54,88 @@ public final class Proxy {
     /**
      * TODO: Update javadoc.
      */
-    public static Proxy socks4(InetSocketAddress proxyAddress) {
-        return new Proxy(ProxyType.SOCKS4, requireNonNull(proxyAddress));
+    public static Socks4ProxyBuilder socks4(InetSocketAddress proxyAddress) {
+        return new Socks4ProxyBuilder(requireNonNull(proxyAddress), USE_DEFAULT_TIMEOUT_MILLIS);
     }
 
     /**
      * TODO: Update javadoc.
      */
-    public static Proxy socks4(InetSocketAddress proxyAddress, long connectionTimeoutMillis) {
-        checkArgument(connectionTimeoutMillis > 0);
-        return new Proxy(ProxyType.SOCKS4, requireNonNull(proxyAddress), connectionTimeoutMillis);
+    public static Socks4ProxyBuilder socks4(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
+        checkArgument(connectTimeoutMillis >= 0);
+        return new Socks4ProxyBuilder(requireNonNull(proxyAddress), connectTimeoutMillis);
     }
 
     /**
      * TODO: Update javadoc.
      */
-    public static Proxy socks5(InetSocketAddress proxyAddress) {
-        return new Proxy(ProxyType.SOCKS5, requireNonNull(proxyAddress));
+    public static Socks5ProxyBuilder socks5(InetSocketAddress proxyAddress) {
+        return new Socks5ProxyBuilder(requireNonNull(proxyAddress), USE_DEFAULT_TIMEOUT_MILLIS);
     }
 
     /**
      * TODO: Update javadoc.
      */
-    public static Proxy socks5(InetSocketAddress proxyAddress, long connectionTimeoutMillis) {
-        checkArgument(connectionTimeoutMillis > 0);
-        return new Proxy(ProxyType.SOCKS5, requireNonNull(proxyAddress), connectionTimeoutMillis);
+    public static Socks5ProxyBuilder socks5(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
+        checkArgument(connectTimeoutMillis >= 0);
+        return new Socks5ProxyBuilder(requireNonNull(proxyAddress), connectTimeoutMillis);
     }
 
     /**
      * TODO: Update javadoc.
      */
-    public static Proxy connect(InetSocketAddress proxyAddress) {
-        return new Proxy(ProxyType.CONNECT, requireNonNull(proxyAddress));
+    public static ConnectProxyBuilder connect(InetSocketAddress proxyAddress) {
+        return new ConnectProxyBuilder(requireNonNull(proxyAddress), USE_DEFAULT_TIMEOUT_MILLIS);
     }
 
     /**
      * TODO: Update javadoc.
      */
-    public static Proxy connect(InetSocketAddress proxyAddress, long connectionTimeoutMillis) {
-        checkArgument(connectionTimeoutMillis > 0);
-        return new Proxy(ProxyType.CONNECT, requireNonNull(proxyAddress), connectionTimeoutMillis);
+    public static ConnectProxyBuilder connect(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
+        checkArgument(connectTimeoutMillis >= 0);
+        return new ConnectProxyBuilder(requireNonNull(proxyAddress), connectTimeoutMillis);
     }
 
-    ProxyType getProxyType() {
+    ProxyType proxyType() {
         return proxyType;
     }
 
     /**
      * TODO: Update javadoc.
      */
-    public InetSocketAddress getProxyAddress() {
+    public InetSocketAddress proxyAddress() {
         return proxyAddress;
     }
 
     /**
      * TODO: Update javadoc.
      */
-    public long getConnectTimeoutMillis() {
+    public long connectTimeoutMillis() {
         return connectTimeoutMillis;
+    }
+
+    /**
+     * TODO: Update javadoc.
+     */
+    @Nullable
+    public String userName() {
+        return userName;
+    }
+
+    /**
+     * TODO: Update javadoc.
+     */
+    @Nullable
+    public String password() {
+        return password;
+    }
+
+    void setUserName(@Nullable String userName) {
+        this.userName = userName;
+    }
+
+    void setPassword(@Nullable String password) {
+        this.password = password;
     }
 
     enum ProxyType {

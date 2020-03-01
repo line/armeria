@@ -126,26 +126,32 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private void applyProxy(ChannelPipeline pipeline, Proxy proxy) {
-        if (proxy.getProxyType() == ProxyType.NONE) {
+        if (proxy.proxyType() == ProxyType.NONE) {
             return;
         }
         final ProxyHandler proxyHandler;
-        switch (proxy.getProxyType()) {
+        switch (proxy.proxyType()) {
             case SOCKS4:
-                proxyHandler = new Socks4ProxyHandler(proxy.getProxyAddress());
+                proxyHandler = new Socks4ProxyHandler(proxy.proxyAddress(), proxy.userName());
                 break;
             case SOCKS5:
-                proxyHandler = new Socks5ProxyHandler(proxy.getProxyAddress());
+                proxyHandler = new Socks5ProxyHandler(
+                        proxy.proxyAddress(), proxy.userName(), proxy.password());
                 break;
             case CONNECT:
-                proxyHandler = new HttpProxyHandler(proxy.getProxyAddress());
+                if (proxy.userName() == null || proxy.password() == null) {
+                    proxyHandler = new HttpProxyHandler(proxy.proxyAddress());
+                } else {
+                    proxyHandler = new HttpProxyHandler(
+                            proxy.proxyAddress(), proxy.userName(), proxy.password());
+                }
                 break;
             default:
-                logger.warn("Unknown proxy type not applied: {}.", proxy.getProxyType());
+                logger.warn("Unknown proxy type not applied: {}.", proxy.proxyType());
                 return;
         }
-        final long proxyConnectTimeoutMillis = proxy.getConnectTimeoutMillis() > 0 ?
-                                               proxy.getConnectTimeoutMillis() : connectTimeoutMillis;
+        final long proxyConnectTimeoutMillis = proxy.connectTimeoutMillis() > 0 ?
+                                               proxy.connectTimeoutMillis() : connectTimeoutMillis;
         proxyHandler.setConnectTimeoutMillis(proxyConnectTimeoutMillis);
         pipeline.addLast(proxyHandler);
     }

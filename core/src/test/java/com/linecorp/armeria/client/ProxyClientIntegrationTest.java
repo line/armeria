@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.proxy;
+package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.HttpStatus.OK;
@@ -36,10 +36,6 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.Proxy;
-import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -134,7 +130,7 @@ public class ProxyClientIntegrationTest {
     @Test
     void testSocks4BasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
-                Proxy.socks4(socksProxyServer.address())).build();
+                Proxy.socks4(socksProxyServer.address()).build()).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -150,7 +146,7 @@ public class ProxyClientIntegrationTest {
     @Test
     void testSocks5BasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
-                Proxy.socks5(socksProxyServer.address())).build();
+                Proxy.socks5(socksProxyServer.address()).build()).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -165,7 +161,7 @@ public class ProxyClientIntegrationTest {
     @Test
     void testHttpProxyBasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
-                Proxy.connect(httpProxyServer.address())).build();
+                Proxy.connect(httpProxyServer.address()).build()).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -181,7 +177,7 @@ public class ProxyClientIntegrationTest {
     void testProxyWithH2C() throws Exception {
         final int numRequests = 5;
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
-                Proxy.socks4(socksProxyServer.address())).build();
+                Proxy.socks4(socksProxyServer.address()).build()).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.H2C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -197,12 +193,36 @@ public class ProxyClientIntegrationTest {
     }
 
     @Test
+    void testProxyWithUserName() throws Exception {
+        final String username = "username";
+        SOCKS_DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+            if (msg instanceof DefaultSocks4CommandRequest) {
+                assertThat(username.equals(((DefaultSocks4CommandRequest) msg).userId()));
+            }
+            ctx.fireChannelRead(msg);
+        });
+
+        final ClientFactory clientFactory = ClientFactory.builder().proxy(
+                Proxy.socks4(socksProxyServer.address()).userName(username).build()).build();
+
+        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                             .factory(clientFactory)
+                                             .decorator(LoggingClient.newDecorator())
+                                             .build();
+        final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                webClient.get(PROXY_PATH).aggregate();
+        final AggregatedHttpResponse response = responseFuture.join();
+        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+    }
+
+    @Test
     void testProxy_protocolUpgrade_notSharableExceptionNotThrown() throws Exception {
         SOCKS_DYNAMIC_HANDLER.setWriteCustomizer((ctx, msg, promise) -> {
             ctx.write(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED), promise);
         });
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
-                Proxy.socks4(socksProxyServer.address())).build();
+                Proxy.socks4(socksProxyServer.address()).build()).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.HTTP, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -221,7 +241,7 @@ public class ProxyClientIntegrationTest {
         }
 
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
-                Proxy.socks4(new InetSocketAddress("127.0.0.1", unusedPort))).build();
+                Proxy.socks4(new InetSocketAddress("127.0.0.1", unusedPort)).build()).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -245,7 +265,7 @@ public class ProxyClientIntegrationTest {
         });
 
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
-                Proxy.socks4(socksProxyServer.address(), 1)).build();
+                Proxy.socks4(socksProxyServer.address(), 1).build()).build();
 
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
@@ -264,7 +284,7 @@ public class ProxyClientIntegrationTest {
             ctx.write(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED), promise);
         });
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
-                Proxy.socks4(socksProxyServer.address())).build();
+                Proxy.socks4(socksProxyServer.address()).build()).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
