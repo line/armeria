@@ -64,7 +64,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
-import com.linecorp.armeria.internal.spring.SecurityInternalService;
+import com.linecorp.armeria.internal.spring.InternalSecurityService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.cors.CorsService;
@@ -225,7 +225,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                     sb.routeDecorator()
                       .path(basePath)
                       .pathPrefix(basePath)
-                      .build(SecurityInternalService.newDecorator(ports));
+                      .build(InternalSecurityService.newDecorator(ports));
                 }
             }
         };

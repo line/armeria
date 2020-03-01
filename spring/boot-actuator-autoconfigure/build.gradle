@@ -21,7 +21,7 @@ task copyFiles(type: Copy) {
     include '**/ArmeriaConfigurationNetUtil.java'
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
-    include '**/SecurityInternalService.java'
+    include '**/InternalSecurityService.java'
     include '**/Ssl.java'
 }
 

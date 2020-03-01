@@ -189,7 +189,7 @@ public final class ArmeriaConfigurationUtil {
         }
 
         secureDecoratingBuilder
-                .build(SecurityInternalService.newDecorator(ports));
+                .build(InternalSecurityService.newDecorator(ports));
     }
 
     private static boolean hasAllClasses(String... classNames) {

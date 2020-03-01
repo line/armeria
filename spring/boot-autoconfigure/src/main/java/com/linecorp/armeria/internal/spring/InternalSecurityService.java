@@ -33,14 +33,14 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 /**
  * Decorates an {@link HttpService} to provide security functionality of internal service.
  */
-public class SecurityInternalService extends SimpleDecoratingHttpService {
+public class InternalSecurityService extends SimpleDecoratingHttpService {
 
     /**
      * Creates security {@link HttpService} decorator using the specified ports.
      *
      * @param ports the array of ports.
      */
-    public static Function<? super HttpService, SecurityInternalService> newDecorator(
+    public static Function<? super HttpService, InternalSecurityService> newDecorator(
             Integer... ports) {
         return newDecorator(ImmutableList.copyOf(ports));
     }
@@ -50,10 +50,10 @@ public class SecurityInternalService extends SimpleDecoratingHttpService {
      *
      * @param ports a list of ports.
      */
-    public static Function<? super HttpService, SecurityInternalService> newDecorator(
+    public static Function<? super HttpService, InternalSecurityService> newDecorator(
             Iterable<Integer> ports) {
         requireNonNull(ports, "ports");
-        return delegate -> new SecurityInternalService(delegate, ports);
+        return delegate -> new InternalSecurityService(delegate, ports);
     }
 
     private final List<Integer> ports;
@@ -61,7 +61,7 @@ public class SecurityInternalService extends SimpleDecoratingHttpService {
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    protected SecurityInternalService(HttpService delegate, Iterable<Integer> port) {
+    protected InternalSecurityService(HttpService delegate, Iterable<Integer> port) {
         super(delegate);
         ports = ImmutableList.copyOf(port);
     }
