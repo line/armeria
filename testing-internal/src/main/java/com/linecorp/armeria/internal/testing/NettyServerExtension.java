@@ -14,9 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.proxy;
+package com.linecorp.armeria.internal.testing;
+
+import static com.google.common.base.Preconditions.checkState;
 
 import java.net.InetSocketAddress;
+
+import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -24,38 +28,37 @@ import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 
-public class NettyServerExtension extends AbstractAllOrEachExtension {
+public abstract class NettyServerExtension extends AbstractAllOrEachExtension {
 
-    private final InetSocketAddress address;
-    private final ChannelHandler childHandler;
-
-    private EventLoopGroup bossGroup;
-    private EventLoopGroup workerGroup;
+    private final EventLoopGroup bossGroup;
+    private final EventLoopGroup workerGroup;
+    @Nullable
     private Channel channel;
 
-    public NettyServerExtension(InetSocketAddress address, ChannelHandler childHandler) {
-        this.address = address;
-        this.childHandler = childHandler;
+    protected NettyServerExtension() {
+        bossGroup = new NioEventLoopGroup(1);
+        workerGroup = new NioEventLoopGroup(1);
     }
+
+    public InetSocketAddress address() {
+        checkState(channel != null);
+        return (InetSocketAddress) channel.localAddress();
+    }
+
+    protected abstract void configure(Channel ch);
 
     @Override
     protected void before(ExtensionContext context) throws Exception {
         final ServerBootstrap bootstrap = new ServerBootstrap();
-        bossGroup = new NioEventLoopGroup(1);
-        workerGroup = new NioEventLoopGroup(1);
-
         bootstrap.group(bossGroup, workerGroup)
                  .channel(NioServerSocketChannel.class)
-                 .handler(new LoggingHandler(LogLevel.INFO))
-                 .childHandler(childHandler);
-        channel = bootstrap.bind(address).sync().channel();
+                 .childHandler(new NettyServerChannelInitializer());
+        channel = bootstrap.bind("127.0.0.1", 0).sync().channel();
     }
 
     @Override
@@ -65,5 +68,12 @@ public class NettyServerExtension extends AbstractAllOrEachExtension {
         }
         bossGroup.shutdownGracefully().get();
         workerGroup.shutdownGracefully().get();
+    }
+
+    private class NettyServerChannelInitializer extends ChannelInitializer<Channel> {
+        @Override
+        protected void initChannel(Channel ch) throws Exception {
+            configure(ch);
+        }
     }
 }

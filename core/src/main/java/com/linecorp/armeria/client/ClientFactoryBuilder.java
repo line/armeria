@@ -30,9 +30,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
 import javax.annotation.Nullable;
@@ -484,8 +484,8 @@ public final class ClientFactoryBuilder {
     /**
      * TODO: add javadoc comment.
      */
-    public ClientFactoryBuilder proxyHandler(ProxyHandler proxyHandlerCustomizer) {
-        option(ClientFactoryOption.PROXY_HANDLER, Optional.of(proxyHandlerCustomizer));
+    public ClientFactoryBuilder proxyHandler(Supplier<ProxyHandler> proxyHandlerCustomizer) {
+        option(ClientFactoryOption.PROXY_HANDLER, proxyHandlerCustomizer);
         return this;
     }
 

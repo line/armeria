@@ -39,9 +39,6 @@
     <appender-ref ref="NOP" />
   </logger>
 
-  <!--  TODO: remove once done testing -->
-  <logger name="com.linecorp.armeria.client.proxy" level="DEBUG" />
-
   <root level="WARN">
     <appender-ref ref="STDOUT" />
   </root>

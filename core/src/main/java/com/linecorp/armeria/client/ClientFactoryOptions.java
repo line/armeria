@@ -20,9 +20,9 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
@@ -263,7 +263,7 @@ public final class ClientFactoryOptions
     /**
      * TODO: add javadoc comment.
      */
-    public Optional<? extends ProxyHandler> getProxyHandler() {
+    public Supplier<? extends ProxyHandler> getProxyHandler() {
         return get(ClientFactoryOption.PROXY_HANDLER);
     }
 }

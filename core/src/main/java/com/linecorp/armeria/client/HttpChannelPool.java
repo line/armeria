@@ -26,11 +26,11 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -123,8 +123,8 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private static void addProxyHandlerIfPossible(
-            ChannelPipeline pipeline, Optional<? extends ProxyHandler> proxyHandler) {
-        if (proxyHandler.isPresent()) {
+            ChannelPipeline pipeline, Supplier<? extends ProxyHandler> proxyHandler) {
+        if (proxyHandler.get() != null) {
             pipeline.addLast(proxyHandler.get());
         }
     }

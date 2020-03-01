@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
@@ -92,7 +91,7 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
     private MeterRegistry meterRegistry;
-    private final Optional<? extends ProxyHandler> proxyHandler;
+    private final Supplier<? extends ProxyHandler> proxyHandler;
 
     private final ConcurrentMap<EventLoop, HttpChannelPool> pools = new MapMaker().weakKeys().makeMap();
     private final HttpClientDelegate clientDelegate;
@@ -236,7 +235,7 @@ final class HttpClientFactory implements ClientFactory {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
     }
 
-    Optional<? extends ProxyHandler> proxyHandler() {
+    Supplier<? extends ProxyHandler> proxyHandler() {
         return proxyHandler;
     }
 

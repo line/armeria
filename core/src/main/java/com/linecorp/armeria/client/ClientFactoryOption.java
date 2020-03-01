@@ -21,11 +21,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -219,8 +219,8 @@ public final class ClientFactoryOption<T>
     /**
      * TODO: add javadoc comment.
      */
-    public static final ClientFactoryOption<Optional<? extends ProxyHandler>> PROXY_HANDLER =
-            define("PROXY_HANDLER", Optional.empty());
+    public static final ClientFactoryOption<Supplier<? extends ProxyHandler>> PROXY_HANDLER =
+            define("PROXY_HANDLER", () -> null);
 
     /**
      * Returns the all available {@link ClientFactoryOption}s.
