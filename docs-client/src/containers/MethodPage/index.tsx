@@ -74,6 +74,26 @@ function addExampleHeadersIfExists(
   }
 }
 
+function getExamplePath(
+  specification: Specification,
+  service: Service,
+  method: Method,
+): string | undefined {
+  return specification
+    .getServiceByName(service.name)
+    ?.methods?.find((m) => m.name === method.name)?.examplePath;
+}
+
+function getExampleQuery(
+  specification: Specification,
+  service: Service,
+  method: Method,
+): string | undefined {
+  return specification
+    .getServiceByName(service.name)
+    ?.methods?.find((m) => m.name === method.name)?.exampleQuery;
+}
+
 function removeBrackets(headers: string): string {
   const length = headers.length;
   return headers.substring(1, length - 1).trim();
@@ -164,6 +184,8 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
             service,
             method,
           )}
+          examplePath={getExamplePath(props.specification, service, method)}
+          exampleQuery={getExampleQuery(props.specification, service, method)}
           exactPathMapping={
             isAnnotatedService ? isSingleExactPathMapping(method) : false
           }

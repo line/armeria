@@ -55,6 +55,8 @@ public final class DocServiceBuilder {
 
     private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders = new HashMap<>();
     private final Map<String, ListMultimap<String, String>> exampleRequests = new HashMap<>();
+    private final Map<String, Map<String, String>> examplePaths = new HashMap<>();
+    private final Map<String, Map<String, String>> exampleQueries = new HashMap<>();
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers =
             new ArrayList<>();
 
@@ -180,6 +182,50 @@ public final class DocServiceBuilder {
             this.exampleHttpHeaders.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
                                    .put(methodName, h);
         }
+        return this;
+    }
+
+    /**
+     * Adds the specified example path for the method with the specified service and method name.
+     */
+    public DocServiceBuilder examplePath(Class<?> serviceType, String methodName, String examplePath) {
+        requireNonNull(serviceType, "serviceType");
+        return examplePath(serviceType.getName(), methodName, examplePath);
+    }
+
+    /**
+     * Adds the specified example path for the method with the specified service and method name.
+     */
+    public DocServiceBuilder examplePath(String serviceName, String methodName, String examplePath) {
+        requireNonNull(serviceName, "serviceName");
+        checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
+        requireNonNull(methodName, "methodName");
+        checkArgument(!methodName.isEmpty(), "methodName is empty.");
+        requireNonNull(examplePath, "examplePath");
+        examplePaths.computeIfAbsent(serviceName, unused -> new HashMap<>())
+                    .put(methodName, examplePath);
+        return this;
+    }
+
+    /**
+     * Adds the specified example query for the method with the specified service and method name.
+     */
+    public DocServiceBuilder exampleQuery(Class<?> serviceType, String methodName, String query) {
+        requireNonNull(serviceType, "serviceType");
+        return exampleQuery(serviceType.getName(), methodName, query);
+    }
+
+    /**
+     * Adds the specified example query for the method with the specified service and method name.
+     */
+    public DocServiceBuilder exampleQuery(String serviceName, String methodName, String query) {
+        requireNonNull(serviceName, "serviceName");
+        checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
+        requireNonNull(methodName, "methodName");
+        checkArgument(!methodName.isEmpty(), "methodName is empty.");
+        requireNonNull(query, "query");
+        exampleQueries.computeIfAbsent(serviceName, unused -> new HashMap<>())
+                      .put(methodName, query);
         return this;
     }
 
@@ -452,7 +498,7 @@ public final class DocServiceBuilder {
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
-        return new DocService(exampleHttpHeaders, exampleRequests, injectedScriptSuppliers,
-                              unifyFilter(includeFilter, excludeFilter));
+        return new DocService(exampleHttpHeaders, exampleRequests, examplePaths, exampleQueries,
+                              injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter));
     }
 }

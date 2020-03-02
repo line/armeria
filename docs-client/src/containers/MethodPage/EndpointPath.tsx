@@ -22,6 +22,7 @@ import React, { ChangeEvent } from 'react';
 const endpointPathPlaceHolder = '/foo/bar';
 
 interface Props {
+  editable: boolean;
   endpointPathOpen: boolean;
   endpointPath: string;
   onEditEndpointPathClick: React.Dispatch<unknown>;
@@ -36,19 +37,17 @@ const EndpointPath: React.FunctionComponent<Props> = (props) => (
     </Button>
     <Typography variant="body2" paragraph />
     {props.endpointPathOpen && (
-      <>
-        <TextField
-          multiline
-          fullWidth
-          rows={1}
-          value={props.endpointPath}
-          placeholder={endpointPathPlaceHolder}
-          onChange={props.onEndpointPathChange}
-          inputProps={{
-            className: 'code',
-          }}
-        />
-      </>
+      <TextField
+        multiline
+        fullWidth
+        rows={1}
+        value={props.endpointPath}
+        placeholder={endpointPathPlaceHolder}
+        inputProps={{
+          readOnly: !props.editable,
+          className: 'code ',
+        }}
+      />
     )}
   </>
 );

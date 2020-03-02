@@ -49,6 +49,8 @@ export interface Method {
   endpoints: Endpoint[];
   exampleHttpHeaders: { [name: string]: string }[];
   exampleRequests: string[];
+  examplePath: string | undefined;
+  exampleQuery: string | undefined;
   httpMethod: string;
   docString?: DocString;
 }
@@ -91,6 +93,7 @@ export interface SpecificationData {
   structs: Struct[];
   exceptions: Struct[];
   exampleHttpHeaders: { [name: string]: string }[];
+  examplePaths: { [name: string]: string }[];
 }
 
 export function simpleName(fullName: string): string {

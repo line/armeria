@@ -53,6 +53,10 @@ public final class MethodInfo {
     private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHttpHeaders;
     private final List<String> exampleRequests;
+    @Nullable
+    private final String examplePath;
+    @Nullable
+    private final String exampleQuery;
     private final HttpMethod httpMethod;
     @Nullable
     private final String docString;
@@ -79,7 +83,8 @@ public final class MethodInfo {
                       HttpMethod httpMethod,
                       @Nullable String docString) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures,
-             endpoints, ImmutableList.of(), ImmutableList.of(), httpMethod, docString);
+             endpoints, ImmutableList.of(), ImmutableList.of(), /* examplePath */ null, /* exampleQuery */ null,
+             httpMethod, docString);
     }
 
     /**
@@ -92,6 +97,8 @@ public final class MethodInfo {
                       Iterable<EndpointInfo> endpoints,
                       Iterable<HttpHeaders> exampleHttpHeaders,
                       Iterable<String> exampleRequests,
+                      @Nullable String examplePath,
+                      @Nullable String exampleQuery,
                       HttpMethod httpMethod,
                       @Nullable String docString) {
         this.name = requireNonNull(name, "name");
@@ -108,6 +115,8 @@ public final class MethodInfo {
         this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
                                                                       "exampleHttpHeaders"));
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
+        this.examplePath = examplePath;
+        this.exampleQuery = exampleQuery;
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.docString = Strings.emptyToNull(docString);
     }
@@ -167,6 +176,26 @@ public final class MethodInfo {
     @JsonProperty
     public List<String> exampleRequests() {
         return exampleRequests;
+    }
+
+    /**
+     * Returns the example path of the method.
+     */
+    @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
+    public String examplePath() {
+        return examplePath;
+    }
+
+    /**
+     * Returns the example query of the method.
+     */
+    @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
+    public String exampleQuery() {
+        return exampleQuery;
     }
 
     /**

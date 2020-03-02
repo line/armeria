@@ -36,19 +36,17 @@ const HttpQueryString: React.FunctionComponent<Props> = (props) => (
     </Button>
     <Typography variant="body2" paragraph />
     {props.additionalQueriesOpen && (
-      <>
-        <TextField
-          multiline
-          fullWidth
-          rows={1}
-          value={props.additionalQueries}
-          placeholder={queryPlaceHolder}
-          onChange={props.onQueriesFormChange}
-          inputProps={{
-            className: 'code',
-          }}
-        />
-      </>
+      <TextField
+        multiline
+        fullWidth
+        rows={1}
+        value={props.additionalQueries}
+        placeholder={queryPlaceHolder}
+        onChange={props.onQueriesFormChange}
+        inputProps={{
+          className: 'code',
+        }}
+      />
     )}
   </>
 );
