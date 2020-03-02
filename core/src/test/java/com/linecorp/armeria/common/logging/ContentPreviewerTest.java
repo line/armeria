@@ -124,7 +124,7 @@ class ContentPreviewerTest {
         return ContentPreviewerFactory.builder()
                                       .maxLength(maxLength)
                                       .defaultCharset(StandardCharsets.UTF_8)
-                                      .disable(new MediaTypeSet(MediaType.BASIC_AUDIO))
+                                      .disable(MediaTypeSet.of(MediaType.BASIC_AUDIO))
                                       .build();
     }
 

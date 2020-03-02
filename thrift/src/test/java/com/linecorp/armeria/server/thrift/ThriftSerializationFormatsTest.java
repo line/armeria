@@ -38,7 +38,6 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
@@ -88,16 +87,6 @@ public class ThriftSerializationFormatsTest {
         assertThat(find(parse("application/vnd.apache.thrift.binary; charset=utf-8"))).isNull();
         assertThat(find(parse("application/x-thrift; protocol=tcompact; charset=utf-8"))).isNull();
         assertThat(find(parse("application/vnd.apache.thrift.compact; charset=utf-8"))).isNull();
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void backwardCompatibility() {
-        assertThat(SerializationFormat.ofThrift()).containsExactlyInAnyOrder(BINARY, COMPACT, JSON, TEXT);
-        assertThat(SerializationFormat.THRIFT_BINARY).isNotNull();
-        assertThat(SerializationFormat.THRIFT_COMPACT).isNotNull();
-        assertThat(SerializationFormat.THRIFT_JSON).isNotNull();
-        assertThat(SerializationFormat.THRIFT_TEXT).isNotNull();
     }
 
     @Test

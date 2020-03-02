@@ -42,7 +42,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -139,7 +138,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         final Throwable cause = future.cause();
-        if (!(cause instanceof ClosedPublisherException)) {
+        if (!(cause instanceof ClosedStreamException)) {
             final Channel ch = future.channel();
             Exceptions.logIfUnexpected(logger, ch, HttpSession.get(ch).protocol(), cause);
             ch.close();

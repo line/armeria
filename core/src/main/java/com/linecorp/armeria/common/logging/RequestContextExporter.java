@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.logging;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.common.logging.RequestContextExporterBuilder.PREFIX_ATTRS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -67,14 +66,14 @@ public final class RequestContextExporter {
     private final ExportEntry<AttributeKey<?>>[] attrs;
     private final int numAttrs;
     @Nullable
-    private final ExportEntry<AsciiString>[] httpReqHeaders;
+    private final ExportEntry<AsciiString>[] reqHeaders;
     @Nullable
-    private final ExportEntry<AsciiString>[] httpResHeaders;
+    private final ExportEntry<AsciiString>[] resHeaders;
 
     RequestContextExporter(Set<ExportEntry<BuiltInProperty>> builtInPropertySet,
                            Set<ExportEntry<AttributeKey<?>>> attrs,
-                           Set<ExportEntry<AsciiString>> httpReqHeaders,
-                           Set<ExportEntry<AsciiString>> httpResHeaders) {
+                           Set<ExportEntry<AsciiString>> reqHeaders,
+                           Set<ExportEntry<AsciiString>> resHeaders) {
 
         if (!builtInPropertySet.isEmpty()) {
             builtInProperties = new BuiltInProperties();
@@ -95,16 +94,16 @@ public final class RequestContextExporter {
             numAttrs = 0;
         }
 
-        if (!httpReqHeaders.isEmpty()) {
-            this.httpReqHeaders = httpReqHeaders.toArray(EMPTY_EXPORT_ENTRIES);
+        if (!reqHeaders.isEmpty()) {
+            this.reqHeaders = reqHeaders.toArray(EMPTY_EXPORT_ENTRIES);
         } else {
-            this.httpReqHeaders = null;
+            this.reqHeaders = null;
         }
 
-        if (!httpResHeaders.isEmpty()) {
-            this.httpResHeaders = httpResHeaders.toArray(EMPTY_EXPORT_ENTRIES);
+        if (!resHeaders.isEmpty()) {
+            this.resHeaders = resHeaders.toArray(EMPTY_EXPORT_ENTRIES);
         } else {
-            this.httpResHeaders = null;
+            this.resHeaders = null;
         }
     }
 
@@ -122,23 +121,23 @@ public final class RequestContextExporter {
     /**
      * Returns {@code true} if the specified HTTP request header name is in the export list.
      */
-    public boolean containsHttpRequestHeader(CharSequence name) {
+    public boolean containsRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
-        if (httpReqHeaders == null) {
+        if (reqHeaders == null) {
             return false;
         }
-        return Arrays.stream(httpReqHeaders).anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
+        return Arrays.stream(reqHeaders).anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
     }
 
     /**
      * Returns {@code true} if the specified HTTP response header name is in the export list.
      */
-    public boolean containsHttpResponseHeader(CharSequence name) {
+    public boolean containsResponseHeader(CharSequence name) {
         requireNonNull(name, "name");
-        if (httpResHeaders == null) {
+        if (resHeaders == null) {
             return false;
         }
-        return Arrays.stream(httpResHeaders).anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
+        return Arrays.stream(resHeaders).anyMatch(e -> e.key.contentEqualsIgnoreCase(name));
     }
 
     /**
@@ -171,28 +170,27 @@ public final class RequestContextExporter {
         if (attrs == null) {
             return ImmutableMap.of();
         }
-        return Arrays.stream(attrs).collect(
-                toImmutableMap(e -> e.exportKey.substring(PREFIX_ATTRS.length()), e -> e.key));
+        return Arrays.stream(attrs).collect(toImmutableMap(e -> e.exportKey, e -> e.key));
     }
 
     /**
      * Returns all HTTP request header names in the export list.
      */
-    public Set<AsciiString> httpRequestHeaders() {
-        if (httpReqHeaders == null) {
+    public Set<AsciiString> requestHeaders() {
+        if (reqHeaders == null) {
             return ImmutableSet.of();
         }
-        return Arrays.stream(httpReqHeaders).map(e -> e.key).collect(toImmutableSet());
+        return Arrays.stream(reqHeaders).map(e -> e.key).collect(toImmutableSet());
     }
 
     /**
      * Returns all HTTP response header names in the export list.
      */
-    public Set<AsciiString> httpResponseHeaders() {
-        if (httpResHeaders == null) {
+    public Set<AsciiString> responseHeaders() {
+        if (resHeaders == null) {
             return ImmutableSet.of();
         }
-        return Arrays.stream(httpResHeaders).map(e -> e.key).collect(toImmutableSet());
+        return Arrays.stream(resHeaders).map(e -> e.key).collect(toImmutableSet());
     }
 
     /**
@@ -251,8 +249,8 @@ public final class RequestContextExporter {
     private void export(State state, RequestContext ctx, RequestLog log) {
         exportBuiltIns(state, log);
         exportAttributes(state);
-        exportHttpRequestHeaders(state, log);
-        exportHttpResponseHeaders(state, log);
+        exportRequestHeaders(state, log);
+        exportResponseHeaders(state, log);
     }
 
     private void exportBuiltIns(State state, RequestLog log) {
@@ -278,24 +276,24 @@ public final class RequestContextExporter {
         }
     }
 
-    private void exportHttpRequestHeaders(State state, RequestLog log) {
-        if (httpReqHeaders == null || !log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
+    private void exportRequestHeaders(State state, RequestLog log) {
+        if (reqHeaders == null || !log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
             return;
         }
 
-        exportHttpHeaders(state, log.requestHeaders(), httpReqHeaders);
+        exportHeaders(state, log.requestHeaders(), reqHeaders);
     }
 
-    private void exportHttpResponseHeaders(State state, RequestLog log) {
-        if (httpResHeaders == null || !log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+    private void exportResponseHeaders(State state, RequestLog log) {
+        if (resHeaders == null || !log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
             return;
         }
 
-        exportHttpHeaders(state, log.responseHeaders(), httpResHeaders);
+        exportHeaders(state, log.responseHeaders(), resHeaders);
     }
 
-    private static void exportHttpHeaders(State state, HttpHeaders headers,
-                                          ExportEntry<AsciiString>[] requiredHeaderNames) {
+    private static void exportHeaders(State state, HttpHeaders headers,
+                                      ExportEntry<AsciiString>[] requiredHeaderNames) {
         for (ExportEntry<AsciiString> e : requiredHeaderNames) {
             putStringifiedProperty(state, e, headers.get(e.key));
         }

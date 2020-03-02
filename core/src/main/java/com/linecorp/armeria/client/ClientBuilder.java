@@ -148,18 +148,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ClientBuilder defaultWriteTimeout(Duration writeTimeout) {
-        return (ClientBuilder) super.defaultWriteTimeout(writeTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ClientBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
-        return (ClientBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
-    }
-
-    @Override
     public ClientBuilder writeTimeout(Duration writeTimeout) {
         return (ClientBuilder) super.writeTimeout(writeTimeout);
     }
@@ -170,18 +158,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ClientBuilder defaultResponseTimeout(Duration responseTimeout) {
-        return (ClientBuilder) super.defaultResponseTimeout(responseTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ClientBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
-        return (ClientBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
     public ClientBuilder responseTimeout(Duration responseTimeout) {
         return (ClientBuilder) super.responseTimeout(responseTimeout);
     }
@@ -189,12 +165,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return (ClientBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    @Deprecated
-    public ClientBuilder defaultMaxResponseLength(long maxResponseLength) {
-        return (ClientBuilder) super.defaultMaxResponseLength(maxResponseLength);
     }
 
     @Override

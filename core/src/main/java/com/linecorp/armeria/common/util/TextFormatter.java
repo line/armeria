@@ -125,36 +125,6 @@ public final class TextFormatter {
      * Formats the given epoch time in milliseconds to typical human-readable format
      * "yyyy-MM-dd'T'HH:mm:ss.SSSX".
      *
-     * @deprecated Use {@link #epochMillis(long)}.
-     *
-     * @param timeMillis epoch time in milliseconds
-     *
-     * @return the human readable string representation of the given epoch time
-     */
-    @Deprecated
-    public static StringBuilder epoch(long timeMillis) {
-        // 24 (human readable part) + 2 (parens) + 19 (max digits of a long integer)
-        final StringBuilder buf = new StringBuilder(45);
-        appendEpochMillis(buf, timeMillis);
-        return buf;
-    }
-
-    /**
-     * Formats the given epoch time in milliseconds to typical human-readable format
-     * "yyyy-MM-dd'T'HH_mm:ss.SSSX" and appends it to the specified {@link StringBuilder}.
-     *
-     * @deprecated Use {@link #appendEpochMillis(StringBuilder, long)}.
-     */
-    @Deprecated
-    public static void appendEpoch(StringBuilder buf, long timeMillis) {
-        buf.append(dateTimeFormatter.format(Instant.ofEpochMilli(timeMillis)))
-           .append('(').append(timeMillis).append(')');
-    }
-
-    /**
-     * Formats the given epoch time in milliseconds to typical human-readable format
-     * "yyyy-MM-dd'T'HH:mm:ss.SSSX".
-     *
      * @param timeMillis epoch time in milliseconds
      *
      * @return the human readable string representation of the given epoch time

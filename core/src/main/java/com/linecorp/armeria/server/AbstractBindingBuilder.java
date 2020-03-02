@@ -78,18 +78,6 @@ abstract class AbstractBindingBuilder {
 
     /**
      * Sets the specified prefix which is a directory that an {@link HttpService} will be bound under.
-     * {@code pathUnder("/my/path")} is identical to {@code path("prefix:/my/path")}.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     * @deprecated Use {@link #pathPrefix(String)}.
-     */
-    @Deprecated
-    public AbstractBindingBuilder pathUnder(String prefix) {
-        return pathPrefix(prefix);
-    }
-
-    /**
-     * Sets the specified prefix which is a directory that an {@link HttpService} will be bound under.
      * {@code pathPrefix("/my/path")} is identical to {@code path("prefix:/my/path")}.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid

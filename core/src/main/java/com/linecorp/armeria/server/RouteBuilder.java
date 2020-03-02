@@ -159,43 +159,6 @@ public final class RouteBuilder {
      * For example, when {@code prefix} is {@code "/foo/"}:
      * <ul>
      *   <li>{@code "/foo/"} translates to {@code "/"}</li>
-     *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
-     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
-     * </ul>
-     * This method is a shortcut to {@linkplain #pathPrefix(String, boolean) pathPrefix(prefix, true)}.
-     *
-     * @deprecated Use {@link #pathPrefix(String)}
-     */
-    @Deprecated
-    public RouteBuilder prefix(String prefix) {
-        return pathPrefix(prefix, true);
-    }
-
-    /**
-     * Sets the {@link Route} to match when a {@linkplain ServiceRequestContext#path() path} is under the
-     * specified {@code prefix}. When {@code stripPrefix} is {@code true}, it also removes the specified
-     * {@code prefix} from the matched path so that {@linkplain ServiceRequestContext#path() mappedPath}
-     * does not have the specified {@code prefix}. For example, when {@code prefix} is {@code "/foo/"}:
-     * <ul>
-     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
-     *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
-     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
-     * </ul>
-     *
-     * @deprecated Use {@link #pathPrefix(String, boolean)}
-     */
-    @Deprecated
-    public RouteBuilder prefix(String prefix, boolean stripPrefix) {
-        return pathPrefix(prefix, stripPrefix);
-    }
-
-    /**
-     * Sets the {@link Route} to match when a {@linkplain ServiceRequestContext#path() path} is under the
-     * specified {@code prefix}. It also removes the specified {@code prefix} from the matched path so that
-     * {@linkplain ServiceRequestContext#mappedPath() mappedPath} does not have the specified {@code prefix}.
-     * For example, when {@code prefix} is {@code "/foo/"}:
-     * <ul>
-     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
      *   <li>{@code "/foo/bar"} translates to {@code "/bar"}</li>
      *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
      * </ul>
@@ -258,18 +221,6 @@ public final class RouteBuilder {
      */
     public RouteBuilder regex(Pattern regex) {
         return pathMapping(new RegexPathMapping(regex));
-    }
-
-    /**
-     * Sets the {@link Route} to match the specified {@code prefix} and {@code pathPattern}. The mapped
-     * {@link HttpService} is found when a {@linkplain ServiceRequestContext#path() path} is under
-     * the specified {@code prefix} and the rest of the path matches the specified {@code pathPattern}.
-     *
-     * @deprecated Use {@linkplain #path(String, String) path(prefix, pathPattern)}
-     */
-    @Deprecated
-    public RouteBuilder pathWithPrefix(String prefix, String pathPattern) {
-        return path(prefix, pathPattern);
     }
 
     /**

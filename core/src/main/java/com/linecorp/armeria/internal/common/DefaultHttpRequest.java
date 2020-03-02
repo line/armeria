@@ -13,37 +13,34 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 
 /**
  * Default {@link HttpRequest} implementation.
- *
- * @deprecated Use {@link HttpRequest#streaming(RequestHeaders)}.
  */
-@Deprecated
 public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> implements HttpRequestWriter {
 
     private final RequestHeaders headers;
 
     /**
      * Creates a new instance with the specified headers.
-     *
-     * @deprecated Use {@link HttpRequest#streaming(RequestHeaders)}.
      */
-    @Deprecated
     public DefaultHttpRequest(RequestHeaders headers) {
         this.headers = requireNonNull(headers, "headers");
     }
 
     @Override
-    public RequestHeaders headers() {
+    public final RequestHeaders headers() {
         return headers;
     }
 

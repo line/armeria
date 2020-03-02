@@ -63,18 +63,6 @@ public interface Sampler<T> {
     }
 
     /**
-     * Returns a rate-limiting sampler which rate-limits up to the specified {@code samplesPerSecond}.
-     *
-     * @param samplesPerSecond an integer between {@code 0} and {@value Integer#MAX_VALUE}
-     *
-     * @deprecated Use {@link #rateLimiting(int)}.
-     */
-    @Deprecated
-    static <T> Sampler<T> rateLimited(int samplesPerSecond) {
-        return rateLimiting(samplesPerSecond);
-    }
-
-    /**
      * Returns a sampler that will always return {@code true}.
      */
     static <T> Sampler<T> always() {

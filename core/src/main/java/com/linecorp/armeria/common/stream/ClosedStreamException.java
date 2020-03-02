@@ -21,7 +21,7 @@ import com.linecorp.armeria.common.Flags;
 /**
  * A {@link RuntimeException} that is raised when a {@link StreamMessage} has been closed unexpectedly.
  */
-public final class ClosedStreamException extends ClosedPublisherException {
+public final class ClosedStreamException extends RuntimeException {
 
     private static final long serialVersionUID = -7665826869012452735L;
 
@@ -38,7 +38,7 @@ public final class ClosedStreamException extends ClosedPublisherException {
 
     private ClosedStreamException() {}
 
-    private ClosedStreamException(boolean dummy) {
-        super(dummy);
+    private ClosedStreamException(@SuppressWarnings("unused") boolean dummy) {
+        super(null, null, false, false);
     }
 }

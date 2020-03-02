@@ -87,13 +87,7 @@ public final class ClientFactoryBuilder {
     private int maxNumEventLoopsPerHttp1Endpoint;
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link ClientFactory#builder()}.
-     */
-    @Deprecated
-    public ClientFactoryBuilder() {
+    ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
     }
 
@@ -199,16 +193,6 @@ public final class ClientFactoryBuilder {
 
     /**
      * Sets the options of sockets created by the {@link ClientFactory}.
-     *
-     * @deprecated Use {@link #channelOption(ChannelOption, Object)}.
-     */
-    @Deprecated
-    public <T> ClientFactoryBuilder socketOption(ChannelOption<T> option, T value) {
-        return channelOption(option, value);
-    }
-
-    /**
-     * Sets the options of sockets created by the {@link ClientFactory}.
      */
     public <T> ClientFactoryBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
@@ -238,21 +222,6 @@ public final class ClientFactoryBuilder {
             options.put(ClientFactoryOption.CHANNEL_OPTIONS,
                         ClientFactoryOption.CHANNEL_OPTIONS.newValue(builder.build()));
         }
-    }
-
-    /**
-     * Sets the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
-     * applied to the SSL session. For example, use {@link SslContextBuilder#trustManager} to configure a
-     * custom server CA or {@link SslContextBuilder#keyManager} to configure a client certificate for SSL
-     * authorization.
-     *
-     * @deprecated Use {@link #tlsCustomizer(Consumer)}.
-     */
-    @Deprecated
-    public ClientFactoryBuilder sslContextCustomizer(Consumer<? super SslContextBuilder> sslContextCustomizer) {
-        option(ClientFactoryOption.TLS_CUSTOMIZER,
-               requireNonNull(sslContextCustomizer, "sslContextCustomizer"));
-        return this;
     }
 
     /**

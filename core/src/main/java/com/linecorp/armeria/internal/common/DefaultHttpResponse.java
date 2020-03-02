@@ -13,26 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.internal.common;
 
-package com.linecorp.armeria.server.annotation;
+import com.google.common.base.MoreObjects;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 
 /**
- * The containing annotation type for {@link ProduceType}.
- *
- * @deprecated Use {@link ProducesGroup}.
+ * Default {@link HttpResponse} instance.
  */
-@Deprecated
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface ProduceTypes {
-
-    /**
-     * An array of {@link ProduceType}s.
-     */
-    ProduceType[] value();
+public class DefaultHttpResponse extends DefaultStreamMessage<HttpObject> implements HttpResponseWriter {
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).toString();
+    }
 }

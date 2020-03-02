@@ -53,16 +53,6 @@ public interface ClientBuilderParams {
     }
 
     /**
-     * Returns the {@link ClientFactory} who created the client.
-     *
-     * @deprecated Use {@link #options()} to get {@link ClientOption#FACTORY}.
-     */
-    @Deprecated
-    default ClientFactory factory() {
-        return options().get(ClientOption.FACTORY);
-    }
-
-    /**
      * Returns the {@link Scheme} of the client.
      */
     Scheme scheme();

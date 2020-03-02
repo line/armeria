@@ -300,18 +300,6 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultWriteTimeout(Duration writeTimeout) {
-        return (ArmeriaRetrofitBuilder) super.defaultWriteTimeout(writeTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
-        return (ArmeriaRetrofitBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
-    }
-
-    @Override
     public ArmeriaRetrofitBuilder writeTimeout(Duration writeTimeout) {
         return (ArmeriaRetrofitBuilder) super.writeTimeout(writeTimeout);
     }
@@ -322,18 +310,6 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultResponseTimeout(Duration responseTimeout) {
-        return (ArmeriaRetrofitBuilder) super.defaultResponseTimeout(responseTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
-        return (ArmeriaRetrofitBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
     public ArmeriaRetrofitBuilder responseTimeout(Duration responseTimeout) {
         return (ArmeriaRetrofitBuilder) super.responseTimeout(responseTimeout);
     }
@@ -341,12 +317,6 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ArmeriaRetrofitBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return (ArmeriaRetrofitBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    @Deprecated
-    public ArmeriaRetrofitBuilder defaultMaxResponseLength(long maxResponseLength) {
-        return (ArmeriaRetrofitBuilder) super.defaultMaxResponseLength(maxResponseLength);
     }
 
     @Override

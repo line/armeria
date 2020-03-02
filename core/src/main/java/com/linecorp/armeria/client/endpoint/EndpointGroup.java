@@ -20,12 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
@@ -150,50 +145,6 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
      * Returns a {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.
      */
     CompletableFuture<List<Endpoint>> whenReady();
-
-    /**
-     * Returns a {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.
-     *
-     * @deprecated Use {@link #whenReady()}.
-     */
-    @Deprecated
-    default CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
-        return whenReady();
-    }
-
-    /**
-     * Waits until the initial {@link Endpoint}s are ready.
-     *
-     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
-     *
-     * @deprecated Use {@link #whenReady()} and {@link CompletableFuture#get()}.
-     */
-    @Deprecated
-    default List<Endpoint> awaitInitialEndpoints() throws InterruptedException {
-        try {
-            return whenReady().get();
-        } catch (ExecutionException e) {
-            throw new CompletionException(e.getCause());
-        }
-    }
-
-    /**
-     * Waits until the initial {@link Endpoint}s are ready, with timeout.
-     *
-     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
-     * @throws TimeoutException if the initial {@link Endpoint}s are not set until timeout
-     *
-     * @deprecated Use {@link #whenReady()} and {@link CompletableFuture#get(long, TimeUnit)}.
-     */
-    @Deprecated
-    default List<Endpoint> awaitInitialEndpoints(long timeout, TimeUnit unit)
-            throws InterruptedException, TimeoutException {
-        try {
-            return whenReady().get(timeout, unit);
-        } catch (ExecutionException e) {
-            throw new CompletionException(e.getCause());
-        }
-    }
 
     @Override
     default void addListener(Consumer<? super List<Endpoint>> listener) {}

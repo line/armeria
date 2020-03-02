@@ -19,8 +19,8 @@
   <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
     <appender-ref ref="NOP"/>
     <export>remote.host</export>
-    <export>req.http_headers.user-agent</export>
-    <export>res.http_headers.set-cookie</export>
+    <export>req.headers.user-agent</export>
+    <export>res.headers.set-cookie</export>
     <export>attrs.foo:com.example.AttrKeys#FOO</export>
     <export>attrs.bar:com.example.AttrKeys#BAR:com.linecorp.armeria.common.logback.CustomObjectValueStringifier</export>
     <export>attrs.qux:com.example.AttrKeys#BAR:com.linecorp.armeria.common.logback.CustomObjectNameStringifier</export>

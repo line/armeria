@@ -26,31 +26,6 @@ import com.linecorp.armeria.common.stream.StreamMessage;
  * It has to be an {@link HttpResponse} or an {@link RpcResponse}.
  */
 public interface Response {
-
-    /**
-     * Returns a {@link CompletableFuture} which completes when
-     * 1) the response stream has been closed (the {@link StreamMessage} has been completed) or
-     * 2) the result value is set (the {@link CompletionStage} has completed.)
-     *
-     * @deprecated Use {@link #whenComplete()}.
-     */
-    @Deprecated
-    default CompletableFuture<?> closeFuture() {
-        return whenComplete();
-    }
-
-    /**
-     * Returns a {@link CompletableFuture} which completes when
-     * 1) the response stream has been closed (the {@link StreamMessage} has been completed) or
-     * 2) the result value is set (the {@link CompletionStage} has completed.)
-     *
-     * @deprecated Use {@link #whenComplete()}.
-     */
-    @Deprecated
-    default CompletableFuture<?> completionFuture() {
-        return whenComplete();
-    }
-
     /**
      * Returns a {@link CompletableFuture} which completes when
      * 1) the response stream has been closed (the {@link StreamMessage} has been completed) or

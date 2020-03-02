@@ -15,19 +15,16 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.zookeeper.CreateMode;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.common.zookeeper.ZooKeeperDefaults;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -90,46 +87,6 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         this.endpoint = endpoint;
         this.closeClientOnStop = closeClientOnStop;
-    }
-
-    /**
-     * A ZooKeeper server listener, which registers server into ZooKeeper.
-     *
-     * @deprecated Use {@link ZooKeeperUpdatingListenerBuilder}.
-     *
-     * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will be registered)
-     * @param sessionTimeout  session timeout
-     * @param endpoint        the endpoint of the server being registered
-     */
-    @Deprecated
-    public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                     @Nullable Endpoint endpoint) {
-        requireNonNull(zkConnectionStr, "zkConnectionStr");
-        checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty");
-        client = CuratorFrameworkFactory.builder()
-                                        .connectString(zkConnectionStr)
-                                        .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
-                                        .sessionTimeoutMs(sessionTimeout)
-                                        .build();
-        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
-        nodeValueCodec = NodeValueCodec.ofDefault();
-        this.endpoint = endpoint;
-        closeClientOnStop = true;
-    }
-
-    /**
-     * A ZooKeeper server listener, which registers server into ZooKeeper.
-     *
-     * @deprecated Use {@link ZooKeeperUpdatingListenerBuilder}.
-     *
-     * @param zkConnectionStr ZooKeeper connection string
-     * @param zNodePath       ZooKeeper node path(under which this server will be registered)
-     * @param sessionTimeout  session timeout
-     */
-    @Deprecated
-    public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, null);
     }
 
     @Override

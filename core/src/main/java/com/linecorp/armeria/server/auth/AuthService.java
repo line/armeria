@@ -37,7 +37,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  *
  * @see AuthServiceBuilder
  */
-public class AuthService extends SimpleDecoratingHttpService {
+public final class AuthService extends SimpleDecoratingHttpService {
 
     static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 

@@ -30,13 +30,7 @@ public final class ClientDecorationBuilder {
     private final List<Function<? super HttpClient, ? extends HttpClient>> decorators = new ArrayList<>();
     private final List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators = new ArrayList<>();
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link ClientDecoration#builder()}.
-     */
-    @Deprecated
-    public ClientDecorationBuilder() {}
+    ClientDecorationBuilder() {}
 
     /**
      * Adds the specified {@link ClientDecoration}.

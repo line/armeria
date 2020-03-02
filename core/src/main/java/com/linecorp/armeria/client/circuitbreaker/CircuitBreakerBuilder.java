@@ -70,15 +70,7 @@ public final class CircuitBreakerBuilder {
 
     private List<CircuitBreakerListener> listeners = Collections.emptyList();
 
-    /**
-     * Creates a new {@link CircuitBreakerBuilder} with the specified name.
-     *
-     * @param name The name of the circuit breaker.
-     *
-     * @deprecated Use {@link CircuitBreaker#builder(String)}.
-     */
-    @Deprecated
-    public CircuitBreakerBuilder(String name) {
+    CircuitBreakerBuilder(String name) {
         requireNonNull(name, "name");
         if (name.isEmpty()) {
             throw new IllegalArgumentException("name: <empty> (expected: a non-empty string)");
@@ -86,13 +78,7 @@ public final class CircuitBreakerBuilder {
         this.name = name;
     }
 
-    /**
-     * Creates a new {@link CircuitBreakerBuilder}.
-     *
-     * @deprecated Use {@link CircuitBreaker#builder()}.
-     */
-    @Deprecated
-    public CircuitBreakerBuilder() {
+    CircuitBreakerBuilder() {
         name = null;
     }
 

@@ -78,19 +78,6 @@ public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
      * will be used.
      *
      * @return {@code this} to support method chaining.
-     *
-     * @deprecated Use {@link #mapping(CircuitBreakerMapping)}.
-     */
-    @Deprecated
-    public AbstractCircuitBreakerClientBuilder<O> circuitBreakerMapping(CircuitBreakerMapping mapping) {
-        return mapping(mapping);
-    }
-
-    /**
-     * Sets the {@link CircuitBreakerMapping}. If unspecified, {@link CircuitBreakerMapping#ofDefault()}
-     * will be used.
-     *
-     * @return {@code this} to support method chaining.
      */
     public AbstractCircuitBreakerClientBuilder<O> mapping(CircuitBreakerMapping mapping) {
         this.mapping = requireNonNull(mapping, "mapping");

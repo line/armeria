@@ -25,22 +25,6 @@ import com.linecorp.armeria.client.Endpoint;
 public interface EndpointSelectionStrategy {
 
     /**
-     * Simple round-robin strategy.
-     *
-     * @deprecated Use {@link #roundRobin()}.
-     */
-    @Deprecated
-    EndpointSelectionStrategy ROUND_ROBIN = RoundRobinStrategy.INSTANCE;
-
-    /**
-     * Weighted round-robin strategy.
-     *
-     * @deprecated Use {@link #weightedRoundRobin()}.
-     */
-    @Deprecated
-    EndpointSelectionStrategy WEIGHTED_ROUND_ROBIN = WeightedRoundRobinStrategy.INSTANCE;
-
-    /**
      * Returns a weighted round-robin strategy.
      *
      * @see #roundRobin()

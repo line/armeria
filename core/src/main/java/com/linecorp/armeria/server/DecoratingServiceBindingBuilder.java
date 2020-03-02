@@ -58,16 +58,6 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
         return (DecoratingServiceBindingBuilder) super.path(pathPattern);
     }
 
-    /**
-     * {@inheritDoc}
-     * @deprecated Use {@link #pathPrefix(String)}.
-     */
-    @Override
-    @Deprecated
-    public DecoratingServiceBindingBuilder pathUnder(String prefix) {
-        return (DecoratingServiceBindingBuilder) super.pathPrefix(prefix);
-    }
-
     @Override
     public DecoratingServiceBindingBuilder pathPrefix(String prefix) {
         return (DecoratingServiceBindingBuilder) super.pathPrefix(prefix);

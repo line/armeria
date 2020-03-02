@@ -31,49 +31,19 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 /**
- * Default {@link RpcResponse} implementation.
+ * An {@link RpcResponse} implementation which is initially incomplete and can be completed later.
  */
-public class DefaultRpcResponse extends CompletableFuture<Object> implements RpcResponse {
+public final class CompletableRpcResponse extends CompletableFuture<Object> implements RpcResponse {
 
-    private static final AtomicReferenceFieldUpdater<DefaultRpcResponse, Throwable> causeUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(DefaultRpcResponse.class, Throwable.class, "cause");
+    private static final AtomicReferenceFieldUpdater<CompletableRpcResponse, Throwable> causeUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(CompletableRpcResponse.class, Throwable.class, "cause");
 
     @Nullable
     private volatile Throwable cause;
 
-    /**
-     * Creates a new incomplete response.
-     */
-    public DefaultRpcResponse() {}
-
-    /**
-     * Creates a new successfully complete response.
-     *
-     * @param result the result or an RPC call
-     *
-     * @deprecated Use the factory methods in {@link RpcResponse}.
-     */
-    @Deprecated
-    public DefaultRpcResponse(@Nullable Object result) {
-        complete(result);
-    }
-
-    /**
-     * Creates a new exceptionally complete response.
-     *
-     * @param cause the cause of failure
-     *
-     * @deprecated Use the factory methods in {@link RpcResponse}.
-     */
-    @Deprecated
-    public DefaultRpcResponse(Throwable cause) {
-        requireNonNull(cause, "cause");
-        completeExceptionally(cause);
-    }
-
     @Nullable
     @Override
-    public final Throwable cause() {
+    public Throwable cause() {
         return cause;
     }
 

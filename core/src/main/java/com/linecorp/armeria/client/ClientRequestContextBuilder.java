@@ -43,37 +43,6 @@ import io.netty.channel.EventLoop;
  */
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
 
-    /**
-     * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link HttpRequest}.
-     *
-     * @deprecated Use {@link ClientRequestContext#builder(HttpRequest)}.
-     */
-    @Deprecated
-    public static ClientRequestContextBuilder of(HttpRequest request) {
-        return new ClientRequestContextBuilder(request);
-    }
-
-    /**
-     * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link RpcRequest} and URI.
-     *
-     * @deprecated Use {@link ClientRequestContext#builder(RpcRequest, String)}.
-     */
-    @Deprecated
-    public static ClientRequestContextBuilder of(RpcRequest request, String uri) {
-        return of(request, URI.create(requireNonNull(uri, "uri")));
-    }
-
-    /**
-     * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link RpcRequest} and
-     * {@link URI}.
-     *
-     * @deprecated Use {@link ClientRequestContext#builder(RpcRequest, URI)}.
-     */
-    @Deprecated
-    public static ClientRequestContextBuilder of(RpcRequest request, URI uri) {
-        return new ClientRequestContextBuilder(request, uri);
-    }
-
     @Nullable
     private final String fragment;
     @Nullable

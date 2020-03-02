@@ -30,7 +30,6 @@ class RequestContextExporterBuilderTest {
         for (BuiltInProperty property : BuiltInProperty.values()) {
             builder.addKeyPattern(property.key);
         }
-        assertThat(builder.getBuiltIns()).containsOnly(BuiltInProperty.values());
         assertThat(builder.build().builtIns()).containsOnly(BuiltInProperty.values());
     }
 
@@ -38,8 +37,15 @@ class RequestContextExporterBuilderTest {
     void addWithoutWildcards() throws Exception {
         final RequestContextExporterBuilder builder = RequestContextExporter.builder();
         builder.addKeyPattern(BuiltInProperty.REMOTE_HOST.key);
-        assertThat(builder.getBuiltIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
         assertThat(builder.build().builtIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
+    }
+
+    @Test
+    void addAttribute() {
+        final RequestContextExporterBuilder builder = RequestContextExporter.builder();
+        builder.addKeyPattern("attrs.foo:com.example.AttrKey#KEY");
+        builder.addKeyPattern("bar=attr:com.example.AttrKey#KEY");
+        assertThat(builder.build().attributes()).containsOnlyKeys("attrs.foo", "bar");
     }
 
     @Test
@@ -50,7 +56,6 @@ class RequestContextExporterBuilderTest {
                       .filter(p -> p.key.startsWith("req."))
                       .toArray(BuiltInProperty[]::new);
         builder.addKeyPattern("req.*");
-        assertThat(builder.getBuiltIns()).containsOnly(expectedProperties);
         assertThat(builder.build().builtIns()).containsOnly(expectedProperties);
     }
 
@@ -62,7 +67,6 @@ class RequestContextExporterBuilderTest {
                       .filter(p -> p.key.contains("rpc"))
                       .toArray(BuiltInProperty[]::new);
         builder.addKeyPattern("*rpc*");
-        assertThat(builder.getBuiltIns()).containsOnly(expectedProperties);
         assertThat(builder.build().builtIns()).containsOnly(expectedProperties);
     }
 
@@ -71,7 +75,6 @@ class RequestContextExporterBuilderTest {
         final RequestContextExporterBuilder builder = RequestContextExporter.builder();
         builder.addKeyPattern("attrs.*");
         builder.addKeyPattern("attrs.my_attrs:MyAttribute");
-        assertThat(1).isEqualTo(builder.getAttributes().size());
-        assertThat(1).isEqualTo(builder.build().attributes().size());
+        assertThat(builder.build().attributes()).hasSize(1);
     }
 }

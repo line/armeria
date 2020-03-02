@@ -38,7 +38,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -409,65 +408,6 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the timeout of a request.
-     *
-     * @deprecated Use {@link ServiceConfig#requestTimeoutMillis()} or
-     *             {@link VirtualHost#requestTimeoutMillis()}.
-     */
-    @Deprecated
-    public long defaultRequestTimeoutMillis() {
-        return requestTimeoutMillis();
-    }
-
-    /**
-     * Returns the timeout of a request.
-     *
-     * @deprecated Use {@link ServiceConfig#requestTimeoutMillis()} or
-     *             {@link VirtualHost#requestTimeoutMillis()}.
-     */
-    @Deprecated
-    public long requestTimeoutMillis() {
-        return defaultVirtualHost.requestTimeoutMillis();
-    }
-
-    /**
-     * Returns the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
-     *
-     * @deprecated Use {@link ServiceConfig#maxRequestLength()} or
-     *             {@link VirtualHost#maxRequestLength()}.
-     */
-    @Deprecated
-    public long defaultMaxRequestLength() {
-        return maxRequestLength();
-    }
-
-    /**
-     * Returns the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
-     *
-     * @deprecated Use {@link ServiceConfig#maxRequestLength()} or
-     *             {@link VirtualHost#maxRequestLength()}.
-     */
-    @Deprecated
-    public long maxRequestLength() {
-        return defaultVirtualHost.maxRequestLength();
-    }
-
-    /**
-     * Returns whether the verbose response mode is enabled. When enabled, the server responses will contain
-     * the exception type and its full stack trace, which may be useful for debugging while potentially
-     * insecure. When disabled, the server responses will not expose such server-side details to the client.
-     *
-     * @deprecated Use {@link ServiceConfig#verboseResponses()} or
-     *             {@link VirtualHost#verboseResponses()}.
-     */
-    @Deprecated
-    public boolean verboseResponses() {
-        return defaultVirtualHost.verboseResponses();
-    }
-
-    /**
      * Returns the maximum length of an HTTP/1 response initial line.
      */
     public int http1MaxInitialLineLength() {
@@ -563,28 +503,6 @@ public final class ServerConfig {
      */
     public MeterRegistry meterRegistry() {
         return meterRegistry;
-    }
-
-    /**
-     * Returns the access log writer.
-     *
-     * @deprecated Use {@link ServiceConfig#accessLogWriter()} or
-     *             {@link VirtualHost#accessLogWriter()}.
-     */
-    @Deprecated
-    public AccessLogWriter accessLogWriter() {
-        return defaultVirtualHost.accessLogWriter();
-    }
-
-    /**
-     * Returns whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
-     *
-     * @deprecated Use {@link ServiceConfig#shutdownAccessLogWriterOnStop()} or
-     *             {@link VirtualHost#shutdownAccessLogWriterOnStop()}.
-     */
-    @Deprecated
-    public boolean shutdownAccessLogWriterOnStop() {
-        return defaultVirtualHost.shutdownAccessLogWriterOnStop();
     }
 
     /**

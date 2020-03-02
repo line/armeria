@@ -148,7 +148,7 @@ class RequestContextExporterTest {
                 .builder()
                 .addAttribute("attrs.attr1", ATTR1)
                 .addAttribute("my_attr2", ATTR1)
-                .addHttpRequestHeader(HttpHeaderNames.METHOD, "request_method")
+                .addRequestHeader(HttpHeaderNames.METHOD, "request_method")
                 .addKeyPattern("request_id=req.id")
                 .addKeyPattern("foo=attr:" + Foo.class.getName() + "#ATTR3")
                 .addKeyPattern("bar=attr:" + Foo.class.getName() + "#ATTR3:" + FooStringifier.class.getName())

@@ -51,14 +51,4 @@ public interface Cookies extends Set<Cookie> {
             return new DefaultCookies(cookiesCopy);
         }
     }
-
-    /**
-     * Creates an instance with a copy of the specified set of {@link Cookie}s.
-     *
-     * @deprecated Use {@link #of(Iterable)}.
-     */
-    @Deprecated
-    static Cookies copyOf(Iterable<? extends Cookie> cookies) {
-        return of(cookies);
-    }
 }

@@ -45,13 +45,7 @@ public final class ClientConnectionTimingsBuilder {
     private long pendingAcquisitionEndNanos;
     private boolean pendingAcquisitionEndSet;
 
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link ClientConnectionTimings#builder()}.
-     */
-    @Deprecated
-    public ClientConnectionTimingsBuilder() {
+    ClientConnectionTimingsBuilder() {
         connectionAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
         connectionAcquisitionStartNanos = System.nanoTime();
     }

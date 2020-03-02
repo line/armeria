@@ -253,79 +253,6 @@ public abstract class ServerRuleDelegate {
     }
 
     /**
-     * Returns the HTTP or HTTPS URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it opened neither HTTP nor HTTPS port
-     *
-     * @deprecated Use {@link #httpUri()} or {@link #httpsUri()} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String uri(String path) {
-        ensureStarted();
-
-        if (hasHttp()) {
-            return httpUri() + validatePath(path);
-        }
-
-        if (hasHttps()) {
-            return httpsUri() + validatePath(path);
-        }
-
-        throw new IllegalStateException("can't find a useful active port");
-    }
-
-    /**
-     * Returns the URI for the {@link Server} of the specified protocol and format.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it did not open a port of the protocol.
-     *
-     * @deprecated Use {@link #uri(SessionProtocol, SerializationFormat)} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String uri(SessionProtocol protocol, SerializationFormat format, String path) {
-        return uri(protocol, format) + validatePath(path);
-    }
-
-    /**
-     * Returns the URI for the {@link Server} of the specified protocol.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it did not open a port of the protocol.
-     *
-     * @deprecated Use {@link #uri(SessionProtocol)} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String uri(SessionProtocol protocol, String path) {
-        return uri(protocol) + validatePath(path);
-    }
-
-    /**
-     * Returns the HTTP or HTTPS URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or
-     *                               it opened neither HTTP nor HTTPS port
-     *
-     * @deprecated Use {@link #httpUri(SerializationFormat)} or {@link #httpsUri(SerializationFormat)}
-     *             and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String uri(SerializationFormat format, String path) {
-        ensureStarted();
-
-        if (hasHttp()) {
-            return httpUri(format) + validatePath(path);
-        }
-
-        if (hasHttps()) {
-            return httpsUri(format) + validatePath(path);
-        }
-
-        throw new IllegalStateException("can't find a useful active port");
-    }
-
-    /**
      * Returns the HTTP {@link URI} for the {@link Server}.
      *
      * @return the absolute {@link URI} without a path.
@@ -348,30 +275,6 @@ public abstract class ServerRuleDelegate {
     }
 
     /**
-     * Returns the HTTP URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
-     *
-     * @deprecated Use {@link #httpUri()} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String httpUri(String path) {
-        return httpUri() + validatePath(path);
-    }
-
-    /**
-     * Returns the HTTP URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
-     *
-     * @deprecated Use {@link #httpUri(SerializationFormat)} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String httpUri(SerializationFormat format, String path) {
-        return httpUri(format) + validatePath(path);
-    }
-
-    /**
      * Returns the HTTPS {@link URI} for the {@link Server}.
      *
      * @return the absolute {@link URI} without a path.
@@ -391,30 +294,6 @@ public abstract class ServerRuleDelegate {
      */
     public URI httpsUri(SerializationFormat format) {
         return uri(HTTPS, format);
-    }
-
-    /**
-     * Returns the HTTPS URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
-     *
-     * @deprecated Use {@link #httpsUri()} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String httpsUri(String path) {
-        return httpsUri() + validatePath(path);
-    }
-
-    /**
-     * Returns the HTTPS URI for the {@link Server}.
-     *
-     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
-     *
-     * @deprecated Use {@link #httpsUri(SerializationFormat)} and {@link URI#resolve(String)}.
-     */
-    @Deprecated
-    public String httpsUri(SerializationFormat format, String path) {
-        return httpsUri(format) + validatePath(path);
     }
 
     /**

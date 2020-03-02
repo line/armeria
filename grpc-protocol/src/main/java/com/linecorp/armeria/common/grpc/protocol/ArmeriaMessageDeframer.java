@@ -98,6 +98,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      * as is in {@code buf} to optimize parsing. For compressed messages, we will parse incrementally
      * and thus return a {@link InputStream} in {@code stream}.
      */
+    @UnstableApi
     public static final class DeframedMessage {
         private final int type;
 
@@ -180,6 +181,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     /**
      * A listener of deframing events.
      */
+    @UnstableApi
     public interface Listener {
 
         /**

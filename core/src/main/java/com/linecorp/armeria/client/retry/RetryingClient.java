@@ -54,7 +54,7 @@ import io.netty.handler.codec.DateFormatter;
 /**
  * An {@link HttpClient} decorator that handles failures of an invocation and retries HTTP requests.
  */
-public class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResponse>
+public final class RetryingClient extends AbstractRetryingClient<HttpRequest, HttpResponse>
         implements HttpClient {
 
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);

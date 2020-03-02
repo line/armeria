@@ -33,7 +33,7 @@ import com.linecorp.armeria.server.Service;
 /**
  * Builds a new {@link AuthService}.
  */
-public class AuthServiceBuilder {
+public final class AuthServiceBuilder {
 
     @Nullable
     private Authorizer<HttpRequest> authorizer;

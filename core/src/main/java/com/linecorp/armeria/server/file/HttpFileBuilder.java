@@ -17,7 +17,6 @@ package com.linecorp.armeria.server.file;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.File;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -50,86 +49,6 @@ import com.linecorp.armeria.common.MediaType;
  * }</pre>
  */
 public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
-
-    /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the specified {@link File}.
-     *
-     * @deprecated Use {@link HttpFile#builder(File)}.
-     */
-    @Deprecated
-    public static HttpFileBuilder of(File file) {
-        return HttpFile.builder(requireNonNull(file, "file").toPath());
-    }
-
-    /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the file at the specified
-     * {@link Path}.
-     *
-     * @deprecated Use {@link HttpFile#builder(Path)}.
-     */
-    @Deprecated
-    public static HttpFileBuilder of(Path path) {
-        return HttpFile.builder(path);
-    }
-
-    /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link AggregatedHttpFile} from the specified
-     * {@link HttpData}. The last modified date of the file is set to 'now'. Note that the {@link #build()}
-     * method of the returned builder will always return an {@link AggregatedHttpFile}, which guarantees
-     * a safe downcast:
-     * <pre>{@code
-     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo")).build();
-     * }</pre>
-     *
-     * @deprecated Use {@link HttpFile#builder(HttpData)}.
-     */
-    @Deprecated
-    public static HttpFileBuilder of(HttpData data) {
-        return HttpFile.builder(data);
-    }
-
-    /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link AggregatedHttpFile} from the specified
-     * {@link HttpData} and {@code lastModifiedMillis}. Note that the {@link #build()} method of the returned
-     * builder will always return an {@link AggregatedHttpFile}, which guarantees a safe downcast:
-     * <pre>{@code
-     * AggregatedHttpFile f = (AggregatedHttpFile) HttpFile.builder(HttpData.ofUtf8("foo"), 1546923055020)
-     *                                                     .build();
-     * }</pre>
-     *
-     * @param data the content of the file
-     * @param lastModifiedMillis the last modified time represented as the number of milliseconds
-     *                           since the epoch
-     *
-     * @deprecated Use {@link HttpFile#builder(HttpData, long)}.
-     */
-    @Deprecated
-    public static HttpFileBuilder of(HttpData data, long lastModifiedMillis) {
-        return HttpFile.builder(data, lastModifiedMillis);
-    }
-
-    /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the classpath resource
-     * at the specified {@code path}. This method is a shortcut for
-     * {@code HttpFile.builder(HttpFile.class.getClassLoader(), path)}.
-     *
-     * @deprecated Use {@link HttpFile#builder(ClassLoader, String)}.
-     */
-    @Deprecated
-    public static HttpFileBuilder ofResource(String path) {
-        return HttpFile.builder(HttpFile.class.getClassLoader(), path);
-    }
-
-    /**
-     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the classpath resource
-     * at the specified {@code path} using the specified {@link ClassLoader}.
-     *
-     * @deprecated Use {@link HttpFile#builder(ClassLoader, String)}.
-     */
-    @Deprecated
-    public static HttpFileBuilder ofResource(ClassLoader classLoader, String path) {
-        return HttpFile.builder(classLoader, path);
-    }
 
     HttpFileBuilder() {}
 

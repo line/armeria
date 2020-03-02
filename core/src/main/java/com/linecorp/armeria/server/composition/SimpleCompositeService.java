@@ -53,24 +53,12 @@ public final class SimpleCompositeService
         return new SimpleCompositeServiceBuilder();
     }
 
-    /**
-     * Creates a new instance that is composed of the specified entries.
-     *
-     * @deprecated Use {@link #of(CompositeServiceEntry[])}.
-     */
     @SafeVarargs
-    @Deprecated
-    public SimpleCompositeService(CompositeServiceEntry<HttpService>... services) {
+    SimpleCompositeService(CompositeServiceEntry<HttpService>... services) {
         super(services);
     }
 
-    /**
-     * Creates a new instance that is composed of the specified entries.
-     *
-     * @deprecated Use {@link #of(Iterable)}.
-     */
-    @Deprecated
-    public SimpleCompositeService(Iterable<CompositeServiceEntry<HttpService>> services) {
+    SimpleCompositeService(Iterable<CompositeServiceEntry<HttpService>> services) {
         super(services);
     }
 

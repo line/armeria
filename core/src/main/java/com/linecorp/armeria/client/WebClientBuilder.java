@@ -198,18 +198,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public WebClientBuilder defaultWriteTimeout(Duration writeTimeout) {
-        return (WebClientBuilder) super.defaultWriteTimeout(writeTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public WebClientBuilder defaultWriteTimeoutMillis(long writeTimeoutMillis) {
-        return (WebClientBuilder) super.defaultWriteTimeoutMillis(writeTimeoutMillis);
-    }
-
-    @Override
     public WebClientBuilder writeTimeout(Duration writeTimeout) {
         return (WebClientBuilder) super.writeTimeout(writeTimeout);
     }
@@ -220,18 +208,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    @Deprecated
-    public WebClientBuilder defaultResponseTimeout(Duration responseTimeout) {
-        return (WebClientBuilder) super.defaultResponseTimeout(responseTimeout);
-    }
-
-    @Override
-    @Deprecated
-    public WebClientBuilder defaultResponseTimeoutMillis(long responseTimeoutMillis) {
-        return (WebClientBuilder) super.defaultResponseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
     public WebClientBuilder responseTimeout(Duration responseTimeout) {
         return (WebClientBuilder) super.responseTimeout(responseTimeout);
     }
@@ -239,12 +215,6 @@ public final class WebClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public WebClientBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return (WebClientBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    @Deprecated
-    public WebClientBuilder defaultMaxResponseLength(long maxResponseLength) {
-        return (WebClientBuilder) super.defaultMaxResponseLength(maxResponseLength);
     }
 
     @Override
