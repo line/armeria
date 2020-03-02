@@ -38,7 +38,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.Proxy.ConnectProxy;
 import com.linecorp.armeria.client.Proxy.ProxyType;
+import com.linecorp.armeria.client.Proxy.Socks5Proxy;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
@@ -136,14 +138,15 @@ final class HttpChannelPool implements AsyncCloseable {
                 break;
             case SOCKS5:
                 proxyHandler = new Socks5ProxyHandler(
-                        proxy.proxyAddress(), proxy.userName(), proxy.password());
+                        proxy.proxyAddress(), proxy.userName(), ((Socks5Proxy) proxy).password());
                 break;
             case CONNECT:
-                if (proxy.userName() == null || proxy.password() == null) {
+                final String username = proxy.userName();
+                final String password = ((ConnectProxy) proxy).password();
+                if (username == null || password == null) {
                     proxyHandler = new HttpProxyHandler(proxy.proxyAddress());
                 } else {
-                    proxyHandler = new HttpProxyHandler(
-                            proxy.proxyAddress(), proxy.userName(), proxy.password());
+                    proxyHandler = new HttpProxyHandler(proxy.proxyAddress(), username, password);
                 }
                 break;
             default:

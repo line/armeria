@@ -22,7 +22,9 @@ import java.net.InetSocketAddress;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.Proxy.ProxyType;
+import com.linecorp.armeria.client.Proxy.ConnectProxy;
+import com.linecorp.armeria.client.Proxy.Socks4Proxy;
+import com.linecorp.armeria.client.Proxy.Socks5Proxy;
 
 abstract class ProxyBuilder {
     @Nullable
@@ -30,34 +32,44 @@ abstract class ProxyBuilder {
     @Nullable
     private String password;
 
-    private final ProxyType proxyType;
     private final InetSocketAddress proxyAddress;
     private final long connectTimeoutMillis;
 
-    private ProxyBuilder(ProxyType proxyType, InetSocketAddress proxyAddress,
-                         long connectTimeoutMillis) {
-        this.proxyType = proxyType;
+    private ProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
         this.proxyAddress = proxyAddress;
         this.connectTimeoutMillis = connectTimeoutMillis;
+    }
+
+    @Nullable
+    protected String getUserName() {
+        return userName;
     }
 
     protected void setUserName(@Nullable String userName) {
         this.userName = userName;
     }
 
+    @Nullable
+    protected String getPassword() {
+        return password;
+    }
+
     protected void setPassword(@Nullable String password) {
         this.password = password;
+    }
+
+    protected InetSocketAddress getProxyAddress() {
+        return proxyAddress;
+    }
+
+    protected long getConnectTimeoutMillis() {
+        return connectTimeoutMillis;
     }
 
     /**
      * TODO: Update javadoc.
      */
-    public Proxy build() {
-        final Proxy proxy = new Proxy(proxyType, proxyAddress, connectTimeoutMillis);
-        proxy.setUserName(userName);
-        proxy.setPassword(password);
-        return proxy;
-    }
+    public abstract Proxy build();
 
     /**
      * TODO: Update javadoc.
@@ -65,7 +77,7 @@ abstract class ProxyBuilder {
     public static final class Socks4ProxyBuilder extends ProxyBuilder {
         Socks4ProxyBuilder(InetSocketAddress proxyAddress,
                                    long connectTimeoutMillis) {
-            super(ProxyType.SOCKS4, proxyAddress, connectTimeoutMillis);
+            super(proxyAddress, connectTimeoutMillis);
         }
 
         /**
@@ -75,6 +87,14 @@ abstract class ProxyBuilder {
             setUserName(userName);
             return this;
         }
+
+        @Override
+        public Socks4Proxy build() {
+            final Socks4Proxy socks4Proxy =
+                    new Socks4Proxy(getProxyAddress(), getConnectTimeoutMillis());
+            socks4Proxy.setUserName(getUserName());
+            return socks4Proxy;
+        }
     }
 
     /**
@@ -83,7 +103,7 @@ abstract class ProxyBuilder {
     public static final class Socks5ProxyBuilder extends ProxyBuilder {
         Socks5ProxyBuilder(InetSocketAddress proxyAddress,
                                    long connectTimeoutMillis) {
-            super(ProxyType.SOCKS5, proxyAddress, connectTimeoutMillis);
+            super(proxyAddress, connectTimeoutMillis);
         }
 
         /**
@@ -101,6 +121,15 @@ abstract class ProxyBuilder {
             setPassword(password);
             return this;
         }
+
+        @Override
+        public Socks5Proxy build() {
+            final Socks5Proxy socks5Proxy =
+                    new Socks5Proxy(getProxyAddress(), getConnectTimeoutMillis());
+            socks5Proxy.setUserName(getUserName());
+            socks5Proxy.setPassword(getPassword());
+            return socks5Proxy;
+        }
     }
 
     /**
@@ -109,7 +138,7 @@ abstract class ProxyBuilder {
     public static final class ConnectProxyBuilder extends ProxyBuilder {
         ConnectProxyBuilder(InetSocketAddress proxyAddress,
                                     long connectTimeoutMillis) {
-            super(ProxyType.CONNECT, proxyAddress, connectTimeoutMillis);
+            super(proxyAddress, connectTimeoutMillis);
         }
 
         /**
@@ -119,6 +148,15 @@ abstract class ProxyBuilder {
             setUserName(requireNonNull(userName));
             setPassword(requireNonNull(password));
             return this;
+        }
+
+        @Override
+        public ConnectProxy build() {
+            final ConnectProxy connectProxy =
+                    new ConnectProxy(getProxyAddress(), getConnectTimeoutMillis());
+            connectProxy.setUserName(getUserName());
+            connectProxy.setPassword(getPassword());
+            return connectProxy;
         }
     }
 }

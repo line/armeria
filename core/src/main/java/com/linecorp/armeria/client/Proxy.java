@@ -30,7 +30,7 @@ import com.linecorp.armeria.client.ProxyBuilder.Socks5ProxyBuilder;
 /**
  * TODO: Update javadoc.
  */
-public final class Proxy {
+public class Proxy {
 
     private static final long USE_DEFAULT_TIMEOUT_MILLIS = -1;
     static final Proxy DEFAULT =
@@ -42,8 +42,6 @@ public final class Proxy {
 
     @Nullable
     private String userName;
-    @Nullable
-    private String password;
 
     Proxy(ProxyType proxyType, InetSocketAddress proxyAddress, long connectTimeoutMillis) {
         this.proxyType = proxyType;
@@ -122,20 +120,8 @@ public final class Proxy {
         return userName;
     }
 
-    /**
-     * TODO: Update javadoc.
-     */
-    @Nullable
-    public String password() {
-        return password;
-    }
-
     void setUserName(@Nullable String userName) {
         this.userName = userName;
-    }
-
-    void setPassword(@Nullable String password) {
-        this.password = password;
     }
 
     enum ProxyType {
@@ -143,5 +129,62 @@ public final class Proxy {
         SOCKS4,
         SOCKS5,
         CONNECT,
+    }
+
+    /**
+     * TODO: Update javadoc.
+     */
+    public static class Socks4Proxy extends Proxy {
+        Socks4Proxy(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
+            super(ProxyType.SOCKS4, proxyAddress, connectTimeoutMillis);
+        }
+    }
+
+    /**
+     * TODO: Update javadoc.
+     */
+    public static class Socks5Proxy extends Proxy {
+        @Nullable
+        private String password;
+
+        Socks5Proxy(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
+            super(ProxyType.SOCKS5, proxyAddress, connectTimeoutMillis);
+        }
+
+        /**
+         * TODO: Update javadoc.
+         */
+        @Nullable
+        public String password() {
+            return password;
+        }
+
+        void setPassword(@Nullable String password) {
+            this.password = password;
+        }
+    }
+
+    /**
+     * TODO: Update javadoc.
+     */
+    public static class ConnectProxy extends Proxy {
+        @Nullable
+        private String password;
+
+        ConnectProxy(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
+            super(ProxyType.CONNECT, proxyAddress, connectTimeoutMillis);
+        }
+
+        /**
+         * TODO: Update javadoc.
+         */
+        @Nullable
+        public String password() {
+            return password;
+        }
+
+        void setPassword(@Nullable String password) {
+            this.password = password;
+        }
     }
 }
