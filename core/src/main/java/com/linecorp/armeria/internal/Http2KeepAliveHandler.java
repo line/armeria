@@ -48,13 +48,23 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 
 /**
- * This will sends an {@link Http2PingFrame} when an {@link IdleStateEvent} is emitted by {@link
- * IdleStateHandler}. Specifically, it will write a PING frame to remote and then expects an ACK
- * back within configured {@code pingTimeoutMillis}. If no valid response is received in time, then
- * channel will be closed.
+ * This will send an {@link Http2PingFrame} when an {@link IdleStateEvent} is emitted by {@link
+ * IdleStateHandler} and {@linkplain Flags#useHttp2PingOnIdle()} is true.
+ *
+ * <p>Once an {@link IdleStateEvent} is triggered and when there are active streams open then a
+ * {@link Http2PingFrame} will be written on connection. When there are no active streams then it depends on
+ * {@linkplain Flags#useHttp2PingOnNoActiveStreams()}.
+ *
+ * <p>Once a {@link Http2PingFrame} is written, then either an ACK for the {@link Http2PingFrame} or any data
+ * is read on connection will invalidate the condition that triggers connection closure. If either of the
+ * conditions are not met then the connection will be closed.
  *
  * <p>This class is <b>not</b> thread-safe and all methods are to be called from single thread such
  * as {@link EventLoop}.
+ *
+ * @see Flags#useHttp2PingOnIdle()
+ * @see Flags#useHttp2PingOnNoActiveStreams()
+ * @see Flags#defaultHttp2PingTimeoutMillis()
  */
 @NotThreadSafe
 public class Http2KeepAliveHandler {
