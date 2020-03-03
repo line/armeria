@@ -34,7 +34,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     private final HttpClientFactory clientFactory;
     private final Http2ResponseDecoder responseDecoder;
     @Nullable
-    private Http2KeepAliveHandler keepAlive;
+    private final Http2KeepAliveHandler keepAlive;
 
     Http2ClientConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel,
@@ -43,9 +43,8 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.clientFactory = clientFactory;
 
-        if (Flags.useHttp2PingOnIdle()) {
-            keepAlive = new Http2KeepAliveHandler(channel, encoder.frameWriter(), connection());
-        }
+        keepAlive = Flags.useHttp2PingWhenIdle() ?
+                    new Http2KeepAliveHandler(channel, encoder.frameWriter(), connection()) : null;
         responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAlive);
         connection().addListener(responseDecoder);
         decoder().frameListener(responseDecoder);

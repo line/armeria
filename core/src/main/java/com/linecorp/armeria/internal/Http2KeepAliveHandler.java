@@ -49,11 +49,11 @@ import io.netty.handler.timeout.IdleStateHandler;
 
 /**
  * This will send an {@link Http2PingFrame} when an {@link IdleStateEvent} is emitted by {@link
- * IdleStateHandler} and {@linkplain Flags#useHttp2PingOnIdle()} is true.
+ * IdleStateHandler} and {@link Flags#useHttp2PingWhenIdle()} is true.
  *
  * <p>Once an {@link IdleStateEvent} is triggered and when there are active streams open then a
  * {@link Http2PingFrame} will be written on connection. When there are no active streams then it depends on
- * {@linkplain Flags#useHttp2PingOnNoActiveStreams()}.
+ * {@link Flags#useHttp2PingWhenNoActiveStreams()}.
  *
  * <p>Once a {@link Http2PingFrame} is written, then either an ACK for the {@link Http2PingFrame} or any data
  * is read on connection will invalidate the condition that triggers connection closure. If either of the
@@ -62,8 +62,8 @@ import io.netty.handler.timeout.IdleStateHandler;
  * <p>This class is <b>not</b> thread-safe and all methods are to be called from single thread such
  * as {@link EventLoop}.
  *
- * @see Flags#useHttp2PingOnIdle()
- * @see Flags#useHttp2PingOnNoActiveStreams()
+ * @see Flags#useHttp2PingWhenIdle()
+ * @see Flags#useHttp2PingWhenNoActiveStreams()
  * @see Flags#defaultHttp2PingTimeoutMillis()
  */
 @NotThreadSafe
@@ -92,7 +92,7 @@ public class Http2KeepAliveHandler {
     public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
                                  Http2Connection http2Connection) {
         this(channel, frameWriter, http2Connection, Flags.defaultHttp2PingTimeoutMillis(),
-             Flags.useHttp2PingOnNoActiveStreams());
+             Flags.useHttp2PingWhenNoActiveStreams());
     }
 
     public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Http2Connection http2Connection,
@@ -109,7 +109,7 @@ public class Http2KeepAliveHandler {
         logger.debug("{} {} triggered.", channel, event);
 
         if (!canSendPing()) {
-            // The default behaviour is to shutdown the channel on idle timeout if not HTTP 2.0 conn.
+            // The default behaviour is to shutdown the channel on idle timeout if not HTTP/2 conn.
             // So preserving the behaviour.
             closeChannelAndLog();
             return;
@@ -213,7 +213,7 @@ public class Http2KeepAliveHandler {
         logger.debug("{} Closing an idle channel", channel);
         channel.close().addListener(future -> {
             if (future.isSuccess()) {
-                logger.debug("{} Closed an channel", channel);
+                logger.debug("{} Closed an idle channel", channel);
             } else {
                 logger.debug("{} Failed to close an idle channel", channel, future.cause());
             }

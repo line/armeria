@@ -253,10 +253,10 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
-    private static final boolean USE_HTTP2_PING_ON_IDLE =
-            getBoolean("useHttp2PingOnIdle", false);
-    private static final boolean USE_HTTP2_PING_ON_NO_ACTIVE_STREAMS =
-            getBoolean("useHttp2PingOnNoActiveStreams", false);
+    private static final boolean USE_HTTP2_PING_WHEN_IDLE =
+            getBoolean("useHttp2PingWhenIdle", false);
+    private static final boolean USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS =
+            getBoolean("useHttp2PingWhenNoActiveStreams", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";
@@ -686,31 +686,31 @@ public final class Flags {
     }
 
     /**
-     * Returns a boolean indicating whether to send <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
+     * Returns whether to send <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
      * frames on an idle HTTP/2 connection.
-     * If true, then PINGs are send when the connection is idle, no otherwise. Connection is considered idle
+     * If true, then PINGs are sent , no otherwise. Connection is considered idle
      * when there is no read or write for at least {@link Flags#defaultClientIdleTimeoutMillis()} for client and
-     * {@link Flags#defaultServerIdleTimeoutMillis()} ()} for server.
+     * {@link Flags#defaultServerIdleTimeoutMillis()} for server.
      *
      * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.useHttp2PingOnIdle=true} JVM option to enable it.
+     * {@code -Dcom.linecorp.armeria.useHttp2PingWhenIdle=true} JVM option to enable it.
      */
-    public static boolean useHttp2PingOnIdle() {
-        return USE_HTTP2_PING_ON_IDLE;
+    public static boolean useHttp2PingWhenIdle() {
+        return USE_HTTP2_PING_WHEN_IDLE;
     }
 
     /**
-     * Returns a boolean indicating whether to <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
+     * Returns whether to send <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
      * frames on a HTTP/2 connection when it is idle and there are no active HTTP/2 stream.
      * A connection is considered having no active streams means that are no requests and responses pending.
      * This does not necessarily indicate end of life of a HTTP/2 connection.
-     * \A client could create a new stream if it intends to use the same connection.
+     * A client could create a new stream if it intends to use the same connection.
      *
      * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.useHttp2PingOnNoActiveStreams=true} JVM option to enable it.
+     * {@code -Dcom.linecorp.armeria.useHttp2PingOnWhenActiveStreams=true} JVM option to enable it.
      */
-    public static boolean useHttp2PingOnNoActiveStreams() {
-        return USE_HTTP2_PING_ON_NO_ACTIVE_STREAMS;
+    public static boolean useHttp2PingWhenNoActiveStreams() {
+        return USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS;
     }
 
     /**
