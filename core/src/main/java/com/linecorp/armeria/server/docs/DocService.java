@@ -110,8 +110,9 @@ public final class DocService extends AbstractCompositeService<HttpService, Http
      * Creates a new instance.
      */
     public DocService() {
-        this(ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of(),
-             ImmutableMap.of(), ImmutableList.of(), DocServiceBuilder.ALL_SERVICES);
+        this(/* exampleHttpHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
+             /* examplePaths */ ImmutableMap.of(), /* exampleQueries */ ImmutableMap.of(),
+             /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES);
     }
 
     /**

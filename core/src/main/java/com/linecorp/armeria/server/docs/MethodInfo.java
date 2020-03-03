@@ -80,8 +80,9 @@ public final class MethodInfo {
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
                       @Nullable String docString) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures,
-             endpoints, ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+             /* exampleHttpHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
+             /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
              httpMethod, docString);
     }
 
