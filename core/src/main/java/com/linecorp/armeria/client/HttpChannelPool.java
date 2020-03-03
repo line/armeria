@@ -53,7 +53,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyHandler;
@@ -113,7 +112,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            applyProxy(ch.pipeline(), clientFactory.proxy());
+                            applyProxy(ch, clientFactory.proxy(), sslCtx);
                             ch.pipeline().addLast(
                                     new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                         }
@@ -127,7 +126,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
     }
 
-    private void applyProxy(ChannelPipeline pipeline, Proxy proxy) {
+    private void applyProxy(Channel ch, Proxy proxy, SslContext sslCtx) {
         if (proxy.proxyType() == ProxyType.NONE) {
             return;
         }
@@ -156,7 +155,10 @@ final class HttpChannelPool implements AsyncCloseable {
         final long proxyConnectTimeoutMillis = proxy.connectTimeoutMillis() > 0 ?
                                                proxy.connectTimeoutMillis() : connectTimeoutMillis;
         proxyHandler.setConnectTimeoutMillis(proxyConnectTimeoutMillis);
-        pipeline.addLast(proxyHandler);
+        if (proxy instanceof ConnectProxy && ((ConnectProxy) proxy).getUseSsl()) {
+            ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
+        }
+        ch.pipeline().addLast(proxyHandler);
     }
 
     /**

@@ -50,7 +50,7 @@ public abstract class NettyServerExtension extends AbstractAllOrEachExtension {
         return (InetSocketAddress) channel.localAddress();
     }
 
-    protected abstract void configure(Channel ch);
+    protected abstract void configure(Channel ch) throws Exception;
 
     @Override
     protected void before(ExtensionContext context) throws Exception {

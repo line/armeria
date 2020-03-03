@@ -34,6 +34,7 @@ abstract class ProxyBuilder {
 
     private final InetSocketAddress proxyAddress;
     private final long connectTimeoutMillis;
+    private boolean useSsl;
 
     private ProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
         this.proxyAddress = proxyAddress;
@@ -66,6 +67,14 @@ abstract class ProxyBuilder {
         return connectTimeoutMillis;
     }
 
+    protected void setUseSsl(boolean useSsl) {
+        this.useSsl = useSsl;
+    }
+
+    protected boolean getUseSsl() {
+        return useSsl;
+    }
+
     /**
      * TODO: Update javadoc.
      */
@@ -75,8 +84,7 @@ abstract class ProxyBuilder {
      * TODO: Update javadoc.
      */
     public static final class Socks4ProxyBuilder extends ProxyBuilder {
-        Socks4ProxyBuilder(InetSocketAddress proxyAddress,
-                                   long connectTimeoutMillis) {
+        Socks4ProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
             super(proxyAddress, connectTimeoutMillis);
         }
 
@@ -101,8 +109,7 @@ abstract class ProxyBuilder {
      * TODO: Update javadoc.
      */
     public static final class Socks5ProxyBuilder extends ProxyBuilder {
-        Socks5ProxyBuilder(InetSocketAddress proxyAddress,
-                                   long connectTimeoutMillis) {
+        Socks5ProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
             super(proxyAddress, connectTimeoutMillis);
         }
 
@@ -136,8 +143,7 @@ abstract class ProxyBuilder {
      * TODO: Update javadoc.
      */
     public static final class ConnectProxyBuilder extends ProxyBuilder {
-        ConnectProxyBuilder(InetSocketAddress proxyAddress,
-                                    long connectTimeoutMillis) {
+        ConnectProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
             super(proxyAddress, connectTimeoutMillis);
         }
 
@@ -150,12 +156,21 @@ abstract class ProxyBuilder {
             return this;
         }
 
+        /**
+         * TODO: Update javadoc.
+         */
+        public ConnectProxyBuilder useSsl(boolean useSsl) {
+            setUseSsl(useSsl);
+            return this;
+        }
+
         @Override
         public ConnectProxy build() {
             final ConnectProxy connectProxy =
                     new ConnectProxy(getProxyAddress(), getConnectTimeoutMillis());
             connectProxy.setUserName(getUserName());
             connectProxy.setPassword(getPassword());
+            connectProxy.setUseSsl(getUseSsl());
             return connectProxy;
         }
     }

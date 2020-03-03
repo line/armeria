@@ -171,6 +171,8 @@ public class Proxy {
         @Nullable
         private String password;
 
+        private boolean useSsl;
+
         ConnectProxy(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
             super(ProxyType.CONNECT, proxyAddress, connectTimeoutMillis);
         }
@@ -185,6 +187,14 @@ public class Proxy {
 
         void setPassword(@Nullable String password) {
             this.password = password;
+        }
+
+        void setUseSsl(boolean useSsl) {
+            this.useSsl = useSsl;
+        }
+
+        boolean getUseSsl() {
+            return useSsl;
         }
     }
 }

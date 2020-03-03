@@ -31,6 +31,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -44,6 +46,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.bootstrap.Bootstrap;
@@ -77,6 +80,8 @@ import io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
 import io.netty.handler.codec.socksx.v5.Socks5Message;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.ReferenceCountUtil;
 
 public class ProxyClientIntegrationTest {
@@ -84,6 +89,10 @@ public class ProxyClientIntegrationTest {
     private static final String SUCCESS_RESPONSE = "success";
 
     private static final DynamicBehaviorHandler SOCKS_DYNAMIC_HANDLER = new DynamicBehaviorHandler();
+
+    @RegisterExtension
+    @Order(0)
+    static final SelfSignedCertificateExtension ssc = new SelfSignedCertificateExtension();
 
     @RegisterExtension
     @Order(1)
@@ -99,7 +108,7 @@ public class ProxyClientIntegrationTest {
     @Order(2)
     static NettyServerExtension socksProxyServer = new NettyServerExtension() {
         @Override
-        protected void configure(Channel ch) {
+        protected void configure(Channel ch) throws Exception {
             ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new SocksPortUnificationServerHandler());
             ch.pipeline().addLast(SOCKS_DYNAMIC_HANDLER);
@@ -113,7 +122,24 @@ public class ProxyClientIntegrationTest {
     @Order(3)
     static NettyServerExtension httpProxyServer = new NettyServerExtension() {
         @Override
-        protected void configure(Channel ch) {
+        protected void configure(Channel ch) throws Exception {
+            ch.pipeline().addLast(new LoggingHandler(getClass()));
+            ch.pipeline().addLast(new HttpServerCodec());
+            ch.pipeline().addLast(new HttpObjectAggregator(1024));
+            ch.pipeline().addLast(new HttpProxyServerHandler());
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http"));
+        }
+    };
+
+    @RegisterExtension
+    @Order(4)
+    static NettyServerExtension httpsProxyServer = new NettyServerExtension() {
+        @Override
+        protected void configure(Channel ch) throws Exception {
+            final SslContext sslContext = SslContextBuilder
+                    .forServer(ssc.privateKey(), ssc.certificate()).build();
+            ch.pipeline().addLast(new LoggingHandler(getClass()));
+            ch.pipeline().addLast(sslContext.newHandler(ch.alloc()));
             ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
@@ -162,6 +188,22 @@ public class ProxyClientIntegrationTest {
     void testHttpProxyBasicCase() throws Exception {
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
                 Proxy.connect(httpProxyServer.address()).build()).build();
+        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                             .factory(clientFactory)
+                                             .decorator(LoggingClient.newDecorator())
+                                             .build();
+        final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                webClient.get(PROXY_PATH).aggregate();
+        final AggregatedHttpResponse response = responseFuture.join();
+        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
+    }
+
+    @Test
+    void testHttpsProxyBasicCase() throws Exception {
+        final ClientFactory clientFactory =
+                ClientFactory.builder().tlsNoVerify().proxy(
+                        Proxy.connect(httpsProxyServer.address()).useSsl(true).build()).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -363,8 +405,8 @@ public class ProxyClientIntegrationTest {
     }
 
     private static final class IntermediaryProxyServerHandler extends ChannelInboundHandlerAdapter {
-        private InetSocketAddress backendAddress;
         private final ConcurrentLinkedDeque<ByteBuf> received = new ConcurrentLinkedDeque<>();
+        @Nullable
         private Channel backend;
         private final String proxyType;
 
@@ -375,8 +417,7 @@ public class ProxyClientIntegrationTest {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             if (evt instanceof ProxySuccessEvent) {
-                backendAddress = ((ProxySuccessEvent) evt).getBackendAddress();
-                connectBackend(ctx).addListener(f -> {
+                connectBackend(ctx, ((ProxySuccessEvent) evt).getBackendAddress()).addListener(f -> {
                     if (f.isSuccess()) {
                         ctx.writeAndFlush(((ProxySuccessEvent) evt).getResponse());
                         if ("http".equals(proxyType)) {
@@ -409,7 +450,8 @@ public class ProxyClientIntegrationTest {
             super.channelInactive(ctx);
         }
 
-        private ChannelFuture connectBackend(final ChannelHandlerContext ctx) {
+        private ChannelFuture connectBackend(
+                final ChannelHandlerContext ctx, InetSocketAddress backendAddress) {
             final ChannelHandlerContext clientCtx = ctx;
             final Bootstrap b = new Bootstrap();
             b.group(ctx.channel().eventLoop());
