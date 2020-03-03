@@ -34,7 +34,11 @@ final class DefaultPooledAggregatedHttpResponse implements PooledAggregatedHttpR
 
     DefaultPooledAggregatedHttpResponse(AggregatedHttpResponse delegate) {
         this.delegate = delegate;
-        content = ByteBufHttpData.convert(delegate.content());
+
+        // This is only called with the result of a pooled aggregation, it would be a programming bug for this
+        // to not be true.
+        assert delegate.content() instanceof PooledHttpData;
+        content = (PooledHttpData) delegate.content();
     }
 
     @Override
