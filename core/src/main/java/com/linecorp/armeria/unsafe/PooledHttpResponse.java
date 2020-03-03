@@ -64,4 +64,26 @@ public interface PooledHttpResponse extends HttpResponse {
         subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future.thenApply(DefaultPooledAggregatedHttpResponse::new);
     }
+
+    /**
+     * This method always throws {@link UnsupportedOperationException}.
+     *
+     * @deprecated Use {@link #aggregateWithPooledObjects()}.
+     */
+    @Override
+    @Deprecated
+    default CompletableFuture<AggregatedHttpResponse> aggregate() {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * This method always throws {@link UnsupportedOperationException}.
+     *
+     * @deprecated Use {@link #aggregateWithPooledObjects(EventExecutor)}.
+     */
+    @Override
+    @Deprecated
+    default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
+        throw new UnsupportedOperationException();
+    }
 }
