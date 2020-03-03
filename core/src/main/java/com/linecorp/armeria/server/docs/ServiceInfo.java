@@ -123,7 +123,7 @@ public final class ServiceInfo {
                     return new MethodInfo(value.name(), value.returnTypeSignature(),
                                           value.parameters(), value.exceptionTypeSignatures(),
                                           endpointInfos, value.exampleHttpHeaders(),
-                                          value.exampleRequests(), value.examplePath(), value.exampleQuery(),
+                                          value.exampleRequests(), value.examplePaths(), value.exampleQueries(),
                                           value.httpMethod(), value.docString());
                 }
             });

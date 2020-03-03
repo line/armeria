@@ -78,20 +78,30 @@ function getExamplePath(
   specification: Specification,
   service: Service,
   method: Method,
-): string | undefined {
-  return specification
-    .getServiceByName(service.name)
-    ?.methods?.find((m) => m.name === method.name)?.examplePath;
+): Option[] {
+  return (
+    specification
+      .getServiceByName(service.name)
+      ?.methods?.find((m) => m.name === method.name)
+      ?.examplePaths?.map((path) => {
+        return { label: path, value: path };
+      }) || []
+  );
 }
 
 function getExampleQuery(
   specification: Specification,
   service: Service,
   method: Method,
-): string | undefined {
-  return specification
-    .getServiceByName(service.name)
-    ?.methods?.find((m) => m.name === method.name)?.exampleQuery;
+): Option[] {
+  return (
+    specification
+      .getServiceByName(service.name)
+      ?.methods?.find((m) => m.name === method.name)
+      ?.exampleQueries?.map((queries) => {
+        return { label: queries, value: queries };
+      }) || []
+  );
 }
 
 function removeBrackets(headers: string): string {
@@ -184,8 +194,8 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
             service,
             method,
           )}
-          examplePath={getExamplePath(props.specification, service, method)}
-          exampleQuery={getExampleQuery(props.specification, service, method)}
+          examplePaths={getExamplePath(props.specification, service, method)}
+          exampleQueries={getExampleQuery(props.specification, service, method)}
           exactPathMapping={
             isAnnotatedService ? isSingleExactPathMapping(method) : false
           }

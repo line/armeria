@@ -46,7 +46,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -109,14 +108,14 @@ public class AnnotatedDocServiceTest {
                               .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
                               .exampleHttpHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
                               .exampleHttpHeaders(MyService.class, "pathParams", EXAMPLE_HEADERS_METHOD)
-                              .examplePath(MyService.class, "pathParams",
-                                           "/service/hello1/foo/hello3/bar")
-                              .exampleQuery(MyService.class, "foo", "query=10")
+                              .examplePaths(MyService.class, "pathParams",
+                                            "/service/hello1/foo/hello3/bar")
+                              .exampleQueries(MyService.class, "foo", "query=10", "query=20")
                               .exampleRequestForMethod(MyService.class, "pathParams",
                                              ImmutableList.of(mapper.readTree("{\"hello\":\"armeria\"}")))
-                              .examplePath(MyService.class, "pathParamsWithQueries",
-                                           "/service/hello1/foo")
-                              .exampleQuery(MyService.class, "pathParamsWithQueries", "hello3=hello4")
+                              .examplePaths(MyService.class, "pathParamsWithQueries",
+                                            "/service/hello1/foo", "/service/hello1/bar")
+                              .exampleQueries(MyService.class, "pathParamsWithQueries", "hello3=hello4")
                               .exclude(DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude1").or(
                                        DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude2")))
                               .build());
@@ -313,17 +312,22 @@ public class AnnotatedDocServiceTest {
                     exampleRequests.add('{' + System.lineSeparator() +
                                         "  \"hello\" : \"armeria\"" + System.lineSeparator() +
                                         '}');
-                    ((ObjectNode) method).set("examplePath",
-                                              TextNode.valueOf("/service/hello1/foo/hello3/bar"));
+                    final ArrayNode examplePaths = (ArrayNode) method.get("examplePaths");
+                    examplePaths.add(TextNode.valueOf("/service/hello1/foo/hello3/bar"));
                 }
 
                 if (MyService.class.getName().equals(serviceName) && "foo".equals(methodName)) {
-                    ((ObjectNode) method).set("exampleQuery", TextNode.valueOf("query=10"));
+                    final ArrayNode exampleQueries = (ArrayNode) method.get("exampleQueries");
+                    exampleQueries.add(TextNode.valueOf("query=10"));
+                    exampleQueries.add(TextNode.valueOf("query=20"));
                 }
 
                 if (MyService.class.getName().equals(serviceName) && "pathParamsWithQueries".equals(methodName)) {
-                    ((ObjectNode) method).set("examplePath", TextNode.valueOf("/service/hello1/foo"));
-                    ((ObjectNode) method).set("exampleQuery", TextNode.valueOf("hello3=hello4"));
+                    final ArrayNode examplePaths = (ArrayNode) method.get("examplePaths");
+                    examplePaths.add(TextNode.valueOf("/service/hello1/foo"));
+                    examplePaths.add(TextNode.valueOf("/service/hello1/bar"));
+                    final ArrayNode exampleQueries = (ArrayNode) method.get("exampleQueries");
+                    exampleQueries.add(TextNode.valueOf("hello3=hello4"));
                 }
             });
         });

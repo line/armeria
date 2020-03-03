@@ -286,8 +286,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 methodEndpoints,
                 ImmutableList.of(),
                 defaultExamples(method),
-                /* examplePath */ null,
-                /* exampleQuery */ null,
+                /* examplePaths */ null,
+                /* exampleQueries */ null,
                 HttpMethod.POST,
                 null);
     }

@@ -99,8 +99,8 @@ public final class DocService extends AbstractCompositeService<HttpService, Http
 
     private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders;
     private final Map<String, ListMultimap<String, String>> exampleRequests;
-    private final Map<String, Map<String, String>> examplePaths;
-    private final Map<String, Map<String, String>> exampleQueries;
+    private final Map<String, ListMultimap<String, String>> examplePaths;
+    private final Map<String, ListMultimap<String, String>> exampleQueries;
     private final DocServiceFilter filter;
 
     @Nullable
@@ -119,8 +119,8 @@ public final class DocService extends AbstractCompositeService<HttpService, Http
      */
     DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders,
                Map<String, ListMultimap<String, String>> exampleRequests,
-               Map<String, Map<String, String>> examplePaths,
-               Map<String, Map<String, String>> exampleQueries,
+               Map<String, ListMultimap<String, String>> examplePaths,
+               Map<String, ListMultimap<String, String>> exampleQueries,
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
                DocServiceFilter filter) {
 
@@ -135,8 +135,8 @@ public final class DocService extends AbstractCompositeService<HttpService, Http
                                         "com/linecorp/armeria/server/docs")));
         this.exampleHttpHeaders = immutableCopyOf(exampleHttpHeaders, "exampleHttpHeaders");
         this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
-        this.examplePaths = ImmutableMap.copyOf(examplePaths);
-        this.exampleQueries = ImmutableMap.copyOf(exampleQueries);
+        this.examplePaths = immutableCopyOf(examplePaths, "examplePaths");
+        this.exampleQueries = immutableCopyOf(exampleQueries, "exampleQueries");
         this.filter = requireNonNull(filter, "filter");
     }
 
@@ -242,8 +242,8 @@ public final class DocService extends AbstractCompositeService<HttpService, Http
                               method.endpoints(),
                               method.exampleHttpHeaders(),
                               method.exampleRequests(),
-                              method.examplePath(),
-                              method.exampleQuery(),
+                              method.examplePaths(),
+                              method.exampleQueries(),
                               method.httpMethod(),
                               docString(service.name() + '/' + method.name(), method.docString(), docStrings));
     }
@@ -320,10 +320,10 @@ public final class DocService extends AbstractCompositeService<HttpService, Http
                 this.exampleHttpHeaders.getOrDefault(service.name(), ImmutableListMultimap.of());
         final ListMultimap<String, String> exampleRequests =
                 this.exampleRequests.getOrDefault(service.name(), ImmutableListMultimap.of());
-        final Map<String, String> examplePaths =
-                this.examplePaths.getOrDefault(service.name(), ImmutableMap.of());
-        final Map<String, String> exampleQueries =
-                this.exampleQueries.getOrDefault(service.name(), ImmutableMap.of());
+        final ListMultimap<String, String> examplePaths =
+                this.examplePaths.getOrDefault(service.name(), ImmutableListMultimap.of());
+        final ListMultimap<String, String> exampleQueries =
+                this.exampleQueries.getOrDefault(service.name(), ImmutableListMultimap.of());
 
         // Reconstruct ServiceInfo with the examples.
         return new ServiceInfo(

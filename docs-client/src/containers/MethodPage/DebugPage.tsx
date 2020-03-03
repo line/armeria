@@ -52,8 +52,8 @@ interface OwnProps {
   method: Method;
   isAnnotatedService: boolean;
   exampleHeaders: Option[];
-  examplePath: string | undefined;
-  exampleQuery: string | undefined;
+  examplePaths: Option[];
+  exampleQueries: Option[];
   exactPathMapping: boolean;
   useRequestBody: boolean;
 }
@@ -105,8 +105,8 @@ const escapeSingleQuote = (text: string) => text.replace(/'/g, `'\\''`);
 const DebugPage: React.FunctionComponent<Props> = ({
   exactPathMapping,
   exampleHeaders,
-  examplePath,
-  exampleQuery,
+  examplePaths,
+  exampleQueries,
   isAnnotatedService,
   history,
   location,
@@ -122,8 +122,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
     false,
   );
   const [additionalQueries, setAdditionalQueries] = useState('');
-  const [endpointPathOpen, toggleEndpointPathOpen] = useReducer(toggle, false);
-  const [endpointPath, setEndpointPath] = useState('');
+  const [endpointPathOpen, toggleEndpointPathOpen] = useReducer(toggle, true);
+  const [endpointPath, setAdditionalPath] = useState('');
   const [additionalHeadersOpen, toggleAdditionalHeadersOpen] = useReducer(
     toggle,
     false,
@@ -148,19 +148,16 @@ const DebugPage: React.FunctionComponent<Props> = ({
       ? jsonPrettify(urlParams.get('http_headers')!)
       : undefined;
 
-    let urlQueries = '';
-    let urlEndpointPath = '';
-    if (isAnnotatedService) {
-      if (exactPathMapping) {
-        urlEndpointPath =
-          TRANSPORTS.getDebugEndpoint(method)?.pathMapping.substring(
-            'exact:'.length,
-          ) || '';
-      } else {
-        urlEndpointPath = urlParams.get('endpoint_path') || examplePath || '';
-      }
-      urlQueries = urlParams.get('queries') || exampleQuery || '';
+    let additionalPath;
+    if (isAnnotatedService && exactPathMapping) {
+      additionalPath = method.endpoints[0].pathMapping.substring(
+        'exact:'.length,
+      );
+    } else {
+      additionalPath = urlParams.get('endpoint_path') || '';
     }
+
+    const additionalQuery = isAnnotatedService ? urlParams.get('queries') : '';
 
     const stateHeaders = stickyHeaders ? additionalHeaders : undefined;
 
@@ -170,10 +167,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setSnackbarOpen(false);
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalHeaders(urlHeaders || stateHeaders || '');
-    setAdditionalQueries(urlQueries);
-    toggleAdditionalQueriesOpen(!!urlQueries);
-    setEndpointPath(urlEndpointPath);
-    toggleEndpointPathOpen(!!urlEndpointPath);
+    setAdditionalQueries(additionalQuery || '');
+    toggleAdditionalQueriesOpen(exampleQueries.length > 0 || additionalQuery);
+    setAdditionalPath(additionalPath || '');
     toggleAdditionalHeadersOpen(headersOpen);
 
     if (urlParams.has('http_headers_sticky') && !stickyHeaders) {
@@ -239,6 +235,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
     [method],
   );
 
+  const onSelectedQueriesChange = useCallback((selectedQueries: Option) => {
+    setAdditionalQueries(selectedQueries.value);
+  }, []);
+
   const onQueriesFormChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       setAdditionalQueries(e.target.value);
@@ -246,12 +246,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
     [],
   );
 
-  const onEndpointPathChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      setEndpointPath(e.target.value);
-    },
-    [],
-  );
+  const onSelectedPathChange = useCallback((selectedPath: Option) => {
+    setAdditionalPath(selectedPath.value);
+  }, []);
+
+  const onPathFormChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setAdditionalPath(e.target.value);
+  }, []);
 
   const onSelectedHeadersChange = useCallback((selectedHeaders: Option) => {
     setAdditionalHeaders(selectedHeaders.value);
@@ -483,17 +484,21 @@ const DebugPage: React.FunctionComponent<Props> = ({
               Debug
             </Typography>
             <EndpointPath
+              examplePaths={examplePaths}
               editable={!exactPathMapping}
               endpointPathOpen={endpointPathOpen}
-              endpointPath={endpointPath}
+              additionalPath={endpointPath}
               onEditEndpointPathClick={toggleEndpointPathOpen}
-              onEndpointPathChange={onEndpointPathChange}
+              onPathFormChange={onPathFormChange}
+              onSelectedPathChange={onSelectedPathChange}
             />
             <HttpQueryString
+              exampleQueries={exampleQueries}
               additionalQueriesOpen={additionalQueriesOpen}
               additionalQueries={additionalQueries}
               onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
               onQueriesFormChange={onQueriesFormChange}
+              onSelectedQueriesChange={onSelectedQueriesChange}
             />
             <HttpHeaders
               exampleHeaders={exampleHeaders}

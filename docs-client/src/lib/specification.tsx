@@ -49,8 +49,8 @@ export interface Method {
   endpoints: Endpoint[];
   exampleHttpHeaders: { [name: string]: string }[];
   exampleRequests: string[];
-  examplePath: string | undefined;
-  exampleQuery: string | undefined;
+  examplePaths: string[];
+  exampleQueries: string[];
   httpMethod: string;
   docString?: DocString;
 }
