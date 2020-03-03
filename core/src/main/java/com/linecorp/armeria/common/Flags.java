@@ -689,7 +689,7 @@ public final class Flags {
      * Returns whether to send <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
      * frames on an idle HTTP/2 connection.
      *
-     * <p>Connection is considered idle when there is no read or write for at least
+     * <p>A Connection is considered idle when there is no read or write for at least
      * {@link Flags#defaultClientIdleTimeoutMillis()} for client and
      * {@link Flags#defaultServerIdleTimeoutMillis()} for server.
      *

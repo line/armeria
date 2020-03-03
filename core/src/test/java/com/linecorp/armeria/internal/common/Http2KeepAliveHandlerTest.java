@@ -46,7 +46,7 @@ class Http2KeepAliveHandlerTest {
 
     private static final String sendPingsOnNoActiveStreams = "sendPingsOnNoActiveStreams";
 
-    private static final long pingTimeout = 100;
+    private static final long pingTimeoutMillis = 100;
     @Mock
     private Http2FrameWriter frameWriter;
     @Mock
@@ -60,7 +60,7 @@ class Http2KeepAliveHandlerTest {
     public void setup(TestInfo testInfo) throws Exception {
         ch = new EmbeddedChannel();
         promise = ch.newPromise();
-        keepAlive = new Http2KeepAliveHandler(ch, frameWriter, connection, pingTimeout,
+        keepAlive = new Http2KeepAliveHandler(ch, frameWriter, connection, pingTimeoutMillis,
                                               !testInfo.getTags().contains(sendPingsOnNoActiveStreams));
 
         ch.pipeline().addLast(new TestIdleStateHandler(keepAlive));
@@ -186,11 +186,11 @@ class Http2KeepAliveHandlerTest {
     }
 
     private void waitUntilPingTimeout() throws InterruptedException {
-        Thread.sleep(pingTimeout * 3 / 2);
+        Thread.sleep(pingTimeoutMillis * 3 / 2);
         ch.runPendingTasks();
     }
 
-    public static final class TestIdleStateHandler extends ChannelInboundHandlerAdapter {
+    private static final class TestIdleStateHandler extends ChannelInboundHandlerAdapter {
         private final Http2KeepAliveHandler keepAlive;
 
         TestIdleStateHandler(Http2KeepAliveHandler keepAlive) {

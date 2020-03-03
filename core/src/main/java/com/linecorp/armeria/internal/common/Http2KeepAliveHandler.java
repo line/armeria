@@ -97,7 +97,7 @@ public class Http2KeepAliveHandler {
 
     @VisibleForTesting
     Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Http2Connection http2Connection,
-                                 long pingTimeoutMillis, boolean sendPingsOnNoActiveStreams) {
+                          long pingTimeoutMillis, boolean sendPingsOnNoActiveStreams) {
         checkArgument(pingTimeoutMillis > 0, pingTimeoutMillis);
         this.channel = requireNonNull(channel, "channel");
         this.frameWriter = requireNonNull(frameWriter, "frameWriter");
