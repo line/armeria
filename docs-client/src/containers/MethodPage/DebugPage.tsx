@@ -369,11 +369,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
       let queries;
       let executedEndpointPath;
       if (isAnnotatedService) {
-        const queriesText = params.get('queries');
-        queries = queriesText || '';
+        queries = params.get('queries') || '';
         if (!exactPathMapping) {
-          const endpointPathText = params.get('endpoint_path');
-          executedEndpointPath = endpointPathText || undefined;
+          executedEndpointPath = params.get('endpoint_path') || undefined;
         }
       }
 
@@ -416,8 +414,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         // See: https://github.com/line/armeria/issues/273
 
         // For some reason jsonMinify minifies {} as empty string, so work around it.
-        const minifiedRequestBody = jsonMinify(requestBody) || '{}';
-        params.set('request_body', minifiedRequestBody);
+        params.set('request_body', jsonMinify(requestBody) || '{}');
       }
 
       if (isAnnotatedService) {
