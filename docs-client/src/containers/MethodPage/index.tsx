@@ -74,7 +74,7 @@ function addExampleHeadersIfExists(
   }
 }
 
-function getExamplePath(
+function getExamplePaths(
   specification: Specification,
   service: Service,
   method: Method,
@@ -89,7 +89,7 @@ function getExamplePath(
   );
 }
 
-function getExampleQuery(
+function getExampleQueries(
   specification: Specification,
   service: Service,
   method: Method,
@@ -194,8 +194,12 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
             service,
             method,
           )}
-          examplePaths={getExamplePath(props.specification, service, method)}
-          exampleQueries={getExampleQuery(props.specification, service, method)}
+          examplePaths={getExamplePaths(props.specification, service, method)}
+          exampleQueries={getExampleQueries(
+            props.specification,
+            service,
+            method,
+          )}
           exactPathMapping={
             isAnnotatedService ? isSingleExactPathMapping(method) : false
           }

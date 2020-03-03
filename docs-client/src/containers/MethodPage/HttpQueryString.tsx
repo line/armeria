@@ -57,7 +57,7 @@ const HttpQueryString: React.FunctionComponent<Props> = (props) => (
           placeholder={queryPlaceHolder}
           onChange={props.onQueriesFormChange}
           inputProps={{
-            className: 'code ',
+            className: 'code',
           }}
         />
       </>

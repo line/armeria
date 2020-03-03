@@ -123,7 +123,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   );
   const [additionalQueries, setAdditionalQueries] = useState('');
   const [endpointPathOpen, toggleEndpointPathOpen] = useReducer(toggle, true);
-  const [endpointPath, setAdditionalPath] = useState('');
+  const [additionalPath, setAdditionalPath] = useState('');
   const [additionalHeadersOpen, toggleAdditionalHeadersOpen] = useReducer(
     toggle,
     false,
@@ -148,16 +148,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
       ? jsonPrettify(urlParams.get('http_headers')!)
       : undefined;
 
-    let additionalPath;
-    if (isAnnotatedService && exactPathMapping) {
-      additionalPath = method.endpoints[0].pathMapping.substring(
-        'exact:'.length,
-      );
-    } else {
-      additionalPath = urlParams.get('endpoint_path') || '';
-    }
+    const urlPath =
+      isAnnotatedService && exactPathMapping
+        ? method.endpoints[0].pathMapping.substring('exact:'.length)
+        : urlParams.get('endpoint_path') || '';
 
-    const additionalQuery = isAnnotatedService ? urlParams.get('queries') : '';
+    const urlQueries = isAnnotatedService ? urlParams.get('queries') : '';
 
     const stateHeaders = stickyHeaders ? additionalHeaders : undefined;
 
@@ -167,9 +163,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setSnackbarOpen(false);
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalHeaders(urlHeaders || stateHeaders || '');
-    setAdditionalQueries(additionalQuery || '');
-    toggleAdditionalQueriesOpen(exampleQueries.length > 0 || additionalQuery);
-    setAdditionalPath(additionalPath || '');
+    setAdditionalQueries(urlQueries || '');
+    toggleAdditionalQueriesOpen(exampleQueries.length > 0 || urlQueries);
+    setAdditionalPath(urlPath || '');
     toggleAdditionalHeadersOpen(headersOpen);
 
     if (urlParams.has('http_headers_sticky') && !stickyHeaders) {
@@ -310,9 +306,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
             `'${host}${escapeSingleQuote(path.substring('exact:'.length))}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         } else {
-          validateEndpointPath(endpointPath);
+          validateEndpointPath(additionalPath);
           uri =
-            `'${host}${escapeSingleQuote(endpointPath)}'` +
+            `'${host}${escapeSingleQuote(additionalPath)}'` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         }
       } else {
@@ -429,8 +425,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
           params.set('queries', queries);
         }
         if (!exactPathMapping) {
-          validateEndpointPath(endpointPath);
-          params.set('endpoint_path', endpointPath);
+          validateEndpointPath(additionalPath);
+          params.set('endpoint_path', additionalPath);
         }
       }
 
@@ -462,7 +458,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     executeRequest(params);
   }, [
     requestBody,
-    endpointPath,
+    additionalPath,
     additionalQueries,
     additionalHeaders,
     location,
@@ -487,7 +483,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
               examplePaths={examplePaths}
               editable={!exactPathMapping}
               endpointPathOpen={endpointPathOpen}
-              additionalPath={endpointPath}
+              additionalPath={additionalPath}
               onEditEndpointPathClick={toggleEndpointPathOpen}
               onPathFormChange={onPathFormChange}
               onSelectedPathChange={onSelectedPathChange}

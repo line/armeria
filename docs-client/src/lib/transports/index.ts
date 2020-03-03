@@ -14,7 +14,7 @@
  * under the License.
  */
 
-import { Endpoint, Method } from '../specification';
+import { Method } from '../specification';
 
 import AnnotatedHttpTransport from './annotated-http';
 import GrpcUnframedTransport from './grpc-unframed';
@@ -45,10 +45,6 @@ export class Transports {
       }
     }
     return undefined;
-  }
-
-  public getDebugEndpoint(method: Method): Endpoint | undefined {
-    return this.getDebugTransport(method)?.findDebugMimeTypeEndpoint(method);
   }
 }
 

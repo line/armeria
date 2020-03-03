@@ -93,7 +93,6 @@ export interface SpecificationData {
   structs: Struct[];
   exceptions: Struct[];
   exampleHttpHeaders: { [name: string]: string }[];
-  examplePaths: { [name: string]: string }[];
 }
 
 export function simpleName(fullName: string): string {

@@ -81,7 +81,7 @@ public final class MethodInfo {
                       HttpMethod httpMethod,
                       @Nullable String docString) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures,
-             endpoints, ImmutableList.of(), ImmutableList.of(), /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
+             endpoints, ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
              httpMethod, docString);
     }
 

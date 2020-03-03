@@ -196,7 +196,8 @@ public final class DocServiceBuilder {
     /**
      * Adds the specified example paths for the method with the specified service and method name.
      */
-    public DocServiceBuilder examplePaths(Class<?> serviceType, String methodName, Iterable<String> examplePaths) {
+    public DocServiceBuilder examplePaths(Class<?> serviceType, String methodName,
+                                          Iterable<String> examplePaths) {
         requireNonNull(serviceType, "serviceType");
         return examplePaths(serviceType.getName(), methodName, examplePaths);
     }
@@ -212,7 +213,8 @@ public final class DocServiceBuilder {
     /**
      * Adds the specified example paths for the method with the specified service and method name.
      */
-    public DocServiceBuilder examplePaths(String serviceName, String methodName, Iterable<String> examplePaths) {
+    public DocServiceBuilder examplePaths(String serviceName, String methodName,
+                                          Iterable<String> examplePaths) {
         requireNonNull(serviceName, "serviceName");
         checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
         requireNonNull(methodName, "methodName");

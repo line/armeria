@@ -51,7 +51,7 @@ export default class AnnotatedHttpTransport extends Transport {
         newPath =
           queries.charAt(0) === '?'
             ? `${newPath}&${queries.substring(1)}`
-            : `${newPath}?${queries}`;
+            : `${newPath}&${queries}`;
       } else {
         newPath =
           queries.charAt(0) === '?'

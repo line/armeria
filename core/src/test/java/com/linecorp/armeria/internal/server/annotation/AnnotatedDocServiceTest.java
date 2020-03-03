@@ -322,7 +322,8 @@ public class AnnotatedDocServiceTest {
                     exampleQueries.add(TextNode.valueOf("query=20"));
                 }
 
-                if (MyService.class.getName().equals(serviceName) && "pathParamsWithQueries".equals(methodName)) {
+                if (MyService.class.getName().equals(serviceName) &&
+                    "pathParamsWithQueries".equals(methodName)) {
                     final ArrayNode examplePaths = (ArrayNode) method.get("examplePaths");
                     examplePaths.add(TextNode.valueOf("/service/hello1/foo"));
                     examplePaths.add(TextNode.valueOf("/service/hello1/bar"));
