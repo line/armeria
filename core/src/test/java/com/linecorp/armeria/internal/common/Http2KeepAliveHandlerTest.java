@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal;
+package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mock;
 
-import com.linecorp.armeria.internal.Http2KeepAliveHandler.State;
+import com.linecorp.armeria.internal.common.Http2KeepAliveHandler.State;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;

@@ -19,8 +19,8 @@ package com.linecorp.armeria.client;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
+import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;

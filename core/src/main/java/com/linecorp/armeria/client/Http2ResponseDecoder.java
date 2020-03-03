@@ -28,9 +28,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.internal.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
+import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 

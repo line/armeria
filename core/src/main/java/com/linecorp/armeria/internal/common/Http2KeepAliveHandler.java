@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal;
+package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -95,7 +95,8 @@ public class Http2KeepAliveHandler {
              Flags.useHttp2PingWhenNoActiveStreams());
     }
 
-    public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Http2Connection http2Connection,
+    @VisibleForTesting
+    Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Http2Connection http2Connection,
                                  long pingTimeoutMillis, boolean sendPingsOnNoActiveStreams) {
         checkArgument(pingTimeoutMillis > 0, pingTimeoutMillis);
         this.channel = requireNonNull(channel, "channel");
@@ -154,6 +155,11 @@ public class Http2KeepAliveHandler {
         cancelFutures();
     }
 
+    private void resetFutures() {
+        shutdownFuture = null;
+        pingWriteFuture = null;
+    }
+
     private void cancelFutures() {
         if (shutdownFuture != null) {
             shutdownFuture.cancel(false);
@@ -179,6 +185,7 @@ public class Http2KeepAliveHandler {
         }
         logger.debug("{} Received PING(ACK=1) in {} ns", channel, elapsed);
         state = State.IDLE;
+        resetFutures();
     }
 
     private boolean isGoodPingAck(long data) {
@@ -258,7 +265,7 @@ public class Http2KeepAliveHandler {
             } else {
                 // Mostly because the channel is already closed. So ignore and change state to IDLE.
                 // If the channel is closed, we change state to SHUTDOWN on onChannelInactive.
-                if (Exceptions.isExpected(future.cause())) {
+                if (!future.isCancelled() && Exceptions.isExpected(future.cause())) {
                     logger.debug("{} Channel PING write failed", channel, future.cause());
                 }
                 if (state != State.SHUTDOWN) {

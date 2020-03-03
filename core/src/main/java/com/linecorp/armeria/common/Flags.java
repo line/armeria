@@ -688,12 +688,18 @@ public final class Flags {
     /**
      * Returns whether to send <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
      * frames on an idle HTTP/2 connection.
-     * If true, then PINGs are sent , no otherwise. Connection is considered idle
-     * when there is no read or write for at least {@link Flags#defaultClientIdleTimeoutMillis()} for client and
+     *
+     * <p>Connection is considered idle when there is no read or write for at least
+     * {@link Flags#defaultClientIdleTimeoutMillis()} for client and
      * {@link Flags#defaultServerIdleTimeoutMillis()} for server.
+     *
+     * <p>Note that even when the connection is idle PING may not be sent because number of open streams
+     * may be zero and {@link Flags#useHttp2PingWhenNoActiveStreams()} is set to false.
      *
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.useHttp2PingWhenIdle=true} JVM option to enable it.
+     *
+     * @see Flags#useHttp2PingWhenNoActiveStreams()
      */
     public static boolean useHttp2PingWhenIdle() {
         return USE_HTTP2_PING_WHEN_IDLE;
@@ -702,12 +708,17 @@ public final class Flags {
     /**
      * Returns whether to send <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
      * frames on a HTTP/2 connection when it is idle and there are no active HTTP/2 stream.
-     * A connection is considered having no active streams means that are no requests and responses pending.
+     *
+     * <p>A connection is considered having no active streams means that are no requests and responses pending.
      * This does not necessarily indicate end of life of a HTTP/2 connection.
      * A client could create a new stream if it intends to use the same connection.
      *
+     * <p>Note that this flag is only in effect when {@link Flags#useHttp2PingWhenIdle()} is set to true.
+     *
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.useHttp2PingOnWhenActiveStreams=true} JVM option to enable it.
+     *
+     * @see Flags#useHttp2PingWhenIdle()
      */
     public static boolean useHttp2PingWhenNoActiveStreams() {
         return USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS;
