@@ -66,7 +66,7 @@ public interface PooledHttpResponse extends HttpResponse {
     }
 
     /**
-     * This method always throws {@link UnsupportedOperationException}.
+     * Throws {@link UnsupportedOperationException}.
      *
      * @deprecated Use {@link #aggregateWithPooledObjects()}.
      */
@@ -77,7 +77,7 @@ public interface PooledHttpResponse extends HttpResponse {
     }
 
     /**
-     * This method always throws {@link UnsupportedOperationException}.
+     * Throws {@link UnsupportedOperationException}.
      *
      * @deprecated Use {@link #aggregateWithPooledObjects(EventExecutor)}.
      */
