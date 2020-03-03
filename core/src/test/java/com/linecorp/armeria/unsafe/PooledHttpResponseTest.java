@@ -46,13 +46,11 @@ class PooledHttpResponseTest {
     @RegisterExtension
     public static final EventLoopExtension eventLoop = new EventLoopExtension(true);
 
-    private WebClient unpooledClient;
     private PooledWebClient client;
 
     @BeforeEach
     void setUp() {
-        unpooledClient = WebClient.of(server.httpUri());
-        client = PooledWebClient.of(unpooledClient);
+        client = PooledWebClient.of(WebClient.of(server.httpUri()));
     }
 
     @Test
