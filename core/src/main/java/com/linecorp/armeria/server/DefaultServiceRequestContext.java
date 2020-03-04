@@ -43,11 +43,13 @@ import com.google.common.math.LongMath;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -539,7 +541,13 @@ public final class DefaultServiceRequestContext
         return additionalResponseTrailers;
     }
 
-    @Override
+    /**
+     * Returns the {@link HttpHeaders} which is set using {@code (add|set)AdditionalResponseTrailer} and
+     * clears the {@link HttpHeaders} so that the {@link HttpHeaders} is not sending twice when
+     * a {@link Service} completes an {@link HttpResponse}.
+     *
+     * <p>This is used only when the trailers is sent as a {@link ResponseHeaders} in gRPC.
+     */
     public HttpHeaders getAndRemoveAdditionalResponseTrailers() {
         return additionalResponseTrailersUpdater.getAndSet(this, HttpHeaders.of());
     }

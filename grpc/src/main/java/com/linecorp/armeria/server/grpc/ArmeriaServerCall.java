@@ -65,6 +65,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
@@ -530,8 +531,11 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                          Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
 
-        final HttpHeaders additionalTrailers = ctx.getAndRemoveAdditionalResponseTrailers();
-        trailers.add(additionalTrailers);
+        if (ctx instanceof DefaultServiceRequestContext) {
+            final HttpHeaders additionalTrailers =
+                    ((DefaultServiceRequestContext) ctx).getAndRemoveAdditionalResponseTrailers();
+            trailers.add(additionalTrailers);
+        }
 
         return trailers.build();
     }

@@ -252,11 +252,6 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public HttpHeaders getAndRemoveAdditionalResponseTrailers() {
-        return delegate().getAndRemoveAdditionalResponseTrailers();
-    }
-
-    @Override
     public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         delegate().setAdditionalResponseTrailer(name, value);
     }
