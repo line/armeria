@@ -73,8 +73,8 @@ import io.netty.util.concurrent.Future;
  *                                   .retryInterval(Duration.ofSeconds(10))
  *                                   .build();
  *
- * // You must specify healthCheckedGroup when building a WebClient, otherwise the client would send the
- * // requests to the unhealthy endpoints.
+ * // You must specify healthCheckedGroup when building a WebClient, otherwise health checking
+ * // will not be enabled.
  * WebClient client = WebClient.builder(SessionProtocol.HTTP, healthCheckedGroup)
  *                             .build();
  * }</pre>

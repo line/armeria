@@ -174,8 +174,8 @@ be removed from the list.
 
 .. note::
 
-   You must specify the wrapped ``healthCheckedGroup`` when building a :api:`WebClient`. If you specify the
-   ``originalGroup``, the client would send the requests to the unhealthy endpoints.
+   You must specify the wrapped ``healthCheckedGroup`` when building a :api:`WebClient`, otherwise health
+   checking will not be enabled.
 
 .. note::
 
