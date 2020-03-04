@@ -23,6 +23,9 @@ time:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.client.Endpoint;
+    import com.linecorp.armeria.client.endpoint.EndpointGroup;
+
     // Create a group of well-known search engine endpoints.
     EndpointGroup searchEngineGroup = EndpointGroup.of(
             Endpoint.of("www.google.com", 443),
@@ -51,6 +54,9 @@ An :api:`EndpointSelectionStrategy` can usually be specified as an input paramet
 when you build an :api:`EndpointGroup`:
 
 .. code-block:: java
+
+    import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+    import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 
     EndpointSelectionStrategy strategy = EndpointSelectionStrategy.roundRobin();
 
@@ -83,6 +89,12 @@ Connecting to an ``EndpointGroup``
 Once an :api:`EndpointGroup` is created, you can specify it when creating a new client:
 
 .. code-block:: java
+
+    import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+
+    import com.linecorp.armeria.client.WebClient;
+    import com.linecorp.armeria.common.HttpResponse;
+    import com.linecorp.armeria.common.AggregatedHttpResponse;
 
     // Create an HTTP client that sends requests to the searchEngineGroup.
     WebClient client = WebClient.of(SessionProtocol.HTTPS, searchEngineGroup);
@@ -135,15 +147,20 @@ be removed from the list.
 
 .. code-block:: java
 
+    import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+
+    import com.linecorp.armeria.client.WebClient;
+    import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup
+
     // Create an EndpointGroup with 2 Endpoints.
-    EndpointGroup group = EndpointGroup.of(
+    EndpointGroup originalGroup = EndpointGroup.of(
         Endpoint.of("192.168.0.1", 80),
         Endpoint.of("192.168.0.2", 80));
 
     // Decorate the EndpointGroup with HealthCheckedEndpointGroup
     // that sends HTTP health check requests to '/internal/l7check' every 10 seconds.
     HealthCheckedEndpointGroup healthCheckedGroup =
-            HealthCheckedEndpointGroup.builder(group, "/internal/l7check")
+            HealthCheckedEndpointGroup.builder(originalGroup, "/internal/l7check")
                                       .protocol(SessionProtocol.HTTP)
                                       .retryInterval(Duration.ofSeconds(10))
                                       .build();
@@ -151,11 +168,19 @@ be removed from the list.
     // Wait until the initial health check is finished.
     healthCheckedGroup.awaitInitialEndpoints();
 
+    // Specify healthCheckedGroup, not the originalGroup.
+    WebClient client = WebClient.builder(SessionProtocol.HTTP, healthCheckedGroup)
+                                .build();
+
+.. note::
+
+   You must specify the wrapped ``healthCheckedGroup`` when building a :api:`WebClient`. If you specify the
+   ``originalGroup``, the client would send the requests to the unhealthy endpoints.
+
 .. note::
 
     You can decorate *any* :api:`EndpointGroup` implementations with :api:`HealthCheckedEndpointGroup`,
     including what we will explain later in this page.
-
 
 DNS-based service discovery with ``DnsEndpointGroup``
 -----------------------------------------------------
@@ -187,6 +212,9 @@ environments that leverage DNS for service discovery such as Kubernetes:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
+    import com.linecorp.armeria.client.retry.Backoff;
+
     DnsServiceEndpointGroup group =
             DnsServiceEndpointGroup.builder("_http._tcp.example.com")
                                    // Custom backoff strategy.
@@ -200,6 +228,8 @@ environments that leverage DNS for service discovery such as Kubernetes:
 form:
 
 .. code-block:: java
+
+    import com.linecorp.armeria.client.endpoint.dns.DnsTextEndpointGroup;
 
     // A mapping function must be specified.
     DnsTextEndpointGroup group = DnsTextEndpointGroup.of("example.com", (byte[] text) -> {
