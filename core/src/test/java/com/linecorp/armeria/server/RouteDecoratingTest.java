@@ -113,8 +113,7 @@ class RouteDecoratingTest {
               .pathPrefix("/assets/resources/private")
               .build((delegate, ctx, req) -> {
                   final HttpResponse response = delegate.serve(ctx, req);
-                  ctx.removeAdditionalResponseHeader(HttpHeaderNames.CACHE_CONTROL);
-                  ctx.addAdditionalResponseHeader(HttpHeaderNames.CACHE_CONTROL, "private");
+                  ctx.setAdditionalResponseHeader(HttpHeaderNames.CACHE_CONTROL, "private");
                   return response;
               });
         }

@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
@@ -565,17 +566,19 @@ public interface ServiceRequestContext extends RequestContext {
     void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     /**
-     * Removes all headers with the specified {@code name}.
-     *
-     * @return {@code true} if at least one entry has been removed
-     */
-    boolean removeAdditionalResponseHeader(CharSequence name);
-
-    /**
      * Returns the {@link HttpHeaders} which is returned along with any other trailers when a
      * {@link Service} completes an {@link HttpResponse}.
      */
     HttpHeaders additionalResponseTrailers();
+
+    /**
+     * Returns the {@link HttpHeaders} which is set using {@code (add|set)AdditionalResponseTrailer} and
+     * clears the {@link HttpHeaders} so that the {@link HttpHeaders} is not sending twice when
+     * a {@link Service} completes an {@link HttpResponse}.
+     *
+     * <p>This is used only when the trailers is sent as a {@link ResponseHeaders} in gRPC.
+     */
+    HttpHeaders getAndRemoveAdditionalResponseTrailers();
 
     /**
      * Sets a trailer with the specified {@code name} and {@code value}. This will remove all previous values
@@ -601,13 +604,6 @@ public interface ServiceRequestContext extends RequestContext {
      * {@link HttpResponse}.
      */
     void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
-     * Removes all trailers with the specified {@code name}.
-     *
-     * @return {@code true} if at least one entry has been removed
-     */
-    boolean removeAdditionalResponseTrailer(CharSequence name);
 
     /**
      * Returns the proxied addresses of the current {@link Request}.

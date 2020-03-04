@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -85,5 +86,12 @@ class HttpResponseTest {
         assertThat(data.refCnt()).isOne();
 
         data.release();
+    }
+
+    @Test
+    void statusOfResponseHeadersShouldNotBeInformational() {
+        assertThatThrownBy(() -> HttpResponse.of(HttpStatus.CONTINUE, MediaType.PLAIN_TEXT_UTF_8,
+                                                 HttpData.ofUtf8("bob")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("non-1xx");
     }
 }

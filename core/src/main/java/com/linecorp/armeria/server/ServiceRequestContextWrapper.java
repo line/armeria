@@ -247,13 +247,13 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public boolean removeAdditionalResponseHeader(CharSequence name) {
-        return delegate().removeAdditionalResponseHeader(name);
+    public HttpHeaders additionalResponseTrailers() {
+        return delegate().additionalResponseTrailers();
     }
 
     @Override
-    public HttpHeaders additionalResponseTrailers() {
-        return delegate().additionalResponseTrailers();
+    public HttpHeaders getAndRemoveAdditionalResponseTrailers() {
+        return delegate().getAndRemoveAdditionalResponseTrailers();
     }
 
     @Override
@@ -276,11 +276,6 @@ public class ServiceRequestContextWrapper
     public void addAdditionalResponseTrailers(
             Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         delegate().addAdditionalResponseTrailers(headers);
-    }
-
-    @Override
-    public boolean removeAdditionalResponseTrailer(CharSequence name) {
-        return delegate().removeAdditionalResponseTrailer(name);
     }
 
     @Override

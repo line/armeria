@@ -279,12 +279,6 @@ public final class AnnotatedServiceFactory {
         setAdditionalHeader(defaultTrailers, method, "trailer", methodAlias, "method",
                             AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
 
-        if (defaultHeaders.status().isContentAlwaysEmpty() && !defaultTrailers.isEmpty()) {
-            logger.warn("A response with HTTP status code '{}' cannot have a content. " +
-                        "Trailers defined at '{}' might be ignored.",
-                        defaultHeaders.status().code(), methodAlias);
-        }
-
         final ResponseHeaders responseHeaders = defaultHeaders.build();
         final HttpHeaders responseTrailers = defaultTrailers.build();
 

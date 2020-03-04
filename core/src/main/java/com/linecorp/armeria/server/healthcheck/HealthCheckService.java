@@ -183,6 +183,7 @@ public final class HealthCheckService implements TransientHttpService {
         stoppingResponse = clearCommonHeaders(unhealthyResponse);
         notModifiedHeaders = ResponseHeaders.builder()
                                             .add(this.unhealthyResponse.headers())
+                                            .endOfStream(true)
                                             .status(HttpStatus.NOT_MODIFIED)
                                             .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
                                             .build();

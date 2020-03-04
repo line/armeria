@@ -312,7 +312,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             return;
         }
 
-        final HttpHeaders trailers = statusToTrailers(status, metadata, sendHeadersCalled);
+        final HttpHeaders trailers = statusToTrailers(ctx, status, metadata, sendHeadersCalled);
         final HttpObject trailersObj;
         if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
             // Normal trailers are not supported in grpc-web and must be encoded as a message.
@@ -516,10 +516,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
     }
 
-    private HttpHeaders statusToTrailers(Status status, Metadata metadata, boolean headersSent) {
-        return statusToTrailers(ctx, status, metadata, headersSent);
-    }
-
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     static HttpHeaders statusToTrailers(
             ServiceRequestContext ctx, Status status, Metadata metadata, boolean headersSent) {
@@ -533,6 +529,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
                          Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
+
+        final HttpHeaders additionalTrailers = ctx.getAndRemoveAdditionalResponseTrailers();
+        trailers.add(additionalTrailers);
 
         return trailers.build();
     }
