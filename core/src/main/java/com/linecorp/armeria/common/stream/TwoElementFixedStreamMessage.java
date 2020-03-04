@@ -119,6 +119,9 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
         inOnNext = true;
         try {
             subscription.subscriber().onNext(published);
+        } catch (Exception e) {
+            // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
+            abort(e);
         } finally {
             inOnNext = false;
         }

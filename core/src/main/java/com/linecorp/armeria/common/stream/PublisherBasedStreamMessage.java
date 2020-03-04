@@ -29,6 +29,8 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.spotify.futures.CompletableFutures;
@@ -47,6 +49,8 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 @UnstableApi
 public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
+    private static final Logger logger = LoggerFactory.getLogger(PublisherBasedStreamMessage.class);
+
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<PublisherBasedStreamMessage, AbortableSubscriber>
             subscriberUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -54,8 +58,8 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     private final Publisher<? extends T> publisher;
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
-    @Nullable
-    @SuppressWarnings("unused") // Updated only via subscriberUpdater.
+
+    @Nullable // Updated only via subscriberUpdater.
     private volatile AbortableSubscriber subscriber;
     private volatile boolean publishedAny;
 
@@ -63,7 +67,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
      * Creates a new instance with the specified delegate {@link Publisher}.
      */
     public PublisherBasedStreamMessage(Publisher<? extends T> publisher) {
-        this.publisher = publisher;
+        this.publisher = requireNonNull(publisher, "publisher");
     }
 
     /**
@@ -126,8 +130,12 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         final Throwable cause = abortedOrLate(oldSubscriber);
 
         executor.execute(() -> {
-            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-            lateSubscriber.onError(cause);
+            try {
+                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+                lateSubscriber.onError(cause);
+            } catch (Exception e) {
+                logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, e);
+            }
         });
     }
 
@@ -259,6 +267,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 if (!cancel || notifyCancellation) {
                     subscriber.onError(cause);
                 }
+            } catch (Exception e) {
+                logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                            subscriber, e);
             } finally {
                 try {
                     subscription.cancel();
@@ -281,6 +292,8 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             try {
                 this.subscription = subscription;
                 subscriber.onSubscribe(this);
+            } catch (Exception e) {
+                abort(e);
             } finally {
                 if (abortCause != null) {
                     cancelOrAbort0(false);
@@ -292,9 +305,17 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         public void onNext(Object obj) {
             parent.publishedAny = true;
             if (executor.inEventLoop()) {
-                subscriber.onNext(obj);
+                onNext0(obj);
             } else {
-                executor.execute(() -> subscriber.onNext(obj));
+                executor.execute(() -> onNext0(obj));
+            }
+        }
+
+        private void onNext0(Object obj) {
+            try {
+                subscriber.onNext(obj);
+            } catch (Exception e) {
+                abort(e);
             }
         }
 
@@ -310,6 +331,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private void onError0(Throwable cause) {
             try {
                 subscriber.onError(cause);
+            } catch (Exception e) {
+                logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                            subscriber, e);
             } finally {
                 parent.whenComplete().completeExceptionally(cause);
             }
@@ -327,6 +351,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private void onComplete0() {
             try {
                 subscriber.onComplete();
+            } catch (Exception e) {
+                logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
+                            subscriber, e);
             } finally {
                 parent.whenComplete().complete(null);
             }

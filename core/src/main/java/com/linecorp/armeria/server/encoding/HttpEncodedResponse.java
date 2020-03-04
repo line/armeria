@@ -137,7 +137,11 @@ class HttpEncodedResponse extends FilteredHttpResponse {
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
         closeEncoder();
         if (encodedStream != null && encodedStream.size() > 0) {
-            subscriber.onNext(HttpData.wrap(encodedStream.toByteArray()));
+            try {
+                subscriber.onNext(HttpData.wrap(encodedStream.toByteArray()));
+            } catch (Exception e) {
+                subscriber.onError(e);
+            }
         }
     }
 

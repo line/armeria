@@ -112,12 +112,21 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
         final Subscriber<Object> subscriber = subscription.subscriber();
         if (subscription.needsDirectInvocation()) {
-            subscriber.onSubscribe(subscription);
+            subscribe0(subscription, subscriber);
         } else {
-            subscription.executor().execute(() -> subscriber.onSubscribe(subscription));
+            subscription.executor().execute(() -> subscribe0(subscription, subscriber));
         }
 
         return subscription;
+    }
+
+    private void subscribe0(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+        try {
+            subscriber.onSubscribe(subscription);
+        } catch (Exception e) {
+            // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
+            abort(e);
+        }
     }
 
     final void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
@@ -160,6 +169,8 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private void cancelOrAbort(Throwable cause) {
         if (closeEventUpdater.compareAndSet(this, null, newCloseEvent(cause))) {
+            final SubscriptionImpl subscription = this.subscription;
+            assert subscription != null;
             if (subscription.needsDirectInvocation()) {
                 cleanup(subscription);
             } else {

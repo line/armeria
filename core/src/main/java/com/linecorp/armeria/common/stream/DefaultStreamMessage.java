@@ -27,6 +27,8 @@ import javax.annotation.Nullable;
 
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.util.UnstableApi;
 
@@ -65,6 +67,8 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 @UnstableApi
 public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
+
+    private static final Logger logger = LoggerFactory.getLogger(DefaultStreamMessage.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, SubscriptionImpl>
@@ -118,16 +122,28 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         final Subscriber<Object> subscriber = subscription.subscriber();
         if (subscription.needsDirectInvocation()) {
-            invokedOnSubscribe = true;
-            subscriber.onSubscribe(subscription);
+            subscribe0(subscription, subscriber);
         } else {
             subscription.executor().execute(() -> {
-                invokedOnSubscribe = true;
-                subscriber.onSubscribe(subscription);
+                subscribe0(subscription, subscriber);
             });
         }
 
         return subscription;
+    }
+
+    private void subscribe0(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+        try {
+            invokedOnSubscribe = true;
+            subscriber.onSubscribe(subscription);
+        } catch (Exception e) {
+            if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
+                notifySubscriberOfCloseEvent(subscription, newCloseEvent(e));
+            } else {
+                logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
+                            subscriber, e);
+            }
+        }
     }
 
     @Override
@@ -328,7 +344,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         for (;;) {
             if (state == State.CLEANUP) {
-                cleanup();
+                cleanupObjects();
                 return;
             }
 
@@ -375,6 +391,15 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         try {
             o = prepareObjectForNotification(subscription, o);
             subscriber.onNext(o);
+        } catch (Exception e) {
+            if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
+                notifySubscriberOfCloseEvent(subscription, newCloseEvent(e));
+            } else {
+                logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
+                            o, subscriber, e);
+            }
+
+            return false;
         } finally {
             inOnNext = false;
         }
@@ -435,7 +460,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         return stateUpdater.compareAndSet(this, oldState, newState);
     }
 
-    private void cleanup() {
+    private void cleanupObjects() {
         Throwable cause = null;
         for (;;) {
             final Object e = queue.poll();

@@ -134,6 +134,10 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
                 inOnNext = true;
                 try {
                     subscriber.onNext(o);
+                } catch (Exception e) {
+                    // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
+                    abort(e);
+                    return;
                 } finally {
                     inOnNext = false;
                 }

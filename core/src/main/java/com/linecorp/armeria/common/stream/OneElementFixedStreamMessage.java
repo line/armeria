@@ -69,7 +69,14 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
         final T published = prepareObjectForNotification(subscription, obj);
         obj = null;
         // Not possible to have re-entrant onNext with only one item, so no need to keep track of it.
-        subscription.subscriber().onNext(published);
+
+        try {
+            subscription.subscriber().onNext(published);
+        } catch (Exception e) {
+            // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
+            abort(e);
+            return;
+        }
         notifySubscriberOfCloseEvent(subscription, SUCCESSFUL_CLOSE);
     }
 }

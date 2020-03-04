@@ -28,6 +28,8 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
@@ -39,6 +41,8 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractStreamMessage.class);
 
     static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
     static final CloseEvent CANCELLED_CLOSE = new CloseEvent(CancelledSubscriptionException.INSTANCE);
@@ -145,13 +149,20 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         final Throwable cause = abortedOrLate(oldSubscriber);
 
         if (subscription.needsDirectInvocation()) {
-            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-            lateSubscriber.onError(cause);
+            lateSubscriber(lateSubscriber, cause);
         } else {
             subscription.executor().execute(() -> {
-                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-                lateSubscriber.onError(cause);
+                lateSubscriber(lateSubscriber, cause);
             });
+        }
+    }
+
+    private static void lateSubscriber(Subscriber<?> lateSubscriber, Throwable cause) {
+        try {
+            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+            lateSubscriber.onError(cause);
+        } catch (Exception e) {
+            logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, e);
         }
     }
 
@@ -231,7 +242,8 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         @Override
         public void request(long n) {
             if (n <= 0) {
-                invokeOnError(new IllegalArgumentException(
+                // Just abort the publisher so subscriber().onError(e) is called and resources are cleaned up.
+                publisher.abort(new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
                 return;
             }
@@ -243,14 +255,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         public void cancel() {
             cancelRequested = true;
             publisher.cancel();
-        }
-
-        private void invokeOnError(Throwable cause) {
-            if (needsDirectInvocation()) {
-                subscriber.onError(cause);
-            } else {
-                executor.execute(() -> subscriber.onError(cause));
-            }
         }
 
         // We directly run callbacks for event loops if we're already on the loop, which applies to the vast
@@ -291,6 +295,9 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             if (cause == null) {
                 try {
                     subscriber.onComplete();
+                } catch (Exception e) {
+                    logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
+                                subscriber, e);
                 } finally {
                     completionFuture.complete(null);
                 }
@@ -299,6 +306,9 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
                     if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                         subscriber.onError(cause);
                     }
+                } catch (Exception e) {
+                    logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                                subscriber, e);
                 } finally {
                     completionFuture.completeExceptionally(cause);
                 }
