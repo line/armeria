@@ -59,7 +59,7 @@ const EndpointPath: React.FunctionComponent<Props> = (props) => (
           onChange={props.onPathFormChange}
           inputProps={{
             readOnly: !props.editable,
-            className: 'code ',
+            className: 'code',
           }}
         />
       </>
