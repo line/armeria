@@ -149,7 +149,7 @@ be removed from the list.
                                       .build();
 
     // Wait until the initial health check is finished.
-    healthCheckedGroup.awaitInitialEndpoints();
+    healthCheckedGroup.whenReady().get();
 
 .. note::
 
@@ -179,7 +179,7 @@ They refresh the :api:`Endpoint` list automatically, respecting TTL values, and 
                                    .build();
 
     // Wait until the initial DNS queries are finished.
-    group.awaitInitialEndpoints();
+    group.whenReady().get();
 
 :api:`DnsServiceEndpointGroup` is useful when accessing an internal service with
 `SRV records <https://en.wikipedia.org/wiki/SRV_record>`_, which is often found in modern container
@@ -194,7 +194,7 @@ environments that leverage DNS for service discovery such as Kubernetes:
                                    .build();
 
     // Wait until the initial DNS queries are finished.
-    group.awaitInitialEndpoints();
+    group.whenReady().get();
 
 :api:`DnsTextEndpointGroup` is useful if you need to represent your :apiplural:`Endpoint` in a non-standard
 form:
@@ -208,7 +208,7 @@ form:
     });
 
     // Wait until the initial DNS queries are finished.
-    group.awaitInitialEndpoints();
+    group.whenReady().get();
 
 
 ZooKeeper-based service discovery with ``ZooKeeperEndpointGroup``
