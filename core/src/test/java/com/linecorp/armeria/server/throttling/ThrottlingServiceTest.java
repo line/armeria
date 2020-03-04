@@ -24,6 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -54,6 +55,16 @@ public class ThrottlingServiceTest {
                         (delegate, ctx, req, cause) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE))
 
             ));
+            sb.service("/http-always-custom", SERVICE.decorate(
+                    ThrottlingService.builder(ThrottlingStrategy.of((ctx, req) -> completedFuture(true)))
+                                     .onAcceptedRequest((delegate, ctx, req) -> {
+                                         ctx.addAdditionalResponseHeader(
+                                                 "X-RateLimit-Limit",
+                                                 "10, 10;window=1;burst=1000, 1000;window=3600");
+                                         return delegate.serve(ctx, req);
+                                     })
+                                     .newDecorator()
+            ));
         }
     };
 
@@ -75,5 +86,14 @@ public class ThrottlingServiceTest {
         final WebClient client = WebClient.of(serverRule.httpUri());
         assertThat(client.get("/http-never-custom").aggregate().get().status())
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    public void serveWithCustomHeader() throws Exception {
+        final WebClient client = WebClient.of(serverRule.httpUri());
+        final AggregatedHttpResponse response = client.get("/http-always-custom").aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.headers().get("X-RateLimit-Limit"))
+                .isEqualTo("10, 10;window=1;burst=1000, 1000;window=3600");
     }
 }

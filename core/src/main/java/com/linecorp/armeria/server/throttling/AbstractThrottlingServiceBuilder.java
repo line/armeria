@@ -17,8 +17,6 @@ package com.linecorp.armeria.server.throttling;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.Service;
@@ -30,7 +28,6 @@ import com.linecorp.armeria.server.Service;
  */
 abstract class AbstractThrottlingServiceBuilder<I extends Request, O extends Response> {
 
-    @Nullable
     private final ThrottlingStrategy<I> strategy;
     private ThrottlingAcceptHandler<I, O> acceptHandler;
     private ThrottlingRejectHandler<I, O> rejectHandler;
@@ -54,9 +51,6 @@ abstract class AbstractThrottlingServiceBuilder<I extends Request, O extends Res
     abstract ThrottlingRejectHandler<I, O> defaultRejectHandler();
 
     final ThrottlingStrategy<I> getStrategy() {
-        if (strategy == null) {
-            throw new IllegalStateException("no " + ThrottlingStrategy.class.getSimpleName() + " was added.");
-        }
         return strategy;
     }
 

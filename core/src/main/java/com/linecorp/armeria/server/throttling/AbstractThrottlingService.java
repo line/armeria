@@ -47,9 +47,9 @@ public abstract class AbstractThrottlingService<I extends Request, O extends Res
                                         ThrottlingRejectHandler<I, O> rejectHandler) {
         super(delegate);
         this.strategy = requireNonNull(strategy, "strategy");
-        this.responseConverter = requireNonNull(responseConverter);
-        this.acceptHandler = acceptHandler;
-        this.rejectHandler = rejectHandler;
+        this.responseConverter = requireNonNull(responseConverter, "responseConverter");
+        this.acceptHandler = requireNonNull(acceptHandler, "acceptHandler");
+        this.rejectHandler = requireNonNull(rejectHandler, "rejectHandler");
     }
 
     @Override
