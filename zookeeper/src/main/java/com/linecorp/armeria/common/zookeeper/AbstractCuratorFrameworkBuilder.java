@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.zookeeper;
+package com.linecorp.armeria.common.zookeeper;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -33,7 +33,13 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
-public class AbstractCuratorFrameworkFactoryBuilder {
+import com.linecorp.armeria.common.util.UnstableApi;
+
+/**
+ * A skeletal builder implementation for {@link CuratorFramework}.
+ */
+@UnstableApi
+public class AbstractCuratorFrameworkBuilder {
 
     private static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
     private static final int DEFAULT_SESSION_TIMEOUT_MILLIS = 10000;
@@ -45,7 +51,10 @@ public class AbstractCuratorFrameworkFactoryBuilder {
     @Nullable
     private final ImmutableList.Builder<Consumer<? super Builder>> customizers;
 
-    protected AbstractCuratorFrameworkFactoryBuilder(String zkConnectionStr) {
+    /**
+     * Creates a new instance with the specified {@code zkConnectionStr}.
+     */
+    protected AbstractCuratorFrameworkBuilder(String zkConnectionStr) {
         checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty");
         clientBuilder = CuratorFrameworkFactory.builder()
                                                .connectString(zkConnectionStr)
@@ -55,7 +64,10 @@ public class AbstractCuratorFrameworkFactoryBuilder {
         customizers = new ImmutableList.Builder<>();
     }
 
-    protected AbstractCuratorFrameworkFactoryBuilder() {
+    /**
+     * Creates a new instance.
+     */
+    protected AbstractCuratorFrameworkBuilder() {
         clientBuilder = null;
         customizers = null;
     }
@@ -68,7 +80,7 @@ public class AbstractCuratorFrameworkFactoryBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkFactoryBuilder connectTimeout(Duration connectTimeout) {
+    public AbstractCuratorFrameworkBuilder connectTimeout(Duration connectTimeout) {
         requireNonNull(connectTimeout, "connectTimeout");
         checkArgument(!connectTimeout.isZero() && !connectTimeout.isNegative(),
                       "connectTimeout: %s (expected: > 0)", connectTimeout);
@@ -84,7 +96,7 @@ public class AbstractCuratorFrameworkFactoryBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkFactoryBuilder connectTimeoutMillis(long connectTimeoutMillis) {
+    public AbstractCuratorFrameworkBuilder connectTimeoutMillis(long connectTimeoutMillis) {
         checkArgument(connectTimeoutMillis > 0,
                       "connectTimeoutMillis: %s (expected: > 0)", connectTimeoutMillis);
         ensureInternalClient();
@@ -100,7 +112,7 @@ public class AbstractCuratorFrameworkFactoryBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkFactoryBuilder sessionTimeout(Duration sessionTimeout) {
+    public AbstractCuratorFrameworkBuilder sessionTimeout(Duration sessionTimeout) {
         requireNonNull(sessionTimeout, "sessionTimeout");
         checkArgument(!sessionTimeout.isZero() && !sessionTimeout.isNegative(),
                       "sessionTimeout: %s (expected: > 0)", sessionTimeout);
@@ -115,7 +127,7 @@ public class AbstractCuratorFrameworkFactoryBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkFactoryBuilder sessionTimeoutMillis(long sessionTimeoutMillis) {
+    public AbstractCuratorFrameworkBuilder sessionTimeoutMillis(long sessionTimeoutMillis) {
         checkArgument(sessionTimeoutMillis > 0,
                       "sessionTimeoutMillis: %s (expected: > 0)", sessionTimeoutMillis);
         ensureInternalClient();
@@ -129,7 +141,7 @@ public class AbstractCuratorFrameworkFactoryBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkFactoryBuilder customizer(
+    public AbstractCuratorFrameworkBuilder customizer(
             Consumer<? super CuratorFrameworkFactory.Builder> customizer) {
         ensureInternalClient();
         customizers.add(requireNonNull(customizer, "customizer"));
@@ -141,6 +153,10 @@ public class AbstractCuratorFrameworkFactoryBuilder {
                    "This method is allowed only when created with a connection string.");
     }
 
+    /**
+     * Returns a newly-created {@link CuratorFramework} based on
+     * the configuration properties added to this builder.
+     */
     protected final CuratorFramework buildCuratorFramework() {
         customizers.build().forEach(c -> c.accept(clientBuilder));
         return clientBuilder.build();

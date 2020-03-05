@@ -26,13 +26,13 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.common.zookeeper.AbstractCuratorFrameworkFactoryBuilder;
 
 /**
  * Builds a {@link ZooKeeperEndpointGroup}.
  */
-public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFrameworkFactoryBuilder {
+public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFrameworkBuilder {
 
     @Nullable
     private final CuratorFramework client;

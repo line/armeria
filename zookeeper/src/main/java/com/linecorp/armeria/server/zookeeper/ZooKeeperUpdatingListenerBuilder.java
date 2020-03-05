@@ -27,8 +27,8 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.common.zookeeper.AbstractCuratorFrameworkFactoryBuilder;
 
 /**
  * Builds a new {@link ZooKeeperUpdatingListener}, which registers the server to a ZooKeeper cluster.
@@ -57,7 +57,7 @@ import com.linecorp.armeria.internal.common.zookeeper.AbstractCuratorFrameworkFa
  * sb.addListener(listener);
  * }</pre>
  * */
-public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkFactoryBuilder {
+public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkBuilder {
     @Nullable
     private final CuratorFramework client;
     private final String zNodePath;
