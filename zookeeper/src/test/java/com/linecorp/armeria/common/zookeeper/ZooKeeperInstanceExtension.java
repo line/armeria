@@ -58,7 +58,6 @@ public class ZooKeeperInstanceExtension extends AbstractAllOrEachExtension imple
         }
     }
 
-
     @Override
     public ZKInstance instance() {
         checkState(zkInstance != null, "ZKInstance not ready");
@@ -83,5 +82,4 @@ public class ZooKeeperInstanceExtension extends AbstractAllOrEachExtension imple
 
         return Exceptions.throwUnsafely(lastCause);
     }
-
 }

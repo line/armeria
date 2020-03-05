@@ -37,7 +37,6 @@ public class AbstractCuratorFrameworkFactoryBuilder {
 
     private static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
     private static final int DEFAULT_SESSION_TIMEOUT_MILLIS = 10000;
-
     private static final ExponentialBackoffRetry DEFAULT_RETRY_POLICY =
             new ExponentialBackoffRetry(DEFAULT_CONNECT_TIMEOUT_MILLIS, 3);
 
@@ -62,8 +61,7 @@ public class AbstractCuratorFrameworkFactoryBuilder {
     }
 
     /**
-     * Sets the specified connect timeout.
-     * (default: {@value DEFAULT_CONNECT_TIMEOUT_MILLIS})
+     * Sets the specified connect timeout. {@value DEFAULT_CONNECT_TIMEOUT_MILLIS} is used by default.
      *
      * @param connectTimeout the connect timeout
      *
@@ -79,7 +77,7 @@ public class AbstractCuratorFrameworkFactoryBuilder {
 
     /**
      * Sets the specified connect timeout in milliseconds.
-     * (default: {@value DEFAULT_CONNECT_TIMEOUT_MILLIS})
+     * {@value DEFAULT_CONNECT_TIMEOUT_MILLIS} is used by default.
      *
      * @param connectTimeoutMillis the connect timeout in milliseconds
      *
@@ -95,7 +93,7 @@ public class AbstractCuratorFrameworkFactoryBuilder {
     }
 
     /**
-     * Sets the session timeout.
+     * Sets the session timeout. {@value DEFAULT_SESSION_TIMEOUT_MILLIS} is used by default.
      *
      * @param sessionTimeout the session timeout
      *
@@ -110,8 +108,7 @@ public class AbstractCuratorFrameworkFactoryBuilder {
     }
 
     /**
-     * Sets the session timeout in milliseconds.
-     * (default: {@value DEFAULT_SESSION_TIMEOUT_MILLIS})
+     * Sets the session timeout in milliseconds. {@value DEFAULT_SESSION_TIMEOUT_MILLIS} is used by default.
      *
      * @param sessionTimeoutMillis the session timeout in milliseconds
      *

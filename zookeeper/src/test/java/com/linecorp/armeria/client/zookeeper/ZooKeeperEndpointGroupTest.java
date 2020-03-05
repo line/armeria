@@ -24,8 +24,8 @@ import javax.annotation.Nullable;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -51,28 +51,6 @@ class ZooKeeperEndpointGroupTest {
     @Nullable
     private static ZooKeeperEndpointGroup endpointGroup;
 
-    @BeforeAll
-    static void connectZk() throws Throwable {
-        // Create the endpoint group and initialize the ZooKeeper nodes.
-        setNodeChild(sampleEndpoints);
-        endpointGroup = ZooKeeperEndpointGroup.builder(zkInstance.instance().connectString().get(), Z_NODE)
-                                              .sessionTimeoutMillis(SESSION_TIMEOUT_MILLIS)
-                                              .build();
-    }
-
-    @AfterAll
-    static void disconnectZk() {
-        if (endpointGroup != null) {
-            endpointGroup.close();
-            endpointGroup = null;
-        }
-
-        // Clear the ZooKeeper nodes.
-        try (CloseableZooKeeper zk0 = zkInstance.connection()) {
-            zk0.deleteRecursively(Z_NODE);
-        }
-    }
-
     private static void setNodeChild(Set<Endpoint> children) throws Throwable {
         try (CloseableZooKeeper zk = zkInstance.connection()) {
             // If the parent node does not exist, create it.
@@ -93,6 +71,28 @@ class ZooKeeperEndpointGroupTest {
         }
         children.forEach(
                 endpoint -> zkInstance.assertExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port()));
+    }
+
+    @BeforeEach
+    void connectZk() throws Throwable {
+        // Create the endpoint group and initialize the ZooKeeper nodes.
+        setNodeChild(sampleEndpoints);
+        endpointGroup = ZooKeeperEndpointGroup.builder(zkInstance.instance().connectString().get(), Z_NODE)
+                                              .sessionTimeoutMillis(SESSION_TIMEOUT_MILLIS)
+                                              .build();
+    }
+
+    @AfterEach
+    void disconnectZk() {
+        if (endpointGroup != null) {
+            endpointGroup.close();
+            endpointGroup = null;
+        }
+
+        // Clear the ZooKeeper nodes.
+        try (CloseableZooKeeper zk0 = zkInstance.connection()) {
+            zk0.deleteRecursively(Z_NODE);
+        }
     }
 
     @Test
