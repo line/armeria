@@ -31,6 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
@@ -41,6 +43,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailabilityException;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -113,11 +116,27 @@ class RetryingClientWithLoggingTest {
                                           .decorator(loggingDecorator())
                                           .decorator(RetryingClient.builder(retryStrategy)
                                                                    .newDecorator())
+                                          .decorator((delegate, ctx, req) -> {
+                                              final RequestLogBuilder logBuilder = ctx.logBuilder();
+                                              logBuilder.name("foo");
+                                              logBuilder.requestContent("bar", null);
+                                              logBuilder.deferRequestContentPreview();
+                                              return delegate.execute(ctx, req);
+                                          })
                                           .build();
-        assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
+            final ClientRequestContext context = captor.get();
+            context.logBuilder().requestContentPreview("baz");
+        }
 
         // wait until 6 logs(3 requests and 3 responses) are called back
         await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
+        // Let's just check the first request log.
+        final RequestLog requestLog = logResult.get(0);
+        assertThat(requestLog.name()).isEqualTo("foo");
+        assertThat(requestLog.requestContent()).isEqualTo("bar");
+        assertThat(requestLog.requestContentPreview()).isEqualTo("baz");
     }
 
     // WebClient -> LoggingClient -> RetryingClient -> HttpClientDelegate

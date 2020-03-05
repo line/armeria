@@ -158,12 +158,22 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void deferRequestContent();
 
     /**
+     * Returns {@code true} if {@link #deferRequestContent()} is called.
+     */
+    boolean isDeferRequestContentSet();
+
+    /**
      * Allows setting the request content preview using {@link #requestContentPreview(String)} even after
      * {@link #endRequest()} is called.
      *
      * <p>Note, however, the request content preview is not set if {@link #endRequest(Throwable)} was called.
      */
     void deferRequestContentPreview();
+
+    /**
+     * Returns {@code true} if {@link #deferRequestContentPreview()} is called.
+     */
+    boolean isDeferRequestContentPreviewSet();
 
     /**
      * Sets the {@link RequestLog#requestTrailers()}.

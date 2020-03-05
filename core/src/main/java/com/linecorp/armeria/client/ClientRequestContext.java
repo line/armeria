@@ -357,6 +357,8 @@ public interface ClientRequestContext extends RequestContext {
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
      * {@link RequestLog}.
+     *
+     * <p>Note that if you want to copy the properties of the {@link RequestLog}, you should do it by yourself.
      */
     ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
                                            Endpoint endpoint);

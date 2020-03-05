@@ -198,10 +198,10 @@ class DefaultRequestLogTest {
         final String responseContent = "baz1";
         final String rawResponseContent = "qux1";
         child.responseContent(responseContent, rawResponseContent);
-        assertThat(log.responseContent()).isSameAs(responseContent);
-        assertThat(log.rawResponseContent()).isSameAs(rawResponseContent);
 
         child.endResponse(new AnticipatedException("Oops!"));
+        assertThat(log.responseContent()).isSameAs(responseContent);
+        assertThat(log.rawResponseContent()).isSameAs(rawResponseContent);
         assertThat(log.responseDurationNanos()).isEqualTo(child.responseDurationNanos());
         assertThat(log.totalDurationNanos()).isEqualTo(child.totalDurationNanos());
     }
