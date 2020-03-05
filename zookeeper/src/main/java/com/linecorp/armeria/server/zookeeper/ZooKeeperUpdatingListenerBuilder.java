@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
  * ZooKeeperUpdatingListener listener =
  *     ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints")
  *                              .sessionTimeoutMillis(10000)
- *                              .nodeValueCodec(NodeValueCodec.ofDefault())
+ *                              .codec(NodeValueCodec.ofDefault())
  *                              .build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
@@ -51,7 +51,7 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
  * <pre>{@code
  * ZooKeeperUpdatingListener listener =
  *     ZooKeeperUpdatingListener.builder(curatorFramework, "/myProductionEndpoints")
- *                              .codec(NodeValueCodec.DEFAULT)
+ *                              .codec(NodeValueCodec.ofDefault())
  *                              .build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
