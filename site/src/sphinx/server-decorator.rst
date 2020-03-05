@@ -68,7 +68,6 @@ decorating an :api:`HttpService` or an :api:`RpcService`:
             if (!authenticate(req)) {
                 // Authentication failed; fail the request.
                 return HttpResponse.of(HttpStatus.UNAUTHORIZED);
-
             }
 
             HttpService delegate = delegate();

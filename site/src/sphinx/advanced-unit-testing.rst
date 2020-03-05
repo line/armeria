@@ -75,17 +75,17 @@ provide sensible defaults, you can override its default properties using a build
     import java.util.Map;
 
     import com.linecorp.armeria.common.SessionProtocol;
-    import com.linecorp.armeria.client.ClientRequestContextBuilder;
+    import com.linecorp.armeria.client.ClientRequestContext;
     import com.linecorp.armeria.server.RoutingResult;
-    import com.linecorp.armeria.server.ServiceRequestContextBuilder;
+    import com.linecorp.armeria.server.ServiceRequestContext;
 
     HttpRequest req = HttpRequest.of(...);
 
     ClientRequestContext cctx =
-            ClientRequestContextBuilder.of(req)
-                                       .sessionProtocol(SessionProtocol.H1C)
-                                       .remoteAddress(new InetSocketAddress("192.168.0.2", 443))
-                                       .build();
+            ClientRequestContext.builder(req)
+                                .sessionProtocol(SessionProtocol.H1C)
+                                .remoteAddress(new InetSocketAddress("192.168.0.2", 443))
+                                .build();
 
     RoutingResult routingResult =
             RoutingResult.builder()
@@ -96,10 +96,10 @@ provide sensible defaults, you can override its default properties using a build
                          .build();
 
     ServiceRequestContext sctx =
-            ServiceRequestContextBuilder.of(req)
-                                        .clientAddress(InetAddress.getByName("192.168.1.2"))
-                                        .routingResult(routingResult);
-                                        .build();
+            ServiceRequestContext.builder(req)
+                                 .clientAddress(InetAddress.getByName("192.168.1.2"))
+                                 .routingResult(routingResult);
+                                 .build();
 
 Using a fake context to emulate an incoming request
 ---------------------------------------------------
