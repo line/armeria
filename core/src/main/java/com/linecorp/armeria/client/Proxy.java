@@ -28,7 +28,7 @@ import com.linecorp.armeria.client.ProxyBuilder.Socks4ProxyBuilder;
 import com.linecorp.armeria.client.ProxyBuilder.Socks5ProxyBuilder;
 
 /**
- * TODO: Update javadoc.
+ * Contains base configuration for proxy related settings used in {@link ClientFactory}.
  */
 public class Proxy {
 
@@ -50,14 +50,17 @@ public class Proxy {
     }
 
     /**
-     * TODO: Update javadoc.
+     * Creates a {@code Proxy} configuration for SOCKS4 protocol.
+     * @param proxyAddress The proxy address.
      */
     public static Socks4ProxyBuilder socks4(InetSocketAddress proxyAddress) {
         return new Socks4ProxyBuilder(requireNonNull(proxyAddress), USE_DEFAULT_TIMEOUT_MILLIS);
     }
 
     /**
-     * TODO: Update javadoc.
+     * Creates a {@code Proxy} configuration for SOCKS4 protocol.
+     * @param proxyAddress The proxy address.
+     * @param connectTimeoutMillis The connection timeout for connecting to the proxy server.
      */
     public static Socks4ProxyBuilder socks4(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
         checkArgument(connectTimeoutMillis >= 0);
@@ -65,14 +68,17 @@ public class Proxy {
     }
 
     /**
-     * TODO: Update javadoc.
+     * Creates a {@code Proxy} configuration for SOCKS5 protocol.
+     * @param proxyAddress The proxy address.
      */
     public static Socks5ProxyBuilder socks5(InetSocketAddress proxyAddress) {
         return new Socks5ProxyBuilder(requireNonNull(proxyAddress), USE_DEFAULT_TIMEOUT_MILLIS);
     }
 
     /**
-     * TODO: Update javadoc.
+     * Creates a {@code Proxy} configuration for SOCKS5 protocol.
+     * @param proxyAddress The proxy address.
+     * @param connectTimeoutMillis The connection timeout for connecting to the proxy server.
      */
     public static Socks5ProxyBuilder socks5(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
         checkArgument(connectTimeoutMillis >= 0);
@@ -80,14 +86,17 @@ public class Proxy {
     }
 
     /**
-     * TODO: Update javadoc.
+     * Creates a {@code Proxy} configuration for CONNECT protocol.
+     * @param proxyAddress The proxy address.
      */
     public static ConnectProxyBuilder connect(InetSocketAddress proxyAddress) {
         return new ConnectProxyBuilder(requireNonNull(proxyAddress), USE_DEFAULT_TIMEOUT_MILLIS);
     }
 
     /**
-     * TODO: Update javadoc.
+     * Creates a {@code Proxy} configuration for CONNECT protocol.
+     * @param proxyAddress The proxy address.
+     * @param connectTimeoutMillis The connection timeout for connecting to the proxy server.
      */
     public static ConnectProxyBuilder connect(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
         checkArgument(connectTimeoutMillis >= 0);
@@ -99,21 +108,21 @@ public class Proxy {
     }
 
     /**
-     * TODO: Update javadoc.
+     * The proxy address.
      */
     public InetSocketAddress proxyAddress() {
         return proxyAddress;
     }
 
     /**
-     * TODO: Update javadoc.
+     * The connect timeout.
      */
     public long connectTimeoutMillis() {
         return connectTimeoutMillis;
     }
 
     /**
-     * TODO: Update javadoc.
+     * The userName.
      */
     @Nullable
     public String userName() {
@@ -132,7 +141,7 @@ public class Proxy {
     }
 
     /**
-     * TODO: Update javadoc.
+     * Contains SOCKS4 proxy configuration used in {@link ClientFactory}.
      */
     public static class Socks4Proxy extends Proxy {
         Socks4Proxy(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
@@ -141,7 +150,7 @@ public class Proxy {
     }
 
     /**
-     * TODO: Update javadoc.
+     * Contains SOCKS5 proxy configuration used in {@link ClientFactory}.
      */
     public static class Socks5Proxy extends Proxy {
         @Nullable
@@ -152,7 +161,7 @@ public class Proxy {
         }
 
         /**
-         * TODO: Update javadoc.
+         * The configured password.
          */
         @Nullable
         public String password() {
@@ -165,7 +174,7 @@ public class Proxy {
     }
 
     /**
-     * TODO: Update javadoc.
+     * Contains CONNECT proxy configuration used in {@link ClientFactory}.
      */
     public static class ConnectProxy extends Proxy {
         @Nullable
@@ -178,7 +187,7 @@ public class Proxy {
         }
 
         /**
-         * TODO: Update javadoc.
+         * The configured password.
          */
         @Nullable
         public String password() {

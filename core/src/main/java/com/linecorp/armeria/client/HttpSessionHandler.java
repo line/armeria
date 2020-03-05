@@ -304,16 +304,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent ||
             evt instanceof SslHandshakeCompletionEvent ||
             evt instanceof SslCloseCompletionEvent ||
-            evt instanceof ChannelInputShutdownReadComplete) {
+            evt instanceof ChannelInputShutdownReadComplete ||
+            evt instanceof ProxyConnectionEvent) {
             // Expected events
-            return;
-        }
-
-        if (evt instanceof ProxyConnectionEvent) {
-            // TODO: remove log statement before merge.
-            final ProxyConnectionEvent proxyEvt = (ProxyConnectionEvent) evt;
-            logger.debug("Connecting by proxy: {} -> destination: {}, channel.remote: {}",
-                         proxyEvt.proxyAddress(), proxyEvt.destinationAddress(), channel.remoteAddress());
             return;
         }
 

@@ -259,7 +259,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * TODO: add javadoc comment.
+     * The {@link Proxy} which contains the proxy configuration.
      */
     public Proxy getProxy() {
         return get(ClientFactoryOption.PROXY);

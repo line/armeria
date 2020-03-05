@@ -480,7 +480,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * TODO: add javadoc comment.
+     * The {@link Proxy} which contains the proxy configuration.
      */
     public ClientFactoryBuilder proxy(Proxy proxy) {
         option(ClientFactoryOption.PROXY, proxy);

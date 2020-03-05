@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Proxy.ConnectProxy;
-import com.linecorp.armeria.client.Proxy.ProxyType;
 import com.linecorp.armeria.client.Proxy.Socks5Proxy;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -127,11 +126,10 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private void applyProxy(Channel ch, Proxy proxy, SslContext sslCtx) {
-        if (proxy.proxyType() == ProxyType.NONE) {
-            return;
-        }
         final ProxyHandler proxyHandler;
         switch (proxy.proxyType()) {
+            case NONE:
+                return;
             case SOCKS4:
                 proxyHandler = new Socks4ProxyHandler(proxy.proxyAddress(), proxy.userName());
                 break;

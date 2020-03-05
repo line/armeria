@@ -215,7 +215,7 @@ public final class ClientFactoryOption<T>
             define("METER_REGISTRY", Metrics.globalRegistry);
 
     /**
-     * TODO: add javadoc comment.
+     * The {@link Proxy} which contains the proxy configuration.
      */
     public static final ClientFactoryOption<Proxy> PROXY =
             define("PROXY", Proxy.DEFAULT);

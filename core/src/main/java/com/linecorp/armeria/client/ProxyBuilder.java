@@ -76,12 +76,12 @@ abstract class ProxyBuilder {
     }
 
     /**
-     * TODO: Update javadoc.
+     * Build the proxy object.
      */
     public abstract Proxy build();
 
     /**
-     * TODO: Update javadoc.
+     * A {@code ProxyBuilder} which builds a SOCKS4 protocol configuration.
      */
     public static final class Socks4ProxyBuilder extends ProxyBuilder {
         Socks4ProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
@@ -89,7 +89,7 @@ abstract class ProxyBuilder {
         }
 
         /**
-         * TODO: Update javadoc.
+         * Set the proxy userName.
          */
         public Socks4ProxyBuilder userName(String userName) {
             setUserName(userName);
@@ -106,7 +106,7 @@ abstract class ProxyBuilder {
     }
 
     /**
-     * TODO: Update javadoc.
+     * A {@code ProxyBuilder} which builds a SOCKS4 protocol configuration.
      */
     public static final class Socks5ProxyBuilder extends ProxyBuilder {
         Socks5ProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
@@ -114,7 +114,7 @@ abstract class ProxyBuilder {
         }
 
         /**
-         * TODO: Update javadoc.
+         * Set the proxy userName.
          */
         public Socks5ProxyBuilder userName(String userName) {
             setUserName(userName);
@@ -122,7 +122,7 @@ abstract class ProxyBuilder {
         }
 
         /**
-         * TODO: Update javadoc.
+         * Set the proxy password.
          */
         public Socks5ProxyBuilder password(String password) {
             setPassword(password);
@@ -140,7 +140,7 @@ abstract class ProxyBuilder {
     }
 
     /**
-     * TODO: Update javadoc.
+     * A {@code ProxyBuilder} which builds a SOCKS4 protocol configuration.
      */
     public static final class ConnectProxyBuilder extends ProxyBuilder {
         ConnectProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
@@ -148,7 +148,7 @@ abstract class ProxyBuilder {
         }
 
         /**
-         * TODO: Update javadoc.
+         * Set the proxy userName and password.
          */
         public ConnectProxyBuilder auth(String userName, String password) {
             setUserName(requireNonNull(userName));
@@ -157,7 +157,7 @@ abstract class ProxyBuilder {
         }
 
         /**
-         * TODO: Update javadoc.
+         * Enables ssl for the proxy.
          */
         public ConnectProxyBuilder useSsl(boolean useSsl) {
             setUseSsl(useSsl);
