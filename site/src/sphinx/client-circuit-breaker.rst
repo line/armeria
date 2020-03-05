@@ -193,7 +193,7 @@ you should implement :api:`CircuitBreakerStrategyWithContent` and specify it whe
     WebClient client = WebClient
             .builder(...)
             .decorator(CircuitBreakerClient.builder(myStrategy) // Specify the strategy
-                                          .newDecorator())
+                                           .newDecorator())
             .build();
 
     AggregatedHttpResponse res = client.execute(...).aggregate().join();

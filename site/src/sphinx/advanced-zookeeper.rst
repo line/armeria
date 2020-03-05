@@ -26,18 +26,18 @@ Create a :api:`ZooKeeperEndpointGroup` to retrieve this information:
     import com.linecorp.armeria.client.endpoint.EndpointGroup;
     import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
 
-    EndpointGroup myEndpointGroup = new ZooKeeperEndpointGroup(
-            /* zkConnectionStr */ "myZooKeeperHost:2181",
-            /* zNodePath       */ "/myProductionEndpoints",
-            /* sessionTimeout  */ 10000);
+    EndpointGroup myEndpointGroup =
+            ZooKeeperEndpointGroup.builder(/* zkConnectionStr */ "myZooKeeperHost:2181",
+                                           /* zNodePath       */ "/myProductionEndpoints")
+                                  .customizer(builder ->  builder.sessionTimeoutMs(10000))
+                                  .build();
 
 And then specify it when you build a client:
 
 .. code-block:: java
 
     HelloService.Iface helloClient =
-            Clients.builder("tbinary+http", myEndpointGroup)
-                   .path("/hello")
+            Clients.builder("tbinary+http", myEndpointGroup, "/hello")
                    .build(HelloService.Iface.class);
 
 For more information, please refer to the API documentation of the
@@ -54,9 +54,9 @@ Use :api:`ZooKeeperUpdatingListenerBuilder` to register your server to a ZooKeep
     import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListenerBuilder;
 
     ZookeeperUpdatingListener listener =
-            new ZooKeeperUpdatingListenerBuilder("myZooKeeperHost:2181", "/myProductionEndpoints")
-                    .sessionTimeout(10000)
-                    .build();
+            ZooKeeperUpdatingListener.builder("myZooKeeperHost:2181", "/myProductionEndpoints")
+                                     .sessionTimeout(10000)
+                                     .build();
     server.addListener(listener);
     server.start();
     ...
@@ -71,9 +71,9 @@ You can also use an existing `CuratorFramework`_ instance instead of ZooKeeper c
 
     CuratorFramework client = ...
     ZookeeperUpdatingListener listener =
-            new ZooKeeperUpdatingListenerBuilder(client, "/myProductionEndpoints")
-                    .nodeValueCodec(NodeValueCodec.DEFAULT)
-                    .build();
+            ZooKeeperUpdatingListener.builder(client, "/myProductionEndpoints")
+                                     .nodeValueCodec(NodeValueCodec.DEFAULT)
+                                     .build();
     server.addListener(listener);
     server.start();
     ...
