@@ -25,6 +25,7 @@ includeWithFlags ':spring:boot-webflux-starter',        'java', 'publish', 'relo
 includeWithFlags ':spring:boot1-autoconfigure',         'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot1-starter',               'java', 'publish', 'relocate'
 includeWithFlags ':dropwizard',                         'java', 'publish', 'relocate'
+includeWithFlags ':dropwizard1',                        'java', 'publish', 'relocate'
 includeWithFlags ':testing:common',                     'java', 'publish', 'relocate'
 includeWithFlags ':testing:junit',                      'java', 'publish', 'relocate'
 includeWithFlags ':testing:junit4',                     'java', 'publish', 'relocate'
