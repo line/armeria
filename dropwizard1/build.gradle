@@ -31,6 +31,18 @@ dependencies {
     }
 }
 
+// Use the sources from ':dropwizard'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
+tasks.compileJava.source "${rootProject.projectDir}/dropwizard/src/main/java"
+tasks.processResources.from "${rootProject.projectDir}/dropwizard/src/main/resources"
+tasks.compileTestJava.source "${rootProject.projectDir}/dropwizard/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/dropwizard/src/test/resources"
+tasks.sourcesJar.from "${rootProject.projectDir}/dropwizard/src/main/java"
+tasks.sourcesJar.from "${rootProject.projectDir}/dropwizard/src/main/resources"
+tasks.javadoc.source "${rootProject.projectDir}/dropwizard/src/main/java"
+
 // Do not relocate Guava because it's part of Dropwizard's public API.
 [tasks.shadedJar, tasks.shadedTestJar].each { task ->
     task.relocators.clear()
@@ -42,4 +54,9 @@ dependencies {
         }
         task.relocate from, to
     }
+}
+
+// Disable checkstyle because it's checked by ':dropwizard'.
+tasks.withType(Checkstyle) {
+    onlyIf { false }
 }
