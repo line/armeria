@@ -22,8 +22,8 @@ import io.netty.channel.ChannelHandlerContext;
 
 final class HttpClientIdleTimeoutHandler extends IdleTimeoutHandler {
 
-    HttpClientIdleTimeoutHandler(long idleTimeoutMillis, boolean isHttp2) {
-        super("client", idleTimeoutMillis, isHttp2);
+    HttpClientIdleTimeoutHandler(long idleTimeoutMillis, boolean isHttp2, boolean sendHttp2Ping) {
+        super("client", idleTimeoutMillis, isHttp2, sendHttp2Ping);
     }
 
     @Override

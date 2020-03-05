@@ -23,8 +23,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.Flags;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -34,22 +32,25 @@ public abstract class IdleTimeoutHandler extends IdleStateHandler {
     private static final Logger logger = LoggerFactory.getLogger(IdleTimeoutHandler.class);
 
     private final String name;
+    private final boolean sendHttpPing;
+
     private boolean isHttp2;
 
-    protected IdleTimeoutHandler(String name, long idleTimeoutMillis, boolean isHttp2) {
+    protected IdleTimeoutHandler(String name, long idleTimeoutMillis, boolean isHttp2, boolean sendHttpPing) {
         super(0, 0, idleTimeoutMillis, TimeUnit.MILLISECONDS);
         this.name = requireNonNull(name, "name");
         this.isHttp2 = isHttp2;
+        this.sendHttpPing = sendHttpPing;
     }
 
     /**
-     * If the channel is serving HTTP/2 and {@link Flags#useHttp2PingWhenIdle()} is set
-     * then we will forward event to {@link Http2KeepAliveHandler} to start sending PING's.
+     * If the channel is serving HTTP/2 and sendHttpPing is true then we will forward event to
+     * {@link Http2KeepAliveHandler} to start sending PING's.
      * But if it is HTTP/1.1 channel then we will close the channel.
      */
     @Override
     protected final void channelIdle(ChannelHandlerContext ctx, IdleStateEvent evt) throws Exception {
-        if (isHttp2 && Flags.useHttp2PingWhenIdle()) {
+        if (isHttp2 && sendHttpPing) {
             ctx.fireUserEventTriggered(evt);
             return;
         }

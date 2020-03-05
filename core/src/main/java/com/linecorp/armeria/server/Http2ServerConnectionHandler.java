@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.IdleTimeoutHandler;
@@ -36,7 +35,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     private final Http2RequestDecoder requestDecoder;
 
     @Nullable
-    private Http2KeepAliveHandler keepAlive;
+    private final Http2KeepAliveHandler keepAlive;
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig config,
@@ -45,9 +44,10 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.gracefulShutdownSupport = gracefulShutdownSupport;
 
-        if (Flags.useHttp2PingWhenIdle()) {
-            keepAlive = new Http2KeepAliveHandler(channel, encoder().frameWriter(), connection());
-        }
+        keepAlive = config.http2PingTimeoutMillis() > 0 ?
+                    new Http2KeepAliveHandler(channel, encoder().frameWriter(), connection(),
+                                              config.http2PingTimeoutMillis(),
+                                              config.useHttpPingWhenNoActiveStreams()) : null;
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAlive);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);

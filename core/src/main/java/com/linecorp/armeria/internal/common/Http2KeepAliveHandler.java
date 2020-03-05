@@ -49,7 +49,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 
 /**
  * This will send an {@link Http2PingFrame} when an {@link IdleStateEvent} is emitted by {@link
- * IdleStateHandler} and {@link Flags#useHttp2PingWhenIdle()} is true.
+ * IdleStateHandler} and {@link Flags#defaultHttp2PingTimeoutMillis()} is greater that zero.
  *
  * <p>Once an {@link IdleStateEvent} is triggered and when there are active streams open then a
  * {@link Http2PingFrame} will be written on connection. When there are no active streams then it depends on
@@ -62,7 +62,6 @@ import io.netty.handler.timeout.IdleStateHandler;
  * <p>This class is <b>not</b> thread-safe and all methods are to be called from single thread such
  * as {@link EventLoop}.
  *
- * @see Flags#useHttp2PingWhenIdle()
  * @see Flags#useHttp2PingWhenNoActiveStreams()
  * @see Flags#defaultHttp2PingTimeoutMillis()
  */
@@ -89,14 +88,7 @@ public class Http2KeepAliveHandler {
     private long lastPingPayload;
     private State state = State.IDLE;
 
-    public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter,
-                                 Http2Connection http2Connection) {
-        this(channel, frameWriter, http2Connection, Flags.defaultHttp2PingTimeoutMillis(),
-             Flags.useHttp2PingWhenNoActiveStreams());
-    }
-
-    @VisibleForTesting
-    Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Http2Connection http2Connection,
+    public Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Http2Connection http2Connection,
                           long pingTimeoutMillis, boolean sendPingsOnNoActiveStreams) {
         checkArgument(pingTimeoutMillis > 0, pingTimeoutMillis);
         this.channel = requireNonNull(channel, "channel");
@@ -183,7 +175,7 @@ public class Http2KeepAliveHandler {
                 logger.debug("{} shutdownFuture cannot be cancelled because of late PING ACK", channel);
             }
         }
-        logger.debug("{} Received PING(ACK=1) in {} ns", channel, elapsed);
+        logger.debug("{} PING(ACK=1, DATA={}) received in {} ns", channel, lastPingPayload, elapsed);
         state = State.IDLE;
         resetFutures();
     }
@@ -192,7 +184,7 @@ public class Http2KeepAliveHandler {
         // This condition can be true when channel read some data other than PING ACK frame
         // or a PING ACK is received without sending PING in first place.
         if (state != State.PENDING_PING_ACK) {
-            logger.debug("{} Ignoring PING(ACK=1, DATA={}) received", channel, data);
+            logger.debug("{} PING(ACK=1, DATA={}) ignored", channel, data);
             return false;
         }
         if (lastPingPayload != data) {
@@ -258,6 +250,7 @@ public class Http2KeepAliveHandler {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isSuccess()) {
+                logger.debug("{} PING(ACK=0, DATA={}) write successful", channel, lastPingPayload);
                 final EventLoop el = channel.eventLoop();
                 shutdownFuture = el.schedule(shutdownRunnable, pingTimeoutMillis, TimeUnit.MILLISECONDS);
                 state = State.PENDING_PING_ACK;
@@ -266,7 +259,7 @@ public class Http2KeepAliveHandler {
                 // Mostly because the channel is already closed. So ignore and change state to IDLE.
                 // If the channel is closed, we change state to SHUTDOWN on onChannelInactive.
                 if (!future.isCancelled() && Exceptions.isExpected(future.cause())) {
-                    logger.debug("{} Channel PING write failed", channel, future.cause());
+                    logger.debug("{} PING write failed", channel, future.cause());
                 }
                 if (state != State.SHUTDOWN) {
                     state = State.IDLE;

@@ -71,6 +71,8 @@ public final class ServerConfig {
     private final int maxNumConnections;
 
     private final long idleTimeoutMillis;
+    private final long http2PingTimeoutMillis;
+    private final boolean useHttpPingWhenNoActiveStreams;
 
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -109,11 +111,11 @@ public final class ServerConfig {
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
-            int maxNumConnections, long idleTimeoutMillis,
-            int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
-            long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
-            int http1MaxInitialLineLength, int http1MaxHeaderSize, int http1MaxChunkSize,
-            Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
+            int maxNumConnections, long idleTimeoutMillis, long http2PingTimeoutMillis,
+            boolean useHttpPingWhenNoActiveStreams, int http2InitialConnectionWindowSize,
+            int http2InitialStreamWindowSize, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
+            long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
+            int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
@@ -135,6 +137,8 @@ public final class ServerConfig {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
+        this.http2PingTimeoutMillis = validateNonNegative(http2PingTimeoutMillis, "http2PingTimeoutMillis");
+        this.useHttpPingWhenNoActiveStreams = useHttpPingWhenNoActiveStreams;
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
@@ -240,6 +244,13 @@ public final class ServerConfig {
             throw new IllegalArgumentException("idleTimeoutMillis: " + idleTimeoutMillis + " (expected: >= 0)");
         }
         return idleTimeoutMillis;
+    }
+
+    static long validateNonNegative(long value, String fieldName) {
+        if (value < 0) {
+            throw new IllegalArgumentException(fieldName + ": " + value + " (expected: >= 0)");
+        }
+        return value;
     }
 
     static int validateNonNegative(int value, String fieldName) {
@@ -405,6 +416,20 @@ public final class ServerConfig {
      */
     public long idleTimeoutMillis() {
         return idleTimeoutMillis;
+    }
+
+    /**
+     * Returns the HTTP/2 ping timeout in milliseconds.
+     */
+    public long http2PingTimeoutMillis() {
+        return http2PingTimeoutMillis;
+    }
+
+    /**
+     * Returns whether to send PING when there are no active HTTP/2 streams.
+     */
+    public boolean useHttpPingWhenNoActiveStreams() {
+        return useHttpPingWhenNoActiveStreams;
     }
 
     /**

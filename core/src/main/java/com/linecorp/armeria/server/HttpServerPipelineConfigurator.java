@@ -169,7 +169,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private void configureIdleTimeoutHandler(ChannelPipeline p, boolean isHttp2) {
         if (config.idleTimeoutMillis() > 0) {
-            p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis(), isHttp2));
+            p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis(), isHttp2,
+                                                        config.http2PingTimeoutMillis() > 0));
         }
     }
 

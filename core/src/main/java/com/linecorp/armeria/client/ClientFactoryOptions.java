@@ -218,6 +218,22 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout in milliseconds.
+     *
+     */
+    public long http2PingTimeoutMillis() {
+        return get(ClientFactoryOption.HTTP2_PING_TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Returns whether to send HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> on
+     * no active HTTP/2 streams.
+     */
+    public boolean useHttp2PingWhenNoActiveStreams() {
+        return get(ClientFactoryOption.USE_HTT2_PING_WHEN_NO_ACTIVE_STREAMS);
+    }
+
+    /**
      * Returns whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
      */

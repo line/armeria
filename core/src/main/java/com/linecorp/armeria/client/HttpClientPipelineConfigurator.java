@@ -340,7 +340,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
         if (idleTimeoutMillis > 0) {
             pipeline.addFirst(new HttpClientIdleTimeoutHandler(idleTimeoutMillis,
-                                                               protocol.isMultiplex()));
+                                                               protocol.isMultiplex(),
+                                                               clientFactory.http2PingTimeoutMillis() > 0));
         }
 
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));

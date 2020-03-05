@@ -163,6 +163,8 @@ public final class ServerBuilder {
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
+    private long http2PingTimeoutMillis = Flags.defaultHttp2PingTimeoutMillis();
+    private boolean useHttp2PingWhenNoActiveStreams = Flags.useHttp2PingWhenNoActiveStreams();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -450,6 +452,37 @@ public final class ServerBuilder {
     public ServerBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
         idleTimeoutMillis = ServerConfig.validateIdleTimeoutMillis(idleTimeout.toMillis());
+        return this;
+    }
+
+    /**
+     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     *
+     * @param http2PingTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     */
+    public ServerBuilder http2PingTimeoutMillis(long http2PingTimeoutMillis) {
+        this.http2PingTimeoutMillis = validateNonNegative(http2PingTimeoutMillis, "http2PingTimeoutMillis");
+        return this;
+    }
+
+    /**
+     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     *
+     * @param http2PingTimeoutMillis the timeout. {@code 0} disables the timeout.
+     */
+    public ServerBuilder http2PingTimeoutMillis(Duration http2PingTimeoutMillis) {
+        requireNonNull(http2PingTimeoutMillis, "http2PingTimeoutMillis");
+        this.http2PingTimeoutMillis =
+                validateNonNegative(http2PingTimeoutMillis.toMillis(), "http2PingTimeoutMillis");
+        return this;
+    }
+
+    /**
+     * Sets whether to send HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
+     * when there are no active streams open.
+     */
+    public ServerBuilder useHttp2PingWhenNoActiveStreams(boolean useHttp2PingWhenNoActiveStreams) {
+        this.useHttp2PingWhenNoActiveStreams = useHttp2PingWhenNoActiveStreams;
         return this;
     }
 
@@ -1433,10 +1466,10 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
-                http2MaxStreamsPerConnection, http2MaxFrameSize, http2MaxHeaderListSize,
-                http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                idleTimeoutMillis, http2PingTimeoutMillis, useHttp2PingWhenNoActiveStreams,
+                http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
+                http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
+                http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
