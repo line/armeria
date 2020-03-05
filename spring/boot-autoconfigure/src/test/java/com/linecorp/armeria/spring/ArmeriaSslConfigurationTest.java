@@ -17,16 +17,23 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.TimeUnit;
+
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.common.collect.ImmutableList;
 
@@ -50,14 +57,14 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguratio
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * {@code application-sslTest.yml} will be loaded with minimal settings to make it work.
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "sslTest" })
 @DirtiesContext
-@Timeout(10)
-class ArmeriaSslConfigurationTest {
+public class ArmeriaSslConfigurationTest {
 
     @SpringBootApplication
-    static class TestConfiguration {
+    public static class TestConfiguration {
 
         @Bean
         public HttpServiceRegistrationBean okService() {
@@ -69,7 +76,7 @@ class ArmeriaSslConfigurationTest {
         }
     }
 
-    static class OkService extends AbstractHttpService {
+    public static class OkService extends AbstractHttpService {
         @Override
         protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
@@ -81,6 +88,9 @@ class ArmeriaSslConfigurationTest {
                          .tlsNoVerify()
                          .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                          .build();
+
+    @Rule
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @Inject
     @Nullable

@@ -19,18 +19,24 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
@@ -75,15 +81,15 @@ import io.grpc.stub.StreamObserver;
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-@Timeout(10)
-class ArmeriaAutoConfigurationTest {
+public class ArmeriaAutoConfigurationTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
-    static class TestConfiguration {
+    public static class TestConfiguration {
         @Bean
         public AnnotatedServiceRegistrationBean annotatedService() {
             return new AnnotatedServiceRegistrationBean()
@@ -187,6 +193,9 @@ class ArmeriaAutoConfigurationTest {
         }
     }
 
+    @Rule
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+
     @Inject
     private Server server;
 
@@ -196,7 +205,7 @@ class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    void testHttpServiceRegistrationBean() throws Exception {
+    public void testHttpServiceRegistrationBean() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         final HttpResponse response = client.get("/ok");
@@ -207,7 +216,7 @@ class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    void testAnnotatedServiceRegistrationBean() throws Exception {
+    public void testAnnotatedServiceRegistrationBean() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         HttpResponse response = client.get("/annotated/get");
@@ -245,7 +254,7 @@ class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    void testThriftServiceRegistrationBean() throws Exception {
+    public void testThriftServiceRegistrationBean() throws Exception {
         final HelloService.Iface client = Clients.newClient(newUrl("tbinary+h1c") + "/thrift",
                                                             HelloService.Iface.class);
         assertThat(client.hello("world")).isEqualTo("hello world");
@@ -265,7 +274,7 @@ class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    void testGrpcServiceRegistrationBean() throws Exception {
+    public void testGrpcServiceRegistrationBean() throws Exception {
         final HelloServiceBlockingStub client = Clients.newClient(newUrl("gproto+h2c") + '/',
                                                                   HelloServiceBlockingStub.class);
         final HelloRequest request = HelloRequest.newBuilder()
@@ -288,7 +297,7 @@ class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    void testPortConfiguration() throws Exception {
+    public void testPortConfiguration() throws Exception {
         final Collection<ServerPort> ports = server.activePorts().values();
         assertThat(ports.stream().filter(ServerPort::hasHttp)).hasSize(3);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(2);
@@ -296,7 +305,7 @@ class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    void testMetrics() throws Exception {
+    public void testMetrics() throws Exception {
         final String metricReport = WebClient.of(newUrl("http"))
                                              .get("/internal/metrics")
                                              .aggregate().join()

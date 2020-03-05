@@ -17,16 +17,22 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import javax.inject.Inject;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -40,18 +46,21 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithConsumerTest.Test
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
-@Timeout(10)
-class ArmeriaAutoConfigurationWithConsumerTest {
+public class ArmeriaAutoConfigurationWithConsumerTest {
 
     @SpringBootApplication
-    static class TestConfiguration {
+    public static class TestConfiguration {
         @Bean
         public Consumer<ServerBuilder> customizer() {
             return sb -> sb.service("/customizer", ((ctx, req) -> HttpResponse.of(HttpStatus.OK)));
         }
     }
+
+    @Rule
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @Inject
     private Server server;
@@ -62,7 +71,7 @@ class ArmeriaAutoConfigurationWithConsumerTest {
     }
 
     @Test
-    void normal() throws Exception {
+    public void normal() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         final HttpResponse response = client.get("/customizer");
