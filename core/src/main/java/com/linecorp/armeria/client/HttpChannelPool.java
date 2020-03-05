@@ -150,9 +150,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 logger.warn("Unknown proxy type not applied: {}.", proxy.proxyType());
                 return;
         }
-        final long proxyConnectTimeoutMillis = proxy.connectTimeoutMillis() > 0 ?
-                                               proxy.connectTimeoutMillis() : connectTimeoutMillis;
-        proxyHandler.setConnectTimeoutMillis(proxyConnectTimeoutMillis);
+        proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);
         if (proxy instanceof ConnectProxy && ((ConnectProxy) proxy).getUseSsl()) {
             ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
         }

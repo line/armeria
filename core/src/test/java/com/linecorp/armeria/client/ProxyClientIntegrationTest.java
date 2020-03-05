@@ -307,7 +307,7 @@ public class ProxyClientIntegrationTest {
         });
 
         final ClientFactory clientFactory = ClientFactory.builder().proxy(
-                Proxy.socks4(socksProxyServer.address(), 1).build()).build();
+                Proxy.socks4(socksProxyServer.address()).build()).connectTimeoutMillis(1).build();
 
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)

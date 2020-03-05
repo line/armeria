@@ -33,12 +33,10 @@ abstract class ProxyBuilder {
     private String password;
 
     private final InetSocketAddress proxyAddress;
-    private final long connectTimeoutMillis;
     private boolean useSsl;
 
-    private ProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
+    private ProxyBuilder(InetSocketAddress proxyAddress) {
         this.proxyAddress = proxyAddress;
-        this.connectTimeoutMillis = connectTimeoutMillis;
     }
 
     @Nullable
@@ -63,10 +61,6 @@ abstract class ProxyBuilder {
         return proxyAddress;
     }
 
-    protected long getConnectTimeoutMillis() {
-        return connectTimeoutMillis;
-    }
-
     protected void setUseSsl(boolean useSsl) {
         this.useSsl = useSsl;
     }
@@ -84,8 +78,8 @@ abstract class ProxyBuilder {
      * A {@code ProxyBuilder} which builds a SOCKS4 protocol configuration.
      */
     public static final class Socks4ProxyBuilder extends ProxyBuilder {
-        Socks4ProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
-            super(proxyAddress, connectTimeoutMillis);
+        Socks4ProxyBuilder(InetSocketAddress proxyAddress) {
+            super(proxyAddress);
         }
 
         /**
@@ -98,8 +92,7 @@ abstract class ProxyBuilder {
 
         @Override
         public Socks4Proxy build() {
-            final Socks4Proxy socks4Proxy =
-                    new Socks4Proxy(getProxyAddress(), getConnectTimeoutMillis());
+            final Socks4Proxy socks4Proxy = new Socks4Proxy(getProxyAddress());
             socks4Proxy.setUserName(getUserName());
             return socks4Proxy;
         }
@@ -109,8 +102,8 @@ abstract class ProxyBuilder {
      * A {@code ProxyBuilder} which builds a SOCKS4 protocol configuration.
      */
     public static final class Socks5ProxyBuilder extends ProxyBuilder {
-        Socks5ProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
-            super(proxyAddress, connectTimeoutMillis);
+        Socks5ProxyBuilder(InetSocketAddress proxyAddress) {
+            super(proxyAddress);
         }
 
         /**
@@ -131,8 +124,7 @@ abstract class ProxyBuilder {
 
         @Override
         public Socks5Proxy build() {
-            final Socks5Proxy socks5Proxy =
-                    new Socks5Proxy(getProxyAddress(), getConnectTimeoutMillis());
+            final Socks5Proxy socks5Proxy = new Socks5Proxy(getProxyAddress());
             socks5Proxy.setUserName(getUserName());
             socks5Proxy.setPassword(getPassword());
             return socks5Proxy;
@@ -143,8 +135,8 @@ abstract class ProxyBuilder {
      * A {@code ProxyBuilder} which builds a SOCKS4 protocol configuration.
      */
     public static final class ConnectProxyBuilder extends ProxyBuilder {
-        ConnectProxyBuilder(InetSocketAddress proxyAddress, long connectTimeoutMillis) {
-            super(proxyAddress, connectTimeoutMillis);
+        ConnectProxyBuilder(InetSocketAddress proxyAddress) {
+            super(proxyAddress);
         }
 
         /**
@@ -166,8 +158,7 @@ abstract class ProxyBuilder {
 
         @Override
         public ConnectProxy build() {
-            final ConnectProxy connectProxy =
-                    new ConnectProxy(getProxyAddress(), getConnectTimeoutMillis());
+            final ConnectProxy connectProxy = new ConnectProxy(getProxyAddress());
             connectProxy.setUserName(getUserName());
             connectProxy.setPassword(getPassword());
             connectProxy.setUseSsl(getUseSsl());
