@@ -82,7 +82,8 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
             internalClient = false;
         }
 
-        return new ZooKeeperEndpointGroup(selectionStrategy, zkClient, zNodePath, nodeValueCodec, internalClient);
+        return new ZooKeeperEndpointGroup(selectionStrategy, zkClient, zNodePath,
+                                          nodeValueCodec, internalClient);
     }
 
     // Override the return type of the chaining methods in the superclass.

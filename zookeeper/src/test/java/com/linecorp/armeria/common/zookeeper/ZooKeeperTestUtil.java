@@ -40,7 +40,7 @@ public final class ZooKeeperTestUtil {
         final int[] ports = new int[numPorts];
         final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < numPorts; i++) {
-            for (; ; ) {
+            for (;;) {
                 final int candidatePort = random.nextInt(64512) + 1024;
                 try (ServerSocket ss = new ServerSocket()) {
                     ss.bind(new InetSocketAddress("127.0.0.1", candidatePort));
