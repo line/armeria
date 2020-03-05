@@ -16,21 +16,19 @@
 package com.linecorp.armeria.server.zookeeper;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-
-import com.google.common.primitives.Ints;
+import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.internal.common.zookeeper.ZooKeeperDefaults;
+import com.linecorp.armeria.internal.common.zookeeper.AbstractCuratorFrameworkFactoryBuilder;
 
 /**
  * Builds a new {@link ZooKeeperUpdatingListener}, which registers the server to a ZooKeeper cluster.
@@ -53,20 +51,16 @@ import com.linecorp.armeria.internal.common.zookeeper.ZooKeeperDefaults;
  * <pre>{@code
  * ZooKeeperUpdatingListener listener =
  *     ZooKeeperUpdatingListener.builder(curatorFramework, "/myProductionEndpoints")
- *                              .nodeValueCodec(NodeValueCodec.DEFAULT)
+ *                              .codec(NodeValueCodec.DEFAULT)
  *                              .build();
  * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>
  * */
-public final class ZooKeeperUpdatingListenerBuilder {
+public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkFactoryBuilder {
     @Nullable
-    private CuratorFramework client;
-    @Nullable
-    private final String connectionStr;
+    private final CuratorFramework client;
     private final String zNodePath;
-    private int connectTimeoutMillis = ZooKeeperDefaults.DEFAULT_CONNECT_TIMEOUT_MS;
-    private int sessionTimeoutMillis = ZooKeeperDefaults.DEFAULT_SESSION_TIMEOUT_MS;
     @Nullable
     private Endpoint endpoint;
     private NodeValueCodec nodeValueCodec = NodeValueCodec.ofDefault();
@@ -80,7 +74,6 @@ public final class ZooKeeperUpdatingListenerBuilder {
      */
     ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath) {
         this.client = requireNonNull(client, "client");
-        connectionStr = null;
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty");
     }
@@ -88,81 +81,14 @@ public final class ZooKeeperUpdatingListenerBuilder {
     /**
      * Creates a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a zNode path.
      *
-     * @param connectionStr the ZooKeeper connection string
+     * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
      */
-    ZooKeeperUpdatingListenerBuilder(String connectionStr, String zNodePath) {
-        this.connectionStr = requireNonNull(connectionStr, "connectionStr");
-        checkArgument(!this.connectionStr.isEmpty(), "connectionStr can't be empty");
+    ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath) {
+        super(requireNonNull(zkConnectionStr, "zkConnectionStr"));
+        client = null;
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty");
-    }
-
-    private void ensureInternalClient() {
-        checkState(client == null,
-                   "This method is allowed only when created with a connection string.");
-    }
-
-    /**
-     * Sets the connect timeout.
-     *
-     * @param connectTimeout the connect timeout
-     *
-     * @throws IllegalStateException if this builder is constructed with
-     *                               {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}
-     */
-    public ZooKeeperUpdatingListenerBuilder connectTimeout(Duration connectTimeout) {
-        requireNonNull(connectTimeout, "connectTimeout");
-        checkArgument(!connectTimeout.isZero() && !connectTimeout.isNegative(),
-                      "connectTimeout: %s (expected: > 0)", connectTimeout);
-        return connectTimeoutMillis(connectTimeout.toMillis());
-    }
-
-    /**
-     * Sets the connect timeout (in ms). (default: {@value ZooKeeperDefaults#DEFAULT_CONNECT_TIMEOUT_MS})
-     *
-     * @param connectTimeoutMillis the connect timeout
-     *
-     * @throws IllegalStateException if this builder is constructed with
-     *                               {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}
-     */
-    public ZooKeeperUpdatingListenerBuilder connectTimeoutMillis(long connectTimeoutMillis) {
-        ensureInternalClient();
-        checkArgument(connectTimeoutMillis > 0,
-                      "connectTimeoutMillis: %s (expected: > 0)", connectTimeoutMillis);
-        this.connectTimeoutMillis = Ints.saturatedCast(connectTimeoutMillis);
-        return this;
-    }
-
-    /**
-     * Sets the session timeout.
-     *
-     * @param sessionTimeout the session timeout
-     *
-     * @throws IllegalStateException if this builder is constructed with
-     *                               {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}
-     */
-    public ZooKeeperUpdatingListenerBuilder sessionTimeout(Duration sessionTimeout) {
-        requireNonNull(sessionTimeout, "sessionTimeout");
-        checkArgument(!sessionTimeout.isZero() && !sessionTimeout.isNegative(),
-                      "sessionTimeout: %s (expected: > 0)", sessionTimeout);
-        return sessionTimeoutMillis(sessionTimeout.toMillis());
-    }
-
-    /**
-     * Sets the session timeout (in ms). (default: {@value ZooKeeperDefaults#DEFAULT_SESSION_TIMEOUT_MS})
-     *
-     * @param sessionTimeoutMillis the session timeout
-     *
-     * @throws IllegalStateException if this builder is constructed with
-     *                               {@link ZooKeeperUpdatingListener#builder(CuratorFramework, String)}
-     */
-    public ZooKeeperUpdatingListenerBuilder sessionTimeoutMillis(long sessionTimeoutMillis) {
-        ensureInternalClient();
-        checkArgument(sessionTimeoutMillis > 0,
-                      "sessionTimeoutMillis: %s (expected: > 0)", sessionTimeoutMillis);
-        this.sessionTimeoutMillis = Ints.saturatedCast(sessionTimeoutMillis);
-        return this;
     }
 
     /**
@@ -180,9 +106,21 @@ public final class ZooKeeperUpdatingListenerBuilder {
      *
      * @param nodeValueCodec the {@link NodeValueCodec} instance to use
      */
-    public ZooKeeperUpdatingListenerBuilder nodeValueCodec(NodeValueCodec nodeValueCodec) {
+    public ZooKeeperUpdatingListenerBuilder codec(NodeValueCodec nodeValueCodec) {
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         return this;
+    }
+
+    /**
+     * Sets the {@link NodeValueCodec} to encode or decode ZooKeeper data.
+     *
+     * @param nodeValueCodec the {@link NodeValueCodec} instance to use
+     *
+     * @deprecated Use {@link #codec(NodeValueCodec)}
+     */
+    @Deprecated
+    public ZooKeeperUpdatingListenerBuilder nodeValueCodec(NodeValueCodec nodeValueCodec) {
+        return codec(nodeValueCodec);
     }
 
     /**
@@ -190,19 +128,43 @@ public final class ZooKeeperUpdatingListenerBuilder {
      * ZooKeeper when the server starts.
      */
     public ZooKeeperUpdatingListener build() {
+        final CuratorFramework zkClient;
         final boolean internalClient;
         if (client == null) {
-            client = CuratorFrameworkFactory.builder()
-                                            .connectString(connectionStr)
-                                            .retryPolicy(ZooKeeperDefaults.DEFAULT_RETRY_POLICY)
-                                            .connectionTimeoutMs(connectTimeoutMillis)
-                                            .sessionTimeoutMs(sessionTimeoutMillis)
-                                            .build();
+            zkClient = buildCuratorFramework();
             internalClient = true;
         } else {
+            zkClient = client;
             internalClient = false;
         }
 
-        return new ZooKeeperUpdatingListener(client, zNodePath, nodeValueCodec, endpoint, internalClient);
+        return new ZooKeeperUpdatingListener(zkClient, zNodePath, nodeValueCodec, endpoint, internalClient);
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public ZooKeeperUpdatingListenerBuilder connectTimeout(Duration connectTimeout) {
+        return (ZooKeeperUpdatingListenerBuilder) super.connectTimeout(connectTimeout);
+    }
+
+    @Override
+    public ZooKeeperUpdatingListenerBuilder connectTimeoutMillis(long connectTimeoutMillis) {
+        return (ZooKeeperUpdatingListenerBuilder) super.connectTimeoutMillis(connectTimeoutMillis);
+    }
+
+    @Override
+    public ZooKeeperUpdatingListenerBuilder sessionTimeout(Duration sessionTimeout) {
+        return (ZooKeeperUpdatingListenerBuilder) super.sessionTimeout(sessionTimeout);
+    }
+
+    @Override
+    public ZooKeeperUpdatingListenerBuilder sessionTimeoutMillis(long sessionTimeoutMillis) {
+        return (ZooKeeperUpdatingListenerBuilder) super.sessionTimeoutMillis(sessionTimeoutMillis);
+    }
+
+    @Override
+    public ZooKeeperUpdatingListenerBuilder customizer(Consumer<? super Builder> customizer) {
+        return (ZooKeeperUpdatingListenerBuilder) super.customizer(customizer);
     }
 }

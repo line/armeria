@@ -47,17 +47,21 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
      * @param zNodePath the ZooKeeper node to register
      */
     public static ZooKeeperUpdatingListenerBuilder builder(CuratorFramework client, String zNodePath) {
+        requireNonNull(client, "client");
+        requireNonNull(zNodePath, "zNodePath");
         return new ZooKeeperUpdatingListenerBuilder(client, zNodePath);
     }
 
     /**
      * Returns a {@link ZooKeeperUpdatingListenerBuilder} with a ZooKeeper connection string and a zNode path.
      *
-     * @param connectionStr the ZooKeeper connection string
+     * @param zkConnectionStr the ZooKeeper connection string
      * @param zNodePath the ZooKeeper node to register
      */
-    public static ZooKeeperUpdatingListenerBuilder builder(String connectionStr, String zNodePath) {
-        return new ZooKeeperUpdatingListenerBuilder(connectionStr, zNodePath);
+    public static ZooKeeperUpdatingListenerBuilder builder(String zkConnectionStr, String zNodePath) {
+        requireNonNull(zkConnectionStr, "zkConnectionStr");
+        requireNonNull(zNodePath, "zNodePath");
+        return new ZooKeeperUpdatingListenerBuilder(zkConnectionStr, zNodePath);
     }
 
     /**

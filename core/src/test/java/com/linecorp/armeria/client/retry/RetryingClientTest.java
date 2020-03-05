@@ -278,11 +278,17 @@ public class RetryingClientTest {
     };
 
     @Test
-    public void retryWhenContentMatched() {
+    public void retryWhenContentMatched2() {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(new RetryIfContentMatch("Need to retry"))
-                              .contentPreviewLength(1024)
-                              .newDecorator();
+                RetryingClient
+                        .builder((RetryStrategy) (ctx, cause) -> {
+                            ctx.log().whenComplete().thenApply(log -> {
+                                System.out.println(log.requestContent());
+                                return null;
+                            });
+                            return CompletableFuture.completedFuture(Backoff.ofDefault());
+                        })
+                        .newDecorator();
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(clientFactory)
                                           .decorator(retryingDecorator)

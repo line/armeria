@@ -24,9 +24,10 @@ import javax.annotation.Nullable;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
@@ -34,45 +35,73 @@ import com.google.common.collect.ImmutableSet.Builder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperInstanceExtension;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
 
 import zookeeperjunit.CloseableZooKeeper;
 
-public class ZooKeeperEndpointGroupTest extends ZooKeeperTestBase {
+class ZooKeeperEndpointGroupTest {
 
+    private static final String Z_NODE = "/testEndPoints";
+    private static final int SESSION_TIMEOUT_MILLIS = 20000;
+    private static final Set<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints();
+
+    @RegisterExtension
+    static ZooKeeperInstanceExtension zkInstance = new ZooKeeperInstanceExtension();
     @Nullable
-    private ZooKeeperEndpointGroup endpointGroup;
+    private static ZooKeeperEndpointGroup endpointGroup;
 
-    @Before
-    public void connectZk() throws Throwable {
+    @BeforeAll
+    static void connectZk() throws Throwable {
         // Create the endpoint group and initialize the ZooKeeper nodes.
         setNodeChild(sampleEndpoints);
-        endpointGroup = ZooKeeperEndpointGroup.builder(instance().connectString().get(), zNode)
-                                              .customizer(builder -> {
-                                                  builder.sessionTimeoutMs(sessionTimeoutMillis);
-                                              })
+        endpointGroup = ZooKeeperEndpointGroup.builder(zkInstance.instance().connectString().get(), Z_NODE)
+                                              .sessionTimeoutMillis(SESSION_TIMEOUT_MILLIS)
                                               .build();
     }
 
-    @After
-    public void disconnectZk() {
+    @AfterAll
+    static void disconnectZk() {
         if (endpointGroup != null) {
             endpointGroup.close();
             endpointGroup = null;
         }
 
         // Clear the ZooKeeper nodes.
-        try (CloseableZooKeeper zk = connection()) {
-            zk.deleteRecursively(zNode);
+        try (CloseableZooKeeper zk0 = zkInstance.connection()) {
+            zk0.deleteRecursively(Z_NODE);
         }
     }
 
+    private static void setNodeChild(Set<Endpoint> children) throws Throwable {
+        try (CloseableZooKeeper zk = zkInstance.connection()) {
+            // If the parent node does not exist, create it.
+            if (!zk.exists(Z_NODE).get()) {
+                zk.create(Z_NODE, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            }
+
+            // Register all child nodes.
+            children.forEach(endpoint -> {
+                try {
+                    zk.create(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port(),
+                              NodeValueCodec.ofDefault().encode(endpoint),
+                              Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                } catch (Exception e) {
+                    Exceptions.throwUnsafely(e);
+                }
+            });
+        }
+        children.forEach(
+                endpoint -> zkInstance.assertExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port()));
+    }
+
     @Test
-    public void testGetEndpointGroup() {
+    void testGetEndpointGroup() {
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints));
     }
 
     @Test
-    public void testUpdateEndpointGroup() throws Throwable {
+    void testUpdateEndpointGroup() throws Throwable {
         Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001).withWeight(2),
                                                  Endpoint.of("127.0.0.1", 8002).withWeight(3));
         // Add two more nodes.
@@ -82,32 +111,12 @@ public class ZooKeeperEndpointGroupTest extends ZooKeeperTestBase {
         builder.addAll(sampleEndpoints).addAll(expected);
         expected = builder.build();
 
-        try (CloseableZooKeeper zk = connection()) {
-            zk.sync(zNode, (rc, path, ctx) -> {}, null);
+        try (CloseableZooKeeper zk = zkInstance.connection()) {
+            zk.sync(Z_NODE, (rc, path, ctx) -> {
+            }, null);
         }
 
         final Set<Endpoint> finalExpected = expected;
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(finalExpected));
-    }
-
-    private void setNodeChild(Set<Endpoint> children) throws Throwable {
-        try (CloseableZooKeeper zk = connection()) {
-            // If the parent node does not exist, create it.
-            if (!zk.exists(zNode).get()) {
-                zk.create(zNode, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-            }
-
-            // Register all child nodes.
-            children.forEach(endpoint -> {
-                try {
-                    zk.create(zNode + '/' + endpoint.host() + '_' + endpoint.port(),
-                              NodeValueCodec.ofDefault().encode(endpoint),
-                              Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                } catch (Exception e) {
-                    Exceptions.throwUnsafely(e);
-                }
-            });
-        }
-        children.forEach(endpoint -> assertExists(zNode + '/' + endpoint.host() + '_' + endpoint.port()));
     }
 }
