@@ -17,15 +17,20 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -38,10 +43,10 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithConsumerTest.Test
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * application-secureTest.yml will be loaded with minimal settings to make it work.
  */
+@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "secureTest" })
-@Timeout(10)
-class ArmeriaAutoConfigurationWithSecureTest {
+public class ArmeriaAutoConfigurationWithSecureTest {
 
     @SpringBootApplication
     static class TestConfiguration {
@@ -51,17 +56,17 @@ class ArmeriaAutoConfigurationWithSecureTest {
         }
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "8080, /customizer, 200",
-            "8081, /customizer, 200",
-            "8080, /internal/healthcheck, 404",
-            "8081, /internal/healthcheck, 200",
-            "8080, /internal/metrics, 404",
-            "8081, /internal/metrics, 200"
-    })
-    void normal(Integer port, String path, Integer statusCode) throws Exception {
-        assertStatus(port, path, statusCode);
+    @Rule
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+
+    @Test
+    public void normal() throws Exception {
+        assertStatus(8080, "/customizer", 200);
+        assertStatus(8081, "/customizer", 200);
+        assertStatus(8080, "/internal/healthcheck", 404);
+        assertStatus(8081, "/internal/healthcheck", 200);
+        assertStatus(8080, "/internal/metrics", 404);
+        assertStatus(8081, "/internal/metrics", 200);
     }
 
     private static void assertStatus(Integer port, String url, Integer statusCode) throws Exception {
