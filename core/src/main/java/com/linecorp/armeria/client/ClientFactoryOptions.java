@@ -219,7 +219,6 @@ public final class ClientFactoryOptions
 
     /**
      * Returns the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout in milliseconds.
-     *
      */
     public long http2PingTimeoutMillis() {
         return get(ClientFactoryOption.HTTP2_PING_TIMEOUT_MILLIS);
