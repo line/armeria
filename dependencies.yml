@@ -3,14 +3,14 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.10.2.20200130
-  - io.dropwizard.metrics:metrics-bom:4.1.3
-  - io.grpc:grpc-bom:1.27.1
+  - com.fasterxml.jackson:jackson-bom:2.10.3
+  - io.dropwizard.metrics:metrics-bom:4.1.4
+  - io.grpc:grpc-bom:1.27.2
   - io.micrometer:micrometer-bom:1.3.5
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.45.Final
+  - io.netty:netty-bom:4.1.46.Final
   - io.zipkin.brave:brave-bom:5.9.5
-  - org.eclipse.jetty:jetty-bom:9.4.26.v20200117
+  - org.eclipse.jetty:jetty-bom:9.4.27.v20200227
   - org.junit:junit-bom:5.6.0
 
 cglib:
@@ -54,7 +54,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.2.0' }
 
 com.github.node-gradle:
-  gradle-node-plugin: { version: '2.2.2' }
+  gradle-node-plugin: { version: '2.2.3' }
 
 com.google.api:
   gax-grpc: { version: '1.53.1' }
@@ -109,7 +109,7 @@ com.google.protobuf:
     version: *PROTOBUF_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
-  protobuf-gradle-plugin: { version: '0.8.11' }
+  protobuf-gradle-plugin: { version: '0.8.12' }
 
 com.puppycrawl.tools:
   checkstyle: { version: '8.29' }
@@ -128,7 +128,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.7.1'
+    version: &RETROFIT2_VERSION '2.7.2'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -217,11 +217,11 @@ io.netty:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.28.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.29.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.2.RELEASE'
+    version: &REACTOR_VERSION '3.3.3.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -415,7 +415,7 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version, 
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: &KOTLIN_VERSION '1.3.61' }
+  kotlin-allopen: { version: &KOTLIN_VERSION '1.3.70' }
 
 org.jetbrains.kotlinx:
   kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.3' }
@@ -479,7 +479,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.2.4.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.2.5.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
