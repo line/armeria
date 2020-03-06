@@ -29,7 +29,8 @@ import com.linecorp.armeria.server.Service;
 /**
  * Builds a new {@link ThrottlingRpcService}.
  */
-public class ThrottlingRpcServiceBuilder extends AbstractThrottlingServiceBuilder<RpcRequest, RpcResponse> {
+public final class ThrottlingRpcServiceBuilder
+        extends AbstractThrottlingServiceBuilder<RpcRequest, RpcResponse> {
 
     private static final ThrottlingRejectHandler<RpcRequest, RpcResponse> DEFAULT_REJECT_HANDLER =
             (delegate, ctx, req, cause) ->

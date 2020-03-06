@@ -28,7 +28,8 @@ import com.linecorp.armeria.server.Service;
 /**
  * Builds a new {@link ThrottlingService}.
  */
-public class ThrottlingServiceBuilder extends AbstractThrottlingServiceBuilder<HttpRequest, HttpResponse> {
+public final class ThrottlingServiceBuilder
+        extends AbstractThrottlingServiceBuilder<HttpRequest, HttpResponse> {
 
     private static final ThrottlingRejectHandler<HttpRequest, HttpResponse> DEFAULT_REJECT_HANDLER =
             (delegate, ctx, req, cause) -> HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS);
