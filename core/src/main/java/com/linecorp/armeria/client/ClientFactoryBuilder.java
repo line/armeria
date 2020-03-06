@@ -430,7 +430,7 @@ public final class ClientFactoryBuilder {
      * @param http2PingTimeout the timeout. {@code 0} disables the timeout.
      */
     public ClientFactoryBuilder http2PingTimeout(Duration http2PingTimeout) {
-        requireNonNull(http2PingTimeout);
+        requireNonNull(http2PingTimeout, "http2PingTimeout");
         checkArgument(http2PingTimeout.toMillis() >= 0,
                       "http2PingTimeoutMillis: %s (expected: >= 0)", http2PingTimeout.toMillis());
         http2PingTimeoutMillis(http2PingTimeout.toMillis());
