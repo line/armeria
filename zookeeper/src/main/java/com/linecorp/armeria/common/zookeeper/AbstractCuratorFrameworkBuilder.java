@@ -156,7 +156,7 @@ public class AbstractCuratorFrameworkBuilder {
      * Returns {@code true} if this builder is created with
      * {@link #AbstractCuratorFrameworkBuilder(CuratorFramework)}.
      */
-    protected boolean isUserSpecifiedCuratorFramework() {
+    protected final boolean isUserSpecifiedCuratorFramework() {
        return client != null;
     }
 

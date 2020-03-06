@@ -87,8 +87,8 @@ class ZooKeeperEndpointGroupTest {
         }
 
         // Clear the ZooKeeper nodes.
-        try (CloseableZooKeeper zk0 = zkInstance.connection()) {
-            zk0.deleteRecursively(Z_NODE);
+        try (CloseableZooKeeper zk = zkInstance.connection()) {
+            zk.deleteRecursively(Z_NODE);
         }
     }
 
