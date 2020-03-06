@@ -31,11 +31,15 @@ import com.linecorp.armeria.server.Service;
 public final class ThrottlingServiceBuilder
         extends AbstractThrottlingServiceBuilder<HttpRequest, HttpResponse> {
 
+    /**
+     * Provides default throttling reject behaviour for {@link HttpRequest}.
+     * Returns an {@link HttpResponse} with {@link HttpStatus#TOO_MANY_REQUESTS}.
+     */
     private static final ThrottlingRejectHandler<HttpRequest, HttpResponse> DEFAULT_REJECT_HANDLER =
             (delegate, ctx, req, cause) -> HttpResponse.of(HttpStatus.TOO_MANY_REQUESTS);
 
     ThrottlingServiceBuilder(ThrottlingStrategy<HttpRequest> strategy) {
-        super(strategy);
+        super(strategy, DEFAULT_REJECT_HANDLER);
     }
 
     /**
@@ -54,15 +58,6 @@ public final class ThrottlingServiceBuilder
             ThrottlingRejectHandler<HttpRequest, HttpResponse> rejectHandler) {
         setRejectHandler(rejectHandler);
         return this;
-    }
-
-    /**
-     * Provides default throttling reject behaviour for {@link HttpRequest}.
-     * Returns an {@link HttpResponse} with {@link HttpStatus#TOO_MANY_REQUESTS}.
-     */
-    @Override
-    ThrottlingRejectHandler<HttpRequest, HttpResponse> defaultRejectHandler() {
-        return DEFAULT_REJECT_HANDLER;
     }
 
     /**

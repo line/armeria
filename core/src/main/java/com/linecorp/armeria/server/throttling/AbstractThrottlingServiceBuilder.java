@@ -32,23 +32,12 @@ abstract class AbstractThrottlingServiceBuilder<I extends Request, O extends Res
     private ThrottlingAcceptHandler<I, O> acceptHandler;
     private ThrottlingRejectHandler<I, O> rejectHandler;
 
-    AbstractThrottlingServiceBuilder(ThrottlingStrategy<I> strategy) {
+    AbstractThrottlingServiceBuilder(ThrottlingStrategy<I> strategy,
+                                     ThrottlingRejectHandler<I, O> defaultRejectHandler) {
         this.strategy = requireNonNull(strategy, "strategy");
-        acceptHandler = requireNonNull(defaultAcceptHandler(), "defaultAcceptHandler");
-        rejectHandler = requireNonNull(defaultRejectHandler(), "defaultRejectHandler");
+        acceptHandler = Service::serve;
+        rejectHandler = requireNonNull(defaultRejectHandler, "defaultRejectHandler");
     }
-
-    /**
-     * Provides default request accept handler.
-     */
-    ThrottlingAcceptHandler<I, O> defaultAcceptHandler() {
-        return Service::serve;
-    }
-
-    /**
-     * Provides default request reject handler.
-     */
-    abstract ThrottlingRejectHandler<I, O> defaultRejectHandler();
 
     final ThrottlingStrategy<I> getStrategy() {
         return strategy;

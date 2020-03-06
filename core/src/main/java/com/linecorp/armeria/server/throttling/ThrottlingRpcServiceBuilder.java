@@ -32,12 +32,16 @@ import com.linecorp.armeria.server.Service;
 public final class ThrottlingRpcServiceBuilder
         extends AbstractThrottlingServiceBuilder<RpcRequest, RpcResponse> {
 
+    /**
+     * Provides default throttling reject behaviour for {@link RpcRequest}.
+     * Responds with {@link HttpStatusException} with {@code 503 Service Unavailable}.
+     */
     private static final ThrottlingRejectHandler<RpcRequest, RpcResponse> DEFAULT_REJECT_HANDLER =
             (delegate, ctx, req, cause) ->
                     RpcResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE));
 
     ThrottlingRpcServiceBuilder(ThrottlingStrategy<RpcRequest> strategy) {
-        super(strategy);
+        super(strategy, DEFAULT_REJECT_HANDLER);
     }
 
     /**
@@ -56,15 +60,6 @@ public final class ThrottlingRpcServiceBuilder
             ThrottlingRejectHandler<RpcRequest, RpcResponse> rejectHandler) {
         setRejectHandler(rejectHandler);
         return this;
-    }
-
-    /**
-     * Provides default throttling reject behaviour for {@link RpcRequest}.
-     * Responds with {@link HttpStatusException} with {@code 503 Service Unavailable}.
-     */
-    @Override
-    ThrottlingRejectHandler<RpcRequest, RpcResponse> defaultRejectHandler() {
-        return DEFAULT_REJECT_HANDLER;
     }
 
     /**
