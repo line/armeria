@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
@@ -59,18 +58,16 @@ class ZooKeeperEndpointGroupTest {
             }
 
             // Register all child nodes.
-            children.forEach(endpoint -> {
-                try {
-                    zk.create(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port(),
-                              NodeValueCodec.ofDefault().encode(endpoint),
-                              Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                } catch (Exception e) {
-                    Exceptions.throwUnsafely(e);
-                }
-            });
+            for (Endpoint endpoint : children) {
+                zk.create(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port(),
+                          NodeValueCodec.ofDefault().encode(endpoint),
+                          Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            }
         }
-        children.forEach(
-                endpoint -> zkInstance.assertExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port()));
+
+        for (Endpoint endpoint : children) {
+            zkInstance.assertExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port());
+        }
     }
 
     @BeforeEach
@@ -112,8 +109,7 @@ class ZooKeeperEndpointGroupTest {
         expected = builder.build();
 
         try (CloseableZooKeeper zk = zkInstance.connection()) {
-            zk.sync(Z_NODE, (rc, path, ctx) -> {
-            }, null);
+            zk.sync(Z_NODE, (rc, path, ctx) -> {}, null);
         }
 
         final Set<Endpoint> finalExpected = expected;

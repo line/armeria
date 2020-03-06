@@ -168,7 +168,7 @@ public class AbstractCuratorFrameworkBuilder {
     /**
      * Returns a newly-created {@link CuratorFramework} based on the configuration properties added to
      * this builder if {@link #isUserSpecifiedCuratorFramework()} is true.
-     * Otherwise, returns the {@link CuratorFramework} which was specified when creating this builder.
+     * Otherwise, the {@link CuratorFramework} specified when creating this builder will be returned.
      *
      *
      */
