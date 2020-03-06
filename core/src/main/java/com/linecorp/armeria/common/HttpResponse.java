@@ -142,7 +142,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Creates a new HTTP response of the specified {@code statusCode}.
      *
      * @throws IllegalArgumentException if the specified {@code statusCode} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(int statusCode) {
         return of(HttpStatus.valueOf(statusCode));
@@ -152,11 +152,11 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
-        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status", status);
+        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status)", status);
 
         if (status.isContentAlwaysEmpty()) {
             return new OneElementFixedHttpResponse(ResponseHeaders.of(status));
@@ -172,7 +172,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, CharSequence content) {
         requireNonNull(mediaType, "mediaType");
@@ -188,7 +188,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String content) {
         requireNonNull(mediaType, "mediaType");
@@ -251,7 +251,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param args the arguments referenced by the format specifiers in the format string
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String format, Object... args) {
         requireNonNull(mediaType, "mediaType");
@@ -268,7 +268,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content) {
         requireNonNull(content, "content");
@@ -282,7 +282,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content) {
         return of(status, mediaType, content, HttpHeaders.of());
@@ -296,7 +296,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param trailers the HTTP trailers
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content,
                            HttpHeaders trailers) {
@@ -313,7 +313,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Creates a new HTTP response of the specified headers.
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(ResponseHeaders headers) {
         return of(headers, HttpData.empty());
@@ -323,7 +323,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Creates a new HTTP response of the specified headers and content.
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(ResponseHeaders headers, HttpData content) {
         return of(headers, content, HttpHeaders.of());
@@ -333,12 +333,12 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Creates a new HTTP response of the specified objects.
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         final HttpStatus status = headers.status();
-        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status", status);
+        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status)", status);
 
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");

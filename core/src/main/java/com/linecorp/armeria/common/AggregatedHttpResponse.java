@@ -43,7 +43,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param statusCode the HTTP status code
      *
      * @throws IllegalArgumentException if the specified {@code statusCode} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(int statusCode) {
         return of(HttpStatus.valueOf(statusCode));
@@ -55,11 +55,11 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param status the HTTP status
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
-        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status", status);
+        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status)", status);
         if (status.isContentAlwaysEmpty()) {
             return of(ResponseHeaders.of(status));
         } else {
@@ -74,7 +74,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType, CharSequence content) {
         requireNonNull(status, "status");
@@ -91,7 +91,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType, String content) {
         requireNonNull(status, "status");
@@ -111,7 +111,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param args the arguments referenced by the format specifiers in the format string
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType, String format, Object... args) {
         requireNonNull(status, "status");
@@ -133,7 +133,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType, byte[] content) {
         requireNonNull(status, "status");
@@ -149,7 +149,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType, HttpData content) {
         requireNonNull(status, "status");
@@ -166,7 +166,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param trailers the HTTP trailers
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType, HttpData content,
                                      HttpHeaders trailers) {
@@ -187,7 +187,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param headers the HTTP headers
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(ResponseHeaders headers) {
         requireNonNull(headers, "headers");
@@ -201,7 +201,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param content the content of the HTTP response
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(ResponseHeaders headers, HttpData content) {
         requireNonNull(headers, "headers");
@@ -217,7 +217,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param trailers the HTTP trailers
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
@@ -235,7 +235,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param trailers the HTTP trailers
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@link HttpStatus#isInformational()}.
+     *                                  {@linkplain HttpStatus#isInformational() informational}.
      */
     static AggregatedHttpResponse of(Iterable<ResponseHeaders> informationals, ResponseHeaders headers,
                                      HttpData content, HttpHeaders trailers) {
@@ -243,7 +243,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
         requireNonNull(informationals, "informationals");
         requireNonNull(headers, "headers");
         final HttpStatus status = headers.status();
-        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status", status);
+        checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status)", status);
 
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");

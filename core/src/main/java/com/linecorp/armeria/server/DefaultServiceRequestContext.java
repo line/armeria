@@ -498,33 +498,33 @@ public final class DefaultServiceRequestContext
     public void setAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalHeaders(additionalResponseHeadersUpdater,
-                                builder -> builder.setObject(name, value));
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        updateAdditionalHeaders(additionalResponseHeadersUpdater,
-                                builder -> builder.setObject(headers));
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalHeaders(additionalResponseHeadersUpdater,
-                                builder -> builder.addObject(name, value));
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        updateAdditionalHeaders(additionalResponseHeadersUpdater,
-                                builder -> builder.addObject(headers));
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.addObject(headers));
     }
 
-    private void updateAdditionalHeaders(
+    private void updateAdditionalResponseHeaders(
             AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
             Function<HttpHeadersBuilder, HttpHeadersBuilder> valueUpdater) {
         for (;;) {
@@ -556,30 +556,30 @@ public final class DefaultServiceRequestContext
     public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalHeaders(additionalResponseTrailersUpdater,
-                                builder -> builder.setObject(name, value));
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        updateAdditionalHeaders(additionalResponseTrailersUpdater,
-                                builder -> builder.setObject(headers));
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalHeaders(additionalResponseTrailersUpdater,
-                                builder -> builder.addObject(name, value));
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        updateAdditionalHeaders(additionalResponseTrailersUpdater,
-                                builder -> builder.addObject(headers));
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.addObject(headers));
     }
 
     @Override
