@@ -240,17 +240,17 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
         final Subscriber<Object> subscriber = subscription.subscriber();
         if (subscription.needsDirectInvocation()) {
-            subscribe0(subscription, subscriber);
+            subscribe(subscription, subscriber);
         } else {
             subscription.executor().execute(() -> {
-                subscribe0(subscription, subscriber);
+                subscribe(subscription, subscriber);
             });
         }
 
         return subscription;
     }
 
-    private void subscribe0(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+    private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
         try {
             subscriber.onSubscribe(subscription);
         } catch (Exception e) {

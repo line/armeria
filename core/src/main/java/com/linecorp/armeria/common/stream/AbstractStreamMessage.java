@@ -149,15 +149,15 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         final Throwable cause = abortedOrLate(oldSubscriber);
 
         if (subscription.needsDirectInvocation()) {
-            lateSubscriber(lateSubscriber, cause);
+            handleLateSubscriber(lateSubscriber, cause);
         } else {
             subscription.executor().execute(() -> {
-                lateSubscriber(lateSubscriber, cause);
+                handleLateSubscriber(lateSubscriber, cause);
             });
         }
     }
 
-    private static void lateSubscriber(Subscriber<?> lateSubscriber, Throwable cause) {
+    private static void handleLateSubscriber(Subscriber<?> lateSubscriber, Throwable cause) {
         try {
             lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
             lateSubscriber.onError(cause);
