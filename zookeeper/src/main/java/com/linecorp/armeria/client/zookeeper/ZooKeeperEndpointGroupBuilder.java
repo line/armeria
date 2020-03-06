@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
@@ -34,8 +32,6 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
  */
 public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFrameworkBuilder {
 
-    @Nullable
-    private final CuratorFramework client;
     private final String zNodePath;
 
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
@@ -43,12 +39,11 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
 
     ZooKeeperEndpointGroupBuilder(String zkConnectionStr, String zNodePath) {
         super(zkConnectionStr);
-        client = null;
         this.zNodePath = zNodePath;
     }
 
     ZooKeeperEndpointGroupBuilder(CuratorFramework client, String zNodePath) {
-        this.client = client;
+        super(client);
         this.zNodePath = zNodePath;
     }
 
@@ -72,18 +67,10 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
      * Returns a new {@link ZooKeeperEndpointGroup} created with the properties set so far.
      */
     public ZooKeeperEndpointGroup build() {
-        final CuratorFramework zkClient;
-        final boolean internalClient;
-        if (client == null) {
-            zkClient = buildCuratorFramework();
-            internalClient = true;
-        } else {
-            zkClient = client;
-            internalClient = false;
-        }
+        final CuratorFramework client = buildCuratorFramework();
+        final boolean internalClient = !isUserSpecifiedCuratorFramework();
 
-        return new ZooKeeperEndpointGroup(selectionStrategy, zkClient, zNodePath,
-                                          nodeValueCodec, internalClient);
+        return new ZooKeeperEndpointGroup(selectionStrategy, client, zNodePath, nodeValueCodec, internalClient);
     }
 
     // Override the return type of the chaining methods in the superclass.

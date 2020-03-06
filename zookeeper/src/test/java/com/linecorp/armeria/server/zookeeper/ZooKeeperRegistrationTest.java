@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperInstanceExtension;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
@@ -53,7 +53,7 @@ class ZooKeeperRegistrationTest {
     private static final Set<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints();
 
     @RegisterExtension
-    static ZooKeeperInstanceExtension zkInstance = new ZooKeeperInstanceExtension();
+    static ZooKeeperExtension zkInstance = new ZooKeeperExtension();
     @Nullable
     private List<Server> servers;
 

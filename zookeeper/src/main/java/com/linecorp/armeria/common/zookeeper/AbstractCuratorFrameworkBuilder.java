@@ -47,6 +47,8 @@ public class AbstractCuratorFrameworkBuilder {
             new ExponentialBackoffRetry(DEFAULT_CONNECT_TIMEOUT_MILLIS, 3);
 
     @Nullable
+    private final CuratorFramework client;
+    @Nullable
     private final CuratorFrameworkFactory.Builder clientBuilder;
     @Nullable
     private final ImmutableList.Builder<Consumer<? super Builder>> customizers;
@@ -55,25 +57,27 @@ public class AbstractCuratorFrameworkBuilder {
      * Creates a new instance with the specified {@code zkConnectionStr}.
      */
     protected AbstractCuratorFrameworkBuilder(String zkConnectionStr) {
-        checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty");
+        checkArgument(!zkConnectionStr.isEmpty(), "zkConnectionStr can't be empty.");
+        client = null;
         clientBuilder = CuratorFrameworkFactory.builder()
                                                .connectString(zkConnectionStr)
                                                .connectionTimeoutMs(DEFAULT_CONNECT_TIMEOUT_MILLIS)
                                                .sessionTimeoutMs(DEFAULT_SESSION_TIMEOUT_MILLIS)
                                                .retryPolicy(DEFAULT_RETRY_POLICY);
-        customizers = new ImmutableList.Builder<>();
+        customizers = ImmutableList.builder();
     }
 
     /**
-     * Creates a new instance.
+     * Creates a new instance with the specified {@link CuratorFramework}
      */
-    protected AbstractCuratorFrameworkBuilder() {
+    protected AbstractCuratorFrameworkBuilder(CuratorFramework client) {
+        this.client = client;
         clientBuilder = null;
         customizers = null;
     }
 
     /**
-     * Sets the specified connect timeout. {@value DEFAULT_CONNECT_TIMEOUT_MILLIS} is used by default.
+     * Sets the specified connect timeout. {@value DEFAULT_CONNECT_TIMEOUT_MILLIS} ms is used by default.
      *
      * @param connectTimeout the connect timeout
      *
@@ -89,7 +93,7 @@ public class AbstractCuratorFrameworkBuilder {
 
     /**
      * Sets the specified connect timeout in milliseconds.
-     * {@value DEFAULT_CONNECT_TIMEOUT_MILLIS} is used by default.
+     * {@value DEFAULT_CONNECT_TIMEOUT_MILLIS} ms is used by default.
      *
      * @param connectTimeoutMillis the connect timeout in milliseconds
      *
@@ -105,7 +109,7 @@ public class AbstractCuratorFrameworkBuilder {
     }
 
     /**
-     * Sets the session timeout. {@value DEFAULT_SESSION_TIMEOUT_MILLIS} is used by default.
+     * Sets the session timeout. {@value DEFAULT_SESSION_TIMEOUT_MILLIS} ms is used by default.
      *
      * @param sessionTimeout the session timeout
      *
@@ -120,7 +124,7 @@ public class AbstractCuratorFrameworkBuilder {
     }
 
     /**
-     * Sets the session timeout in milliseconds. {@value DEFAULT_SESSION_TIMEOUT_MILLIS} is used by default.
+     * Sets the session timeout in milliseconds. {@value DEFAULT_SESSION_TIMEOUT_MILLIS} ms is used by default.
      *
      * @param sessionTimeoutMillis the session timeout in milliseconds
      *
@@ -148,16 +152,30 @@ public class AbstractCuratorFrameworkBuilder {
         return this;
     }
 
+    /**
+     * Returns {@code true} if this builder is created with
+     * {@link #AbstractCuratorFrameworkBuilder(CuratorFramework)}
+     */
+    protected boolean isUserSpecifiedCuratorFramework() {
+       return client != null;
+    }
+
     private void ensureInternalClient() {
-        checkState(clientBuilder != null,
+        checkState(client == null,
                    "This method is allowed only when created with a connection string.");
     }
 
     /**
-     * Returns a newly-created {@link CuratorFramework} based on
-     * the configuration properties added to this builder.
+     * Returns a newly-created {@link CuratorFramework} based on the configuration properties added to
+     * this builder if {@link #isUserSpecifiedCuratorFramework()} is true.
+     * Otherwise, returns the {@link CuratorFramework} which was specified when creating this builder.
+     *
+     *
      */
     protected final CuratorFramework buildCuratorFramework() {
+        if (client != null) {
+            return client;
+        }
         customizers.build().forEach(c -> c.accept(clientBuilder));
         return clientBuilder.build();
     }

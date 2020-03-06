@@ -58,8 +58,6 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
  * }</pre>
  * */
 public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkBuilder {
-    @Nullable
-    private final CuratorFramework client;
     private final String zNodePath;
     @Nullable
     private Endpoint endpoint;
@@ -73,8 +71,8 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param zNodePath the ZooKeeper node to register
      */
     ZooKeeperUpdatingListenerBuilder(CuratorFramework client, String zNodePath) {
-        this.client = requireNonNull(client, "client");
-        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        super(client);
+        this.zNodePath = zNodePath;
         checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty");
     }
 
@@ -85,9 +83,8 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * @param zNodePath the ZooKeeper node to register
      */
     ZooKeeperUpdatingListenerBuilder(String zkConnectionStr, String zNodePath) {
-        super(requireNonNull(zkConnectionStr, "zkConnectionStr"));
-        client = null;
-        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        super(zkConnectionStr);
+        this.zNodePath = zNodePath;
         checkArgument(!this.zNodePath.isEmpty(), "zNodePath can't be empty");
     }
 
@@ -128,17 +125,10 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
      * ZooKeeper when the server starts.
      */
     public ZooKeeperUpdatingListener build() {
-        final CuratorFramework zkClient;
-        final boolean internalClient;
-        if (client == null) {
-            zkClient = buildCuratorFramework();
-            internalClient = true;
-        } else {
-            zkClient = client;
-            internalClient = false;
-        }
+        final CuratorFramework client = buildCuratorFramework();
+        final boolean internalClient = !isUserSpecifiedCuratorFramework();
 
-        return new ZooKeeperUpdatingListener(zkClient, zNodePath, nodeValueCodec, endpoint, internalClient);
+        return new ZooKeeperUpdatingListener(client, zNodePath, nodeValueCodec, endpoint, internalClient);
     }
 
     // Override the return type of the chaining methods in the superclass.

@@ -32,7 +32,7 @@ import zookeeperjunit.ZKFactory;
 import zookeeperjunit.ZKInstance;
 import zookeeperjunit.ZooKeeperAssert;
 
-public class ZooKeeperInstanceExtension extends AbstractAllOrEachExtension implements ZooKeeperAssert {
+public class ZooKeeperExtension extends AbstractAllOrEachExtension implements ZooKeeperAssert {
 
     private static final Duration duration = Duration.ofSeconds(10);
     private static final TemporaryFolder tempFolder = new TemporaryFolder();

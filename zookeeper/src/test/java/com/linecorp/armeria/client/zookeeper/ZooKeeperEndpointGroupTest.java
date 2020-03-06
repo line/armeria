@@ -35,7 +35,7 @@ import com.google.common.collect.ImmutableSet.Builder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperInstanceExtension;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
 
 import zookeeperjunit.CloseableZooKeeper;
@@ -47,7 +47,7 @@ class ZooKeeperEndpointGroupTest {
     private static final Set<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints();
 
     @RegisterExtension
-    static ZooKeeperInstanceExtension zkInstance = new ZooKeeperInstanceExtension();
+    static ZooKeeperExtension zkInstance = new ZooKeeperExtension();
     @Nullable
     private static ZooKeeperEndpointGroup endpointGroup;
 
