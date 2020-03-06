@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.AbstractOption;
@@ -215,10 +216,10 @@ public final class ClientFactoryOption<T>
             define("METER_REGISTRY", Metrics.globalRegistry);
 
     /**
-     * The {@link Proxy} which contains the proxy configuration.
+     * The {@link ProxyConfig} which contains the proxy configuration.
      */
-    public static final ClientFactoryOption<Proxy> PROXY =
-            define("PROXY", Proxy.DEFAULT);
+    public static final ClientFactoryOption<ProxyConfig> PROXY_CONFIG =
+            define("PROXY_CONFIG", ProxyConfig.none());
 
     /**
      * Returns the all available {@link ClientFactoryOption}s.

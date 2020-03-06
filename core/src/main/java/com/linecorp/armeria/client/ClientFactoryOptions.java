@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -259,9 +260,9 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * The {@link Proxy} which contains the proxy configuration.
+     * The {@link ProxyConfig} which contains the proxy configuration.
      */
-    public Proxy getProxy() {
-        return get(ClientFactoryOption.PROXY);
+    public ProxyConfig proxyConfig() {
+        return get(ClientFactoryOption.PROXY_CONFIG);
     }
 }

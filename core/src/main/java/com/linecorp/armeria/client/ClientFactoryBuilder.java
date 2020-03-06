@@ -43,6 +43,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -480,10 +481,10 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * The {@link Proxy} which contains the proxy configuration.
+     * The {@link ProxyConfig} which contains the proxyConfig configuration.
      */
-    public ClientFactoryBuilder proxy(Proxy proxy) {
-        option(ClientFactoryOption.PROXY, proxy);
+    public ClientFactoryBuilder proxy(ProxyConfig proxyConfig) {
+        option(ClientFactoryOption.PROXY_CONFIG, proxyConfig);
         return this;
     }
 

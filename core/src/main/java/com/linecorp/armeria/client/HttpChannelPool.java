@@ -38,8 +38,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.Proxy.ConnectProxy;
-import com.linecorp.armeria.client.Proxy.Socks5Proxy;
+import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
+import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
+import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
@@ -111,7 +113,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            applyProxy(ch, clientFactory.proxy(), sslCtx);
+                            applyProxy(ch, clientFactory.proxyConfig(), sslCtx);
                             ch.pipeline().addLast(
                                     new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                         }
@@ -125,35 +127,34 @@ final class HttpChannelPool implements AsyncCloseable {
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
     }
 
-    private void applyProxy(Channel ch, Proxy proxy, SslContext sslCtx) {
+    private void applyProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
+        if (proxyConfig.equals(ProxyConfig.none())) {
+            return;
+        }
         final ProxyHandler proxyHandler;
-        switch (proxy.proxyType()) {
-            case NONE:
-                return;
-            case SOCKS4:
-                proxyHandler = new Socks4ProxyHandler(proxy.proxyAddress(), proxy.userName());
-                break;
-            case SOCKS5:
-                proxyHandler = new Socks5ProxyHandler(
-                        proxy.proxyAddress(), proxy.userName(), ((Socks5Proxy) proxy).password());
-                break;
-            case CONNECT:
-                final String username = proxy.userName();
-                final String password = ((ConnectProxy) proxy).password();
-                if (username == null || password == null) {
-                    proxyHandler = new HttpProxyHandler(proxy.proxyAddress());
-                } else {
-                    proxyHandler = new HttpProxyHandler(proxy.proxyAddress(), username, password);
-                }
-                break;
-            default:
-                logger.warn("Unknown proxy type not applied: {}.", proxy.proxyType());
-                return;
+        if (proxyConfig instanceof Socks4ProxyConfig) {
+            proxyHandler = new Socks4ProxyHandler(
+                    proxyConfig.proxyAddress(), ((Socks4ProxyConfig) proxyConfig).userName());
+        } else if (proxyConfig instanceof Socks5ProxyConfig) {
+            proxyHandler = new Socks5ProxyHandler(
+                    proxyConfig.proxyAddress(), ((Socks5ProxyConfig) proxyConfig).userName(),
+                    ((Socks5ProxyConfig) proxyConfig).password());
+        } else if (proxyConfig instanceof ConnectProxyConfig) {
+            final String username = ((ConnectProxyConfig) proxyConfig).userName();
+            final String password = ((ConnectProxyConfig) proxyConfig).password();
+            if (username == null || password == null) {
+                proxyHandler = new HttpProxyHandler(proxyConfig.proxyAddress());
+            } else {
+                proxyHandler = new HttpProxyHandler(proxyConfig.proxyAddress(), username, password);
+            }
+            if (((ConnectProxyConfig) proxyConfig).useSsl()) {
+                ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
+            }
+        } else {
+            logger.warn("{} Ignoring unknown proxy type: {}", ch, proxyConfig);
+            return;
         }
         proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);
-        if (proxy instanceof ConnectProxy && ((ConnectProxy) proxy).getUseSsl()) {
-            ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
-        }
         ch.pipeline().addLast(proxyHandler);
     }
 
