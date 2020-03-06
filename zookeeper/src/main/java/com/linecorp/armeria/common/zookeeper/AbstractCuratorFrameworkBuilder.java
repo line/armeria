@@ -68,7 +68,7 @@ public class AbstractCuratorFrameworkBuilder {
     }
 
     /**
-     * Creates a new instance with the specified {@link CuratorFramework}
+     * Creates a new instance with the specified {@link CuratorFramework}.
      */
     protected AbstractCuratorFrameworkBuilder(CuratorFramework client) {
         this.client = client;
@@ -154,7 +154,7 @@ public class AbstractCuratorFrameworkBuilder {
 
     /**
      * Returns {@code true} if this builder is created with
-     * {@link #AbstractCuratorFrameworkBuilder(CuratorFramework)}
+     * {@link #AbstractCuratorFrameworkBuilder(CuratorFramework)}.
      */
     protected boolean isUserSpecifiedCuratorFramework() {
        return client != null;
