@@ -483,7 +483,7 @@ public final class ClientFactoryBuilder {
     /**
      * The {@link ProxyConfig} which contains the proxyConfig configuration.
      */
-    public ClientFactoryBuilder proxy(ProxyConfig proxyConfig) {
+    public ClientFactoryBuilder proxyConfig(ProxyConfig proxyConfig) {
         option(ClientFactoryOption.PROXY_CONFIG, proxyConfig);
         return this;
     }

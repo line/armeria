@@ -27,27 +27,15 @@ import com.google.common.base.MoreObjects;
  */
 public class Socks4ProxyConfig extends ProxyConfig {
 
-    @Nullable
-    private final String userName;
-
-    Socks4ProxyConfig(InetSocketAddress proxyAddress, @Nullable String userName) {
-        super(proxyAddress);
-        this.userName = userName;
-    }
-
-    /**
-     * The configured userName.
-     */
-    @Nullable
-    public String userName() {
-        return userName;
+    Socks4ProxyConfig(InetSocketAddress proxyAddress, @Nullable String username) {
+        super(proxyAddress, username);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("proxyAddress", proxyAddress())
-                          .add("userName", userName)
+                          .add("username", username())
                           .toString();
     }
 }

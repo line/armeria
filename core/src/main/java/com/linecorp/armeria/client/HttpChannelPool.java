@@ -113,7 +113,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     bootstrap.handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            applyProxy(ch, clientFactory.proxyConfig(), sslCtx);
+                            configureProxy(ch, clientFactory.proxyConfig(), sslCtx);
                             ch.pipeline().addLast(
                                     new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
                         }
@@ -127,20 +127,20 @@ final class HttpChannelPool implements AsyncCloseable {
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
     }
 
-    private void applyProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
+    private void configureProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
         if (proxyConfig.equals(ProxyConfig.none())) {
             return;
         }
         final ProxyHandler proxyHandler;
         if (proxyConfig instanceof Socks4ProxyConfig) {
             proxyHandler = new Socks4ProxyHandler(
-                    proxyConfig.proxyAddress(), ((Socks4ProxyConfig) proxyConfig).userName());
+                    proxyConfig.proxyAddress(), proxyConfig.username());
         } else if (proxyConfig instanceof Socks5ProxyConfig) {
             proxyHandler = new Socks5ProxyHandler(
-                    proxyConfig.proxyAddress(), ((Socks5ProxyConfig) proxyConfig).userName(),
+                    proxyConfig.proxyAddress(), proxyConfig.username(),
                     ((Socks5ProxyConfig) proxyConfig).password());
         } else if (proxyConfig instanceof ConnectProxyConfig) {
-            final String username = ((ConnectProxyConfig) proxyConfig).userName();
+            final String username = proxyConfig.username();
             final String password = ((ConnectProxyConfig) proxyConfig).password();
             if (username == null || password == null) {
                 proxyHandler = new HttpProxyHandler(proxyConfig.proxyAddress());
@@ -151,7 +151,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
             }
         } else {
-            logger.warn("{} Ignoring unknown proxy type: {}", ch, proxyConfig);
+            logger.warn("{} Ignoring unknown proxy: {}", ch, proxyConfig);
             return;
         }
         proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);

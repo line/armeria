@@ -24,7 +24,7 @@ abstract class AbstractProxyBuilder {
 
     private final InetSocketAddress proxyAddress;
     @Nullable
-    private String userName;
+    private String username;
     @Nullable
     private String password;
 
@@ -37,12 +37,12 @@ abstract class AbstractProxyBuilder {
     }
 
     @Nullable
-    protected String getUserName() {
-        return userName;
+    protected String getUsername() {
+        return username;
     }
 
-    protected void setUserName(@Nullable String userName) {
-        this.userName = userName;
+    protected void setUsername(@Nullable String username) {
+        this.username = username;
     }
 
     @Nullable

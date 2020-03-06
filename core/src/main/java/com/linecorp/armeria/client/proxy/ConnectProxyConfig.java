@@ -28,27 +28,15 @@ import com.google.common.base.MoreObjects;
 public class ConnectProxyConfig extends ProxyConfig {
 
     @Nullable
-    private final String userName;
-
-    @Nullable
     private final String password;
 
     private final boolean useSsl;
 
-    ConnectProxyConfig(InetSocketAddress proxyAddress, @Nullable String userName,
+    ConnectProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
                        @Nullable String password, boolean useSsl) {
-        super(proxyAddress);
-        this.userName = userName;
+        super(proxyAddress, username);
         this.password = password;
         this.useSsl = useSsl;
-    }
-
-    /**
-     * The configured userName.
-     */
-    @Nullable
-    public String userName() {
-        return userName;
     }
 
     /**
@@ -70,7 +58,7 @@ public class ConnectProxyConfig extends ProxyConfig {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("proxyAddress", proxyAddress())
-                          .add("userName", userName)
+                          .add("username", username())
                           .add("password", password)
                           .add("useSsl", useSsl)
                           .toString();

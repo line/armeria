@@ -28,15 +28,15 @@ public final class Socks4ProxyBuilder extends AbstractProxyBuilder {
     }
 
     /**
-     * Sets the proxy userName.
+     * Sets the proxy username.
      */
-    public Socks4ProxyBuilder userName(String userName) {
-        setUserName(userName);
+    public Socks4ProxyBuilder username(String username) {
+        setUsername(username);
         return this;
     }
 
     @Override
     public Socks4ProxyConfig build() {
-        return new Socks4ProxyConfig(getProxyAddress(), getUserName());
+        return new Socks4ProxyConfig(getProxyAddress(), getUsername());
     }
 }

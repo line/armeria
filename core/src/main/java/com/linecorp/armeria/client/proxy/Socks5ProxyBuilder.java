@@ -28,10 +28,10 @@ public final class Socks5ProxyBuilder extends AbstractProxyBuilder {
     }
 
     /**
-     * Set the proxy userName.
+     * Set the proxy username.
      */
-    public Socks5ProxyBuilder userName(String userName) {
-        setUserName(userName);
+    public Socks5ProxyBuilder username(String username) {
+        setUsername(username);
         return this;
     }
 
@@ -45,6 +45,6 @@ public final class Socks5ProxyBuilder extends AbstractProxyBuilder {
 
     @Override
     public Socks5ProxyConfig build() {
-        return new Socks5ProxyConfig(getProxyAddress(), getUserName(), getPassword());
+        return new Socks5ProxyConfig(getProxyAddress(), getUsername(), getPassword());
     }
 }

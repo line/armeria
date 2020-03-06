@@ -34,10 +34,10 @@ public final class ConnectProxyBuilder extends AbstractProxyBuilder {
     }
 
     /**
-     * Sets the proxy userName and password.
+     * Sets the proxy username and password.
      */
-    public ConnectProxyBuilder auth(String userName, String password) {
-        setUserName(requireNonNull(userName));
+    public ConnectProxyBuilder auth(String username, String password) {
+        setUsername(requireNonNull(username));
         setPassword(requireNonNull(password));
         return this;
     }
@@ -53,6 +53,6 @@ public final class ConnectProxyBuilder extends AbstractProxyBuilder {
 
     @Override
     public ConnectProxyConfig build() {
-        return new ConnectProxyConfig(getProxyAddress(), getUserName(), getPassword(), useSsl);
+        return new ConnectProxyConfig(getProxyAddress(), getUsername(), getPassword(), useSsl);
     }
 }

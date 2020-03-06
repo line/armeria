@@ -20,6 +20,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 
+import javax.annotation.Nullable;
+
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientFactory;
 
 /**
@@ -27,13 +31,7 @@ import com.linecorp.armeria.client.ClientFactory;
  */
 public class ProxyConfig {
 
-    static final ProxyConfig NONE_CONFIG = new ProxyConfig(new InetSocketAddress(0));
-
-    private final InetSocketAddress proxyAddress;
-
-    ProxyConfig(InetSocketAddress proxyAddress) {
-        this.proxyAddress = proxyAddress;
-    }
+    static final ProxyConfig NONE_CONFIG = new ProxyConfig(new InetSocketAddress(0), null);
 
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
@@ -59,6 +57,16 @@ public class ProxyConfig {
         return new ConnectProxyBuilder(requireNonNull(proxyAddress));
     }
 
+    private final InetSocketAddress proxyAddress;
+
+    @Nullable
+    private final String username;
+
+    ProxyConfig(InetSocketAddress proxyAddress, @Nullable String username) {
+        this.proxyAddress = proxyAddress;
+        this.username = username;
+    }
+
     /**
      * The proxy address.
      */
@@ -67,9 +75,25 @@ public class ProxyConfig {
     }
 
     /**
-     * A configuration which signifies proxy should be disabled.
+     * The configured username.
+     */
+    @Nullable
+    public String username() {
+        return username;
+    }
+
+    /**
+     * A {@code ProxyConfig} which signifies the proxy should be disabled.
      */
     public static ProxyConfig none() {
         return NONE_CONFIG;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("proxyAddress", proxyAddress())
+                          .add("username", username())
+                          .toString();
     }
 }

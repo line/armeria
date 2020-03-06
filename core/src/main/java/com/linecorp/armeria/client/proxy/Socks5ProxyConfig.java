@@ -28,24 +28,12 @@ import com.google.common.base.MoreObjects;
 public class Socks5ProxyConfig extends ProxyConfig {
 
     @Nullable
-    private final String userName;
-
-    @Nullable
     private final String password;
 
-    Socks5ProxyConfig(InetSocketAddress proxyAddress, @Nullable String userName,
+    Socks5ProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
                       @Nullable String password) {
-        super(proxyAddress);
-        this.userName = userName;
+        super(proxyAddress, username);
         this.password = password;
-    }
-
-    /**
-     * The configured userName.
-     */
-    @Nullable
-    public String userName() {
-        return userName;
     }
 
     /**
@@ -60,7 +48,7 @@ public class Socks5ProxyConfig extends ProxyConfig {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("proxyAddress", proxyAddress())
-                          .add("userName", userName)
+                          .add("username", username())
                           .add("password", password)
                           .toString();
     }
