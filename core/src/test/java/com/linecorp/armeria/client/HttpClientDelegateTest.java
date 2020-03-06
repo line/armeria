@@ -75,7 +75,7 @@ public class HttpClientDelegateTest {
 
     private static ClientRequestContext context(HttpHeaders additionalHeaders) {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        ctx.setAdditionalRequestHeaders(additionalHeaders);
+        ctx.mutateAdditionalRequestHeaders(mutator -> mutator.add(additionalHeaders));
         return ctx;
     }
 }

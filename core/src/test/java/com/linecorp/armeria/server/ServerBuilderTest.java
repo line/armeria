@@ -62,13 +62,15 @@ class ServerBuilderTest {
             sb.service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .service("/test", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .decorator((delegate, ctx, req) -> {
-                  ctx.addAdditionalResponseHeader("global_decorator", "true");
+                  ctx.mutateAdditionalResponseHeaders(
+                          mutator -> mutator.add("global_decorator", "true"));
                   return delegate.serve(ctx, req);
               })
               .virtualHost("*.example.com")
               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .decorator((delegate, ctx, req) -> {
-                  ctx.addAdditionalResponseHeader("virtualhost_decorator", "true");
+                  ctx.mutateAdditionalResponseHeaders(
+                          mutator -> mutator.add("virtualhost_decorator", "true"));
                   return delegate.serve(ctx, req);
               });
         }

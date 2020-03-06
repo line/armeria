@@ -67,7 +67,8 @@ public class ThriftHttpHeaderTest {
             resultHandler.onError(new Exception(errorMessage));
         }
 
-        ctx.setAdditionalResponseHeader(HttpHeaderNames.of("foo"), "bar");
+        ctx.mutateAdditionalResponseHeaders(
+                mutator -> mutator.add(HttpHeaderNames.of("foo"), "bar"));
     };
 
     @ClassRule

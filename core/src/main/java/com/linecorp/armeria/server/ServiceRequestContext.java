@@ -24,8 +24,8 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -534,66 +535,32 @@ public interface ServiceRequestContext extends RequestContext {
     AccessLogWriter accessLogWriter();
 
     /**
-     * Returns an immutable {@link HttpHeaders} which is included when a {@link Service} sends an
+     * Returns the {@link HttpHeaders} which is included when a {@link Service} sends an
      * {@link HttpResponse}.
      */
     HttpHeaders additionalResponseHeaders();
 
     /**
-     * Sets a header with the specified {@code name} and {@code value}. This will remove all previous values
-     * associated with the specified {@code name}.
-     * The header will be included when a {@link Service} sends an {@link HttpResponse}.
-     */
-    void setAdditionalResponseHeader(CharSequence name, Object value);
-
-    /**
-     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
-     * {@link Service} sends an {@link HttpResponse}.
-     */
-    void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
-     * Adds a header with the specified {@code name} and {@code value}. The header will be included when
-     * a {@link Service} sends an {@link HttpResponse}.
-     */
-    void addAdditionalResponseHeader(CharSequence name, Object value);
-
-    /**
-     * Adds the specified {@link HttpHeaders} which is included when a {@link Service} sends an
+     * Mutates the {@link HttpHeaders} which is included when a {@link Service} sends an
      * {@link HttpResponse}.
+     *
+     * @param mutator the {@link Consumer} that mutates the additional response headers
      */
-    void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
+    void mutateAdditionalResponseHeaders(Consumer<HttpHeadersBuilder> mutator);
 
     /**
-     * Returns the {@link HttpHeaders} which is returned along with any other trailers when a
+     * Returns the {@link HttpHeaders} which is included along with any other trailers when a
      * {@link Service} completes an {@link HttpResponse}.
      */
     HttpHeaders additionalResponseTrailers();
 
     /**
-     * Sets a trailer with the specified {@code name} and {@code value}. This will remove all previous values
-     * associated with the specified {@code name}.
-     * The trailer will be included when a {@link Service} completes an {@link HttpResponse}.
-     */
-    void setAdditionalResponseTrailer(CharSequence name, Object value);
-
-    /**
-     * Clears the current trailer and sets the specified {@link HttpHeaders} which is included when a
+     * Mutates the {@link HttpHeaders} which is included along with any other trailers when a
      * {@link Service} completes an {@link HttpResponse}.
+     *
+     * @param mutator the {@link Consumer} that mutates the additional trailers
      */
-    void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
-     * Adds a trailer with the specified {@code name} and {@code value}. The trailer will be included when
-     * a {@link Service} completes an {@link HttpResponse}.
-     */
-    void addAdditionalResponseTrailer(CharSequence name, Object value);
-
-    /**
-     * Adds the specified {@link HttpHeaders} which is included when a {@link Service} completes an
-     * {@link HttpResponse}.
-     */
-    void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
+    void mutateAdditionalResponseTrailers(Consumer<HttpHeadersBuilder> mutator);
 
     /**
      * Returns the proxied addresses of the current {@link Request}.

@@ -21,13 +21,14 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContextWrapper;
@@ -225,25 +226,8 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public void setAdditionalResponseHeader(CharSequence name, Object value) {
-        delegate().setAdditionalResponseHeader(name, value);
-    }
-
-    @Override
-    public void setAdditionalResponseHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        delegate().setAdditionalResponseHeaders(headers);
-    }
-
-    @Override
-    public void addAdditionalResponseHeader(CharSequence name, Object value) {
-        delegate().addAdditionalResponseHeader(name, value);
-    }
-
-    @Override
-    public void addAdditionalResponseHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        delegate().addAdditionalResponseHeaders(headers);
+    public void mutateAdditionalResponseHeaders(Consumer<HttpHeadersBuilder> mutator) {
+        delegate().mutateAdditionalResponseHeaders(mutator);
     }
 
     @Override
@@ -252,25 +236,8 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public void setAdditionalResponseTrailer(CharSequence name, Object value) {
-        delegate().setAdditionalResponseTrailer(name, value);
-    }
-
-    @Override
-    public void setAdditionalResponseTrailers(
-            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        delegate().setAdditionalResponseTrailers(headers);
-    }
-
-    @Override
-    public void addAdditionalResponseTrailer(CharSequence name, Object value) {
-        delegate().addAdditionalResponseTrailer(name, value);
-    }
-
-    @Override
-    public void addAdditionalResponseTrailers(
-            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        delegate().addAdditionalResponseTrailers(headers);
+    public void mutateAdditionalResponseTrailers(Consumer<HttpHeadersBuilder> mutator) {
+        delegate().mutateAdditionalResponseTrailers(mutator);
     }
 
     @Override

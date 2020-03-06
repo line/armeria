@@ -94,7 +94,7 @@ class DefaultClientRequestContextTest {
     void deriveContext() {
         final DefaultClientRequestContext originalCtx = newContext();
 
-        setAdditionalHeaders(originalCtx);
+        mutateAdditionalHeaders(originalCtx);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
         originalCtx.setAttr(foo, "foo");
@@ -381,15 +381,18 @@ class DefaultClientRequestContextTest {
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }
 
-    private static void setAdditionalHeaders(ClientRequestContext originalCtx) {
+    private static void mutateAdditionalHeaders(ClientRequestContext originalCtx) {
         final HttpHeaders headers1 = HttpHeaders.of(HttpHeaderNames.of("my-header#1"), "value#1");
-        originalCtx.setAdditionalRequestHeaders(headers1);
-        originalCtx.setAdditionalRequestHeader(HttpHeaderNames.of("my-header#2"), "value#2");
+        originalCtx.mutateAdditionalRequestHeaders(mutator -> mutator.add(headers1));
+        originalCtx.mutateAdditionalRequestHeaders(
+                mutator -> mutator.add(HttpHeaderNames.of("my-header#2"), "value#2"));
 
         final HttpHeaders headers2 = HttpHeaders.of(HttpHeaderNames.of("my-header#3"), "value#3");
-        originalCtx.addAdditionalRequestHeaders(headers2);
-        originalCtx.addAdditionalRequestHeader(HttpHeaderNames.of("my-header#4"), "value#4");
+        originalCtx.mutateAdditionalRequestHeaders(mutator -> mutator.add(headers2));
+        originalCtx.mutateAdditionalRequestHeaders(
+                mutator -> mutator.add(HttpHeaderNames.of("my-header#4"), "value#4"));
         // Remove the first one.
-        originalCtx.removeAdditionalRequestHeader(HttpHeaderNames.of("my-header#1"));
+        originalCtx.mutateAdditionalRequestHeaders(
+                mutator -> mutator.remove(HttpHeaderNames.of("my-header#1")));
     }
 }

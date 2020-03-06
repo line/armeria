@@ -20,11 +20,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
@@ -182,27 +184,7 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public void setAdditionalRequestHeader(CharSequence name, Object value) {
-        delegate().setAdditionalRequestHeader(name, value);
-    }
-
-    @Override
-    public void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        delegate().setAdditionalRequestHeaders(headers);
-    }
-
-    @Override
-    public void addAdditionalRequestHeader(CharSequence name, Object value) {
-        delegate().addAdditionalRequestHeader(name, value);
-    }
-
-    @Override
-    public void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        delegate().setAdditionalRequestHeaders(headers);
-    }
-
-    @Override
-    public boolean removeAdditionalRequestHeader(CharSequence name) {
-        return delegate().removeAdditionalRequestHeader(name);
+    public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
+        delegate().additionalRequestHeaders();
     }
 }

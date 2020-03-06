@@ -477,7 +477,7 @@ public final class Clients {
         requireNonNull(headerManipulator, "headerManipulator");
         return withContextCustomizer(ctx -> {
             final HttpHeaders manipulatedHeaders = headerManipulator.apply(ctx.additionalRequestHeaders());
-            ctx.setAdditionalRequestHeaders(manipulatedHeaders);
+            ctx.mutateAdditionalRequestHeaders(mutator -> mutator.add(manipulatedHeaders));
         });
     }
 
