@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Queue;
@@ -136,12 +137,14 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         try {
             invokedOnSubscribe = true;
             subscriber.onSubscribe(subscription);
-        } catch (Exception e) {
+        } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
-                notifySubscriberOfCloseEvent(subscription, newCloseEvent(e));
+                notifySubscriberOfCloseEvent(subscription, newCloseEvent(t));
+                throwIfFatal(t);
             } else {
+                throwIfFatal(t);
                 logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
-                            subscriber, e);
+                            subscriber, t);
             }
         }
     }
@@ -391,12 +394,14 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         try {
             o = prepareObjectForNotification(subscription, o);
             subscriber.onNext(o);
-        } catch (Exception e) {
+        } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
-                notifySubscriberOfCloseEvent(subscription, newCloseEvent(e));
+                notifySubscriberOfCloseEvent(subscription, newCloseEvent(t));
+                throwIfFatal(t);
             } else {
+                throwIfFatal(t);
                 logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
-                            o, subscriber, e);
+                            o, subscriber, t);
             }
 
             return false;

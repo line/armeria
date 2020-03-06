@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
 
+import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.util.PooledObjects;
 
@@ -295,22 +297,25 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             if (cause == null) {
                 try {
                     subscriber.onComplete();
-                } catch (Exception e) {
-                    logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
-                                subscriber, e);
-                } finally {
                     completionFuture.complete(null);
+                } catch (Throwable t) {
+                    completionFuture.completeExceptionally(t);
+                    throwIfFatal(t);
+                    logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
+                                subscriber, t);
                 }
             } else {
                 try {
                     if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                         subscriber.onError(cause);
                     }
-                } catch (Exception e) {
-                    logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
-                                subscriber, e);
-                } finally {
                     completionFuture.completeExceptionally(cause);
+                } catch (Throwable t) {
+                    final Exception composite = new CompositeException(t, cause);
+                    completionFuture.completeExceptionally(composite);
+                    throwIfFatal(t);
+                    logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                                subscriber, composite);
                 }
             }
         }

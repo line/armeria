@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.spotify.futures.CompletableFutures;
 
+import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.UnstableApi;
 
@@ -263,19 +265,20 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             }
 
             final Throwable cause = cancel ? CancelledSubscriptionException.get() : abortCause;
+            assert cause != null;
             try {
                 if (!cancel || notifyCancellation) {
                     subscriber.onError(cause);
                 }
-            } catch (Exception e) {
+                completionFuture.completeExceptionally(cause);
+            } catch (Throwable t) {
+                final Exception composite = new CompositeException(t, cause);
+                completionFuture.completeExceptionally(composite);
+                throwIfFatal(t);
                 logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
-                            subscriber, e);
+                            subscriber, composite);
             } finally {
-                try {
-                    subscription.cancel();
-                } finally {
-                    completionFuture.completeExceptionally(cause);
-                }
+                subscription.cancel();
             }
         }
 
@@ -331,11 +334,13 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private void onError0(Throwable cause) {
             try {
                 subscriber.onError(cause);
-            } catch (Exception e) {
-                logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
-                            subscriber, e);
-            } finally {
                 parent.whenComplete().completeExceptionally(cause);
+            } catch (Throwable t) {
+                final Exception composite = new CompositeException(t, cause);
+                parent.whenComplete().completeExceptionally(composite);
+                throwIfFatal(t);
+                logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                            subscriber, composite);
             }
         }
 
@@ -351,11 +356,12 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private void onComplete0() {
             try {
                 subscriber.onComplete();
-            } catch (Exception e) {
-                logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
-                            subscriber, e);
-            } finally {
                 parent.whenComplete().complete(null);
+            } catch (Throwable t) {
+                parent.whenComplete().completeExceptionally(t);
+                throwIfFatal(t);
+                logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
+                            subscriber, t);
             }
         }
     }

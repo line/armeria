@@ -21,11 +21,13 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;
@@ -33,6 +35,37 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 class SubscriberThrowingExceptionTest {
+
+    @Test
+    void streamCompleteExceptionallyWithCompositeExceptionIfOnErrorThrowsException() {
+        final DefaultStreamMessage<Object> stream = new DefaultStreamMessage<>();
+        final IllegalStateException illegalStateException = new IllegalStateException();
+        final AnticipatedException anticipatedException = new AnticipatedException();
+        stream.tryClose(illegalStateException);
+        stream.subscribe(new Subscriber<Object>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(1);
+            }
+
+            @Override
+            public void onNext(Object o) {}
+
+            @Override
+            public void onError(Throwable t) {
+                throw anticipatedException;
+            }
+
+            @Override
+            public void onComplete() {}
+        }, ImmediateEventExecutor.INSTANCE);
+
+        final Throwable throwable = catchThrowable(() -> stream.whenComplete().join());
+        final Throwable cause = throwable.getCause();
+        assertThat(cause).isInstanceOf(CompositeException.class);
+        final CompositeException composite = (CompositeException) cause;
+        assertThat(composite.getExceptions()).containsExactly(anticipatedException, illegalStateException);
+    }
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
