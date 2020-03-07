@@ -18,33 +18,27 @@ package com.linecorp.armeria.client.proxy;
 
 import java.net.InetSocketAddress;
 
+import javax.annotation.Nullable;
+
+import com.google.common.base.MoreObjects;
+
 /**
- * A builder for a SOCKS5 protocol {@link ProxyConfig}.
+ * Represents client-side proxy is disabled.
  */
-public final class Socks5ProxyBuilder extends AbstractProxyBuilder {
+public class NoopProxyConfig extends ProxyConfig {
 
-    Socks5ProxyBuilder(InetSocketAddress proxyAddress) {
-        super(proxyAddress);
-    }
+    static final NoopProxyConfig NOOP_PROXY_CONFIG =
+            new NoopProxyConfig(new InetSocketAddress(0), null);
 
-    /**
-     * Set the proxy username.
-     */
-    public Socks5ProxyBuilder username(String username) {
-        setUsername(username);
-        return this;
-    }
-
-    /**
-     * Set the proxy password.
-     */
-    public Socks5ProxyBuilder password(String password) {
-        setPassword(password);
-        return this;
+    NoopProxyConfig(InetSocketAddress proxyAddress, @Nullable String username) {
+        super(proxyAddress, username);
     }
 
     @Override
-    public Socks5ProxyConfig build() {
-        return new Socks5ProxyConfig(getProxyAddress(), getUsername(), getPassword());
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("proxyAddress", proxyAddress())
+                          .add("username", username())
+                          .toString();
     }
 }

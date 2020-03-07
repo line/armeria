@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.client.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.HttpStatus.OK;
@@ -38,8 +38,10 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
@@ -152,6 +154,21 @@ public class ProxyClientIntegrationTest {
     @BeforeEach
     void beforeEach() {
         SOCKS_DYNAMIC_HANDLER.reset();
+    }
+
+    @Test
+    void testNoopProxyBasicCase() throws Exception {
+        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(ProxyConfig.noop()).build();
+        final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
+                                             .factory(clientFactory)
+                                             .decorator(LoggingClient.newDecorator())
+                                             .build();
+        final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                webClient.get(PROXY_PATH).aggregate();
+        final AggregatedHttpResponse response = responseFuture.join();
+
+        assertThat(response.status()).isEqualByComparingTo(OK);
+        assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
     }
 
     @Test

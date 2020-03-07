@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 /**
- * Contains CONNECT proxy configuration.
+ * Contains CONNECT proxy related configuration.
  */
 public class ConnectProxyConfig extends ProxyConfig {
 

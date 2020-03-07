@@ -19,7 +19,7 @@ package com.linecorp.armeria.client.proxy;
 import java.net.InetSocketAddress;
 
 /**
- * A {@code AbstractProxyBuilder} which builds a SOCKS4 protocol configuration.
+ * A builder for a SOCKS4 protocol {@link ProxyConfig}.
  */
 public final class Socks4ProxyBuilder extends AbstractProxyBuilder {
 

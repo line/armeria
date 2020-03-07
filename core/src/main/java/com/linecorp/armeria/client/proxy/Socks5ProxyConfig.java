@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 /**
- * Contains SOCKS5 proxy configuration.
+ * Contains SOCKS5 proxy related configuration.
  */
 public class Socks5ProxyConfig extends ProxyConfig {
 

@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
+import com.linecorp.armeria.client.proxy.NoopProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
@@ -128,9 +129,10 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
-        if (proxyConfig.equals(ProxyConfig.none())) {
+        if (proxyConfig instanceof NoopProxyConfig) {
             return;
         }
+
         final ProxyHandler proxyHandler;
         if (proxyConfig instanceof Socks4ProxyConfig) {
             proxyHandler = new Socks4ProxyHandler(
@@ -151,7 +153,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
             }
         } else {
-            logger.warn("{} Ignoring unknown proxy: {}", ch, proxyConfig);
+            logger.warn("{} Ignoring unknown proxy type: {}", ch, proxyConfig.getClass().getSimpleName());
             return;
         }
         proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);

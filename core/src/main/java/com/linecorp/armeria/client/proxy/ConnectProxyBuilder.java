@@ -23,7 +23,7 @@ import java.net.InetSocketAddress;
 import com.linecorp.armeria.client.ClientFactory;
 
 /**
- * A {@code AbstractProxyBuilder} which builds a CONNECT protocol configuration.
+ * A builder for a CONNECT protocol {@link ProxyConfig}.
  */
 public final class ConnectProxyBuilder extends AbstractProxyBuilder {
 
@@ -44,7 +44,7 @@ public final class ConnectProxyBuilder extends AbstractProxyBuilder {
 
     /**
      * Signifies whether to use ssl to connect to the proxy.
-     * The ssl configurations for {@link ClientFactory} will also be applied to the proxy if enabled.
+     * If enabled, the ssl configurations for the {@link ClientFactory} will also be applied to the proxy.
      */
     public ConnectProxyBuilder useSsl(boolean useSsl) {
         this.useSsl = useSsl;

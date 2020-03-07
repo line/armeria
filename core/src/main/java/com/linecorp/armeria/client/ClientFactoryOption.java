@@ -216,10 +216,10 @@ public final class ClientFactoryOption<T>
             define("METER_REGISTRY", Metrics.globalRegistry);
 
     /**
-     * The {@link ProxyConfig} which contains the proxy configuration.
+     * The {@link ProxyConfig} which contains proxy related configuration.
      */
     public static final ClientFactoryOption<ProxyConfig> PROXY_CONFIG =
-            define("PROXY_CONFIG", ProxyConfig.none());
+            define("PROXY_CONFIG", ProxyConfig.noop());
 
     /**
      * Returns the all available {@link ClientFactoryOption}s.

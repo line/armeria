@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import static com.linecorp.armeria.client.proxy.NoopProxyConfig.NOOP_PROXY_CONFIG;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -29,9 +30,7 @@ import com.linecorp.armeria.client.ClientFactory;
 /**
  * Contains base configuration for proxy related settings used in {@link ClientFactory}.
  */
-public class ProxyConfig {
-
-    static final ProxyConfig NONE_CONFIG = new ProxyConfig(new InetSocketAddress(0), null);
+public abstract class ProxyConfig {
 
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
@@ -57,6 +56,13 @@ public class ProxyConfig {
         return new ConnectProxyBuilder(requireNonNull(proxyAddress));
     }
 
+    /**
+     * Returns a {@code ProxyConfig} which signifies that proxy is disabled.
+     */
+    public static ProxyConfig noop() {
+        return NOOP_PROXY_CONFIG;
+    }
+
     private final InetSocketAddress proxyAddress;
 
     @Nullable
@@ -80,13 +86,6 @@ public class ProxyConfig {
     @Nullable
     public String username() {
         return username;
-    }
-
-    /**
-     * A {@code ProxyConfig} which signifies the proxy should be disabled.
-     */
-    public static ProxyConfig none() {
-        return NONE_CONFIG;
     }
 
     @Override
