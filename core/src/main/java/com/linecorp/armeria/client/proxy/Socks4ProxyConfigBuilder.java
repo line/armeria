@@ -19,18 +19,18 @@ package com.linecorp.armeria.client.proxy;
 import java.net.InetSocketAddress;
 
 /**
- * A builder for a SOCKS4 protocol {@link ProxyConfig}.
+ * A {@link ProxyConfig} builder for the SOCKS4 protocol.
  */
-public final class Socks4ProxyBuilder extends AbstractProxyBuilder {
+public final class Socks4ProxyConfigBuilder extends AbstractProxyConfigBuilder {
 
-    Socks4ProxyBuilder(InetSocketAddress proxyAddress) {
+    Socks4ProxyConfigBuilder(InetSocketAddress proxyAddress) {
         super(proxyAddress);
     }
 
     /**
      * Sets the proxy username.
      */
-    public Socks4ProxyBuilder username(String username) {
+    public Socks4ProxyConfigBuilder username(String username) {
         setUsername(username);
         return this;
     }

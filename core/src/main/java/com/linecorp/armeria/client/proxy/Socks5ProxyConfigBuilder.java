@@ -19,18 +19,18 @@ package com.linecorp.armeria.client.proxy;
 import java.net.InetSocketAddress;
 
 /**
- * A builder for a SOCKS5 protocol {@link ProxyConfig}.
+ * A {@link ProxyConfig} builder for the SOCKS5 protocol.
  */
-public final class Socks5ProxyBuilder extends AbstractProxyBuilder {
+public final class Socks5ProxyConfigBuilder extends AbstractProxyConfigBuilder {
 
-    Socks5ProxyBuilder(InetSocketAddress proxyAddress) {
+    Socks5ProxyConfigBuilder(InetSocketAddress proxyAddress) {
         super(proxyAddress);
     }
 
     /**
      * Set the proxy username.
      */
-    public Socks5ProxyBuilder username(String username) {
+    public Socks5ProxyConfigBuilder username(String username) {
         setUsername(username);
         return this;
     }
@@ -38,7 +38,7 @@ public final class Socks5ProxyBuilder extends AbstractProxyBuilder {
     /**
      * Set the proxy password.
      */
-    public Socks5ProxyBuilder password(String password) {
+    public Socks5ProxyConfigBuilder password(String password) {
         setPassword(password);
         return this;
     }

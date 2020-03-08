@@ -20,7 +20,7 @@ import java.net.InetSocketAddress;
 
 import javax.annotation.Nullable;
 
-abstract class AbstractProxyBuilder {
+abstract class AbstractProxyConfigBuilder {
 
     private final InetSocketAddress proxyAddress;
     @Nullable
@@ -28,7 +28,7 @@ abstract class AbstractProxyBuilder {
     @Nullable
     private String password;
 
-    protected AbstractProxyBuilder(InetSocketAddress proxyAddress) {
+    protected AbstractProxyConfigBuilder(InetSocketAddress proxyAddress) {
         this.proxyAddress = proxyAddress;
     }
 

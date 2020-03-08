@@ -36,24 +36,24 @@ public abstract class ProxyConfig {
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
      * @param proxyAddress The proxy address.
      */
-    public static Socks4ProxyBuilder socks4(InetSocketAddress proxyAddress) {
-        return new Socks4ProxyBuilder(requireNonNull(proxyAddress));
+    public static Socks4ProxyConfigBuilder socks4(InetSocketAddress proxyAddress) {
+        return new Socks4ProxyConfigBuilder(requireNonNull(proxyAddress));
     }
 
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS5 protocol.
      * @param proxyAddress The proxy address.
      */
-    public static Socks5ProxyBuilder socks5(InetSocketAddress proxyAddress) {
-        return new Socks5ProxyBuilder(requireNonNull(proxyAddress));
+    public static Socks5ProxyConfigBuilder socks5(InetSocketAddress proxyAddress) {
+        return new Socks5ProxyConfigBuilder(requireNonNull(proxyAddress));
     }
 
     /**
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
      * @param proxyAddress The proxy address.
      */
-    public static ConnectProxyBuilder connect(InetSocketAddress proxyAddress) {
-        return new ConnectProxyBuilder(requireNonNull(proxyAddress));
+    public static ConnectProxyConfigBuilder connect(InetSocketAddress proxyAddress) {
+        return new ConnectProxyConfigBuilder(requireNonNull(proxyAddress));
     }
 
     /**
