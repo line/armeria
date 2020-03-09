@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
@@ -76,6 +77,7 @@ public class ThriftHttpHeaderTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/hello", THttpService.of(helloService));
+            sb.decorator(LoggingService.newDecorator());
         }
     };
 
@@ -100,8 +102,9 @@ public class ThriftHttpHeaderTest {
         try (SafeCloseable ignored = Clients.withHttpHeader(AUTHORIZATION, secretA)) {
             // Should fail with the first half of the secret.
             assertAuthorizationFailure(client, secretA);
-            try (SafeCloseable ignored2 = Clients.withHttpHeaders(
-                    h -> h.toBuilder().set(AUTHORIZATION, h.get(AUTHORIZATION) + secretB).build())) {
+            try (SafeCloseable ignored2 = Clients.withHttpHeaders(builder -> {
+                builder.set(AUTHORIZATION, builder.get(AUTHORIZATION) + secretB);
+            })) {
                 // Should pass if both manipulators worked.
                 assertThat(client.hello("foobar")).isEqualTo("Hello, foobar!");
             }

@@ -184,6 +184,16 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public void setAdditionalRequestHeader(CharSequence name, Object value) {
+        delegate().setAdditionalRequestHeader(name, value);
+    }
+
+    @Override
+    public void addAdditionalRequestHeader(CharSequence name, Object value) {
+        delegate().addAdditionalRequestHeader(name, value);
+    }
+
+    @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         delegate().additionalRequestHeaders();
     }

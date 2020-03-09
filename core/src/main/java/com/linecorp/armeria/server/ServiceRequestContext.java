@@ -535,13 +535,26 @@ public interface ServiceRequestContext extends RequestContext {
     AccessLogWriter accessLogWriter();
 
     /**
-     * Returns the {@link HttpHeaders} which is included when a {@link Service} sends an
+     * Returns the {@link HttpHeaders} which will be included when a {@link Service} sends an
      * {@link HttpResponse}.
      */
     HttpHeaders additionalResponseHeaders();
 
     /**
-     * Mutates the {@link HttpHeaders} which is included when a {@link Service} sends an
+     * Sets a header with the specified {@code name} and {@code value}. This will remove all previous values
+     * associated with the specified {@code name}.
+     * The header will be included when a {@link Service} sends an {@link HttpResponse}.
+     */
+    void setAdditionalResponseHeader(CharSequence name, Object value);
+
+    /**
+     * Adds a header with the specified {@code name} and {@code value}. The header will be included when
+     * a {@link Service} sends an {@link HttpResponse}.
+     */
+    void addAdditionalResponseHeader(CharSequence name, Object value);
+
+    /**
+     * Mutates the {@link HttpHeaders} which will be included when a {@link Service} sends an
      * {@link HttpResponse}.
      *
      * @param mutator the {@link Consumer} that mutates the additional response headers
@@ -553,6 +566,19 @@ public interface ServiceRequestContext extends RequestContext {
      * {@link Service} completes an {@link HttpResponse}.
      */
     HttpHeaders additionalResponseTrailers();
+
+    /**
+     * Sets a trailer with the specified {@code name} and {@code value}. This will remove all previous values
+     * associated with the specified {@code name}.
+     * The trailer will be included when a {@link Service} completes an {@link HttpResponse}.
+     */
+    void setAdditionalResponseTrailer(CharSequence name, Object value);
+
+    /**
+     * Adds a trailer with the specified {@code name} and {@code value}. The trailer will be included when
+     * a {@link Service} completes an {@link HttpResponse}.
+     */
+    void addAdditionalResponseTrailer(CharSequence name, Object value);
 
     /**
      * Mutates the {@link HttpHeaders} which is included along with any other trailers when a

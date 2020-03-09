@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -386,12 +387,14 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeaders(Function)
+     * @see #withHttpHeaders(Consumer)
      */
     public static SafeCloseable withHttpHeader(CharSequence name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        return withHttpHeaders(headers -> headers.toBuilder().set(name, value).build());
+        return withHttpHeaders(headersBuilder -> {
+            headersBuilder.set(name, value);
+        });
     }
 
     /**
@@ -422,12 +425,14 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeaders(Function)
+     * @see #withHttpHeaders(Consumer)
      */
     public static SafeCloseable withHttpHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        return withHttpHeaders(headers -> headers.toBuilder().setObject(name, value).build());
+        return withHttpHeaders(headersBuilder -> {
+            headersBuilder.setObject(name, value);
+        });
     }
 
     /**
@@ -470,14 +475,61 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeader(CharSequence, String)
+     * @see #withHttpHeaders(Consumer)
+     *
+     * @deprecated Use {@link #withHttpHeaders(Consumer)}.
      */
+    @Deprecated
     public static SafeCloseable withHttpHeaders(
             Function<? super HttpHeaders, ? extends HttpHeaders> headerManipulator) {
         requireNonNull(headerManipulator, "headerManipulator");
         return withContextCustomizer(ctx -> {
             final HttpHeaders manipulatedHeaders = headerManipulator.apply(ctx.additionalRequestHeaders());
             ctx.mutateAdditionalRequestHeaders(mutator -> mutator.add(manipulatedHeaders));
+        });
+    }
+
+    /**
+     * Sets the specified {@link Consumer}, which mutates HTTP headers, in a thread-local variable so that the
+     * mutated headers are sent by the client call made from the current thread.
+     * Use the {@code try-with-resources} block with the returned {@link SafeCloseable} to unset the
+     * thread-local variable automatically:
+     * <pre>{@code
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
+     *
+     * try (SafeCloseable ignored = withHttpHeaders(headersBuilder -> {
+     *     headersBuilder.set(HttpHeaders.AUTHORIZATION, myCredential)
+     *                   .set(HttpHeaders.USER_AGENT, myAgent);
+     * })) {
+     *     client.executeSomething(..);
+     * }
+     * }</pre>
+     * You can also nest the header mutation:
+     * <pre>{@code
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
+     *
+     * try (SafeCloseable ignored = withHttpHeaders(builder -> {
+     *          builder.set(USER_AGENT, myAgent);
+     *      })) {
+     *     for (String secret : secrets) {
+     *         try (SafeCloseable ignored2 = withHttpHeaders(builder -> {
+     *                  builder.set(AUTHORIZATION, secret)
+     *              })) {
+     *             // Both USER_AGENT and AUTHORIZATION will be set.
+     *             client.executeSomething(..);
+     *         }
+     *     }
+     * }
+     * }</pre>
+     *
+     * @see #withHttpHeader(CharSequence, String)
+     */
+    public static SafeCloseable withHttpHeaders(Consumer<HttpHeadersBuilder> headerMutator) {
+        requireNonNull(headerMutator, "headerMutator");
+        return withContextCustomizer(ctx -> {
+            ctx.mutateAdditionalRequestHeaders(headerMutator);
         });
     }
 
@@ -513,7 +565,7 @@ public final class Clients {
      * may be {@code null} while the customizer function runs, because the target host of the {@link Request}
      * is not determined yet.
      *
-     * @see #withHttpHeaders(Function)
+     * @see #withHttpHeaders(Consumer)
      */
     public static SafeCloseable withContextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {

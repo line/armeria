@@ -492,6 +492,22 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
+    public void setAdditionalResponseHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.setObject(name, value));
+    }
+
+    @Override
+    public void addAdditionalResponseHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.addObject(name, value));
+    }
+
+    @Override
     public void mutateAdditionalResponseHeaders(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
         mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater, mutator);
@@ -514,6 +530,22 @@ public final class DefaultServiceRequestContext
     @Override
     public HttpHeaders additionalResponseTrailers() {
         return additionalResponseTrailers;
+    }
+
+    @Override
+    public void setAdditionalResponseTrailer(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.setObject(name, value));
+    }
+
+    @Override
+    public void addAdditionalResponseTrailer(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.addObject(name, value));
     }
 
     @Override

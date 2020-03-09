@@ -620,6 +620,20 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    public void setAdditionalRequestHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        mutateAdditionalRequestHeaders(builder -> builder.setObject(name, value));
+    }
+
+    @Override
+    public void addAdditionalRequestHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        mutateAdditionalRequestHeaders(builder -> builder.addObject(name, value));
+    }
+
+    @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
         for (;;) {

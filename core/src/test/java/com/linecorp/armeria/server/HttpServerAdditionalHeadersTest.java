@@ -36,8 +36,7 @@ class HttpServerAdditionalHeadersTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/headers_merged", (ctx, req) -> {
                 addBadHeaders(ctx);
-                ctx.mutateAdditionalResponseTrailers(
-                        mutator -> mutator.add("foo", "bar"));
+                ctx.setAdditionalResponseTrailer("foo", "bar");
                 return HttpResponse.of(HttpStatus.NO_CONTENT);
             });
             sb.service("/headers_and_trailers", (ctx, req) -> {

@@ -72,8 +72,7 @@ class HttpServerDefaultHeadersTest {
                 return HttpResponse.of(HttpStatus.OK);
             });
             sb.decorator((delegate, ctx, req) -> {
-                ctx.mutateAdditionalResponseHeaders(
-                        mutator -> mutator.add(HttpHeaderNames.SERVER, "name-set-by-user"));
+                ctx.addAdditionalResponseHeader(HttpHeaderNames.SERVER, "name-set-by-user");
                 return delegate.serve(ctx, req);
             });
         }

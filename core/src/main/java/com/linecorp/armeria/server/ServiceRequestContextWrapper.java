@@ -226,6 +226,16 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public void setAdditionalResponseHeader(CharSequence name, Object value) {
+        delegate().setAdditionalResponseHeader(name, value);
+    }
+
+    @Override
+    public void addAdditionalResponseHeader(CharSequence name, Object value) {
+        delegate().addAdditionalResponseHeader(name, value);
+    }
+
+    @Override
     public void mutateAdditionalResponseHeaders(Consumer<HttpHeadersBuilder> mutator) {
         delegate().mutateAdditionalResponseHeaders(mutator);
     }
@@ -233,6 +243,16 @@ public class ServiceRequestContextWrapper
     @Override
     public HttpHeaders additionalResponseTrailers() {
         return delegate().additionalResponseTrailers();
+    }
+
+    @Override
+    public void setAdditionalResponseTrailer(CharSequence name, Object value) {
+        delegate().setAdditionalResponseTrailer(name, value);
+    }
+
+    @Override
+    public void addAdditionalResponseTrailer(CharSequence name, Object value) {
+        delegate().addAdditionalResponseTrailer(name, value);
     }
 
     @Override

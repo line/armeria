@@ -629,12 +629,26 @@ public interface ClientRequestContext extends RequestContext {
     void setMaxResponseLength(long maxResponseLength);
 
     /**
-     * Returns an {@link HttpHeaders} which is included when a {@link Client} sends an {@link HttpRequest}.
+     * Returns an {@link HttpHeaders} which will be included when a {@link Client} sends an {@link HttpRequest}.
      */
     HttpHeaders additionalRequestHeaders();
 
     /**
-     * Mutates the {@link HttpHeaders} which is included when a {@link Client} sends an {@link HttpRequest}.
+     * Sets a header with the specified {@code name} and {@code value}. This will remove all previous values
+     * associated with the specified {@code name}.
+     * The header will be included when a {@link Client} sends an {@link HttpRequest}.
+     */
+    void setAdditionalRequestHeader(CharSequence name, Object value);
+
+    /**
+     * Adds a header with the specified {@code name} and {@code value}. The header will be included when
+     * a {@link Client} sends an {@link HttpRequest}.
+     */
+    void addAdditionalRequestHeader(CharSequence name, Object value);
+
+    /**
+     * Mutates the {@link HttpHeaders} which will be included when a {@link Client} sends
+     * an {@link HttpRequest}.
      *
      * @param mutator the {@link Consumer} that mutates the additional request headers
      */
