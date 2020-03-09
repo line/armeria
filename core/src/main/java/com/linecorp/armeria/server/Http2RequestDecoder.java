@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
+import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -74,13 +75,17 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final InboundTrafficController inboundTrafficController;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
+    @Nullable
+    private final Http2KeepAliveHandler keepAlive;
     private int nextId;
 
-    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme) {
+    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme,
+                        @Nullable Http2KeepAliveHandler keepAlive) {
         this.cfg = cfg;
         this.channel = channel;
         this.writer = writer;
         this.scheme = scheme;
+        this.keepAlive = keepAlive;
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
         goAwayHandler = new Http2GoAwayHandler();
@@ -98,6 +103,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             // Validate the method.
@@ -166,7 +172,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             ChannelHandlerContext ctx, int streamId, Http2Headers headers,
             int streamDependency, short weight, boolean exclusive, int padding,
             boolean endOfStream) throws Http2Exception {
-
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
@@ -208,6 +213,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     public int onDataRead(
             ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endOfStream) throws Http2Exception {
+        keepAliveChannelRead();
 
         final DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
@@ -292,6 +298,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+        keepAliveChannelRead();
         final DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             throw connectionError(PROTOCOL_ERROR,
@@ -315,5 +322,23 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
         goAwayHandler.onGoAwayReceived(channel, lastStreamId, errorCode, debugData);
+    }
+
+    @Override
+    public void onPingAckRead(final ChannelHandlerContext ctx, final long data) {
+        if (keepAlive != null) {
+            keepAlive.onPingAck(data);
+        }
+    }
+
+    @Override
+    public void onPingRead(ChannelHandlerContext ctx, long data) {
+        keepAliveChannelRead();
+    }
+
+    private void keepAliveChannelRead() {
+        if (keepAlive != null) {
+            keepAlive.onChannelRead();
+        }
     }
 }

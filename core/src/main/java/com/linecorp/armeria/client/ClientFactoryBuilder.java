@@ -413,6 +413,40 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     *
+     * @param http2PingTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     */
+    public ClientFactoryBuilder http2PingTimeoutMillis(long http2PingTimeoutMillis) {
+        checkArgument(http2PingTimeoutMillis >= 0,
+                      "http2PingTimeoutMillis: %s (expected: >= 0)", http2PingTimeoutMillis);
+        option(ClientFactoryOption.HTTP2_PING_TIMEOUT_MILLIS, http2PingTimeoutMillis);
+        return this;
+    }
+
+    /**
+     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     *
+     * @param http2PingTimeout the timeout. {@code 0} disables the timeout.
+     */
+    public ClientFactoryBuilder http2PingTimeout(Duration http2PingTimeout) {
+        requireNonNull(http2PingTimeout, "http2PingTimeout");
+        checkArgument(http2PingTimeout.toMillis() >= 0,
+                      "http2PingTimeoutMillis: %s (expected: >= 0)", http2PingTimeout.toMillis());
+        http2PingTimeoutMillis(http2PingTimeout.toMillis());
+        return this;
+    }
+
+    /**
+     * Sets whether to send HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
+     * when there are no active streams open.
+     */
+    public ClientFactoryBuilder useHttp2PingWhenNoActiveStreams(boolean useHttp2PingWhenNoActiveStreams) {
+        option(ClientFactoryOption.USE_HTT2_PING_WHEN_NO_ACTIVE_STREAMS, useHttp2PingWhenNoActiveStreams);
+        return this;
+    }
+
+    /**
      * Sets whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
      */

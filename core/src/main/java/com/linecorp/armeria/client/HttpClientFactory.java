@@ -82,6 +82,8 @@ final class HttpClientFactory implements ClientFactory {
     private final int http2InitialStreamWindowSize;
     private final int http2MaxFrameSize;
     private final long http2MaxHeaderListSize;
+    private final long http2PingtimeoutMillis;
+    private final boolean useHttp2PingWhenNoActiveStreams;
     private final int http1MaxInitialLineLength;
     private final int http1MaxHeaderSize;
     private final int http1MaxChunkSize;
@@ -131,6 +133,8 @@ final class HttpClientFactory implements ClientFactory {
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
         http2MaxFrameSize = options.http2MaxFrameSize();
         http2MaxHeaderListSize = options.http2MaxHeaderListSize();
+        http2PingtimeoutMillis = options.http2PingTimeoutMillis();
+        useHttp2PingWhenNoActiveStreams = options.useHttp2PingWhenNoActiveStreams();
         http1MaxInitialLineLength = options.http1MaxInitialLineLength();
         http1MaxHeaderSize = options.http1MaxHeaderSize();
         http1MaxChunkSize = options.http1MaxChunkSize();
@@ -167,6 +171,14 @@ final class HttpClientFactory implements ClientFactory {
 
     long http2MaxHeaderListSize() {
         return http2MaxHeaderListSize;
+    }
+
+    long http2PingTimeoutMillis() {
+        return http2PingtimeoutMillis;
+    }
+
+    boolean useHttp2PingWhenNoActiveStreams() {
+        return useHttp2PingWhenNoActiveStreams;
     }
 
     int http1MaxInitialLineLength() {

@@ -193,6 +193,12 @@ public final class Flags {
                     DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
+    private static final long DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS = 0; // Disabled
+    private static final long DEFAULT_HTTP2_PING_TIMEOUT_MILLIS =
+            getLong("defaultHttp2PingTimeoutMillis",
+                    DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS,
+                    value -> value >= 0);
+
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     private static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             getInt("defaultHttp2InitialConnectionWindowSize",
@@ -247,6 +253,8 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
+    private static final boolean USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS =
+            getBoolean("useHttp2PingWhenNoActiveStreams", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";
@@ -673,6 +681,39 @@ public final class Flags {
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
+    }
+
+    /**
+     * Returns whether to send <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a>
+     * frames on a HTTP/2 connection when it is idle and there are no active HTTP/2 stream.
+     *
+     * <p>A connection is considered having no active streams means that are no requests and responses pending.
+     * This does not necessarily indicate end of life of a HTTP/2 connection.
+     * A client could create a new stream if it intends to use the same connection.
+     *
+     * <p>Note that this flag is only in effect when {@link Flags#defaultHttp2PingTimeoutMillis()}
+     * is set greater than zero.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.useHttp2PingOnWhenActiveStreams=true} JVM option to enable it.
+     *
+     * @see Flags#defaultHttp2PingTimeoutMillis()
+     */
+    public static boolean useHttp2PingWhenNoActiveStreams() {
+        return USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS;
+    }
+
+    /**
+     * Returns the default value for HTTP2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     * Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
+     * {@link #defaultClientIdleTimeoutMillis()} for client are greater than 0.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_HTTP2_PING_TIMEOUT_MILLIS} milliseconds.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2PingTimeoutMillis=<integer>} JVM option to override
+     * the default value.
+     */
+    public static long defaultHttp2PingTimeoutMillis() {
+        return DEFAULT_HTTP2_PING_TIMEOUT_MILLIS;
     }
 
     /**
