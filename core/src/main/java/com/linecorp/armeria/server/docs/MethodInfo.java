@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
@@ -36,6 +37,7 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -114,8 +116,18 @@ public final class MethodInfo {
         this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
                                                                       "exampleHttpHeaders"));
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
+
         this.examplePaths = ImmutableList.copyOf(requireNonNull(examplePaths, "examplePaths"));
+        this.examplePaths.forEach(path -> checkArgument(PathAndQuery.parse(path) != null,
+                                                        "examplePaths contains an invalid path: {}", path));
+
         this.exampleQueries = ImmutableList.copyOf(requireNonNull(exampleQueries, "exampleQueries"));
+        this.exampleQueries.forEach(query -> {
+            final PathAndQuery pathAndQuery = PathAndQuery.parse(query.startsWith("?") ? query : '?' + query);
+            checkArgument(pathAndQuery != null,
+                          "exampleQueries contains an invalid query string: {}", query);
+        });
+
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.docString = Strings.emptyToNull(docString);
     }

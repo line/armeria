@@ -31,7 +31,6 @@ import com.google.common.collect.ListMultimap;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -189,44 +188,40 @@ public final class DocServiceBuilder {
     /**
      * Adds the specified example paths for the method with the specified service and method name.
      */
-    public DocServiceBuilder examplePaths(Class<?> serviceType, String methodName, String... examplePaths) {
+    public DocServiceBuilder examplePaths(Class<?> serviceType, String methodName, String... paths) {
         requireNonNull(serviceType, "serviceType");
-        return examplePaths(serviceType.getName(), methodName, examplePaths);
+        return examplePaths(serviceType.getName(), methodName, paths);
     }
 
     /**
      * Adds the specified example paths for the method with the specified service and method name.
      */
-    public DocServiceBuilder examplePaths(Class<?> serviceType, String methodName,
-                                          Iterable<String> examplePaths) {
+    public DocServiceBuilder examplePaths(Class<?> serviceType, String methodName, Iterable<String> paths) {
         requireNonNull(serviceType, "serviceType");
-        return examplePaths(serviceType.getName(), methodName, examplePaths);
+        return examplePaths(serviceType.getName(), methodName, paths);
     }
 
     /**
      * Adds the specified example paths for the method with the specified service and method name.
      */
-    public DocServiceBuilder examplePaths(String serviceName, String methodName, String... examplePaths) {
-        requireNonNull(examplePaths, "examplePaths");
-        return examplePaths(serviceName, methodName, ImmutableList.copyOf(examplePaths));
+    public DocServiceBuilder examplePaths(String serviceName, String methodName, String... paths) {
+        requireNonNull(paths, "paths");
+        return examplePaths(serviceName, methodName, ImmutableList.copyOf(paths));
     }
 
     /**
      * Adds the specified example paths for the method with the specified service and method name.
      */
-    public DocServiceBuilder examplePaths(String serviceName, String methodName,
-                                          Iterable<String> examplePaths) {
+    public DocServiceBuilder examplePaths(String serviceName, String methodName, Iterable<String> paths) {
         requireNonNull(serviceName, "serviceName");
         checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
         requireNonNull(methodName, "methodName");
         checkArgument(!methodName.isEmpty(), "methodName is empty.");
-        requireNonNull(examplePaths, "examplePaths");
-        for (String examplePath : examplePaths) {
-            requireNonNull(examplePath, "examplePaths contains null");
-            examplePaths.forEach(path -> checkArgument(PathAndQuery.parse(path) != null,
-                                                       "examplePaths contain an invalid path: {}", path));
-            this.examplePaths.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
-                             .put(methodName, examplePath);
+        requireNonNull(paths, "paths");
+        for (String examplePath : paths) {
+            requireNonNull(examplePath, "paths contains null");
+            examplePaths.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
+                        .put(methodName, examplePath);
         }
         return this;
     }
@@ -242,9 +237,10 @@ public final class DocServiceBuilder {
     /**
      * Adds the specified example query strings for the method with the specified service and method name.
      */
-    public DocServiceBuilder exampleQueries(Class<?> serviceType, String methodName, Iterable<String> queries) {
+    public DocServiceBuilder exampleQueries(Class<?> serviceType, String methodName,
+                                            Iterable<String> queryStrings) {
         requireNonNull(serviceType, "serviceType");
-        return exampleQueries(serviceType.getName(), methodName, queries);
+        return exampleQueries(serviceType.getName(), methodName, queryStrings);
     }
 
     /**
@@ -258,17 +254,15 @@ public final class DocServiceBuilder {
     /**
      * Adds the specified example query strings for the method with the specified service and method name.
      */
-    public DocServiceBuilder exampleQueries(String serviceName, String methodName, Iterable<String> queries) {
+    public DocServiceBuilder exampleQueries(String serviceName, String methodName,
+                                            Iterable<String> queryStrings) {
         requireNonNull(serviceName, "serviceName");
         checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
         requireNonNull(methodName, "methodName");
         checkArgument(!methodName.isEmpty(), "methodName is empty.");
-        requireNonNull(queries, "queries");
-        for (String query : queries) {
-            requireNonNull(query, "queries contains null");
-            final PathAndQuery pathAndQuery = PathAndQuery.parse(query.startsWith("?") ? query : '?' + query);
-            checkArgument(pathAndQuery != null,
-                          "exampleQueries contain an invalid query string: {}", query);
+        requireNonNull(queryStrings, "queryStrings");
+        for (String query : queryStrings) {
+            requireNonNull(query, "queryStrings contains null");
             exampleQueries.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
                           .put(methodName, query);
         }
