@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,19 +15,12 @@
  */
 package com.linecorp.armeria.server.throttling;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Decorates an RPC {@link Service} to throttle incoming requests.
@@ -35,30 +28,41 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public final class ThrottlingRpcService extends AbstractThrottlingService<RpcRequest, RpcResponse>
         implements RpcService {
     /**
-     * Creates a new decorator using the specified {@link ThrottlingStrategy} instance.
+     * Creates a new decorator using the specified {@link ThrottlingStrategy} and
+     * {@link ThrottlingRejectHandler}.
      *
-     * @param strategy The {@link ThrottlingStrategy} instance to be used
+     * @param strategy The {@link ThrottlingStrategy} instance to define throttling strategy
+     * @param rejectHandler The {@link ThrottlingRejectHandler} instance to define request rejection behaviour
+     */
+    public static Function<? super RpcService, ThrottlingRpcService>
+    newDecorator(ThrottlingStrategy<RpcRequest> strategy,
+                 ThrottlingRejectHandler<RpcRequest, RpcResponse> rejectHandler) {
+        return builder(strategy).onRejectedRequest(rejectHandler).newDecorator();
+    }
+
+    /**
+     * Creates a new decorator using the specified {@link ThrottlingStrategy}.
+     *
+     * @param strategy The {@link ThrottlingStrategy} instance to define throttling strategy
      */
     public static Function<? super RpcService, ThrottlingRpcService>
     newDecorator(ThrottlingStrategy<RpcRequest> strategy) {
-        requireNonNull(strategy, "strategy");
-        return delegate -> new ThrottlingRpcService(delegate, strategy);
+        return builder(strategy).newDecorator();
     }
 
     /**
-     * Creates a new instance that decorates the specified {@link Service}.
+     * Returns a new {@link ThrottlingRpcServiceBuilder}.
      */
-    protected ThrottlingRpcService(RpcService delegate, ThrottlingStrategy<RpcRequest> strategy) {
-        super(delegate, strategy, RpcResponse::from);
+    public static ThrottlingRpcServiceBuilder builder(ThrottlingStrategy<RpcRequest> strategy) {
+        return new ThrottlingRpcServiceBuilder(strategy);
     }
 
     /**
-     * Invoked when {@code req} is throttled. By default, this method responds with a
-     * {@link HttpStatusException} with {@code 503 Service Unavailable}.
+     * Creates a new instance that decorates the specified {@link RpcService}.
      */
-    @Override
-    protected RpcResponse onFailure(ServiceRequestContext ctx, RpcRequest req, @Nullable Throwable cause)
-            throws Exception {
-        return RpcResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE));
+    ThrottlingRpcService(RpcService delegate, ThrottlingStrategy<RpcRequest> strategy,
+                         ThrottlingAcceptHandler<RpcRequest, RpcResponse> acceptHandler,
+                         ThrottlingRejectHandler<RpcRequest, RpcResponse> rejectHandler) {
+        super(delegate, strategy, RpcResponse::from, acceptHandler, rejectHandler);
     }
 }
