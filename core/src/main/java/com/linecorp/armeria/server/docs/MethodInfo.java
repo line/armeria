@@ -33,6 +33,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -117,16 +118,25 @@ public final class MethodInfo {
                                                                       "exampleHttpHeaders"));
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
 
-        this.examplePaths = ImmutableList.copyOf(requireNonNull(examplePaths, "examplePaths"));
-        this.examplePaths.forEach(path -> checkArgument(PathAndQuery.parse(path) != null,
-                                                        "examplePaths contains an invalid path: {}", path));
+        requireNonNull(examplePaths, "examplePaths");
+        final ImmutableList.Builder<String> examplePathsBuilder =
+                ImmutableList.builderWithExpectedSize(Iterables.size(examplePaths));
+        for (String path : examplePaths) {
+            final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
+            checkArgument(pathAndQuery != null, "examplePaths contains an invalid path: {}", path);
+            examplePathsBuilder.add(pathAndQuery.path());
+        }
+        this.examplePaths = examplePathsBuilder.build();
 
-        this.exampleQueries = ImmutableList.copyOf(requireNonNull(exampleQueries, "exampleQueries"));
-        this.exampleQueries.forEach(query -> {
+        requireNonNull(exampleQueries, "exampleQueries");
+        final ImmutableList.Builder<String> exampleQueriesBuilder =
+                ImmutableList.builderWithExpectedSize(Iterables.size(exampleQueries));
+        for (String query : exampleQueries) {
             final PathAndQuery pathAndQuery = PathAndQuery.parse(query.startsWith("?") ? query : '?' + query);
-            checkArgument(pathAndQuery != null,
-                          "exampleQueries contains an invalid query string: {}", query);
-        });
+            checkArgument(pathAndQuery != null, "exampleQueries contains an invalid query string: {}", query);
+            exampleQueriesBuilder.add(pathAndQuery.query());
+        }
+        this.exampleQueries = exampleQueriesBuilder.build();
 
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.docString = Strings.emptyToNull(docString);
