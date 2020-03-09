@@ -229,7 +229,7 @@ public final class ClientFactoryOptions
      * no active HTTP/2 streams.
      */
     public boolean useHttp2PingWhenNoActiveStreams() {
-        return get(ClientFactoryOption.USE_HTT2_PING_WHEN_NO_ACTIVE_STREAMS);
+        return get(ClientFactoryOption.USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS);
     }
 
     /**

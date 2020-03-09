@@ -164,7 +164,7 @@ public final class ServerBuilder {
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long http2PingTimeoutMillis = Flags.defaultHttp2PingTimeoutMillis();
-    private boolean useHttp2PingWhenNoActiveStreams = Flags.useHttp2PingWhenNoActiveStreams();
+    private boolean useHttp2PingWhenNoActiveStreams = Flags.defaultUseHttp2PingWhenNoActiveStreams();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();

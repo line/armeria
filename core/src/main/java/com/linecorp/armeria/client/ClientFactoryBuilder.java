@@ -442,7 +442,7 @@ public final class ClientFactoryBuilder {
      * when there are no active streams open.
      */
     public ClientFactoryBuilder useHttp2PingWhenNoActiveStreams(boolean useHttp2PingWhenNoActiveStreams) {
-        option(ClientFactoryOption.USE_HTT2_PING_WHEN_NO_ACTIVE_STREAMS, useHttp2PingWhenNoActiveStreams);
+        option(ClientFactoryOption.USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS, useHttp2PingWhenNoActiveStreams);
         return this;
     }
 

@@ -53,7 +53,7 @@ import io.netty.handler.timeout.IdleStateHandler;
  *
  * <p>Once an {@link IdleStateEvent} is triggered and when there are active streams open then a
  * {@link Http2PingFrame} will be written on connection. When there are no active streams then it depends on
- * {@link Flags#useHttp2PingWhenNoActiveStreams()}.
+ * {@link Flags#defaultUseHttp2PingWhenNoActiveStreams()}.
  *
  * <p>Once a {@link Http2PingFrame} is written, then either an ACK for the {@link Http2PingFrame} or any data
  * is read on connection will invalidate the condition that triggers connection closure. If either of the
@@ -62,7 +62,7 @@ import io.netty.handler.timeout.IdleStateHandler;
  * <p>This class is <b>not</b> thread-safe and all methods are to be called from single thread such
  * as {@link EventLoop}.
  *
- * @see Flags#useHttp2PingWhenNoActiveStreams()
+ * @see Flags#defaultUseHttp2PingWhenNoActiveStreams()
  * @see Flags#defaultHttp2PingTimeoutMillis()
  */
 @NotThreadSafe
