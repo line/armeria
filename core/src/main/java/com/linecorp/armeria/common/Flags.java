@@ -253,8 +253,8 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", true);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
-    private static final boolean USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS =
-            getBoolean("useHttp2PingWhenNoActiveStreams", false);
+    private static final boolean DEFAULT_USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS =
+            getBoolean("defaultUseHttp2PingWhenNoActiveStreams", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2";
@@ -695,12 +695,12 @@ public final class Flags {
      * is set greater than zero.
      *
      * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.useHttp2PingOnWhenActiveStreams=true} JVM option to enable it.
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2PingWhenActiveStreams=true} JVM option to enable it.
      *
      * @see Flags#defaultHttp2PingTimeoutMillis()
      */
-    public static boolean useHttp2PingWhenNoActiveStreams() {
-        return USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS;
+    public static boolean defaultUseHttp2PingWhenNoActiveStreams() {
+        return DEFAULT_USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS;
     }
 
     /**
