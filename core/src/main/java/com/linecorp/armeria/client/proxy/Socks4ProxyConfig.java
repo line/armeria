@@ -25,10 +25,31 @@ import com.google.common.base.MoreObjects;
 /**
  * Contains SOCKS4 proxy related configuration.
  */
-public class Socks4ProxyConfig extends ProxyConfig {
+public final class Socks4ProxyConfig extends ProxyConfig {
+
+    private final InetSocketAddress proxyAddress;
+
+    @Nullable
+    private final String username;
 
     Socks4ProxyConfig(InetSocketAddress proxyAddress, @Nullable String username) {
-        super(proxyAddress, username);
+        this.proxyAddress = proxyAddress;
+        this.username = username;
+    }
+
+    /**
+     * The configured proxy address.
+     */
+    public InetSocketAddress proxyAddress() {
+        return proxyAddress;
+    }
+
+    /**
+     * The configured username.
+     */
+    @Nullable
+    public String username() {
+        return username;
     }
 
     @Override

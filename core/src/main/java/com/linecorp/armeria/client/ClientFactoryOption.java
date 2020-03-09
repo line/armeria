@@ -219,7 +219,7 @@ public final class ClientFactoryOption<T>
      * The {@link ProxyConfig} which contains proxy related configuration.
      */
     public static final ClientFactoryOption<ProxyConfig> PROXY_CONFIG =
-            define("PROXY_CONFIG", ProxyConfig.noop());
+            define("PROXY_CONFIG", ProxyConfig.disabled());
 
     /**
      * Returns the all available {@link ClientFactoryOption}s.

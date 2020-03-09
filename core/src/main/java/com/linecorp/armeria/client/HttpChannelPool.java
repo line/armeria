@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
-import com.linecorp.armeria.client.proxy.NoopProxyConfig;
+import com.linecorp.armeria.client.proxy.DisabledProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
@@ -129,27 +129,30 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
-        if (proxyConfig instanceof NoopProxyConfig) {
+        if (proxyConfig instanceof DisabledProxyConfig) {
             return;
         }
 
         final ProxyHandler proxyHandler;
         if (proxyConfig instanceof Socks4ProxyConfig) {
-            proxyHandler = new Socks4ProxyHandler(
-                    proxyConfig.proxyAddress(), proxyConfig.username());
+            final Socks4ProxyConfig socks4ProxyConfig = (Socks4ProxyConfig) proxyConfig;
+            proxyHandler = new Socks4ProxyHandler(socks4ProxyConfig.proxyAddress(),
+                                                  socks4ProxyConfig.username());
         } else if (proxyConfig instanceof Socks5ProxyConfig) {
+            final Socks5ProxyConfig socks5ProxyConfig = (Socks5ProxyConfig) proxyConfig;
             proxyHandler = new Socks5ProxyHandler(
-                    proxyConfig.proxyAddress(), proxyConfig.username(),
-                    ((Socks5ProxyConfig) proxyConfig).password());
+                    socks5ProxyConfig.proxyAddress(), socks5ProxyConfig.username(),
+                    socks5ProxyConfig.password());
         } else if (proxyConfig instanceof ConnectProxyConfig) {
-            final String username = proxyConfig.username();
-            final String password = ((ConnectProxyConfig) proxyConfig).password();
+            final ConnectProxyConfig connectProxyConfig = (ConnectProxyConfig) proxyConfig;
+            final String username = connectProxyConfig.username();
+            final String password = connectProxyConfig.password();
             if (username == null || password == null) {
-                proxyHandler = new HttpProxyHandler(proxyConfig.proxyAddress());
+                proxyHandler = new HttpProxyHandler(connectProxyConfig.proxyAddress());
             } else {
-                proxyHandler = new HttpProxyHandler(proxyConfig.proxyAddress(), username, password);
+                proxyHandler = new HttpProxyHandler(connectProxyConfig.proxyAddress(), username, password);
             }
-            if (((ConnectProxyConfig) proxyConfig).useSsl()) {
+            if (connectProxyConfig.useTls()) {
                 ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
             }
         } else {

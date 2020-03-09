@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.net.InetSocketAddress;
 
 import javax.annotation.Nullable;
@@ -25,18 +27,41 @@ import com.google.common.base.MoreObjects;
 /**
  * Contains CONNECT proxy related configuration.
  */
-public class ConnectProxyConfig extends ProxyConfig {
+public final class ConnectProxyConfig extends ProxyConfig {
+
+    private final InetSocketAddress proxyAddress;
+
+    @Nullable
+    private final String username;
 
     @Nullable
     private final String password;
 
-    private final boolean useSsl;
+    private final boolean useTls;
 
     ConnectProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
-                       @Nullable String password, boolean useSsl) {
-        super(proxyAddress, username);
+                       @Nullable String password, boolean useTls) {
+        checkArgument((username == null && password == null) || (username != null && password != null),
+                      "Username and password must either both be null or non-null.");
+        this.proxyAddress = proxyAddress;
+        this.username = username;
         this.password = password;
-        this.useSsl = useSsl;
+        this.useTls = useTls;
+    }
+
+    /**
+     * The configured proxy address.
+     */
+    public InetSocketAddress proxyAddress() {
+        return proxyAddress;
+    }
+
+    /**
+     * The configured username.
+     */
+    @Nullable
+    public String username() {
+        return username;
     }
 
     /**
@@ -50,8 +75,8 @@ public class ConnectProxyConfig extends ProxyConfig {
     /**
      * Whether ssl is enabled.
      */
-    public boolean useSsl() {
-        return useSsl;
+    public boolean useTls() {
+        return useTls;
     }
 
     @Override
@@ -59,8 +84,8 @@ public class ConnectProxyConfig extends ProxyConfig {
         return MoreObjects.toStringHelper(this)
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
-                          .add("password", password)
-                          .add("useSsl", useSsl)
+                          .add("password", password())
+                          .add("useTls", useTls())
                           .toString();
     }
 }

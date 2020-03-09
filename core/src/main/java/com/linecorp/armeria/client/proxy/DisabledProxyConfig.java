@@ -16,27 +16,20 @@
 
 package com.linecorp.armeria.client.proxy;
 
-import java.net.InetSocketAddress;
+import com.google.common.base.MoreObjects;
 
 /**
- * A {@link ProxyConfig} builder for the SOCKS4 protocol.
+ * Represents client-side proxy is disabled.
  */
-public final class Socks4ProxyConfigBuilder extends AbstractProxyConfigBuilder {
+public final class DisabledProxyConfig extends ProxyConfig {
 
-    Socks4ProxyConfigBuilder(InetSocketAddress proxyAddress) {
-        super(proxyAddress);
-    }
+    static final DisabledProxyConfig DISABLED_PROXY_CONFIG = new DisabledProxyConfig();
 
-    /**
-     * Sets the proxy username.
-     */
-    public Socks4ProxyConfigBuilder username(String username) {
-        setUsername(username);
-        return this;
+    private DisabledProxyConfig() {
     }
 
     @Override
-    public Socks4ProxyConfig build() {
-        return new Socks4ProxyConfig(getProxyAddress(), getUsername());
+    public String toString() {
+        return MoreObjects.toStringHelper(this).toString();
     }
 }

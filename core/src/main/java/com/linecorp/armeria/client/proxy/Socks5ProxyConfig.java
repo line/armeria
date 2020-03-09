@@ -25,15 +25,36 @@ import com.google.common.base.MoreObjects;
 /**
  * Contains SOCKS5 proxy related configuration.
  */
-public class Socks5ProxyConfig extends ProxyConfig {
+public final class Socks5ProxyConfig extends ProxyConfig {
+
+    private final InetSocketAddress proxyAddress;
+
+    @Nullable
+    private final String username;
 
     @Nullable
     private final String password;
 
     Socks5ProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
                       @Nullable String password) {
-        super(proxyAddress, username);
+        this.proxyAddress = proxyAddress;
+        this.username = username;
         this.password = password;
+    }
+
+    /**
+     * The configured proxy address.
+     */
+    public InetSocketAddress proxyAddress() {
+        return proxyAddress;
+    }
+
+    /**
+     * The configured username.
+     */
+    @Nullable
+    public String username() {
+        return username;
     }
 
     /**
@@ -49,7 +70,7 @@ public class Socks5ProxyConfig extends ProxyConfig {
         return MoreObjects.toStringHelper(this)
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
-                          .add("password", password)
+                          .add("password", password())
                           .toString();
     }
 }
