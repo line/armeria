@@ -277,6 +277,11 @@ This product depends on Retrofit, distributed by Square:
   * License: licenses/LICENSE.retrofit.al20.txt (Apache License v2.0)
   * Homepage: https://square.github.io/retrofit/
 
+  This product depends on RxJava, distributed by RxJava Contributors:
+
+    * License: licenses/LICENSE.rxjava.al20.txt (Apache License v2.0)
+    * Homepage: https://github.com/ReactiveX/RxJava
+
 This product depends on SLF4J, distributed by QOS.ch:
 
   * License: licenses/LICENSE.slf4j.mit.txt (MIT License)
