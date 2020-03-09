@@ -72,12 +72,11 @@ public final class AuthService extends SimpleDecoratingHttpService {
     }
 
     private final Authorizer<HttpRequest> authorizer;
-    private final AuthSuccessHandler<HttpRequest, HttpResponse> successHandler;
-    private final AuthFailureHandler<HttpRequest, HttpResponse> failureHandler;
+    private final AuthSuccessHandler successHandler;
+    private final AuthFailureHandler failureHandler;
 
     AuthService(HttpService delegate, Authorizer<HttpRequest> authorizer,
-                AuthSuccessHandler<HttpRequest, HttpResponse> successHandler,
-                AuthFailureHandler<HttpRequest, HttpResponse> failureHandler) {
+                AuthSuccessHandler successHandler, AuthFailureHandler failureHandler) {
         super(delegate);
         this.authorizer = authorizer;
         this.successHandler = successHandler;
