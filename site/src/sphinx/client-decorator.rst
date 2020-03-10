@@ -114,33 +114,38 @@ separately grouped and executed in reverse order of the insertion:
 
     ClientBuilder cb = Clients.builder(...);
 
-    // RPC decorator #2.
+    // #2 RPC decorator.
     cb.rpcDecorator((delegate, ctx, rpcReq) -> {
         System.err.println("Secondly, executed.");
         ...
     });
 
-    // HTTP decorator #4.
-    cb.decorator((delegate, ctx, httpReq) -> {
-        System.err.println("Fourthly, executed.");
-        ...
-    });
-
-    // RPC decorator #1.
-    cb.rpcDecorator((delegate, ctx, rpcReq) -> {
-        System.err.println("Firstly, executed.");
-        ...
-    });
-
-    // HTTP decorator #3.
+    // #1 HTTP decorator.
     cb.decorator((delegate, ctx, httpReq) -> {
         System.err.println("Thirdly, executed.");
         ...
     });
 
+    // #1 RPC decorator.
+    cb.rpcDecorator((delegate, ctx, rpcReq) -> {
+        System.err.println("Firstly, executed.");
+        ...
+    });
+
 An RPC request is converted into an HTTP request before it's sent to a server.
 So RPC decorators are inserted before the RPC request is converted and HTTP decorators are inserted after the
-request is converted into the HTTP request.
+request is converted into the HTTP request. The following diagram describes it:
+
+.. uml::
+
+    @startditaa
+    +--------+ req +-----------+ req +-----------+ req +--------+ req +-----------+ req +------------------+
+    |        |---->|           |---->|           |---->|        |---->|           |---->|                  |
+    | Thrift |     | #1 RPC    |     | #2 RPC    |     | RPC to |     | #1 HTTP   |     | Armeria          |
+    | Client | res | decorator | res | decorator | res | HTTP   | res | decorator | res | Netwokring Layer |
+    |        |<----|           |<----|           |<----|        |<----|           |<----|                  |
+    +--------+     +-----------+     +-----------+     +--------+     +-----------+     +------------------+
+    @endditaa
 
 If the decorator modifies the response (e.g. :api:`DecodingClient`) or spawns more requests
 (e.g. :api:`RetryingClient`), the consequence is different depending on the order of the decorators.
