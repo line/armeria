@@ -85,10 +85,6 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
 
     @Override
     public final void onNext(HttpObject httpObject) {
-        // There's no chance that an exception is raised from the underlying logic, so we don't do try catch not
-        // to propagate the exception to the publisher.
-        // https://github.com/reactive-streams/reactive-streams-jvm#2.13
-
         if (armeriaCall.isCanceled()) {
             onCancelled();
             assert subscription != null;

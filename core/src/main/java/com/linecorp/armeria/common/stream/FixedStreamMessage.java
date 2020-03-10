@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -112,12 +113,23 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
         final Subscriber<Object> subscriber = subscription.subscriber();
         if (subscription.needsDirectInvocation()) {
-            subscriber.onSubscribe(subscription);
+            subscribe(subscription, subscriber);
         } else {
-            subscription.executor().execute(() -> subscriber.onSubscribe(subscription));
+            subscription.executor().execute(() -> subscribe(subscription, subscriber));
         }
 
         return subscription;
+    }
+
+    private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+        try {
+            subscriber.onSubscribe(subscription);
+        } catch (Throwable t) {
+            abort(t);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
+                        subscriber, t);
+        }
     }
 
     final void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
@@ -160,6 +172,8 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private void cancelOrAbort(Throwable cause) {
         if (closeEventUpdater.compareAndSet(this, null, newCloseEvent(cause))) {
+            final SubscriptionImpl subscription = this.subscription;
+            assert subscription != null;
             if (subscription.needsDirectInvocation()) {
                 cleanup(subscription);
             } else {
