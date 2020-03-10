@@ -46,6 +46,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -106,9 +107,15 @@ public class AnnotatedDocServiceTest {
                     DocService.builder()
                               .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
                               .exampleHttpHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
-                              .exampleHttpHeaders(MyService.class,"pathParams", EXAMPLE_HEADERS_METHOD)
+                              .exampleHttpHeaders(MyService.class, "pathParams", EXAMPLE_HEADERS_METHOD)
+                              .examplePaths(MyService.class, "pathParams",
+                                            "/service/hello1/foo/hello3/bar")
+                              .exampleQueries(MyService.class, "foo", "query=10", "query=20")
                               .exampleRequestForMethod(MyService.class, "pathParams",
                                              ImmutableList.of(mapper.readTree("{\"hello\":\"armeria\"}")))
+                              .examplePaths(MyService.class, "pathParamsWithQueries",
+                                            "/service/hello1/foo", "/service/hello1/bar")
+                              .exampleQueries(MyService.class, "pathParamsWithQueries", "hello3=hello4")
                               .exclude(DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude1").or(
                                        DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude2")))
                               .build());
@@ -128,6 +135,7 @@ public class AnnotatedDocServiceTest {
         addAllMethodsMethodInfos(methodInfos);
         addIntsMethodInfo(methodInfos);
         addPathParamsMethodInfo(methodInfos);
+        addPathParamsWithQueriesMethodInfo(methodInfos);
         addRegexMethodInfo(methodInfos);
         addPrefixMethodInfo(methodInfos);
         addConsumesMethodInfo(methodInfos);
@@ -203,6 +211,19 @@ public class AnnotatedDocServiceTest {
                 FieldInfo.builder("hello4", STRING).requirement(REQUIRED).location(PATH).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "pathParams", STRING, fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
+    private static void addPathParamsWithQueriesMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "/service/hello1/{hello2}")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of(
+                FieldInfo.builder("hello2", STRING).requirement(REQUIRED).location(PATH).build(),
+                FieldInfo.builder("hello3", STRING).requirement(REQUIRED).location(QUERY).build());
+        final MethodInfo methodInfo = new MethodInfo(
+                "pathParamsWithQueries", STRING, fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
@@ -285,13 +306,29 @@ public class AnnotatedDocServiceTest {
             service.get("methods").forEach(method -> {
                 final String methodName = method.get("name").textValue();
                 final ArrayNode exampleHttpHeaders = (ArrayNode) method.get("exampleHttpHeaders");
-                if (MyService.class.getName().equals(serviceName) &&
-                    "pathParams".equals(methodName)) {
+                if (MyService.class.getName().equals(serviceName) && "pathParams".equals(methodName)) {
                     exampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_METHOD));
                     final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                     exampleRequests.add('{' + System.lineSeparator() +
                                         "  \"hello\" : \"armeria\"" + System.lineSeparator() +
                                         '}');
+                    final ArrayNode examplePaths = (ArrayNode) method.get("examplePaths");
+                    examplePaths.add(TextNode.valueOf("/service/hello1/foo/hello3/bar"));
+                }
+
+                if (MyService.class.getName().equals(serviceName) && "foo".equals(methodName)) {
+                    final ArrayNode exampleQueries = (ArrayNode) method.get("exampleQueries");
+                    exampleQueries.add(TextNode.valueOf("query=10"));
+                    exampleQueries.add(TextNode.valueOf("query=20"));
+                }
+
+                if (MyService.class.getName().equals(serviceName) &&
+                    "pathParamsWithQueries".equals(methodName)) {
+                    final ArrayNode examplePaths = (ArrayNode) method.get("examplePaths");
+                    examplePaths.add(TextNode.valueOf("/service/hello1/foo"));
+                    examplePaths.add(TextNode.valueOf("/service/hello1/bar"));
+                    final ArrayNode exampleQueries = (ArrayNode) method.get("exampleQueries");
+                    exampleQueries.add(TextNode.valueOf("hello3=hello4"));
                 }
             });
         });
@@ -345,6 +382,11 @@ public class AnnotatedDocServiceTest {
         @Get("/hello1/:hello2/hello3/:hello4")
         public String pathParams(@Param String hello2, @Param String hello4) {
             return hello2 + ' ' + hello4;
+        }
+
+        @Get("/hello1/:hello2")
+        public String pathParamsWithQueries(@Param String hello2, @Param String hello3) {
+            return hello2 + ' ' + hello3;
         }
 
         @Get("regex:/(bar|baz)")

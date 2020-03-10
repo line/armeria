@@ -44,19 +44,15 @@ export default class AnnotatedHttpTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    let newPath;
-    if (endpointPath) {
-      newPath = endpointPath;
-    } else {
-      newPath = endpoint.pathMapping.substring('exact:'.length);
-      if (queries && queries.length > 1) {
-        if (queries.charAt(0) === '?') {
-          newPath += queries;
-        } else {
-          newPath = `${newPath}?${queries}`;
-        }
-      }
+    let newPath =
+      endpointPath || endpoint.pathMapping.substring('exact:'.length);
+    if (queries && queries.length > 1) {
+      newPath =
+        newPath.indexOf('?') > 0
+          ? `${newPath}&${queries}`
+          : `${newPath}?${queries}`;
     }
+
     const httpResponse = await fetch(encodeURI(newPath), {
       headers: hdrs,
       method: method.httpMethod,
