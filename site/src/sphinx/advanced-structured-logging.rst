@@ -230,6 +230,8 @@ request and response properties, you need to use :api:`ClientConnectionTimings` 
     The reason why we used the static method is that the :api:`ClientConnectionTimings` is stored using
     the attribute. See :ref:`advanced-custom-attribute` for more information.
 
+.. _content-previewing:
+
 Enabling content previews
 -------------------------
 Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`

@@ -45,11 +45,30 @@ public final class ClientDecoration {
     }
 
     /**
+     * Creates a new instance from a single {@link DecoratingHttpClientFunction}.
+     *
+     * @param decorator the {@link DecoratingHttpClientFunction} that transforms an {@link HttpClient}
+     *                  to another
+     */
+    public static ClientDecoration of(DecoratingHttpClientFunction decorator) {
+        return builder().add(decorator).build();
+    }
+
+    /**
      * Creates a new instance from a single decorator {@link Function}.
      *
      * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
      */
     public static ClientDecoration ofRpc(Function<? super RpcClient, ? extends RpcClient> decorator) {
+        return builder().addRpc(decorator).build();
+    }
+
+    /**
+     * Creates a new instance from a single {@link DecoratingRpcClientFunction}.
+     *
+     * @param decorator the {@link DecoratingRpcClientFunction} that transforms an {@link RpcClient} to another
+     */
+    public static ClientDecoration ofRpc(DecoratingRpcClientFunction decorator) {
         return builder().addRpc(decorator).build();
     }
 

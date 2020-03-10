@@ -67,6 +67,85 @@ If your decorator is expected to be reusable, it is recommended to define a new 
     // Using a lambda expression:
     cb.decorator(delegate -> new AuditClient(delegate));
 
+The order of decoration
+-----------------------
+
+The decorators are executed in reverse order of the insertion. The following example shows which order
+the decorators are executed by printing the messages.
+
+.. code-block:: java
+
+    ClientBuilder cb = Clients.builder(...);
+    cb.decorator((delegate, ctx, req) -> {
+        System.err.println("Thirdly, executed.");
+        ...
+    });
+    // No matter decorator() or option() is used, decorators are executed in reverse order.
+    cb.option(ClientOption.DECORATION, ClientDecoration.of((delegate, ctx, req) -> {
+        System.err.println("Secondly, executed");
+        ...
+    });
+    cb.decorator((delegate, ctx, req) -> {
+        System.err.println("Firstly, executed.");
+        ...
+    });
+
+If the client is a Thrift client and RPC decorators are inserted, HTTP decorators and RPC decorators are
+separately grouped and executed in reverse order of the insertion:
+
+.. code-block:: java
+
+    ClientBuilder cb = Clients.builder(...);
+
+    // RPC decorator #2.
+    cb.rpcDecorator((delegate, ctx, rpcReq) -> {
+        System.err.println("Secondly, executed.");
+        ...
+    });
+
+    // HTTP decorator #4.
+    cb.decorator((delegate, ctx, httpReq) -> {
+        System.err.println("Fourthly, executed.");
+        ...
+    });
+
+    // RPC decorator #1.
+    cb.rpcDecorator((delegate, ctx, rpcReq) -> {
+        System.err.println("Firstly, executed.");
+        ...
+    });
+
+    // HTTP decorator #3.
+    cb.decorator((delegate, ctx, httpReq) -> {
+        System.err.println("Thirdly, executed.");
+        ...
+    });
+
+An RPC request is converted into an HTTP request before it's sent to a server.
+So RPC decorators are inserted before the RPC request is converted and HTTP decorators are inserted after the
+request is converted into the HTTP request.
+
+If the decorator modifies the response (e.g. :api:`DecodingClient`) or spawns more requests
+(e.g. :api:`RetryingClient`), the consequence is different depending on the order of the decorators.
+Let's look at the following example that :api:`DecodingClient` and :api:`ContentPreviewingClient`
+are used together:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.client.encoding.DecodingClient;
+    import com.linecorp.armeria.client.logging.ContentPreviewingClient;
+
+    ClientBuilder cb = Clients.builder(...);
+    // Don't do this. ContentPreviewingClient should be inserted after DecodingClient.
+    cb.decorator(ContentPreviewingClient.newDecorator(1000));
+    cb.decorator(DecodingClient.newDecorator());
+
+:api:`DecodingClient` decodes the content of HTTP responses.
+:api:`ContentPreviewingClient` is :ref:`content-previewing` of the HTTP response by setting it to the
+:api:`RequestLog`. Because it's inserted after :api:`DecodingClient`, which means that the response content
+is set before it's decoded, you will see the encoded response content preview.
+For :api:`RetryingClient`, please check out :ref:`retry-with-logging`.
+
 See also
 --------
 
