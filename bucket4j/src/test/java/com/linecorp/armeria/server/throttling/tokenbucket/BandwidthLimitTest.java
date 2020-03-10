@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.throttling.tokenbucket;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 
@@ -79,26 +80,20 @@ class BandwidthLimitTest {
 
     @Test
     void testInvalidConstructor() {
-        try {
-            BandwidthLimit.of(0L, 1000L, 50L, Duration.ofSeconds(60L));
-        } catch (IllegalArgumentException e) {
-            assertThat(
-                    e.getMessage()).isEqualTo("Bandwidth limit must be positive. Found: 0");
-        }
+        assertThatThrownBy(
+                () -> BandwidthLimit.of(0L, 1000L, 50L, Duration.ofSeconds(60L)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Bandwidth limit must be positive. Found: 0");
 
-        try {
-            BandwidthLimit.of(100L, 99L, 50L, Duration.ofSeconds(60L));
-        } catch (IllegalArgumentException e) {
-            assertThat(
-                    e.getMessage()).isEqualTo("Overdraft limit has to exceed bandwidth limit 100. Found: 99");
-        }
+        assertThatThrownBy(
+                () -> BandwidthLimit.of(100L, 99L, 50L, Duration.ofSeconds(60L)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Overdraft limit has to exceed bandwidth limit 100. Found: 99");
 
-        try {
-            BandwidthLimit.of(100L, 1000L, 50L, Duration.ofSeconds(0L));
-        } catch (IllegalArgumentException e) {
-            assertThat(
-                    e.getMessage()).isEqualTo("Bandwidth period must be positive. Found: PT0S");
-        }
+        assertThatThrownBy(
+                () -> BandwidthLimit.of(100L, 1000L, 50L, Duration.ofSeconds(0L)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Bandwidth period must be positive. Found: PT0S");
     }
 
     @Test
@@ -127,55 +122,48 @@ class BandwidthLimitTest {
 
     @Test
     void testInvalidSpecification() {
-        try {
-            BandwidthLimit.of("1000000000000000000000000000000000000000000000000000000000000000000;window=60");
-        } catch (NumberFormatException e) {
-            assertThat(e.getMessage())
-                .isEqualTo(
+        assertThatThrownBy(
+                () -> BandwidthLimit.of(
+                  "1000000000000000000000000000000000000000000000000000000000000000000;window=60"))
+                .isInstanceOf(NumberFormatException.class)
+                .hasMessageContaining(
                   "For input string: \"1000000000000000000000000000000000000000000000000000000000000000000\"");
-        }
 
-        try {
-            BandwidthLimit.of("abcd;window=60");
-        } catch (NumberFormatException e) {
-            assertThat(e.getMessage()).isEqualTo("For input string: \"abcd\"");
-        }
+        assertThatThrownBy(
+                () -> BandwidthLimit.of("abcd;window=60"))
+                .isInstanceOf(NumberFormatException.class)
+                .hasMessageContaining("For input string: \"abcd\"");
 
-        try {
-            BandwidthLimit.of("100;window=defg");
-        } catch (NumberFormatException e) {
-            assertThat(e.getMessage()).isEqualTo("For input string: \"defg\"");
-        }
+        assertThatThrownBy(
+                () -> BandwidthLimit.of("100;window=defg"))
+                .isInstanceOf(NumberFormatException.class)
+                .hasMessageContaining("For input string: \"defg\"");
 
-        try {
-            BandwidthLimit.of("100;");
-        } catch (IllegalArgumentException e) {
-            assertThat(e.getMessage()).isEqualTo("Invalid format of \"100;\" - period not found");
-        }
+        assertThatThrownBy(
+                () -> BandwidthLimit.of("100;"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid format of \"100;\" - period not found");
 
-        try {
-            BandwidthLimit.of(";window=60;burst=1000;initial=50");
-        } catch (IllegalArgumentException e) {
-            assertThat(e.getMessage())
-                    .isEqualTo("Invalid format of \";window=60;burst=1000;initial=50\" - limit not found");
-        }
+        assertThatThrownBy(
+                () -> BandwidthLimit.of(";window=60;burst=1000;initial=50"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(
+                        "Invalid format of \";window=60;burst=1000;initial=50\" - limit not found");
 
-        try {
-            BandwidthLimit.of("100");
-        } catch (IllegalArgumentException e) {
-            assertThat(e.getMessage()).isEqualTo("Invalid format of \"100\" - period not found");
-        }
+        assertThatThrownBy(
+                () -> BandwidthLimit.of("100"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid format of \"100\" - period not found");
 
-        try {
-            BandwidthLimit.of("");
-        } catch (IllegalArgumentException e) {
-            assertThat(e.getMessage()).isEqualTo("Empty bandwidth limit specification");
-        }
+        assertThatThrownBy(
+                () -> BandwidthLimit.of(""))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Empty bandwidth limit specification");
 
-        try {
-            BandwidthLimit.of(null);
-        } catch (NullPointerException e) {
-            assertThat(e.getMessage()).isEqualTo("specification");
-        }
+        //noinspection ConstantConditions
+        assertThatThrownBy(
+                () -> BandwidthLimit.of(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("specification");
     }
 }

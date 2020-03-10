@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.throttling.tokenbucket;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -53,6 +55,19 @@ public final class TokenBucket {
      */
     public static TokenBucket of(String specification) {
         return TokenBucketSpec.parseTokenBucket(specification);
+    }
+
+    /**
+     * Returns a newly created {@link TokenBucket} with a single simple {@link BandwidthLimit}.
+     * Specifies easy limitation of {@code limit} tokens per {@code period} time window.
+     * @param limit the bucket size - defines the maximum count of tokens which can be held by the bucket
+     *              and defines the speed at which tokens are regenerated in the bucket
+     * @param period the time window, during which the tokens will be regenerated
+     * @return Newly created {@link TokenBucket}
+     * @see BandwidthLimit#of(long, Duration)
+     */
+    public static TokenBucket of(long limit, Duration period) {
+        return new TokenBucket(BandwidthLimit.of(limit, period));
     }
 
     @Nonnull

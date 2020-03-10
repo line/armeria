@@ -118,7 +118,7 @@ public class TokenBucketThrottlingStrategyTest {
         assertThat(response1.headers().contains("X-RateLimit-Remaining", "0")).isTrue();
         assertThat(response1.headers().contains("X-RateLimit-Reset")).isTrue();
         final long reset1 = Long.parseLong(response1.headers().get("X-RateLimit-Reset"));
-        assertThat(reset1 <= 10L && reset1 >= 0L).isTrue();
+        assertThat(reset1).isBetween(0L, 10L);
         assertThat(response1.headers().contains("X-RateLimit-Limit")).isFalse();
 
         final AggregatedHttpResponse response2 = client.get("/http-throttle1").aggregate().get();
@@ -126,7 +126,7 @@ public class TokenBucketThrottlingStrategyTest {
 
         assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER)).isTrue();
         final long retryAfter2 = Long.parseLong(response2.headers().get(HttpHeaderNames.RETRY_AFTER));
-        assertThat(retryAfter2 <= 10L && retryAfter2 >= 0L).isTrue();
+        assertThat(retryAfter2).isBetween(0L, 10L);
         assertThat(response2.headers().contains("RateLimit-Remaining")).isFalse();
         assertThat(response2.headers().contains("X-Rate-Limit-Remaining")).isFalse();
         assertThat(response2.headers().contains("X-RateLimit-Remaining", "0")).isTrue();
@@ -148,7 +148,7 @@ public class TokenBucketThrottlingStrategyTest {
         assertThat(response1.headers().contains("X-RateLimit-Remaining", "0")).isTrue();
         assertThat(response1.headers().contains("X-RateLimit-Reset")).isTrue();
         final long reset1 = Long.parseLong(response1.headers().get("X-RateLimit-Reset"));
-        assertThat(reset1 <= 10L && reset1 >= 0L).isTrue();
+        assertThat(reset1).isBetween(0L, 10L);
         assertThat(response1.headers().get("X-RateLimit-Limit")).isEqualTo("1, 1;window=10");
 
         final AggregatedHttpResponse response2 = client.get("/http-throttle2").aggregate().get();
@@ -179,7 +179,7 @@ public class TokenBucketThrottlingStrategyTest {
 
         assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER)).isTrue();
         final long retryAfter2 = Long.parseLong(response2.headers().get(HttpHeaderNames.RETRY_AFTER));
-        assertThat(retryAfter2 <= 10L && retryAfter2 >= 0L).isTrue();
+        assertThat(retryAfter2).isBetween(0L, 10L);
         assertThat(response2.headers().contains("RateLimit-Remaining")).isFalse();
         assertThat(response2.headers().contains("X-Rate-Limit-Remaining")).isFalse();
         assertThat(response2.headers().contains("X-RateLimit-Remaining")).isFalse();
@@ -203,7 +203,7 @@ public class TokenBucketThrottlingStrategyTest {
 
         assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER)).isTrue();
         final long retryAfter2 = Long.parseLong(response2.headers().get(HttpHeaderNames.RETRY_AFTER));
-        assertThat(retryAfter2 <= 10L && retryAfter2 >= 5L).isTrue();
+        assertThat(retryAfter2).isBetween(5L, 10L);
         assertThat(response2.headers().contains("RateLimit-Remaining")).isFalse();
         assertThat(response2.headers().contains("X-Rate-Limit-Remaining")).isFalse();
         assertThat(response2.headers().contains("X-RateLimit-Remaining")).isFalse();

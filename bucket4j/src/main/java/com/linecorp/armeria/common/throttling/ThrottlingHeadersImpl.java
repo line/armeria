@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.throttling;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 
 import io.netty.util.AsciiString;
@@ -31,13 +33,9 @@ final class ThrottlingHeadersImpl implements ThrottlingHeaders {
     private final AsciiString resetHeader;
 
     ThrottlingHeadersImpl(final String scheme) {
-        limitHeader = createHeaderName(scheme + LIMIT_SUFFIX);
-        remainingHeader = createHeaderName(scheme + REMAINING_SUFFIX);
-        resetHeader = createHeaderName(scheme + RESET_SUFFIX);
-    }
-
-    private static AsciiString createHeaderName(String name) {
-        return HttpHeaderNames.of(name);
+        limitHeader = HttpHeaderNames.of(scheme + LIMIT_SUFFIX);
+        remainingHeader = HttpHeaderNames.of(scheme + REMAINING_SUFFIX);
+        resetHeader = HttpHeaderNames.of(scheme + RESET_SUFFIX);
     }
 
     @Override
@@ -53,5 +51,14 @@ final class ThrottlingHeadersImpl implements ThrottlingHeaders {
     @Override
     public AsciiString resetHeader() {
         return resetHeader;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("limitHeader", limitHeader)
+                          .add("remainingHeader", remainingHeader)
+                          .add("resetHeader", resetHeader)
+                          .toString();
     }
 }
