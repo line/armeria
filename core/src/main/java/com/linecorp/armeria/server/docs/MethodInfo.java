@@ -123,7 +123,7 @@ public final class MethodInfo {
                 ImmutableList.builderWithExpectedSize(Iterables.size(examplePaths));
         for (String path : examplePaths) {
             final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
-            checkArgument(pathAndQuery != null, "examplePaths contains an invalid path: {}", path);
+            checkArgument(pathAndQuery != null, "examplePaths contains an invalid path: %s", path);
             examplePathsBuilder.add(pathAndQuery.path());
         }
         this.examplePaths = examplePathsBuilder.build();
@@ -132,8 +132,8 @@ public final class MethodInfo {
         final ImmutableList.Builder<String> exampleQueriesBuilder =
                 ImmutableList.builderWithExpectedSize(Iterables.size(exampleQueries));
         for (String query : exampleQueries) {
-            final PathAndQuery pathAndQuery = PathAndQuery.parse(query.startsWith("?") ? query : '?' + query);
-            checkArgument(pathAndQuery != null, "exampleQueries contains an invalid query string: {}", query);
+            final PathAndQuery pathAndQuery = PathAndQuery.parse('?' + query);
+            checkArgument(pathAndQuery != null, "exampleQueries contains an invalid query string: %s", query);
             exampleQueriesBuilder.add(pathAndQuery.query());
         }
         this.exampleQueries = exampleQueriesBuilder.build();

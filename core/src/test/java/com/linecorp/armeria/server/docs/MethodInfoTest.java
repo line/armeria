@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
@@ -51,5 +52,13 @@ class MethodInfoTest {
         assertThatThrownBy(() -> newMethodInfo(ImmutableList.of(invalidPath), ImmutableList.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("contains an invalid path");
+    }
+
+    @Test
+    void validQueryString() {
+        for (String queryString : ImmutableList.of("foo", "?foo", "??foo")) {
+            assertThat(newMethodInfo(ImmutableList.of(), ImmutableList.of(queryString)).exampleQueries())
+                    .containsOnly(queryString);
+        }
     }
 }
