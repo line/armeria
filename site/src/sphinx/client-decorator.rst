@@ -75,6 +75,8 @@ the decorators are executed by printing the messages.
 
 .. code-block:: java
 
+    import com.linecorp.armeria.client.WebClient;
+
     ClientBuilder cb = Clients.builder(...);
 
     // #2 decorator
@@ -90,20 +92,19 @@ the decorators are executed by printing the messages.
         ...
     });
 
+    WebClient myClient = cb.build(WebClient.class);
+
 The following diagram describes how an HTTP request and HTTP response are gone through decorators:
 
 .. uml::
 
     @startditaa
-                                            HTTP request
-    +--------+      +--------------+      +--------------+      +--------+            +--------------+
-    | Client | ---> | #1 decorator | ---> | #2 decorator | ---> | socket | ---------> |              |
-    +--------+      +--------------+      +--------------+      +--------+            |              |
-                                                                                      |    server    |
-                                            HTTP response                             |              |
-    +--------+      +--------------+      +--------------+      +--------+            |              |
-    | Client | <--- | #1 decorator | <--- | #2 decorator | <--- | socket | <--------- |              |
-    +--------+      +--------------+      +--------------+      +--------+            +--------------+
+    +-----------+  req  +-----------+  req  +-----------+  req  +------------------+    req    +--------------+
+    |           |------>|           |------>|           |------>|                  |---------->|              |
+    | WebClient |       | #1        |       | #2        |       | Armeria          |           |    Server    |
+    |           |  res  | decorator |  res  | decorator |  res  | Netwokring Layer |    res    |              |
+    |           |<------|           |<------|           |<------|                  |<----------|              |
+    +-----------+       +-----------+       +-----------+       +------------------+           +--------------+
     @endditaa
 
 If the client is a Thrift client and RPC decorators are inserted, HTTP decorators and RPC decorators are
