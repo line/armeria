@@ -25,11 +25,8 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.UnstableApi;
@@ -44,8 +41,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 @UnstableApi
 public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
-
-    private static final Logger logger = LoggerFactory.getLogger(DeferredStreamMessage.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, SubscriptionImpl>
@@ -271,7 +266,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return;
         }
 
-        final Builder<SubscriptionOption> builder = ImmutableList.builder();
+        final ImmutableList.Builder<SubscriptionOption> builder = ImmutableList.builder();
         if (downstreamSubscription.withPooledObjects()) {
             builder.add(SubscriptionOption.WITH_POOLED_OBJECTS);
         }

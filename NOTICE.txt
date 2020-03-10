@@ -88,6 +88,11 @@ This product contains a modified part of Netty, distributed by Netty.io:
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
   * Homepage: https://netty.io/
 
+This product contains a modified part of RxJava, distributed by RxJava Contributors:
+
+  * License: licenses/LICENSE.rxjava.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/ReactiveX/RxJava
+
 This product contains a modified part of Spring Boot, distributed by Pivotal Software, Inc:
 
   * License: licenses/LICENSE.spring.al20.txt (Apache License v2.0)
@@ -277,10 +282,10 @@ This product depends on Retrofit, distributed by Square:
   * License: licenses/LICENSE.retrofit.al20.txt (Apache License v2.0)
   * Homepage: https://square.github.io/retrofit/
 
-  This product depends on RxJava, distributed by RxJava Contributors:
+This product depends on RxJava, distributed by RxJava Contributors:
 
-    * License: licenses/LICENSE.rxjava.al20.txt (Apache License v2.0)
-    * Homepage: https://github.com/ReactiveX/RxJava
+  * License: licenses/LICENSE.rxjava.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/ReactiveX/RxJava
 
 This product depends on SLF4J, distributed by QOS.ch:
 

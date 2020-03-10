@@ -238,8 +238,7 @@ public final class Exceptions {
      * if the errors are not so catastrophic that such a call would be futile, in which case you simply want to
      * rethrow the error.
      *
-     * @param t
-     *         the {@code Throwable} to test and perhaps throw
+     * @param t the {@code Throwable} to test and perhaps throw
      * @see <a href="https://github.com/ReactiveX/RxJava/issues/748#issuecomment-32471495">
      *     RxJava: StackOverflowError is swallowed (Issue #748)</a>
      */

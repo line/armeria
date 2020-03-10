@@ -34,8 +34,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -105,8 +103,7 @@ public final class CompositeException extends RuntimeException {
         if (deDupedExceptions.isEmpty()) {
             throw new IllegalArgumentException("errors is empty");
         }
-        final List<Throwable> localExceptions = new ArrayList<>(deDupedExceptions);
-        exceptions = Collections.unmodifiableList(localExceptions);
+        exceptions = ImmutableList.copyOf(deDupedExceptions);
         message = exceptions.size() + " exceptions occurred. ";
     }
 
@@ -225,8 +222,7 @@ public final class CompositeException extends RuntimeException {
      * Special handling for printing out a {@code CompositeException}.
      * Loops through all inner exceptions and prints them out.
      *
-     * @param s
-     *            stream to print to
+     * @param s stream to print to
      */
     private void printStackTrace(PrintStreamOrWriter s) {
         final StringBuilder b = new StringBuilder(128);
