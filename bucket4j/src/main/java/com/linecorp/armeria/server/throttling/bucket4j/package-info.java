@@ -21,6 +21,6 @@
  *
  */
 @NonNullByDefault
-package com.linecorp.armeria.server.throttling.tokenbucket;
+package com.linecorp.armeria.server.throttling.bucket4j;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

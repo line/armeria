@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.throttling.tokenbucket;
+package com.linecorp.armeria.server.throttling.bucket4j;
 
 import static java.util.Objects.requireNonNull;
 
