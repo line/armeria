@@ -9,7 +9,7 @@ server:
   verboseResponses: false
   defaultHostname: "host.name.com"
   ports:
-    - port: 8080
+    - port: 0
       protocol: HTTP
   compression:
     enabled: true
