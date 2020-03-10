@@ -498,9 +498,9 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
-     * try (SafeCloseable ignored = withHttpHeaders(headersBuilder -> {
-     *     headersBuilder.set(HttpHeaders.AUTHORIZATION, myCredential)
-     *                   .set(HttpHeaders.USER_AGENT, myAgent);
+     * try (SafeCloseable ignored = withHttpHeaders(builder -> {
+     *     builder.set(HttpHeaders.AUTHORIZATION, myCredential)
+     *            .set(HttpHeaders.USER_AGENT, myAgent);
      * })) {
      *     client.executeSomething(..);
      * }
@@ -515,7 +515,7 @@ public final class Clients {
      *      })) {
      *     for (String secret : secrets) {
      *         try (SafeCloseable ignored2 = withHttpHeaders(builder -> {
-     *                  builder.set(AUTHORIZATION, secret)
+     *                  builder.set(AUTHORIZATION, secret);
      *              })) {
      *             // Both USER_AGENT and AUTHORIZATION will be set.
      *             client.executeSomething(..);
