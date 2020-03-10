@@ -308,6 +308,22 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             logBuilder.requestContentPreview(requestLog.requestContentPreview());
             return null;
         });
+
+        // Propagates the response content only when deferResponseContent is called.
+        if (parentLogBuilder.isDeferResponseContentSet()) {
+            logBuilder.deferResponseContent();
+            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT).thenApply(requestLog -> {
+                logBuilder.responseContent(requestLog.responseContent(), requestLog.rawResponseContent());
+                return null;
+            });
+        }
+        if (parentLogBuilder.isDeferResponseContentPreviewSet()) {
+            logBuilder.deferResponseContentPreview();
+            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW).thenApply(requestLog -> {
+                logBuilder.responseContentPreview(requestLog.responseContentPreview());
+                return null;
+            });
+        }
         return derived;
     }
 

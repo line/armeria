@@ -303,12 +303,22 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void deferResponseContent();
 
     /**
+     * Returns {@code true} if {@link #deferResponseContent()} is called.
+     */
+    boolean isDeferResponseContentSet();
+
+    /**
      * Allows setting the response content preview using {@link #responseContentPreview(String)} even after
      * {@link #endResponse()} is called.
      *
      * <p>Note, however, the response content preview is not set if {@link #endResponse(Throwable)} was called.
      */
     void deferResponseContentPreview();
+
+    /**
+     * Returns {@code true} if {@link #deferResponseContentPreview()} is called.
+     */
+    boolean isDeferResponseContentPreviewSet();
 
     /**
      * Sets the {@link RequestLog#responseTrailers()}.

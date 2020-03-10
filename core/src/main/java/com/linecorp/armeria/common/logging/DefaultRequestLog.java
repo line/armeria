@@ -1131,11 +1131,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public boolean isDeferResponseContentSet() {
+        return isDeferredFlagSet(RequestLogProperty.RESPONSE_CONTENT);
+    }
+
+    @Override
     public void deferResponseContentPreview() {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
             return;
         }
         updateDeferredFlags(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+    }
+
+    @Override
+    public boolean isDeferResponseContentPreviewSet() {
+        return isDeferredFlagSet(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
     }
 
     @Override

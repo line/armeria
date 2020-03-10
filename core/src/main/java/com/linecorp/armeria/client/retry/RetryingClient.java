@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
@@ -246,6 +247,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                                Runnable originalResClosingTask) {
         return (backoff, unused) -> {
             if (backoff != null) {
+                // Set response content with null to make sure that the log is complete.
+                final RequestLogBuilder logBuilder = derivedCtx.logBuilder();
+                logBuilder.responseContent(null, null);
+                logBuilder.responseContentPreview(null);
+
                 final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
                 final long nextDelay = getNextDelay(ctx, backoff, millisAfter);
                 if (nextDelay >= 0) {
