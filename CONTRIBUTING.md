@@ -90,7 +90,7 @@ import org.junit.Test;
 
 ### Use Assert4J instead of JUnit's assertion API
 
-We prefer [Assert4J]() when writing assertions for test cases.
+We prefer [Assert4J](https://joel-costigliola.github.io/assertj/) when writing assertions for test cases.
 
 ```java
 // Good
