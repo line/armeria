@@ -76,19 +76,35 @@ the decorators are executed by printing the messages.
 .. code-block:: java
 
     ClientBuilder cb = Clients.builder(...);
+
+    // #2 decorator
     cb.decorator((delegate, ctx, req) -> {
-        System.err.println("Thirdly, executed.");
+        System.err.println("Secondly, executed.");
         ...
     });
-    // No matter decorator() or option() is used, decorators are executed in reverse order.
+
+    // #1 decorator.
+    // No matter decorator() or option() is used, decorators are executed in reverse order of the insertion.
     cb.option(ClientOption.DECORATION, ClientDecoration.of((delegate, ctx, req) -> {
-        System.err.println("Secondly, executed");
+        System.err.println("Firstly, executed");
         ...
     });
-    cb.decorator((delegate, ctx, req) -> {
-        System.err.println("Firstly, executed.");
-        ...
-    });
+
+The following diagram describes how an HTTP request and HTTP response are gone through decorators:
+
+.. uml::
+
+    @startditaa
+                                            HTTP request
+    +--------+      +--------------+      +--------------+      +--------+            +--------------+
+    | Client | ---> | #1 decorator | ---> | #2 decorator | ---> | socket | ---------> |              |
+    +--------+      +--------------+      +--------------+      +--------+            |              |
+                                                                                      |    server    |
+                                            HTTP response                             |              |
+    +--------+      +--------------+      +--------------+      +--------+            |              |
+    | Client | <--- | #1 decorator | <--- | #2 decorator | <--- | socket | <--------- |              |
+    +--------+      +--------------+      +--------------+      +--------+            +--------------+
+    @endditaa
 
 If the client is a Thrift client and RPC decorators are inserted, HTTP decorators and RPC decorators are
 separately grouped and executed in reverse order of the insertion:
