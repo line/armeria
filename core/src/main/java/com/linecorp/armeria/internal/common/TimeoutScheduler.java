@@ -29,7 +29,7 @@ import com.google.common.math.LongMath;
 
 import io.netty.channel.EventLoop;
 
-public final class RequestTimeoutScheduler {
+public final class TimeoutScheduler {
 
     private final EventLoop eventLoop;
     private long timeoutMillis;
@@ -38,7 +38,7 @@ public final class RequestTimeoutScheduler {
     @Nullable
     private TimeoutController timeoutController;
 
-    public RequestTimeoutScheduler(EventLoop eventLoop, long timeoutMillis) {
+    public TimeoutScheduler(EventLoop eventLoop, long timeoutMillis) {
         this.eventLoop = eventLoop;
         this.timeoutMillis = timeoutMillis;
     }

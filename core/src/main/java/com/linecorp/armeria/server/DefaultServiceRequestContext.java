@@ -50,8 +50,8 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.UnstableApi;
-import com.linecorp.armeria.internal.common.RequestTimeoutScheduler;
 import com.linecorp.armeria.internal.common.TimeoutController;
+import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -80,7 +80,7 @@ public final class DefaultServiceRequestContext
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
-    private final RequestTimeoutScheduler timeoutScheduler;
+    private final TimeoutScheduler timeoutScheduler;
     @Nullable
     private final SSLSession sslSession;
 
@@ -138,7 +138,7 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
-        timeoutScheduler = new RequestTimeoutScheduler(ch.eventLoop(), cfg.requestTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(ch.eventLoop(), cfg.requestTimeoutMillis());
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");

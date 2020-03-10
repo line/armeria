@@ -50,8 +50,8 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.UnstableApi;
-import com.linecorp.armeria.internal.common.RequestTimeoutScheduler;
 import com.linecorp.armeria.internal.common.TimeoutController;
+import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -87,7 +87,7 @@ public final class DefaultClientRequestContext
     private final ServiceRequestContext root;
 
     private final RequestLogBuilder log;
-    private final RequestTimeoutScheduler timeoutScheduler;
+    private final TimeoutScheduler timeoutScheduler;
 
     private long writeTimeoutMillis;
     @Nullable
@@ -168,7 +168,7 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
-        timeoutScheduler = new RequestTimeoutScheduler(eventLoop, options.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(eventLoop, options.responseTimeoutMillis());
 
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
@@ -304,7 +304,7 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        timeoutScheduler = new RequestTimeoutScheduler(eventLoop, options.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(eventLoop, options.responseTimeoutMillis());
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
