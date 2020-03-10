@@ -114,6 +114,12 @@ separately grouped and executed in reverse order of the insertion:
 
     ClientBuilder cb = Clients.builder(...);
 
+    // #2 HTTP decorator.
+    cb.decorator((delegate, ctx, httpReq) -> {
+        System.err.println("Fourthly, executed.");
+        ...
+    });
+
     // #2 RPC decorator.
     cb.rpcDecorator((delegate, ctx, rpcReq) -> {
         System.err.println("Secondly, executed.");
@@ -139,13 +145,12 @@ request is converted into the HTTP request. The following diagram describes it:
 .. uml::
 
     @startditaa
-    +--------+ req +-----------+ req +-----------+ req +--------+ req +-----------+ req +------------------+
-    |        |---->|           |---->|           |---->|        |---->|           |---->|                  |
-    | Thrift |     | #1 RPC    |     | #2 RPC    |     | RPC to |     | #1 HTTP   |     | Armeria          |
-    | Client | res | decorator | res | decorator | res | HTTP   | res | decorator | res | Netwokring Layer |
-    |        |<----|           |<----|           |<----|        |<----|           |<----|                  |
-    +--------+     +-----------+     +-----------+     +--------+     +-----------+     +------------------+
-        \------------------------RPC----------------------/  \--------------------HTTP------------------/
+    +--------+ req +-----------+ req +-----------+                       +-----------+ req +-----------+
+    |        |---->|           |---->|           |----> RPC to HTTP ---->|           |---->|           |--=->
+    | Thrift |     | #1 RPC    |     | #2 RPC    |                       | #1 HTTP   |     | #2 HTTP   |
+    | Client | res | decorator | res | decorator |                       | decorator | res | decorator |
+    |        |<----|           |<----|           |<---- HTTP to RPC <----|           |<----|           |<-=--
+    +--------+     +-----------+     +-----------+                       +-----------+     +-----------+
     @endditaa
 
 If the decorator modifies the response (e.g. :api:`DecodingClient`) or spawns more requests
