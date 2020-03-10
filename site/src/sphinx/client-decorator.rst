@@ -145,6 +145,7 @@ request is converted into the HTTP request. The following diagram describes it:
     | Client | res | decorator | res | decorator | res | HTTP   | res | decorator | res | Netwokring Layer |
     |        |<----|           |<----|           |<----|        |<----|           |<----|                  |
     +--------+     +-----------+     +-----------+     +--------+     +-----------+     +------------------+
+        \------------------------RPC----------------------/  \--------------------HTTP------------------/
     @endditaa
 
 If the decorator modifies the response (e.g. :api:`DecodingClient`) or spawns more requests
