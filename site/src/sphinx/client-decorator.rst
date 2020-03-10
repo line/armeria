@@ -102,7 +102,7 @@ The following diagram describes how an HTTP request and HTTP response are gone t
     +-----------+  req  +-----------+  req  +-----------+  req  +------------------+    req    +--------------+
     |           |------>|           |------>|           |------>|                  |---------->|              |
     | WebClient |       | #1        |       | #2        |       | Armeria          |           |    Server    |
-    |           |  res  | decorator |  res  | decorator |  res  | Netwokring Layer |    res    |              |
+    |           |  res  | decorator |  res  | decorator |  res  | Networking Layer |    res    |              |
     |           |<------|           |<------|           |<------|                  |<----------|              |
     +-----------+       +-----------+       +-----------+       +------------------+           +--------------+
     @endditaa
