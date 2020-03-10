@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.proxy;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.net.InetSocketAddress;
 
 import javax.annotation.Nullable;
@@ -41,8 +39,6 @@ public final class ConnectProxyConfig extends ProxyConfig {
 
     ConnectProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
                        @Nullable String password, boolean useTls) {
-        checkArgument((username == null && password == null) || (username != null && password != null),
-                      "Username and password must either both be null or non-null.");
         this.proxyAddress = proxyAddress;
         this.username = username;
         this.password = password;
@@ -50,14 +46,14 @@ public final class ConnectProxyConfig extends ProxyConfig {
     }
 
     /**
-     * The configured proxy address.
+     * Returns the configured proxy address.
      */
     public InetSocketAddress proxyAddress() {
         return proxyAddress;
     }
 
     /**
-     * The configured username.
+     * Returns the configured username.
      */
     @Nullable
     public String username() {
@@ -65,7 +61,7 @@ public final class ConnectProxyConfig extends ProxyConfig {
     }
 
     /**
-     * The configured password.
+     * Returns the configured password.
      */
     @Nullable
     public String password() {
@@ -73,7 +69,7 @@ public final class ConnectProxyConfig extends ProxyConfig {
     }
 
     /**
-     * Whether ssl is enabled.
+     * Returns whether ssl is enabled.
      */
     public boolean useTls() {
         return useTls;

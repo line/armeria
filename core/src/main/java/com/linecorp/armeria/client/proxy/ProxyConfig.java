@@ -21,17 +21,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.ClientFactory;
 
 /**
  * Contains base configuration for proxy related settings used in {@link ClientFactory}.
  */
 public abstract class ProxyConfig {
-
-    ProxyConfig() {
-    }
 
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
@@ -44,10 +39,11 @@ public abstract class ProxyConfig {
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
      * @param proxyAddress The proxy address.
-     * @param username The user name.
+     * @param username The username.
      */
-    public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress, @Nullable String username) {
-        return new Socks4ProxyConfig(requireNonNull(proxyAddress, "proxyAddress"), username);
+    public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress, String username) {
+        return new Socks4ProxyConfig(requireNonNull(proxyAddress, "proxyAddress"),
+                                     requireNonNull(username, "username"));
     }
 
     /**
@@ -61,12 +57,14 @@ public abstract class ProxyConfig {
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS5 protocol.
      * @param proxyAddress The proxy address.
-     * @param username The user name.
+     * @param username The username.
      * @param password The password.
      */
     public static Socks5ProxyConfig socks5(
-            InetSocketAddress proxyAddress, @Nullable String username, @Nullable String password) {
-        return new Socks5ProxyConfig(requireNonNull(proxyAddress, "proxyAddress"), username, password);
+            InetSocketAddress proxyAddress, String username, String password) {
+        return new Socks5ProxyConfig(
+                requireNonNull(proxyAddress, "proxyAddress"), requireNonNull(username, "username"),
+                requireNonNull(password, "password"));
     }
 
     /**
@@ -79,17 +77,27 @@ public abstract class ProxyConfig {
 
     /**
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
-     * Username and password must both be null, or both be non-null.
      * @param proxyAddress The proxy address.
-     * @param username The user name.
+     * @param useTls Whether to use TLS to connect to the proxy.
+     */
+    public static ConnectProxyConfig connect(
+            InetSocketAddress proxyAddress, boolean useTls) {
+        return new ConnectProxyConfig(
+                requireNonNull(proxyAddress, "proxyAddress"), null, null, useTls);
+    }
+
+    /**
+     * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
+     * @param proxyAddress The proxy address.
+     * @param username The username.
      * @param password The password.
      * @param useTls Whether to use TLS to connect to the proxy.
      */
     public static ConnectProxyConfig connect(
-            InetSocketAddress proxyAddress, @Nullable String username, @Nullable String password,
-            boolean useTls) {
-        return new ConnectProxyConfig(requireNonNull(proxyAddress, "proxyAddress"),
-                                      username, password, useTls);
+            InetSocketAddress proxyAddress, String username, String password, boolean useTls) {
+        return new ConnectProxyConfig(
+                requireNonNull(proxyAddress, "proxyAddress"), requireNonNull(username, "username"),
+                requireNonNull(password, "password"), useTls);
     }
 
     /**
@@ -97,5 +105,8 @@ public abstract class ProxyConfig {
      */
     public static ProxyConfig disabled() {
         return DISABLED_PROXY_CONFIG;
+    }
+
+    ProxyConfig() {
     }
 }

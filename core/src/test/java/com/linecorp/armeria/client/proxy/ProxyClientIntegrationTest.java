@@ -221,7 +221,7 @@ public class ProxyClientIntegrationTest {
     void testHttpsProxyBasicCase() throws Exception {
         final ClientFactory clientFactory =
                 ClientFactory.builder().tlsNoVerify().proxyConfig(
-                        ProxyConfig.connect(httpsProxyServer.address(), null, null, true)).build();
+                        ProxyConfig.connect(httpsProxyServer.address(), true)).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())

@@ -38,14 +38,14 @@ public final class Socks4ProxyConfig extends ProxyConfig {
     }
 
     /**
-     * The configured proxy address.
+     * Returns the configured proxy address.
      */
     public InetSocketAddress proxyAddress() {
         return proxyAddress;
     }
 
     /**
-     * The configured username.
+     * Returns the configured username.
      */
     @Nullable
     public String username() {

@@ -43,14 +43,14 @@ public final class Socks5ProxyConfig extends ProxyConfig {
     }
 
     /**
-     * The configured proxy address.
+     * Returns the configured proxy address.
      */
     public InetSocketAddress proxyAddress() {
         return proxyAddress;
     }
 
     /**
-     * The configured username.
+     * Returns the configured username.
      */
     @Nullable
     public String username() {
@@ -58,7 +58,7 @@ public final class Socks5ProxyConfig extends ProxyConfig {
     }
 
     /**
-     * The configured password.
+     * Returns the configured password.
      */
     @Nullable
     public String password() {
