@@ -139,8 +139,8 @@ separately grouped and executed in reverse order of the insertion:
     });
 
 An RPC request is converted into an HTTP request before it's sent to a server.
-So RPC decorators are inserted before the RPC request is converted and HTTP decorators are inserted after the
-request is converted into the HTTP request. The following diagram describes it:
+Therefore, RPC decorators are inserted before the RPC request is converted and HTTP decorators are inserted
+after the request is converted into the HTTP request, as described in the following diagram:
 
 .. uml::
 
@@ -154,7 +154,7 @@ request is converted into the HTTP request. The following diagram describes it:
     @endditaa
 
 If the decorator modifies the response (e.g. :api:`DecodingClient`) or spawns more requests
-(e.g. :api:`RetryingClient`), the consequence is different depending on the order of the decorators.
+(e.g. :api:`RetryingClient`), the outcome may be different depending on the order of the decorators.
 Let's look at the following example that :api:`DecodingClient` and :api:`ContentPreviewingClient`
 are used together:
 
@@ -164,14 +164,17 @@ are used together:
     import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 
     ClientBuilder cb = Clients.builder(...);
-    cb.decorator(ContentPreviewingClient.newDecorator(1000));
-    // ContentPreviewingClient should be inserted after DecodingClient.
     cb.decorator(DecodingClient.newDecorator());
+
+    // ContentPreviewingClient should be inserted after DecodingClient.
+    cb.decorator(ContentPreviewingClient.newDecorator(1000));
 
 :api:`DecodingClient` decodes the content of HTTP responses.
 :api:`ContentPreviewingClient` is :ref:`content-previewing` of the HTTP response by setting it to the
-:api:`RequestLog`. Because it's inserted after :api:`DecodingClient`, which means that the response content
-is set before it's decoded, you will see the encoded response content preview.
+:api:`RequestLog`. Because it's inserted before :api:`DecodingClient`, which means that the response content
+is set after it's decoded, you will see the decoded response content preview.
+If the two decorators are added in the opposite order, you will get the encoded preview because
+:api:`DecodingClient` is evaluated first for the HTTP response.
 For :api:`RetryingClient`, please check out :ref:`retry-with-logging`.
 
 See also
