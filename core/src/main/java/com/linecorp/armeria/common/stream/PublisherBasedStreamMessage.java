@@ -135,8 +135,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             try {
                 lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
                 lateSubscriber.onError(cause);
-            } catch (Exception e) {
-                logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, e);
+            } catch (Throwable t) {
+                throwIfFatal(t);
+                logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
             }
         });
     }
@@ -295,12 +296,14 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             try {
                 this.subscription = subscription;
                 subscriber.onSubscribe(this);
-            } catch (Exception e) {
-                abort(e);
-            } finally {
                 if (abortCause != null) {
                     cancelOrAbort0(false);
                 }
+            } catch (Throwable t) {
+                abort(t);
+                throwIfFatal(t);
+                logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
+                            subscriber, t);
             }
         }
 
@@ -317,8 +320,11 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private void onNext0(Object obj) {
             try {
                 subscriber.onNext(obj);
-            } catch (Exception e) {
-                abort(e);
+            } catch (Throwable t) {
+                abort(t);
+                throwIfFatal(t);
+                logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
+                            obj, subscriber, t);
             }
         }
 

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import org.reactivestreams.Subscriber;
@@ -134,10 +135,12 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
                 inOnNext = true;
                 try {
                     subscriber.onNext(o);
-                } catch (Exception e) {
+                } catch (Throwable t) {
                     // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
-                    abort(e);
-                    return;
+                    abort(t);
+                    throwIfFatal(t);
+                    logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
+                                o, subscriber, t);
                 } finally {
                     inOnNext = false;
                 }

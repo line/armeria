@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -248,8 +249,11 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
         try {
             subscriber.onSubscribe(subscription);
-        } catch (Exception e) {
-            abort(e);
+        } catch (Throwable t) {
+            abort(t);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
+                        subscriber, t);
             return;
         }
         safeOnSubscribeToUpstream();

@@ -44,7 +44,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractStreamMessage.class);
+    static final Logger logger = LoggerFactory.getLogger(AbstractStreamMessage.class);
 
     static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
     static final CloseEvent CANCELLED_CLOSE = new CloseEvent(CancelledSubscriptionException.INSTANCE);
@@ -163,8 +163,9 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         try {
             lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
             lateSubscriber.onError(cause);
-        } catch (Exception e) {
-            logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, e);
+        } catch (Throwable t) {
+            throwIfFatal(t);
+            logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
         }
     }
 

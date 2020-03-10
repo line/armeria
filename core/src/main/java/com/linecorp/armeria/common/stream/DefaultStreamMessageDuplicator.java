@@ -296,8 +296,9 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
                 lateSubscriber.onError(
                         new IllegalStateException("duplicator is closed or no more downstream can be added."));
-            } catch (Exception e) {
-                logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, e);
+            } catch (Throwable t) {
+                throwIfFatal(t);
+                logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
             }
         }
 
@@ -537,8 +538,9 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 try {
                     lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
                     lateSubscriber.onError(cause);
-                } catch (Exception e) {
-                    logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, e);
+                } catch (Throwable t) {
+                    throwIfFatal(t);
+                    logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
                 }
             });
         }
@@ -687,8 +689,11 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         void invokeOnSubscribe0() {
             try {
                 subscriber.onSubscribe(this);
-            } catch (Exception e) {
-                processor.unsubscribe(this, e);
+            } catch (Throwable t) {
+                processor.unsubscribe(this, t);
+                throwIfFatal(t);
+                logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
+                            subscriber, t);
             }
         }
 
@@ -834,8 +839,11 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 inOnNext = true;
                 try {
                     subscriber.onNext(obj);
-                } catch (Exception e) {
-                    processor.unsubscribe(this, e);
+                } catch (Throwable t) {
+                    processor.unsubscribe(this, t);
+                    throwIfFatal(t);
+                    logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
+                                obj, subscriber, t);
                     return false;
                 } finally {
                     inOnNext = false;

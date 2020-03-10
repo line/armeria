@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -123,9 +124,11 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
         try {
             subscriber.onSubscribe(subscription);
-        } catch (Exception e) {
-            // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
-            abort(e);
+        } catch (Throwable t) {
+            abort(t);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
+                        subscriber, t);
         }
     }
 

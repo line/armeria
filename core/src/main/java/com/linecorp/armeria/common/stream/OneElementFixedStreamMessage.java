@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.UnstableApi;
@@ -72,9 +74,12 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
         try {
             subscription.subscriber().onNext(published);
-        } catch (Exception e) {
+        } catch (Throwable t) {
             // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
-            abort(e);
+            abort(t);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
+                        published, subscription.subscriber(), t);
             return;
         }
         notifySubscriberOfCloseEvent(subscription, SUCCESSFUL_CLOSE);
