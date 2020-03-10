@@ -38,12 +38,9 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -74,11 +71,11 @@ import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.channel.EventLoop;
 
-public class RetryingClientTest {
+class RetryingClientTest {
 
     // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
     private static final ClientFactory clientFactory =
@@ -93,16 +90,18 @@ public class RetryingClientTest {
 
     private final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
 
-    @AfterClass
-    public static void destroy() {
+    @AfterAll
+    static void destroy() {
         clientFactory.close();
     }
 
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+    @RegisterExtension
+    final ServerExtension server = new ServerExtension() {
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
 
-    @Rule
-    public final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/retry-content", new AbstractHttpService() {
@@ -217,8 +216,8 @@ public class RetryingClientTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
-                        TimeUnit.MILLISECONDS.sleep(1000);
-                        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+                        return HttpResponse.delayed(
+                                HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE), Duration.ofSeconds(1));
                     } else {
                         return HttpResponse.of(
                                 HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
@@ -278,7 +277,7 @@ public class RetryingClientTest {
     };
 
     @Test
-    public void retryWhenContentMatched() {
+    void retryWhenContentMatched() {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
                 RetryingClient.builder(new RetryIfContentMatch("Need to retry"))
                               .contentPreviewLength(1024)
@@ -293,14 +292,14 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void retryWhenStatusMatched() {
+    void retryWhenStatusMatched() {
         final WebClient client = client(RetryStrategy.onServerErrorStatus());
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
     @Test
-    public void disableResponseTimeout() {
+    void disableResponseTimeout() {
         final WebClient client = client(RetryStrategy.onServerErrorStatus(), 0, 0, 100);
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
@@ -308,7 +307,7 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void respectRetryAfter() {
+    void respectRetryAfter() {
         final WebClient client = client(RetryStrategy.onServerErrorStatus());
         final Stopwatch sw = Stopwatch.createStarted();
 
@@ -319,7 +318,7 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void respectRetryAfterWithHttpDate() {
+    void respectRetryAfterWithHttpDate() {
         final WebClient client = client(RetryStrategy.onServerErrorStatus());
 
         final Stopwatch sw = Stopwatch.createStarted();
@@ -332,21 +331,21 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void propagateLastResponseWhenNextRetryIsAfterTimeout() {
+    void propagateLastResponseWhenNextRetryIsAfterTimeout() {
         final WebClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(10000000)));
         final AggregatedHttpResponse res = client.get("/service-unavailable").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Test
-    public void propagateLastResponseWhenExceedMaxAttempts() {
+    void propagateLastResponseWhenExceedMaxAttempts() {
         final WebClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(1)), 0, 0, 3);
         final AggregatedHttpResponse res = client.get("/service-unavailable").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Test
-    public void retryAfterOneYear() {
+    void retryAfterOneYear() {
         final WebClient client = client(RetryStrategy.onServerErrorStatus());
 
         // The response will be the last response whose headers contains HttpHeaderNames.RETRY_AFTER
@@ -357,7 +356,7 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void retryOnResponseTimeout() {
+    void retryOnResponseTimeout() {
         final Backoff backoff = Backoff.fixed(100);
         final RetryStrategy strategy =
                 (ctx, cause) -> {
@@ -373,7 +372,7 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void differentBackoffBasedOnStatus() {
+    void differentBackoffBasedOnStatus() {
         final WebClient client = client(RetryStrategy.onStatus(statusBasedBackoff()));
 
         final Stopwatch sw = Stopwatch.createStarted();
@@ -407,14 +406,14 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void retryWithRequestBody() {
+    void retryWithRequestBody() {
         final WebClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(10)));
         final AggregatedHttpResponse res = client.post("/post-ping-pong", "bar").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("bar");
     }
 
     @Test
-    public void shouldGetExceptionWhenFactoryIsClosed() {
+    void shouldGetExceptionWhenFactoryIsClosed() {
         final ClientFactory factory =
                 ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
@@ -457,7 +456,7 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void doNotRetryWhenResponseIsAborted() throws Exception {
+    void doNotRetryWhenResponseIsAborted() throws Exception {
         final List<Throwable> abortCauses =
                 Arrays.asList(null, new IllegalStateException("abort stream with a specified cause"));
         for (Throwable abortCause : abortCauses) {
@@ -494,7 +493,7 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void retryDoNotStopUntilGetResponseWhenSubscriberCancel() {
+    void retryDoNotStopUntilGetResponseWhenSubscriberCancel() {
         final WebClient client = client(retryAlways);
         client.get("/subscriber-cancel").subscribe(
                 new Subscriber<HttpObject>() {
@@ -517,7 +516,7 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void doNotRetryWhenRequestIsAborted() throws Exception {
+    void doNotRetryWhenRequestIsAborted() throws Exception {
         final List<Throwable> abortCauses =
                 Arrays.asList(null, new IllegalStateException("abort stream with a specified cause"));
         for (Throwable abortCause : abortCauses) {
@@ -555,7 +554,7 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void exceptionInDecorator() {
+    void exceptionInDecorator() {
         final AtomicInteger retryCounter = new AtomicInteger();
         final RetryStrategy strategy = (ctx, cause) -> {
             retryCounter.incrementAndGet();
@@ -574,7 +573,7 @@ public class RetryingClientTest {
     }
 
     @Test
-    public void useSameEventLoopWhenAggregate() throws InterruptedException {
+    void useSameEventLoopWhenAggregate() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<EventLoop> eventLoop = new AtomicReference<>();
         final WebClient client = WebClient.builder(server.httpUri())
