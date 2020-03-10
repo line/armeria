@@ -138,7 +138,7 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
-        timeoutScheduler = new TimeoutScheduler(ch.eventLoop(), cfg.requestTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(cfg.requestTimeoutMillis());
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
@@ -476,7 +476,7 @@ public final class DefaultServiceRequestContext
      * a timeout task when a user updates the request timeout configuration.
      */
     void setRequestTimeoutController(TimeoutController requestTimeoutController) {
-        timeoutScheduler.setTimeoutController(requestTimeoutController);
+        timeoutScheduler.setTimeoutController(requestTimeoutController, eventLoop());
     }
 
     @Override

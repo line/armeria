@@ -168,7 +168,7 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
-        timeoutScheduler = new TimeoutScheduler(eventLoop, options.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(options.responseTimeoutMillis());
 
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
@@ -304,7 +304,7 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        timeoutScheduler = new TimeoutScheduler(eventLoop, options.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(options.responseTimeoutMillis());
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
@@ -489,7 +489,7 @@ public final class DefaultClientRequestContext
      * a timeout task when a user updates the response timeout configuration.
      */
     void setResponseTimeoutController(TimeoutController responseTimeoutController) {
-        timeoutScheduler.setTimeoutController(responseTimeoutController);
+        timeoutScheduler.setTimeoutController(responseTimeoutController, eventLoop);
     }
 
     @Override

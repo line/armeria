@@ -31,15 +31,15 @@ import io.netty.channel.EventLoop;
 
 public final class TimeoutScheduler {
 
-    private final EventLoop eventLoop;
     private long timeoutMillis;
     @Nullable
     private Consumer<TimeoutController> pendingTimeoutTask;
     @Nullable
+    private EventLoop eventLoop;
+    @Nullable
     private TimeoutController timeoutController;
 
-    public TimeoutScheduler(EventLoop eventLoop, long timeoutMillis) {
-        this.eventLoop = eventLoop;
+    public TimeoutScheduler(long timeoutMillis) {
         this.timeoutMillis = timeoutMillis;
     }
 
@@ -151,10 +151,12 @@ public final class TimeoutScheduler {
         return timeoutController.isTimedOut();
     }
 
-    public void setTimeoutController(TimeoutController timeoutController) {
+    public void setTimeoutController(TimeoutController timeoutController, EventLoop eventLoop) {
         requireNonNull(timeoutController, "timeoutController");
+        requireNonNull(eventLoop, "eventLoop");
         checkState(this.timeoutController == null, "timeoutController is set already.");
         this.timeoutController = timeoutController;
+        this.eventLoop = eventLoop;
 
         final Consumer<TimeoutController> pendingTimeoutTask = this.pendingTimeoutTask;
         if (pendingTimeoutTask != null) {
