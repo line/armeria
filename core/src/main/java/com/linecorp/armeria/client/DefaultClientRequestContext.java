@@ -304,7 +304,7 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        timeoutScheduler = new TimeoutScheduler(options.responseTimeoutMillis());
+        timeoutScheduler = new TimeoutScheduler(ctx.responseTimeoutMillis());
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
