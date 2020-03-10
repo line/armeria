@@ -1,12 +1,3 @@
-buildscript {
-    repositories {
-        gradlePluginPortal()
-    }
-    dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:${managedVersions['com.github.jengelman.gradle.plugins:shadow']}"
-    }
-}
-
 dependencies {
     implementation project(':jetty')
     // Dropwizard
