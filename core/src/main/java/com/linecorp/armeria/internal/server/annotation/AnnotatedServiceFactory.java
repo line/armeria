@@ -281,7 +281,7 @@ public final class AnnotatedServiceFactory {
 
         if (defaultHeaders.status().isContentAlwaysEmpty() && !defaultTrailers.isEmpty()) {
             logger.warn("A response with HTTP status code '{}' cannot have a content. " +
-                        "Trailers defined at '{}' might be ignored.",
+                        "Trailers defined at '{}' might be ignored if HTTP/1.1 is used.",
                         defaultHeaders.status().code(), methodAlias);
         }
 

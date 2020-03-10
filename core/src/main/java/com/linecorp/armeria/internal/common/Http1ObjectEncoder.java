@@ -204,7 +204,12 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             convert(streamId, headers, outHeaders, false, false);
 
             if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
-                outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+                if (statusCode == 304) {
+                    // 304 response can have the "content-length" header when it is a response to a conditional
+                    // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
+                } else {
+                    outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+                }
             } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 // NB: Set the 'content-length' only when not set rather than always setting to 0.
                 //     It's because a response to a HEAD request can have empty content while having

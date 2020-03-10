@@ -32,7 +32,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -215,12 +214,12 @@ public final class DefaultServiceRequestContext
 
         final HttpHeaders additionalHeaders = additionalResponseHeaders();
         if (!additionalHeaders.isEmpty()) {
-            ctx.setAdditionalResponseHeaders(additionalHeaders);
+            ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(additionalHeaders));
         }
 
         final HttpHeaders additionalTrailers = additionalResponseTrailers();
         if (!additionalTrailers.isEmpty()) {
-            ctx.setAdditionalResponseTrailers(additionalTrailers);
+            ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(additionalTrailers));
         }
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = attrs(); i.hasNext();/* noop */) {
@@ -496,62 +495,34 @@ public final class DefaultServiceRequestContext
     public void setAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
                                         builder -> builder.setObject(name, value));
-    }
-
-    @Override
-    public void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                        builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
                                         builder -> builder.addObject(name, value));
     }
 
     @Override
-    public void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                        builder -> builder.addObject(headers));
+    public void mutateAdditionalResponseHeaders(Consumer<HttpHeadersBuilder> mutator) {
+        requireNonNull(mutator, "mutator");
+        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater, mutator);
     }
 
-    private void updateAdditionalResponseHeaders(
+    private void mutateAdditionalResponseHeaders(
             AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
-            Function<HttpHeadersBuilder, HttpHeadersBuilder> valueUpdater) {
+            Consumer<HttpHeadersBuilder> mutator) {
         for (;;) {
             final HttpHeaders oldValue = atomicUpdater.get(this);
-            final HttpHeaders newValue = valueUpdater.apply(oldValue.toBuilder()).build();
+            final HttpHeadersBuilder builder = oldValue.toBuilder();
+            mutator.accept(builder);
+            final HttpHeaders newValue = builder.build();
             if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
                 return;
-            }
-        }
-    }
-
-    @Override
-    public boolean removeAdditionalResponseHeader(CharSequence name) {
-        return removeAdditionalResponseHeader(additionalResponseHeadersUpdater, name);
-    }
-
-    private boolean removeAdditionalResponseHeader(
-            AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
-            CharSequence name) {
-        requireNonNull(name, "name");
-        for (;;) {
-            final HttpHeaders oldValue = atomicUpdater.get(this);
-            if (oldValue.isEmpty() || !oldValue.contains(name)) {
-                return false;
-            }
-
-            final HttpHeaders newValue = oldValue.toBuilder().removeAndThen(name).build();
-            if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
-                return true;
             }
         }
     }
@@ -565,35 +536,22 @@ public final class DefaultServiceRequestContext
     public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
                                         builder -> builder.setObject(name, value));
-    }
-
-    @Override
-    public void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                        builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
                                         builder -> builder.addObject(name, value));
     }
 
     @Override
-    public void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                        builder -> builder.addObject(headers));
-    }
-
-    @Override
-    public boolean removeAdditionalResponseTrailer(CharSequence name) {
-        return removeAdditionalResponseHeader(additionalResponseTrailersUpdater, name);
+    public void mutateAdditionalResponseTrailers(Consumer<HttpHeadersBuilder> mutator) {
+        requireNonNull(mutator, "mutator");
+        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater, mutator);
     }
 
     @Override

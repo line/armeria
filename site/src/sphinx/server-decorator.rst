@@ -249,7 +249,8 @@ decorators using ``decoratorUnder(pathPrefix, ...)`` or ``decorator(Route, ...)`
     // Decorate services only when a request method is 'GET'
     sb.decorator(Route.builder().get("/public").build(), (delegate, ctx, req) -> {
         final HttpResponse response = delegate.serve(ctx, req);
-        ctx.addAdditionalResponseHeader(HttpHeaderNames.CACHE_CONTROL, "public");
+        ctx.mutateAdditionalResponseHeaders(
+                mutator -> mutator.add(HttpHeaderNames.CACHE_CONTROL, "public"));
         return response;
     });
 
@@ -282,7 +283,8 @@ You can also use fluent route builder with ``routeDecorator()`` to match service
       .get("prefix:/public")
       .build((delegate, ctx, req) -> {
           final HttpResponse response = delegate.serve(ctx, req);
-          ctx.addAdditionalResponseHeader(HttpHeaderNames.CACHE_CONTROL, "public");
+          ctx.mutateAdditionalResponseHeaders(
+                  mutator -> mutator.add(HttpHeaderNames.CACHE_CONTROL, "public"));
           return response;
       });
 

@@ -77,6 +77,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     enum State {
         NEEDS_HEADERS,
         NEEDS_DATA_OR_TRAILERS,
+        NEEDS_TRAILERS,
         DONE,
     }
 
@@ -130,6 +131,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         subscription.request(1);
     }
 
+    @SuppressWarnings("checkstyle:FallThrough")
     @Override
     public void onNext(HttpObject o) {
         if (!(o instanceof HttpData) && !(o instanceof HttpHeaders)) {
@@ -157,31 +159,16 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     break;
                 }
 
-                if (req.method() == HttpMethod.HEAD || status.isContentAlwaysEmpty()) {
-                    // We're done with the response if it is a response to a HEAD request or one of the
-                    // no-content response statuses.
+                if (req.method() == HttpMethod.HEAD) {
                     endOfStream = true;
+                } else if (status.isContentAlwaysEmpty()) {
+                    state = State.NEEDS_TRAILERS;
                 } else {
                     state = State.NEEDS_DATA_OR_TRAILERS;
                 }
 
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
-                final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-
                 final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
-
-                if (endOfStream) {
-                    fillAdditionalTrailers(newHeaders, additionalTrailers);
-                }
-
-                if (newHeaders.contains(HttpHeaderNames.CONTENT_LENGTH) &&
-                    !additionalTrailers.isEmpty()) {
-                    // We don't apply chunked encoding when the content-length header is set, which would
-                    // prevent the trailers from being sent so we go ahead and remove content-length to force
-                    // chunked encoding.
-                    newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
-                }
-
                 if (enableServerHeader && !newHeaders.contains(HttpHeaderNames.SERVER)) {
                     newHeaders.add(HttpHeaderNames.SERVER, SERVER_HEADER);
                 }
@@ -192,9 +179,25 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
                 headers = newHeaders.build();
                 logBuilder().responseHeaders(headers);
-                o = headers;
+
+                final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+                if (endOfStream && !additionalTrailers.isEmpty()) {
+                    write(headers, false);
+                    o = additionalTrailers;
+                } else {
+                    o = headers;
+                }
 
                 break;
+            }
+            case NEEDS_TRAILERS: {
+                if (o instanceof HttpData || o instanceof ResponseHeaders) {
+                    failAndRespond(new IllegalStateException(
+                            "published an HttpData or a ResponseHeaders: " + o +
+                            " (expected: an HTTP trailers). service: " + service()));
+                    return;
+                }
+                // We handle the trailers in NEEDS_DATA_OR_TRAILERS.
             }
             case NEEDS_DATA_OR_TRAILERS: {
                 if (o instanceof HttpHeaders) {

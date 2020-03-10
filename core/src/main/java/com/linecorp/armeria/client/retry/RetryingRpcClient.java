@@ -120,7 +120,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         ctx.logBuilder().addChild(derivedCtx.log());
 
         if (!initialAttempt) {
-            derivedCtx.setAdditionalRequestHeader(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1));
+            derivedCtx.mutateAdditionalRequestHeaders(
+                    mutator -> mutator.add(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1)));
         }
 
         final RpcResponse res = executeWithFallback(delegate(), derivedCtx,

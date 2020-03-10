@@ -232,8 +232,8 @@ public class AnnotatedService implements HttpService {
             f = CompletableFuture.completedFuture(null);
         }
 
-        ctx.setAdditionalResponseHeaders(defaultHttpHeaders);
-        ctx.setAdditionalResponseTrailers(defaultHttpTrailers);
+        ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
+        ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(defaultHttpTrailers));
 
         switch (responseType) {
             case HTTP_RESPONSE:
