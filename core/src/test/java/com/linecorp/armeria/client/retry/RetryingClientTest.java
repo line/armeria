@@ -84,11 +84,11 @@ class RetryingClientTest {
     private static final RetryStrategy retryAlways =
             (ctx, cause) -> CompletableFuture.completedFuture(Backoff.fixed(500));
 
-    private static final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();
+    private final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();
 
-    private static final AtomicInteger requestAbortServiceCallCounter = new AtomicInteger();
+    private final AtomicInteger requestAbortServiceCallCounter = new AtomicInteger();
 
-    private static final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
+    private final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
 
     @AfterAll
     static void destroy() {
@@ -96,7 +96,12 @@ class RetryingClientTest {
     }
 
     @RegisterExtension
-    static final ServerExtension server = new ServerExtension() {
+    final ServerExtension server = new ServerExtension() {
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/retry-content", new AbstractHttpService() {
