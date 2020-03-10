@@ -16,18 +16,16 @@
 
 package com.linecorp.armeria.server.throttling.tokenbucket;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
-public class TokenBucketTest {
+class TokenBucketTest {
 
     @Test
-    public void testBuilder1() {
+    void testBuilder1() {
         final TokenBucket tb1 =
                 TokenBucket.builder()
                            .limit(100L, 1000L, 50L, Duration.ofSeconds(60L))
@@ -35,99 +33,96 @@ public class TokenBucketTest {
                            .build();
 
         final BandwidthLimit[] limits1 = tb1.limits();
-        assertEquals(2, limits1.length);
+        assertThat(limits1.length).isEqualTo(2);
 
-        assertEquals(100L, limits1[0].limit());
-        assertEquals(1000L, limits1[0].overdraftLimit());
-        assertEquals(50L, limits1[0].initialSize());
-        assertEquals(Duration.ofSeconds(60L), limits1[0].period());
+        assertThat(limits1[0].limit()).isEqualTo(100L);
+        assertThat(limits1[0].overdraftLimit()).isEqualTo(1000L);
+        assertThat(limits1[0].initialSize()).isEqualTo(50L);
+        assertThat(limits1[0].period()).isEqualTo(Duration.ofSeconds(60L));
 
-        assertEquals(50000L, limits1[1].limit());
-        assertEquals(0L, limits1[1].overdraftLimit());
-        assertEquals(0L, limits1[1].initialSize());
-        assertEquals(Duration.ofSeconds(3600L), limits1[1].period());
+        assertThat(limits1[1].limit()).isEqualTo(50000L);
+        assertThat(limits1[1].overdraftLimit()).isEqualTo(0L);
+        assertThat(limits1[1].initialSize()).isEqualTo(0L);
+        assertThat(limits1[1].period()).isEqualTo(Duration.ofSeconds(3600L));
 
-        assertSame(limits1[0], tb1.lowestLimit());
-        assertEquals("100, 100;window=60;burst=1000, 50000;window=3600", tb1.toSpecString());
+        assertThat(tb1.lowestLimit()).isSameAs(limits1[0]);
+        assertThat(tb1.toSpecString()).isEqualTo("100, 100;window=60;burst=1000, 50000;window=3600");
     }
 
     @Test
-    public void testBuilder2() {
+    void testBuilder2() {
         final TokenBucket tb1 =
                 TokenBucket.builder()
                            .limit(100L, 1000L, Duration.ofSeconds(60L))
                            .build();
 
         final BandwidthLimit[] limits1 = tb1.limits();
-        assertEquals(1, limits1.length);
+        assertThat(limits1.length).isEqualTo(1);
 
-        assertEquals(100L, limits1[0].limit());
-        assertEquals(1000L, limits1[0].overdraftLimit());
-        assertEquals(0L, limits1[0].initialSize());
-        assertEquals(Duration.ofSeconds(60L), limits1[0].period());
+        assertThat(limits1[0].limit()).isEqualTo(100L);
+        assertThat(limits1[0].overdraftLimit()).isEqualTo(1000L);
+        assertThat(limits1[0].initialSize()).isEqualTo(0L);
+        assertThat(limits1[0].period()).isEqualTo(Duration.ofSeconds(60L));
 
-        assertSame(limits1[0], tb1.lowestLimit());
-        assertEquals("100, 100;window=60;burst=1000", tb1.toSpecString());
+        assertThat(tb1.lowestLimit()).isSameAs(limits1[0]);
+        assertThat(tb1.toSpecString()).isEqualTo("100, 100;window=60;burst=1000");
     }
 
     @Test
-    public void testBuilder3() {
+    void testBuilder3() {
         final TokenBucket tb1 =
                 TokenBucket.builder()
                            .limits()
                            .build();
 
         final BandwidthLimit[] limits1 = tb1.limits();
-        assertEquals(0, limits1.length);
-        assertNull(tb1.lowestLimit());
+        assertThat(limits1.length).isEqualTo(0);
+        assertThat(tb1.lowestLimit()).isNull();
     }
 
     @Test
-    public void testSpecification1() {
+    void testSpecification1() {
         final TokenBucket tb1 = TokenBucket.of("100;window=60;burst=1000, 50000;window=3600");
-        System.out.println(tb1);
 
         final BandwidthLimit[] limits1 = tb1.limits();
-        assertEquals(2, limits1.length);
+        assertThat(limits1.length).isEqualTo(2);
 
-        assertEquals(100L, limits1[0].limit());
-        assertEquals(1000L, limits1[0].overdraftLimit());
-        assertEquals(0L, limits1[0].initialSize());
-        assertEquals(Duration.ofSeconds(60L), limits1[0].period());
+        assertThat(limits1[0].limit()).isEqualTo(100L);
+        assertThat(limits1[0].overdraftLimit()).isEqualTo(1000L);
+        assertThat(limits1[0].initialSize()).isEqualTo(0L);
+        assertThat(limits1[0].period()).isEqualTo(Duration.ofSeconds(60L));
 
-        assertEquals(50000L, limits1[1].limit());
-        assertEquals(0L, limits1[1].overdraftLimit());
-        assertEquals(0L, limits1[1].initialSize());
-        assertEquals(Duration.ofSeconds(3600L), limits1[1].period());
+        assertThat(limits1[1].limit()).isEqualTo(50000L);
+        assertThat(limits1[1].overdraftLimit()).isEqualTo(0L);
+        assertThat(limits1[1].initialSize()).isEqualTo(0L);
+        assertThat(limits1[1].period()).isEqualTo(Duration.ofSeconds(3600L));
 
-        assertSame(limits1[0], tb1.lowestLimit());
-        assertEquals("100, 100;window=60;burst=1000, 50000;window=3600", tb1.toSpecString());
+        assertThat(tb1.lowestLimit()).isSameAs(limits1[0]);
+        assertThat(tb1.toSpecString()).isEqualTo("100, 100;window=60;burst=1000, 50000;window=3600");
     }
 
     @Test
-    public void testSpecification2() {
+    void testSpecification2() {
         final TokenBucket tb1 = TokenBucket.of("100;window=60;burst=1000");
-        System.out.println(tb1);
 
         final BandwidthLimit[] limits1 = tb1.limits();
-        assertEquals(1, limits1.length);
+        assertThat(limits1.length).isEqualTo(1);
 
-        assertEquals(100L, limits1[0].limit());
-        assertEquals(1000L, limits1[0].overdraftLimit());
-        assertEquals(0L, limits1[0].initialSize());
-        assertEquals(Duration.ofSeconds(60L), limits1[0].period());
-        assertSame(limits1[0], tb1.lowestLimit());
+        assertThat(limits1[0].limit()).isEqualTo(100L);
+        assertThat(limits1[0].overdraftLimit()).isEqualTo(1000L);
+        assertThat(limits1[0].initialSize()).isEqualTo(0L);
+        assertThat(limits1[0].period()).isEqualTo(Duration.ofSeconds(60L));
+        assertThat(tb1.lowestLimit()).isSameAs(limits1[0]);
 
-        assertEquals("100, 100;window=60;burst=1000", tb1.toSpecString());
+        assertThat(tb1.toSpecString()).isEqualTo("100, 100;window=60;burst=1000");
     }
 
     @Test
-    public void testSpecification3() {
+    void testSpecification3() {
         final TokenBucket tb1 = TokenBucket.of("");
-        System.out.println(tb1);
 
         final BandwidthLimit[] limits1 = tb1.limits();
-        assertEquals(0, limits1.length);
-        assertNull(tb1.lowestLimit());
+        assertThat(limits1.length).isEqualTo(0);
+        assertThat(tb1.lowestLimit()).isNull();
     }
 }

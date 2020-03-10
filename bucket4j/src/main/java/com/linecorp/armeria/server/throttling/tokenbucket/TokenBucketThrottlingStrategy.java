@@ -39,7 +39,14 @@ import io.github.bucket4j.local.LocalBucketBuilder;
  * The throttling works by examining the number of requests from the beginning, and
  * throttling if the request rate exceed the configured bucket limits.
  */
-public class TokenBucketThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
+public final class TokenBucketThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
+
+    /**
+     * Returns a newly created {@link TokenBucketThrottlingStrategyBuilder}.
+     */
+    public static <T extends Request> TokenBucketThrottlingStrategyBuilder<T> builder(TokenBucket tokenBucket) {
+        return new TokenBucketThrottlingStrategyBuilder<>(tokenBucket);
+    }
 
     private final AsyncBucket asyncBucket;
     private final long minimumBackoffSeconds;
@@ -82,17 +89,10 @@ public class TokenBucketThrottlingStrategy<T extends Request> extends Throttling
     }
 
     /**
-     * Returns a new {@link TokenBucketThrottlingStrategyBuilder}.
-     */
-    public static <T extends Request> TokenBucketThrottlingStrategyBuilder<T> builder(TokenBucket tokenBucket) {
-        return new TokenBucketThrottlingStrategyBuilder<>(tokenBucket);
-    }
-
-    /**
-     * Allows resetting the Token-Bucket configuration at runtime by providing a new set of limits.
-     * Empty set of limits will remove previously set limits.
-     *
+     * Resets the Token-Bucket configuration at runtime by providing a new set of limits.
+     * Empty set of limits will remove previously set limits. Reconfiguration will take place asynchronously.
      * @param tokenBucket Token-Bucket configuration
+     * @return A {@link CompletableFuture} to handle asynchronous result
      */
     public CompletableFuture<Void> reconfigure(TokenBucket tokenBucket) {
         // construct the configuration builder

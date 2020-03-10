@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.throttling;
 
-import com.google.common.base.Ascii;
+import com.linecorp.armeria.common.HttpHeaderNames;
 
 import io.netty.util.AsciiString;
 
@@ -37,32 +37,19 @@ final class ThrottlingHeadersImpl implements ThrottlingHeaders {
     }
 
     private static AsciiString createHeaderName(String name) {
-        return AsciiString.cached(Ascii.toLowerCase(name));
+        return HttpHeaderNames.of(name);
     }
 
-    /**
-     * Returns the name of the "limit" throttling header for the given scheme, like "X-RateLimit-Limit".
-     * This header specifies the requests quota for the given time window.
-     */
     @Override
     public AsciiString limitHeader() {
         return limitHeader;
     }
 
-    /**
-     * Returns the name of the "remaining" throttling header for the given scheme, like "X-RateLimit-Remaining".
-     * This header specifies the remaining requests quota for the current time window.
-     */
     @Override
     public AsciiString remainingHeader() {
         return remainingHeader;
     }
 
-    /**
-     * Returns the name of the "reset" throttling header for the given scheme, like "X-RateLimit-Reset".
-     * This header specifies the time remaining in the current window. Its value defined in seconds or
-     * as a timestamp.
-     */
     @Override
     public AsciiString resetHeader() {
         return resetHeader;

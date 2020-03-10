@@ -19,18 +19,16 @@ package com.linecorp.armeria.server.throttling.tokenbucket;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Builds a {@link TokenBucket} instance.
  */
-public class TokenBucketBuilder {
+public final class TokenBucketBuilder {
     private static final BandwidthLimit[] NO_BANDWIDTH_LIMITS = {};
 
-    private List<BandwidthLimit> limits = Collections.emptyList();
+    private final ImmutableList.Builder<BandwidthLimit> limitsBuilder = new ImmutableList.Builder<>();
 
     TokenBucketBuilder() {} // prevent public access
 
@@ -39,18 +37,15 @@ public class TokenBucketBuilder {
      */
     public TokenBucketBuilder limits(BandwidthLimit... limits) {
         requireNonNull(limits, "limits");
-        return limits(Arrays.asList(limits));
+        return limits(ImmutableList.copyOf(limits));
     }
 
     /**
      * Adds a number of {@link BandwidthLimit}.
      */
-    public TokenBucketBuilder limits(Iterable<? extends BandwidthLimit> limits) {
+    public TokenBucketBuilder limits(Iterable<BandwidthLimit> limits) {
         requireNonNull(limits, "limits");
-        if (this.limits.isEmpty()) {
-            this.limits = new ArrayList<>(2);
-        }
-        limits.forEach(this.limits::add);
+        limitsBuilder.addAll(limits);
         return this;
     }
 
@@ -76,9 +71,10 @@ public class TokenBucketBuilder {
     }
 
     /**
-     * Builds {@link TokenBucket}.
+     * Returns a newly-created {@link TokenBucket} based on the set of limits configured for this builder.
      */
     public TokenBucket build() {
+        final ImmutableList<BandwidthLimit> limits = limitsBuilder.build();
         return new TokenBucket(limits.isEmpty() ? NO_BANDWIDTH_LIMITS
                                                 : limits.toArray(NO_BANDWIDTH_LIMITS));
     }

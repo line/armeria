@@ -26,7 +26,34 @@ import com.google.common.base.MoreObjects;
 /**
  * Stores configuration of the Token-Bucket algorithm, comprised of multiple limits.
  */
-public class TokenBucket {
+public final class TokenBucket {
+
+    /**
+     * Returns a newly created {@link TokenBucketBuilder}.
+     */
+    public static TokenBucketBuilder builder() {
+        return new TokenBucketBuilder();
+    }
+
+    /**
+     * Returns a newly created {@link TokenBucket}. Computes a set of {@link BandwidthLimit} out of
+     * a comma-separated {@code specification} string that conforms to the following format,
+     * as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>:
+     * <pre>{@code
+     * <bandwidth limit 1>[, <bandwidth limit 2>[, etc.]]
+     * }</pre>
+     * The order of elements inside {@code specification} is not defined.
+     * For example:
+     * <ul>
+     *   <li>{@code 100;window=60;burst=1000, 50000;window=3600}</li>
+     * </ul>
+     *
+     * @param specification the specification used to create a {@link BandwidthLimit}
+     * @see TokenBucketSpec#parseTokenBucket(String)
+     */
+    public static TokenBucket of(String specification) {
+        return TokenBucketSpec.parseTokenBucket(specification);
+    }
 
     @Nonnull
     private final BandwidthLimit[] limits;
@@ -57,34 +84,7 @@ public class TokenBucket {
     }
 
     /**
-     * Creates a new {@link TokenBucketBuilder} using a builder.
-     */
-    public static TokenBucketBuilder builder() {
-        return new TokenBucketBuilder();
-    }
-
-    /**
-     * Creates a new {@link TokenBucket} from a comma-separated {@code specification} string
-     * that conforms to the following format,
-     * as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>:
-     * <pre>{@code
-     * <bandwidth limit 1>[, <bandwidth limit 2>[, etc.]]
-     * }</pre>
-     * The order of elements inside {@code specification} is not defined.
-     * For example:
-     * <ul>
-     *   <li>{@code 100;window=60;burst=1000, 50000;window=3600}</li>
-     * </ul>
-     *
-     * @param specification the specification used to create a {@link BandwidthLimit}
-     * @see TokenBucketSpec#parseTokenBucket(String)
-     */
-    public static TokenBucket of(String specification) {
-        return TokenBucketSpec.parseTokenBucket(specification);
-    }
-
-    /**
-     *  Multiple limits applied to the bucket. This may be empty.
+     * Returns multiple limits applied to the bucket. This may be empty.
      * @return An array of {@link BandwidthLimit}
      */
     @Nonnull
@@ -101,7 +101,7 @@ public class TokenBucket {
     }
 
     /**
-     * Selects lowest limit out the limits configured, normalizing all rates to rate-per-second.
+     * Selects lowest limit out of the limits configured, normalizing all rates to rate-per-second.
      */
     @Nullable
     BandwidthLimit lowestLimit() {

@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.throttling.ThrottlingHeaders;
 /**
  * Builds {@link TokenBucketThrottlingStrategy}.
  */
-public class TokenBucketThrottlingStrategyBuilder<T extends Request> {
+public final class TokenBucketThrottlingStrategyBuilder<T extends Request> {
 
     private final TokenBucket tokenBucket;
     @Nullable
@@ -62,10 +62,10 @@ public class TokenBucketThrottlingStrategyBuilder<T extends Request> {
 
     /**
      * Optional {@link ThrottlingHeaders} to define specific RateLimit Header Scheme for HTTP.
-     * By default, no throttling headers will be used.
+     * By default, no specialized throttling headers will be used.
      * The strategy will only use standard HTTP {@code Retry-After} header.
      * @param headersScheme defines specific RateLimit Header Scheme for HTTP.
-     * @param sendQuota indicates whether to use quota header for the scheme.
+     * @param sendQuota indicates whether to use quota header for the scheme, like {@code X-RateLimit-Limit}.
      */
     public TokenBucketThrottlingStrategyBuilder<T> withHeadersScheme(ThrottlingHeaders headersScheme,
                                                                      boolean sendQuota) {
@@ -86,7 +86,7 @@ public class TokenBucketThrottlingStrategyBuilder<T extends Request> {
     }
 
     /**
-     * Returns a newly-created {@link TokenBucketThrottlingStrategy}.
+     * Returns a newly-created {@link TokenBucketThrottlingStrategy} based on the properties of this builder.
      */
     public TokenBucketThrottlingStrategy<T> build() {
         return new TokenBucketThrottlingStrategy<>(tokenBucket, minimumBackoff, headersScheme, sendQuota, name);

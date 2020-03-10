@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.server.throttling.tokenbucket;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
@@ -94,130 +92,121 @@ public class TokenBucketThrottlingStrategyTest {
     public void serve1() throws Exception {
         final WebClient client = WebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response = client.get("/http-serve").aggregate().get();
-        assertEquals(HttpStatus.OK, response.status());
-        System.out.println(response.headers());
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        assertFalse(response.headers().contains(HttpHeaderNames.RETRY_AFTER));
-        assertFalse(response.headers().contains("RateLimit-Remaining"));
-        assertFalse(response.headers().contains("X-RateLimit-Remaining"));
-        assertFalse(response.headers().contains("X-Rate-Limit-Remaining"));
-        assertFalse(response.headers().contains("RateLimit-Reset"));
-        assertFalse(response.headers().contains("X-RateLimit-Reset"));
-        assertFalse(response.headers().contains("X-Rate-Limit-Reset"));
-        assertFalse(response.headers().contains("RateLimit-Limit"));
-        assertFalse(response.headers().contains("X-RateLimit-Limit"));
-        assertFalse(response.headers().contains("X-Rate-Limit-Limit"));
+        assertThat(response.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
+        assertThat(response.headers().contains("RateLimit-Remaining")).isFalse();
+        assertThat(response.headers().contains("X-RateLimit-Remaining")).isFalse();
+        assertThat(response.headers().contains("X-Rate-Limit-Remaining")).isFalse();
+        assertThat(response.headers().contains("RateLimit-Reset")).isFalse();
+        assertThat(response.headers().contains("X-RateLimit-Reset")).isFalse();
+        assertThat(response.headers().contains("X-Rate-Limit-Reset")).isFalse();
+        assertThat(response.headers().contains("RateLimit-Limit")).isFalse();
+        assertThat(response.headers().contains("X-RateLimit-Limit")).isFalse();
+        assertThat(response.headers().contains("X-Rate-Limit-Limit")).isFalse();
     }
 
     @Test
     public void throttle1() throws Exception {
         final WebClient client = WebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response1 = client.get("/http-throttle1").aggregate().get();
-        assertEquals(HttpStatus.OK, response1.status());
-        System.out.println(response1.headers());
+        assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
-        assertFalse(response1.headers().contains(HttpHeaderNames.RETRY_AFTER));
-        assertFalse(response1.headers().contains("RateLimit-Remaining"));
-        assertFalse(response1.headers().contains("X-Rate-Limit-Remaining"));
-        assertTrue(response1.headers().contains("X-RateLimit-Remaining", "0"));
-        assertTrue(response1.headers().contains("X-RateLimit-Reset"));
+        assertThat(response1.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
+        assertThat(response1.headers().contains("RateLimit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-Rate-Limit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-RateLimit-Remaining", "0")).isTrue();
+        assertThat(response1.headers().contains("X-RateLimit-Reset")).isTrue();
         final long reset1 = Long.parseLong(response1.headers().get("X-RateLimit-Reset"));
-        assertTrue(reset1 <= 10L && reset1 >= 0L);
-        assertFalse(response1.headers().contains("X-RateLimit-Limit"));
+        assertThat(reset1 <= 10L && reset1 >= 0L).isTrue();
+        assertThat(response1.headers().contains("X-RateLimit-Limit")).isFalse();
 
         final AggregatedHttpResponse response2 = client.get("/http-throttle1").aggregate().get();
-        System.out.println(response2.headers());
-        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response2.status());
+        assertThat(response2.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
-        assertTrue(response2.headers().contains(HttpHeaderNames.RETRY_AFTER));
+        assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER)).isTrue();
         final long retryAfter2 = Long.parseLong(response2.headers().get(HttpHeaderNames.RETRY_AFTER));
-        assertTrue(retryAfter2 <= 10L && retryAfter2 >= 0L);
-        assertFalse(response2.headers().contains("RateLimit-Remaining"));
-        assertFalse(response2.headers().contains("X-Rate-Limit-Remaining"));
-        assertTrue(response2.headers().contains("X-RateLimit-Remaining", "0"));
-        assertTrue(response2.headers().contains("X-RateLimit-Reset"));
+        assertThat(retryAfter2 <= 10L && retryAfter2 >= 0L).isTrue();
+        assertThat(response2.headers().contains("RateLimit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-Rate-Limit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-RateLimit-Remaining", "0")).isTrue();
+        assertThat(response2.headers().contains("X-RateLimit-Reset")).isTrue();
         final long reset = Long.parseLong(response2.headers().get("X-RateLimit-Reset"));
-        assertEquals(retryAfter2, reset);
-        assertFalse(response2.headers().contains("X-RateLimit-Limit"));
+        assertThat(reset).isEqualTo(retryAfter2);
+        assertThat(response2.headers().contains("X-RateLimit-Limit")).isFalse();
     }
 
     @Test
     public void throttle2() throws Exception {
         final WebClient client = WebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response1 = client.get("/http-throttle2").aggregate().get();
-        assertEquals(HttpStatus.OK, response1.status());
-        System.out.println(response1.headers());
+        assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
-        assertFalse(response1.headers().contains(HttpHeaderNames.RETRY_AFTER));
-        assertFalse(response1.headers().contains("RateLimit-Remaining"));
-        assertFalse(response1.headers().contains("X-Rate-Limit-Remaining"));
-        assertTrue(response1.headers().contains("X-RateLimit-Remaining", "0"));
-        assertTrue(response1.headers().contains("X-RateLimit-Reset"));
+        assertThat(response1.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
+        assertThat(response1.headers().contains("RateLimit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-Rate-Limit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-RateLimit-Remaining", "0")).isTrue();
+        assertThat(response1.headers().contains("X-RateLimit-Reset")).isTrue();
         final long reset1 = Long.parseLong(response1.headers().get("X-RateLimit-Reset"));
-        assertTrue(reset1 <= 10L && reset1 >= 0L);
-        assertEquals("1, 1;window=10", response1.headers().get("X-RateLimit-Limit"));
+        assertThat(reset1 <= 10L && reset1 >= 0L).isTrue();
+        assertThat(response1.headers().get("X-RateLimit-Limit")).isEqualTo("1, 1;window=10");
 
         final AggregatedHttpResponse response2 = client.get("/http-throttle2").aggregate().get();
-        System.out.println(response2.headers());
-        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response2.status());
+        assertThat(response2.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
-        assertTrue(response2.headers().contains(HttpHeaderNames.RETRY_AFTER, "15"));
-        assertFalse(response2.headers().contains("RateLimit-Remaining"));
-        assertFalse(response2.headers().contains("X-Rate-Limit-Remaining"));
-        assertTrue(response2.headers().contains("X-RateLimit-Remaining", "0"));
-        assertTrue(response2.headers().contains("X-RateLimit-Reset", "15"));
-        assertEquals("1, 1;window=10", response1.headers().get("X-RateLimit-Limit"));
+        assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER, "15")).isTrue();
+        assertThat(response2.headers().contains("RateLimit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-Rate-Limit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-RateLimit-Remaining", "0")).isTrue();
+        assertThat(response2.headers().contains("X-RateLimit-Reset", "15")).isTrue();
+        assertThat(response1.headers().get("X-RateLimit-Limit")).isEqualTo("1, 1;window=10");
     }
 
     @Test
     public void throttle3() throws Exception {
         final WebClient client = WebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response1 = client.get("/http-throttle3").aggregate().get();
-        assertEquals(HttpStatus.OK, response1.status());
-        System.out.println(response1.headers());
+        assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
-        assertFalse(response1.headers().contains(HttpHeaderNames.RETRY_AFTER));
-        assertFalse(response1.headers().contains("RateLimit-Remaining"));
-        assertFalse(response1.headers().contains("X-Rate-Limit-Remaining"));
-        assertFalse(response1.headers().contains("X-RateLimit-Remaining"));
-        assertFalse(response1.headers().contains("X-RateLimit-Reset"));
+        assertThat(response1.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
+        assertThat(response1.headers().contains("RateLimit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-Rate-Limit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-RateLimit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-RateLimit-Reset")).isFalse();
 
         final AggregatedHttpResponse response2 = client.get("/http-throttle3").aggregate().get();
-        System.out.println(response2.headers());
-        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response2.status());
+        assertThat(response2.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
-        assertTrue(response2.headers().contains(HttpHeaderNames.RETRY_AFTER));
+        assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER)).isTrue();
         final long retryAfter2 = Long.parseLong(response2.headers().get(HttpHeaderNames.RETRY_AFTER));
-        assertTrue(retryAfter2 <= 10L && retryAfter2 >= 0L);
-        assertFalse(response2.headers().contains("RateLimit-Remaining"));
-        assertFalse(response2.headers().contains("X-Rate-Limit-Remaining"));
-        assertFalse(response2.headers().contains("X-RateLimit-Remaining"));
-        assertFalse(response2.headers().contains("X-RateLimit-Reset"));
+        assertThat(retryAfter2 <= 10L && retryAfter2 >= 0L).isTrue();
+        assertThat(response2.headers().contains("RateLimit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-Rate-Limit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-RateLimit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-RateLimit-Reset")).isFalse();
     }
 
     @Test
     public void throttle4() throws Exception {
         final WebClient client = WebClient.of(serverRule.httpUri());
         final AggregatedHttpResponse response1 = client.get("/http-throttle4").aggregate().get();
-        assertEquals(HttpStatus.OK, response1.status());
-        System.out.println(response1.headers());
+        assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
-        assertFalse(response1.headers().contains(HttpHeaderNames.RETRY_AFTER));
-        assertFalse(response1.headers().contains("RateLimit-Remaining"));
-        assertFalse(response1.headers().contains("X-Rate-Limit-Remaining"));
-        assertFalse(response1.headers().contains("X-RateLimit-Remaining"));
-        assertFalse(response1.headers().contains("X-RateLimit-Reset"));
+        assertThat(response1.headers().contains(HttpHeaderNames.RETRY_AFTER)).isFalse();
+        assertThat(response1.headers().contains("RateLimit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-Rate-Limit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-RateLimit-Remaining")).isFalse();
+        assertThat(response1.headers().contains("X-RateLimit-Reset")).isFalse();
 
         final AggregatedHttpResponse response2 = client.get("/http-throttle4").aggregate().get();
-        System.out.println(response2.headers());
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response2.status());
+        assertThat(response2.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
 
-        assertTrue(response2.headers().contains(HttpHeaderNames.RETRY_AFTER));
+        assertThat(response2.headers().contains(HttpHeaderNames.RETRY_AFTER)).isTrue();
         final long retryAfter2 = Long.parseLong(response2.headers().get(HttpHeaderNames.RETRY_AFTER));
-        assertTrue(retryAfter2 <= 10L && retryAfter2 >= 5L);
-        assertFalse(response2.headers().contains("RateLimit-Remaining"));
-        assertFalse(response2.headers().contains("X-Rate-Limit-Remaining"));
-        assertFalse(response2.headers().contains("X-RateLimit-Remaining"));
-        assertFalse(response2.headers().contains("X-RateLimit-Reset"));
+        assertThat(retryAfter2 <= 10L && retryAfter2 >= 5L).isTrue();
+        assertThat(response2.headers().contains("RateLimit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-Rate-Limit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-RateLimit-Remaining")).isFalse();
+        assertThat(response2.headers().contains("X-RateLimit-Reset")).isFalse();
     }
 }

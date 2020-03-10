@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.server.throttling.tokenbucket;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
@@ -25,173 +24,158 @@ import org.junit.jupiter.api.Test;
 
 import io.github.bucket4j.Bandwidth;
 
-public class BandwidthLimitTest {
+class BandwidthLimitTest {
 
     @Test
-    public void testConstructor() {
+    void testConstructor() {
         final BandwidthLimit bl1 = BandwidthLimit.of(100L, 1000L, 50L, Duration.ofSeconds(60L));
-        System.out.println(bl1);
-        assertEquals(100L, bl1.limit());
-        assertEquals(1000L, bl1.overdraftLimit());
-        assertEquals(50L, bl1.initialSize());
-        assertEquals(Duration.ofSeconds(60L), bl1.period());
-        assertEquals("100;window=60;burst=1000", bl1.toSpecString());
+        assertThat(bl1.limit()).isEqualTo(100L);
+        assertThat(bl1.overdraftLimit()).isEqualTo(1000L);
+        assertThat(bl1.initialSize()).isEqualTo(50L);
+        assertThat(bl1.period()).isEqualTo(Duration.ofSeconds(60L));
+        assertThat(bl1.toSpecString()).isEqualTo("100;window=60;burst=1000");
         final Bandwidth b1 = bl1.bandwidth();
-        System.out.println(b1);
-        assertEquals(1000L, b1.getCapacity());
-        assertEquals(100L, b1.getRefillTokens());
-        assertEquals(50L, b1.getInitialTokens());
-        assertEquals(Duration.ofSeconds(60L).toNanos(), b1.getRefillPeriodNanos());
+        assertThat(b1.getCapacity()).isEqualTo(1000L);
+        assertThat(b1.getRefillTokens()).isEqualTo(100L);
+        assertThat(b1.getInitialTokens()).isEqualTo(50L);
+        assertThat(b1.getRefillPeriodNanos()).isEqualTo(Duration.ofSeconds(60L).toNanos());
 
         final BandwidthLimit bl2 = BandwidthLimit.of(100L, 1000L, Duration.ofSeconds(60L));
-        System.out.println(bl2);
-        assertEquals(100L, bl2.limit());
-        assertEquals(1000L, bl2.overdraftLimit());
-        assertEquals(0L, bl2.initialSize());
-        assertEquals(Duration.ofSeconds(60L), bl2.period());
-        assertEquals("100;window=60;burst=1000", bl2.toSpecString());
+        assertThat(bl2.limit()).isEqualTo(100L);
+        assertThat(bl2.overdraftLimit()).isEqualTo(1000L);
+        assertThat(bl2.initialSize()).isEqualTo(0L);
+        assertThat(bl2.period()).isEqualTo(Duration.ofSeconds(60L));
+        assertThat(bl2.toSpecString()).isEqualTo("100;window=60;burst=1000");
         final Bandwidth b2 = bl2.bandwidth();
-        System.out.println(b2);
-        assertEquals(1000L, b2.getCapacity());
-        assertEquals(100L, b2.getRefillTokens());
-        assertEquals(100L, b2.getInitialTokens());
-        assertEquals(Duration.ofSeconds(60L).toNanos(), b2.getRefillPeriodNanos());
+        assertThat(b2.getCapacity()).isEqualTo(1000L);
+        assertThat(b2.getRefillTokens()).isEqualTo(100L);
+        assertThat(b2.getInitialTokens()).isEqualTo(100L);
+        assertThat(b2.getRefillPeriodNanos()).isEqualTo(Duration.ofSeconds(60L).toNanos());
 
         final BandwidthLimit bl3 = BandwidthLimit.of(100L, Duration.ofSeconds(60L));
-        System.out.println(bl3);
-        assertEquals(100L, bl3.limit());
-        assertEquals(0L, bl3.overdraftLimit());
-        assertEquals(0L, bl3.initialSize());
-        assertEquals(Duration.ofSeconds(60L), bl3.period());
-        assertEquals("100;window=60", bl3.toSpecString());
+        assertThat(bl3.limit()).isEqualTo(100L);
+        assertThat(bl3.overdraftLimit()).isEqualTo(0L);
+        assertThat(bl3.initialSize()).isEqualTo(0L);
+        assertThat(bl3.period()).isEqualTo(Duration.ofSeconds(60L));
+        assertThat(bl3.toSpecString()).isEqualTo("100;window=60");
         final Bandwidth b3 = bl3.bandwidth();
-        System.out.println(b3);
-        assertEquals(100L, b3.getCapacity());
-        assertEquals(100L, b3.getRefillTokens());
-        assertEquals(100L, b3.getInitialTokens());
-        assertEquals(Duration.ofSeconds(60L).toNanos(), b3.getRefillPeriodNanos());
+        assertThat(b3.getCapacity()).isEqualTo(100L);
+        assertThat(b3.getRefillTokens()).isEqualTo(100L);
+        assertThat(b3.getInitialTokens()).isEqualTo(100L);
+        assertThat(b3.getRefillPeriodNanos()).isEqualTo(Duration.ofSeconds(60L).toNanos());
 
         final BandwidthLimit bl4 = BandwidthLimit.of(100L, 0L, Duration.ofSeconds(60L));
-        System.out.println(bl4);
-        assertEquals(100L, bl4.limit());
-        assertEquals(0L, bl4.overdraftLimit());
-        assertEquals(0L, bl4.initialSize());
-        assertEquals(Duration.ofSeconds(60L), bl4.period());
-        assertEquals("100;window=60", bl4.toSpecString());
+        assertThat(bl4.limit()).isEqualTo(100L);
+        assertThat(bl4.overdraftLimit()).isEqualTo(0L);
+        assertThat(bl4.initialSize()).isEqualTo(0L);
+        assertThat(bl4.period()).isEqualTo(Duration.ofSeconds(60L));
+        assertThat(bl4.toSpecString()).isEqualTo("100;window=60");
         final Bandwidth b4 = bl4.bandwidth();
-        System.out.println(b4);
-        assertEquals(100L, b4.getCapacity());
-        assertEquals(100L, b4.getRefillTokens());
-        assertEquals(100L, b4.getInitialTokens());
-        assertEquals(Duration.ofSeconds(60L).toNanos(), b4.getRefillPeriodNanos());
+        assertThat(b4.getCapacity()).isEqualTo(100L);
+        assertThat(b4.getRefillTokens()).isEqualTo(100L);
+        assertThat(b4.getInitialTokens()).isEqualTo(100L);
+        assertThat(b4.getRefillPeriodNanos()).isEqualTo(Duration.ofSeconds(60L).toNanos());
     }
 
     @Test
-    public void testInvalidConstructor() {
+    void testInvalidConstructor() {
         try {
             BandwidthLimit.of(0L, 1000L, 50L, Duration.ofSeconds(60L));
         } catch (IllegalArgumentException e) {
-            assertEquals(
-                    "Bandwidth limit must be positive. Found: 0", e.getMessage());
+            assertThat(
+                    e.getMessage()).isEqualTo("Bandwidth limit must be positive. Found: 0");
         }
 
         try {
             BandwidthLimit.of(100L, 99L, 50L, Duration.ofSeconds(60L));
         } catch (IllegalArgumentException e) {
-            assertEquals(
-                    "Overdraft limit has to exceed bandwidth limit 100. Found: 99", e.getMessage());
+            assertThat(
+                    e.getMessage()).isEqualTo("Overdraft limit has to exceed bandwidth limit 100. Found: 99");
         }
 
         try {
             BandwidthLimit.of(100L, 1000L, 50L, Duration.ofSeconds(0L));
         } catch (IllegalArgumentException e) {
-            assertEquals(
-                    "Bandwidth period must be positive. Found: PT0S", e.getMessage());
+            assertThat(
+                    e.getMessage()).isEqualTo("Bandwidth period must be positive. Found: PT0S");
         }
     }
 
     @Test
-    public void testSpecification() {
+    void testSpecification() {
         final BandwidthLimit bl1 = BandwidthLimit.of("100;window=60;burst=1000;initial=50");
-        System.out.println(bl1);
-        assertEquals(100L, bl1.limit());
-        assertEquals(1000L, bl1.overdraftLimit());
-        assertEquals(50L, bl1.initialSize());
-        assertEquals(Duration.ofSeconds(60L), bl1.period());
-        assertNotNull(bl1.bandwidth());
+        assertThat(bl1.limit()).isEqualTo(100L);
+        assertThat(bl1.overdraftLimit()).isEqualTo(1000L);
+        assertThat(bl1.initialSize()).isEqualTo(50L);
+        assertThat(bl1.period()).isEqualTo(Duration.ofSeconds(60L));
+        assertThat(bl1.bandwidth()).isNotNull();
 
         final BandwidthLimit bl2 = BandwidthLimit.of("100;window=60;burst=1000");
-        System.out.println(bl2);
-        assertEquals(100L, bl2.limit());
-        assertEquals(1000L, bl2.overdraftLimit());
-        assertEquals(0L, bl2.initialSize());
-        assertEquals(Duration.ofSeconds(60L), bl2.period());
-        assertNotNull(bl2.bandwidth());
+        assertThat(bl2.limit()).isEqualTo(100L);
+        assertThat(bl2.overdraftLimit()).isEqualTo(1000L);
+        assertThat(bl2.initialSize()).isEqualTo(0L);
+        assertThat(bl2.period()).isEqualTo(Duration.ofSeconds(60L));
+        assertThat(bl2.bandwidth()).isNotNull();
 
         final BandwidthLimit bl3 = BandwidthLimit.of("100;window=60");
-        System.out.println(bl3);
-        assertEquals(100L, bl3.limit());
-        assertEquals(0L, bl3.overdraftLimit());
-        assertEquals(0L, bl3.initialSize());
-        assertEquals(Duration.ofSeconds(60L), bl3.period());
-        assertNotNull(bl3.bandwidth());
+        assertThat(bl3.limit()).isEqualTo(100L);
+        assertThat(bl3.overdraftLimit()).isEqualTo(0L);
+        assertThat(bl3.initialSize()).isEqualTo(0L);
+        assertThat(bl3.period()).isEqualTo(Duration.ofSeconds(60L));
+        assertThat(bl3.bandwidth()).isNotNull();
     }
 
     @Test
-    public void testInvalidSpecification() {
+    void testInvalidSpecification() {
         try {
             BandwidthLimit.of("1000000000000000000000000000000000000000000000000000000000000000000;window=60");
         } catch (NumberFormatException e) {
-            assertEquals(
-                    "For input string: \"1000000000000000000000000000000000000000000000000000000000000000000\"",
-                         e.getMessage());
+            assertThat(e.getMessage())
+                .isEqualTo(
+                  "For input string: \"1000000000000000000000000000000000000000000000000000000000000000000\"");
         }
 
         try {
             BandwidthLimit.of("abcd;window=60");
         } catch (NumberFormatException e) {
-            assertEquals(
-                    "For input string: \"abcd\"",
-                         e.getMessage());
+            assertThat(e.getMessage()).isEqualTo("For input string: \"abcd\"");
         }
 
         try {
             BandwidthLimit.of("100;window=defg");
         } catch (NumberFormatException e) {
-            assertEquals(
-                    "For input string: \"defg\"",
-                         e.getMessage());
+            assertThat(e.getMessage()).isEqualTo("For input string: \"defg\"");
         }
 
         try {
             BandwidthLimit.of("100;");
         } catch (IllegalArgumentException e) {
-            assertEquals("Invalid format of \"100;\" - period not found", e.getMessage());
+            assertThat(e.getMessage()).isEqualTo("Invalid format of \"100;\" - period not found");
         }
 
         try {
             BandwidthLimit.of(";window=60;burst=1000;initial=50");
         } catch (IllegalArgumentException e) {
-            assertEquals("Invalid format of \";window=60;burst=1000;initial=50\" - limit not found",
-                         e.getMessage());
+            assertThat(e.getMessage())
+                    .isEqualTo("Invalid format of \";window=60;burst=1000;initial=50\" - limit not found");
         }
 
         try {
             BandwidthLimit.of("100");
         } catch (IllegalArgumentException e) {
-            assertEquals("Invalid format of \"100\" - period not found", e.getMessage());
+            assertThat(e.getMessage()).isEqualTo("Invalid format of \"100\" - period not found");
         }
 
         try {
             BandwidthLimit.of("");
         } catch (IllegalArgumentException e) {
-            assertEquals("Empty bandwidth limit specification", e.getMessage());
+            assertThat(e.getMessage()).isEqualTo("Empty bandwidth limit specification");
         }
 
         try {
             BandwidthLimit.of(null);
         } catch (NullPointerException e) {
-            assertEquals("specification", e.getMessage());
+            assertThat(e.getMessage()).isEqualTo("specification");
         }
     }
 }

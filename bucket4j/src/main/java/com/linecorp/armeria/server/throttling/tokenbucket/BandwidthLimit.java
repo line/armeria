@@ -28,7 +28,73 @@ import io.github.bucket4j.Refill;
 /**
  * Stores configurations of a single Token-Bucket bandwidth limit.
  */
-public class BandwidthLimit {
+public final class BandwidthLimit {
+
+    /**
+     * Returns a newly created {@link BandwidthLimit}. Specifies limitation in
+     * <a href="https://github.com/vladimir-bukhtoyarov/bucket4j/blob/1.3/doc-pages/token-bucket-brief-overview.md#token-bucket-algorithm">classic
+     * interpretation</a> of token-bucket algorithm.
+     *
+     * @param limit          the bucket size - defines the count of tokens which can be held by the bucket
+     *                       and defines the speed at which tokens are regenerated in the bucket
+     * @param overdraftLimit defines the maximum overdraft count of tokens which can be held by
+     *                       the bucket, this value must exceed the {@code limit}
+     * @param initialSize    the initial number of tokens available to this bandwidth limit
+     * @param period         the time window, during which the tokens will be regenerated
+     */
+    public static BandwidthLimit of(long limit, long overdraftLimit, long initialSize, Duration period) {
+        return new BandwidthLimit(limit, overdraftLimit, initialSize, period);
+    }
+
+    /**
+     * Returns a newly created {@link BandwidthLimit}. Specifies limitation in
+     * <a href="https://github.com/vladimir-bukhtoyarov/bucket4j/blob/1.3/doc-pages/token-bucket-brief-overview.md#token-bucket-algorithm">classic
+     * interpretation</a> of token-bucket algorithm.
+     *
+     * @param limit the bucket size - defines the count of tokens which can be held by the bucket
+     *              and defines the speed at which tokens are regenerated in the bucket
+     * @param overdraftLimit defines the maximum overdraft count of tokens which can be held by the bucket,
+     *                       this value must exceed the {@code limit}
+     * @param period the time window, during which the tokens will be regenerated
+     */
+    public static BandwidthLimit of(long limit, long overdraftLimit, Duration period) {
+        return new BandwidthLimit(limit, overdraftLimit, 0L, period);
+    }
+
+    /**
+     * Returns a newly created simple {@link BandwidthLimit}.
+     * Specifies easy limitation of {@code limit} tokens per {@code period} time window.
+     * @param limit the bucket size - defines the maximum count of tokens which can be held by the bucket
+     *              and defines the speed at which tokens are regenerated in the bucket
+     * @param period the time window, during which the tokens will be regenerated
+     */
+    public static BandwidthLimit of(long limit, Duration period) {
+        return new BandwidthLimit(limit, 0L, 0L, period);
+    }
+
+    /**
+     * Returns a newly created {@link BandwidthLimit}. Computes {@code limit}, {@code overdraftLimit},
+     * {@code initialSize} and {@code period} out of a semicolon-separated {@code specification} string
+     * that conforms to the following format,
+     * as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>:
+     * <pre>{@code
+     * <limit>;window=<period(in seconds)>[;burst=<overdraftLimit>][;initial=<initialSize>]
+     * }</pre>
+     * All {@code specification} string elements must come in the defined order.
+     * For example:
+     * <ul>
+     *   <li>{@code 100;window=60;burst=1000} ({@code limit}=100, {@code overdraftLimit}=1000,
+     *       {@code initialSize} and {@code period}=60seconds)</li>
+     *   <li>{@code 100;window=60;burst=1000;initial=20} ({@code limit}=100, {@code overdraftLimit}=1000,
+     *       {@code initialSize}=20 and {@code period}=60seconds)</li>
+     *   <li>{@code 5000;window=1} ({@code limit}=5000 and {@code period}=1second)</li>
+     * </ul>
+     *
+     * @param specification the specification used to create a {@link BandwidthLimit}
+     */
+    public static BandwidthLimit of(String specification) {
+        return TokenBucketSpec.parseBandwidthLimit(specification);
+    }
 
     private final long limit;
     private final long overdraftLimit;
@@ -60,74 +126,8 @@ public class BandwidthLimit {
     }
 
     /**
-     * Creates new {@link BandwidthLimit}. Specifies limitation in
-     * <a href="https://github.com/vladimir-bukhtoyarov/bucket4j/blob/1.3/doc-pages/token-bucket-brief-overview.md#token-bucket-algorithm">classic
-     * interpretation</a> of token-bucket algorithm.
-     *
-     * @param limit          the bucket size - defines the count of tokens which can be held by bucket
-     *                       and defines the speed at which tokens are regenerated in bucket
-     * @param overdraftLimit defines the maximum overdraft count of tokens which can be held by
-     *                       bucket, this must exceed the {@code limit}
-     * @param initialSize   the initial number of tokens for this bandwidth
-     * @param period         the time window, during which the tokens will be regenerated
-     */
-    public static BandwidthLimit of(long limit, long overdraftLimit, long initialSize, Duration period) {
-        return new BandwidthLimit(limit, overdraftLimit, initialSize, period);
-    }
-
-    /**
-     * Creates new {@link BandwidthLimit}. Specifies limitation in
-     * <a href="https://github.com/vladimir-bukhtoyarov/bucket4j/blob/1.3/doc-pages/token-bucket-brief-overview.md#token-bucket-algorithm">classic
-     * interpretation</a> of token-bucket algorithm.
-     *
-     * @param limit the bucket size - defines the count of tokens which can be held by bucket
-     *              and defines the speed at which tokens are regenerated in bucket
-     * @param overdraftLimit defines the maximum overdraft count of tokens which can be held by bucket,
-     *                       this must exceed the {@code limit}
-     * @param period the time window, during which the tokens will be regenerated
-     */
-    public static BandwidthLimit of(long limit, long overdraftLimit, Duration period) {
-        return new BandwidthLimit(limit, overdraftLimit, 0L, period);
-    }
-
-    /**
-     * Creates new {@link BandwidthLimit}.
-     * Specifies easy limitation of {@code limit} tokens per {@code period} time window.
-     * @param limit the bucket size - defines the maximum count of tokens which can be held by bucket
-     *              and defines the speed at which tokens are regenerated in bucket
-     * @param period the time window, during which the tokens will be regenerated
-     */
-    public static BandwidthLimit of(long limit, Duration period) {
-        return new BandwidthLimit(limit, 0L, 0L, period);
-    }
-
-    /**
-     * Creates a new {@link BandwidthLimit} that computes {@code limit}, {@code overdraftLimit},
-     * {@code initialSize} and {@code period} from a semicolon-separated {@code specification} string
-     * that conforms to the following format,
-     * as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>:
-     * <pre>{@code
-     * <limit>;window=<period(in seconds)>[;burst=<overdraftLimit>][;initial=<initialSize>]
-     * }</pre>
-     * All {@code specification} string elements must come in the defined order.
-     * For example:
-     * <ul>
-     *   <li>{@code 100;window=60;burst=1000} ({@code limit}=100, {@code overdraftLimit}=1000,
-     *       {@code initialSize} and {@code period}=60seconds)</li>
-     *   <li>{@code 100;window=60;burst=1000;initial=20} ({@code limit}=100, {@code overdraftLimit}=1000,
-     *       {@code initialSize}=20 and {@code period}=60seconds)</li>
-     *   <li>{@code 5000;window=1} ({@code limit}=5000 and {@code period}=1second)</li>
-     * </ul>
-     *
-     * @param specification the specification used to create a {@link BandwidthLimit}
-     */
-    public static BandwidthLimit of(String specification) {
-        return TokenBucketSpec.parseBandwidthLimit(specification);
-    }
-
-    /**
-     * The bucket size - defines the count of tokens which can be held by bucket
-     * and defines the speed at which tokens are regenerated in bucket.
+     * Returns the bucket size, which defines the count of tokens which can be held by the bucket
+     * and defines the speed at which tokens are regenerated in the bucket.
      * @return Bucket size.
      */
     public long limit() {
@@ -135,8 +135,8 @@ public class BandwidthLimit {
     }
 
     /**
-     * The maximum overdraft count of tokens which can be held by bucket,
-     * this must exceed the {@code BandwidthLimit#limit()}.
+     * Returns the maximum overdraft count of tokens which can be held by the bucket.
+     * This value always exceeds the {@code BandwidthLimit#limit()} or equals to 0, if not specified.
      * @return Bucket maximum overdraft count.
      */
     public long overdraftLimit() {
@@ -144,10 +144,10 @@ public class BandwidthLimit {
     }
 
     /**
-     * By default new created bandwidth has amount tokens that equals its capacity.
-     * The initial limit allows having lesser initial size, for example for case of cold start
-     * in order to prevent denial of service.
-     *
+     * Returns the number of initial available tokens available to this bandwidth limit. The initial limit
+     * allows having lesser initial size, for example, in case of cold start in order to prevent denial of
+     * service.
+     * This value equals to 0, if not set.
      * @return the number of initial tokens in the bandwidth.
      */
     public long initialSize() {
@@ -155,7 +155,7 @@ public class BandwidthLimit {
     }
 
     /**
-     * The time window, during which the tokens will be regenerated.
+     * Returns the time window, during which the tokens will be regenerated for the given bandwidth limit.
      * @return Time window for the limit.
      */
     public Duration period() {
@@ -163,7 +163,7 @@ public class BandwidthLimit {
     }
 
     /**
-     * Constructs new {@link Bandwidth}.
+     * Constructs a new {@link Bandwidth}.
      */
     Bandwidth bandwidth() {
         final Bandwidth bandwidth;
