@@ -24,14 +24,11 @@ import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
-
-import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
@@ -53,6 +50,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.common.RequestTimeoutScheduler;
 import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -89,15 +87,11 @@ public final class DefaultClientRequestContext
     private final ServiceRequestContext root;
 
     private final RequestLogBuilder log;
+    private final RequestTimeoutScheduler timeoutScheduler;
 
     private long writeTimeoutMillis;
-    private long responseTimeoutMillis;
     @Nullable
     private Runnable responseTimeoutHandler;
-    @Nullable
-    private TimeoutController responseTimeoutController;
-    @Nullable
-    private Consumer<TimeoutController> pendingTimeoutTask;
     private long maxResponseLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
@@ -174,9 +168,9 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
+        timeoutScheduler = new RequestTimeoutScheduler(eventLoop, options.responseTimeoutMillis());
 
         writeTimeoutMillis = options.writeTimeoutMillis();
-        responseTimeoutMillis = options.responseTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
         additionalRequestHeaders = options.get(ClientOption.HTTP_HEADERS);
         customizers = copyThreadLocalCustomizers();
@@ -310,9 +304,9 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
+        timeoutScheduler = new RequestTimeoutScheduler(eventLoop, options.responseTimeoutMillis());
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
-        responseTimeoutMillis = ctx.responseTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
@@ -428,45 +422,17 @@ public final class DefaultClientRequestContext
 
     @Override
     public long responseTimeoutMillis() {
-        return responseTimeoutMillis;
+        return timeoutScheduler.timeoutMillis();
     }
 
     @Override
     public void clearResponseTimeout() {
-        if (responseTimeoutMillis == 0) {
-            return;
-        }
-
-        final TimeoutController responseTimeoutController = this.responseTimeoutController;
-        responseTimeoutMillis = 0;
-        if (responseTimeoutController != null) {
-            if (eventLoop().inEventLoop()) {
-                responseTimeoutController.cancelTimeout();
-            } else {
-                eventLoop().execute(responseTimeoutController::cancelTimeout);
-            }
-        } else {
-            addPendingTimeoutTask(TimeoutController::cancelTimeout);
-        }
+        timeoutScheduler.clearTimeout();
     }
 
     @Override
     public void setResponseTimeoutMillis(long responseTimeoutMillis) {
-        checkArgument(responseTimeoutMillis >= 0,
-                      "responseTimeoutMillis: %s (expected: >= 0)", responseTimeoutMillis);
-        if (responseTimeoutMillis == 0) {
-            clearResponseTimeout();
-            return;
-        }
-
-        if (this.responseTimeoutMillis == 0) {
-            setResponseTimeoutAfterMillis(responseTimeoutMillis);
-            return;
-        }
-
-        final long adjustmentMillis =
-                LongMath.saturatedSubtract(responseTimeoutMillis, this.responseTimeoutMillis);
-        extendResponseTimeoutMillis(adjustmentMillis);
+        timeoutScheduler.setTimeoutMillis(responseTimeoutMillis);
     }
 
     @Override
@@ -476,22 +442,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void extendResponseTimeoutMillis(long adjustmentMillis) {
-        if (adjustmentMillis == 0 || responseTimeoutMillis == 0) {
-            return;
-        }
-
-        final long oldResponseTimeoutMillis = responseTimeoutMillis;
-        responseTimeoutMillis = LongMath.saturatedAdd(oldResponseTimeoutMillis, adjustmentMillis);
-        final TimeoutController responseTimeoutController = this.responseTimeoutController;
-        if (responseTimeoutController != null) {
-            if (eventLoop().inEventLoop()) {
-                responseTimeoutController.extendTimeout(adjustmentMillis);
-            } else {
-                eventLoop().execute(() -> responseTimeoutController.extendTimeout(adjustmentMillis));
-            }
-        } else {
-            addPendingTimeoutTask(timeoutController -> timeoutController.extendTimeout(adjustmentMillis));
-        }
+        timeoutScheduler.extendTimeoutMillis(adjustmentMillis);
     }
 
     @Override
@@ -501,32 +452,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setResponseTimeoutAfterMillis(long responseTimeoutMillis) {
-        checkArgument(responseTimeoutMillis > 0,
-                      "responseTimeoutMillis: %s (expected: > 0)", responseTimeoutMillis);
-
-        long passedTimeMillis = 0;
-        final TimeoutController responseTimeoutController = this.responseTimeoutController;
-        if (responseTimeoutController != null) {
-            final Long startTimeNanos = responseTimeoutController.startTimeNanos();
-            if (startTimeNanos != null) {
-                passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-            }
-            if (eventLoop().inEventLoop()) {
-                responseTimeoutController.resetTimeout(responseTimeoutMillis);
-            } else {
-                eventLoop().execute(() -> responseTimeoutController.resetTimeout(responseTimeoutMillis));
-            }
-        } else {
-            final long startTimeNanos = System.nanoTime();
-            addPendingTimeoutTask(timeoutController -> {
-                final long passedTimeMillis0 =
-                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
-                final long timeoutMillis = Math.max(1, responseTimeoutMillis - passedTimeMillis0);
-                timeoutController.resetTimeout(timeoutMillis);
-            });
-        }
-
-        this.responseTimeoutMillis = LongMath.saturatedAdd(passedTimeMillis, responseTimeoutMillis);
+        timeoutScheduler.setTimeoutAfterMillis(responseTimeoutMillis);
     }
 
     @Override
@@ -536,24 +462,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
-        checkArgument(responseTimeoutAtMillis >= 0,
-                      "responseTimeoutAtMillis: %s (expected: >= 0)", responseTimeoutMillis);
-        final long responseTimeoutAfter = responseTimeoutAtMillis - System.currentTimeMillis();
-
-        if (responseTimeoutAfter <= 0) {
-            final TimeoutController responseTimeoutController = this.responseTimeoutController;
-            if (responseTimeoutController != null) {
-                if (eventLoop().inEventLoop()) {
-                    responseTimeoutController.timeoutNow();
-                } else {
-                    eventLoop().execute(responseTimeoutController::timeoutNow);
-                }
-            } else {
-                addPendingTimeoutTask(TimeoutController::timeoutNow);
-            }
-        } else {
-            setResponseTimeoutAfterMillis(responseTimeoutAfter);
-        }
+        timeoutScheduler.setTimeoutAtMillis(responseTimeoutAtMillis);
     }
 
     @Override
@@ -580,27 +489,7 @@ public final class DefaultClientRequestContext
      * a timeout task when a user updates the response timeout configuration.
      */
     void setResponseTimeoutController(TimeoutController responseTimeoutController) {
-        requireNonNull(responseTimeoutController, "responseTimeoutController");
-        checkState(this.responseTimeoutController == null, "responseTimeoutController is set already.");
-        this.responseTimeoutController = responseTimeoutController;
-
-        // Invoke pending timeout task which was set before initializing responseTimeoutController
-        final Consumer<TimeoutController> pendingTimeoutTask = this.pendingTimeoutTask;
-        if (pendingTimeoutTask != null) {
-            if (eventLoop().inEventLoop()) {
-                pendingTimeoutTask.accept(responseTimeoutController);
-            } else {
-                eventLoop().execute(() -> pendingTimeoutTask.accept(responseTimeoutController));
-            }
-        }
-    }
-
-    private void addPendingTimeoutTask(Consumer<TimeoutController> pendingTimeoutTask) {
-        if (this.pendingTimeoutTask == null) {
-            this.pendingTimeoutTask = pendingTimeoutTask;
-        } else {
-            this.pendingTimeoutTask = this.pendingTimeoutTask.andThen(pendingTimeoutTask);
-        }
+        timeoutScheduler.setTimeoutController(responseTimeoutController);
     }
 
     @Override

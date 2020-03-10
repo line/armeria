@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -34,6 +35,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController;
+import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.internal.common.TimeoutController;
 
 import io.netty.util.AttributeKey;
@@ -45,12 +48,24 @@ class DefaultServiceRequestContextTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
         final ServiceRequestContext ctx = ServiceRequestContext.builder(request).build();
         assertThat(ctx.isTimedOut()).isFalse();
-
         assert ctx instanceof DefaultServiceRequestContext;
         final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
-        defaultCtx.setTimedOut();
 
-        assertThat(ctx.isTimedOut()).isTrue();
+        final TimeoutTask timeoutTask = new TimeoutTask() {
+            @Override
+            public boolean canSchedule() {
+                return true;
+            }
+
+            @Override
+            public void run() {}
+        };
+
+        defaultCtx.setRequestTimeoutController(new DefaultTimeoutController(timeoutTask, ctx.eventLoop()));
+        defaultCtx.setRequestTimeoutAt(Instant.now().minusMillis(100));
+
+        await().timeout(Duration.ofSeconds(1))
+               .untilAsserted(() -> assertThat(ctx.isTimedOut()).isTrue());
     }
 
     @Test

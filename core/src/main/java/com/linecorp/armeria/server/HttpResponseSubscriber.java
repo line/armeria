@@ -519,7 +519,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             @Override
             public void run() {
                 if (state != State.DONE) {
-                    reqCtx.setTimedOut();
                     final Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
                     if (requestTimeoutHandler != null) {
                         requestTimeoutHandler.run();
