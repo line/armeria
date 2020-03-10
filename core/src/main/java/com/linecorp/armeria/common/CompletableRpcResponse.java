@@ -16,24 +16,21 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.common.util.EventLoopCheckingUtil.maybeLogIfOnEventLoop;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+
 /**
  * An {@link RpcResponse} implementation which is initially incomplete and can be completed later.
  */
-public final class CompletableRpcResponse extends CompletableFuture<Object> implements RpcResponse {
+public final class CompletableRpcResponse extends EventLoopCheckingFuture<Object> implements RpcResponse {
 
     private static final AtomicReferenceFieldUpdater<CompletableRpcResponse, Throwable> causeUpdater =
             AtomicReferenceFieldUpdater.newUpdater(CompletableRpcResponse.class, Throwable.class, "cause");
@@ -65,25 +62,6 @@ public final class CompletableRpcResponse extends CompletableFuture<Object> impl
     public boolean cancel(boolean mayInterruptIfRunning) {
         final boolean updated = !isDone() && completeExceptionally(new CancellationException());
         return updated || isCancelled();
-    }
-
-    @Override
-    public Object get() throws InterruptedException, ExecutionException {
-        maybeLogIfOnEventLoop();
-        return super.get();
-    }
-
-    @Override
-    public Object get(long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        maybeLogIfOnEventLoop();
-        return super.get(timeout, unit);
-    }
-
-    @Override
-    public Object join() {
-        maybeLogIfOnEventLoop();
-        return super.join();
     }
 
     @Override

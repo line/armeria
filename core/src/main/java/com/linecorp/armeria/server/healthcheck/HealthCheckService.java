@@ -183,6 +183,7 @@ public final class HealthCheckService implements TransientHttpService {
         stoppingResponse = clearCommonHeaders(unhealthyResponse);
         notModifiedHeaders = ResponseHeaders.builder()
                                             .add(this.unhealthyResponse.headers())
+                                            .endOfStream(true)
                                             .status(HttpStatus.NOT_MODIFIED)
                                             .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
                                             .build();
@@ -348,9 +349,9 @@ public final class HealthCheckService implements TransientHttpService {
 
                     updateRequestTimeout(ctx, longPollingTimeoutMillis);
 
-                    // Cancel the scheduled timeout task if the response is closed,
-                    // so that it's removed from the event loop's task queue quickly.
-                    res.whenComplete().exceptionally(cause -> {
+                    // Cancel the scheduled timeout and ping task if the response is closed,
+                    // so that they are removed from the event loop's task queue.
+                    res.whenComplete().handle((unused1, unused2) -> {
                         pendingResponse.cancelAllScheduledFutures();
                         return null;
                     });

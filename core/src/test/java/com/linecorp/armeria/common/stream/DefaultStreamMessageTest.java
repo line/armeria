@@ -217,4 +217,37 @@ class DefaultStreamMessageTest {
         assertThat(throwableCaptor.get()).isInstanceOf(AbortedStreamException.class);
         assertThat(data.refCnt()).isZero();
     }
+
+    @Test
+    void requestWithNegativeValue() {
+        final StreamMessageAndWriter<Object> stream = new DefaultStreamMessage<>();
+        final ByteBufHttpData data = new ByteBufHttpData(
+                PooledByteBufAllocator.DEFAULT.buffer().writeByte(0), true);
+        stream.write(data);
+
+        final AtomicBoolean onErrorCalled = new AtomicBoolean();
+        stream.subscribe(new Subscriber<Object>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(-1);
+            }
+
+            @Override
+            public void onNext(Object o) {}
+
+            @Override
+            public void onError(Throwable t) {
+                onErrorCalled.set(true);
+            }
+
+            @Override
+            public void onComplete() {}
+        }, ImmediateEventExecutor.INSTANCE);
+
+        assertThat(onErrorCalled.get()).isTrue();
+        assertThat(data.refCnt()).isZero();
+        assertThatThrownBy(() -> stream.whenComplete().get())
+                .hasCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: > 0");
+    }
 }

@@ -20,7 +20,11 @@ import java.util.List;
 import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -48,6 +52,9 @@ import zipkin2.Callback;
 
 @RunWith(Parameterized.class)
 public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
+
+    @Rule(order = Integer.MAX_VALUE)
+    public TestRule globalTimeout = new DisableOnDebug(Timeout.seconds(10));
 
     @Parameters
     public static List<SessionProtocol> sessionProtocols() {

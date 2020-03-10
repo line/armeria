@@ -61,6 +61,23 @@ import io.netty.util.concurrent.Future;
 /**
  * An {@link EndpointGroup} that filters out unhealthy {@link Endpoint}s from an existing {@link EndpointGroup},
  * by sending periodic health check requests.
+ *
+ * <pre>{@code
+ * EndpointGroup originalGroup = ...
+ *
+ * // Decorate the EndpointGroup with HealthCheckedEndpointGroup
+ * // that sends HTTP health check requests to '/internal/l7check' every 10 seconds.
+ * HealthCheckedEndpointGroup healthCheckedGroup =
+ *         HealthCheckedEndpointGroup.builder(originalGroup, "/internal/l7check")
+ *                                   .protocol(SessionProtocol.HTTP)
+ *                                   .retryInterval(Duration.ofSeconds(10))
+ *                                   .build();
+ *
+ * // You must specify healthCheckedGroup when building a WebClient, otherwise health checking
+ * // will not be enabled.
+ * WebClient client = WebClient.builder(SessionProtocol.HTTP, healthCheckedGroup)
+ *                             .build();
+ * }</pre>
  */
 public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 

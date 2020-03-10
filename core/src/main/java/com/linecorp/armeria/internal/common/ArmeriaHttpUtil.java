@@ -365,14 +365,14 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Returns {@code true} if the content of the response with the given {@link HttpStatus} is expected to
-     * be always empty (1xx, 204, 205 and 304 responses.)
+     * Returns {@code true} if the content of the response with the given {@link HttpStatus} is one of
+     * {@link HttpStatus#NO_CONTENT}, {@link HttpStatus#RESET_CONTENT} and {@link HttpStatus#NOT_MODIFIED}.
      *
-     * @throws IllegalArgumentException if the specified {@code content} or {@code trailers} are
-     *                                  non-empty when the content is always empty
+     * @throws IllegalArgumentException if the specified {@code content} is not empty when the specified
+     *                                  {@link HttpStatus} is one of {@link HttpStatus#NO_CONTENT},
+     *                                  {@link HttpStatus#RESET_CONTENT} and {@link HttpStatus#NOT_MODIFIED}.
      */
-    public static boolean isContentAlwaysEmptyWithValidation(
-            HttpStatus status, HttpData content, HttpHeaders trailers) {
+    public static boolean isContentAlwaysEmptyWithValidation(HttpStatus status, HttpData content) {
         if (!status.isContentAlwaysEmpty()) {
             return false;
         }
@@ -380,10 +380,6 @@ public final class ArmeriaHttpUtil {
         if (!content.isEmpty()) {
             throw new IllegalArgumentException(
                     "A " + status + " response must have empty content: " + content.length() + " byte(s)");
-        }
-        if (!trailers.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "A " + status + " response must not have trailers: " + trailers);
         }
 
         return true;
@@ -907,16 +903,17 @@ public final class ArmeriaHttpUtil {
      * according to the status of the specified {@code headers}, {@code content} and {@code trailers}.
      * The {@link HttpHeaderNames#CONTENT_LENGTH} is removed when:
      * <ul>
-     *   <li>the status of the specified {@code headers} is one of informational headers,
-     *   {@link HttpStatus#NO_CONTENT} or {@link HttpStatus#RESET_CONTENT}</li>
+     *   <li>the status of the specified {@code headers} is one of {@link HttpStatus#NO_CONTENT},
+     *       {@link HttpStatus#RESET_CONTENT} or {@link HttpStatus#NOT_MODIFIED}</li>
      *   <li>the trailers exists</li>
      * </ul>
      * The {@link HttpHeaderNames#CONTENT_LENGTH} is added when the state of the specified {@code headers}
      * does not meet the conditions above and {@link HttpHeaderNames#CONTENT_LENGTH} is not present
      * regardless of the fact that the content is empty or not.
      *
-     * @throws IllegalArgumentException if the specified {@code content} or {@code trailers} are
-     *                                  non-empty when the content is always empty
+     * @throws IllegalArgumentException if the specified {@code content} is not empty when the specified
+     *                                  {@link HttpStatus} is one of {@link HttpStatus#NO_CONTENT},
+     *                                  {@link HttpStatus#RESET_CONTENT} and {@link HttpStatus#NOT_MODIFIED}.
      */
     public static ResponseHeaders setOrRemoveContentLength(ResponseHeaders headers, HttpData content,
                                                            HttpHeaders trailers) {
@@ -926,7 +923,7 @@ public final class ArmeriaHttpUtil {
 
         final HttpStatus status = headers.status();
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailers)) {
+        if (isContentAlwaysEmptyWithValidation(status, content)) {
             if (status != HttpStatus.NOT_MODIFIED) {
                 if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                     final ResponseHeadersBuilder builder = headers.toBuilder();

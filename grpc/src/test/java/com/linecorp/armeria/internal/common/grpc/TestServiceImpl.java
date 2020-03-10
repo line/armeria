@@ -94,13 +94,14 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
     @Override
     public void emptyCall(EmptyProtos.Empty empty,
                           StreamObserver<Empty> responseObserver) {
-        ServiceRequestContext.current().addAdditionalResponseTrailer(
-                STRING_VALUE_KEY.name(),
-                Base64.getEncoder().encodeToString(
-                        StringValue.newBuilder().setValue("hello").build().toByteArray()) +
-                ',' +
-                Base64.getEncoder().encodeToString(
-                        StringValue.newBuilder().setValue("world").build().toByteArray()));
+        ServiceRequestContext.current().mutateAdditionalResponseTrailers(
+                mutator -> mutator.add(
+                        STRING_VALUE_KEY.name(),
+                        Base64.getEncoder().encodeToString(
+                                StringValue.newBuilder().setValue("hello").build().toByteArray()) +
+                        ',' +
+                        Base64.getEncoder().encodeToString(
+                                StringValue.newBuilder().setValue("world").build().toByteArray())));
 
         responseObserver.onNext(Empty.getDefaultInstance());
         responseObserver.onCompleted();

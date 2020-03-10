@@ -67,7 +67,8 @@ public class ThriftHttpHeaderTest {
             resultHandler.onError(new Exception(errorMessage));
         }
 
-        ctx.setAdditionalResponseHeader(HttpHeaderNames.of("foo"), "bar");
+        ctx.mutateAdditionalResponseHeaders(
+                mutator -> mutator.add(HttpHeaderNames.of("foo"), "bar"));
     };
 
     @ClassRule
@@ -99,8 +100,9 @@ public class ThriftHttpHeaderTest {
         try (SafeCloseable ignored = Clients.withHttpHeader(AUTHORIZATION, secretA)) {
             // Should fail with the first half of the secret.
             assertAuthorizationFailure(client, secretA);
-            try (SafeCloseable ignored2 = Clients.withHttpHeaders(
-                    h -> h.toBuilder().set(AUTHORIZATION, h.get(AUTHORIZATION) + secretB).build())) {
+            try (SafeCloseable ignored2 = Clients.withHttpHeaders(builder -> {
+                builder.set(AUTHORIZATION, builder.get(AUTHORIZATION) + secretB);
+            })) {
                 // Should pass if both manipulators worked.
                 assertThat(client.hello("foobar")).isEqualTo("Hello, foobar!");
             }

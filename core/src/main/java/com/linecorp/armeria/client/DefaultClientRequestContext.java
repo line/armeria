@@ -27,7 +27,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -624,50 +623,26 @@ public final class DefaultClientRequestContext
     public void setAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalRequestHeaders(builder -> builder.setObject(name, value));
-    }
-
-    @Override
-    public void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalRequestHeaders(builder -> builder.setObject(headers));
+        mutateAdditionalRequestHeaders(builder -> builder.setObject(name, value));
     }
 
     @Override
     public void addAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        updateAdditionalRequestHeaders(builder -> builder.addObject(name, value));
+        mutateAdditionalRequestHeaders(builder -> builder.addObject(name, value));
     }
 
     @Override
-    public void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        requireNonNull(headers, "headers");
-        updateAdditionalRequestHeaders(builder -> builder.addObject(headers));
-    }
-
-    private void updateAdditionalRequestHeaders(Function<HttpHeadersBuilder, HttpHeadersBuilder> updater) {
+    public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
+        requireNonNull(mutator, "mutator");
         for (;;) {
             final HttpHeaders oldValue = additionalRequestHeaders;
-            final HttpHeaders newValue = updater.apply(oldValue.toBuilder()).build();
+            final HttpHeadersBuilder builder = oldValue.toBuilder();
+            mutator.accept(builder);
+            final HttpHeaders newValue = builder.build();
             if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
                 return;
-            }
-        }
-    }
-
-    @Override
-    public boolean removeAdditionalRequestHeader(CharSequence name) {
-        requireNonNull(name, "name");
-        for (;;) {
-            final HttpHeaders oldValue = additionalRequestHeaders;
-            if (oldValue.isEmpty() || !oldValue.contains(name)) {
-                return false;
-            }
-
-            final HttpHeaders newValue = oldValue.toBuilder().removeAndThen(name).build();
-            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return true;
             }
         }
     }

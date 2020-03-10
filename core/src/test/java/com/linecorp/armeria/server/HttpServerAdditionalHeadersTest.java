@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -35,6 +36,7 @@ class HttpServerAdditionalHeadersTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/headers_merged", (ctx, req) -> {
                 addBadHeaders(ctx);
+                ctx.setAdditionalResponseTrailer("foo", "bar");
                 return HttpResponse.of(HttpStatus.NO_CONTENT);
             });
             sb.service("/headers_and_trailers", (ctx, req) -> {
@@ -44,15 +46,24 @@ class HttpServerAdditionalHeadersTest {
         }
 
         private void addBadHeaders(ServiceRequestContext ctx) {
-            ctx.addAdditionalResponseHeader(HttpHeaderNames.SCHEME, "https");
-            ctx.addAdditionalResponseHeader(HttpHeaderNames.STATUS, "100");
-            ctx.addAdditionalResponseHeader(HttpHeaderNames.METHOD, "CONNECT");
-            ctx.addAdditionalResponseHeader(HttpHeaderNames.PATH, "/foo");
-            ctx.addAdditionalResponseTrailer(HttpHeaderNames.SCHEME, "https");
-            ctx.addAdditionalResponseTrailer(HttpHeaderNames.STATUS, "100");
-            ctx.addAdditionalResponseTrailer(HttpHeaderNames.METHOD, "CONNECT");
-            ctx.addAdditionalResponseTrailer(HttpHeaderNames.PATH, "/foo");
-            ctx.addAdditionalResponseTrailer(HttpHeaderNames.TRANSFER_ENCODING, "magic");
+            ctx.mutateAdditionalResponseHeaders(
+                    mutator -> mutator.add(HttpHeaderNames.SCHEME, "https"));
+            ctx.mutateAdditionalResponseHeaders(
+                    mutator -> mutator.add(HttpHeaderNames.STATUS, "100"));
+            ctx.mutateAdditionalResponseHeaders(
+                    mutator -> mutator.add(HttpHeaderNames.METHOD, "CONNECT"));
+            ctx.mutateAdditionalResponseHeaders(
+                    mutator -> mutator.add(HttpHeaderNames.PATH, "/foo"));
+            ctx.mutateAdditionalResponseTrailers(
+                    mutator -> mutator.add(HttpHeaderNames.SCHEME, "https"));
+            ctx.mutateAdditionalResponseTrailers(
+                    mutator -> mutator.add(HttpHeaderNames.STATUS, "100"));
+            ctx.mutateAdditionalResponseTrailers(
+                    mutator -> mutator.add(HttpHeaderNames.METHOD, "CONNECT"));
+            ctx.mutateAdditionalResponseTrailers(
+                    mutator -> mutator.add(HttpHeaderNames.PATH, "/foo"));
+            ctx.mutateAdditionalResponseTrailers(
+                    mutator -> mutator.add(HttpHeaderNames.TRANSFER_ENCODING, "magic"));
         }
     };
 
@@ -81,5 +92,9 @@ class HttpServerAdditionalHeadersTest {
                                                          HttpHeaderNames.METHOD,
                                                          HttpHeaderNames.PATH,
                                                          HttpHeaderNames.TRANSFER_ENCODING);
+        assertThat(res.trailers()).isEqualTo(HttpHeaders.builder()
+                                                        .endOfStream(true)
+                                                        .add("foo", "bar")
+                                                        .build());
     }
 }

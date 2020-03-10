@@ -179,6 +179,19 @@ public final class ClientFactoryOption<T>
             define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
     /**
+     * The HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> timeout.
+     */
+    public static final ClientFactoryOption<Long> HTTP2_PING_TIMEOUT_MILLIS =
+            define("HTTP2_PING_TIMEOUT_MILLIS", Flags.defaultHttp2PingTimeoutMillis());
+
+    /**
+     * Whether to sent <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> when
+     * there are no active HTTP/2 streams.
+     */
+    public static final ClientFactoryOption<Boolean> USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS =
+            define("USE_HTTP2_PING_WHEN_NO_ACTIVE_STREAMS", Flags.defaultUseHttp2PingWhenNoActiveStreams());
+
+    /**
      * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
      */

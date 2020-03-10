@@ -203,13 +203,14 @@ class GrpcServiceServerTest {
 
             final ServiceRequestContext ctx = ServiceRequestContext.current();
             // gRPC wire format allow comma-separated binary headers.
-            ctx.addAdditionalResponseTrailer(
-                    INT_32_VALUE_KEY.name(),
-                    Base64.getEncoder().encodeToString(
-                            Int32Value.newBuilder().setValue(10).build().toByteArray()) +
-                    ',' +
-                    Base64.getEncoder().encodeToString(
-                            Int32Value.newBuilder().setValue(20).build().toByteArray()));
+            ctx.mutateAdditionalResponseTrailers(
+                    mutator -> mutator.add(
+                            INT_32_VALUE_KEY.name(),
+                            Base64.getEncoder().encodeToString(
+                                    Int32Value.newBuilder().setValue(10).build().toByteArray()) +
+                            ',' +
+                            Base64.getEncoder().encodeToString(
+                                    Int32Value.newBuilder().setValue(20).build().toByteArray())));
 
             responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException(metadata));
         }
@@ -324,12 +325,13 @@ class GrpcServiceServerTest {
         @Override
         public void errorAdditionalMetadata(SimpleRequest request,
                                             StreamObserver<SimpleResponse> responseObserver) {
-            ServiceRequestContext.current().addAdditionalResponseTrailer(
-                    ERROR_METADATA_HEADER,
-                    Base64.getEncoder().encodeToString(StringValue.newBuilder()
-                                                                  .setValue("an error occurred")
-                                                                  .build()
-                                                                  .toByteArray()));
+            ServiceRequestContext.current().mutateAdditionalResponseTrailers(
+                    mutator -> mutator.add(
+                            ERROR_METADATA_HEADER,
+                            Base64.getEncoder().encodeToString(StringValue.newBuilder()
+                                                                          .setValue("an error occurred")
+                                                                          .build()
+                                                                          .toByteArray())));
             responseObserver.onError(new IllegalStateException("This error should have metadata"));
         }
 

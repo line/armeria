@@ -58,8 +58,8 @@ class DefaultServiceRequestContextTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
         final ServiceRequestContext originalCtx = ServiceRequestContext.builder(request).build();
 
-        setAdditionalHeaders(originalCtx);
-        setAdditionalTrailers(originalCtx);
+        mutateAdditionalHeaders(originalCtx);
+        mutateAdditionalTrailers(originalCtx);
 
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultServiceRequestContextTest.class, "foo");
         originalCtx.setAttr(foo, "foo");
@@ -256,27 +256,23 @@ class DefaultServiceRequestContextTest {
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
 
-    private static void setAdditionalHeaders(ServiceRequestContext originalCtx) {
-        final HttpHeaders headers1 = HttpHeaders.of(HttpHeaderNames.of("my-header#1"), "value#1");
-        originalCtx.setAdditionalResponseHeaders(headers1);
-        originalCtx.setAdditionalResponseHeader(HttpHeaderNames.of("my-header#2"), "value#2");
+    private static void mutateAdditionalHeaders(ServiceRequestContext originalCtx) {
+        originalCtx.mutateAdditionalResponseHeaders(
+                mutator -> mutator.add(HttpHeaderNames.of("my-header#2"), "value#2"));
 
         final HttpHeaders headers2 = HttpHeaders.of(HttpHeaderNames.of("my-header#3"), "value#3");
-        originalCtx.addAdditionalResponseHeaders(headers2);
-        originalCtx.addAdditionalResponseHeader(HttpHeaderNames.of("my-header#4"), "value#4");
-        // Remove the first one.
-        originalCtx.removeAdditionalResponseHeader(HttpHeaderNames.of("my-header#1"));
+        originalCtx.mutateAdditionalResponseHeaders(mutator -> mutator.add(headers2));
+        originalCtx.mutateAdditionalResponseHeaders(
+                mutator -> mutator.add(HttpHeaderNames.of("my-header#4"), "value#4"));
     }
 
-    private static void setAdditionalTrailers(ServiceRequestContext originalCtx) {
-        final HttpHeaders trailers1 = HttpHeaders.of(HttpHeaderNames.of("my-trailer#1"), "value#1");
-        originalCtx.setAdditionalResponseTrailers(trailers1);
-        originalCtx.setAdditionalResponseTrailer(HttpHeaderNames.of("my-trailer#2"), "value#2");
+    private static void mutateAdditionalTrailers(ServiceRequestContext originalCtx) {
+        originalCtx.mutateAdditionalResponseTrailers(
+                mutator -> mutator.add(HttpHeaderNames.of("my-trailer#2"), "value#2"));
 
         final HttpHeaders trailers2 = HttpHeaders.of(HttpHeaderNames.of("my-trailer#3"), "value#3");
-        originalCtx.addAdditionalResponseTrailers(trailers2);
-        originalCtx.addAdditionalResponseTrailer(HttpHeaderNames.of("my-trailer#4"), "value#4");
-        // Remove the first one.
-        originalCtx.removeAdditionalResponseTrailer(HttpHeaderNames.of("my-trailer#1"));
+        originalCtx.mutateAdditionalResponseTrailers(mutator -> mutator.add(trailers2));
+        originalCtx.mutateAdditionalResponseTrailers(
+                mutator -> mutator.add(HttpHeaderNames.of("my-trailer#4"), "value#4"));
     }
 }

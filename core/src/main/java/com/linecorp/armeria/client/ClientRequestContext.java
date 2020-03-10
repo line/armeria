@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -34,6 +35,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.Request;
@@ -631,7 +633,7 @@ public interface ClientRequestContext extends RequestContext {
     void setMaxResponseLength(long maxResponseLength);
 
     /**
-     * Returns an {@link HttpHeaders} which is included when a {@link Client} sends an {@link HttpRequest}.
+     * Returns an {@link HttpHeaders} which will be included when a {@link Client} sends an {@link HttpRequest}.
      */
     HttpHeaders additionalRequestHeaders();
 
@@ -643,27 +645,16 @@ public interface ClientRequestContext extends RequestContext {
     void setAdditionalRequestHeader(CharSequence name, Object value);
 
     /**
-     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
-     * {@link Client} sends an {@link HttpRequest}.
-     */
-    void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
      * Adds a header with the specified {@code name} and {@code value}. The header will be included when
      * a {@link Client} sends an {@link HttpRequest}.
      */
     void addAdditionalRequestHeader(CharSequence name, Object value);
 
     /**
-     * Adds the specified {@link HttpHeaders} which is included when a {@link Client} sends an
-     * {@link HttpRequest}.
-     */
-    void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
-
-    /**
-     * Removes all headers with the specified {@code name}.
+     * Mutates the {@link HttpHeaders} which will be included when a {@link Client} sends
+     * an {@link HttpRequest}.
      *
-     * @return {@code true} if at least one entry has been removed
+     * @param mutator the {@link Consumer} that mutates the additional request headers
      */
-    boolean removeAdditionalRequestHeader(CharSequence name);
+    void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator);
 }
