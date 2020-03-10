@@ -47,17 +47,10 @@ export default class AnnotatedHttpTransport extends Transport {
     let newPath =
       endpointPath || endpoint.pathMapping.substring('exact:'.length);
     if (queries && queries.length > 1) {
-      if (newPath.indexOf('?') > 0) {
-        newPath =
-          queries.charAt(0) === '?'
-            ? `${newPath}&${queries.substring(1)}`
-            : `${newPath}&${queries}`;
-      } else {
-        newPath =
-          queries.charAt(0) === '?'
-            ? newPath + queries
-            : `${newPath}?${queries}`;
-      }
+      newPath =
+        newPath.indexOf('?') > 0
+          ? `${newPath}&${queries}`
+          : `${newPath}?${queries}`;
     }
 
     const httpResponse = await fetch(encodeURI(newPath), {
