@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
@@ -32,10 +33,12 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -53,6 +56,8 @@ public final class MethodInfo {
     private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHttpHeaders;
     private final List<String> exampleRequests;
+    private final List<String> examplePaths;
+    private final List<String> exampleQueries;
     private final HttpMethod httpMethod;
     @Nullable
     private final String docString;
@@ -78,8 +83,10 @@ public final class MethodInfo {
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
                       @Nullable String docString) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures,
-             endpoints, ImmutableList.of(), ImmutableList.of(), httpMethod, docString);
+        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+             /* exampleHttpHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
+             /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
+             httpMethod, docString);
     }
 
     /**
@@ -92,6 +99,8 @@ public final class MethodInfo {
                       Iterable<EndpointInfo> endpoints,
                       Iterable<HttpHeaders> exampleHttpHeaders,
                       Iterable<String> exampleRequests,
+                      Iterable<String> examplePaths,
+                      Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
                       @Nullable String docString) {
         this.name = requireNonNull(name, "name");
@@ -108,6 +117,27 @@ public final class MethodInfo {
         this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
                                                                       "exampleHttpHeaders"));
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
+
+        requireNonNull(examplePaths, "examplePaths");
+        final ImmutableList.Builder<String> examplePathsBuilder =
+                ImmutableList.builderWithExpectedSize(Iterables.size(examplePaths));
+        for (String path : examplePaths) {
+            final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
+            checkArgument(pathAndQuery != null, "examplePaths contains an invalid path: %s", path);
+            examplePathsBuilder.add(pathAndQuery.path());
+        }
+        this.examplePaths = examplePathsBuilder.build();
+
+        requireNonNull(exampleQueries, "exampleQueries");
+        final ImmutableList.Builder<String> exampleQueriesBuilder =
+                ImmutableList.builderWithExpectedSize(Iterables.size(exampleQueries));
+        for (String query : exampleQueries) {
+            final PathAndQuery pathAndQuery = PathAndQuery.parse('?' + query);
+            checkArgument(pathAndQuery != null, "exampleQueries contains an invalid query string: %s", query);
+            exampleQueriesBuilder.add(pathAndQuery.query());
+        }
+        this.exampleQueries = exampleQueriesBuilder.build();
+
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.docString = Strings.emptyToNull(docString);
     }
@@ -167,6 +197,22 @@ public final class MethodInfo {
     @JsonProperty
     public List<String> exampleRequests() {
         return exampleRequests;
+    }
+
+    /**
+     * Returns the example paths of the method.
+     */
+    @JsonProperty
+    public List<String> examplePaths() {
+        return examplePaths;
+    }
+
+    /**
+     * Returns the example queries of the method.
+     */
+    @JsonProperty
+    public List<String> exampleQueries() {
+        return exampleQueries;
     }
 
     /**

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.UnstableApi;
@@ -69,7 +71,17 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
         final T published = prepareObjectForNotification(subscription, obj);
         obj = null;
         // Not possible to have re-entrant onNext with only one item, so no need to keep track of it.
-        subscription.subscriber().onNext(published);
+
+        try {
+            subscription.subscriber().onNext(published);
+        } catch (Throwable t) {
+            // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
+            abort(t);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
+                        published, subscription.subscriber(), t);
+            return;
+        }
         notifySubscriberOfCloseEvent(subscription, SUCCESSFUL_CLOSE);
     }
 }

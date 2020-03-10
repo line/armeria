@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -28,10 +29,13 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
 
+import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.util.PooledObjects;
 
@@ -39,6 +43,8 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
+
+    static final Logger logger = LoggerFactory.getLogger(AbstractStreamMessage.class);
 
     static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
     static final CloseEvent CANCELLED_CLOSE = new CloseEvent(CancelledSubscriptionException.INSTANCE);
@@ -145,13 +151,21 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         final Throwable cause = abortedOrLate(oldSubscriber);
 
         if (subscription.needsDirectInvocation()) {
-            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-            lateSubscriber.onError(cause);
+            handleLateSubscriber(lateSubscriber, cause);
         } else {
             subscription.executor().execute(() -> {
-                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-                lateSubscriber.onError(cause);
+                handleLateSubscriber(lateSubscriber, cause);
             });
+        }
+    }
+
+    private static void handleLateSubscriber(Subscriber<?> lateSubscriber, Throwable cause) {
+        try {
+            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+            lateSubscriber.onError(cause);
+        } catch (Throwable t) {
+            throwIfFatal(t);
+            logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
         }
     }
 
@@ -231,7 +245,8 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         @Override
         public void request(long n) {
             if (n <= 0) {
-                invokeOnError(new IllegalArgumentException(
+                // Just abort the publisher so subscriber().onError(e) is called and resources are cleaned up.
+                publisher.abort(new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
                 return;
             }
@@ -243,14 +258,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         public void cancel() {
             cancelRequested = true;
             publisher.cancel();
-        }
-
-        private void invokeOnError(Throwable cause) {
-            if (needsDirectInvocation()) {
-                subscriber.onError(cause);
-            } else {
-                executor.execute(() -> subscriber.onError(cause));
-            }
         }
 
         // We directly run callbacks for event loops if we're already on the loop, which applies to the vast
@@ -291,16 +298,25 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             if (cause == null) {
                 try {
                     subscriber.onComplete();
-                } finally {
                     completionFuture.complete(null);
+                } catch (Throwable t) {
+                    completionFuture.completeExceptionally(t);
+                    throwIfFatal(t);
+                    logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
+                                subscriber, t);
                 }
             } else {
                 try {
                     if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                         subscriber.onError(cause);
                     }
-                } finally {
                     completionFuture.completeExceptionally(cause);
+                } catch (Throwable t) {
+                    final Exception composite = new CompositeException(t, cause);
+                    completionFuture.completeExceptionally(composite);
+                    throwIfFatal(t);
+                    logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                                subscriber, composite);
                 }
             }
         }

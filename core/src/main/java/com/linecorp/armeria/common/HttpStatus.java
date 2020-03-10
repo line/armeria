@@ -377,14 +377,10 @@ public final class HttpStatus implements Comparable<HttpStatus> {
 
     /**
      * Returns {@code true} if the content of the response for the specified status code is expected to
-     * be always empty (1xx, 204, 205 and 304 responses.)
+     * be always empty (204, 205 and 304 responses.)
      */
     @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
     public static boolean isContentAlwaysEmpty(int statusCode) {
-        if (HttpStatusClass.INFORMATIONAL.contains(statusCode)) {
-            return true;
-        }
-
         switch (statusCode) {
             case /* NO_CONTENT */ 204:
             case /* RESET_CONTENT */ 205:
@@ -483,7 +479,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
 
     /**
      * Returns {@code true} if the content of the response for this {@link HttpStatus} is expected to
-     * be always empty (1xx, 204, 205 and 304 responses.)
+     * be always empty (204, 205 and 304 responses.)
      *
      * @see #isContentAlwaysEmpty(int)
      */

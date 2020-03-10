@@ -74,6 +74,36 @@ function addExampleHeadersIfExists(
   }
 }
 
+function getExamplePaths(
+  specification: Specification,
+  service: Service,
+  method: Method,
+): Option[] {
+  return (
+    specification
+      .getServiceByName(service.name)
+      ?.methods?.find((m) => m.name === method.name)
+      ?.examplePaths?.map((path) => {
+        return { label: path, value: path };
+      }) || []
+  );
+}
+
+function getExampleQueries(
+  specification: Specification,
+  service: Service,
+  method: Method,
+): Option[] {
+  return (
+    specification
+      .getServiceByName(service.name)
+      ?.methods?.find((m) => m.name === method.name)
+      ?.exampleQueries?.map((queries) => {
+        return { label: queries, value: queries };
+      }) || []
+  );
+}
+
 function removeBrackets(headers: string): string {
   const length = headers.length;
   return headers.substring(1, length - 1).trim();
@@ -160,6 +190,12 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           method={method}
           isAnnotatedService={isAnnotatedService}
           exampleHeaders={getExampleHeaders(
+            props.specification,
+            service,
+            method,
+          )}
+          examplePaths={getExamplePaths(props.specification, service, method)}
+          exampleQueries={getExampleQueries(
             props.specification,
             service,
             method,

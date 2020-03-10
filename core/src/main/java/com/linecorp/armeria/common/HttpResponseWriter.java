@@ -40,8 +40,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
             final ResponseHeaders headers = res.headers();
             final HttpStatus status = headers.status();
             content = res.content();
-            final HttpHeaders trailers = res.trailers();
-            final boolean contentAlwaysEmpty = isContentAlwaysEmptyWithValidation(status, content, trailers);
+            final boolean contentAlwaysEmpty = isContentAlwaysEmptyWithValidation(status, content);
 
             if (!tryWrite(headers)) {
                 return;
@@ -55,7 +54,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
                 }
             }
 
-            // Add trailers if not empty.
+            final HttpHeaders trailers = res.trailers();
             if (!trailers.isEmpty()) {
                 tryWrite(trailers);
             }

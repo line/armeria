@@ -16,13 +16,9 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.internal.common.util.EventLoopCheckingUtil.maybeLogIfOnEventLoop;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -33,13 +29,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
  * A base class for {@link CompletableFuture} which pushing {@link RequestContext} into the thread-local
  * when executes callbacks.
  */
-public abstract class AbstractRequestContextAwareFuture<T> extends CompletableFuture<T> {
+public abstract class AbstractRequestContextAwareFuture<T> extends EventLoopCheckingFuture<T> {
 
     private static final Logger logger =
             LoggerFactory.getLogger(AbstractRequestContextAwareFuture.class);
@@ -54,30 +51,9 @@ public abstract class AbstractRequestContextAwareFuture<T> extends CompletableFu
         return ctx;
     }
 
-    @Override
-    public T get() throws InterruptedException, ExecutionException {
-        maybeLogIfOnEventLoop();
-        return super.get();
-    }
-
-    @Override
-    public T get(long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        maybeLogIfOnEventLoop();
-        return super.get(timeout, unit);
-    }
-
-    @Override
-    public T join() {
-        maybeLogIfOnEventLoop();
-        return super.join();
-    }
-
     protected Runnable makeContextAwareLoggingException(Runnable action) {
         requireNonNull(action, "action");
-        return () -> {
-            makeContextAwareLoggingException0(action);
-        };
+        return () -> makeContextAwareLoggingException0(action);
     }
 
     protected <I> Consumer<I> makeContextAwareLoggingException(Consumer<I> action) {

@@ -40,7 +40,7 @@ public class HttpClientIdleTimeoutHandlerTest {
     @Before
     public void before() {
         session = new MockHttpSessionHandler();
-        ch = new EmbeddedChannel(new HttpClientIdleTimeoutHandler(idleTimeoutMillis), session);
+        ch = new EmbeddedChannel(new HttpClientIdleTimeoutHandler(idleTimeoutMillis, false, false), session);
         assertTrue(ch.isOpen());
     }
 

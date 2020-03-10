@@ -369,21 +369,24 @@ class HttpServerTest {
             sb.service("/head-headers-only", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
             sb.service("/additional-trailers-other-trailers", (ctx, req) -> {
-                ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
+                ctx.mutateAdditionalResponseTrailers(
+                        mutator -> mutator.add(HttpHeaderNames.of("additional-trailer"), "value2"));
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        HttpData.ofAscii("foobar"),
                                        HttpHeaders.of(HttpHeaderNames.of("original-trailer"), "value1"));
             });
 
             sb.service("/additional-trailers-no-other-trailers", (ctx, req) -> {
-                ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
+                ctx.mutateAdditionalResponseTrailers(
+                        mutator -> mutator.add(HttpHeaderNames.of("additional-trailer"), "value2"));
                 final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        HttpData.ofUtf8(payload).withEndOfStream());
             });
 
             sb.service("/additional-trailers-no-eos", (ctx, req) -> {
-                ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
+                ctx.mutateAdditionalResponseTrailers(
+                        mutator -> mutator.add(HttpHeaderNames.of("additional-trailer"), "value2"));
                 final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        HttpData.ofUtf8(payload).withEndOfStream());

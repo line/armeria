@@ -103,10 +103,6 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
 
     @Override
     public final void onNext(HttpObject o) {
-        // There's no chance that an exception is raised from the underlying logic, so we don't do try catch not
-        // to propagate the exception to the publisher.
-        // https://github.com/reactive-streams/reactive-streams-jvm#2.13
-
         if (o instanceof HttpHeaders) {
             onHeaders((HttpHeaders) o);
         } else {
