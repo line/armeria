@@ -164,8 +164,8 @@ are used together:
     import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 
     ClientBuilder cb = Clients.builder(...);
-    // Don't do this. ContentPreviewingClient should be inserted after DecodingClient.
     cb.decorator(ContentPreviewingClient.newDecorator(1000));
+    // ContentPreviewingClient should be inserted after DecodingClient.
     cb.decorator(DecodingClient.newDecorator());
 
 :api:`DecodingClient` decodes the content of HTTP responses.
