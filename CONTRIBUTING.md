@@ -88,6 +88,24 @@ import org.junit.Test;
 ...
 ```
 
+### Use Assert4J instead of JUnit's assertion API
+
+We prefer [Assert4J]() when writing assertions for test cases.
+
+```java
+// Good
+assertThat(actualValue).isEqualTo(expectedValue);
+assertThatThrownBy(() -> badMethod()).isInstanceOf(IllegalArgumentException.class)
+                                     .hasMessageContaining("bad method");
+// Not Good
+assertEquals(expectedValue, actualValue);
+try {
+    badMethod();
+} catch (IllegalArgumentException e) {
+    assertTrue(e.getMessage().contains("bad method"));
+}
+```
+
 ### Checklist for your pull request
 
 Please use the following checklist to keep your contribution's quality high and
