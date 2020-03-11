@@ -17,17 +17,18 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.HttpStatus.OK;
+import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 
 class VirtualHostBuilderTest {
 
@@ -239,8 +240,9 @@ class VirtualHostBuilderTest {
                 .service(routeB, (ctx, req) -> HttpResponse.of(OK))
                 .build(template);
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
-        final RoutingContext routingContext = mock(RoutingContext.class);
-        when(routingContext.path()).thenReturn("/");
+        final RoutingContext routingContext = new DefaultRoutingContext(virtualHost(), "example.com",
+                                                                        RequestHeaders.of(HttpMethod.GET, "/"),
+                                                                        "/", null, false);
         final Routed<ServiceConfig> serviceConfig = virtualHost.findServiceConfig(routingContext);
         final Route route = serviceConfig.route();
         assertThat(route).isSameAs(routeA);
