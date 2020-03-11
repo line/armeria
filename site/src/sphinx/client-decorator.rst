@@ -171,10 +171,10 @@ are used together:
 
 :api:`DecodingClient` decodes the content of HTTP responses.
 :api:`ContentPreviewingClient` is :ref:`content-previewing` of the HTTP response by setting it to the
-:api:`RequestLog`. Because it's inserted before :api:`DecodingClient`, which means that the response content
-is set after it's decoded, you will see the decoded response content preview.
-If the two decorators are added in the opposite order, you will get the encoded preview because
-:api:`DecodingClient` is evaluated first for the HTTP response.
+:api:`RequestLog`. Because it's evaluated after :api:`DecodingClient` from the point of view of an
+HTTP response, which means that the response content is set after it's decoded, you will see the decoded
+response content preview. If the two decorators are added in the opposite order, you will get the encoded
+preview because :api:`ContentPreviewingClient` is evaluated first for the HTTP response.
 For :api:`RetryingClient`, please check out :ref:`retry-with-logging`.
 
 See also
