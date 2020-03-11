@@ -245,7 +245,7 @@ final class DefaultRoute implements Route {
         name.add(prefix);
 
         // Skip if the methods is knownMethods because it's verbose.
-        if (HttpMethod.knownMethods().equals(methods)) {
+        if (!HttpMethod.knownMethods().equals(methods)) {
             name.add(loggerNameJoiner.join(methods.stream().sorted().iterator()));
         }
 
@@ -286,7 +286,7 @@ final class DefaultRoute implements Route {
         name.add(parentTag);
 
         // Skip if the methods is knownMethods because it's verbose.
-        if (HttpMethod.knownMethods().equals(methods)) {
+        if (!HttpMethod.knownMethods().equals(methods)) {
             name.add("methods:" + meterTagJoiner.join(methods.stream().sorted().iterator()));
         }
 
