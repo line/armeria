@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.RoutingResult.HIGHEST_SCORE;
 import static java.util.Objects.requireNonNull;
 
@@ -58,6 +59,7 @@ final class DefaultRoute implements Route {
                  List<RoutingPredicate<QueryParams>> paramPredicates,
                  List<RoutingPredicate<HttpHeaders>> headerPredicates) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
+        checkArgument(!methods.isEmpty(), "methods is empty.");
         this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
         this.consumes = ImmutableSet.copyOf(requireNonNull(consumes, "consumes"));
         this.produces = ImmutableSet.copyOf(requireNonNull(produces, "produces"));
@@ -71,20 +73,17 @@ final class DefaultRoute implements Route {
                                     paramPredicates, headerPredicates);
 
         int complexity = 0;
-        if (!methods.isEmpty()) {
+        if (!consumes.isEmpty()) {
             complexity += 1;
         }
-        if (!consumes.isEmpty()) {
+        if (!produces.isEmpty()) {
             complexity += 1 << 1;
         }
-        if (!produces.isEmpty()) {
+        if (!paramPredicates.isEmpty()) {
             complexity += 1 << 2;
         }
-        if (!paramPredicates.isEmpty()) {
-            complexity += 1 << 3;
-        }
         if (!headerPredicates.isEmpty()) {
-            complexity += 1 << 4;
+            complexity += 1 << 3;
         }
         this.complexity = complexity;
     }
@@ -96,7 +95,7 @@ final class DefaultRoute implements Route {
             return RoutingResult.empty();
         }
 
-        if (!methods.isEmpty() && !methods.contains(routingCtx.method())) {
+        if (!methods.contains(routingCtx.method())) {
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (routingCtx.deferredStatusException() == null) {
@@ -245,8 +244,8 @@ final class DefaultRoute implements Route {
         final StringJoiner name = new StringJoiner(".");
         name.add(prefix);
 
-        // Skip if the methods is empty or it's knownMethods because it's verbose.
-        if (!methods.isEmpty() && methods != HttpMethod.knownMethods()) {
+        // Skip if the methods is knownMethods because it's verbose.
+        if (HttpMethod.knownMethods().equals(methods)) {
             name.add(loggerNameJoiner.join(methods.stream().sorted().iterator()));
         }
 
@@ -286,8 +285,8 @@ final class DefaultRoute implements Route {
         final StringJoiner name = new StringJoiner(",");
         name.add(parentTag);
 
-        // Skip if the methods is empty or it's knownMethods because it's verbose.
-        if (!methods.isEmpty() && methods != HttpMethod.knownMethods()) {
+        // Skip if the methods is knownMethods because it's verbose.
+        if (HttpMethod.knownMethods().equals(methods)) {
             name.add("methods:" + meterTagJoiner.join(methods.stream().sorted().iterator()));
         }
 
