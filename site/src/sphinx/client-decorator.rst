@@ -81,15 +81,17 @@ the decorators are executed by printing the messages.
 
     // #2 decorator
     cb.decorator((delegate, ctx, req) -> {
+        // This is called from #1 decorator.
         System.err.println("Secondly, executed.");
-        ...
+        return delegate.execute(ctx, req);
     });
 
     // #1 decorator.
     // No matter decorator() or option() is used, decorators are executed in reverse order of the insertion.
     cb.option(ClientOption.DECORATION, ClientDecoration.of((delegate, ctx, req) -> {
         System.err.println("Firstly, executed");
-        ...
+        return delegate.execute(ctx, req); // The delegate, here, is #2 decorator.
+                                           // This will call execute(ctx, req) method on #2 decorator.
     });
 
     WebClient myClient = cb.build(WebClient.class);
@@ -107,7 +109,7 @@ The following diagram describes how an HTTP request and HTTP response are gone t
     +-----------+       +-----------+       +-----------+       +------------------+           +--------------+
     @endditaa
 
-If the client is a Thrift client and RPC decorators are inserted, HTTP decorators and RPC decorators are
+If the client is a Thrift client and RPC decorators are used, HTTP decorators and RPC decorators are
 separately grouped and executed in reverse order of the insertion:
 
 .. code-block:: java
@@ -139,7 +141,7 @@ separately grouped and executed in reverse order of the insertion:
     });
 
 An RPC request is converted into an HTTP request before it's sent to a server.
-Therefore, RPC decorators are inserted before the RPC request is converted and HTTP decorators are inserted
+Therefore, RPC decorators are applied before the RPC request is converted and HTTP decorators are applied
 after the request is converted into the HTTP request, as described in the following diagram:
 
 .. uml::
@@ -166,7 +168,7 @@ are used together:
     ClientBuilder cb = Clients.builder(...);
     cb.decorator(DecodingClient.newDecorator());
 
-    // ContentPreviewingClient should be inserted after DecodingClient.
+    // ContentPreviewingClient should be applied after DecodingClient.
     cb.decorator(ContentPreviewingClient.newDecorator(1000));
 
 :api:`DecodingClient` decodes the content of HTTP responses.
