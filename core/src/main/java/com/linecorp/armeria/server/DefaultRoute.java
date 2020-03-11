@@ -59,8 +59,8 @@ final class DefaultRoute implements Route {
                  List<RoutingPredicate<QueryParams>> paramPredicates,
                  List<RoutingPredicate<HttpHeaders>> headerPredicates) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
-        checkArgument(!methods.isEmpty(), "methods is empty.");
-        this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
+        checkArgument(!requireNonNull(methods, "methods").isEmpty(), "methods is empty.");
+        this.methods = Sets.immutableEnumSet(methods);
         this.consumes = ImmutableSet.copyOf(requireNonNull(consumes, "consumes"));
         this.produces = ImmutableSet.copyOf(requireNonNull(produces, "produces"));
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
