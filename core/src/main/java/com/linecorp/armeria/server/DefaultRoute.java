@@ -244,7 +244,9 @@ final class DefaultRoute implements Route {
                                              List<RoutingPredicate<HttpHeaders>> headerPredicates) {
         final StringJoiner name = new StringJoiner(".");
         name.add(prefix);
-        if (!methods.isEmpty()) {
+
+        // Skip if the methods is empty or it's knownMethods because it's verbose.
+        if (!methods.isEmpty() && methods != HttpMethod.knownMethods()) {
             name.add(loggerNameJoiner.join(methods.stream().sorted().iterator()));
         }
 
@@ -283,7 +285,9 @@ final class DefaultRoute implements Route {
 
         final StringJoiner name = new StringJoiner(",");
         name.add(parentTag);
-        if (!methods.isEmpty()) {
+
+        // Skip if the methods is empty or it's knownMethods because it's verbose.
+        if (!methods.isEmpty() && methods != HttpMethod.knownMethods()) {
             name.add("methods:" + meterTagJoiner.join(methods.stream().sorted().iterator()));
         }
 

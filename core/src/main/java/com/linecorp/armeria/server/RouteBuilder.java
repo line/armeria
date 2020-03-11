@@ -418,7 +418,9 @@ public final class RouteBuilder {
             throw new IllegalStateException("Must set methods if consumes or produces is not empty." +
                                             " consumes: " + consumes + ", produces: " + produces);
         }
-        return new DefaultRoute(pathMapping, methods, consumes, produces, paramPredicates, headerPredicates);
+        final Set<HttpMethod> pathMethods = methods.isEmpty() ? HttpMethod.knownMethods() : methods;
+        return new DefaultRoute(pathMapping, pathMethods, consumes, produces,
+                                paramPredicates, headerPredicates);
     }
 
     @Override
