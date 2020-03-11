@@ -76,8 +76,14 @@ public final class ConnectProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public ProxyType proxyType() {
+        return ProxyType.CONNECT;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
                           .add("password", maskedStr(password()))

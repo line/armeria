@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
-import com.linecorp.armeria.client.proxy.DisabledProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
@@ -129,35 +128,37 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
-        if (proxyConfig instanceof DisabledProxyConfig) {
-            return;
-        }
-
         final ProxyHandler proxyHandler;
-        if (proxyConfig instanceof Socks4ProxyConfig) {
-            final Socks4ProxyConfig socks4ProxyConfig = (Socks4ProxyConfig) proxyConfig;
-            proxyHandler = new Socks4ProxyHandler(socks4ProxyConfig.proxyAddress(),
-                                                  socks4ProxyConfig.username());
-        } else if (proxyConfig instanceof Socks5ProxyConfig) {
-            final Socks5ProxyConfig socks5ProxyConfig = (Socks5ProxyConfig) proxyConfig;
-            proxyHandler = new Socks5ProxyHandler(
-                    socks5ProxyConfig.proxyAddress(), socks5ProxyConfig.username(),
-                    socks5ProxyConfig.password());
-        } else if (proxyConfig instanceof ConnectProxyConfig) {
-            final ConnectProxyConfig connectProxyConfig = (ConnectProxyConfig) proxyConfig;
-            final String username = connectProxyConfig.username();
-            final String password = connectProxyConfig.password();
-            if (username == null || password == null) {
-                proxyHandler = new HttpProxyHandler(connectProxyConfig.proxyAddress());
-            } else {
-                proxyHandler = new HttpProxyHandler(connectProxyConfig.proxyAddress(), username, password);
-            }
-            if (connectProxyConfig.useTls()) {
-                ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
-            }
-        } else {
-            logger.warn("{} Ignoring unknown proxy type: {}", ch, proxyConfig.getClass().getSimpleName());
-            return;
+        switch (proxyConfig.proxyType()) {
+            case DISABLED:
+                return;
+            case SOCKS4:
+                final Socks4ProxyConfig socks4ProxyConfig = (Socks4ProxyConfig) proxyConfig;
+                proxyHandler = new Socks4ProxyHandler(socks4ProxyConfig.proxyAddress(),
+                                                      socks4ProxyConfig.username());
+                break;
+            case SOCKS5:
+                final Socks5ProxyConfig socks5ProxyConfig = (Socks5ProxyConfig) proxyConfig;
+                proxyHandler = new Socks5ProxyHandler(
+                        socks5ProxyConfig.proxyAddress(), socks5ProxyConfig.username(),
+                        socks5ProxyConfig.password());
+                break;
+            case CONNECT:
+                final ConnectProxyConfig connectProxyConfig = (ConnectProxyConfig) proxyConfig;
+                final String username = connectProxyConfig.username();
+                final String password = connectProxyConfig.password();
+                if (username == null || password == null) {
+                    proxyHandler = new HttpProxyHandler(connectProxyConfig.proxyAddress());
+                } else {
+                    proxyHandler = new HttpProxyHandler(connectProxyConfig.proxyAddress(), username, password);
+                }
+                if (connectProxyConfig.useTls()) {
+                    ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
+                }
+                break;
+            default:
+                logger.warn("{} Ignoring unknown proxy type: {}", ch, proxyConfig.getClass().getSimpleName());
+                return;
         }
         proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);
         ch.pipeline().addLast(proxyHandler);

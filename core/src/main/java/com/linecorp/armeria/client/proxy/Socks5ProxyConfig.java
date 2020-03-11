@@ -66,8 +66,14 @@ public final class Socks5ProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public ProxyType proxyType() {
+        return ProxyType.SOCKS5;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
                           .add("password", maskedStr(password()))

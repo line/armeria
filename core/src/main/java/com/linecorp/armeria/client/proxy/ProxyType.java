@@ -16,25 +16,28 @@
 
 package com.linecorp.armeria.client.proxy;
 
-import com.google.common.base.MoreObjects;
-
 /**
- * Represents client-side proxy is disabled.
+ * The proxy protocol type.
  */
-public final class DisabledProxyConfig extends ProxyConfig {
+public enum ProxyType {
 
-    static final DisabledProxyConfig DISABLED_PROXY_CONFIG = new DisabledProxyConfig();
+    /**
+     * Proxy is disabled.
+     */
+    DISABLED,
 
-    private DisabledProxyConfig() {
-    }
+    /**
+     * SOCKS4 proxy protocol.
+     */
+    SOCKS4,
 
-    @Override
-    public ProxyType proxyType() {
-        return ProxyType.DISABLED;
-    }
+    /**
+     * SOCKS5 proxy protocol.
+     */
+    SOCKS5,
 
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this).add("proxyType", proxyType()).toString();
-    }
+    /**
+     * CONNECT proxy protocol.
+     */
+    CONNECT
 }

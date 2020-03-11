@@ -53,8 +53,14 @@ public final class Socks4ProxyConfig extends ProxyConfig {
     }
 
     @Override
+    public ProxyType proxyType() {
+        return ProxyType.SOCKS4;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
                           .toString();

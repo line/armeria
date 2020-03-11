@@ -116,11 +116,16 @@ public abstract class ProxyConfig {
         return DISABLED_PROXY_CONFIG;
     }
 
-    ProxyConfig() {
-    }
-
     @Nullable
     static String maskedStr(@Nullable String value) {
         return value == null ? null : "****";
     }
+
+    ProxyConfig() {
+    }
+
+    /**
+     * Returns the proxy type.
+     */
+    public abstract ProxyType proxyType();
 }
