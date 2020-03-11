@@ -132,15 +132,15 @@ class RetryingClientWithLoggingTest {
             final RequestLogBuilder logBuilder = captor.get().logBuilder();
             logBuilder.requestContentPreview("baz");
 
-            await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex));
+            await().untilAsserted(() -> assertThat(logResult).hasSize(successLogIndex));
             TimeUnit.SECONDS.sleep(1);
             // The last log is not complete because the parent log doesn't set the response content yet.
-            assertThat(logResult.size()).isEqualTo(successLogIndex);
+            assertThat(logResult).hasSize(successLogIndex);
             logBuilder.responseContent("qux", null);
         }
 
         // wait until 4 logs(2 requests and 2 responses) are called back
-        await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
+        await().untilAsserted(() -> assertThat(logResult).hasSize(successLogIndex + 1));
         // Let's just check the first request log.
         final RequestLog requestLog = logResult.get(0);
         assertThat(requestLog.name()).isEqualTo("foo");
@@ -165,7 +165,7 @@ class RetryingClientWithLoggingTest {
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 2 logs are called back
-        await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
+        await().untilAsserted(() -> assertThat(logResult).hasSize(successLogIndex + 1));
 
         // toStringRequestOnly() is same in the request log and the response log
         assertThat(logResult.get(0).toStringRequestOnly()).isEqualTo(logResult.get(1).toStringRequestOnly());
