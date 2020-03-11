@@ -106,12 +106,13 @@ dependencies {
     optionalApi 'io.prometheus:simpleclient_common'
 
     // Netty
-    [ 'netty-transport', 'netty-codec-http2', 'netty-codec-haproxy', 'netty-resolver-dns', 'netty-handler-proxy' ].each {
+    [ 'netty-transport', 'netty-codec-http2', 'netty-codec-haproxy', 'netty-resolver-dns' ].each {
         api "io.netty:$it"
     }
     implementation "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-transport-native-unix-common']}:linux-x86_64"
     implementation "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     implementation 'io.netty:netty-tcnative-boringssl-static'
+    implementation 'io.netty:netty-handler-proxy'
 
     // Project Reactor
     testImplementation 'io.projectreactor:reactor-test'

@@ -45,7 +45,7 @@ public abstract class NettyServerExtension extends AbstractAllOrEachExtension {
         workerGroup = new NioEventLoopGroup(1);
     }
 
-    public InetSocketAddress address() {
+    public final InetSocketAddress address() {
         checkState(channel != null);
         return (InetSocketAddress) channel.localAddress();
     }

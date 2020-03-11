@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -262,8 +263,10 @@ public class ProxyClientIntegrationTest {
             ctx.fireChannelRead(msg);
         });
 
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
-                ProxyConfig.socks4(socksProxyServer.address(), username)).build();
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .proxyConfig(ProxyConfig.socks4(socksProxyServer.address(), username))
+                             .build();
 
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
@@ -319,9 +322,11 @@ public class ProxyClientIntegrationTest {
     void testProxy_connectionTimeoutFailure_throwsException() throws Exception {
         SOCKS_DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
-                Thread.sleep(50);
+                ctx.channel().eventLoop().schedule(
+                        () -> ctx.fireChannelRead(msg), 50, TimeUnit.MILLISECONDS);
+            } else {
+                ctx.fireChannelRead(msg);
             }
-            ctx.fireChannelRead(msg);
         });
 
         final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(
@@ -454,7 +459,7 @@ public class ProxyClientIntegrationTest {
             if (msg instanceof ByteBuf) {
                 final ByteBuf backendMessage = ReferenceCountUtil.retain((ByteBuf) msg);
                 received.add(backendMessage);
-                flush();
+                writeToBackendAndFlush();
             } else {
                 throw new IllegalStateException("unexpected msg: " + msg);
             }
@@ -499,11 +504,11 @@ public class ProxyClientIntegrationTest {
                     return;
                 }
                 backend = f.channel();
-                flush();
+                writeToBackendAndFlush();
             });
         }
 
-        private void flush() {
+        private void writeToBackendAndFlush() {
             if (backend != null) {
                 boolean wrote = false;
                 for (;;) {

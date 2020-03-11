@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 /**
- * Contains CONNECT proxy related configuration.
+ * CONNECT proxy configuration.
  */
 public final class ConnectProxyConfig extends ProxyConfig {
 
@@ -80,7 +80,7 @@ public final class ConnectProxyConfig extends ProxyConfig {
         return MoreObjects.toStringHelper(this)
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
-                          .add("password", password())
+                          .add("password", maskedStr(password()))
                           .add("useTls", useTls())
                           .toString();
     }

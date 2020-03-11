@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 /**
- * Contains SOCKS5 proxy related configuration.
+ * SOCKS5 proxy configuration.
  */
 public final class Socks5ProxyConfig extends ProxyConfig {
 
@@ -70,7 +70,7 @@ public final class Socks5ProxyConfig extends ProxyConfig {
         return MoreObjects.toStringHelper(this)
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
-                          .add("password", password())
+                          .add("password", maskedStr(password()))
                           .toString();
     }
 }

@@ -68,12 +68,12 @@ public class DynamicBehaviorHandler extends ChannelDuplexHandler {
     }
 
     @FunctionalInterface
-    public interface ThrowingTriConsumer<A,B,C> {
+    public interface ThrowingTriConsumer<A, B, C> {
         void accept(A a, B b, C c) throws Exception;
     }
 
     @FunctionalInterface
-    public interface ThrowingBiConsumer<A,B> {
+    public interface ThrowingBiConsumer<A, B> {
         void accept(A a, B b) throws Exception;
     }
 }

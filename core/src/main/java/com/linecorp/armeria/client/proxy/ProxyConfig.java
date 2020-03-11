@@ -21,15 +21,18 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.ClientFactory;
 
 /**
- * Contains base configuration for proxy related settings used in {@link ClientFactory}.
+ * Base configuration for proxy settings used by {@link ClientFactory}.
  */
 public abstract class ProxyConfig {
 
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
+     *
      * @param proxyAddress The proxy address.
      */
     public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress) {
@@ -38,6 +41,7 @@ public abstract class ProxyConfig {
 
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
+     *
      * @param proxyAddress The proxy address.
      * @param username The username.
      */
@@ -48,6 +52,7 @@ public abstract class ProxyConfig {
 
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS5 protocol.
+     *
      * @param proxyAddress The proxy address.
      */
     public static Socks5ProxyConfig socks5(InetSocketAddress proxyAddress) {
@@ -56,6 +61,7 @@ public abstract class ProxyConfig {
 
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS5 protocol.
+     *
      * @param proxyAddress The proxy address.
      * @param username The username.
      * @param password The password.
@@ -69,6 +75,7 @@ public abstract class ProxyConfig {
 
     /**
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
+     *
      * @param proxyAddress The proxy address.
      */
     public static ConnectProxyConfig connect(InetSocketAddress proxyAddress) {
@@ -77,6 +84,7 @@ public abstract class ProxyConfig {
 
     /**
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
+     *
      * @param proxyAddress The proxy address.
      * @param useTls Whether to use TLS to connect to the proxy.
      */
@@ -88,6 +96,7 @@ public abstract class ProxyConfig {
 
     /**
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
+     *
      * @param proxyAddress The proxy address.
      * @param username The username.
      * @param password The password.
@@ -108,5 +117,10 @@ public abstract class ProxyConfig {
     }
 
     ProxyConfig() {
+    }
+
+    @Nullable
+    static String maskedStr(@Nullable String value) {
+        return value == null ? null : "****";
     }
 }
