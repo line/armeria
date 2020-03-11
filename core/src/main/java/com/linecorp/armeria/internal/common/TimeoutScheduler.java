@@ -18,6 +18,9 @@ package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.util.TimeoutMode.EXTEND;
+import static com.linecorp.armeria.common.util.TimeoutMode.FROM_NOW;
+import static com.linecorp.armeria.common.util.TimeoutMode.FROM_START;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
@@ -26,6 +29,8 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 import com.google.common.math.LongMath;
+
+import com.linecorp.armeria.common.util.TimeoutMode;
 
 import io.netty.channel.EventLoop;
 
@@ -61,6 +66,16 @@ public final class TimeoutScheduler {
         }
     }
 
+    public void setTimeoutMillis(TimeoutMode mode, long timeoutMillis) {
+        if (mode == FROM_NOW) {
+            setTimeoutAfterMillis(timeoutMillis);
+        } else if (mode == FROM_START) {
+            setTimeoutMillis(timeoutMillis);
+        } else if (mode == EXTEND) {
+            extendTimeoutMillis(timeoutMillis);
+        }
+    }
+
     public void setTimeoutMillis(long timeoutMillis) {
         checkArgument(timeoutMillis >= 0, "timeoutMillis: %s (expected: >= 0)", timeoutMillis);
         if (timeoutMillis == 0) {
@@ -77,7 +92,7 @@ public final class TimeoutScheduler {
         extendTimeoutMillis(adjustmentMillis);
     }
 
-    public void extendTimeoutMillis(long adjustmentMillis) {
+    private void extendTimeoutMillis(long adjustmentMillis) {
         if (adjustmentMillis == 0 || timeoutMillis == 0) {
             return;
         }
@@ -96,7 +111,7 @@ public final class TimeoutScheduler {
         }
     }
 
-    public void setTimeoutAfterMillis(long timeoutMillis) {
+    private void setTimeoutAfterMillis(long timeoutMillis) {
         checkArgument(timeoutMillis > 0, "timeoutMillis: %s (expected: > 0)", timeoutMillis);
 
         long passedTimeMillis = 0;
@@ -124,6 +139,7 @@ public final class TimeoutScheduler {
         this.timeoutMillis = LongMath.saturatedAdd(passedTimeMillis, timeoutMillis);
     }
 
+    @Deprecated
     public void setTimeoutAtMillis(long timeoutAtMillis) {
         checkArgument(timeoutAtMillis >= 0, "timeoutAtMillis: %s (expected: >= 0)", timeoutAtMillis);
         final long timeoutAfter = timeoutAtMillis - System.currentTimeMillis();

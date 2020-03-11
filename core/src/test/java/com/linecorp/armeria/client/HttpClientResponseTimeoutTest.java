@@ -36,6 +36,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -110,7 +111,7 @@ class HttpClientResponseTimeoutTest {
                 throws Exception {
             final Stream<Consumer<? super ClientRequestContext>> timeoutCustomizers = Stream.of(
                     ctx -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
-                    ctx -> ctx.setResponseTimeoutAfterMillis(1000),
+                    ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.FROM_NOW, 1000),
                     ctx -> ctx.setResponseTimeoutMillis(1000)
             );
             return timeoutCustomizers.map(Arguments::of);

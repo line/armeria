@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
@@ -34,6 +32,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -148,45 +147,13 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    @Deprecated
-    public void setRequestTimeoutMillis(long requestTimeoutMillis) {
-        delegate().setRequestTimeoutMillis(requestTimeoutMillis);
-    }
-
-    @Override
-    @Deprecated
-    public void setRequestTimeout(Duration requestTimeout) {
-        delegate().setRequestTimeout(requestTimeout);
-    }
-
-    @Override
-    public void extendRequestTimeoutMillis(long requestTimeoutMillis) {
-        delegate().extendRequestTimeoutMillis(requestTimeoutMillis);
-    }
-
-    @Override
-    public void extendRequestTimeout(Duration requestTimeout) {
-        delegate().extendRequestTimeout(requestTimeout);
-    }
-
-    @Override
-    public void setRequestTimeoutAfterMillis(long requestTimeoutMillis) {
-        delegate().setRequestTimeoutAfterMillis(requestTimeoutMillis);
-    }
-
-    @Override
-    public void setRequestTimeoutAfter(Duration requestTimeout) {
-        delegate().setRequestTimeoutAfter(requestTimeout);
+    public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
+       delegate().setRequestTimeoutMillis(mode, requestTimeoutMillis);
     }
 
     @Override
     public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
-        delegate().setRequestTimeoutAfterMillis(requestTimeoutAtMillis);
-    }
-
-    @Override
-    public void setRequestTimeoutAt(Instant requestTimeoutAt) {
-        delegate().setRequestTimeoutAt(requestTimeoutAt);
+        delegate().setRequestTimeoutAtMillis(requestTimeoutAtMillis);
     }
 
     @Nullable

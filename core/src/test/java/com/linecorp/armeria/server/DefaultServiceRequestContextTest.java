@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.DefaultTimeoutController;
 import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask;
 import com.linecorp.armeria.internal.common.TimeoutController;
@@ -62,7 +63,7 @@ class DefaultServiceRequestContextTest {
         };
 
         defaultCtx.setRequestTimeoutController(new DefaultTimeoutController(timeoutTask, ctx.eventLoop()));
-        defaultCtx.setRequestTimeoutAt(Instant.now().minusMillis(100));
+        defaultCtx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, 1);
 
         await().timeout(Duration.ofSeconds(1))
                .untilAsserted(() -> assertThat(ctx.isTimedOut()).isTrue());
@@ -128,15 +129,15 @@ class DefaultServiceRequestContextTest {
         ctx.setRequestTimeoutController(timeoutController);
 
         final long oldRequestTimeout1 = ctx.requestTimeoutMillis();
-        ctx.extendRequestTimeoutMillis(1000);
+        ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, 1000);
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(oldRequestTimeout1 + 1000);
 
         final long oldRequestTimeout2 = ctx.requestTimeoutMillis();
-        ctx.extendRequestTimeout(Duration.ofSeconds(-2));
+        ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofSeconds(-2));
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(oldRequestTimeout2 - 2000);
 
         final long oldRequestTimeout3 = ctx.requestTimeoutMillis();
-        ctx.extendRequestTimeoutMillis(0);
+        ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, 0);
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(oldRequestTimeout3);
     }
 
@@ -150,10 +151,10 @@ class DefaultServiceRequestContextTest {
         // This request now has an infinite timeout
         ctx.clearRequestTimeout();
 
-        ctx.extendRequestTimeoutMillis(1000);
+        ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, 1000);
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
 
-        ctx.extendRequestTimeoutMillis(-1000);
+        ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, -1000);
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
 
@@ -169,13 +170,13 @@ class DefaultServiceRequestContextTest {
 
         final long passedTimeMillis1 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
-        ctx.setRequestTimeoutAfterMillis(1000);
+        ctx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, 1000);
         assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis1 + 1000 - tolerance,
                                                          passedTimeMillis1 + 1000 + tolerance);
         Thread.sleep(1000);
         final long passedTimeMillis2 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
-        ctx.setRequestTimeoutAfter(Duration.ofSeconds(2));
+        ctx.setRequestTimeout(TimeoutMode.FROM_NOW, Duration.ofSeconds(2));
         assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis2 + 2000 - tolerance,
                                                          passedTimeMillis2 + 2000 + tolerance);
     }
@@ -184,11 +185,11 @@ class DefaultServiceRequestContextTest {
     void setRequestTimeoutAfterWithNonPositive() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
-        assertThatThrownBy(() -> ctx.setRequestTimeoutAfterMillis(0))
+        assertThatThrownBy(() -> ctx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("(expected: > 0)");
 
-        assertThatThrownBy(() -> ctx.setRequestTimeoutAfterMillis(-10))
+        assertThatThrownBy(() -> ctx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, -10))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("(expected: > 0)");
     }

@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -50,15 +51,14 @@ class HttpServerRequestTimeoutTest {
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
-                              .doOnNext(i -> ctx.setRequestTimeoutAfter(Duration.ofMillis(300)));
+                              .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.FROM_NOW,
+                                                                   Duration.ofMillis(300)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/extend-timeout-from-start", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
-                              .doOnNext(i -> {
-                                  ctx.extendRequestTimeout(Duration.ofMillis(200));
-                              });
+                              .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofMillis(200)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-while-writing", (ctx, req) -> {
@@ -76,7 +76,7 @@ class HttpServerRequestTimeoutTest {
               .serviceUnder("/timeout-by-decorator", (ctx, req) ->
                       HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1)))
               .decorator("/timeout-by-decorator/extend", (delegate, ctx, req) -> {
-                  ctx.extendRequestTimeout(Duration.ofSeconds(2));
+                  ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofSeconds(2));
                   return delegate.serve(ctx, req);
               })
               .decorator("/timeout-by-decorator/deadline", (delegate, ctx, req) -> {
@@ -88,7 +88,7 @@ class HttpServerRequestTimeoutTest {
                   return delegate.serve(ctx, req);
               })
               .decorator("/timeout-by-decorator/after", (delegate, ctx, req) -> {
-                  ctx.setRequestTimeoutAfter(Duration.ofSeconds(2));
+                  ctx.setRequestTimeout(TimeoutMode.FROM_NOW, Duration.ofSeconds(2));
                   return delegate.serve(ctx, req);
               });
         }
@@ -102,7 +102,8 @@ class HttpServerRequestTimeoutTest {
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(100))
-                              .doOnNext(i -> ctx.setRequestTimeoutAfter(Duration.ofMillis(150)));
+                              .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.FROM_NOW,
+                                                                   Duration.ofMillis(150)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .serviceUnder("/timeout-by-decorator", (ctx, req) -> HttpResponse.streaming())
@@ -111,7 +112,7 @@ class HttpServerRequestTimeoutTest {
                   return delegate.serve(ctx, req);
               })
               .decorator("/timeout-by-decorator/after", (delegate, ctx, req) -> {
-                  ctx.setRequestTimeoutAfter(Duration.ofSeconds(1));
+                  ctx.setRequestTimeout(TimeoutMode.FROM_NOW, Duration.ofSeconds(1));
                   return delegate.serve(ctx, req);
               })
               .decorator("/timeout-by-decorator/set", (delegate, ctx, req) -> {

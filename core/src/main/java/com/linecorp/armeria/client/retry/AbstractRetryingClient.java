@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.util.TimeoutMode;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -193,7 +194,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             ctx.clearResponseTimeout();
             return true;
         } else {
-            ctx.setResponseTimeoutAfterMillis(responseTimeoutMillis);
+            ctx.setResponseTimeoutMillis(TimeoutMode.FROM_NOW, responseTimeoutMillis);
             return true;
         }
     }
