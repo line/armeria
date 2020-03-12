@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -49,7 +50,9 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
     @Override
     public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
         if (cause instanceof IllegalArgumentException) {
-            log(log -> log.warn("{} Failed processing a request:", ctx, cause));
+            if (needsToWarn()) {
+                logger.warn("{} Failed processing a request:", ctx, cause);
+            }
             return HttpResponse.of(HttpStatus.BAD_REQUEST);
         }
 
@@ -61,15 +64,15 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
             return ((HttpResponseException) cause).httpResponse();
         }
 
-        log(log -> log.warn("{} Unhandled exception from an annotated service:", ctx, cause));
+        if (needsToWarn() && !Exceptions.isExpected(cause)) {
+            logger.warn("{} Unhandled exception from an annotated service:", ctx, cause);
+        }
 
         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    private static void log(Consumer<Logger> logConsumer) {
-        if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
-            logger.isWarnEnabled()) {
-            logConsumer.accept(logger);
-        }
+    private static boolean needsToWarn() {
+        return Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
+               logger.isWarnEnabled();
     }
 }
