@@ -467,27 +467,23 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not
-     * fully received within the specified amount of time since the {@link Response} started
-     * or {@link Request} was fully sent.
+     * fully received within the specified amount of time from now.
+     * Note that the specified {@code responseTimeoutMillis} must be positive.
      * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      * This method is a shortcut for
-     * {@code setResponseTimeoutMillis(TimeoutMode.FROM_START, responseTimeoutMillis)}.
+     * {@code setResponseTimeoutMillis(TimeoutMode.FROM_NOW, responseTimeoutMillis)}.
      *
      * <p>For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
+     * // Schedules timeout after 1 seconds from now.
      * ctx.setResponseTimeoutMillis(1000);
-     * assert ctx.responseTimeoutMillis() == 1000;
-     * ctx.setResponseTimeoutMillis(2000);
-     * assert ctx.responseTimeoutMillis() == 2000;
      * }</pre>
      *
-     * @param responseTimeoutMillis the amount of time allowed in milliseconds from
-     *                              the beginning of the response
-     *
+     * @param responseTimeoutMillis the amount of time allowed in milliseconds from now
      */
     default void setResponseTimeoutMillis(long responseTimeoutMillis) {
-        setResponseTimeoutMillis(TimeoutMode.FROM_START, responseTimeoutMillis);
+        setResponseTimeoutMillis(TimeoutMode.FROM_NOW, responseTimeoutMillis);
     }
 
     /**
@@ -532,21 +528,19 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not
-     * fully received within the specified amount of time since the {@link Response} started
-     * or {@link Request} was fully sent.
+     * fully received within the specified amount of time from now.
+     * Note that the specified {@code responseTimeout} must be positive.
      * This value is initially set from {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
-     * This method is a shortcut for {@code setResponseTimeout(TimeoutMode.FROM_START, responseTimeout)}.
+     * This method is a shortcut for {@code setResponseTimeout(TimeoutMode.FROM_NOW, responseTimeout)}.
      *
      * <p>For example:
      * <pre>{@code
      * ClientRequestContext ctx = ...;
+     * // Schedules timeout after 1 seconds from now.
      * ctx.setResponseTimeout(Duration.ofSeconds(1));
-     * assert ctx.responseTimeoutMillis() == 1000;
-     * ctx.setResponseTimeout(Duration.ofSeconds(2));
-     * assert ctx.responseTimeoutMillis() == 2000;
      * }</pre>
      *
-     * @param responseTimeout the amount of time allowed from the beginning of the response
+     * @param responseTimeout the amount of time allowed from now
      *
      */
     default void setResponseTimeout(Duration responseTimeout) {

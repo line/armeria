@@ -320,25 +320,24 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
-     * the corresponding {@link Response} is not sent completely since the {@link Request} started.
+     * the corresponding {@link Response} is not sent completely within the specified amount time from now.
+     * Note that the specified {@code requestTimeout} must be positive.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      * This method is a shortcut for
-     * {@code setRequestTimeoutMillis(TimeoutMode.FROM_START, requestTimeoutMillis)}.
+     * {@code setRequestTimeoutMillis(TimeoutMode.FROM_NOW, requestTimeoutMillis)}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
+     * // Schedules timeout after 1 seconds from now.
      * ctx.setRequestTimeoutMillis(1000);
-     * assert ctx.requestTimeoutMillis() == 1000;
-     * ctx.setRequestTimeoutMillis(2000);
-     * assert ctx.requestTimeoutMillis() == 2000;
      * }</pre>
      *
-     * @param requestTimeoutMillis the amount of time in milliseconds from the start time of the request
+     * @param requestTimeoutMillis the amount of time allowed in milliseconds from now
      *
      */
     default void setRequestTimeoutMillis(long requestTimeoutMillis) {
-        setRequestTimeoutMillis(TimeoutMode.FROM_START, requestTimeoutMillis);
+        setRequestTimeoutMillis(TimeoutMode.FROM_NOW, requestTimeoutMillis);
     }
 
     /**
@@ -380,24 +379,23 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Schedules the request timeout that is triggered when the {@link Request} is not fully received or
-     * the corresponding {@link Response} is not sent completely since the {@link Request} started.
+     * the corresponding {@link Response} is not sent completely within the specified amount time from now.
+     * Note that the specified {@code requestTimeout} must be positive.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
-     * This method is a shortcut for {@code setRequestTimeout(TimeoutMode.FROM_START, requestTimeout)}.
+     * This method is a shortcut for {@code setRequestTimeout(TimeoutMode.FROM_NOW, requestTimeout)}.
      *
      * <p>For example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
+     * // Schedules timeout after 1 seconds from now.
      * ctx.setRequestTimeout(Duration.ofSeconds(1));
-     * assert ctx.requestTimeoutMillis() == 1000;
-     * ctx.setRequestTimeout(Duration.ofSeconds(2));
-     * assert ctx.requestTimeoutMillis() == 2000;
      * }</pre>
      *
-     * @param requestTimeout the amount of time from the start time of the request
+     * @param requestTimeout the amount of time allowed from now
      *
      */
     default void setRequestTimeout(Duration requestTimeout) {
-        setRequestTimeout(TimeoutMode.FROM_START, requestTimeout);
+        setRequestTimeout(TimeoutMode.FROM_NOW, requestTimeout);
     }
 
     /**
