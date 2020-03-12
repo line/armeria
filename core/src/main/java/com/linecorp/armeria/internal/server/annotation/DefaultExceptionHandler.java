@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import java.util.function.Consumer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
