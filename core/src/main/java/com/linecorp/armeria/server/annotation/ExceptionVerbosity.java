@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
 
@@ -33,6 +34,7 @@ public enum ExceptionVerbosity {
      *     <li>{@link IllegalArgumentException}</li>
      *     <li>{@link HttpStatusException}</li>
      *     <li>{@link HttpResponseException}</li>
+     *     <li>Other expected exceptions as defined in {@link Exceptions#isExpected(Throwable)}</li>
      * </ul>
      */
     UNHANDLED,
