@@ -130,7 +130,7 @@ final class HttpChannelPool implements AsyncCloseable {
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SslContext sslCtx) {
         final ProxyHandler proxyHandler;
         switch (proxyConfig.proxyType()) {
-            case DISABLED:
+            case DIRECT:
                 return;
             case SOCKS4:
                 final Socks4ProxyConfig socks4ProxyConfig = (Socks4ProxyConfig) proxyConfig;

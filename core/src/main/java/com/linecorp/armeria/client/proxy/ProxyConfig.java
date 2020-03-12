@@ -16,12 +16,10 @@
 
 package com.linecorp.armeria.client.proxy;
 
-import static com.linecorp.armeria.client.proxy.DisabledProxyConfig.DISABLED_PROXY_CONFIG;
+import static com.linecorp.armeria.client.proxy.DirectProxyConfig.DIRECT_PROXY_CONFIG;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientFactory;
 
@@ -33,7 +31,7 @@ public abstract class ProxyConfig {
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
      *
-     * @param proxyAddress The proxy address.
+     * @param proxyAddress the proxy address
      */
     public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress) {
         return new Socks4ProxyConfig(requireNonNull(proxyAddress, "proxyAddress"), null);
@@ -42,8 +40,8 @@ public abstract class ProxyConfig {
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS4 protocol.
      *
-     * @param proxyAddress The proxy address.
-     * @param username The username.
+     * @param proxyAddress the proxy address
+     * @param username the username
      */
     public static Socks4ProxyConfig socks4(InetSocketAddress proxyAddress, String username) {
         return new Socks4ProxyConfig(requireNonNull(proxyAddress, "proxyAddress"),
@@ -53,7 +51,7 @@ public abstract class ProxyConfig {
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS5 protocol.
      *
-     * @param proxyAddress The proxy address.
+     * @param proxyAddress the proxy address
      */
     public static Socks5ProxyConfig socks5(InetSocketAddress proxyAddress) {
         return new Socks5ProxyConfig(requireNonNull(proxyAddress, "proxyAddress"), null, null);
@@ -62,9 +60,9 @@ public abstract class ProxyConfig {
     /**
      * Creates a {@code ProxyConfig} configuration for SOCKS5 protocol.
      *
-     * @param proxyAddress The proxy address.
-     * @param username The username.
-     * @param password The password.
+     * @param proxyAddress the proxy address
+     * @param username the username
+     * @param password the password
      */
     public static Socks5ProxyConfig socks5(
             InetSocketAddress proxyAddress, String username, String password) {
@@ -76,7 +74,7 @@ public abstract class ProxyConfig {
     /**
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
      *
-     * @param proxyAddress The proxy address.
+     * @param proxyAddress the proxy address
      */
     public static ConnectProxyConfig connect(InetSocketAddress proxyAddress) {
         return new ConnectProxyConfig(requireNonNull(proxyAddress, "proxyAddress"), null, null, false);
@@ -85,8 +83,8 @@ public abstract class ProxyConfig {
     /**
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
      *
-     * @param proxyAddress The proxy address.
-     * @param useTls Whether to use TLS to connect to the proxy.
+     * @param proxyAddress the proxy address
+     * @param useTls whether to use TLS to connect to the proxy
      */
     public static ConnectProxyConfig connect(
             InetSocketAddress proxyAddress, boolean useTls) {
@@ -97,10 +95,10 @@ public abstract class ProxyConfig {
     /**
      * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
      *
-     * @param proxyAddress The proxy address.
-     * @param username The username.
-     * @param password The password.
-     * @param useTls Whether to use TLS to connect to the proxy.
+     * @param proxyAddress the proxy address
+     * @param username the username
+     * @param password the password
+     * @param useTls whether to use TLS to connect to the proxy
      */
     public static ConnectProxyConfig connect(
             InetSocketAddress proxyAddress, String username, String password, boolean useTls) {
@@ -110,15 +108,10 @@ public abstract class ProxyConfig {
     }
 
     /**
-     * Returns a {@code ProxyConfig} which signifies that proxy is disabled.
+     * Returns a {@code ProxyConfig} which signifies that a proxy is absent.
      */
-    public static ProxyConfig disabled() {
-        return DISABLED_PROXY_CONFIG;
-    }
-
-    @Nullable
-    static String maskedStr(@Nullable String value) {
-        return value == null ? null : "****";
+    public static ProxyConfig direct() {
+        return DIRECT_PROXY_CONFIG;
     }
 
     ProxyConfig() {

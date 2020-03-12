@@ -86,7 +86,7 @@ public final class ConnectProxyConfig extends ProxyConfig {
                           .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
-                          .add("password", maskedStr(password()))
+                          .add("password", "****")
                           .add("useTls", useTls())
                           .toString();
     }

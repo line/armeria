@@ -19,18 +19,18 @@ package com.linecorp.armeria.client.proxy;
 import com.google.common.base.MoreObjects;
 
 /**
- * Represents client-side proxy is disabled.
+ * Represents a direct connection without a proxy.
  */
-public final class DisabledProxyConfig extends ProxyConfig {
+public final class DirectProxyConfig extends ProxyConfig {
 
-    static final DisabledProxyConfig DISABLED_PROXY_CONFIG = new DisabledProxyConfig();
+    static final DirectProxyConfig DIRECT_PROXY_CONFIG = new DirectProxyConfig();
 
-    private DisabledProxyConfig() {
+    private DirectProxyConfig() {
     }
 
     @Override
     public ProxyType proxyType() {
-        return ProxyType.DISABLED;
+        return ProxyType.DIRECT;
     }
 
     @Override

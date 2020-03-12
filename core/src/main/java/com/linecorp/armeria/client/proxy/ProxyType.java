@@ -22,9 +22,9 @@ package com.linecorp.armeria.client.proxy;
 public enum ProxyType {
 
     /**
-     * Proxy is disabled.
+     * Proxy is absent.
      */
-    DISABLED,
+    DIRECT,
 
     /**
      * SOCKS4 proxy protocol.

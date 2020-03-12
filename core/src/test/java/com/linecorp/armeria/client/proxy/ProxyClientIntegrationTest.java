@@ -159,7 +159,7 @@ public class ProxyClientIntegrationTest {
 
     @Test
     void testDisabledProxyBasicCase() throws Exception {
-        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(ProxyConfig.disabled()).build();
+        final ClientFactory clientFactory = ClientFactory.builder().proxyConfig(ProxyConfig.direct()).build();
         final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
