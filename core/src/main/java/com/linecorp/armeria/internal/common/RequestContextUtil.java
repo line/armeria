@@ -18,6 +18,9 @@ package com.linecorp.armeria.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -29,7 +32,11 @@ import io.netty.channel.ChannelFutureListener;
  */
 public final class RequestContextUtil {
 
+    private static final Logger logger = LoggerFactory.getLogger(RequestContextUtil.class);
+
     private static final SafeCloseable noopSafeCloseable = () -> { /* no-op */ };
+
+    private static boolean warned;
 
     /**
      * Returns the {@link SafeCloseable} which doesn't do anything.
@@ -46,10 +53,15 @@ public final class RequestContextUtil {
             RequestContext newCtx, RequestContext oldCtx) {
         requireNonNull(newCtx, "newCtx");
         requireNonNull(oldCtx, "oldCtx");
-        return new IllegalStateException(
+        final IllegalStateException ex = new IllegalStateException(
                 "Trying to call object wrapped with context " + newCtx + ", but context is currently " +
                 "set to " + oldCtx + ". This means the callback was called from " +
                 "unexpected thread or forgetting to close previous context.");
+        if (!warned) {
+            warned = true;
+            logger.warn("An error occurred when pushing a context", ex);
+        }
+        return ex;
     }
 
     /**
