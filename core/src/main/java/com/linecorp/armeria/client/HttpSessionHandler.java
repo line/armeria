@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
@@ -55,7 +54,6 @@ import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWritte
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
@@ -346,7 +344,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         setPendingException(ctx, new ClosedSessionException(cause));
-        Exceptions.logIfUnexpected(logger, channel, protocol(), cause);
         if (!(cause instanceof IOException)) {
             ctx.close();
         } else {
@@ -363,14 +360,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     static void setPendingException(ChannelHandlerContext ctx, Throwable cause) {
-        final Attribute<Throwable> attr = ctx.channel().attr(PENDING_EXCEPTION);
-        final Throwable previousCause = attr.get();
-        if (previousCause == null) {
-            attr.set(cause);
-        } else if (previousCause != cause) {
-            previousCause.addSuppressed(cause);
-        } else {
-            // Self-suppression not allowed by JDK.
+        final Throwable previousCause = ctx.channel().attr(PENDING_EXCEPTION).setIfAbsent(cause);
+        if (previousCause != null && logger.isWarnEnabled()) {
+            logger.warn("{} Unexpected suppressed exception:", ctx.channel(), cause);
         }
     }
 }
