@@ -17,10 +17,9 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map.Entry;
@@ -41,12 +40,13 @@ import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 
 class RouterTest {
     private static final Logger logger = LoggerFactory.getLogger(RouterTest.class);
 
     private static final BiConsumer<Route, Route> REJECT = (a, b) -> {
-        throw new IllegalStateException("duplicate route: " + a + "vs. " + b);
+        throw new IllegalStateException("duplicate route: " + a + " vs. " + b);
     };
 
     @Test
@@ -63,7 +63,7 @@ class RouterTest {
                 Route.builder().path("prefix:/i").build()         // router 5
         );
         final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT);
-        assertThat(routers.size()).isEqualTo(5);
+        assertThat(routers).hasSize(5);
 
         // Map of a path string and a router index
         final List<Entry<String, Integer>> args = Lists.newArrayList(
@@ -78,12 +78,9 @@ class RouterTest {
                 Maps.immutableEntry("/i/1/2/3", 4)
         );
 
-        final RoutingContext routingCtx = mock(RoutingContext.class);
         args.forEach(entry -> {
-            logger.debug("Entry: path {} router {}", entry.getKey(), entry.getValue());
             for (int i = 0; i < 5; i++) {
-                when(routingCtx.path()).thenReturn(entry.getKey());
-                final Routed<Route> result = routers.get(i).find(routingCtx);
+                final Routed<Route> result = routers.get(i).find(routingCtx(entry.getKey()));
                 assertThat(result.isPresent()).isEqualTo(i == entry.getValue());
             }
         });
@@ -104,14 +101,19 @@ class RouterTest {
         );
         final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT);
         final CompositeRouter<Route, Route> router = new CompositeRouter<>(routers, Function.identity());
-        final RoutingContext mock = mock(RoutingContext.class);
+        final RoutingContext routingCtx = routingCtx(path);
+        assertThat(router.find(routingCtx).route()).isEqualTo(routes.get(expectForFind));
 
-        when(mock.path()).thenReturn(path);
-        assertThat(router.find(mock).route()).isEqualTo(routes.get(expectForFind));
-
-        final List<Route> matched = router.findAll(mock).stream().map(Routed::route).collect(toImmutableList());
+        final List<Route> matched = router.findAll(routingCtx)
+                                          .stream().map(Routed::route).collect(toImmutableList());
         final List<Route> expected = expectForFindAll.stream().map(routes::get).collect(toImmutableList());
         assertThat(matched).containsAll(expected);
+    }
+
+    private static DefaultRoutingContext routingCtx(String path) {
+        return new DefaultRoutingContext(virtualHost(), "example.com",
+                                         RequestHeaders.of(HttpMethod.GET, path),
+                                         path, null, false);
     }
 
     static Stream<Arguments> generateRouteMatchData() {
@@ -153,13 +155,13 @@ class RouterTest {
 
     @Test
     void duplicatePathWithHeaders() {
-        // Not a duplicate if complexity is different.
-        testNonDuplicateRoutes(Route.builder().path("/foo").build(),
-                               Route.builder().path("/foo").methods(HttpMethod.GET).build());
-
         // Duplicate if supported methods overlap.
         testDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.GET).build(),
                             Route.builder().path("/foo").methods(HttpMethod.GET, HttpMethod.POST).build());
+
+        // Duplicate if supported methods overlap.
+        testDuplicateRoutes(Route.builder().path("/foo").build(), // This route contains all methods.
+                            Route.builder().path("/foo").methods(HttpMethod.GET).build());
 
         testNonDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.GET).build(),
                                Route.builder().path("/foo").methods(HttpMethod.POST).build());

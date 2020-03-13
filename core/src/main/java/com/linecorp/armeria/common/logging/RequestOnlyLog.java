@@ -162,6 +162,11 @@ public interface RequestOnlyLog extends RequestLogAccess {
     ClientConnectionTimings connectionTimings();
 
     /**
+     * Returns the {@link SerializationFormat} of the {@link Request}.
+     */
+    SerializationFormat serializationFormat();
+
+    /**
      * Returns the {@link Scheme} of the {@link Request}.
      *
      * @throws RequestLogAvailabilityException if the property is not available yet.

@@ -409,6 +409,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
+    private boolean isDeferredFlagSet(RequestLogProperty property) {
+        final int flag = property.flag();
+        return (deferredFlags & flag) == flag;
+    }
+
     // Methods required for adding children.
 
     @Override
@@ -502,13 +507,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                      .thenAccept(log -> responseHeaders(log.responseHeaders()));
         }
 
-        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
-            responseContent(lastChild.responseContent(), lastChild.rawResponseContent());
-        } else {
-            lastChild.whenAvailable(RequestLogProperty.RESPONSE_CONTENT)
-                     .thenAccept(log -> responseContent(log.responseContent(), log.rawResponseContent()));
-        }
-
         if (lastChild.isComplete()) {
             propagateResponseEndData(lastChild);
         } else {
@@ -517,6 +515,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void propagateResponseEndData(RequestLog log) {
+        responseContent(log.responseContent(), log.rawResponseContent());
         responseLength(log.responseLength());
         responseContentPreview(log.responseContentPreview());
         responseTrailers(log.responseTrailers());
@@ -646,6 +645,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             scheme = Scheme.of(serializationFormat, sessionProtocol);
             updateFlags(RequestLogProperty.SCHEME);
         }
+    }
+
+    @Override
+    public SerializationFormat serializationFormat() {
+        return serializationFormat;
     }
 
     @Override
@@ -809,11 +813,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public boolean isDeferRequestContentSet() {
+        return isDeferredFlagSet(RequestLogProperty.REQUEST_CONTENT);
+    }
+
+    @Override
     public void deferRequestContentPreview() {
         if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
             return;
         }
         updateDeferredFlags(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
+    }
+
+    @Override
+    public boolean isDeferRequestContentPreviewSet() {
+        return isDeferredFlagSet(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
     }
 
     @Override
@@ -1117,11 +1131,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public boolean isDeferResponseContentSet() {
+        return isDeferredFlagSet(RequestLogProperty.RESPONSE_CONTENT);
+    }
+
+    @Override
     public void deferResponseContentPreview() {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
             return;
         }
         updateDeferredFlags(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
+    }
+
+    @Override
+    public boolean isDeferResponseContentPreviewSet() {
+        return isDeferredFlagSet(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
     }
 
     @Override
@@ -1624,6 +1648,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public ClientConnectionTimings connectionTimings() {
             return connectionTimings;
+        }
+
+        @Override
+        public SerializationFormat serializationFormat() {
+            return serializationFormat;
         }
 
         @Override

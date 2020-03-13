@@ -58,6 +58,7 @@ public final class ClientDecorationBuilder {
      * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
     public ClientDecorationBuilder add(DecoratingHttpClientFunction decorator) {
+        requireNonNull(decorator, "decorator");
         return add(delegate -> new FunctionalDecoratingHttpClient(delegate, decorator));
     }
 
@@ -77,6 +78,7 @@ public final class ClientDecorationBuilder {
      * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
     public ClientDecorationBuilder addRpc(DecoratingRpcClientFunction decorator) {
+        requireNonNull(decorator, "decorator");
         return addRpc(delegate -> new FunctionalDecoratingRpcClient(delegate, decorator));
     }
 
