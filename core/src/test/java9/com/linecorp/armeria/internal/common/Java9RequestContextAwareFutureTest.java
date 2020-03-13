@@ -169,7 +169,7 @@ class Java9RequestContextAwareFutureTest {
             verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
             assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
                 assertThat(event.getLevel()).isEqualTo(Level.WARN);
-                assertThat(event.getMessage()).startsWith("An error occurred when pushing");
+                assertThat(event.getMessage()).startsWith("An error occurred while pushing");
             });
         }
     }
