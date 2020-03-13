@@ -474,14 +474,20 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         //     and they are handled by different threads simultaneously.
         //     e.g. when the 3rd request triggers a reset and then the 2nd one triggers another.
         minClosedId = Math.min(minClosedId, id);
-        for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
-            final PendingWrites pendingWrites = pendingWritesMap.remove(i);
-            for (;;) {
-                final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
-                if (e == null) {
-                    break;
+
+        if (minClosedId <= maxIdWithPendingWrites) {
+            final ClosedSessionException cause =
+                    new ClosedSessionException("An HTTP/1 stream has been reset: " + error);
+            for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
+                final PendingWrites pendingWrites = pendingWritesMap.remove(i);
+                for (;;) {
+                    final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
+                    if (e == null) {
+                        break;
+                    }
+
+                    e.getValue().tryFailure(cause);
                 }
-                e.getValue().tryFailure(ClosedSessionException.get());
             }
         }
 

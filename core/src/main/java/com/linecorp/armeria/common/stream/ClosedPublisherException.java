@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Flags;
 
 /**
@@ -37,9 +39,8 @@ public class ClosedPublisherException extends RuntimeException {
         return ClosedStreamException.get();
     }
 
-    ClosedPublisherException() {}
-
-    ClosedPublisherException(@SuppressWarnings("unused") boolean dummy) {
-        super(null, null, false, false);
+    ClosedPublisherException(@Nullable String message, @Nullable Throwable cause,
+                             boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

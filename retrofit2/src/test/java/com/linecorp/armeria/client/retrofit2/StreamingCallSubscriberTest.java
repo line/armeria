@@ -205,7 +205,7 @@ public class StreamingCallSubscriberTest {
 
         verify(subscription, times(2)).request(1L);
         await().untilAsserted(() -> assertThat(callback.callbackCallingCount).isEqualTo(1));
-        assertThat(callback.exception).hasMessage("foo");
+        assertThat(callback.exception).hasMessageEndingWith("foo");
     }
 
     @Test
