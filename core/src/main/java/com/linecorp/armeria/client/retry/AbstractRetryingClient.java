@@ -332,6 +332,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         private final int maxTotalAttempts;
         private final long responseTimeoutMillisForEachAttempt;
         private final long deadlineNanos;
+        private final boolean isTimeoutEnabled;
 
         @Nullable
         private Backoff lastBackoff;
@@ -344,8 +345,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
             if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
                 deadlineNanos = 0;
+                isTimeoutEnabled = false;
             } else {
                 deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
+                isTimeoutEnabled = true;
             }
             totalAttemptNo = 1;
         }
@@ -377,7 +380,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         }
 
         boolean timeoutForWholeRetryEnabled() {
-            return deadlineNanos != 0;
+            return isTimeoutEnabled;
         }
 
         long actualResponseTimeoutMillis() {
