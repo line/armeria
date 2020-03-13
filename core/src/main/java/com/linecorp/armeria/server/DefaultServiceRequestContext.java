@@ -129,6 +129,18 @@ public final class DefaultServiceRequestContext
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             long requestStartTimeNanos, long requestStartTimeMicros) {
 
+        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
+             sslSession, proxiedAddresses, clientAddress, requestStartTimeNanos, requestStartTimeMicros,
+             HttpHeaders.of(), HttpHeaders.of());
+    }
+
+    private DefaultServiceRequestContext(
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
+            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            long requestStartTimeNanos, long requestStartTimeMicros,
+            HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
+
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
               requireNonNull(routingResult, "routingResult").query(),
@@ -154,8 +166,8 @@ public final class DefaultServiceRequestContext
         log.requestFirstBytesTransferred();
 
         maxRequestLength = cfg.maxRequestLength();
-        additionalResponseHeaders = HttpHeaders.of();
-        additionalResponseTrailers = HttpHeaders.of();
+        this.additionalResponseHeaders = additionalResponseHeaders;
+        this.additionalResponseTrailers = additionalResponseTrailers;
     }
 
     @Nonnull
@@ -195,25 +207,17 @@ public final class DefaultServiceRequestContext
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), id, routingContext,
                 routingResult, req, sslSession(), proxiedAddresses(), clientAddress(),
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                System.nanoTime(), SystemInfo.currentTimeMicros(),
+                additionalResponseHeaders, additionalResponseTrailers);
 
         if (rpcReq != null) {
             ctx.updateRpcRequest(rpcReq);
         }
 
-        final HttpHeaders additionalHeaders = additionalResponseHeaders();
-        if (!additionalHeaders.isEmpty()) {
-            ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(additionalHeaders));
-        }
-
-        final HttpHeaders additionalTrailers = additionalResponseTrailers();
-        if (!additionalTrailers.isEmpty()) {
-            ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(additionalTrailers));
-        }
-
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = attrs(); i.hasNext();/* noop */) {
             ctx.addAttr(i.next());
         }
+
         return ctx;
     }
 
