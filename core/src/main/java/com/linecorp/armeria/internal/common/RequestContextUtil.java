@@ -48,8 +48,6 @@ public final class RequestContextUtil {
     private static final Set<Thread> REPORTED_THREADS =
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
-    private static boolean warned;
-
     /**
      * Returns the {@link SafeCloseable} which doesn't do anything.
      */
