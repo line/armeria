@@ -59,7 +59,7 @@ public final class RequestContextUtil {
                 "unexpected thread or forgetting to close previous context.");
         if (!warned) {
             warned = true;
-            logger.warn("An error occurred when pushing a context", ex);
+            logger.warn("An error occurred while pushing a context", ex);
         }
         return ex;
     }
