@@ -38,8 +38,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.thrift.TApplicationException;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -56,9 +56,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class RetryingRpcClientTest {
+class RetryingRpcClientTest {
 
     private static final RetryStrategyWithContent<RpcResponse> retryAlways =
             (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(500));
@@ -74,8 +74,13 @@ public class RetryingRpcClientTest {
     private final HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
     private final DevNullService.Iface devNullServiceHandler = mock(DevNullService.Iface.class);
 
-    @Rule
-    public final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    final ServerExtension server = new ServerExtension() {
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final AtomicInteger retryCount = new AtomicInteger();
@@ -92,7 +97,7 @@ public class RetryingRpcClientTest {
     };
 
     @Test
-    public void execute() throws Exception {
+    void execute() throws Exception {
         final HelloService.Iface client = helloClient(retryOnException, 100);
         when(serviceHandler.hello(anyString())).thenReturn("world");
 
@@ -101,7 +106,7 @@ public class RetryingRpcClientTest {
     }
 
     @Test
-    public void execute_retry() throws Exception {
+    void execute_retry() throws Exception {
         final HelloService.Iface client = helloClient(retryOnException, 100);
         when(serviceHandler.hello(anyString()))
                 .thenThrow(new IllegalArgumentException())
@@ -113,7 +118,7 @@ public class RetryingRpcClientTest {
     }
 
     @Test
-    public void execute_reachedMaxAttempts() throws Exception {
+    void execute_reachedMaxAttempts() throws Exception {
         final HelloService.Iface client = helloClient(retryAlways, 2);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
@@ -124,7 +129,7 @@ public class RetryingRpcClientTest {
     }
 
     @Test
-    public void propagateLastResponseWhenNextRetryIsAfterTimeout() throws Exception {
+    void propagateLastResponseWhenNextRetryIsAfterTimeout() throws Exception {
         final BlockingQueue<RequestLog> logQueue = new LinkedTransferQueue<>();
         final RetryStrategyWithContent<RpcResponse> strategy =
                 (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(10000000));
@@ -141,6 +146,16 @@ public class RetryingRpcClientTest {
         assertThat(log.children()).isNotEmpty();
         final HttpRequest lastHttpReq = log.children().get(log.children().size() - 1).context().request();
         assertThat(lastHttpReq).isSameAs(log.context().request());
+    }
+
+    @Test
+    void exceptionInStrategy() {
+        final IllegalStateException exception = new IllegalStateException("foo");
+        final HelloService.Iface client = helloClient((ctx, response) -> {
+            throw exception;
+        }, Integer.MAX_VALUE);
+
+        assertThatThrownBy(() -> client.hello("bar")).isSameAs(exception);
     }
 
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
@@ -166,7 +181,7 @@ public class RetryingRpcClientTest {
     }
 
     @Test
-    public void execute_void() throws Exception {
+    void execute_void() throws Exception {
         final DevNullService.Iface client =
                 Clients.builder(server.httpUri(BINARY) + "/thrift-devnull")
                        .rpcDecorator(RetryingRpcClient.newDecorator(retryOnException, 10))
@@ -181,7 +196,7 @@ public class RetryingRpcClientTest {
     }
 
     @Test
-    public void shouldGetExceptionWhenFactoryIsClosed() throws Exception {
+    void shouldGetExceptionWhenFactoryIsClosed() throws Exception {
         final ClientFactory factory =
                 ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
@@ -225,7 +240,7 @@ public class RetryingRpcClientTest {
     }
 
     @Test
-    public void doNotRetryWhenResponseIsCancelled() throws Exception {
+    void doNotRetryWhenResponseIsCancelled() throws Exception {
         final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
         final HelloService.Iface client =
                 Clients.builder(server.httpUri(BINARY) + "/thrift")
