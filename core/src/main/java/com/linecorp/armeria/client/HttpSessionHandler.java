@@ -22,6 +22,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.concurrent.ScheduledFuture;
 
@@ -54,6 +55,7 @@ import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWritte
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
@@ -67,7 +69,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      */
     private static final int MAX_NUM_REQUESTS_SENT = 536870912;
 
-    static final AttributeKey<Throwable> PENDING_EXCEPTION =
+    private static final AttributeKey<Throwable> PENDING_EXCEPTION =
             AttributeKey.valueOf(HttpSessionHandler.class, "PENDING_EXCEPTION");
 
     private final HttpChannelPool channelPool;
@@ -322,34 +324,53 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             channelPool.connect(channel.remoteAddress(), H1C, sessionPromise);
         } else {
             // Fail all pending responses.
-            final Throwable throwable;
-            if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
-                throwable = ctx.channel().attr(PENDING_EXCEPTION).get();
+            final HttpResponseDecoder responseDecoder = this.responseDecoder;
+            final Throwable pendingException;
+            if (responseDecoder != null && responseDecoder.hasUnfinishedResponses()) {
+                pendingException = getPendingException(ctx);
+                responseDecoder.failUnfinishedResponses(pendingException);
             } else {
-                throwable = ClosedSessionException.get();
+                pendingException = null;
             }
-            failUnfinishedResponses(throwable);
+
             // Cancel the timeout and reject the sessionPromise just in case the connection has been closed
             // even before the session protocol negotiation is done.
             sessionTimeoutFuture.cancel(false);
-            sessionPromise.tryFailure(throwable);
+            if (!sessionPromise.isDone()) {
+                sessionPromise.tryFailure(pendingException != null ? pendingException
+                                                                   : getPendingException(ctx));
+            }
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        setPendingException(ctx, new ClosedSessionException(cause));
         Exceptions.logIfUnexpected(logger, channel, protocol(), cause);
-        if (channel.isActive()) {
+        if (!(cause instanceof IOException)) {
             ctx.close();
+        } else {
+            // Netty will close the connection automatically on an IOException.
         }
     }
 
-    private void failUnfinishedResponses(Throwable e) {
-        final HttpResponseDecoder responseDecoder = this.responseDecoder;
-        if (responseDecoder == null) {
-            return;
+    private static Throwable getPendingException(ChannelHandlerContext ctx) {
+        if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
+            return ctx.channel().attr(PENDING_EXCEPTION).get();
         }
 
-        responseDecoder.failUnfinishedResponses(e);
+        return ClosedSessionException.get();
+    }
+
+    static void setPendingException(ChannelHandlerContext ctx, Throwable cause) {
+        final Attribute<Throwable> attr = ctx.channel().attr(PENDING_EXCEPTION);
+        final Throwable previousCause = attr.get();
+        if (previousCause == null) {
+            attr.set(cause);
+        } else if (previousCause != cause) {
+            previousCause.addSuppressed(cause);
+        } else {
+            // Self-suppression not allowed by JDK.
+        }
     }
 }

@@ -223,11 +223,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             responseEncoder.close();
         }
 
-        unfinishedRequests.forEach((req, res) -> {
-            // Mark the request stream as closed due to disconnection.
-            req.close(ClosedSessionException.get());
-            res.abort(ClosedSessionException.get());
-        });
+        if (!unfinishedRequests.isEmpty()) {
+            final ClosedSessionException cause = ClosedSessionException.get();
+            unfinishedRequests.forEach((req, res) -> {
+                // Mark the request stream as closed due to disconnection.
+                req.close(cause);
+                res.abort(cause);
+            });
+        }
     }
 
     @Override
