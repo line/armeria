@@ -228,7 +228,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                 }
             }
 
-            try (SafeCloseable ignored = ctx.push()) {
+            try (SafeCloseable ignored = ctx.replace()) {
                 try {
                     final O actualRes = delegate().execute(ctx, req);
                     actualRes.whenComplete().handleAsync((unused, cause) -> {
