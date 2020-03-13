@@ -203,25 +203,31 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
-            if (needsContentInStrategy) {
-                try (HttpResponseDuplicator duplicator =
-                             response.toDuplicator(derivedCtx.eventLoop(), derivedCtx.maxResponseLength())) {
-                    final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
-                            duplicator.duplicate(), contentPreviewLength);
-                    final HttpResponse duplicated = duplicator.duplicate();
-                    retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse)
-                                              .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                                                    originalReq, returnedRes, future,
-                                                                    duplicated, duplicator::abort));
+            try {
+                if (needsContentInStrategy) {
+                    try (HttpResponseDuplicator duplicator =
+                                 response.toDuplicator(derivedCtx.eventLoop(),
+                                                       derivedCtx.maxResponseLength())) {
+                        final ContentPreviewResponse contentPreviewResponse = new ContentPreviewResponse(
+                                duplicator.duplicate(), contentPreviewLength);
+                        final HttpResponse duplicated = duplicator.duplicate();
+                        retryStrategyWithContent().shouldRetry(derivedCtx, contentPreviewResponse)
+                                                  .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                                        originalReq, returnedRes, future,
+                                                                        duplicated, duplicator::abort));
+                    }
+                } else {
+                    final Throwable responseCause =
+                            log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+                    final Runnable originalResClosingTask =
+                            responseCause == null ? response::abort : () -> response.abort(responseCause);
+                    retryStrategy().shouldRetry(derivedCtx, responseCause)
+                                   .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
+                                                         originalReq, returnedRes, future, response,
+                                                         originalResClosingTask));
                 }
-            } else {
-                final Throwable responseCause =
-                        log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
-                final Runnable originalResClosingTask =
-                        responseCause == null ? response::abort : () -> response.abort(responseCause);
-                retryStrategy().shouldRetry(derivedCtx, responseCause)
-                               .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator, originalReq,
-                                                     returnedRes, future, response, originalResClosingTask));
+            } catch (Throwable t) {
+                handleException(ctx, rootReqDuplicator, future, t, false);
             }
         });
     }

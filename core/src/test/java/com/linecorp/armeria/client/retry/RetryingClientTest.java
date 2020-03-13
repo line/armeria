@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -570,6 +571,19 @@ class RetryingClientTest {
         assertThatThrownBy(() -> client.get("/").aggregate().join())
                 .hasCauseExactlyInstanceOf(AnticipatedException.class);
         assertThat(retryCounter.get()).isEqualTo(5);
+    }
+
+    @Test
+    void exceptionInStrategy() {
+        final IllegalStateException exception = new IllegalStateException("foo");
+        final RetryStrategy strategy = (ctx, cause) -> {
+            throw exception;
+        };
+
+        final WebClient client = client(strategy);
+        assertThatThrownBy(client.get("/").aggregate()::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseReference(exception);
     }
 
     @Test
