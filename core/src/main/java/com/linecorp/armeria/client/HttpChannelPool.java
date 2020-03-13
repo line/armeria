@@ -416,7 +416,8 @@ final class HttpChannelPool implements AsyncCloseable {
                 if (protocol == null || closeable.isClosing()) {
                     channel.close();
                     promise.completeExceptionally(
-                            new UnprocessedRequestException(ClosedSessionException.get()));
+                            new UnprocessedRequestException(
+                                    new ClosedSessionException("acquired an unhealthy connection")));
                     return;
                 }
 

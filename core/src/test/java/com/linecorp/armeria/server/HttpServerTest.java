@@ -80,6 +80,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.encoding.EncodingService;
@@ -557,8 +558,13 @@ class HttpServerTest {
 
         // Because the service has written out the content partially, there's no way for the service
         // to reply with '503 Service Unavailable', so it will just close the stream.
+
+        final Class<? extends Throwable> expectedCauseType =
+                client.scheme().sessionProtocol().isMultiplex() ?
+                ClosedStreamException.class : ClosedSessionException.class;
+
         assertThatThrownBy(f::get).isInstanceOf(ExecutionException.class)
-                                  .hasCauseInstanceOf(ClosedSessionException.class);
+                                  .hasCauseInstanceOf(expectedCauseType);
     }
 
     /**
@@ -574,8 +580,13 @@ class HttpServerTest {
 
         // Because the service has written out the content partially, there's no way for the service
         // to reply with '503 Service Unavailable', so it will just close the stream.
+
+        final Class<? extends Throwable> expectedCauseType =
+                client.scheme().sessionProtocol().isMultiplex() ?
+                ClosedStreamException.class : ClosedSessionException.class;
+
         assertThatThrownBy(f::get).isInstanceOf(ExecutionException.class)
-                                  .hasCauseInstanceOf(ClosedSessionException.class);
+                                  .hasCauseInstanceOf(expectedCauseType);
     }
 
     @ParameterizedTest

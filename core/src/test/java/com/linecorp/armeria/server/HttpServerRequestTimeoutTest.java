@@ -32,9 +32,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -152,7 +152,7 @@ class HttpServerRequestTimeoutTest {
     void requestTimeout_reset_stream() {
         assertThatThrownBy(() -> clientWithoutTimeout.get("/timeout-while-writing").aggregate().join())
                 .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(ClosedSessionException.class);
+                .hasCauseInstanceOf(ClosedStreamException.class);
     }
 
     @Test
