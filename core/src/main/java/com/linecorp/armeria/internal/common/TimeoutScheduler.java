@@ -18,9 +18,6 @@ package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.util.TimeoutMode.EXTEND;
-import static com.linecorp.armeria.common.util.TimeoutMode.FROM_NOW;
-import static com.linecorp.armeria.common.util.TimeoutMode.FROM_START;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
@@ -67,12 +64,16 @@ public final class TimeoutScheduler {
     }
 
     public void setTimeoutMillis(TimeoutMode mode, long timeoutMillis) {
-        if (mode == FROM_NOW) {
-            setTimeoutAfterMillis(timeoutMillis);
-        } else if (mode == FROM_START) {
-            setTimeoutMillis(timeoutMillis);
-        } else if (mode == EXTEND) {
-            extendTimeoutMillis(timeoutMillis);
+        switch (mode) {
+            case FROM_NOW:
+                setTimeoutAfterMillis(timeoutMillis);
+                break;
+            case FROM_START:
+                setTimeoutMillis(timeoutMillis);
+                break;
+            case EXTEND:
+                extendTimeoutMillis(timeoutMillis);
+                break;
         }
     }
 
