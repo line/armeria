@@ -93,20 +93,8 @@ class DefaultServiceRequestContextTest {
         assertThat(derivedCtx.path()).isEqualTo(originalCtx.path());
         assertThat(derivedCtx.maxRequestLength()).isEqualTo(originalCtx.maxRequestLength());
         assertThat(derivedCtx.requestTimeoutMillis()).isEqualTo(originalCtx.requestTimeoutMillis());
-        assertThat(derivedCtx.additionalResponseHeaders().get(HttpHeaderNames.of("my-header#1"))).isNull();
-        assertThat(derivedCtx.additionalResponseHeaders().get(HttpHeaderNames.of("my-header#2")))
-                .isEqualTo("value#2");
-        assertThat(derivedCtx.additionalResponseHeaders().get(HttpHeaderNames.of("my-header#3")))
-                .isEqualTo("value#3");
-        assertThat(derivedCtx.additionalResponseHeaders().get(HttpHeaderNames.of("my-header#4")))
-                .isEqualTo("value#4");
-        assertThat(derivedCtx.additionalResponseTrailers().get(HttpHeaderNames.of("my-trailer#1"))).isNull();
-        assertThat(derivedCtx.additionalResponseTrailers().get(HttpHeaderNames.of("my-trailer#2")))
-                .isEqualTo("value#2");
-        assertThat(derivedCtx.additionalResponseTrailers().get(HttpHeaderNames.of("my-trailer#3")))
-                .isEqualTo("value#3");
-        assertThat(derivedCtx.additionalResponseTrailers().get(HttpHeaderNames.of("my-trailer#4")))
-                .isEqualTo("value#4");
+        assertThat(derivedCtx.additionalResponseHeaders()).isSameAs(originalCtx.additionalResponseHeaders());
+        assertThat(derivedCtx.additionalResponseTrailers()).isSameAs(originalCtx.additionalResponseTrailers());
         // the attribute is derived as well
         assertThat(derivedCtx.attr(foo)).isEqualTo("foo");
 
