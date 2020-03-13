@@ -86,7 +86,7 @@ public abstract class AbstractRequestContextAwareFuture<T> extends EventLoopChec
         try {
             handle = ctx.push();
         } catch (Throwable th) {
-            logger.warn("An error occurred when pushing a context", th);
+            logger.warn("An error occurred while pushing a context", th);
             throw th;
         }
 
@@ -102,7 +102,7 @@ public abstract class AbstractRequestContextAwareFuture<T> extends EventLoopChec
         try {
             handle = ctx.push();
         } catch (Throwable th) {
-            logger.warn("An error occurred when pushing a context", th);
+            logger.warn("An error occurred while pushing a context", th);
             throw th;
         }
 
