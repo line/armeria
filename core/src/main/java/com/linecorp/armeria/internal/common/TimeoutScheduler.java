@@ -65,10 +65,10 @@ public final class TimeoutScheduler {
 
     public void setTimeoutMillis(TimeoutMode mode, long timeoutMillis) {
         switch (mode) {
-            case FROM_NOW:
+            case SET_FROM_NOW:
                 setTimeoutAfterMillis(timeoutMillis);
                 break;
-            case FROM_START:
+            case SET_FROM_START:
                 setTimeoutMillis(timeoutMillis);
                 break;
             case EXTEND:

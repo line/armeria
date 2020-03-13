@@ -153,7 +153,7 @@ class ServerTest {
                             if ("/timeout-not".equals(ctx.path())) {
                                ctx.clearRequestTimeout();
                             } else {
-                                ctx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, requestTimeoutMillis);
+                                ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis);
                             }
                             return delegate().serve(ctx, req);
                         }

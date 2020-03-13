@@ -346,7 +346,7 @@ class GrpcServiceServerTest {
 
         @Override
         public void timesOut(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            ServiceRequestContext.current().setRequestTimeoutMillis(TimeoutMode.FROM_NOW, 100);
+            ServiceRequestContext.current().setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, 100);
         }
     }
 

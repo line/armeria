@@ -324,7 +324,7 @@ public interface ServiceRequestContext extends RequestContext {
      * Note that the specified {@code requestTimeout} must be positive.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      * This method is a shortcut for
-     * {@code setRequestTimeoutMillis(TimeoutMode.FROM_NOW, requestTimeoutMillis)}.
+     * {@code setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis)}.
      *
      * <p>For example:
      * <pre>{@code
@@ -337,7 +337,7 @@ public interface ServiceRequestContext extends RequestContext {
      *
      */
     default void setRequestTimeoutMillis(long requestTimeoutMillis) {
-        setRequestTimeoutMillis(TimeoutMode.FROM_NOW, requestTimeoutMillis);
+        setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis);
     }
 
     /**
@@ -347,9 +347,9 @@ public interface ServiceRequestContext extends RequestContext {
      *
      * <table>
      * <tr><th>Timeout mode</th><th>description</th></tr>
-     * <tr><td>{@link TimeoutMode#FROM_NOW}</td>
+     * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>
-     * <tr><td>{@link TimeoutMode#FROM_START}</td>
+     * <tr><td>{@link TimeoutMode#SET_FROM_START}</td>
      *     <td>Sets a given amount of timeout since the current {@link Request} began processing.</td></tr>
      * <tr><td>{@link TimeoutMode#EXTEND}</td>
      *     <td>Extends the previously scheduled timeout by the given amount of timeout.</td></tr>
@@ -359,13 +359,13 @@ public interface ServiceRequestContext extends RequestContext {
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
      * // Schedules a timeout from the start time of the request
-     * ctx.setRequestTimeoutMillis(TimeoutMode.FROM_START, 2000);
+     * ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 2000);
      * assert ctx.requestTimeoutMillis() == 2000;
-     * ctx.setRequestTimeoutMillis(TimeoutMode.FROM_START, 1000);
+     * ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
      * assert ctx.requestTimeoutMillis() == 1000;
      *
      * // Schedules timeout after 3 seconds from now.
-     * ctx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, 3000);
+     * ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, 3000);
      *
      * // Extends the previously scheduled timeout.
      * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
@@ -382,7 +382,7 @@ public interface ServiceRequestContext extends RequestContext {
      * the corresponding {@link Response} is not sent completely within the specified amount time from now.
      * Note that the specified {@code requestTimeout} must be positive.
      * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
-     * This method is a shortcut for {@code setRequestTimeout(TimeoutMode.FROM_NOW, requestTimeout)}.
+     * This method is a shortcut for {@code setRequestTimeout(TimeoutMode.SET_FROM_NOW, requestTimeout)}.
      *
      * <p>For example:
      * <pre>{@code
@@ -395,7 +395,7 @@ public interface ServiceRequestContext extends RequestContext {
      *
      */
     default void setRequestTimeout(Duration requestTimeout) {
-        setRequestTimeout(TimeoutMode.FROM_NOW, requestTimeout);
+        setRequestTimeout(TimeoutMode.SET_FROM_NOW, requestTimeout);
     }
 
     /**
@@ -405,9 +405,9 @@ public interface ServiceRequestContext extends RequestContext {
      *
      * <table>
      * <tr><th>Timeout mode</th><th>description</th></tr>
-     * <tr><td>{@link TimeoutMode#FROM_NOW}</td>
+     * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>
-     * <tr><td>{@link TimeoutMode#FROM_START}</td>
+     * <tr><td>{@link TimeoutMode#SET_FROM_START}</td>
      *     <td>Sets a given amount of timeout since the current {@link Request} began processing.</td></tr>
      * <tr><td>{@link TimeoutMode#EXTEND}</td>
      *     <td>Extends the previously scheduled timeout by the given amount of timeout.</td></tr>
@@ -417,13 +417,13 @@ public interface ServiceRequestContext extends RequestContext {
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
      * // Schedules a timeout from the start time of the request
-     * ctx.setRequestTimeout(TimeoutMode.FROM_START, Duration.ofSeconds(2));
+     * ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, Duration.ofSeconds(2));
      * assert ctx.requestTimeoutMillis() == 2000;
-     * ctx.setRequestTimeout(TimeoutMode.FROM_START, Duration.ofSeconds(1));
+     * ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, Duration.ofSeconds(1));
      * assert ctx.requestTimeoutMillis() == 1000;
      *
      * // Schedules timeout after 3 seconds from now.
-     * ctx.setRequestTimeout(TimeoutMode.FROM_NOW, Duration.ofSeconds(3));
+     * ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(3));
      *
      * // Extends the previously scheduled timeout.
      * long oldRequestTimeoutMillis = ctx.requestTimeoutMillis();
@@ -502,11 +502,12 @@ public interface ServiceRequestContext extends RequestContext {
      *
      * @param requestTimeoutMillis the amount of time allowed in milliseconds from now
      *
-     * @deprecated Use {@link #setRequestTimeoutMillis(TimeoutMode, long)}} with {@link TimeoutMode#FROM_NOW}.
+     * @deprecated Use {@link #setRequestTimeoutMillis(TimeoutMode, long)}}
+     *             with {@link TimeoutMode#SET_FROM_NOW}.
      */
     @Deprecated
     default void setRequestTimeoutAfterMillis(long requestTimeoutMillis) {
-        setRequestTimeoutMillis(TimeoutMode.FROM_NOW, requestTimeoutMillis);
+        setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis);
     }
 
     /**
@@ -524,7 +525,7 @@ public interface ServiceRequestContext extends RequestContext {
      *
      * @param requestTimeout the amount of time allowed from now
      *
-     * @deprecated Use {@link #setRequestTimeout(TimeoutMode, Duration)}} with {@link TimeoutMode#FROM_NOW}.
+     * @deprecated Use {@link #setRequestTimeout(TimeoutMode, Duration)}} with {@link TimeoutMode#SET_FROM_NOW}.
      */
     @Deprecated
     default void setRequestTimeoutAfter(Duration requestTimeout) {

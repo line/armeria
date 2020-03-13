@@ -270,13 +270,13 @@ class DefaultClientRequestContextTest {
 
         final long passedTimeMillis1 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
-        ctx.setResponseTimeoutMillis(TimeoutMode.FROM_NOW, 1000);
+        ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1000);
         assertThat(ctx.responseTimeoutMillis()).isBetween(passedTimeMillis1 + 1000 - tolerance,
                                                           passedTimeMillis1 + 1000 + tolerance);
         Thread.sleep(1000);
         final long passedTimeMillis2 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
-        ctx.setResponseTimeout(TimeoutMode.FROM_NOW, Duration.ofSeconds(2));
+        ctx.setResponseTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(2));
         assertThat(ctx.responseTimeoutMillis()).isBetween(passedTimeMillis2 + 2000 - tolerance,
                                                           passedTimeMillis2 + 2000 + tolerance);
     }
@@ -285,11 +285,11 @@ class DefaultClientRequestContextTest {
     void setResponseTimeoutAfterWithNonPositive() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
-        assertThatThrownBy(() -> ctx.setResponseTimeoutMillis(TimeoutMode.FROM_NOW, 0))
+        assertThatThrownBy(() -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("(expected: > 0)");
 
-        assertThatThrownBy(() -> ctx.setResponseTimeoutMillis(TimeoutMode.FROM_NOW, -10))
+        assertThatThrownBy(() -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, -10))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("(expected: > 0)");
     }
@@ -354,30 +354,30 @@ class DefaultClientRequestContextTest {
     }
 
     @Test
-    void setResponseTimeout() {
+    void setResponseTimeoutFromStart() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
 
         final TimeoutController timeoutController = mock(TimeoutController.class);
         ctx.setResponseTimeoutController(timeoutController);
 
-        ctx.setResponseTimeoutMillis(1000);
+        ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(1000);
-        ctx.setResponseTimeoutMillis(2000);
+        ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 2000);
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(2000);
-        ctx.setResponseTimeoutMillis(0);
+        ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 0);
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }
 
     @Test
-    void setResponseTimeoutZero() {
+    void setResponseTimeoutZeroFromStart() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
 
         final TimeoutController timeoutController = mock(TimeoutController.class);
         ctx.setResponseTimeoutController(timeoutController);
 
-        ctx.setResponseTimeoutMillis(0);
+        ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 0);
         verify(timeoutController, timeout(1000)).cancelTimeout();
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }

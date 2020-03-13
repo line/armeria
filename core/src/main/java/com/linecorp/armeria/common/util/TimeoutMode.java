@@ -25,11 +25,11 @@ public enum TimeoutMode {
     /**
      * Schedules a timeout from the current time.
      */
-    FROM_NOW,
+    SET_FROM_NOW,
     /**
      * Schedules a timeout from the start time of the {@link Request}.
      */
-    FROM_START,
+    SET_FROM_START,
     /**
      * Extends the previously scheduled timeout.
      */

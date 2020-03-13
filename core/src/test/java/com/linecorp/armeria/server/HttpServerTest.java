@@ -417,7 +417,8 @@ class HttpServerTest {
                             if (serverRequestTimeoutMillis == 0) {
                                 ctx.clearRequestTimeout();
                             } else {
-                                ctx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, serverRequestTimeoutMillis);
+                                ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW,
+                                                            serverRequestTimeoutMillis);
                             }
                             ctx.setMaxRequestLength(serverMaxRequestLength);
                             ctx.log().whenComplete().thenAccept(log -> {
@@ -920,7 +921,7 @@ class HttpServerTest {
                                          if (clientResponseTimeoutMillis == 0) {
                                             ctx.clearResponseTimeout();
                                          } else {
-                                             ctx.setResponseTimeoutMillis(TimeoutMode.FROM_NOW,
+                                             ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW,
                                                                           clientResponseTimeoutMillis);
                                          }
                                          ctx.setMaxResponseLength(clientMaxResponseLength);

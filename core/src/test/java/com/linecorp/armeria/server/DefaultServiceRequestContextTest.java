@@ -63,7 +63,7 @@ class DefaultServiceRequestContextTest {
         };
 
         defaultCtx.setRequestTimeoutController(new DefaultTimeoutController(timeoutTask, ctx.eventLoop()));
-        defaultCtx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, 1);
+        defaultCtx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1);
 
         await().timeout(Duration.ofSeconds(1))
                .untilAsserted(() -> assertThat(ctx.isTimedOut()).isTrue());
@@ -170,13 +170,13 @@ class DefaultServiceRequestContextTest {
 
         final long passedTimeMillis1 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
-        ctx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, 1000);
+        ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1000);
         assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis1 + 1000 - tolerance,
                                                          passedTimeMillis1 + 1000 + tolerance);
         Thread.sleep(1000);
         final long passedTimeMillis2 = TimeUnit.NANOSECONDS.toMillis(
                 System.nanoTime() - timeoutController.startTimeNanos());
-        ctx.setRequestTimeout(TimeoutMode.FROM_NOW, Duration.ofSeconds(2));
+        ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(2));
         assertThat(ctx.requestTimeoutMillis()).isBetween(passedTimeMillis2 + 2000 - tolerance,
                                                          passedTimeMillis2 + 2000 + tolerance);
     }
@@ -185,11 +185,11 @@ class DefaultServiceRequestContextTest {
     void setRequestTimeoutAfterWithNonPositive() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
-        assertThatThrownBy(() -> ctx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, 0))
+        assertThatThrownBy(() -> ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("(expected: > 0)");
 
-        assertThatThrownBy(() -> ctx.setRequestTimeoutMillis(TimeoutMode.FROM_NOW, -10))
+        assertThatThrownBy(() -> ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, -10))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("(expected: > 0)");
     }
@@ -242,20 +242,20 @@ class DefaultServiceRequestContextTest {
     }
 
     @Test
-    void setRequestTimeout() {
+    void setRequestTimeoutFromStart() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
 
         final TimeoutController timeoutController = mock(TimeoutController.class);
         ctx.setRequestTimeoutController(timeoutController);
 
-        ctx.setRequestTimeoutMillis(1000);
+        ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
-        ctx.setRequestTimeoutMillis(2000);
+        ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 2000);
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(2000);
-        ctx.setRequestTimeout(Duration.ofSeconds(3));
+        ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, Duration.ofSeconds(3));
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(3000);
-        ctx.setRequestTimeoutMillis(0);
+        ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 0);
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }
 
@@ -267,7 +267,7 @@ class DefaultServiceRequestContextTest {
         final TimeoutController timeoutController = mock(TimeoutController.class);
         ctx.setRequestTimeoutController(timeoutController);
 
-        ctx.setRequestTimeoutMillis(0);
+        ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 0);
         verify(timeoutController, timeout(1000)).cancelTimeout();
         assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
     }

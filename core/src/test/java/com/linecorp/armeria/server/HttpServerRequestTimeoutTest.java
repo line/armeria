@@ -51,7 +51,7 @@ class HttpServerRequestTimeoutTest {
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
-                              .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.FROM_NOW,
+                              .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
                                                                    Duration.ofMillis(300)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
@@ -87,8 +87,8 @@ class HttpServerRequestTimeoutTest {
                   ctx.clearRequestTimeout();
                   return delegate.serve(ctx, req);
               })
-              .decorator("/timeout-by-decorator/after", (delegate, ctx, req) -> {
-                  ctx.setRequestTimeout(TimeoutMode.FROM_NOW, Duration.ofSeconds(2));
+              .decorator("/timeout-by-decorator/from_now", (delegate, ctx, req) -> {
+                  ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(2));
                   return delegate.serve(ctx, req);
               });
         }
@@ -102,7 +102,7 @@ class HttpServerRequestTimeoutTest {
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(100))
-                              .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.FROM_NOW,
+                              .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
                                                                    Duration.ofMillis(150)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
@@ -111,12 +111,12 @@ class HttpServerRequestTimeoutTest {
                   ctx.setRequestTimeoutAt(Instant.now().plusSeconds(1));
                   return delegate.serve(ctx, req);
               })
-              .decorator("/timeout-by-decorator/after", (delegate, ctx, req) -> {
-                  ctx.setRequestTimeout(TimeoutMode.FROM_NOW, Duration.ofSeconds(1));
+              .decorator("/timeout-by-decorator/from_now", (delegate, ctx, req) -> {
+                  ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(1));
                   return delegate.serve(ctx, req);
               })
-              .decorator("/timeout-by-decorator/set", (delegate, ctx, req) -> {
-                  ctx.setRequestTimeout(Duration.ofSeconds(1));
+              .decorator("/timeout-by-decorator/from_start", (delegate, ctx, req) -> {
+                  ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, Duration.ofSeconds(1));
                   assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
                   return delegate.serve(ctx, req);
               });
@@ -168,7 +168,7 @@ class HttpServerRequestTimeoutTest {
             "/timeout-by-decorator/extend",
             "/timeout-by-decorator/deadline",
             "/timeout-by-decorator/clear",
-            "/timeout-by-decorator/after",
+            "/timeout-by-decorator/from_now",
     })
     void extendRequestTimeoutByDecorator(String path) {
         final AggregatedHttpResponse response =
@@ -179,8 +179,8 @@ class HttpServerRequestTimeoutTest {
     @ParameterizedTest
     @CsvSource({
             "/timeout-by-decorator/deadline",
-            "/timeout-by-decorator/after",
-            "/timeout-by-decorator/set",
+            "/timeout-by-decorator/from_now",
+            "/timeout-by-decorator/from_start",
     })
     void limitRequestTimeoutByDecorator(String path) {
         final AggregatedHttpResponse response =

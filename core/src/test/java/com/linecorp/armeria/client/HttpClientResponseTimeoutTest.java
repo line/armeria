@@ -72,7 +72,7 @@ class HttpClientResponseTimeoutTest {
                 .builder(server.httpUri())
                 .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
                 .decorator((delegate, ctx, req) -> {
-                    ctx.setResponseTimeoutMillis(1000);
+                    ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
                     assertThat(ctx.responseTimeoutMillis()).isEqualTo(1000);
                     return delegate.execute(ctx, req);
                 })
@@ -111,8 +111,8 @@ class HttpClientResponseTimeoutTest {
                 throws Exception {
             final Stream<Consumer<? super ClientRequestContext>> timeoutCustomizers = Stream.of(
                     ctx -> ctx.setResponseTimeoutAt(Instant.now().minusSeconds(1)),
-                    ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.FROM_NOW, 1000),
-                    ctx -> ctx.setResponseTimeoutMillis(1000)
+                    ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1000),
+                    ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000)
             );
             return timeoutCustomizers.map(Arguments::of);
         }
