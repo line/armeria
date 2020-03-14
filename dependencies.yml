@@ -4,11 +4,11 @@
 
 boms:
   - com.fasterxml.jackson:jackson-bom:2.10.3
-  - io.dropwizard.metrics:metrics-bom:4.1.4
-  - io.grpc:grpc-bom:1.27.2
+  - io.dropwizard.metrics:metrics-bom:4.1.5
+  - io.grpc:grpc-bom:1.28.0
   - io.micrometer:micrometer-bom:1.3.5
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.46.Final
+  - io.netty:netty-bom:4.1.47.Final
   - io.zipkin.brave:brave-bom:5.9.5
   - org.eclipse.jetty:jetty-bom:9.4.27.v20200227
   - org.junit:junit-bom:5.6.0
@@ -57,13 +57,13 @@ com.github.node-gradle:
   gradle-node-plugin: { version: '2.2.3' }
 
 com.google.api:
-  gax-grpc: { version: '1.53.1' }
+  gax-grpc: { version: '1.54.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.dagger:
-  dagger: { version: &DAGGER_VERSION '2.26' }
+  dagger: { version: &DAGGER_VERSION '2.27' }
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
@@ -112,7 +112,7 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.12' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.29' }
+  checkstyle: { version: '8.30' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.0' }
@@ -237,7 +237,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.18'
+    version: '2.2.19'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -295,7 +295,7 @@ net.javacrumbs.future-converter:
   future-converter-rxjava2-java8: { version: 1.2.0 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.13.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.14.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -323,7 +323,7 @@ org.apache.hbase:
 
 org.apache.httpcomponents:
   httpclient:
-    version: '4.5.11'
+    version: '4.5.12'
     exclusions:
     - commons-logging:commons-logging
 
@@ -418,7 +418,7 @@ org.jetbrains.kotlin:
   kotlin-allopen: { version: &KOTLIN_VERSION '1.3.70' }
 
 org.jetbrains.kotlinx:
-  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.3' }
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.4' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
@@ -426,10 +426,10 @@ org.jlleitschuh.gradle:
   ktlint-gradle: { version: '9.2.1' }
 
 org.jsoup:
-  jsoup: { version: '1.12.2' }
+  jsoup: { version: '1.13.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.2.4' }
+  mockito-core: { version: &MOCKITO_VERSION '3.3.3' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
