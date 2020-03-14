@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.ClientFactory;
 
 /**
@@ -121,4 +123,12 @@ public abstract class ProxyConfig {
      * Returns the proxy type.
      */
     public abstract ProxyType proxyType();
+
+    @Nullable
+    protected static String maskPassword(@Nullable String username, @Nullable String password) {
+        if (username == null && password == null) {
+            return null;
+        }
+        return "****";
+    }
 }

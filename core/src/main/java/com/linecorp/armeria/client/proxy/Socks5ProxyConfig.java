@@ -76,7 +76,8 @@ public final class Socks5ProxyConfig extends ProxyConfig {
                           .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
-                          .add("password", "****")
+                          .add("password", maskPassword(username(), password()))
+                          .omitNullValues()
                           .toString();
     }
 }
