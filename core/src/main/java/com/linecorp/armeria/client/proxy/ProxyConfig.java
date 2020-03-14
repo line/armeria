@@ -125,10 +125,7 @@ public abstract class ProxyConfig {
     public abstract ProxyType proxyType();
 
     @Nullable
-    protected static String maskPassword(@Nullable String username, @Nullable String password) {
-        if (username == null && password == null) {
-            return null;
-        }
-        return "****";
+    static String maskPassword(@Nullable String username, @Nullable String password) {
+        return username != null ? "****" : null;
     }
 }
