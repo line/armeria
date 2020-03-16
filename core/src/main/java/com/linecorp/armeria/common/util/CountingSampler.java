@@ -58,8 +58,8 @@ final class CountingSampler<T> implements Sampler<T> {
      * @param probability {@code 0.0} means never sample, {@code 1.0} means always sample.
      *                    Otherwise minimum probability is between {@code 0.01} and {@code 1.0}.
      */
-    static <T> Sampler<T> create(double probability) {
-        final int percent = (int) (probability * 100.0);
+    static <T> Sampler<T> create(float probability) {
+        final int percent = (int) (probability * 100.0f);
         checkArgument(percent >= 0 && percent <= 100,
                       "probability: %s (expected: 0.0 <= probability <= 1.0)", probability);
         if (percent == 0) {
