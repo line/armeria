@@ -83,7 +83,7 @@ final class Samplers {
         try {
             switch (key) {
                 case "random":
-                    return Sampler.random(Double.parseDouble(value));
+                    return Sampler.random(Float.parseFloat(value));
                 case "rate-limit":
                 case "rate-limiting":
                 case "rate-limited":

@@ -49,7 +49,7 @@ public interface Sampler<T> {
      * @param probability the probability expressed as a floating point number
      *                    between {@code 0.0} and {@code 1.0}.
      */
-    static <T> Sampler<T> random(double probability) {
+    static <T> Sampler<T> random(float probability) {
         return CountingSampler.create(probability);
     }
 
