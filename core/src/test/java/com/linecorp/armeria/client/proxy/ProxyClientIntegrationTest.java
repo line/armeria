@@ -44,7 +44,6 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
@@ -84,6 +83,7 @@ import io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
 import io.netty.handler.codec.socksx.v5.Socks5Message;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.ReferenceCountUtil;
@@ -293,7 +293,7 @@ public class ProxyClientIntegrationTest {
         final CompletableFuture<AggregatedHttpResponse> responseFuture =
                 webClient.get(PROXY_PATH).aggregate();
         assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasCauseInstanceOf(ClosedSessionException.class);
+                                                .hasCauseInstanceOf(ProxyConnectException.class);
     }
 
     @Test
@@ -340,7 +340,7 @@ public class ProxyClientIntegrationTest {
                 webClient.get(PROXY_PATH).aggregate();
 
         assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasCauseInstanceOf(ClosedSessionException.class);
+                                                .hasCauseInstanceOf(ProxyConnectException.class);
     }
 
     @Test
@@ -358,7 +358,7 @@ public class ProxyClientIntegrationTest {
                 webClient.get(PROXY_PATH).aggregate();
 
         assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
-                                                .hasCauseInstanceOf(ClosedSessionException.class);
+                                                .hasCauseInstanceOf(ProxyConnectException.class);
     }
 
     static class ProxySuccessEvent {
