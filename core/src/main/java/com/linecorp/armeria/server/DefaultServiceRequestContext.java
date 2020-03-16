@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -35,8 +36,6 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
-
-import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -514,7 +513,7 @@ public final class DefaultServiceRequestContext
         buf.append("[sreqId=").append(sreqId)
            .append(", chanId=").append(chanId);
 
-        if (!Objects.equal(caddr, raddr.getAddress())) {
+        if (!Objects.equals(caddr, raddr.getAddress())) {
             buf.append(", caddr=");
             TextFormatter.appendInetAddress(buf, caddr);
         }
