@@ -560,7 +560,6 @@ public final class DefaultClientRequestContext
             return strVal;
         }
         return toStringSlow();
-
     }
 
     private String toStringSlow() {

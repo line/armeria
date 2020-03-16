@@ -492,7 +492,6 @@ public final class DefaultServiceRequestContext
         } else {
             return toStringSlow();
         }
-
     }
 
     private String toStringSlow() {
