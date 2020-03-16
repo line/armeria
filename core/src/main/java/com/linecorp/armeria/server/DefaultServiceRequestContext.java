@@ -495,9 +495,9 @@ public final class DefaultServiceRequestContext
     }
 
     private String toStringSlow() {
-        // Prepare all properties required for building a string representation,
-        // so that we don't have a chance of building two Strings using one StringBuilder
-        // provided by TemporaryThreadLocals.
+        // Prepare all properties required for building a String, so that we don't have a chance of
+        // building one String with a thread-local StringBuilder while building another String with
+        // the same StringBuilder. See TemporaryThreadLocals for more information.
         final String sreqId = id().shortText();
         final String chanId = ch.id().asShortText();
         final InetSocketAddress raddr = remoteAddress();
