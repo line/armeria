@@ -42,9 +42,14 @@ class SamplerTest {
         assertThat(Sampler.of("random=0.1")).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
             assertThat(sampler.sampleDecisions.cardinality()).isEqualTo(10);
         });
-
         assertThat(Sampler.of("random=0.1f")).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
             assertThat(sampler.sampleDecisions.cardinality()).isEqualTo(10);
+        });
+        assertThat(Sampler.of("random=0.01")).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
+            assertThat(sampler.sampleDecisions.cardinality()).isOne();
+        });
+        assertThat(Sampler.of("random=0.01f")).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
+            assertThat(sampler.sampleDecisions.cardinality()).isOne();
         });
 
         // 'rate-limit=<samples_per_sec>'
