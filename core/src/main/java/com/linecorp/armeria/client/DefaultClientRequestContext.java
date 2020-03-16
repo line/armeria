@@ -565,7 +565,8 @@ public final class DefaultClientRequestContext
 
     private String toStringSlow() {
         // Prepare all properties required for building a string representation,
-        // to follow our convention of not calling other methods while appending to TemporaryThreadLocals.
+        // so that we don't have a chance of building two Strings using one StringBuilder
+        // provided by TemporaryThreadLocals.
         final Channel ch = channel();
         final String creqId = id().shortText();
         final String sreqId = root() != null ? root().id().shortText() : null;
