@@ -48,7 +48,7 @@ public class CountingSamplerTest {
     @Test
     public void testSamplingRatePercentageRounding() {
         assertThat(CountingSampler.create(0.01f)).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
-            assertThat(sampler.sampleDecisions.cardinality()).isEqualTo(10);
+            assertThat(sampler.sampleDecisions.cardinality()).isEqualTo(1);
         });
     }
 
