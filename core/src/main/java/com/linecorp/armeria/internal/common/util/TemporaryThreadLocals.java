@@ -44,8 +44,8 @@ import io.netty.util.internal.EmptyArrays;
  * > assert "\"foo\"".equals(new A().toString());
  * }</pre></p>
  *
- * <p>A rule of thumb is to use the thread-local variables provided by this class in a narrow scope
- * where there's no chance of recursion or reentrance.</p>
+ * <p>A general rule of thumb is not to call other methods while using the thread-local variables provided by
+ * this class, unless you are sure the methods you're calling never uses the same thread-local variables.</p>
  */
 public final class TemporaryThreadLocals {
 
