@@ -332,9 +332,14 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private void fail(Throwable cause) {
         state = State.DONE;
-        logBuilder.endRequest(cause);
-        logBuilder.endResponse(cause);
         cancelSubscription();
+        logBuilder.endRequest(cause);
+        if (response.isOpen()) {
+            response.close(cause);
+        } else {
+            // To make it sure that the log is complete.
+            logBuilder.endResponse(cause);
+        }
     }
 
     private void cancelSubscription() {
@@ -353,9 +358,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             error = Http2Error.INTERNAL_ERROR;
         }
 
-        if (response.isOpen()) {
-            response.close(cause);
-        } else if (error.code() != Http2Error.CANCEL.code()) {
+        if (error.code() != Http2Error.CANCEL.code()) {
             Exceptions.logIfUnexpected(logger, ch,
                                        HttpSession.get(ch).protocol(),
                                        "a request publisher raised an exception", cause);
