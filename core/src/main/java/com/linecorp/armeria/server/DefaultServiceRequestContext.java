@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -35,6 +36,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.google.common.base.Objects;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -49,9 +52,11 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -75,6 +80,8 @@ public final class DefaultServiceRequestContext
     private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders>
             additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
+
+    private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
 
     private final Channel ch;
     private final ServiceConfig cfg;
@@ -173,20 +180,16 @@ public final class DefaultServiceRequestContext
     @Nonnull
     @Override
     public <A extends SocketAddress> A remoteAddress() {
-        final Channel ch = channel();
-        assert ch != null;
         @SuppressWarnings("unchecked")
-        final A addr = (A) ch.remoteAddress();
+        final A addr = (A) firstNonNull(ch.remoteAddress(), UNKNOWN_ADDR);
         return addr;
     }
 
     @Nonnull
     @Override
     public <A extends SocketAddress> A localAddress() {
-        final Channel ch = channel();
-        assert ch != null;
         @SuppressWarnings("unchecked")
-        final A addr = (A) ch.localAddress();
+        final A addr = (A) firstNonNull(ch.localAddress(), UNKNOWN_ADDR);
         return addr;
     }
 
@@ -289,6 +292,11 @@ public final class DefaultServiceRequestContext
     @Override
     public EventLoop eventLoop() {
         return ch.eventLoop();
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return ch.alloc();
     }
 
     @Nullable
@@ -467,11 +475,6 @@ public final class DefaultServiceRequestContext
         return log;
     }
 
-    @Override
-    public ByteBufAllocator alloc() {
-        return ch.alloc();
-    }
-
     /**
      * Sets the {@code requestTimeoutController} that is set to a new timeout when
      * the {@linkplain #requestTimeoutMillis()} request timeout} of the request is changed.
@@ -485,48 +488,45 @@ public final class DefaultServiceRequestContext
 
     @Override
     public String toString() {
-        String strVal = this.strVal;
         if (strVal != null) {
             return strVal;
-        }
-
-        final StringBuilder buf = new StringBuilder(108);
-        buf.append("[S]");
-
-        // Prepend the current channel information if available.
-        final Channel ch = channel();
-        final boolean hasChannel = ch != null;
-        if (hasChannel) {
-            buf.append(ch);
-
-            final InetAddress remote = ((InetSocketAddress) remoteAddress()).getAddress();
-            final InetAddress client = clientAddress();
-            if (remote != null && !remote.equals(client)) {
-                buf.append("[C:").append(client.getHostAddress()).append(']');
-            }
-        }
-
-        buf.append('[')
-           .append(sessionProtocol().uriText())
-           .append("://")
-           .append(virtualHost().defaultHostname());
-
-        final InetSocketAddress laddr = localAddress();
-        if (laddr != null) {
-            buf.append(':').append(laddr.getPort());
         } else {
-            buf.append(":-1"); // Port unknown.
+            return toStringSlow();
         }
 
-        buf.append(path())
-           .append('#')
-           .append(method())
+    }
+
+    private String toStringSlow() {
+        // Prepare all properties required for building a string representation,
+        // so we do not have any chance of nesting the use of TemporaryThreadLocals.
+        final String sreqId = id().shortText();
+        final String chanId = ch.id().asShortText();
+        final InetSocketAddress raddr = remoteAddress();
+        final InetSocketAddress laddr = localAddress();
+        final InetAddress caddr = clientAddress();
+        final String proto = sessionProtocol().uriText();
+        final String authority = virtualHost().defaultHostname();
+        final String path = path();
+        final String method = method().name();
+
+        // Build the string representation.
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("[sreqId=").append(sreqId)
+           .append(", chanId=").append(chanId);
+
+        if (!Objects.equal(caddr, raddr.getAddress())) {
+            buf.append(", caddr=");
+            TextFormatter.appendInetAddress(buf, caddr);
+        }
+
+        buf.append(", raddr=");
+        TextFormatter.appendSocketAddress(buf, raddr);
+        buf.append(", laddr=");
+        TextFormatter.appendSocketAddress(buf, laddr);
+        buf.append("][")
+           .append(proto).append("://").append(authority).append(path).append('#').append(method)
            .append(']');
 
-        strVal = buf.toString();
-        if (hasChannel) {
-            this.strVal = strVal;
-        }
-        return strVal;
+        return strVal = buf.toString();
     }
 }
