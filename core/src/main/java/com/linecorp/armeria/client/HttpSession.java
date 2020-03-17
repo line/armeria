@@ -51,9 +51,9 @@ interface HttpSession {
         }
 
         @Override
-        public boolean invoke(ClientRequestContext ctx, HttpRequest req, DecodedHttpResponse res) {
+        public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
+                           HttpRequest req, DecodedHttpResponse res) {
             res.close(ClosedSessionException.get());
-            return false;
         }
 
         @Override
@@ -63,6 +63,11 @@ interface HttpSession {
 
         @Override
         public void deactivate() {}
+
+        @Override
+        public int getAndIncrementNumRequestsSent() {
+            return 0;
+        }
     };
 
     static HttpSession get(Channel ch) {
@@ -90,9 +95,12 @@ interface HttpSession {
         return Integer.MAX_VALUE;
     }
 
-    boolean invoke(ClientRequestContext ctx, HttpRequest req, DecodedHttpResponse res);
+    void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
+                HttpRequest req, DecodedHttpResponse res);
 
     void retryWithH1C();
 
     void deactivate();
+
+    int getAndIncrementNumRequestsSent();
 }

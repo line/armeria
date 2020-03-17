@@ -129,7 +129,8 @@ public class HttpClientIdleTimeoutHandlerTest {
         }
 
         @Override
-        public boolean invoke(ClientRequestContext ctx, HttpRequest req, DecodedHttpResponse res) {
+        public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
+                           HttpRequest req, DecodedHttpResponse res) {
             throw new UnsupportedOperationException();
         }
 
@@ -141,6 +142,11 @@ public class HttpClientIdleTimeoutHandlerTest {
         @Override
         public void deactivate() {
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int getAndIncrementNumRequestsSent() {
+            return 0;
         }
     }
 }

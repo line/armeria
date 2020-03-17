@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -226,50 +225,11 @@ final class HttpClientDelegate implements HttpClient {
         }
     }
 
-    private void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,
-                           HttpRequest req, DecodedHttpResponse res) {
+    private static void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,
+                                  HttpRequest req, DecodedHttpResponse res) {
         final Channel channel = pooledChannel.get();
-        boolean needsRelease = true;
-        try {
-            final HttpSession session = HttpSession.get(channel);
-            res.init(session.inboundTrafficController());
-            final SessionProtocol sessionProtocol = session.protocol();
-
-            // Should never reach here.
-            if (sessionProtocol == null) {
-                needsRelease = false;
-                try {
-                    // TODO(minwoox): Make a test that handles this case
-                    final NullPointerException cause = new NullPointerException("sessionProtocol");
-                    handleEarlyRequestException(ctx, req, cause);
-                    res.close(cause);
-                } finally {
-                    channel.close();
-                }
-                return;
-            }
-
-            if (session.invoke(ctx, req, res)) {
-                needsRelease = false;
-
-                // Return the channel to the pool.
-                if (!sessionProtocol.isMultiplex()) {
-                    // If pipelining is enabled, return as soon as the request is fully sent.
-                    // If pipelining is disabled, return after the response is fully received.
-                    final CompletableFuture<Void> completionFuture =
-                            factory.useHttp1Pipelining() ? req.whenComplete() : res.whenComplete();
-                    completionFuture.handle((ret, cause) -> {
-                        pooledChannel.release();
-                        return null;
-                    });
-                } else {
-                    // HTTP/2 connections do not need to get returned.
-                }
-            }
-        } finally {
-            if (needsRelease) {
-                pooledChannel.release();
-            }
-        }
+        final HttpSession session = HttpSession.get(channel);
+        res.init(session.inboundTrafficController());
+        session.invoke(pooledChannel, ctx, req, res);
     }
 }
