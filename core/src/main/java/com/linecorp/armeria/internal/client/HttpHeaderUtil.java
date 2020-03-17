@@ -14,25 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
 import com.linecorp.armeria.common.util.Version;
 
 import io.netty.util.AsciiString;
 
-final class HttpHeaderUtil {
+/**
+ * Provides utility functions for internal use related with HTTP headers.
+ */
+public final class HttpHeaderUtil {
 
     private static final String CLIENT_ARTIFACT_ID = "armeria";
 
-    static final AsciiString USER_AGENT = AsciiString.cached(createUserAgentName());
-
-    static String hostHeader(String host, int port, int defaultPort) {
-        if (port == defaultPort) {
-            return host;
-        }
-
-        return host + ':' + port;
-    }
+    public static final AsciiString USER_AGENT = AsciiString.cached(createUserAgentName());
 
     private static String createUserAgentName() {
         final Version version = Version.get(CLIENT_ARTIFACT_ID, HttpHeaderUtil.class.getClassLoader());

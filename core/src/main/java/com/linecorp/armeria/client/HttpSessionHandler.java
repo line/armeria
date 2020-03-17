@@ -23,7 +23,6 @@ import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.util.concurrent.ScheduledFuture;
 
 import javax.annotation.Nullable;
@@ -37,8 +36,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
+import com.linecorp.armeria.internal.client.ClientHttp1ObjectEncoder;
+import com.linecorp.armeria.internal.client.ClientHttp2ObjectEncoder;
 import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -75,7 +74,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final Channel channel;
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
-    private final SocketAddress remoteAddress;
 
     /**
      * Whether the current channel is active or not.
@@ -115,8 +113,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
-        final SocketAddress remoteAddress = channel.remoteAddress();
-        this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
     }
@@ -171,7 +167,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
 
         final HttpRequestSubscriber reqSubscriber =
-                new HttpRequestSubscriber(channel, remoteAddress, requestEncoder, numRequestsSent,
+                new HttpRequestSubscriber(channel, requestEncoder, numRequestsSent,
                                           req, wrappedRes, ctx, writeTimeoutMillis);
         req.subscribe(reqSubscriber, channel.eventLoop(), WITH_POOLED_OBJECTS);
 
@@ -277,11 +273,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                requestEncoder = new Http1ObjectEncoder(channel, false, protocol.isTls());
+                requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
                 responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
             } else if (protocol == H2 || protocol == H2C) {
                 final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
-                requestEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
+                requestEncoder = new ClientHttp2ObjectEncoder(ctx, handler.encoder(), protocol);
                 responseDecoder = ctx.pipeline().get(Http2ClientConnectionHandler.class).responseDecoder();
             } else {
                 throw new Error(); // Should never reach here.

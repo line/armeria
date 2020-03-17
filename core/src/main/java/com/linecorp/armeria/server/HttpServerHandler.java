@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -59,10 +60,10 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.server.ServerHttp2ObjectEncoder;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -260,10 +261,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ChannelPipeline pipeline = ctx.pipeline();
         final Http2ConnectionHandler handler = pipeline.get(Http2ConnectionHandler.class);
         if (responseEncoder == null) {
-            responseEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
+            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(),
+                                                           config.isServerHeaderEnabled(),
+                                                           config.isDateHeaderEnabled());
         } else if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
-            responseEncoder = new Http2ObjectEncoder(ctx, handler.encoder());
+            responseEncoder = new ServerHttp2ObjectEncoder(ctx, handler.encoder(),
+                                                           config.isServerHeaderEnabled(),
+                                                           config.isDateHeaderEnabled());
         }
 
         // Update the connection-level flow-control window size.
@@ -440,8 +445,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             assert responseEncoder != null;
             final HttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req,
-                                               config.isServerHeaderEnabled(), config.isDateHeaderEnabled());
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
             reqCtx.setRequestTimeoutController(resSubscriber);
             res.subscribe(resSubscriber, eventLoop, WITH_POOLED_OBJECTS);
         }
@@ -551,7 +555,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final ResponseHeaders immutableResHeaders = resHeaders.build();
         ChannelFuture future = responseEncoder.writeHeaders(
-                req.id(), req.streamId(), immutableResHeaders, !hasContent);
+                req.id(), req.streamId(), immutableResHeaders, !hasContent,
+                HttpHeaders.of(), HttpHeaders.of());
         logBuilder.responseHeaders(immutableResHeaders);
         if (hasContent) {
             logBuilder.increaseResponseLength(resContent);

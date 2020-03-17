@@ -41,6 +41,7 @@ import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.server.ServerHttp1ObjectEncoder;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -159,7 +160,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        final Http1ObjectEncoder responseEncoder = new Http1ObjectEncoder(p.channel(), true, false);
+        final Http1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(p.channel(),
+                                                                                SessionProtocol.H1C,
+                                                                                config.isServerHeaderEnabled(),
+                                                                                config.isDateHeaderEnabled());
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
         configureIdleTimeoutHandler(p, false);
@@ -401,7 +405,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttpHandlers(ChannelHandlerContext ctx) {
             final Channel ch = ctx.channel();
             final ChannelPipeline p = ctx.pipeline();
-            final Http1ObjectEncoder writer = new Http1ObjectEncoder(ch, true, true);
+            final Http1ObjectEncoder writer = new ServerHttp1ObjectEncoder(ch, SessionProtocol.H1,
+                                                                           config.isServerHeaderEnabled(),
+                                                                           config.isDateHeaderEnabled());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),

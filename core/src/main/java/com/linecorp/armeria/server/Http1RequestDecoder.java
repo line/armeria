@@ -260,7 +260,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
 
         // Send a '100 Continue' response.
-        writer.writeHeaders(id, 1, CONTINUE_RESPONSE, false);
+        writer.writeHeaders(id, 1, CONTINUE_RESPONSE, false,
+                            com.linecorp.armeria.common.HttpHeaders.of(),
+                            com.linecorp.armeria.common.HttpHeaders.of());
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         nettyHeaders.remove(HttpHeaderNames.EXPECT);
@@ -279,7 +281,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
                                .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
                                .build();
-        writer.writeHeaders(id, 1, headers, false);
+        writer.writeHeaders(id, 1, headers, false,
+                            com.linecorp.armeria.common.HttpHeaders.of(),
+                            com.linecorp.armeria.common.HttpHeaders.of());
         writer.writeData(id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
     }
 

@@ -46,6 +46,8 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.client.HttpHeaderUtil;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -403,7 +405,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             //       because they are filled by Http2ClientUpgradeCodec.
 
             assert remoteAddress != null;
-            final String host = HttpHeaderUtil.hostHeader(
+            final String host = ArmeriaHttpUtil.authorityHeader(
                     remoteAddress.getHostString(), remoteAddress.getPort(), H1C.defaultPort());
 
             upgradeReq.headers().set(HttpHeaderNames.HOST, host);
