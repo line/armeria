@@ -45,19 +45,21 @@ public abstract class HttpObjectEncoder {
     /**
      * Writes an {@link HttpHeaders}.
      */
-    public final ChannelFuture writeHeaders(int id, int streamId, HttpHeaders headers, boolean endStream) {
-
+    public final ChannelFuture writeHeaders(int id, int streamId, HttpHeaders headers, boolean endStream,
+                                            HttpHeaders additionalHeaders, HttpHeaders additionalTrailers) {
         assert eventLoop().inEventLoop();
 
         if (closed) {
             return newClosedSessionFuture();
         }
 
-        return doWriteHeaders(id, streamId, headers, endStream);
+        return doWriteHeaders(id, streamId, headers, endStream, additionalHeaders, additionalTrailers);
     }
 
     protected abstract ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers,
-                                                    boolean endStream);
+                                                    boolean endStream,
+                                                    HttpHeaders additionalHeaders,
+                                                    HttpHeaders additionalTrailers);
 
     /**
      * Writes an {@link HttpData}.

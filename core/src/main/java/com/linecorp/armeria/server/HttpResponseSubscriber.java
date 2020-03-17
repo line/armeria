@@ -16,10 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isTrailerBlacklisted;
-
 import java.nio.channels.ClosedChannelException;
-import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -28,34 +25,27 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.DefaultTimeoutController;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
 final class HttpResponseSubscriber extends DefaultTimeoutController implements Subscriber<HttpObject> {
@@ -66,13 +56,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
     private static final AggregatedHttpResponse serviceUnavailableResponse =
             AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
-
-    private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
-            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
-
-    private static final String SERVER_HEADER =
-            "Armeria/" + Version.get("armeria", HttpResponseSubscriber.class.getClassLoader())
-                                .artifactVersion();
 
     enum State {
         NEEDS_HEADERS,
@@ -85,8 +68,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     private final HttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
     private final DefaultServiceRequestContext reqCtx;
-    private final boolean enableServerHeader;
-    private final boolean enableDateHeader;
 
     @Nullable
     private Subscription subscription;
@@ -96,15 +77,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
     private boolean loggedResponseHeadersFirstBytesTransferred;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
-                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
-                           boolean enableServerHeader, boolean enableDateHeader) {
+                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
         super(ctx.channel().eventLoop());
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
-        this.enableServerHeader = enableServerHeader;
-        this.enableDateHeader = enableDateHeader;
         setTimeoutTask(newTimeoutTask());
     }
 
@@ -142,6 +120,9 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         }
 
         boolean endOfStream = o.isEndOfStream();
+        final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
+        final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+
         switch (state) {
             case NEEDS_HEADERS: {
                 logBuilder().startResponse();
@@ -152,7 +133,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     return;
                 }
 
-                ResponseHeaders headers = (ResponseHeaders) o;
+                final ResponseHeaders headers = (ResponseHeaders) o;
                 final HttpStatus status = headers.status();
                 if (status.isInformational()) {
                     // Needs non-informational headers.
@@ -167,27 +148,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                     state = State.NEEDS_DATA_OR_TRAILERS;
                 }
 
-                final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
-                final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
-                if (enableServerHeader && !newHeaders.contains(HttpHeaderNames.SERVER)) {
-                    newHeaders.add(HttpHeaderNames.SERVER, SERVER_HEADER);
-                }
-
-                if (enableDateHeader && !newHeaders.contains(HttpHeaderNames.DATE)) {
-                    newHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
-                }
-
-                headers = newHeaders.build();
                 logBuilder().responseHeaders(headers);
-
-                final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-                if (endOfStream && !additionalTrailers.isEmpty()) {
-                    write(headers, false);
-                    o = additionalTrailers;
-                } else {
-                    o = headers;
-                }
-
                 break;
             }
             case NEEDS_TRAILERS: {
@@ -208,18 +169,14 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                                 " (service: " + service() + ')'));
                         return;
                     }
-                    final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-                    final HttpHeaders addedTrailers = fillAdditionalTrailers(trailers, additionalTrailers);
-                    logBuilder().responseTrailers(addedTrailers);
-                    o = addedTrailers;
+                    logBuilder().responseTrailers(trailers);
 
                     // Trailers always end the stream even if not explicitly set.
                     endOfStream = true;
                 } else if (endOfStream) { // Last DATA frame
-                    final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
                     if (!additionalTrailers.isEmpty()) {
                         write(o, false);
-                        o = additionalTrailers;
+                        o = HttpHeaders.of();
                     }
                 }
                 break;
@@ -232,7 +189,7 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
                 return;
         }
 
-        write(o, endOfStream);
+        write(o, endOfStream, additionalHeaders, additionalTrailers);
     }
 
     @Override
@@ -282,10 +239,9 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
         }
 
         if (state != State.DONE) {
-            final HttpHeaders additionalTrailers =
-                    fillAdditionalTrailers(HttpHeaders.of(), reqCtx.additionalResponseTrailers());
+            final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
             if (!additionalTrailers.isEmpty()) {
-                write(additionalTrailers, true);
+                write(HttpHeaders.of(), true, HttpHeaders.of(), additionalTrailers);
             } else {
                 write(HttpData.empty(), true);
             }
@@ -309,6 +265,11 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             return;
         }
 
+        write(o, endOfStream, HttpHeaders.of(), HttpHeaders.of());
+    }
+
+    private void write(HttpObject o, boolean endOfStream,
+                       HttpHeaders additionalHeaders, HttpHeaders additionalTrailers) {
         if (endOfStream) {
             setDone();
         }
@@ -322,7 +283,8 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             future = responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream);
         } else if (o instanceof HttpHeaders) {
             wroteEmptyData = false;
-            future = responseEncoder.writeHeaders(req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
+            future = responseEncoder.writeHeaders(req.id(), req.streamId(), (HttpHeaders) o, endOfStream,
+                                                  additionalHeaders, additionalTrailers);
         } else {
             // Should never reach here because we did validation in onNext().
             throw new Error();
@@ -405,10 +367,12 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
             final ChannelFuture headersWriteFuture;
             // Did not write anything yet; we can send an error response instead of resetting the stream.
             if (content.isEmpty()) {
-                headersWriteFuture = responseEncoder.writeHeaders(id, streamId, headers, true);
+                headersWriteFuture = responseEncoder.writeHeaders(id, streamId, headers, true,
+                                                                  HttpHeaders.of(), HttpHeaders.of());
                 future = headersWriteFuture;
             } else {
-                headersWriteFuture = responseEncoder.writeHeaders(id, streamId, headers, false);
+                headersWriteFuture = responseEncoder.writeHeaders(id, streamId, headers, false,
+                                                                  HttpHeaders.of(), HttpHeaders.of());
                 future = responseEncoder.writeData(id, streamId, content, true);
             }
 
@@ -469,44 +433,6 @@ final class HttpResponseSubscriber extends DefaultTimeoutController implements S
 
     private static boolean wroteNothing(State state) {
         return state == State.NEEDS_HEADERS;
-    }
-
-    private static ResponseHeadersBuilder fillAdditionalHeaders(ResponseHeaders headers,
-                                                                HttpHeaders additionalHeaders) {
-        final ResponseHeadersBuilder builder = headers.toBuilder();
-        if (!additionalHeaders.isEmpty()) {
-            for (AsciiString name : additionalHeaders.names()) {
-                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name)) {
-                    builder.remove(name);
-                    additionalHeaders.forEachValue(name, value -> builder.add(name, value));
-                }
-            }
-        }
-
-        return builder;
-    }
-
-    private static HttpHeaders fillAdditionalTrailers(HttpHeaders trailers, HttpHeaders additionalTrailers) {
-        if (additionalTrailers.isEmpty()) {
-            return trailers;
-        }
-
-        return fillAdditionalTrailers(trailers.toBuilder(), additionalTrailers).build();
-    }
-
-    private static HttpHeadersBuilder fillAdditionalTrailers(HttpHeadersBuilder builder,
-                                                             HttpHeaders additionalTrailers) {
-        if (!additionalTrailers.isEmpty()) {
-            for (AsciiString name : additionalTrailers.names()) {
-                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name) &&
-                    !isTrailerBlacklisted(name)) {
-                    builder.remove(name);
-                    additionalTrailers.forEachValue(name, value -> builder.add(name, value));
-                }
-            }
-        }
-
-        return builder;
     }
 
     private TimeoutTask newTimeoutTask() {

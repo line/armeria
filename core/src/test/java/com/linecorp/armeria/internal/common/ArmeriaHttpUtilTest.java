@@ -21,8 +21,13 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.decodePath;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.parseDirectives;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toArmeria;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientHeader;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientTrailer;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ServerHeader;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ServerTrailer;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ClientTrailer;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ServerHeader;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ServerTrailer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -161,7 +166,7 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1(0, in, out, HttpVersion.HTTP_1_1, false, true);
+        toNettyHttp1ClientHeader(0, in, HttpHeaders.of(), out, HttpVersion.HTTP_1_1);
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
     }
@@ -176,7 +181,7 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.COOKIE, "k=l;")
                                           .build();
 
-        final Http2Headers out = toNettyHttp2(in, true);
+        final Http2Headers out = toNettyHttp2ServerHeader(in, HttpHeaders.of(), HttpHeaders.of(), false);
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b", "c=d", "e=f", "g=h", "i=j", "k=l");
     }
@@ -368,7 +373,7 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1(0, in, out, HttpVersion.HTTP_1_1, false, false);
+        toNettyHttp1ServerHeader(0, in, HttpHeaders.of(), HttpHeaders.of(), out, HttpVersion.HTTP_1_1, false);
         assertThat(out).isEqualTo(new DefaultHttpHeaders()
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.TRAILER, "foo")
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.HOST, "bar"));
@@ -405,11 +410,17 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders outHttp1 =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1(0, in, outHttp1, HttpVersion.HTTP_1_1, true, false);
+        toNettyHttp1ServerTrailer(0, in, HttpHeaders.of(), outHttp1, true);
         assertThat(outHttp1).isEqualTo(new DefaultHttpHeaders().add("foo", "bar"));
 
-        final Http2Headers outHttp2 = toNettyHttp2(in, true);
-        assertThat(outHttp2).isEqualTo(new DefaultHttp2Headers().add("foo", "bar"));
+        toNettyHttp1ClientTrailer(0, in, outHttp1);
+        assertThat(outHttp1).isEqualTo(new DefaultHttpHeaders().add("foo", "bar"));
+
+        final Http2Headers outHttp2Response = toNettyHttp2ServerTrailer(in, HttpHeaders.of(), false);
+        assertThat(outHttp2Response).isEqualTo(new DefaultHttp2Headers().add("foo", "bar"));
+
+        final Http2Headers outHttp2Request = toNettyHttp2ClientTrailer(in);
+        assertThat(outHttp2Request).isEqualTo(new DefaultHttp2Headers().add("foo", "bar"));
     }
 
     @Test

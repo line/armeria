@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -29,8 +26,6 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
@@ -39,7 +34,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -53,15 +47,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
 final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutureListener {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpRequestSubscriber.class);
-
-    private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
-            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
 
     enum State {
         NEEDS_TO_WRITE_FIRST_HEADER,
@@ -70,7 +60,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private final Channel ch;
-    private final InetSocketAddress remoteAddress;
     private final HttpObjectEncoder encoder;
     private final int id;
     private final HttpRequest request;
@@ -86,12 +75,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private boolean isSubscriptionCompleted;
     private boolean loggedRequestFirstBytesTransferred;
 
-    HttpRequestSubscriber(Channel ch, SocketAddress remoteAddress, HttpObjectEncoder encoder,
+    HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
                           int id, HttpRequest request, HttpResponseWrapper response,
                           ClientRequestContext reqCtx, long timeoutMillis) {
 
         this.ch = ch;
-        this.remoteAddress = (InetSocketAddress) remoteAddress;
         this.encoder = encoder;
         this.id = id;
         this.request = request;
@@ -171,7 +159,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             return;
         }
 
-        final RequestHeaders firstHeaders = autoFillHeaders();
+        final RequestHeaders firstHeaders = request.headers();
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
@@ -179,57 +167,18 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         if (request.isEmpty()) {
             state = State.DONE;
-            write0(firstHeaders, true, true);
         } else {
             state = State.NEEDS_DATA_OR_TRAILERS;
-            write0(firstHeaders, false, true);
-        }
-    }
-
-    private RequestHeaders autoFillHeaders() {
-        final RequestHeaders oldHeaders = request.headers();
-        final RequestHeadersBuilder newHeaders = oldHeaders.toBuilder();
-
-        final HttpHeaders additionalHeaders = reqCtx.additionalRequestHeaders();
-        if (!additionalHeaders.isEmpty()) {
-            for (AsciiString name : additionalHeaders.names()) {
-                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name)) {
-                    newHeaders.remove(name);
-                    additionalHeaders.forEachValue(name, value -> newHeaders.add(name, value));
-                }
-            }
         }
 
-        if (!newHeaders.contains(HttpHeaderNames.USER_AGENT)) {
-            newHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
+        if (isStreamOrSessionClosed()) {
+            return;
         }
 
-        // :scheme and :authority are auto-filled in the beginning of decorator chain,
-        // but a decorator might have removed them, so we check again.
-        final SessionProtocol sessionProtocol = reqCtx.sessionProtocol();
-        if (newHeaders.scheme() == null) {
-            newHeaders.scheme(sessionProtocol);
-        }
-
-        if (newHeaders.authority() == null) {
-            final String hostname = remoteAddress.getHostName();
-            final int port = remoteAddress.getPort();
-
-            final String authority;
-            if (port == sessionProtocol.defaultPort()) {
-                authority = hostname;
-            } else {
-                final StringBuilder buf = new StringBuilder(hostname.length() + 6);
-                buf.append(hostname);
-                buf.append(':');
-                buf.append(port);
-                authority = buf.toString();
-            }
-
-            newHeaders.add(HttpHeaderNames.AUTHORITY, authority);
-        }
-
-        return newHeaders.build();
+        final ChannelFuture future = encoder.writeHeaders(id, streamId(), firstHeaders, request.isEmpty(),
+                                                          reqCtx.additionalRequestHeaders(), HttpHeaders.of());
+        future.addListener(this);
+        ch.flush();
     }
 
     @Override
@@ -255,7 +204,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 } else {
                     logBuilder.increaseRequestLength((HttpData) o);
                 }
-                write(o, endOfStream, true);
+                write(o, endOfStream);
                 break;
             }
             case DONE:
@@ -278,11 +227,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         cancelTimeout();
 
         if (state != State.DONE) {
-            write(HttpData.empty(), true, true);
+            write(HttpData.empty(), true);
         }
     }
 
-    private void write(HttpObject o, boolean endOfStream, boolean flush) {
+    private void write(HttpObject o, boolean endOfStream) {
         if (!ch.isActive()) {
             ReferenceCountUtil.safeRelease(o);
             fail(ClosedSessionException.get());
@@ -293,10 +242,23 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             state = State.DONE;
         }
 
-        write0(o, endOfStream, flush);
+        if (isStreamOrSessionClosed()) {
+            return;
+        }
+
+        final ChannelFuture future;
+        if (o instanceof HttpHeaders) {
+            future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream,
+                                          HttpHeaders.of(), HttpHeaders.of());
+        } else {
+            future = encoder.writeData(id, streamId(), (HttpData) o, endOfStream);
+        }
+
+        future.addListener(this);
+        ch.flush();
     }
 
-    private void write0(HttpObject o, boolean endOfStream, boolean flush) {
+    private boolean isStreamOrSessionClosed() {
         // Make sure that a stream exists before writing data if first bytes were transferred.
         // The following situation may cause the data to be written to a closed stream.
         // 1. A connection that has pending outbound buffers receives GOAWAY frame.
@@ -309,20 +271,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             } else {
                 fail(ClosedSessionException.get());
             }
-            return;
+            return true;
         }
-
-        final ChannelFuture future;
-        if (o instanceof HttpHeaders) {
-            future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream);
-        } else {
-            future = encoder.writeData(id, streamId(), (HttpData) o, endOfStream);
-        }
-
-        future.addListener(this);
-        if (flush) {
-            ch.flush();
-        }
+        return false;
     }
 
     private int streamId() {
