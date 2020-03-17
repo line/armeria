@@ -36,22 +36,29 @@ import org.junit.jupiter.api.Test;
 
 public class CountingSamplerTest {
     @Test
-    public void testSamplingRateMinimumLimit() throws Exception {
-        assertThatThrownBy(() -> CountingSampler.create(-1.99)).isInstanceOf(IllegalArgumentException.class);
+    public void testSamplingRateMinimumLimit() {
+        assertThatThrownBy(() -> CountingSampler.create(-1.99f)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void testSamplingRateMaximumLimit() throws Exception {
-        assertThatThrownBy(() -> CountingSampler.create(1.01)).isInstanceOf(IllegalArgumentException.class);
+    public void testSamplingRateMaximumLimit() {
+        assertThatThrownBy(() -> CountingSampler.create(1.01f)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void testNeverSampledSampler() throws Exception {
-        assertThat(CountingSampler.create(0.0)).isSameAs(Sampler.never());
+    public void testSamplingRatePercentageRounding() {
+        assertThat(CountingSampler.create(0.01f)).isInstanceOfSatisfying(CountingSampler.class, sampler -> {
+            assertThat(sampler.sampleDecisions.cardinality()).isOne();
+        });
     }
 
     @Test
-    public void testAlwaysSampledSampler() throws Exception {
-        assertThat(CountingSampler.create(1.0)).isSameAs(Sampler.always());
+    public void testNeverSampledSampler() {
+        assertThat(CountingSampler.create(0.0f)).isSameAs(Sampler.never());
+    }
+
+    @Test
+    public void testAlwaysSampledSampler() {
+        assertThat(CountingSampler.create(1.0f)).isSameAs(Sampler.always());
     }
 }

@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -205,7 +204,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         final DecodedHttpRequest req = requests.remove(stream.id());
         if (req != null) {
             // Ignored if the stream has already been closed.
-            req.close(ClosedSessionException.get());
+            req.close(ClosedStreamException.get());
         }
     }
 
@@ -305,7 +304,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                   "received a RST_STREAM frame for an unknown stream: %d", streamId);
         }
 
-        req.abortResponse(ClosedStreamException.get());
+        req.abortResponse(new ClosedStreamException(
+                "received a RST_STREAM frame: " + Http2Error.valueOf(errorCode)));
     }
 
     @Override

@@ -18,7 +18,9 @@ package com.linecorp.armeria.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 
@@ -27,8 +29,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
+import io.netty.handler.codec.http2.Http2LocalFlowController;
 import io.netty.handler.codec.http2.Http2Stream;
 import io.netty.util.ReferenceCountUtil;
 
@@ -64,9 +68,16 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
             return newFailedFuture(ClosedStreamException.get());
         }
 
-        if (conn.local().mayHaveCreatedStream(streamId)) {
-            // Stream has been closed.
-            return newFailedFuture(ClosedStreamException.get());
+        final Endpoint<Http2LocalFlowController> local = conn.local();
+        if (local.mayHaveCreatedStream(streamId)) {
+            final ClosedStreamException closedStreamException =
+                    new ClosedStreamException("Cannot create a new stream. streamId: " + streamId +
+                                              ", lastStreamCreated: " + local.lastStreamCreated());
+            if (headers.contains(HttpHeaderNames.METHOD)) {
+                return newFailedFuture(new UnprocessedRequestException(closedStreamException));
+            } else {
+                return newFailedFuture(closedStreamException);
+            }
         }
 
         // Client starts a new stream.

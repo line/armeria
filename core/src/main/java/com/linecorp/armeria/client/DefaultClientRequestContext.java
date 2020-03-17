@@ -48,10 +48,12 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -71,7 +73,7 @@ public final class DefaultClientRequestContext
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                    DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
+            DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
 
     private boolean initialized;
     @Nullable
@@ -372,6 +374,12 @@ public final class DefaultClientRequestContext
         return eventLoop;
     }
 
+    @Override
+    public ByteBufAllocator alloc() {
+        final Channel channel = channel();
+        return channel != null ? channel.alloc() : PooledByteBufAllocator.DEFAULT;
+    }
+
     @Nullable
     @Override
     public SSLSession sslSession() {
@@ -519,42 +527,46 @@ public final class DefaultClientRequestContext
 
     @Override
     public String toString() {
-        String strVal = this.strVal;
         if (strVal != null) {
             return strVal;
         }
-
-        final StringBuilder buf = new StringBuilder(107);
-        buf.append("[C]");
-
-        // Prepend the current channel information if available.
-        final Channel ch = channel();
-        final boolean hasChannel = ch != null;
-        if (hasChannel) {
-            buf.append(ch);
-        }
-
-        buf.append('[')
-           .append(sessionProtocol().uriText())
-           .append("://")
-           .append(endpoint != null ? endpoint.authority() : "UNKNOWN")
-           .append(path())
-           .append('#')
-           .append(method())
-           .append(']');
-
-        strVal = buf.toString();
-
-        if (hasChannel) {
-            this.strVal = strVal;
-        }
-
-        return strVal;
+        return toStringSlow();
     }
 
-    @Override
-    public ByteBufAllocator alloc() {
-        final Channel channel = channel();
-        return channel != null ? channel.alloc() : PooledByteBufAllocator.DEFAULT;
+    private String toStringSlow() {
+        // Prepare all properties required for building a String, so that we don't have a chance of
+        // building one String with a thread-local StringBuilder while building another String with
+        // the same StringBuilder. See TemporaryThreadLocals for more information.
+        final Channel ch = channel();
+        final String creqId = id().shortText();
+        final String sreqId = root() != null ? root().id().shortText() : null;
+        final String chanId = ch != null ? ch.id().asShortText() : null;
+        final String proto = sessionProtocol().uriText();
+        final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
+        final String path = path();
+        final String method = method().name();
+
+        // Build the string representation.
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("[creqId=").append(creqId);
+        if (sreqId != null) {
+            buf.append(", sreqId=").append(sreqId);
+        }
+        if (ch != null) {
+            buf.append(", chanId=").append(chanId)
+               .append(", laddr=");
+            TextFormatter.appendSocketAddress(buf, ch.localAddress());
+            buf.append(", raddr=");
+            TextFormatter.appendSocketAddress(buf, ch.remoteAddress());
+        }
+        buf.append("][")
+           .append(proto).append("://").append(authority).append(path).append('#').append(method)
+           .append(']');
+
+        final String strVal = buf.toString();
+        if (ch != null) {
+            this.strVal = strVal;
+        }
+        return strVal;
     }
 }
