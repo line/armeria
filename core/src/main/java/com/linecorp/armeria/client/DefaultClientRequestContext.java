@@ -556,10 +556,23 @@ public final class DefaultClientRequestContext
 
     @Override
     public String toString() {
+        final String clientRequestIdStr = toStringClientRequestId();
         if (strVal != null) {
-            return strVal;
+            return clientRequestIdStr + strVal;
         }
-        return toStringSlow();
+        return clientRequestIdStr + toStringSlow();
+    }
+
+    private String toStringClientRequestId() {
+        final String creqId = id().shortText();
+        final RequestLogAccess parent = log.parent();
+        final String pcreqId = parent != null ? parent.context().id().shortText() : null;
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("[creqId=").append(creqId);
+        if (parent != null) {
+            buf.append(", pcreqId=").append(pcreqId);
+        }
+        return buf.toString();
     }
 
     private String toStringSlow() {
@@ -567,7 +580,6 @@ public final class DefaultClientRequestContext
         // building one String with a thread-local StringBuilder while building another String with
         // the same StringBuilder. See TemporaryThreadLocals for more information.
         final Channel ch = channel();
-        final String creqId = id().shortText();
         final String sreqId = root() != null ? root().id().shortText() : null;
         final String chanId = ch != null ? ch.id().asShortText() : null;
         final String proto = sessionProtocol().uriText();
@@ -577,7 +589,6 @@ public final class DefaultClientRequestContext
 
         // Build the string representation.
         final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("[creqId=").append(creqId);
         if (sreqId != null) {
             buf.append(", sreqId=").append(sreqId);
         }

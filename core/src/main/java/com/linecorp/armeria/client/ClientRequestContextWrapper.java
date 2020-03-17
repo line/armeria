@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AttributeKey;

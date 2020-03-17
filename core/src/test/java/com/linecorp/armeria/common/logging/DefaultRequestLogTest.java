@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
@@ -204,6 +205,16 @@ class DefaultRequestLogTest {
         assertThat(log.rawResponseContent()).isSameAs(rawResponseContent);
         assertThat(log.responseDurationNanos()).isEqualTo(child.responseDurationNanos());
         assertThat(log.totalDurationNanos()).isEqualTo(child.totalDurationNanos());
+    }
+
+    @Test
+    void setParentIdWhileAddingChild() {
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(ctx2.log().parent()).isNull();
+        ctx1.logBuilder().addChild(ctx2.log());
+        assertThat(ctx2.log().parent()).isEqualTo(ctx1.log());
+        assertThat(ctx2.log().parent().context().id()).isEqualTo(ctx1.id());
     }
 
     @Test
