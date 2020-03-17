@@ -73,7 +73,7 @@ public final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder {
         ArmeriaHttpUtil.toNettyHttp1ClientTrailer(streamId, inHeaders, lastContent.trailingHeaders());
 
         removeHttpExtensionHeaders(lastContent.trailingHeaders());
-        return  lastContent;
+        return lastContent;
     }
 
     private HttpObject convertHeaders(int streamId, HttpHeaders headers, boolean endStream,
