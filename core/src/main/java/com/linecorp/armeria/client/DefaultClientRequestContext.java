@@ -559,36 +559,24 @@ public final class DefaultClientRequestContext
 
     @Override
     public String toString() {
-        if (strVal == null) {
-            strVal = toStringSlow();
-            if (channel() != null) {
-                strValAvailabilities |= STR_CHANNEL_AVAILABILITY;
-            }
-            if (log().parent() != null) {
-                strValAvailabilities |= STR_PARENT_LOG_AVAILABILITY;
-            }
+        final Channel ch = channel();
+        final RequestLogAccess parent = log().parent();
+        final short newAvailability =
+                (short) ((ch != null ? STR_CHANNEL_AVAILABILITY : 0) |
+                         (parent != null ? STR_PARENT_LOG_AVAILABILITY : 0));
+        if (strVal != null && strValAvailabilities == newAvailability) {
             return strVal;
         }
 
-        boolean dirty = false;
-        if (channel() != null && (strValAvailabilities & STR_CHANNEL_AVAILABILITY) == 0) {
-            dirty = true;
-            strValAvailabilities |= STR_CHANNEL_AVAILABILITY;
-        } else if (log().parent() != null && (strValAvailabilities & STR_PARENT_LOG_AVAILABILITY) == 0) {
-            dirty = true;
-            strValAvailabilities |= STR_PARENT_LOG_AVAILABILITY;
-        }
-
-        return dirty ? strVal = toStringSlow() : strVal;
+        strValAvailabilities = newAvailability;
+        return strVal = toStringSlow(ch, parent) ;
     }
 
-    private String toStringSlow() {
+    private String toStringSlow(@Nullable Channel ch, @Nullable RequestLogAccess parent) {
         // Prepare all properties required for building a String, so that we don't have a chance of
         // building one String with a thread-local StringBuilder while building another String with
         // the same StringBuilder. See TemporaryThreadLocals for more information.
-        final Channel ch = channel();
         final String creqId = id().shortText();
-        final RequestLogAccess parent = log.parent();
         final String pcreqId = parent != null ? parent.context().id().shortText() : null;
         final String sreqId = root() != null ? root().id().shortText() : null;
         final String chanId = ch != null ? ch.id().asShortText() : null;
@@ -617,10 +605,6 @@ public final class DefaultClientRequestContext
            .append(proto).append("://").append(authority).append(path).append('#').append(method)
            .append(']');
 
-        final String strVal = buf.toString();
-        if (ch != null) {
-            this.strVal = strVal;
-        }
-        return strVal;
+        return buf.toString();
     }
 }

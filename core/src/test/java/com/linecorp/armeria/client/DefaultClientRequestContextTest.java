@@ -382,18 +382,24 @@ class DefaultClientRequestContextTest {
         final DefaultClientRequestContext ctxWithNoChannel = newContext();
 
         assertThat(ctxWithNoChannel.channel()).isNull();
-        assertThat(ctxWithNoChannel.toString()).doesNotContain("chanId=");
+        final String strWithNoChannel = ctxWithNoChannel.toString();
+        assertThat(strWithNoChannel).doesNotContain("chanId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(strWithNoChannel);
+
         ctxWithNoChannel.logBuilder().session(ctxWithChannel.channel(), ctxWithChannel.sessionProtocol(), null);
-        final String channelCached = ctxWithNoChannel.toString();
-        assertThat(channelCached).contains("chanId=");
-        assertThat(ctxWithNoChannel.toString()).isSameAs(channelCached);
+        final String strWithChannel = ctxWithNoChannel.toString();
+        assertThat(strWithChannel).contains("chanId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(strWithChannel);
 
         assertThat(ctxWithNoChannel.log().parent()).isNull();
-        assertThat(ctxWithNoChannel.toString()).doesNotContain("pcreqId=");
+        final String strWithNoParentLog = ctxWithNoChannel.toString();
+        assertThat(strWithNoParentLog).doesNotContain("pcreqId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(strWithNoParentLog);
+
         ctxWithChannel.logBuilder().addChild(ctxWithNoChannel.log());
-        final String parentIdCached = ctxWithNoChannel.toString();
-        assertThat(parentIdCached).contains("pcreqId=");
-        assertThat(ctxWithNoChannel.toString()).isSameAs(parentIdCached);
+        final String strWithParentLog = ctxWithNoChannel.toString();
+        assertThat(strWithParentLog).contains("pcreqId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(strWithParentLog);
     }
 
     private static void mutateAdditionalHeaders(ClientRequestContext originalCtx) {
