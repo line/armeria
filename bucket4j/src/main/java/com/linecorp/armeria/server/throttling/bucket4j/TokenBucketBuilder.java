@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 public final class TokenBucketBuilder {
     private static final BandwidthLimit[] NO_BANDWIDTH_LIMITS = {};
 
-    private final ImmutableList.Builder<BandwidthLimit> limitsBuilder = new ImmutableList.Builder<>();
+    private final ImmutableList.Builder<BandwidthLimit> limitsBuilder = ImmutableList.builder();
 
     TokenBucketBuilder() {} // prevent public access
 
