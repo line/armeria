@@ -77,7 +77,7 @@ public final class TimeoutScheduler {
         }
     }
 
-    public void setTimeoutMillis(long timeoutMillis) {
+    private void setTimeoutMillis(long timeoutMillis) {
         checkArgument(timeoutMillis >= 0, "timeoutMillis: %s (expected: >= 0)", timeoutMillis);
         if (timeoutMillis == 0) {
             clearTimeout();
