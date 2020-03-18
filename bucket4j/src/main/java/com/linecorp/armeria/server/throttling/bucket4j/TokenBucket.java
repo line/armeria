@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
@@ -70,7 +69,6 @@ public final class TokenBucket {
         return new TokenBucket(BandwidthLimit.of(limit, period));
     }
 
-    @Nonnull
     private final BandwidthLimit[] limits;
 
     /**
@@ -94,7 +92,7 @@ public final class TokenBucket {
      *
      * @param limits one or more bandwidth limits to be used by token-bucket algorithm
      */
-    TokenBucket(@Nonnull BandwidthLimit... limits) {
+    TokenBucket(BandwidthLimit... limits) {
         this.limits = requireNonNull(limits, "limits");
     }
 
@@ -102,7 +100,6 @@ public final class TokenBucket {
      * Returns multiple limits applied to the bucket. This may be empty.
      * @return An array of {@link BandwidthLimit}
      */
-    @Nonnull
     public BandwidthLimit[] limits() {
         return limits;
     }

@@ -83,17 +83,17 @@ class BandwidthLimitTest {
         assertThatThrownBy(
                 () -> BandwidthLimit.of(0L, 1000L, 50L, Duration.ofSeconds(60L)))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Bandwidth limit must be positive. Found: 0");
+                .hasMessageContaining("limit: 0 (expected: > 0)");
 
         assertThatThrownBy(
                 () -> BandwidthLimit.of(100L, 99L, 50L, Duration.ofSeconds(60L)))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Overdraft limit has to exceed bandwidth limit 100. Found: 99");
+                .hasMessageContaining("overdraftLimit: 99 (expected: > 100)");
 
         assertThatThrownBy(
                 () -> BandwidthLimit.of(100L, 1000L, 50L, Duration.ofSeconds(0L)))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Bandwidth period must be positive. Found: PT0S");
+                .hasMessageContaining("period: PT0S (expected: > PT0S)");
     }
 
     @Test

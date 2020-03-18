@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.throttling.bucket4j;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -103,25 +104,21 @@ public final class BandwidthLimit {
 
     BandwidthLimit(long limit, long overdraftLimit, long initialSize, Duration period) {
         // validate limit
-        if (limit <= 0L) {
-            throw new IllegalArgumentException("Bandwidth limit must be positive. Found: " + limit);
-        }
+        checkArgument(limit > 0L, "limit: %s (expected: > 0)", limit);
         this.limit = limit;
 
         // validate overdraftLimit
-        if (overdraftLimit > 0L && overdraftLimit <= limit) {
-            throw new IllegalArgumentException("Overdraft limit has to exceed bandwidth limit " + limit +
-                                               ". Found: " + overdraftLimit);
-        }
+        checkArgument(overdraftLimit == 0L || overdraftLimit > limit,
+                      "overdraftLimit: %s (expected: > %s)", overdraftLimit, limit);
         this.overdraftLimit = overdraftLimit;
 
         // validate initialSize
+        checkArgument(initialSize >= 0L, "initialSize: %s (expected: >= 0)", initialSize);
         this.initialSize = initialSize;
 
         requireNonNull(period, "period");
-        if (period.isNegative() || period.isZero()) {
-            throw new IllegalArgumentException("Bandwidth period must be positive. Found: " + period);
-        }
+        checkArgument(!period.isNegative() && !period.isZero(),
+                      "period: %s (expected: > %s)", period, Duration.ZERO);
         this.period = period;
     }
 

@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.server.throttling.bucket4j;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import java.time.Duration;
-import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -39,7 +41,7 @@ public final class TokenBucketThrottlingStrategyBuilder<T extends Request> {
     private String name;
 
     TokenBucketThrottlingStrategyBuilder(TokenBucket tokenBucket) {
-        this.tokenBucket = Objects.requireNonNull(tokenBucket, "tokenBucket");
+        this.tokenBucket = requireNonNull(tokenBucket, "tokenBucket");
     }
 
     /**
@@ -47,7 +49,7 @@ public final class TokenBucketThrottlingStrategyBuilder<T extends Request> {
      * By default, it will be assigned with a predefined name.
      */
     public TokenBucketThrottlingStrategyBuilder<T> name(String name) {
-        this.name = name;
+        this.name = requireNonNull(name, "name");
         return this;
     }
 
@@ -56,6 +58,8 @@ public final class TokenBucketThrottlingStrategyBuilder<T extends Request> {
      * By default, it will be set to 0 seconds.
      */
     public TokenBucketThrottlingStrategyBuilder<T> withMinimumBackoff(Duration minimumBackoff) {
+        requireNonNull(minimumBackoff, "minimumBackoff");
+        checkArgument(!minimumBackoff.isNegative(), "minimumBackoff: %s (expected: >= 0)", minimumBackoff);
         this.minimumBackoff = minimumBackoff;
         return this;
     }
@@ -69,7 +73,7 @@ public final class TokenBucketThrottlingStrategyBuilder<T extends Request> {
      */
     public TokenBucketThrottlingStrategyBuilder<T> withHeadersScheme(ThrottlingHeaders headersScheme,
                                                                      boolean sendQuota) {
-        this.headersScheme = headersScheme;
+        this.headersScheme = requireNonNull(headersScheme, "headersScheme");
         this.sendQuota = sendQuota;
         return this;
     }
