@@ -31,7 +31,7 @@ interface Props {
   onQueriesFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
-const HttpQueryString: React.FunctionComponent<Props> = (props) => (
+const HttpQueryString: React.FunctionComponent<Props> = props => (
   <>
     <Typography variant="body2" paragraph />
     <Button color="secondary" onClick={props.onEditHttpQueriesClick}>

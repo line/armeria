@@ -29,13 +29,13 @@ interface Props {
   specification: Specification;
 }
 
-const Exceptions: React.FunctionComponent<Props> = (props) => (
+const Exceptions: React.FunctionComponent<Props> = props => (
   <Section>
     <Typography variant="h6">Exceptions</Typography>
     <Table>
       <TableBody>
         {props.method.exceptionTypeSignatures.length > 0 ? (
-          props.method.exceptionTypeSignatures.map((exception) => (
+          props.method.exceptionTypeSignatures.map(exception => (
             <TableRow key={exception}>
               <TableCell>
                 <code>

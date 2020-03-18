@@ -30,7 +30,7 @@ interface Props {
   onDebugFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
-const RequestBody: React.FunctionComponent<Props> = (props) => (
+const RequestBody: React.FunctionComponent<Props> = props => (
   <>
     <Typography variant="body2" paragraph />
     <Button color="secondary" onClick={props.onEditRequestBodyClick}>

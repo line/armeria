@@ -32,7 +32,7 @@ interface Props {
   onPathFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
-const EndpointPath: React.FunctionComponent<Props> = (props) => (
+const EndpointPath: React.FunctionComponent<Props> = props => (
   <>
     <Typography variant="body2" paragraph />
     <Button color="secondary" onClick={props.onEditEndpointPathClick}>

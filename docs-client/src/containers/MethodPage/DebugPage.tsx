@@ -171,7 +171,18 @@ const DebugPage: React.FunctionComponent<Props> = ({
     if (urlParams.has('http_headers_sticky') && !stickyHeaders) {
       toggleStickyHeaders(undefined);
     }
-  }, [match.params]);
+  }, [
+    additionalHeaders,
+    exactPathMapping,
+    exampleQueries.length,
+    isAnnotatedService,
+    location.search,
+    match.params,
+    method.endpoints,
+    method.exampleRequests,
+    stickyHeaders,
+    useRequestBody,
+  ]);
 
   const showSnackbar = useCallback((text: string) => {
     setSnackbarOpen(true);
@@ -321,7 +332,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
 
       const headerOptions = Object.keys(headers)
-        .map((name) => {
+        .map(name => {
           return `-H '${name}: ${headers[name]}'`;
         })
         .join(' ');
@@ -337,11 +348,15 @@ const DebugPage: React.FunctionComponent<Props> = ({
     }
   }, [
     useRequestBody,
-    requestBody,
     additionalHeaders,
     method,
+    requestBody,
     isAnnotatedService,
+    showSnackbar,
+    additionalQueries,
     exactPathMapping,
+    validateEndpointPath,
+    additionalPath,
   ]);
 
   const onCopy = useCallback(() => {
@@ -350,7 +365,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       copyTextToClipboard(response);
       showSnackbar('The response has been copied to the clipboard.');
     }
-  }, [debugResponse]);
+  }, [debugResponse, showSnackbar]);
 
   const onClear = useCallback(() => {
     setDebugResponse('');
@@ -406,7 +421,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     try {
       if (useRequestBody) {
         // Validate requestBody only if it's not empty string.
-        if (!!requestBody.trim()) {
+        if (requestBody.trim()) {
           validateJsonObject(requestBody, 'request body');
         }
 
@@ -454,17 +469,19 @@ const DebugPage: React.FunctionComponent<Props> = ({
     }
     executeRequest(params);
   }, [
-    requestBody,
-    additionalPath,
     additionalQueries,
     additionalHeaders,
-    location,
-    useRequestBody,
-    isAnnotatedService,
-    exactPathMapping,
-    validateEndpointPath,
+    location.search,
+    location.pathname,
     stickyHeaders,
     executeRequest,
+    useRequestBody,
+    isAnnotatedService,
+    requestBody,
+    exactPathMapping,
+    validateEndpointPath,
+    additionalPath,
+    history,
   ]);
 
   return (
