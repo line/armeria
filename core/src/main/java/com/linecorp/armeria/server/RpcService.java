@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.internal.common.util.DecoratorUtil;
 
 /**
  * An RPC {@link Service}.
@@ -43,6 +44,7 @@ public interface RpcService extends Service<RpcRequest, RpcResponse> {
         if (newService == null) {
             throw new NullPointerException("decorator.apply() returned null: " + decorator);
         }
+        DecoratorUtil.validateServiceDecorator(newService);
 
         return newService;
     }

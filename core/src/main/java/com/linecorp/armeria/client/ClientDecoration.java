@@ -21,6 +21,8 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.internal.common.util.DecoratorUtil;
+
 /**
  * A set of {@link Function}s that transforms a {@link Client} into another.
  */
@@ -108,6 +110,7 @@ public final class ClientDecoration {
     public HttpClient decorate(HttpClient client) {
         for (Function<? super HttpClient, ? extends HttpClient> decorator : decorators) {
             client = decorator.apply(client);
+            DecoratorUtil.validateClientDecorator(client);
         }
         return client;
     }
@@ -120,6 +123,7 @@ public final class ClientDecoration {
     public RpcClient rpcDecorate(RpcClient client) {
         for (Function<? super RpcClient, ? extends RpcClient> decorator : rpcDecorators) {
             client = decorator.apply(client);
+            DecoratorUtil.validateClientDecorator(client);
         }
         return client;
     }

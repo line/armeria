@@ -19,11 +19,19 @@ package com.linecorp.armeria.server.thrift;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.JSON;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingRpcService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
+import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 
 class THttpServiceBuilderTest {
 
@@ -45,5 +53,25 @@ class THttpServiceBuilderTest {
 
         assertThat(service.supportedSerializationFormats())
                 .containsExactlyInAnyOrderElementsOf(ThriftSerializationFormats.values());
+    }
+
+    @Test
+    void validateDecorator() {
+        THttpService.builder()
+                    .addService((Iface) name -> name)
+                    .decorate(delegate -> new SimpleDecoratingRpcService(delegate) {
+                        @Override
+                        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
+                            return delegate().serve(ctx, req);
+                        }
+                    })
+                    .build();
+
+        assertThatThrownBy(() -> THttpService.builder()
+                                             .addService((Iface) name -> name)
+                                             .decorate(Function.identity())
+                                             .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("decorator should override Service.as()");
     }
 }
