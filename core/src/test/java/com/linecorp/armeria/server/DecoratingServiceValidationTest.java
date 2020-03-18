@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.function.Function;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -28,6 +30,17 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.internal.server.DecoratingServiceUtil;
 
 class DecoratingServiceValidationTest {
+
+    private static final HttpService service = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+
+    private static final Function<? super HttpService, ? extends HttpService> decoratorFunction =
+            delegate -> new SimpleDecoratingHttpService(delegate) {
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    return delegate.serve(ctx, req);
+                }
+            };
+
     @Test
     void invalidService_as() {
         final HttpService service = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
@@ -45,7 +58,7 @@ class DecoratingServiceValidationTest {
     }
 
     @Test
-    void validHttpServiceDecorator() {
+    void validateDecorator() {
         final HttpService service = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
         final HttpService decorator = new SimpleDecoratingHttpService(service) {
             @Override
@@ -57,7 +70,7 @@ class DecoratingServiceValidationTest {
     }
 
     @Test
-    void validRpcServiceDecorator() {
+    void validateRpcDecorator() {
         final RpcService service = (ctx, req) -> RpcResponse.of(null);
         final RpcService decorator = new SimpleDecoratingRpcService(service) {
             @Override
@@ -68,7 +81,30 @@ class DecoratingServiceValidationTest {
         DecoratingServiceUtil.validateDecorator(decorator);
     }
 
-    private static class UnwrappableService implements HttpService {
+    @Test
+    void validateDecoratorByServerBuilder() {
+        Server.builder()
+              .service("/", service)
+              .decorator(decoratorFunction);
+
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .service("/", service)
+                  .decorator(Function.identity());
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("decorator should override Service.as()");
+    }
+
+    @Test
+    void validateDecoratorByService() {
+        service.decorate(decoratorFunction);
+
+        assertThatThrownBy(() -> service.decorate(Function.identity()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("decorator should override Service.as()");
+    }
+
+    private static final class UnwrappableService implements HttpService {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             return HttpResponse.of(HttpStatus.OK);
