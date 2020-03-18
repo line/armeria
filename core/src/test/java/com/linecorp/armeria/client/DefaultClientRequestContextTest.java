@@ -378,7 +378,8 @@ class DefaultClientRequestContextTest {
     @Test
     void testToStringSlow() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final DefaultClientRequestContext ctxWithChannel = (DefaultClientRequestContext) ClientRequestContext.of(req);
+        final DefaultClientRequestContext ctxWithChannel =
+                (DefaultClientRequestContext) ClientRequestContext.of(req);
         final DefaultClientRequestContext ctxWithNoChannel = newContext();
 
         assertThat(ctxWithNoChannel.channel()).isNull();
@@ -393,12 +394,12 @@ class DefaultClientRequestContextTest {
 
         assertThat(ctxWithNoChannel.log().parent()).isNull();
         final String strWithNoParentLog = ctxWithNoChannel.toString();
-        assertThat(strWithNoParentLog).doesNotContain("pcreqId=");
+        assertThat(strWithNoParentLog).doesNotContain("preqId=");
         assertThat(ctxWithNoChannel.toString()).isSameAs(strWithNoParentLog);
 
         ctxWithChannel.logBuilder().addChild(ctxWithNoChannel.log());
         final String strWithParentLog = ctxWithNoChannel.toString();
-        assertThat(strWithParentLog).contains("pcreqId=");
+        assertThat(strWithParentLog).contains("preqId=");
         assertThat(ctxWithNoChannel.toString()).isSameAs(strWithParentLog);
     }
 

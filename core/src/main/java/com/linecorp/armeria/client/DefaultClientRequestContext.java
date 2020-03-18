@@ -569,7 +569,7 @@ public final class DefaultClientRequestContext
         }
 
         strValAvailabilities = newAvailability;
-        return strVal = toStringSlow(ch, parent) ;
+        return strVal = toStringSlow(ch, parent);
     }
 
     private String toStringSlow(@Nullable Channel ch, @Nullable RequestLogAccess parent) {
@@ -577,7 +577,7 @@ public final class DefaultClientRequestContext
         // building one String with a thread-local StringBuilder while building another String with
         // the same StringBuilder. See TemporaryThreadLocals for more information.
         final String creqId = id().shortText();
-        final String pcreqId = parent != null ? parent.context().id().shortText() : null;
+        final String preqId = parent != null ? parent.context().id().shortText() : null;
         final String sreqId = root() != null ? root().id().shortText() : null;
         final String chanId = ch != null ? ch.id().asShortText() : null;
         final String proto = sessionProtocol().uriText();
@@ -589,7 +589,7 @@ public final class DefaultClientRequestContext
         final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
         buf.append("[creqId=").append(creqId);
         if (parent != null) {
-            buf.append(", pcreqId=").append(pcreqId);
+            buf.append(", preqId=").append(preqId);
         }
         if (sreqId != null) {
             buf.append(", sreqId=").append(sreqId);

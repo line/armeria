@@ -271,7 +271,6 @@ public interface RequestLogAccess {
      */
     RequestContext context();
 
-
     /**
      * Returns the {@link RequestLogAccess} that provides access to the parent {@link RequestLog}.
      * {@code null} is returned if the {@link RequestLog} was not added as a child log.
