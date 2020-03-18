@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -454,7 +455,7 @@ public final class HealthCheckService implements TransientHttpService {
     private static void updateRequestTimeout(ServiceRequestContext ctx, long longPollingTimeoutMillis) {
         final long requestTimeoutMillis = ctx.requestTimeoutMillis();
         if (requestTimeoutMillis > 0) {
-            ctx.extendRequestTimeoutMillis(longPollingTimeoutMillis);
+            ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, longPollingTimeoutMillis);
         }
     }
 

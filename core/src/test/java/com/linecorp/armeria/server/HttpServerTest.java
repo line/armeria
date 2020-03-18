@@ -82,6 +82,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -417,7 +418,8 @@ class HttpServerTest {
                             if (serverRequestTimeoutMillis == 0) {
                                 ctx.clearRequestTimeout();
                             } else {
-                                ctx.setRequestTimeoutAfterMillis(serverRequestTimeoutMillis);
+                                ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW,
+                                                            serverRequestTimeoutMillis);
                             }
                             ctx.setMaxRequestLength(serverMaxRequestLength);
                             ctx.log().whenComplete().thenAccept(log -> {
@@ -930,7 +932,8 @@ class HttpServerTest {
                                          if (clientResponseTimeoutMillis == 0) {
                                             ctx.clearResponseTimeout();
                                          } else {
-                                             ctx.setResponseTimeoutAfterMillis(clientResponseTimeoutMillis);
+                                             ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW,
+                                                                          clientResponseTimeoutMillis);
                                          }
                                          ctx.setMaxResponseLength(clientMaxResponseLength);
                                          return delegate.execute(ctx, req);

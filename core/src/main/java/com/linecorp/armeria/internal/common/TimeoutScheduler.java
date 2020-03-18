@@ -27,6 +27,8 @@ import javax.annotation.Nullable;
 
 import com.google.common.math.LongMath;
 
+import com.linecorp.armeria.common.util.TimeoutMode;
+
 import io.netty.channel.EventLoop;
 
 public final class TimeoutScheduler {
@@ -61,7 +63,21 @@ public final class TimeoutScheduler {
         }
     }
 
-    public void setTimeoutMillis(long timeoutMillis) {
+    public void setTimeoutMillis(TimeoutMode mode, long timeoutMillis) {
+        switch (mode) {
+            case SET_FROM_NOW:
+                setTimeoutAfterMillis(timeoutMillis);
+                break;
+            case SET_FROM_START:
+                setTimeoutMillis(timeoutMillis);
+                break;
+            case EXTEND:
+                extendTimeoutMillis(timeoutMillis);
+                break;
+        }
+    }
+
+    private void setTimeoutMillis(long timeoutMillis) {
         checkArgument(timeoutMillis >= 0, "timeoutMillis: %s (expected: >= 0)", timeoutMillis);
         if (timeoutMillis == 0) {
             clearTimeout();
@@ -77,7 +93,7 @@ public final class TimeoutScheduler {
         extendTimeoutMillis(adjustmentMillis);
     }
 
-    public void extendTimeoutMillis(long adjustmentMillis) {
+    private void extendTimeoutMillis(long adjustmentMillis) {
         if (adjustmentMillis == 0 || timeoutMillis == 0) {
             return;
         }
@@ -96,7 +112,7 @@ public final class TimeoutScheduler {
         }
     }
 
-    public void setTimeoutAfterMillis(long timeoutMillis) {
+    private void setTimeoutAfterMillis(long timeoutMillis) {
         checkArgument(timeoutMillis > 0, "timeoutMillis: %s (expected: > 0)", timeoutMillis);
 
         long passedTimeMillis = 0;
@@ -124,6 +140,7 @@ public final class TimeoutScheduler {
         this.timeoutMillis = LongMath.saturatedAdd(passedTimeMillis, timeoutMillis);
     }
 
+    @Deprecated
     public void setTimeoutAtMillis(long timeoutAtMillis) {
         checkArgument(timeoutAtMillis >= 0, "timeoutAtMillis: %s (expected: >= 0)", timeoutAtMillis);
         final long timeoutAfter = timeoutAtMillis - System.currentTimeMillis();

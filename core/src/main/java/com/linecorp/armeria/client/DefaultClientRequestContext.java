@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -50,6 +49,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
@@ -439,43 +439,14 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public void setResponseTimeoutMillis(long responseTimeoutMillis) {
-        timeoutScheduler.setTimeoutMillis(responseTimeoutMillis);
+    public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
+        timeoutScheduler.setTimeoutMillis(requireNonNull(mode, "mode"), responseTimeoutMillis);
     }
 
-    @Override
-    public void setResponseTimeout(Duration responseTimeout) {
-        setResponseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
-    }
-
-    @Override
-    public void extendResponseTimeoutMillis(long adjustmentMillis) {
-        timeoutScheduler.extendTimeoutMillis(adjustmentMillis);
-    }
-
-    @Override
-    public void extendResponseTimeout(Duration adjustment) {
-        extendResponseTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
-    }
-
-    @Override
-    public void setResponseTimeoutAfterMillis(long responseTimeoutMillis) {
-        timeoutScheduler.setTimeoutAfterMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    public void setResponseTimeoutAfter(Duration responseTimeout) {
-        setResponseTimeoutAfterMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
-    }
-
+    @Deprecated
     @Override
     public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
         timeoutScheduler.setTimeoutAtMillis(responseTimeoutAtMillis);
-    }
-
-    @Override
-    public void setResponseTimeoutAt(Instant responseTimeoutAt) {
-        setResponseTimeoutAtMillis(requireNonNull(responseTimeoutAt, "responseTimeoutAt").toEpochMilli());
     }
 
     @Override

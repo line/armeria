@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
@@ -193,7 +194,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                 callOptions.getDeadline());
                 close(status, new Metadata());
             } else {
-                ctx.setResponseTimeoutAfterMillis(remainingMillis);
+                ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, remainingMillis);
                 ctx.setResponseTimeoutHandler(() -> {
                     final Status status = Status.DEADLINE_EXCEEDED
                             .augmentDescription(

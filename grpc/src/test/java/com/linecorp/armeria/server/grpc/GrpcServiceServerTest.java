@@ -80,6 +80,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -345,7 +346,7 @@ class GrpcServiceServerTest {
 
         @Override
         public void timesOut(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            ServiceRequestContext.current().setRequestTimeoutAfterMillis(100);
+            ServiceRequestContext.current().setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, 100);
         }
     }
 

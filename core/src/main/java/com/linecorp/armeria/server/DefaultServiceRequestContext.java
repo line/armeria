@@ -23,8 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -52,6 +50,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnstableApi;
 import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
@@ -315,43 +314,14 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public void setRequestTimeoutMillis(long requestTimeoutMillis) {
-        timeoutScheduler.setTimeoutMillis(requestTimeoutMillis);
+    public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
+        timeoutScheduler.setTimeoutMillis(mode, requestTimeoutMillis);
     }
 
-    @Override
-    public void setRequestTimeout(Duration requestTimeout) {
-        setRequestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
-    }
-
-    @Override
-    public void extendRequestTimeoutMillis(long adjustmentMillis) {
-        timeoutScheduler.extendTimeoutMillis(adjustmentMillis);
-    }
-
-    @Override
-    public void extendRequestTimeout(Duration adjustment) {
-        extendRequestTimeoutMillis(requireNonNull(adjustment, "adjustment").toMillis());
-    }
-
-    @Override
-    public void setRequestTimeoutAfterMillis(long requestTimeoutMillis) {
-        timeoutScheduler.setTimeoutAfterMillis(requestTimeoutMillis);
-    }
-
-    @Override
-    public void setRequestTimeoutAfter(Duration requestTimeout) {
-        setRequestTimeoutAfterMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
-    }
-
+    @Deprecated
     @Override
     public void setRequestTimeoutAtMillis(long requestTimeoutAtMillis) {
         timeoutScheduler.setTimeoutAtMillis(requestTimeoutAtMillis);
-    }
-
-    @Override
-    public void setRequestTimeoutAt(Instant requestTimeoutAt) {
-        setRequestTimeoutAtMillis(requireNonNull(requestTimeoutAt, "requestTimeoutAt").toEpochMilli());
     }
 
     @Nullable

@@ -71,6 +71,7 @@ import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -152,7 +153,7 @@ class ServerTest {
                             if ("/timeout-not".equals(ctx.path())) {
                                ctx.clearRequestTimeout();
                             } else {
-                                ctx.setRequestTimeoutAfterMillis(requestTimeoutMillis);
+                                ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, requestTimeoutMillis);
                             }
                             return delegate().serve(ctx, req);
                         }

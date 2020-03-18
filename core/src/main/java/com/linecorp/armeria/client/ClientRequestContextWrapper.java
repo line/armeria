@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
@@ -31,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AttributeKey;
@@ -116,45 +116,14 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    @Deprecated
-    public void setResponseTimeoutMillis(long responseTimeoutMillis) {
-        delegate().setResponseTimeoutMillis(responseTimeoutMillis);
+    public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
+        delegate().setResponseTimeoutMillis(mode, responseTimeoutMillis);
     }
 
     @Override
     @Deprecated
-    public void setResponseTimeout(Duration responseTimeout) {
-        delegate().setResponseTimeout(responseTimeout);
-    }
-
-    @Override
-    public void extendResponseTimeoutMillis(long adjustmentMillis) {
-        delegate().extendResponseTimeoutMillis(adjustmentMillis);
-    }
-
-    @Override
-    public void extendResponseTimeout(Duration adjustment) {
-        delegate().extendResponseTimeout(adjustment);
-    }
-
-    @Override
-    public void setResponseTimeoutAfterMillis(long responseTimeoutMillis) {
-        delegate().setResponseTimeoutAfterMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    public void setResponseTimeoutAfter(Duration responseTimeout) {
-        delegate().setResponseTimeoutAfter(responseTimeout);
-    }
-
-    @Override
     public void setResponseTimeoutAtMillis(long responseTimeoutAtMillis) {
         delegate().setResponseTimeoutAtMillis(responseTimeoutAtMillis);
-    }
-
-    @Override
-    public void setResponseTimeoutAt(Instant responseTimeoutAt) {
-        delegate().setResponseTimeoutAt(responseTimeoutAt);
     }
 
     @Override
