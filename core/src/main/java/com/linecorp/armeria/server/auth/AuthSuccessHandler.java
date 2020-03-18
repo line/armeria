@@ -17,29 +17,24 @@ package com.linecorp.armeria.server.auth;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A callback which is invoked to handle an authorization success indicated by {@link Authorizer}.
  *
- * @param <I> the type of incoming {@link Request}. Must be {@link HttpRequest} or {@link RpcRequest}.
- * @param <O> the type of outgoing {@link Response}. Must be {@link HttpResponse} or {@link RpcResponse}.
- *
  * @see AuthServiceBuilder#onSuccess(AuthSuccessHandler)
  */
 @FunctionalInterface
-public interface AuthSuccessHandler<I extends Request, O extends Response> {
+public interface AuthSuccessHandler {
+
     /**
-     * Invoked when the authorization of the specified {@link Request} has succeeded.
+     * Invoked when the authorization of the specified {@link HttpRequest} has succeeded.
      *
-     * @param delegate the next {@link Service} in the decoration chain
-     * @param ctx the {@link ServiceRequestContext} of {@code req}
-     * @param req the {@link Request} being handled
+     * @param delegate the next {@link HttpService} in the decoration chain
+     * @param ctx the {@link ServiceRequestContext}
+     * @param req the {@link HttpRequest} being handled
      */
-    O authSucceeded(Service<I, O> delegate, ServiceRequestContext ctx, I req) throws Exception;
+    HttpResponse authSucceeded(
+            HttpService delegate, ServiceRequestContext ctx, HttpRequest req) throws Exception;
 }
