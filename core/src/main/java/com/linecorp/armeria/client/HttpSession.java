@@ -75,7 +75,7 @@ interface HttpSession {
         public void deactivate() {}
 
         @Override
-        public int getAndIncrementNumRequestsSent() {
+        public int incrementAndGetNumRequestsSent() {
             return MAX_NUM_REQUESTS_SENT;
         }
     };
@@ -114,5 +114,5 @@ interface HttpSession {
 
     void deactivate();
 
-    int getAndIncrementNumRequestsSent();
+    int incrementAndGetNumRequestsSent();
 }

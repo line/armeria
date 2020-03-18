@@ -143,7 +143,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         final HttpSession session = HttpSession.get(ch);
-        id = session.getAndIncrementNumRequestsSent();
+        id = session.incrementAndGetNumRequestsSent();
         if (id >= MAX_NUM_REQUESTS_SENT || !session.canSendRequest()) {
             final ClosedSessionException exception;
             if (id >= MAX_NUM_REQUESTS_SENT) {
@@ -246,7 +246,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             failAndReset(cause);
         } else {
             // No need to send RST because we didn't send any packet.
-            fail(cause);
+            fail(new UnprocessedRequestException(cause));
         }
     }
 

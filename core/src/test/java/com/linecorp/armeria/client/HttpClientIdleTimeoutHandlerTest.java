@@ -150,7 +150,7 @@ public class HttpClientIdleTimeoutHandlerTest {
         }
 
         @Override
-        public int getAndIncrementNumRequestsSent() {
+        public int incrementAndGetNumRequestsSent() {
             return 0;
         }
     }

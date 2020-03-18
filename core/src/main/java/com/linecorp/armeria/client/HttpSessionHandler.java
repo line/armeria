@@ -179,7 +179,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public int getAndIncrementNumRequestsSent() {
+    public int incrementAndGetNumRequestsSent() {
         return ++numRequestsSent;
     }
 
