@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common.util;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Set;
 
 import org.reflections.ReflectionUtils;
 
@@ -31,7 +32,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 
 public final class DecoratorUtil {
 
-    private static Predicate<Method> isOverriddenAsMethod = method -> {
+    private static final Predicate<Method> isOverriddenAsMethod = method -> {
         final Class<?>[] parameterTypes = method.getParameterTypes();
         return "as".equals(method.getName()) &&
                Modifier.isPublic(method.getModifiers()) &&
@@ -40,7 +41,7 @@ public final class DecoratorUtil {
                parameterTypes[0].getName().equals(Class.class.getName());
     };
 
-    private static Predicate<Method> isOverriddenServiceAddedMethod = method -> {
+    private static final Predicate<Method> isOverriddenServiceAddedMethod = method -> {
         final Class<?>[] parameterTypes = method.getParameterTypes();
         return "serviceAdded".equals(method.getName()) &&
                Modifier.isPublic(method.getModifiers()) &&
@@ -49,19 +50,32 @@ public final class DecoratorUtil {
                parameterTypes[0].getName().equals(ServiceConfig.class.getName());
     };
 
+    private static final Predicate<Method> isOverriddenAsOrServiceAddedMethod = method ->
+            isOverriddenAsMethod.test(method) || isOverriddenServiceAddedMethod.test(method);
+
     /**
      * Validates whether the specified {@code decorator} overrides {@link Service#as(Class)} and
      * {@link Service#serviceAdded(ServiceConfig)} properly.
      */
     public static <I extends Request, O extends Response>
     void validateServiceDecorator(Service<I, O> decorator) {
-        if (ReflectionUtils.getAllMethods(decorator.getClass(), isOverriddenAsMethod).isEmpty()) {
-            throw new IllegalArgumentException("decorator should override Service.as(): " + decorator);
-        }
-        if (ReflectionUtils.getAllMethods(decorator.getClass(), isOverriddenServiceAddedMethod).isEmpty()) {
+        final Set<Method> methods = ReflectionUtils.getAllMethods(decorator.getClass(),
+                                                                  isOverriddenAsOrServiceAddedMethod);
+        if (methods.isEmpty()) {
             throw new IllegalArgumentException(
-                    "decorator should override Service.serviceAdded(): " + decorator);
+                    "decorator should override Service.as() and Service.serviceAdded(): " + decorator);
         }
+
+        methods.stream()
+               .filter(isOverriddenAsMethod)
+               .findFirst()
+               .orElseThrow(() -> new IllegalArgumentException(
+                       "decorator should override Service.as(): " + decorator));
+        methods.stream()
+               .filter(isOverriddenServiceAddedMethod)
+               .findFirst()
+               .orElseThrow(() -> new IllegalArgumentException(
+                       "decorator should override Service.serviceAdded(): " + decorator));
     }
 
     /**
