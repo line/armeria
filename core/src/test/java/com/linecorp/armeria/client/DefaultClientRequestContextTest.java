@@ -375,6 +375,27 @@ class DefaultClientRequestContextTest {
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }
 
+    @Test
+    void testToStringSlow() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext ctxWithChannel = (DefaultClientRequestContext) ClientRequestContext.of(req);
+        final DefaultClientRequestContext ctxWithNoChannel = newContext();
+
+        assertThat(ctxWithNoChannel.channel()).isNull();
+        assertThat(ctxWithNoChannel.toString()).doesNotContain("chanId=");
+        ctxWithNoChannel.logBuilder().session(ctxWithChannel.channel(), ctxWithChannel.sessionProtocol(), null);
+        final String channelCached = ctxWithNoChannel.toString();
+        assertThat(channelCached).contains("chanId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(channelCached);
+
+        assertThat(ctxWithNoChannel.log().parent()).isNull();
+        assertThat(ctxWithNoChannel.toString()).doesNotContain("pcreqId=");
+        ctxWithChannel.logBuilder().addChild(ctxWithNoChannel.log());
+        final String parentIdCached = ctxWithNoChannel.toString();
+        assertThat(parentIdCached).contains("pcreqId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(parentIdCached);
+    }
+
     private static void mutateAdditionalHeaders(ClientRequestContext originalCtx) {
         final HttpHeaders headers1 = HttpHeaders.of(HttpHeaderNames.of("my-header#1"), "value#1");
         originalCtx.mutateAdditionalRequestHeaders(mutator -> mutator.add(headers1));

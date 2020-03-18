@@ -74,6 +74,8 @@ public final class DefaultClientRequestContext
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
+    private static final short STR_CHANNEL_AVAILABILITY = 1;
+    private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
 
     private boolean initialized;
     @Nullable
@@ -101,6 +103,7 @@ public final class DefaultClientRequestContext
 
     @Nullable
     private String strVal;
+    private short strValAvailabilities;
 
     // We use null checks which are faster than checking if a list is empty,
     // because it is more common to have no customizers than to have any.
@@ -556,23 +559,27 @@ public final class DefaultClientRequestContext
 
     @Override
     public String toString() {
-        final String clientRequestIdStr = toStringClientRequestId();
-        if (strVal != null) {
-            return clientRequestIdStr + strVal;
+        if (strVal == null) {
+            strVal = toStringSlow();
+            if (channel() != null) {
+                strValAvailabilities |= STR_CHANNEL_AVAILABILITY;
+            }
+            if (log().parent() != null) {
+                strValAvailabilities |= STR_PARENT_LOG_AVAILABILITY;
+            }
+            return strVal;
         }
-        return clientRequestIdStr + toStringSlow();
-    }
 
-    private String toStringClientRequestId() {
-        final String creqId = id().shortText();
-        final RequestLogAccess parent = log.parent();
-        final String pcreqId = parent != null ? parent.context().id().shortText() : null;
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("[creqId=").append(creqId);
-        if (parent != null) {
-            buf.append(", pcreqId=").append(pcreqId);
+        boolean dirty = false;
+        if (channel() != null && (strValAvailabilities & STR_CHANNEL_AVAILABILITY) == 0) {
+            dirty = true;
+            strValAvailabilities |= STR_CHANNEL_AVAILABILITY;
+        } else if (log().parent() != null && (strValAvailabilities & STR_PARENT_LOG_AVAILABILITY) == 0) {
+            dirty = true;
+            strValAvailabilities |= STR_PARENT_LOG_AVAILABILITY;
         }
-        return buf.toString();
+
+        return dirty ? strVal = toStringSlow() : strVal;
     }
 
     private String toStringSlow() {
@@ -580,6 +587,9 @@ public final class DefaultClientRequestContext
         // building one String with a thread-local StringBuilder while building another String with
         // the same StringBuilder. See TemporaryThreadLocals for more information.
         final Channel ch = channel();
+        final String creqId = id().shortText();
+        final RequestLogAccess parent = log.parent();
+        final String pcreqId = parent != null ? parent.context().id().shortText() : null;
         final String sreqId = root() != null ? root().id().shortText() : null;
         final String chanId = ch != null ? ch.id().asShortText() : null;
         final String proto = sessionProtocol().uriText();
@@ -589,6 +599,10 @@ public final class DefaultClientRequestContext
 
         // Build the string representation.
         final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append("[creqId=").append(creqId);
+        if (parent != null) {
+            buf.append(", pcreqId=").append(pcreqId);
+        }
         if (sreqId != null) {
             buf.append(", sreqId=").append(sreqId);
         }

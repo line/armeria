@@ -430,6 +430,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         requireNonNull(child, "child");
 
         if (child instanceof DefaultRequestLog) {
+            checkState(((DefaultRequestLog) child).parent == null, "child has parent already");
             ((DefaultRequestLog) child).parent = this;
         }
 
