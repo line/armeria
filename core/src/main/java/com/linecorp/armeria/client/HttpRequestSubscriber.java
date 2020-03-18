@@ -129,7 +129,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 return;
             }
 
-            failAndWriteResetIfActive(future.cause());
+            failAndReset(future.cause());
         }
     }
 
@@ -144,17 +144,28 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final HttpSession session = HttpSession.get(ch);
         id = session.getAndIncrementNumRequestsSent();
-        if (!session.canSendRequest() || id >= MAX_NUM_REQUESTS_SENT) {
+        if (id >= MAX_NUM_REQUESTS_SENT || !session.canSendRequest()) {
+            final ClosedSessionException exception;
+            if (id >= MAX_NUM_REQUESTS_SENT) {
+                exception = new ClosedSessionException(
+                        "Can't send requests more than " + MAX_NUM_REQUESTS_SENT +
+                        " in one connection. ID: " + id);
+            } else {
+                exception = new ClosedSessionException(
+                        "Can't send requests. ID: " + id + ", session active: " + session.isActive() +
+                        ", response needs to disconnect: " + responseDecoder.needsToDisconnectWhenFinished());
+            }
             responseDecoder.disconnectWhenFinished();
             // No need to send RST because we didn't send any packet and this will be disconnected anyway.
-            fail(new UnprocessedRequestException(ClosedSessionException.get()));
+            fail(new UnprocessedRequestException(exception));
             return;
         }
+
         addResponseToDecoder();
         if (timeoutMillis > 0) {
             // The timer would be executed if the first message has not been sent out within the timeout.
             timeoutFuture = ch.eventLoop().schedule(
-                    () -> failAndWriteResetIfActive(WriteTimeoutException.get()),
+                    () -> failAndReset(WriteTimeoutException.get()),
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
 
@@ -196,7 +207,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Override
     public void onNext(HttpObject o) {
         if (!(o instanceof HttpData) && !(o instanceof HttpHeaders)) {
-            failAndWriteResetIfActive(new IllegalArgumentException(
+            failAndReset(new IllegalArgumentException(
                     "published an HttpObject that's neither Http2Headers nor Http2Data: " + o));
             return;
         }
@@ -207,7 +218,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 if (o instanceof HttpHeaders) {
                     final HttpHeaders trailers = (HttpHeaders) o;
                     if (trailers.contains(HttpHeaderNames.STATUS)) {
-                        failAndWriteResetIfActive(
+                        failAndReset(
                                 new IllegalArgumentException("published a trailers with status: " + o));
                         return;
                     }
@@ -232,7 +243,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     public void onError(Throwable cause) {
         isSubscriptionCompleted = true;
         if (id >= 0) { // onSubscribe is called.
-            failAndWriteResetIfActive(cause);
+            failAndReset(cause);
         } else {
             // No need to send RST because we didn't send any packet.
             fail(cause);
@@ -286,9 +297,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         //    the subscriber attempts to write the next data to the stream closed at 2).
         if (!encoder.isWritable(id, streamId())) {
             if (ctx.sessionProtocol().isMultiplex()) {
-                failAndWriteResetIfActive(ClosedStreamException.get());
+                failAndReset(ClosedStreamException.get());
             } else {
-                failAndWriteResetIfActive(ClosedSessionException.get());
+                failAndReset(ClosedSessionException.get());
             }
             return true;
         }
@@ -322,7 +333,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         subscription.cancel();
     }
 
-    private void failAndWriteResetIfActive(Throwable cause) {
+    private void failAndReset(Throwable cause) {
         fail(cause);
 
         final Http2Error error;

@@ -28,6 +28,11 @@ import io.netty.channel.ChannelHandler;
 
 interface HttpSession {
 
+    /**
+     * 2^29 - We could have used 2^30 but this should be large enough.
+     */
+    int MAX_NUM_REQUESTS_SENT = 536870912;
+
     HttpSession INACTIVE = new HttpSession() {
         @Nullable
         @Override
@@ -62,11 +67,16 @@ interface HttpSession {
         }
 
         @Override
+        public boolean isActive() {
+            return false;
+        }
+
+        @Override
         public void deactivate() {}
 
         @Override
         public int getAndIncrementNumRequestsSent() {
-            return 0;
+            return MAX_NUM_REQUESTS_SENT;
         }
     };
 
@@ -99,6 +109,8 @@ interface HttpSession {
                 HttpRequest req, DecodedHttpResponse res);
 
     void retryWithH1C();
+
+    boolean isActive();
 
     void deactivate();
 

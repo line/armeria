@@ -63,11 +63,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     private static final Logger logger = LoggerFactory.getLogger(HttpSessionHandler.class);
 
-    /**
-     * 2^29 - We could have used 2^30 but this should be large enough.
-     */
-    static final int MAX_NUM_REQUESTS_SENT = 536870912;
-
     private static final AttributeKey<Throwable> PENDING_EXCEPTION =
             AttributeKey.valueOf(HttpSessionHandler.class, "PENDING_EXCEPTION");
 
@@ -225,6 +220,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void retryWithH1C() {
         needsRetryWithH1C = true;
+    }
+
+    @Override
+    public boolean isActive() {
+        return active;
     }
 
     @Override

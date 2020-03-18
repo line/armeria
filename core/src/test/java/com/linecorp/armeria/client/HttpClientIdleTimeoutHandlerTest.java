@@ -140,6 +140,11 @@ public class HttpClientIdleTimeoutHandlerTest {
         }
 
         @Override
+        public boolean isActive() {
+            return false;
+        }
+
+        @Override
         public void deactivate() {
             throw new UnsupportedOperationException();
         }
