@@ -440,7 +440,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
-        timeoutScheduler.setTimeoutMillis(mode, responseTimeoutMillis);
+        timeoutScheduler.setTimeoutMillis(requireNonNull(mode, "mode"), responseTimeoutMillis);
     }
 
     @Deprecated
