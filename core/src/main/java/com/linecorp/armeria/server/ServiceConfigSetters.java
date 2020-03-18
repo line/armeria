@@ -76,4 +76,11 @@ interface ServiceConfigSetters {
      * @param decorator the {@link Function} that decorates the {@link HttpService}
      */
     ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator);
+
+    /**
+     * Decorates an {@link HttpService} with the specified {@code decorator}.
+     *
+     * @param decorator the {@link DecoratingHttpServiceFunction} that decorates the {@link HttpService}
+     */
+    ServiceConfigSetters decorator(DecoratingHttpServiceFunction decorator);
 }

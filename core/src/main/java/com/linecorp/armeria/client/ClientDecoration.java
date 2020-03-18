@@ -16,12 +16,18 @@
 
 package com.linecorp.armeria.client;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.function.Function;
 
+import org.reflections.ReflectionUtils;
+
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.internal.common.util.DecoratorUtil;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 
 /**
  * A set of {@link Function}s that transforms a {@link Client} into another.
@@ -29,6 +35,22 @@ import com.linecorp.armeria.internal.common.util.DecoratorUtil;
 public final class ClientDecoration {
 
     private static final ClientDecoration NONE = new ClientDecoration(ImmutableList.of(), ImmutableList.of());
+
+    private static final Predicate<Method> isOverriddenAsMethod = method -> {
+        final Class<?>[] parameterTypes = method.getParameterTypes();
+        return "as".equals(method.getName()) &&
+               Modifier.isPublic(method.getModifiers()) && !method.isDefault() &&
+               parameterTypes.length == 1 && parameterTypes[0].getName().equals(Class.class.getName());
+    };
+
+    /**
+     * Validates whether the specified {@code decorator} overrides {@link Client#as(Class)} properly.
+     */
+    static <I extends Request, O extends Response> void validateDecorator(Client<I, O> decorator) {
+        if (ReflectionUtils.getAllMethods(decorator.getClass(), isOverriddenAsMethod).isEmpty()) {
+            throw new IllegalArgumentException("decorator should override Client.as(): " + decorator);
+        }
+    }
 
     /**
      * Returns an empty {@link ClientDecoration} which does not decorate a {@link Client}.
@@ -110,7 +132,7 @@ public final class ClientDecoration {
     public HttpClient decorate(HttpClient client) {
         for (Function<? super HttpClient, ? extends HttpClient> decorator : decorators) {
             client = decorator.apply(client);
-            DecoratorUtil.validateClientDecorator(client);
+            validateDecorator(client);
         }
         return client;
     }
@@ -123,7 +145,7 @@ public final class ClientDecoration {
     public RpcClient rpcDecorate(RpcClient client) {
         for (Function<? super RpcClient, ? extends RpcClient> decorator : rpcDecorators) {
             client = decorator.apply(client);
-            DecoratorUtil.validateClientDecorator(client);
+            validateDecorator(client);
         }
         return client;
     }

@@ -14,34 +14,24 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.util;
+package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
-import com.linecorp.armeria.client.SimpleDecoratingRpcClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.RpcService;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.server.SimpleDecoratingRpcService;
+import com.linecorp.armeria.internal.server.DecoratingServiceUtil;
 
-class DecoratorUtilTest {
-
+class DecoratingServiceValidationTest {
     @Test
     void invalidService_as() {
         final HttpService service = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
-        assertThatThrownBy(() -> DecoratorUtil.validateServiceDecorator(service))
+        assertThatThrownBy(() -> DecoratingServiceUtil.validateDecorator(service))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("decorator should override Service.as()");
     }
@@ -49,7 +39,7 @@ class DecoratorUtilTest {
     @Test
     void invalidService_serviceAdded() {
         final HttpService service = new UnwrappableService();
-        assertThatThrownBy(() -> DecoratorUtil.validateServiceDecorator(service))
+        assertThatThrownBy(() -> DecoratingServiceUtil.validateDecorator(service))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("decorator should override Service.serviceAdded()");
     }
@@ -63,7 +53,7 @@ class DecoratorUtilTest {
                 return delegate().serve(ctx, req);
             }
         };
-        DecoratorUtil.validateServiceDecorator(decorator);
+        DecoratingServiceUtil.validateDecorator(decorator);
     }
 
     @Test
@@ -75,39 +65,7 @@ class DecoratorUtilTest {
                 return delegate().serve(ctx, req);
             }
         };
-        DecoratorUtil.validateServiceDecorator(decorator);
-    }
-
-    @Test
-    void invalidClient_as() {
-        final HttpClient client = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
-        assertThatThrownBy(() -> DecoratorUtil.validateClientDecorator(client))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("decorator should override Client.as()");
-    }
-
-    @Test
-    void validHttpClientDecorator() {
-        final HttpClient client = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
-        final HttpClient decorator = new SimpleDecoratingHttpClient(client) {
-            @Override
-            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-                return HttpResponse.of(HttpStatus.OK);
-            }
-        };
-        DecoratorUtil.validateClientDecorator(decorator);
-    }
-
-    @Test
-    void validRpcClientDecorator() {
-        final RpcClient client = (ctx, req) -> RpcResponse.of(null);
-        final RpcClient decorator = new SimpleDecoratingRpcClient(client) {
-            @Override
-            public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
-                return RpcResponse.of(null);
-            }
-        };
-        DecoratorUtil.validateClientDecorator(decorator);
+        DecoratingServiceUtil.validateDecorator(decorator);
     }
 
     private static class UnwrappableService implements HttpService {

@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.server.DecoratingServiceUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -350,13 +351,14 @@ public final class ArmeriaConfigurationUtil {
         final Map<String, Collection<? extends AnnotatedExampleRequest>> docServiceRequests = new HashMap<>();
         final Map<String, Collection<? extends ExampleHeaders>> docServiceHeaders = new HashMap<>();
         beans.forEach(bean -> {
-            Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+            Function<? super HttpService, ? extends HttpService> decorator = null;
             for (Function<? super HttpService, ? extends HttpService> d : bean.getDecorators()) {
-                decorator = decorator.andThen(d);
+                decorator = decorator != null ? decorator.andThen(d) : d;
             }
             if (meterIdPrefixFunctionFactory != null) {
-                decorator = decorator.andThen(
-                        metricCollectingServiceDecorator(bean, meterIdPrefixFunctionFactory));
+                final Function<? super HttpService, MetricCollectingService> collectingDecorator =
+                        metricCollectingServiceDecorator(bean, meterIdPrefixFunctionFactory);
+                decorator = decorator != null ? decorator.andThen(collectingDecorator) : collectingDecorator;
             }
             final ImmutableList<Object> exceptionHandlersAndConverters =
                     ImmutableList.builder()
@@ -367,6 +369,9 @@ public final class ArmeriaConfigurationUtil {
             final String serviceName = bean.getService().getClass().getName();
             docServiceRequests.put(serviceName, bean.getExampleRequests());
             docServiceHeaders.put(serviceName, bean.getExampleHeaders());
+            if (decorator == null) {
+                decorator = DecoratingServiceUtil.noopDecorator();
+            }
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator,
                                     exceptionHandlersAndConverters);
         });

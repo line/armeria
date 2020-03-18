@@ -58,6 +58,7 @@ import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.internal.server.DecoratingServiceUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -418,7 +419,7 @@ public final class VirtualHostBuilder {
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
     public VirtualHostBuilder annotatedService(Object service) {
-        return annotatedService("/", service, Function.identity(), ImmutableList.of());
+        return annotatedService("/", service, DecoratingServiceUtil.noopDecorator(), ImmutableList.of());
     }
 
     /**
@@ -430,7 +431,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder annotatedService(Object service,
                                                Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, Function.identity(),
+        return annotatedService("/", service, DecoratingServiceUtil.noopDecorator(),
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
                                                                     "exceptionHandlersAndConverters")));
     }
@@ -454,7 +455,7 @@ public final class VirtualHostBuilder {
      * Binds the specified annotated service object under the specified path prefix.
      */
     public VirtualHostBuilder annotatedService(String pathPrefix, Object service) {
-        return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
+        return annotatedService(pathPrefix, service, DecoratingServiceUtil.noopDecorator(), ImmutableList.of());
     }
 
     /**
@@ -466,7 +467,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
                                                Object... exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(),
+        return annotatedService(pathPrefix, service, DecoratingServiceUtil.noopDecorator(),
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
                                                                     "exceptionHandlersAndConverters")));
     }
@@ -480,7 +481,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
                                                Iterable<?> exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(),
+        return annotatedService(pathPrefix, service, DecoratingServiceUtil.noopDecorator(),
                                 requireNonNull(exceptionHandlersAndConverters,
                                                "exceptionHandlersAndConverters"));
     }

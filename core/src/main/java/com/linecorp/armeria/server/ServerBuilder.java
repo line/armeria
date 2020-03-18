@@ -66,6 +66,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.server.DecoratingServiceUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -912,7 +913,7 @@ public final class ServerBuilder {
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
     public ServerBuilder annotatedService(Object service) {
-        return annotatedService("/", service, Function.identity(), ImmutableList.of());
+        return annotatedService("/", service, DecoratingServiceUtil.noopDecorator(), ImmutableList.of());
     }
 
     /**
@@ -924,7 +925,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder annotatedService(Object service,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, Function.identity(),
+        return annotatedService("/", service, DecoratingServiceUtil.noopDecorator(),
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
                                                                     "exceptionHandlersAndConverters")));
     }
@@ -948,19 +949,18 @@ public final class ServerBuilder {
      * Binds the specified annotated service object under the specified path prefix.
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service) {
-        return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
+        return annotatedService(pathPrefix, service, DecoratingServiceUtil.noopDecorator(), ImmutableList.of());
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
-     *
      * @param exceptionHandlersAndConverters the {@link ExceptionHandlerFunction}s,
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(),
+        return annotatedService(pathPrefix, service, DecoratingServiceUtil.noopDecorator(),
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
                                                                     "exceptionHandlersAndConverters")));
     }
@@ -990,7 +990,8 @@ public final class ServerBuilder {
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Iterable<?> exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(), exceptionHandlersAndConverters);
+        return annotatedService(pathPrefix, service, DecoratingServiceUtil.noopDecorator(),
+                                exceptionHandlersAndConverters);
     }
 
     /**

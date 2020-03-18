@@ -77,13 +77,21 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
+    @Override
+    public AbstractServiceBindingBuilder decorator(DecoratingHttpServiceFunction decorator) {
+        defaultServiceConfigSetters.decorator(decorator);
+        return this;
+    }
+
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
         final List<Route> routes = buildRouteList();
 
+        final Function<? super HttpService, ? extends HttpService> decorator =
+                defaultServiceConfigSetters.decorator();
         for (Route route : routes) {
-            final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
+            final HttpService decoratedService = decorator != null ? decorator.apply(service) : service;
             final ServiceConfigBuilder serviceConfigBuilder =
                     defaultServiceConfigSetters.toServiceConfigBuilder(route, decoratedService);
             serviceConfigBuilder(serviceConfigBuilder);

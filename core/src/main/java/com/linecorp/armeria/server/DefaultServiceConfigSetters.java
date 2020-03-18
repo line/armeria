@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.server.DecoratingServiceUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -84,6 +85,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
+        if (decorator == DecoratingServiceUtil.noopDecorator()) {
+            return this;
+        }
 
         if (this.decorator != null) {
             this.decorator = this.decorator.andThen(decorator);
@@ -94,10 +98,13 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
+    @Override
+    public ServiceConfigSetters decorator(DecoratingHttpServiceFunction decorator) {
+        return decorator(delegate -> new FunctionalDecoratingHttpService(delegate, decorator));
+    }
+
+    @Nullable
     Function<? super HttpService, ? extends HttpService> decorator() {
-        if (decorator == null) {
-            return Function.identity();
-        }
         return decorator;
     }
 

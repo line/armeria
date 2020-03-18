@@ -518,15 +518,16 @@ public final class AnnotatedServiceFactory {
      * Returns a decorator chain which is specified by {@link Decorator} annotations and user-defined
      * decorator annotations.
      */
+    @Nullable
     private static Function<? super HttpService, ? extends HttpService> decorator(
             Method method, Class<?> clazz) {
 
         final List<DecoratorAndOrder> decorators = collectDecorators(clazz, method);
 
-        Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+        Function<? super HttpService, ? extends HttpService> decorator = null;
         for (int i = decorators.size() - 1; i >= 0; i--) {
             final DecoratorAndOrder d = decorators.get(i);
-            decorator = decorator.andThen(d.decorator());
+            decorator = decorator != null ? decorator.andThen(d.decorator()) : d.decorator();
         }
         return decorator;
     }

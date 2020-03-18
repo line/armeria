@@ -25,7 +25,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.common.util.DecoratorUtil;
+import com.linecorp.armeria.internal.server.DecoratingServiceUtil;
 
 import io.netty.util.AttributeKey;
 
@@ -82,7 +82,7 @@ final class RouteDecoratingService implements HttpService {
                            Function<? super HttpService, ? extends HttpService> decoratorFunction) {
         this.route = requireNonNull(route, "route");
         decorator = requireNonNull(decoratorFunction, "decoratorFunction").apply(this);
-        DecoratorUtil.validateServiceDecorator(decorator);
+        DecoratingServiceUtil.validateDecorator(decorator);
     }
 
     @Override

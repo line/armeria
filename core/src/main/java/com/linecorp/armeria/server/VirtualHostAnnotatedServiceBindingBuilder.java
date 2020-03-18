@@ -194,6 +194,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder decorator(DecoratingHttpServiceFunction decorator) {
+        defaultServiceConfigSetters.decorator(decorator);
+        return this;
+    }
+
     /**
      * Registers the given service to the {@linkplain VirtualHostBuilder}.
      *

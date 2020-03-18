@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.internal.common.util.DecoratorUtil;
+import com.linecorp.armeria.internal.server.DecoratingServiceUtil;
 
 /**
  * An HTTP/2 {@link Service}.
@@ -44,7 +44,7 @@ public interface HttpService extends Service<HttpRequest, HttpResponse> {
         if (newService == null) {
             throw new NullPointerException("decorator.apply() returned null: " + decorator);
         }
-        DecoratorUtil.validateServiceDecorator(newService);
+        DecoratingServiceUtil.validateDecorator(newService);
 
         return newService;
     }

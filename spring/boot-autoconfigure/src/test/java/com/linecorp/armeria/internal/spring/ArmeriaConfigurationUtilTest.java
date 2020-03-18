@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.internal.server.DecoratingServiceUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
@@ -52,7 +53,29 @@ class ArmeriaConfigurationUtilTest {
 
     @Test
     void makesSureDecoratorsAreConfigured() {
-        final Function<? super HttpService, ? extends HttpService> decorator = spy(new IdentityFunction());
+        final AnnotatedServiceRegistrationBean bean = new AnnotatedServiceRegistrationBean()
+                .setServiceName("test")
+                .setService(new SimpleService())
+                .setDecorators(DecoratingServiceUtil.noopDecorator());
+
+        final ServerBuilder sb1 = Server.builder();
+        final DocServiceBuilder dsb1 = DocService.builder();
+        configureAnnotatedServices(sb1, dsb1, ImmutableList.of(bean),
+                                   MeterIdPrefixFunctionFactory.ofDefault(), null);
+        final Server s1 = sb1.build();
+        assertThat(service(s1).as(MetricCollectingService.class)).isNotNull();
+
+        final ServerBuilder sb2 = Server.builder();
+        final DocServiceBuilder dsb2 = DocService.builder();
+        configureAnnotatedServices(sb2, dsb2, ImmutableList.of(bean), null, null);
+        sb2.build();
+        assertThat(getServiceForHttpMethod(sb2.build(), HttpMethod.OPTIONS))
+                .isInstanceOf(AnnotatedService.class);
+    }
+
+    @Test
+    void makeSureDecoratorsNumInvocation() {
+        final Function<? super HttpService, ? extends HttpService> decorator = spy(new DecoratingFunction());
         final AnnotatedServiceRegistrationBean bean = new AnnotatedServiceRegistrationBean()
                 .setServiceName("test")
                 .setService(new SimpleService())
@@ -61,21 +84,20 @@ class ArmeriaConfigurationUtilTest {
         final ServerBuilder sb1 = Server.builder();
         final DocServiceBuilder dsb1 = DocService.builder();
         configureAnnotatedServices(sb1, dsb1, ImmutableList.of(bean),
-                                       MeterIdPrefixFunctionFactory.ofDefault(), null);
+                                   MeterIdPrefixFunctionFactory.ofDefault(), null);
         final Server s1 = sb1.build();
         verify(decorator, times(2)).apply(any());
         assertThat(service(s1).as(MetricCollectingService.class)).isNotNull();
 
         reset(decorator);
-
         final ServerBuilder sb2 = Server.builder();
         final DocServiceBuilder dsb2 = DocService.builder();
         configureAnnotatedServices(sb2, dsb2, ImmutableList.of(bean),
-                                       null, null);
-        final Server s2 = sb2.build();
+                                   null, null);
+        sb2.build();
         verify(decorator, times(2)).apply(any());
-        assertThat(getServiceForHttpMethod(sb2.build(), HttpMethod.OPTIONS))
-                .isInstanceOf(AnnotatedService.class);
+        assertThat(getServiceForHttpMethod(sb2.build(), HttpMethod.OPTIONS).as(AnnotatedService.class))
+                .isNotNull();
     }
 
     @Test
@@ -102,16 +124,6 @@ class ArmeriaConfigurationUtilTest {
         return server.serviceConfigs().stream()
                      .filter(config -> config.route().methods().contains(httpMethod))
                      .findFirst().get().service();
-    }
-
-    /**
-     * A decorator function which is the same as {@link #identity()} but is not a final class.
-     */
-    static class IdentityFunction implements Function<HttpService, HttpService> {
-        @Override
-        public HttpService apply(HttpService delegate) {
-            return delegate;
-        }
     }
 
     /**

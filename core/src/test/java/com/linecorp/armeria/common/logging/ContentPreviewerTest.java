@@ -189,7 +189,7 @@ class ContentPreviewerTest {
 
         void build(ServerBuilder sb) {
             sb.decorator(ContentPreviewingService.newDecorator(contentPreviewerFactory(10)));
-            sb.decorator(delegate -> (ctx, req) -> {
+            sb.decorator((delegate, ctx, req) -> {
                 if (waitingFuture != null) {
                     ctx.log().whenComplete().thenAccept(waitingFuture::complete);
                 }

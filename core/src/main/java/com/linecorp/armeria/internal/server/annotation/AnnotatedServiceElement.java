@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.server.HttpService;
@@ -34,14 +36,15 @@ public final class AnnotatedServiceElement {
 
     private final AnnotatedService service;
 
+    @Nullable
     private final Function<? super HttpService, ? extends HttpService> decorator;
 
     AnnotatedServiceElement(Route route,
                             AnnotatedService service,
-                            Function<? super HttpService, ? extends HttpService> decorator) {
+                            @Nullable Function<? super HttpService, ? extends HttpService> decorator) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
-        this.decorator = requireNonNull(decorator, "decorator");
+        this.decorator = decorator;
     }
 
     /**
@@ -73,11 +76,13 @@ public final class AnnotatedServiceElement {
      * @param localDecorator a decorator to decorate the service with.
      */
     public HttpService buildSafeDecoratedService(
-            Function<? super HttpService, ? extends HttpService> localDecorator) {
+            @Nullable Function<? super HttpService, ? extends HttpService> localDecorator) {
         // Apply decorators which are specified in the service class.
-        HttpService decoratedService = decorator.apply(service);
+        HttpService decoratedService = decorator != null ? decorator.apply(service) : service;
         // Apply localDecorator passed in through method parameter
-        decoratedService = decoratedService.decorate(localDecorator);
+        if (localDecorator != null) {
+            decoratedService = decoratedService.decorate(localDecorator);
+        }
         // If there is a decorator, we should add one more decorator which handles an exception
         // raised from decorators.
         if (decoratedService != service) {
