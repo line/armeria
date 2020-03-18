@@ -50,8 +50,8 @@ public final class DecoratorUtil {
                parameterTypes[0].getName().equals(ServiceConfig.class.getName());
     };
 
-    private static final Predicate<Method> isOverriddenAsOrServiceAddedMethod = method ->
-            isOverriddenAsMethod.test(method) || isOverriddenServiceAddedMethod.test(method);
+    private static final Predicate<Method> isOverriddenAsOrServiceAddedMethod =
+            method -> isOverriddenAsMethod.test(method) || isOverriddenServiceAddedMethod.test(method);
 
     /**
      * Validates whether the specified {@code decorator} overrides {@link Service#as(Class)} and
