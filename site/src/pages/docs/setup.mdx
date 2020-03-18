@@ -1,0 +1,242 @@
+import versions from '../../../gen-src/versions.json';
+
+# Setting up a project
+
+## Requirements
+
+[Java 8 (or later)](https://adoptopenjdk.net/) is required to build and run an application based on Armeria.
+
+<Tip>
+
+Use Java 13 (or later) if you are a contributor who tries to build Armeria itself.
+See [CONTRIBUTING.md](https://github.com/line/armeria/blob/master/CONTRIBUTING.md) for more information.
+   
+</Tip>
+
+## Choosing the artifacts
+
+All Armeria JARs are available in [Maven Central Repository](https://search.maven.org/search?q=g:com.linecorp.armeria%20-shaded)
+under group ID `com.linecorp.armeria` so that you can fetch them easily using your favorite build tool.
+Add the Armeria artifacts that provide the desired functionality to your project dependencies. The following is
+the list of major Armeria artifacts which might interest you:
+
++---------------------------------------------+---------------------------------------------------------------------------------+
+| Artifact ID                                 | Description                                                                     |
++=============================================+=================================================================================+
+| `armeria`                                   | The core library.                                                               |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-brave`                             | Distributed tracing with Brave.                                                 |
+|                                             | See [Zipkin integration](/docs/advanced-zipkin).                                |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-dropwizard`                        | Provides a Dropwizard Bundle around `armeria-jetty`.                            |
+|                                             | See [Using Armeria with Dropwizard](/docs/advanced-dropwizard-integration).     |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-grpc`                              | gRPC client and server support.                                                 |
+|                                             | See [Running a gRPC service](/docs/server-grpc)                                 |
+|                                             | and [Calling a gRPC service](/docs/client-grpc).                                |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-jetty`                             | Embedded Jetty Servlet container.                                               |
+|                                             |  See [Embedding a servlet container](/docs/server-servlet).                     |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-kafka`                             | Enables sending access logs to Kafka                                            |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-logback`                           | Provides Logback `Appender` implementation that adds                            |
+|                                             | request information.                                                            |
+|                                             | See [Logging contextual information](/docs/advanced-logging).                   |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-retrofit2`                         | Allows using Armeria instead of OkHttp as transport layer                       |
+|                                             | when using Retrofit.                                                            |
+|                                             | See [Retrofit integration](/docs/client-retrofit).                              |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-rxjava`                            | RxJava plugin                                                                   |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-saml`                              | SAML support                                                                    |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-spring-boot-autoconfigure`         | Spring Boot integration                                                         |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-spring-boot-webflux-autoconfigure` | Spring Boot WebFlux integration. See                                            |
+|                                             | [Using Armeria with Spring WebFlux](/docs/advanced-spring-webflux-integration). |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-thrift`                            | Thrift client and server support.                                               |
+|                                             | See [Running a Thrift service](/docs/server-thrift)                             |
+|                                             | and [Calling a Thrift service](/docs/client-thrift).                            |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-tomcat`                            | Embedded Tomcat Servlet container.                                              |
+|                                             |  See [Embedding a servlet container](/docs/server-servlet).                     |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-zookeeper`                         | ZooKeeper-based service discovery.                                              |
+|                                             | See [Service discovery with ZooKeeper](/docs/advanced-zookeeper).               |
++---------------------------------------------+---------------------------------------------------------------------------------+
+
+## Setting up with a build system
+
+You might want to use the following build file as a starting point when you set up a new project:
+
+<Tabs>
+  <TabPane tab="Gradle" key="gradle">
+    <CodeBlock language="groovy" filename="build.gradle">{`
+    apply plugin: 'java'
+    apply plugin: 'idea'
+    apply plugin: 'eclipse'\n
+    repositories {
+        mavenCentral()
+    }\n
+    dependencies {
+        // Adjust the list as you need.
+        ['armeria',
+        'armeria-brave',
+        'armeria-grpc',
+        'armeria-jetty',
+        'armeria-kafka',
+        'armeria-logback',
+        'armeria-retrofit2',
+        'armeria-rxjava',
+        'armeria-saml',
+        'armeria-thrift',
+        'armeria-tomcat',
+        'armeria-zookeeper'].each {
+            compile "com.linecorp.armeria:\${it}:${versions['com.linecorp.armeria:armeria-bom']}"
+        }\n
+        // Logging
+        runtime 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
+        runtime 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
+    }
+    `}</CodeBlock>
+  </TabPane>
+  <TabPane tab="Maven" key="maven">
+    <CodeBlock language="xml" filename="pom.xml">{`
+    <project xmlns="http://maven.apache.org/POM/4.0.0"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">\n
+      <modelVersion>4.0.0</modelVersion>
+      <groupId>com.example</groupId>
+      <artifactId>myproject</artifactId>
+      <version>1.0-SNAPSHOT</version>
+      <packaging>jar</packaging>
+      <name>myproject</name>
+      <url>https://example.com/</url>\n
+      <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      </properties>\n
+      <dependencies>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-brave</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-grpc</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-jetty</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-kafka</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-logback</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-retrofit2</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-rxjava</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-saml</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-thrift</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-tomcat</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-zookeeper</artifactId>
+          <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
+        </dependency>
+        <!-- Logging -->
+        <dependency>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+          <version>${versions['ch.qos.logback:logback-classic']}</version>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>log4j-over-slf4j</artifactId>
+          <version>${versions['org.slf4j:log4j-over-slf4j']}</version>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+    </project>
+    `}</CodeBlock>
+  </TabPane>
+</Tabs>
+
+## Configure `-parameters` javac option
+
+You can configure your build tool to add `-parameters` javac option as follows.
+
+```groovy
+// Gradle:
+tasks.withType(JavaCompile) {
+    options.compilerArgs += '-parameters'
+}
+```
+
+```xml
+<!-- Maven -->
+<project>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <compilerArgs>
+            <arg>-parameters</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+```
+
+### IntelliJ IDEA
+
+Go to `Preferences` > `Build, Execution, Deployment` > `Compiler` > `Java Compiler` 
+and add `-parameters` to `Additional command line paramters`.
+
+![](../../images/intellij_javac_parameters.png)
+
+## Using Maven BOM for simpler dependency management
+
+You can import `com.linecorp.armeria:armeria-bom` into your build rather than specifying Armeria versions in
+more than one place. See [this article](https://www.baeldung.com/spring-maven-bom) to learn more about what
+Maven BOM is and how to use it.

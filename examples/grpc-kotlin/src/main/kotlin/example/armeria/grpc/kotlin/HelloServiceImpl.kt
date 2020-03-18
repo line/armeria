@@ -30,7 +30,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
     /**
      * Sends a [HelloReply] using `blockingTaskExecutor`.
      *
-     * @see [Blocking service implementation](https://line.github.io/armeria/server-grpc.html#blocking-service-implementation)
+     * @see [Blocking service implementation](https://line.github.io/armeria/docs/server-grpc#blocking-service-implementation)
      */
     override fun blockingHello(request: HelloRequest, responseObserver: StreamObserver<HelloReply>) {
         // Unlike upstream gRPC-Java, Armeria does not run service logic in a separate thread pool by default.

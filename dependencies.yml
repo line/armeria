@@ -12,7 +12,6 @@ boms:
   - io.zipkin.brave:brave-bom:5.11.2
   - org.eclipse.jetty:jetty-bom:9.4.27.v20200227
   - org.junit:junit-bom:5.6.1
-
 cglib:
   cglib: { version: '3.3.0' }
 
@@ -270,9 +269,6 @@ javax.inject:
 javax.validation:
   validation-api: { version: '2.0.1.Final' }
 
-org.testng:
-  testng: { version: '7.1.0' }
-
 junit:
   junit:
     version: '4.13'
@@ -284,9 +280,6 @@ org.junit.jupiter:
     javadocs:
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     - https://junit.org/junit5/docs/5.5.2/api/
-
-kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.6.1' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
@@ -500,6 +493,9 @@ org.springframework.boot:
     - org.springframework.boot:spring-boot-starter-reactor-netty
   spring-boot-configuration-processor: { version: *SPRING_BOOT_VERSION }
   spring-boot-gradle-plugin: { version: *SPRING_BOOT_VERSION }
+
+org.testng:
+  testng: { version: '7.1.0' }
 
 pl.project13.scala:
   sbt-jmh-extras: { version: '0.3.7' }

@@ -39,7 +39,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
     /**
      * Sends a {@link HelloReply} using {@code blockingTaskExecutor}.
      *
-     * @see <a href="https://line.github.io/armeria/server-grpc.html#blocking-service-implementation">Blocking
+     * @see <a href="https://line.github.io/armeria/docs/server-grpc#blocking-service-implementation">Blocking
      *      service implementation</a>
      */
     @Override
