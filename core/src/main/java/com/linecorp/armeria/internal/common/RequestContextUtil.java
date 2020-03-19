@@ -78,17 +78,16 @@ public final class RequestContextUtil {
                 if (providerFqcn.isEmpty()) {
                     throw new IllegalStateException(
                             "Found more than one " + RequestContextStorageProvider.class.getSimpleName() +
-                            ". You must specify -D" + RequestContextStorageProvider.class.getName() +
-                            "=<FQCN>. providers:" + providers);
+                            ". You must specify -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>." +
+                            " providers: " + providers);
                 }
 
                 for (RequestContextStorageProvider candidate : providers) {
                     if (candidate.getClass().getName().equals(providerFqcn)) {
                         if (provider != null) {
                             throw new IllegalStateException(
-                                    "-D" + RequestContextStorageProvider.class.getName() +
-                                    " matches more than one " +
-                                    RequestContextStorageProvider.class.getSimpleName() + ". providers:" +
+                                    providerFqcn + " matches more than one " +
+                                    RequestContextStorageProvider.class.getSimpleName() + ". providers: " +
                                     providers);
                         } else {
                             provider = candidate;
@@ -98,7 +97,7 @@ public final class RequestContextUtil {
                 if (provider == null) {
                     throw new IllegalStateException(
                             providerFqcn + " does not match any " +
-                            RequestContextStorageProvider.class.getSimpleName() + ". providers:" + providers);
+                            RequestContextStorageProvider.class.getSimpleName() + ". providers: " + providers);
                 }
             } else {
                 provider = providers.get(0);
