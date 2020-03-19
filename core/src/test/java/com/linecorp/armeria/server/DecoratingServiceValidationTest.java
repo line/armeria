@@ -42,7 +42,7 @@ class DecoratingServiceValidationTest {
             };
 
     @Test
-    void invalidService_as() {
+    void invalidDecorator_as() {
         final HttpService service = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
         assertThatThrownBy(() -> DecoratingServiceUtil.validateDecorator(service))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -50,7 +50,7 @@ class DecoratingServiceValidationTest {
     }
 
     @Test
-    void invalidService_serviceAdded() {
+    void invalidDecorator_serviceAdded() {
         final HttpService service = new UnwrappableService();
         assertThatThrownBy(() -> DecoratingServiceUtil.validateDecorator(service))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -58,7 +58,7 @@ class DecoratingServiceValidationTest {
     }
 
     @Test
-    void validateDecorator() {
+    void validDecorator() {
         final HttpService service = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
         final HttpService decorator = new SimpleDecoratingHttpService(service) {
             @Override
@@ -70,7 +70,7 @@ class DecoratingServiceValidationTest {
     }
 
     @Test
-    void validateRpcDecorator() {
+    void invalidRpcDecorator() {
         final RpcService service = (ctx, req) -> RpcResponse.of(null);
         final RpcService decorator = new SimpleDecoratingRpcService(service) {
             @Override
@@ -82,7 +82,7 @@ class DecoratingServiceValidationTest {
     }
 
     @Test
-    void validateDecoratorByServerBuilder() {
+    void invalidDecoratorWithServerBuilder() {
         Server.builder()
               .service("/", service)
               .decorator(decoratorFunction);
@@ -96,7 +96,7 @@ class DecoratingServiceValidationTest {
     }
 
     @Test
-    void validateDecoratorByService() {
+    void invalidDecoratorWithService() {
         service.decorate(decoratorFunction);
 
         assertThatThrownBy(() -> service.decorate(Function.identity()))

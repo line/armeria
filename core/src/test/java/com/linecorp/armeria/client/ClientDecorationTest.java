@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.function.Function;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -27,18 +29,14 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
 class ClientDecorationTest {
-
     @Test
-    void invalidClient_as() {
+    void validateDecorator() {
         final HttpClient client = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+
         assertThatThrownBy(() -> ClientDecoration.validateDecorator(client))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("decorator should override Client.as()");
-    }
 
-    @Test
-    void validDecorator() {
-        final HttpClient client = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
         final HttpClient decorator = new SimpleDecoratingHttpClient(client) {
             @Override
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
@@ -49,8 +47,31 @@ class ClientDecorationTest {
     }
 
     @Test
-    void validRpcDecorator() {
+    void validateDecoratorFunction() {
+        final Function<? super HttpClient, ? extends HttpClient> decoratorFunction =
+                delegate -> new SimpleDecoratingHttpClient(delegate) {
+                    @Override
+                    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+                        return delegate.execute(ctx, req);
+                    }
+                };
+        final HttpClient client = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+
+        ClientDecoration.of(decoratorFunction).decorate(client);
+
+        assertThatThrownBy(() -> ClientDecoration.of(Function.identity()).decorate(client))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("decorator should override Client.as()");
+    }
+
+    @Test
+    void validateRpcDecorator() {
         final RpcClient client = (ctx, req) -> RpcResponse.of(null);
+
+        assertThatThrownBy(() -> ClientDecoration.validateDecorator(client))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("decorator should override Client.as()");
+
         final RpcClient decorator = new SimpleDecoratingRpcClient(client) {
             @Override
             public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
@@ -58,5 +79,23 @@ class ClientDecorationTest {
             }
         };
         ClientDecoration.validateDecorator(decorator);
+    }
+
+    @Test
+    void validateRpcDecoratorFunction() {
+        final Function<? super RpcClient, ? extends RpcClient> rpcDecoratorFunction =
+                delegate -> new SimpleDecoratingRpcClient(delegate) {
+                    @Override
+                    public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
+                        return delegate.execute(ctx, req);
+                    }
+                };
+        final RpcClient client = (ctx, req) -> RpcResponse.of(null);
+
+        ClientDecoration.ofRpc(rpcDecoratorFunction).rpcDecorate(client);
+
+        assertThatThrownBy(() -> ClientDecoration.ofRpc(Function.identity()).rpcDecorate(client))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("decorator should override Client.as()");
     }
 }
