@@ -173,14 +173,6 @@ public final class RequestContextUtil {
     }
 
     /**
-     * Sets the specified {@link RequestContext} in the {@link ContextStorage}.
-     */
-    public static void set(RequestContext ctx) {
-        requireNonNull(ctx, "ctx");
-        contextStorage.push(ctx);
-    }
-
-    /**
      * Removes the {@link RequestContext} in the {@link ContextStorage} if exists and returns
      * {@link SafeCloseable} which pushes the {@link RequestContext} back to the {@link ContextStorage}.
      *
