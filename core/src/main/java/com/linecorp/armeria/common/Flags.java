@@ -418,7 +418,7 @@ public final class Flags {
     }
 
     /**
-     * Returns the fully qualified class name of {@link RequestContextStorage} that is used to choose
+     * Returns the fully qualified class name of {@link RequestContextStorageProvider} that is used to choose
      * when multiple {@link RequestContextStorageProvider}s exist.
      *
      * <p>The default value of this flag is an empty string, which means only one
