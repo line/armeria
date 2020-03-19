@@ -37,7 +37,6 @@ class ExecutorServiceMetricsTest {
         }
 
         final String meterId = meter.getId().getName();
-        assertThat(meterId).doesNotStartWith("executor.");
         if (meterId.contains("executor.")) {
             assertThat(meterId).startsWith("armeria.executor.");
         }
