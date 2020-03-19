@@ -376,6 +376,34 @@ class DefaultClientRequestContextTest {
         assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
     }
 
+    @Test
+    void testToStringSlow() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext ctxWithChannel =
+                (DefaultClientRequestContext) ClientRequestContext.of(req);
+        final DefaultClientRequestContext ctxWithNoChannel = newContext();
+
+        assertThat(ctxWithNoChannel.channel()).isNull();
+        final String strWithNoChannel = ctxWithNoChannel.toString();
+        assertThat(strWithNoChannel).doesNotContain("chanId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(strWithNoChannel);
+
+        ctxWithNoChannel.logBuilder().session(ctxWithChannel.channel(), ctxWithChannel.sessionProtocol(), null);
+        final String strWithChannel = ctxWithNoChannel.toString();
+        assertThat(strWithChannel).contains("chanId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(strWithChannel);
+
+        assertThat(ctxWithNoChannel.log().parent()).isNull();
+        final String strWithNoParentLog = ctxWithNoChannel.toString();
+        assertThat(strWithNoParentLog).doesNotContain("preqId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(strWithNoParentLog);
+
+        ctxWithChannel.logBuilder().addChild(ctxWithNoChannel.log());
+        final String strWithParentLog = ctxWithNoChannel.toString();
+        assertThat(strWithParentLog).contains("preqId=");
+        assertThat(ctxWithNoChannel.toString()).isSameAs(strWithParentLog);
+    }
+
     private static void mutateAdditionalHeaders(ClientRequestContext originalCtx) {
         final HttpHeaders headers1 = HttpHeaders.of(HttpHeaderNames.of("my-header#1"), "value#1");
         originalCtx.mutateAdditionalRequestHeaders(mutator -> mutator.add(headers1));

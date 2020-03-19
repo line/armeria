@@ -83,6 +83,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private final CompleteRequestLog notCheckingAccessor = new CompleteRequestLog();
 
     @Nullable
+    private RequestLogAccess parent;
+    @Nullable
     private List<RequestLogAccess> children;
     private boolean hasLastChild;
 
@@ -281,6 +283,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return ctx;
     }
 
+    @Nullable
+    @Override
+    public RequestLogAccess parent() {
+        return parent;
+    }
+
     @Override
     public List<RequestLogAccess> children() {
         return children != null ? ImmutableList.copyOf(children) : ImmutableList.of();
@@ -420,6 +428,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public void addChild(RequestLogAccess child) {
         checkState(!hasLastChild, "last child is already added");
         requireNonNull(child, "child");
+
+        if (child instanceof DefaultRequestLog) {
+            checkState(((DefaultRequestLog) child).parent == null, "child has parent already");
+            ((DefaultRequestLog) child).parent = this;
+        }
+
         if (children == null) {
             // first child's all request-side logging events are propagated immediately to the parent
             children = new ArrayList<>();
@@ -1583,6 +1597,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public RequestContext context() {
             return ctx;
+        }
+
+        @Nullable
+        @Override
+        public RequestLogAccess parent() {
+            return DefaultRequestLog.this.parent();
         }
 
         @Override

@@ -74,6 +74,8 @@ public final class DefaultClientRequestContext
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
+    private static final short STR_CHANNEL_AVAILABILITY = 1;
+    private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
 
     private boolean initialized;
     @Nullable
@@ -101,6 +103,7 @@ public final class DefaultClientRequestContext
 
     @Nullable
     private String strVal;
+    private short strValAvailabilities;
 
     // We use null checks which are faster than checking if a list is empty,
     // because it is more common to have no customizers than to have any.
@@ -527,18 +530,25 @@ public final class DefaultClientRequestContext
 
     @Override
     public String toString() {
-        if (strVal != null) {
+        final Channel ch = channel();
+        final RequestLogAccess parent = log().parent();
+        final short newAvailability =
+                (short) ((ch != null ? STR_CHANNEL_AVAILABILITY : 0) |
+                         (parent != null ? STR_PARENT_LOG_AVAILABILITY : 0));
+        if (strVal != null && strValAvailabilities == newAvailability) {
             return strVal;
         }
-        return toStringSlow();
+
+        strValAvailabilities = newAvailability;
+        return strVal = toStringSlow(ch, parent);
     }
 
-    private String toStringSlow() {
+    private String toStringSlow(@Nullable Channel ch, @Nullable RequestLogAccess parent) {
         // Prepare all properties required for building a String, so that we don't have a chance of
         // building one String with a thread-local StringBuilder while building another String with
         // the same StringBuilder. See TemporaryThreadLocals for more information.
-        final Channel ch = channel();
         final String creqId = id().shortText();
+        final String preqId = parent != null ? parent.context().id().shortText() : null;
         final String sreqId = root() != null ? root().id().shortText() : null;
         final String chanId = ch != null ? ch.id().asShortText() : null;
         final String proto = sessionProtocol().uriText();
@@ -549,6 +559,9 @@ public final class DefaultClientRequestContext
         // Build the string representation.
         final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
         buf.append("[creqId=").append(creqId);
+        if (parent != null) {
+            buf.append(", preqId=").append(preqId);
+        }
         if (sreqId != null) {
             buf.append(", sreqId=").append(sreqId);
         }
@@ -563,10 +576,6 @@ public final class DefaultClientRequestContext
            .append(proto).append("://").append(authority).append(path).append('#').append(method)
            .append(']');
 
-        final String strVal = buf.toString();
-        if (ch != null) {
-            this.strVal = strVal;
-        }
-        return strVal;
+        return buf.toString();
     }
 }
