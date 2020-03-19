@@ -400,6 +400,8 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
   return (
     <div className={classes.root}>
       <NoSsr>
+        {/* Can't express nested options with react-select's type definition.
+        // @ts-ignore */}
         <Async
           autoFocus
           classes={classes}
