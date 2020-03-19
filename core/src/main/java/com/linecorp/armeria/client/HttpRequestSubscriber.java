@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.HttpSessionHandler.MAX_NUM_REQUESTS_SENT;
+
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -45,7 +47,6 @@ import com.linecorp.armeria.internal.common.RequestContextUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
 
@@ -61,31 +62,36 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private final Channel ch;
     private final HttpObjectEncoder encoder;
-    private final int id;
+    private final HttpResponseDecoder responseDecoder;
     private final HttpRequest request;
-    private final HttpResponseWrapper response;
-    private final ClientRequestContext reqCtx;
+    private final DecodedHttpResponse originalRes;
+    private final ClientRequestContext ctx;
     private final RequestLogBuilder logBuilder;
     private final long timeoutMillis;
+
+    // subscription, id and responseWrapper are assigned in onSubscribe()
     @Nullable
     private Subscription subscription;
+    private int id = -1;
+    @Nullable
+    private HttpResponseWrapper responseWrapper;
+
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
     private boolean isSubscriptionCompleted;
     private boolean loggedRequestFirstBytesTransferred;
 
-    HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
-                          int id, HttpRequest request, HttpResponseWrapper response,
-                          ClientRequestContext reqCtx, long timeoutMillis) {
-
+    HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
+                          HttpRequest request, DecodedHttpResponse originalRes,
+                          ClientRequestContext ctx, long timeoutMillis) {
         this.ch = ch;
         this.encoder = encoder;
-        this.id = id;
+        this.responseDecoder = responseDecoder;
         this.request = request;
-        this.response = response;
-        this.reqCtx = reqCtx;
-        logBuilder = reqCtx.logBuilder();
+        this.originalRes = originalRes;
+        this.ctx = ctx;
+        logBuilder = ctx.logBuilder();
         this.timeoutMillis = timeoutMillis;
     }
 
@@ -109,7 +115,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 if (state == State.DONE) {
                     logBuilder.endRequest();
                     // Successfully sent the request; schedule the response timeout.
-                    response.initTimeout();
+                    assert responseWrapper != null;
+                    responseWrapper.initTimeout();
                 }
 
                 // Request more messages regardless whether the state is DONE. It makes the producer have
@@ -122,14 +129,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 return;
             }
 
-            fail(future.cause());
-        }
-
-        final Throwable cause = future.cause();
-        if (!(cause instanceof ClosedStreamException)) {
-            final Channel ch = future.channel();
-            Exceptions.logIfUnexpected(logger, ch, HttpSession.get(ch).protocol(), cause);
-            ch.close();
+            failAndReset(future.cause());
         }
     }
 
@@ -137,28 +137,56 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     public void onSubscribe(Subscription subscription) {
         assert this.subscription == null;
         this.subscription = subscription;
+        if (state == State.DONE) {
+            cancelSubscription();
+            return;
+        }
 
-        final EventLoop eventLoop = ch.eventLoop();
+        final HttpSession session = HttpSession.get(ch);
+        id = session.incrementAndGetNumRequestsSent();
+        if (id >= MAX_NUM_REQUESTS_SENT || !session.canSendRequest()) {
+            final ClosedSessionException exception;
+            if (id >= MAX_NUM_REQUESTS_SENT) {
+                exception = new ClosedSessionException(
+                        "Can't send requests more than " + MAX_NUM_REQUESTS_SENT +
+                        " in one connection. ID: " + id);
+            } else {
+                exception = new ClosedSessionException(
+                        "Can't send requests. ID: " + id + ", session active: " + session.isActive() +
+                        ", response needs to disconnect: " + responseDecoder.needsToDisconnectWhenFinished());
+            }
+            responseDecoder.disconnectWhenFinished();
+            // No need to send RST because we didn't send any packet and this will be disconnected anyway.
+            fail(new UnprocessedRequestException(exception));
+            return;
+        }
+
+        addResponseToDecoder();
         if (timeoutMillis > 0) {
             // The timer would be executed if the first message has not been sent out within the timeout.
-            timeoutFuture = eventLoop.schedule(
-                    () -> failAndRespond(WriteTimeoutException.get()),
+            timeoutFuture = ch.eventLoop().schedule(
+                    () -> failAndReset(WriteTimeoutException.get()),
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
 
         // NB: This must be invoked at the end of this method because otherwise the callback methods in this
-        //     class can be called before the member fields (subscription and timeoutFuture) are initialized.
+        //     class can be called before the member fields (subscription, id, responseWrapper and
+        //     timeoutFuture) are initialized.
         //     It is because the successful write of the first headers will trigger subscription.request(1).
-        writeFirstHeader();
+        writeFirstHeader(session);
     }
 
-    private void writeFirstHeader() {
-        final HttpSession session = HttpSession.get(ch);
-        if (!session.canSendRequest()) {
-            failAndRespond(new UnprocessedRequestException(ClosedSessionException.get()));
-            return;
+    private void addResponseToDecoder() {
+        final long responseTimeoutMillis = ctx.responseTimeoutMillis();
+        final long maxContentLength = ctx.maxResponseLength();
+        responseWrapper = responseDecoder.addResponse(id, originalRes, ctx,
+                                                      ch.eventLoop(), responseTimeoutMillis, maxContentLength);
+        if (ctx instanceof DefaultClientRequestContext) {
+            ((DefaultClientRequestContext) ctx).setResponseTimeoutController(responseWrapper);
         }
+    }
 
+    private void writeFirstHeader(HttpSession session) {
         final RequestHeaders firstHeaders = request.headers();
 
         final SessionProtocol protocol = session.protocol();
@@ -170,13 +198,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         } else {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
-
-        if (isStreamOrSessionClosed()) {
-            return;
-        }
-
         final ChannelFuture future = encoder.writeHeaders(id, streamId(), firstHeaders, request.isEmpty(),
-                                                          reqCtx.additionalRequestHeaders(), HttpHeaders.of());
+                                                          ctx.additionalRequestHeaders(), HttpHeaders.of());
         future.addListener(this);
         ch.flush();
     }
@@ -184,7 +207,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Override
     public void onNext(HttpObject o) {
         if (!(o instanceof HttpData) && !(o instanceof HttpHeaders)) {
-            fail(new IllegalArgumentException(
+            failAndReset(new IllegalArgumentException(
                     "published an HttpObject that's neither Http2Headers nor Http2Data: " + o));
             return;
         }
@@ -195,7 +218,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 if (o instanceof HttpHeaders) {
                     final HttpHeaders trailers = (HttpHeaders) o;
                     if (trailers.contains(HttpHeaderNames.STATUS)) {
-                        fail(new IllegalArgumentException("published a trailers with status: " + o));
+                        failAndReset(
+                                new IllegalArgumentException("published a trailers with status: " + o));
                         return;
                     }
                     // Trailers always end the stream even if not explicitly set.
@@ -218,7 +242,12 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Override
     public void onError(Throwable cause) {
         isSubscriptionCompleted = true;
-        failAndRespond(cause);
+        if (id >= 0) { // onSubscribe is called.
+            failAndReset(cause);
+        } else {
+            // No need to send RST because we didn't send any packet.
+            fail(new UnprocessedRequestException(cause));
+        }
     }
 
     @Override
@@ -248,6 +277,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final ChannelFuture future;
         if (o instanceof HttpHeaders) {
+            // trailers
             future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream,
                                           HttpHeaders.of(), HttpHeaders.of());
         } else {
@@ -265,11 +295,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         // 2. AbstractHttp2ConnectionHandler.close() clears and flushes all active streams.
         // 3. After successfully flushing, operationComplete() requests next data and
         //    the subscriber attempts to write the next data to the stream closed at 2).
-        if (loggedRequestFirstBytesTransferred && !encoder.isWritable(id, streamId())) {
-            if (reqCtx.sessionProtocol().isMultiplex()) {
-                fail(ClosedStreamException.get());
+        if (!encoder.isWritable(id, streamId())) {
+            if (ctx.sessionProtocol().isMultiplex()) {
+                failAndReset(ClosedStreamException.get());
             } else {
-                fail(ClosedSessionException.get());
+                failAndReset(ClosedSessionException.get());
             }
             return true;
         }
@@ -284,10 +314,15 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         state = State.DONE;
         cancelSubscription();
         logBuilder.endRequest(cause);
-        if (response.isOpen()) {
-            response.close(cause);
+        if (responseWrapper != null) {
+            if (responseWrapper.isOpen()) {
+                responseWrapper.close(cause);
+            } else {
+                // To make it sure that the log is complete.
+                logBuilder.endResponse(cause);
+            }
         } else {
-            // To make it sure that the log is complete.
+            originalRes.close(cause);
             logBuilder.endResponse(cause);
         }
     }
@@ -298,7 +333,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         subscription.cancel();
     }
 
-    private void failAndRespond(Throwable cause) {
+    private void failAndReset(Throwable cause) {
         fail(cause);
 
         final Http2Error error;
