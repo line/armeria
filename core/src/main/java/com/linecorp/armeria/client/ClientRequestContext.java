@@ -34,7 +34,6 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.ContextStorage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -323,25 +322,24 @@ public interface ClientRequestContext extends RequestContext {
      */
     @Override
     default SafeCloseable push() {
-        final ContextStorage contextStorage = RequestContextUtil.storage();
-        final RequestContext oldCtx = contextStorage.push(this);
+        final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
         if (oldCtx == this) {
             // Reentrance
             return noopSafeCloseable();
         }
 
         if (oldCtx == null) {
-            return () -> contextStorage.pop(null);
+            return () -> RequestContextUtil.pop(this, null);
         }
 
         final ServiceRequestContext root = root();
         if ((oldCtx instanceof ServiceRequestContext && oldCtx == root) ||
             oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
-            return () -> contextStorage.pop(oldCtx);
+            return () -> RequestContextUtil.pop(this, oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.
-        contextStorage.pop(oldCtx);
+        RequestContextUtil.pop(this, oldCtx);
         throw newIllegalContextPushingException(this, oldCtx);
     }
 

@@ -63,7 +63,7 @@ public final class CustomContextStorageProvider implements ContextStorageProvide
             }
 
             @Override
-            public void pop(@Nullable RequestContext toRestore) {
+            public void pop(RequestContext current, @Nullable RequestContext toRestore) {
                 popCalled.incrementAndGet();
                 context.set(toRestore);
             }

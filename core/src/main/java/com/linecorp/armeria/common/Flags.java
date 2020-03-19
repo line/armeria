@@ -120,6 +120,8 @@ public final class Flags {
 
     private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
+    private static final String CONTEXT_STORAGE = get("contextStorage", "", unused -> true);
+
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
@@ -412,6 +414,18 @@ public final class Flags {
      */
     public static boolean verboseResponses() {
         return VERBOSE_RESPONSES;
+    }
+
+    /**
+     * Returns the fully qualified class name of {@link ContextStorage}.
+     *
+     * <p>The default value of this flag is an empty string, which means {@link ContextStorage#ofDefault()}
+     * is used. Specify the {@code -Dcom.linecorp.armeria.contextStorage=<FQCN>} JVM option where
+     * {@code FQCN} is the impletation of {@link ContextStorage} (e.g. {@code com.mycom.CustomContextStorage})
+     * to override the default value.
+     */
+    public static String contextStorage() {
+        return CONTEXT_STORAGE;
     }
 
     /**

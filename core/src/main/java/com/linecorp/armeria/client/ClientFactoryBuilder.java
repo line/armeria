@@ -561,8 +561,7 @@ public final class ClientFactoryBuilder {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
-        // To initialize the context storage when the factory is built not the first request is sent.
-        assert RequestContextUtil.storage() != null;
+        RequestContextUtil.init();
         return new DefaultClientFactory(new HttpClientFactory(buildOptions()));
     }
 

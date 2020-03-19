@@ -16,29 +16,78 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.common.RequestContextUtil.defaultContextStorage;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
- * Storage.
+ * The storage for storing {@link RequestContext}.
+ *
+ * <p>If you want to implement your own storage or add some hooks when a {@link RequestContext} is pushed
+ * and popped, you should use {@link ContextStorageProvider} or {@link Flags#contextStorage()}.
+ * Here's an example that sets MDC before {@link RequestContext} is pushed:
+ *
+ * <pre>{@code
+ * > public class MyStorage implements ContextStorageProvider {
+ * >     @Override
+ * >     public ContextStorage newContextStorage() {
+ * >         ContextStorage storage = ContextStorage.ofDefault();
+ * >         return new ContextStorage() {
+ * >
+ * >             @Nullable
+ * >             @Override
+ * >             @SuppressWarnings("unchecked")
+ * >             public <T extends RequestContext> T push(RequestContext toPush) {
+ * >                 setMDC(...); // using toPush
+ * >                 return storage.push(toPush);
+ * >             }
+ * >
+ * >             @Override
+ * >             public void pop(RequestContext current, @Nullable RequestContext toRestore) {
+ * >                 if (toRestore != null) {
+ * >                     setMDC(...); // using toRestore
+ * >                 }
+ * >                 storage.pop(current, toRestore);
+ * >             }
+ * >             ...
+ * >      }
+ * > }
+ * }</pre>
  */
 @UnstableApi
 public interface ContextStorage {
 
     /**
-     * Push.
+     * Returns the default {@link ContextStorage} which stores the {@link RequestContext} in the thread-local.
+     */
+    static ContextStorage ofDefault() {
+        return defaultContextStorage;
+    }
+
+    /**
+     * Pushes the specified {@link RequestContext} into the storage.
+     *
+     * @return the old {@link RequestContext} which was in the storage before the specified {@code toPush} is
+     *         pushed. {@code null}, if there was no {@link RequestContext}.
      */
     @Nullable
     <T extends RequestContext> T push(RequestContext toPush);
 
     /**
-     * Pop.
+     * Pops the current {@link RequestContext} in the storage and pushes back the specified {@code toRestore}.
+     * {@code toRestore} is the {@link RequestContext} returned from when
+     * {@linkplain #push(RequestContext) push(current)} is called, so it can be {@code null}.
+     *
+     * <p>The specified {@code current} must be the {@link RequestContext} in the storage. If it's not,
+     * it means that {@link RequestContext#push()} is not called using {@code try-with-resources} block, so
+     * the previous {@link RequestContext} is not popped properly.
      */
-    void pop(@Nullable RequestContext toRestore);
+    void pop(RequestContext current, @Nullable RequestContext toRestore);
 
     /**
-     * Current.
+     * Returns the {@link RequestContext} in the storage. {@code null} if there is no {@link RequestContext}.
      */
     @Nullable
     <T extends RequestContext> T currentOrNull();

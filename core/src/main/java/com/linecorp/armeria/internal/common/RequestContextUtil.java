@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -24,20 +23,24 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.ContextStorage;
 import com.linecorp.armeria.common.ContextStorageProvider;
-import com.linecorp.armeria.common.ContextStorageThreadLocal;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.util.concurrent.FastThreadLocal;
 
 /**
  * Utilities for {@link RequestContext}.
@@ -55,43 +58,62 @@ public final class RequestContextUtil {
     private static final Set<Thread> REPORTED_THREADS =
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
+    /**
+     * The default {@link ContextStorage} which stores the {@link RequestContext} in {@link FastThreadLocal}.
+     */
+    public static final ContextStorage defaultContextStorage = new ThreadLocalContextStorage();
+
     private static final ContextStorage contextStorage;
 
     static {
-        final List<ContextStorageProvider> providers = Streams.stream(
-                ServiceLoader.load(ContextStorageProvider.class)).collect(toImmutableList());
-
-        if (providers.isEmpty()) {
-            contextStorage = new ContextStorageThreadLocal();
-        } else {
-            final ContextStorageProvider provider = providers.get(0);
+        final List<ContextStorageProvider> providers = ImmutableList.copyOf(
+                ServiceLoader.load(ContextStorageProvider.class));
+        final String contextStorageFqcn = Flags.contextStorage();
+        if (!providers.isEmpty()) {
             if (providers.size() > 1) {
-                logger.warn("Found more than one {}. Only the first provider is used: {}, providers: {}",
-                            ContextStorageProvider.class.getSimpleName(), provider, providers);
+                throw new IllegalStateException("Found more than one " +
+                                                ContextStorageProvider.class.getSimpleName() + ". providers:" +
+                                                providers);
             }
-            ContextStorage temp;
+
+            final ContextStorageProvider provider = providers.get(0);
+            if (!contextStorageFqcn.isEmpty()) {
+                throw new IllegalStateException("Found " + provider + " and " + contextStorageFqcn +
+                                                ". Which one do you want to use?");
+            }
+
             try {
-                temp = provider.newContextStorage();
+                contextStorage = provider.newContextStorage();
             } catch (Throwable t) {
-                logger.warn("Failed to create context storage. provider: {}", provider, t);
-                temp = new ContextStorageThreadLocal();
+                throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
             }
-            contextStorage = temp;
+        } else {
+            if (contextStorageFqcn.isEmpty()) {
+                contextStorage = defaultContextStorage;
+            } else {
+                try {
+                    final Class<?> clazz = Class.forName(contextStorageFqcn);
+                    contextStorage = clazz.asSubclass(ContextStorage.class)
+                                          .getConstructor()
+                                          .newInstance();
+                } catch (Throwable t) {
+                    throw new IllegalStateException("Failed to create context storage from FQCN: " +
+                                                    contextStorageFqcn, t);
+                }
+            }
         }
     }
+
+    /**
+     * Invoked to initialize this class earlier than when an {@link HttpRequest} is received or sent.
+     */
+    public static void init() { /* no-op */ }
 
     /**
      * Returns the {@link SafeCloseable} which doesn't do anything.
      */
     public static SafeCloseable noopSafeCloseable() {
         return noopSafeCloseable;
-    }
-
-    /**
-     * Returns the {@link ContextStorage}.
-     */
-    public static ContextStorage storage() {
-        return contextStorage;
     }
 
     /**
@@ -113,23 +135,73 @@ public final class RequestContextUtil {
     }
 
     /**
-     * Removes the {@link RequestContext} in the thread-local if exists and returns {@link SafeCloseable} which
-     * pushes the {@link RequestContext} back to the thread-local.
+     * Returns an {@link IllegalStateException} which is raised when popping a context from
+     * the unexpected thread or forgetting to close the previous context.
+     */
+    public static IllegalStateException newIllegalContextPoppingException(
+            RequestContext currentCtx, RequestContext contextInStorage) {
+        requireNonNull(currentCtx, "currentCtx");
+        requireNonNull(contextInStorage, "contextInStorage");
+        final IllegalStateException ex = new IllegalStateException(
+                "The currentCtx " + currentCtx + " is not the same as the context in the storage: " +
+                contextInStorage + ". This means the callback was called from " +
+                "unexpected thread or forgetting to close previous context.");
+        if (REPORTED_THREADS.add(Thread.currentThread())) {
+            logger.warn("An error occurred while popping a context", ex);
+        }
+        return ex;
+    }
+
+    /**
+     * Returns the current {@link RequestContext} in the {@link ContextStorage}.
+     */
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public static <T extends RequestContext> T get() {
+        return (T) contextStorage.currentOrNull();
+    }
+
+    /**
+     * Sets the specified {@link RequestContext} in the {@link ContextStorage} and
+     * returns the old {@link RequestContext}.
+     */
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public static <T extends RequestContext> T getAndSet(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        return (T) contextStorage.push(ctx);
+    }
+
+    /**
+     * Sets the specified {@link RequestContext} in the {@link ContextStorage}.
+     */
+    public static void set(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        contextStorage.push(ctx);
+    }
+
+    /**
+     * Removes the {@link RequestContext} in the {@link ContextStorage} if exists and returns
+     * {@link SafeCloseable} which pushes the {@link RequestContext} back to the {@link ContextStorage}.
      *
      * <p>Because this method pops the {@link RequestContext} arbitrarily, it shouldn't be used in
      * most cases. One of the examples this can be used is in {@link ChannelFutureListener}.
      * The {@link ChannelFuture} can be complete when the eventloop handles the different request. The
-     * eventloop might have the wrong {@link RequestContext} in the thread-local, so we should pop it.
+     * eventloop might have the wrong {@link RequestContext} in the {@link ContextStorage}, so we should pop it.
      */
     public static SafeCloseable pop() {
-        final ContextStorage contextStorage = storage();
         final RequestContext oldCtx = contextStorage.currentOrNull();
         if (oldCtx == null) {
             return noopSafeCloseable();
         }
 
-        contextStorage.pop(null);
+        pop(oldCtx, null);
         return () -> contextStorage.push(oldCtx);
+    }
+
+    public static void pop(RequestContext current, @Nullable RequestContext toRestore) {
+        requireNonNull(current, "current");
+        contextStorage.pop(current, toRestore);
     }
 
     private RequestContextUtil() {}

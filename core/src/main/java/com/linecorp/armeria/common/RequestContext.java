@@ -80,7 +80,7 @@ public interface RequestContext {
      */
     @Nullable
     static <T extends RequestContext> T currentOrNull() {
-        return RequestContextUtil.storage().currentOrNull();
+        return RequestContextUtil.get();
     }
 
     /**
@@ -328,9 +328,8 @@ public interface RequestContext {
      * @see ServiceRequestContext#push()
      */
     default SafeCloseable replace() {
-        final ContextStorage contextStorage = RequestContextUtil.storage();
-        final RequestContext oldCtx = contextStorage.push(this);
-        return () -> contextStorage.pop(oldCtx);
+        final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
+        return () -> RequestContextUtil.pop(this, oldCtx);
     }
 
     /**

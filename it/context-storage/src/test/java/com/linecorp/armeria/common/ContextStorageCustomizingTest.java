@@ -66,7 +66,6 @@ class ContextStorageCustomizingTest {
             latch1.await();
             assertThat(CustomContextStorageProvider.current()).isEqualTo(ctx);
             assertThat(CustomContextStorageProvider.pushCalled()).isEqualTo(2);
-
         }
         assertThat(CustomContextStorageProvider.current()).isNull();
         assertThat(CustomContextStorageProvider.popCalled()).isOne();

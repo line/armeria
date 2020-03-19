@@ -14,23 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPoppingException;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.util.UnstableApi;
+import com.linecorp.armeria.common.ContextStorage;
+import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 
-/**
- * A {@link ContextStorage} that uses thread-local to store {@link RequestContext}.
- * Override this.
- */
-@UnstableApi
-public class ContextStorageThreadLocal implements ContextStorage {
+class ThreadLocalContextStorage implements ContextStorage {
 
     private static final FastThreadLocal<RequestContext> context = new FastThreadLocal<>();
 
@@ -46,7 +43,12 @@ public class ContextStorageThreadLocal implements ContextStorage {
     }
 
     @Override
-    public void pop(@Nullable RequestContext toRestore) {
+    public void pop(RequestContext current, @Nullable RequestContext toRestore) {
+        requireNonNull(current, "current");
+        final RequestContext contextInThreadLocal = context.get();
+        if (current != contextInThreadLocal) {
+            throw newIllegalContextPoppingException(current, contextInThreadLocal);
+        }
         context.set(toRestore);
     }
 

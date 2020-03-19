@@ -1477,8 +1477,7 @@ public final class ServerBuilder {
                 enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
 
         serverListeners.forEach(server::addListener);
-        // To initialize the context storage at the server start time not when the first request is received.
-        assert RequestContextUtil.storage() != null;
+        RequestContextUtil.init();
         return server;
     }
 
