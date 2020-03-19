@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JavaVersionSpecific;
-import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -80,7 +80,7 @@ public interface RequestContext {
      */
     @Nullable
     static <T extends RequestContext> T currentOrNull() {
-        return RequestContextThreadLocal.get();
+        return RequestContextUtil.storage().currentOrNull();
     }
 
     /**
@@ -328,11 +328,9 @@ public interface RequestContext {
      * @see ServiceRequestContext#push()
      */
     default SafeCloseable replace() {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
-        if (oldCtx == null) {
-            return RequestContextThreadLocal::remove;
-        }
-        return () -> RequestContextThreadLocal.set(oldCtx);
+        final ContextStorage contextStorage = RequestContextUtil.storage();
+        final RequestContext oldCtx = contextStorage.push(this);
+        return () -> contextStorage.pop(oldCtx);
     }
 
     /**

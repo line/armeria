@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ContextStorage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -46,7 +47,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.RequestContextThreadLocal;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -322,24 +323,25 @@ public interface ClientRequestContext extends RequestContext {
      */
     @Override
     default SafeCloseable push() {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(this);
+        final ContextStorage contextStorage = RequestContextUtil.storage();
+        final RequestContext oldCtx = contextStorage.push(this);
         if (oldCtx == this) {
             // Reentrance
             return noopSafeCloseable();
         }
 
         if (oldCtx == null) {
-            return RequestContextThreadLocal::remove;
+            return () -> contextStorage.pop(null);
         }
 
         final ServiceRequestContext root = root();
         if ((oldCtx instanceof ServiceRequestContext && oldCtx == root) ||
             oldCtx instanceof ClientRequestContext && ((ClientRequestContext) oldCtx).root() == root) {
-            return () -> RequestContextThreadLocal.set(oldCtx);
+            return () -> contextStorage.pop(oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.
-        RequestContextThreadLocal.set(oldCtx);
+        contextStorage.pop(oldCtx);
         throw newIllegalContextPushingException(this, oldCtx);
     }
 

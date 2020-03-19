@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -560,6 +561,8 @@ public final class ClientFactoryBuilder {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
+        // To initialize the context storage when the factory is built not the first request is sent.
+        assert RequestContextUtil.storage() != null;
         return new DefaultClientFactory(new HttpClientFactory(buildOptions()));
     }
 

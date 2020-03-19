@@ -66,6 +66,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -1476,6 +1477,8 @@ public final class ServerBuilder {
                 enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
 
         serverListeners.forEach(server::addListener);
+        // To initialize the context storage at the server start time not when the first request is received.
+        assert RequestContextUtil.storage() != null;
         return server;
     }
 

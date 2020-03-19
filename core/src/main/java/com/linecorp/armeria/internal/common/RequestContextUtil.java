@@ -16,16 +16,23 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.MapMaker;
+import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.ContextStorage;
+import com.linecorp.armeria.common.ContextStorageProvider;
+import com.linecorp.armeria.common.ContextStorageThreadLocal;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -48,11 +55,43 @@ public final class RequestContextUtil {
     private static final Set<Thread> REPORTED_THREADS =
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
+    private static final ContextStorage contextStorage;
+
+    static {
+        final List<ContextStorageProvider> providers = Streams.stream(
+                ServiceLoader.load(ContextStorageProvider.class)).collect(toImmutableList());
+
+        if (providers.isEmpty()) {
+            contextStorage = new ContextStorageThreadLocal();
+        } else {
+            final ContextStorageProvider provider = providers.get(0);
+            if (providers.size() > 1) {
+                logger.warn("Found more than one {}. Only the first provider is used: {}, providers: {}",
+                            ContextStorageProvider.class.getSimpleName(), provider, providers);
+            }
+            ContextStorage temp;
+            try {
+                temp = provider.newContextStorage();
+            } catch (Throwable t) {
+                logger.warn("Failed to create context storage. provider: {}", provider, t);
+                temp = new ContextStorageThreadLocal();
+            }
+            contextStorage = temp;
+        }
+    }
+
     /**
      * Returns the {@link SafeCloseable} which doesn't do anything.
      */
     public static SafeCloseable noopSafeCloseable() {
         return noopSafeCloseable;
+    }
+
+    /**
+     * Returns the {@link ContextStorage}.
+     */
+    public static ContextStorage storage() {
+        return contextStorage;
     }
 
     /**
@@ -83,12 +122,14 @@ public final class RequestContextUtil {
      * eventloop might have the wrong {@link RequestContext} in the thread-local, so we should pop it.
      */
     public static SafeCloseable pop() {
-        final RequestContext oldCtx = RequestContextThreadLocal.getAndRemove();
+        final ContextStorage contextStorage = storage();
+        final RequestContext oldCtx = contextStorage.currentOrNull();
         if (oldCtx == null) {
             return noopSafeCloseable();
         }
 
-        return () -> RequestContextThreadLocal.set(oldCtx);
+        contextStorage.pop(null);
+        return () -> contextStorage.push(oldCtx);
     }
 
     private RequestContextUtil() {}
