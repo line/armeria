@@ -28,39 +28,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.common;
+
+import java.util.concurrent.Callable;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 
 /**
- * A wrapper for a {@link Runnable} with idle and execution timings.
+ * A wrapper for a {@link Callable} with idle and execution timings.
  */
-class TimedRunnable implements Runnable {
+class TimedCallable<V> implements Callable<V> {
 
     // Forked from Micrometer 1.3.6
-    // https://github.com/micrometer-metrics/micrometer/blob/5d1fe8685edfa50de56c9f5bee212dc0785b80e1/micrometer-core/src/main/java/io/micrometer/core/instrument/internal/TimedRunnable.java
+    // https://github.com/micrometer-metrics/micrometer/blob/5d1fe8685edfa50de56c9f5bee212dc0785b80e1/micrometer-core/src/main/java/io/micrometer/core/instrument/internal/TimedCallable.java
 
     private final MeterRegistry registry;
     private final Timer executionTimer;
     private final Timer idleTimer;
-    private final Runnable command;
+    private final Callable<V> callable;
     private final Timer.Sample idleSample;
 
-    TimedRunnable(MeterRegistry registry, Timer executionTimer, Timer idleTimer, Runnable command) {
+    TimedCallable(MeterRegistry registry, Timer executionTimer, Timer idleTimer, Callable<V> callable) {
         this.registry = registry;
         this.executionTimer = executionTimer;
         this.idleTimer = idleTimer;
-        this.command = command;
+        this.callable = callable;
         idleSample = Timer.start(registry);
     }
 
     @Override
-    public void run() {
+    public V call() throws Exception {
         idleSample.stop(idleTimer);
         final Timer.Sample executionSample = Timer.start(registry);
         try {
-            command.run();
+            return callable.call();
         } finally {
             executionSample.stop(executionTimer);
         }

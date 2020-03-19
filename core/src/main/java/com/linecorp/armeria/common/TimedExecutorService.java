@@ -28,7 +28,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.common;
 
 import static java.util.stream.Collectors.toList;
 
@@ -41,8 +41,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.linecorp.armeria.common.util.UnstableApi;
-
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
@@ -53,8 +51,7 @@ import io.micrometer.core.instrument.Timer;
  *
  * @author Jon Schneider
  */
-@UnstableApi
-public class TimedExecutorService implements ExecutorService {
+class TimedExecutorService implements ExecutorService {
 
     // Forked from Micrometer 1.3.6
     // https://github.com/micrometer-metrics/micrometer/blob/e6ff3c2fe9542608a33a62b10fdf1222cd60feae/micrometer-core/src/main/java/io/micrometer/core/instrument/internal/TimedExecutorService.java#L35

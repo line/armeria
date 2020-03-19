@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.common.ExecutorServiceMetrics;
+
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
@@ -46,7 +48,7 @@ class ExecutorServiceMetricsTest {
     void executorShouldHaveArmeriaPrefix() {
         final CompositeMeterRegistry registry = Metrics.globalRegistry;
         final String executorServiceName = "test-executor";
-        ExecutorServiceMetrics.monitor(registry, MoreExecutors.directExecutor(), executorServiceName);
+        ExecutorServiceMetrics.monitor(registry, MoreExecutors.directExecutor(), executorServiceName, "armeria");
         registry.getMeters().forEach(meter -> validateMeterName(meter, executorServiceName));
     }
 
@@ -54,7 +56,7 @@ class ExecutorServiceMetricsTest {
     void executorServiceShouldHaveArmeriaPrefix() {
         final CompositeMeterRegistry registry = Metrics.globalRegistry;
         final String executorServiceName = "test-executor-service";
-        ExecutorServiceMetrics.monitor(registry, Executors.newSingleThreadExecutor(), executorServiceName);
+        ExecutorServiceMetrics.monitor(registry, Executors.newSingleThreadExecutor(), executorServiceName, "armeria");
         registry.getMeters().forEach(meter -> validateMeterName(meter, executorServiceName));
     }
 
@@ -63,7 +65,7 @@ class ExecutorServiceMetricsTest {
         final CompositeMeterRegistry registry = Metrics.globalRegistry;
         final String executorServiceName = "test-scheduled-executor-service";
         ExecutorServiceMetrics.monitor(registry, Executors.newSingleThreadScheduledExecutor(),
-                                       executorServiceName);
+                                       executorServiceName, "armeria");
         registry.getMeters().forEach(meter -> validateMeterName(meter, executorServiceName));
     }
 }

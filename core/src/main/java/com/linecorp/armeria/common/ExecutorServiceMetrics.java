@@ -28,7 +28,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.common;
 
 import static java.util.Arrays.asList;
 
@@ -40,6 +40,8 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.util.UnstableApi;
 
 import io.micrometer.core.instrument.FunctionCounter;
@@ -49,9 +51,6 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.binder.BaseUnits;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import io.micrometer.core.lang.NonNullApi;
-import io.micrometer.core.lang.NonNullFields;
-import io.micrometer.core.lang.Nullable;
 
 /**
  * Monitors the status of executor service pools. Does not record timings on operations executed in the
@@ -62,89 +61,104 @@ import io.micrometer.core.lang.Nullable;
  * @author Clint Checketts
  * @author Johnny Lim
  */
-@NonNullApi
-@NonNullFields
 @UnstableApi
 public class ExecutorServiceMetrics implements MeterBinder {
+
+    /**
+     * Returns whether the specified {@link Executor} could be monitored by {@link MeterRegistry}
+     */
+    public static boolean isMonitorableExecutor(Executor executor) {
+        return executor instanceof TimedScheduledExecutorService ||
+               executor instanceof TimedExecutorService ||
+               executor instanceof TimedExecutor ||
+               executor instanceof io.micrometer.core.instrument.internal.TimedScheduledExecutorService ||
+               executor instanceof io.micrometer.core.instrument.internal.TimedExecutorService ||
+               executor instanceof io.micrometer.core.instrument.internal.TimedExecutor;
+    }
 
     // Forked from Micrometer 1.3.6
     // https://github.com/micrometer-metrics/micrometer/blob/e6ff3c2fe9542608a33a62b10fdf1222cd60feae/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/jvm/ExecutorServiceMetrics.java
 
     @Nullable
     private final ExecutorService executorService;
-
+    private final String prefix;
     private final Iterable<Tag> tags;
 
     /**
      * Creates a new instance.
      */
     public ExecutorServiceMetrics(@Nullable ExecutorService executorService, String executorServiceName,
-                                  Iterable<Tag> tags) {
+                                  String prefix, Iterable<Tag> tags) {
         this.executorService = executorService;
+        this.prefix = prefix;
         this.tags = Tags.concat(tags, "name", executorServiceName);
     }
 
     /**
      * Record metrics on the use of an {@link Executor}.
      *
-     * @param registry     The registry to bind metrics to.
-     * @param executor     The executor to instrument.
-     * @param executorName Will be used to tag metrics with "name".
-     * @param tags         Tags to apply to all recorded metrics.
-     * @return The instrumented executor, proxied.
+     * @param registry the registry to bind metrics to.
+     * @param executor the executor to instrument.
+     * @param executorName will be used to tag metrics with "name".
+     * @param prefix the prefix of the metric name.
+     * @param tags tags to apply to all recorded metrics.
+     * @return the instrumented executor, proxied.
      */
     public static Executor monitor(MeterRegistry registry, Executor executor, String executorName,
-                                   Iterable<Tag> tags) {
+                                   String prefix, Iterable<Tag> tags) {
         if (executor instanceof ExecutorService) {
-            return monitor(registry, (ExecutorService) executor, executorName, tags);
+            return monitor(registry, (ExecutorService) executor, executorName, prefix, tags);
         }
-        return new TimedExecutor(registry, executor, executorName, tags);
+        return new TimedExecutor(registry, executor, executorName, prefix, tags);
     }
 
     /**
      * Record metrics on the use of an {@link Executor}.
      *
-     * @param registry     The registry to bind metrics to.
-     * @param executor     The executor to instrument.
-     * @param executorName Will be used to tag metrics with "name".
-     * @param tags         Tags to apply to all recorded metrics.
-     * @return The instrumented executor, proxied.
+     * @param registry the registry to bind metrics to.
+     * @param executor the executor to instrument.
+     * @param executorName will be used to tag metrics with "name".
+     * @param prefix the prefix of the metric name.
+     * @param tags tags to apply to all recorded metrics.
+     * @return the instrumented executor, proxied.
      */
     public static Executor monitor(MeterRegistry registry, Executor executor, String executorName,
-                                   Tag... tags) {
-        return monitor(registry, executor, executorName, asList(tags));
+                                   String prefix, Tag... tags) {
+        return monitor(registry, executor, executorName, prefix, asList(tags));
     }
 
     /**
      * Record metrics on the use of an {@link ExecutorService}.
      *
-     * @param registry            The registry to bind metrics to.
-     * @param executor            The executor to instrument.
+     * @param registry the registry to bind metrics to.
+     * @param executor the executor to instrument.
      * @param executorServiceName Will be used to tag metrics with "name".
-     * @param tags                Tags to apply to all recorded metrics.
-     * @return The instrumented executor, proxied.
+     * @param prefix the prefix of the metric name.
+     * @param tags tags to apply to all recorded metrics.
+     * @return the instrumented executor, proxied.
      */
     public static ExecutorService monitor(MeterRegistry registry, ExecutorService executor,
-                                          String executorServiceName, Iterable<Tag> tags) {
+                                          String executorServiceName, String prefix, Iterable<Tag> tags) {
         if (executor instanceof ScheduledExecutorService) {
-            return monitor(registry, (ScheduledExecutorService) executor, executorServiceName, tags);
+            return monitor(registry, (ScheduledExecutorService) executor, executorServiceName, prefix, tags);
         }
-        new ExecutorServiceMetrics(executor, executorServiceName, tags).bindTo(registry);
+        new ExecutorServiceMetrics(executor, executorServiceName, prefix, tags).bindTo(registry);
         return new TimedExecutorService(registry, executor, executorServiceName, tags);
     }
 
     /**
      * Record metrics on the use of an {@link ExecutorService}.
      *
-     * @param registry            The registry to bind metrics to.
-     * @param executor            The executor to instrument.
-     * @param executorServiceName Will be used to tag metrics with "name".
-     * @param tags                Tags to apply to all recorded metrics.
+     * @param registry the registry to bind metrics to.
+     * @param executor the executor to instrument.
+     * @param executorServiceName will be used to tag metrics with "name".
+     * @param prefix the prefix of the metric name.
+     * @param tags yags to apply to all recorded metrics.
      * @return The instrumented executor, proxied.
      */
     public static ExecutorService monitor(MeterRegistry registry, ExecutorService executor,
-                                          String executorServiceName, Tag... tags) {
-        return monitor(registry, executor, executorServiceName, asList(tags));
+                                          String executorServiceName, String prefix, Tag... tags) {
+        return monitor(registry, executor, executorServiceName, prefix, asList(tags));
     }
 
     /**
@@ -158,8 +172,9 @@ public class ExecutorServiceMetrics implements MeterBinder {
      * @since 1.3.0
      */
     public static ScheduledExecutorService monitor(MeterRegistry registry, ScheduledExecutorService executor,
-                                                   String executorServiceName, Iterable<Tag> tags) {
-        new ExecutorServiceMetrics(executor, executorServiceName, tags).bindTo(registry);
+                                                   String executorServiceName, String prefix,
+                                                   Iterable<Tag> tags) {
+        new ExecutorServiceMetrics(executor, executorServiceName, prefix, tags).bindTo(registry);
         return new TimedScheduledExecutorService(registry, executor, executorServiceName, tags);
     }
 
@@ -174,8 +189,8 @@ public class ExecutorServiceMetrics implements MeterBinder {
      * @since 1.3.0
      */
     public static ScheduledExecutorService monitor(MeterRegistry registry, ScheduledExecutorService executor,
-                                                   String executorServiceName, Tag... tags) {
-        return monitor(registry, executor, executorServiceName, asList(tags));
+                                                   String executorServiceName, String prefix, Tag... tags) {
+        return monitor(registry, executor, executorServiceName, prefix, asList(tags));
     }
 
     private void monitor(MeterRegistry registry, @Nullable ThreadPoolExecutor tp) {
@@ -183,32 +198,32 @@ public class ExecutorServiceMetrics implements MeterBinder {
             return;
         }
 
-        FunctionCounter.builder("armeria.executor.completed", tp, ThreadPoolExecutor::getCompletedTaskCount)
+        FunctionCounter.builder(prefix + ".executor.completed", tp, ThreadPoolExecutor::getCompletedTaskCount)
                        .tags(tags)
                        .description("The approximate total number of tasks that have completed execution")
                        .baseUnit(BaseUnits.TASKS)
                        .register(registry);
 
-        Gauge.builder("armeria.executor.active", tp, ThreadPoolExecutor::getActiveCount)
+        Gauge.builder(prefix + ".executor.active", tp, ThreadPoolExecutor::getActiveCount)
              .tags(tags)
              .description("The approximate number of threads that are actively executing tasks")
              .baseUnit(BaseUnits.THREADS)
              .register(registry);
 
-        Gauge.builder("armeria.executor.queued", tp, tpRef -> tpRef.getQueue().size())
+        Gauge.builder(prefix + ".executor.queued", tp, tpRef -> tpRef.getQueue().size())
              .tags(tags)
              .description("The approximate number of tasks that are queued for execution")
              .baseUnit(BaseUnits.TASKS)
              .register(registry);
 
-        Gauge.builder("armeria.executor.queue.remaining", tp, tpRef -> tpRef.getQueue().remainingCapacity())
+        Gauge.builder(prefix + ".executor.queue.remaining", tp, tpRef -> tpRef.getQueue().remainingCapacity())
              .tags(tags)
              .description(
                      "The number of additional elements that this queue can ideally accept without blocking")
              .baseUnit(BaseUnits.TASKS)
              .register(registry);
 
-        Gauge.builder("armeria.executor.pool.size", tp, ThreadPoolExecutor::getPoolSize)
+        Gauge.builder(prefix + ".executor.pool.size", tp, ThreadPoolExecutor::getPoolSize)
              .tags(tags)
              .description("The current number of threads in the pool")
              .baseUnit(BaseUnits.THREADS)
@@ -216,7 +231,7 @@ public class ExecutorServiceMetrics implements MeterBinder {
     }
 
     private void monitor(MeterRegistry registry, ForkJoinPool fj) {
-        FunctionCounter.builder("armeria.executor.steals", fj, ForkJoinPool::getStealCount)
+        FunctionCounter.builder(prefix + ".executor.steals", fj, ForkJoinPool::getStealCount)
                        .tags(tags)
                        .description("Estimate of the total number of tasks stolen from " +
                                     "one thread's work queue by another. The reported value " +
@@ -224,17 +239,17 @@ public class ExecutorServiceMetrics implements MeterBinder {
                                     "is not quiescent")
                        .register(registry);
 
-        Gauge.builder("armeria.executor.queued", fj, ForkJoinPool::getQueuedTaskCount)
+        Gauge.builder(prefix + ".executor.queued", fj, ForkJoinPool::getQueuedTaskCount)
              .tags(tags)
              .description("An estimate of the total number of tasks currently held in queues by worker threads")
              .register(registry);
 
-        Gauge.builder("armeria.executor.active", fj, ForkJoinPool::getActiveThreadCount)
+        Gauge.builder(prefix + ".executor.active", fj, ForkJoinPool::getActiveThreadCount)
              .tags(tags)
              .description("An estimate of the number of threads that are currently stealing or executing tasks")
              .register(registry);
 
-        Gauge.builder("armeria.executor.running", fj, ForkJoinPool::getRunningThreadCount)
+        Gauge.builder(prefix + ".executor.running", fj, ForkJoinPool::getRunningThreadCount)
              .tags(tags)
              .description(
                      "An estimate of the number of worker threads that are not blocked waiting to join tasks " +
