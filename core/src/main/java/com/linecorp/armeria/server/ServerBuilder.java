@@ -150,6 +150,10 @@ public final class ServerBuilder {
             ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
             EpollChannelOption.EPOLL_MODE);
 
+    static {
+        RequestContextUtil.init();
+    }
+
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<ServerListener> serverListeners = new ArrayList<>();
     @VisibleForTesting
@@ -1477,7 +1481,6 @@ public final class ServerBuilder {
                 enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
 
         serverListeners.forEach(server::addListener);
-        RequestContextUtil.init();
         return server;
     }
 

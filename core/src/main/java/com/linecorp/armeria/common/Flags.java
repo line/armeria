@@ -120,7 +120,8 @@ public final class Flags {
 
     private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
-    private static final String CONTEXT_STORAGE = get("contextStorage", "", unused -> true);
+    private static final String REQUEST_CONTEXT_STORAGE_PROVIER =
+            get("requestContextStorageProvider", "", unused -> true);
 
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
@@ -417,15 +418,16 @@ public final class Flags {
     }
 
     /**
-     * Returns the fully qualified class name of {@link ContextStorage}.
+     * Returns the fully qualified class name of {@link RequestContextStorage} that is used to choose
+     * when multiple {@link RequestContextStorageProvider}s exist.
      *
-     * <p>The default value of this flag is an empty string, which means {@link ContextStorage#ofDefault()}
-     * is used. Specify the {@code -Dcom.linecorp.armeria.contextStorage=<FQCN>} JVM option where
-     * {@code FQCN} is the impletation of {@link ContextStorage} (e.g. {@code com.mycom.CustomContextStorage})
-     * to override the default value.
+     * <p>The default value of this flag is an empty string, which means only one
+     * {@link RequestContextStorageProvider} must be found via Java SPI. If there are more than one,
+     * specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option to
+     * choose the {@link RequestContextStorageProvider}.
      */
-    public static String contextStorage() {
-        return CONTEXT_STORAGE;
+    public static String requestContextStorageProvider() {
+        return REQUEST_CONTEXT_STORAGE_PROVIER;
     }
 
     /**

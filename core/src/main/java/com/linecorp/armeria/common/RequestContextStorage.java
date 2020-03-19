@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.common.RequestContextUtil.defaultContextStorage;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.threadLocalRequestContextStorage;
 
 import javax.annotation.Nullable;
 
@@ -26,44 +26,47 @@ import com.linecorp.armeria.common.util.UnstableApi;
  * The storage for storing {@link RequestContext}.
  *
  * <p>If you want to implement your own storage or add some hooks when a {@link RequestContext} is pushed
- * and popped, you should use {@link ContextStorageProvider} or {@link Flags#contextStorage()}.
+ * and popped, you should use {@link RequestContextStorageProvider}.
  * Here's an example that sets MDC before {@link RequestContext} is pushed:
  *
  * <pre>{@code
- * > public class MyStorage implements ContextStorageProvider {
+ * > public class MyStorage implements RequestContextStorageProvider {
+ * >
  * >     @Override
- * >     public ContextStorage newContextStorage() {
- * >         ContextStorage storage = ContextStorage.ofDefault();
- * >         return new ContextStorage() {
+ * >     public RequestContextStorage newStorage() {
+ * >         RequestContextStorage threadLocalStorage = RequestContextStorage.threadLocal();
+ * >         return new RequestContextStorage() {
  * >
  * >             @Nullable
  * >             @Override
- * >             @SuppressWarnings("unchecked")
  * >             public <T extends RequestContext> T push(RequestContext toPush) {
- * >                 setMDC(...); // using toPush
- * >                 return storage.push(toPush);
+ * >                 setMdc(toPush);
+ * >                 return threadLocalStorage.push(toPush);
  * >             }
  * >
  * >             @Override
  * >             public void pop(RequestContext current, @Nullable RequestContext toRestore) {
+ * >                 clearMdc();
  * >                 if (toRestore != null) {
- * >                     setMDC(...); // using toRestore
+ * >                     setMdc(toRestore);
  * >                 }
- * >                 storage.pop(current, toRestore);
+ * >                 threadLocalStorage.pop(current, toRestore);
  * >             }
  * >             ...
- * >      }
+ * >          }
+ * >     }
  * > }
  * }</pre>
  */
 @UnstableApi
-public interface ContextStorage {
+public interface RequestContextStorage {
 
     /**
-     * Returns the default {@link ContextStorage} which stores the {@link RequestContext} in the thread-local.
+     * Returns the default {@link RequestContextStorage} which stores the {@link RequestContext}
+     * in the thread-local.
      */
-    static ContextStorage ofDefault() {
-        return defaultContextStorage;
+    static RequestContextStorage threadLocal() {
+        return threadLocalRequestContextStorage;
     }
 
     /**

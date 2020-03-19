@@ -21,13 +21,13 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.ContextStorage;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 
-class ThreadLocalContextStorage implements ContextStorage {
+final class ThreadLocalRequestContextStorage implements RequestContextStorage {
 
     private static final FastThreadLocal<RequestContext> context = new FastThreadLocal<>();
 

@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 
-public final class CustomContextStorageProvider implements ContextStorageProvider {
+public final class CustomRequestContextStorageProvider implements RequestContextStorageProvider {
 
     private static final FastThreadLocal<RequestContext> context = new FastThreadLocal<>();
 
@@ -47,8 +47,8 @@ public final class CustomContextStorageProvider implements ContextStorageProvide
     }
 
     @Override
-    public ContextStorage newContextStorage() {
-        return new ContextStorage() {
+    public RequestContextStorage newStorage() {
+        return new RequestContextStorage() {
 
             @Nullable
             @Override

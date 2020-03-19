@@ -19,14 +19,14 @@ package com.linecorp.armeria.common;
 import com.linecorp.armeria.common.util.UnstableApi;
 
 /**
- * Creates a new {@link ContextStorage} dynamically via Java SPI (Service Provider Interface).
+ * Creates a new {@link RequestContextStorage} dynamically via Java SPI (Service Provider Interface).
  */
 @UnstableApi
 @FunctionalInterface
-public interface ContextStorageProvider {
+public interface RequestContextStorageProvider {
 
     /**
-     * Creates a new {@link ContextStorage}.
+     * Creates a new {@link RequestContextStorage}.
      */
-    ContextStorage newContextStorage();
+    RequestContextStorage newStorage();
 }

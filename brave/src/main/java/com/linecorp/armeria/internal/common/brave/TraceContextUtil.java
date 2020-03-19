@@ -66,7 +66,7 @@ public final class TraceContextUtil {
                     "Tracing.currentTraceContext is not a " + RequestContextCurrentTraceContext.class
                             .getSimpleName() + " scope. " +
                     "Please call Tracing.Builder.currentTraceContext(" + RequestContextCurrentTraceContext.class
-                            .getSimpleName() + ".ofDefault()).");
+                            .getSimpleName() + ".threadLocal()).");
         }
     }
 

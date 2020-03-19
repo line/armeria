@@ -29,13 +29,13 @@ import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 import io.netty.channel.EventLoop;
 
-class ContextStorageCustomizingTest {
+class RequestContextStorageCustomizingTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
 
     @Test
-    void contextStorageDoesNotAffectOtherThread() throws InterruptedException {
+    void requestContextStorageDoesNotAffectOtherThread() throws InterruptedException {
         final EventLoop eventLoop = eventLoopExtension.get();
         final ServiceRequestContext ctx = newCtx();
 
@@ -43,14 +43,14 @@ class ContextStorageCustomizingTest {
         final CountDownLatch latch2 = new CountDownLatch(1);
         final CountDownLatch latch3 = new CountDownLatch(1);
         try (SafeCloseable ignored = ctx.push()) {
-            assertThat(CustomContextStorageProvider.current()).isEqualTo(ctx);
-            assertThat(CustomContextStorageProvider.pushCalled()).isOne();
+            assertThat(CustomRequestContextStorageProvider.current()).isEqualTo(ctx);
+            assertThat(CustomRequestContextStorageProvider.pushCalled()).isOne();
 
             eventLoop.execute(() -> {
                 final ServiceRequestContext ctx1 = newCtx();
                 try (SafeCloseable ignored1 = ctx1.push()) {
-                    assertThat(CustomContextStorageProvider.current()).isEqualTo(ctx1);
-                    assertThat(CustomContextStorageProvider.pushCalled()).isEqualTo(2);
+                    assertThat(CustomRequestContextStorageProvider.current()).isEqualTo(ctx1);
+                    assertThat(CustomRequestContextStorageProvider.pushCalled()).isEqualTo(2);
                     latch1.countDown();
                     try {
                         latch2.await();
@@ -58,17 +58,17 @@ class ContextStorageCustomizingTest {
                         // ignore
                     }
                 }
-                assertThat(CustomContextStorageProvider.current()).isNull();
-                assertThat(CustomContextStorageProvider.popCalled()).isEqualTo(2);
+                assertThat(CustomRequestContextStorageProvider.current()).isNull();
+                assertThat(CustomRequestContextStorageProvider.popCalled()).isEqualTo(2);
                 latch3.countDown();
             });
 
             latch1.await();
-            assertThat(CustomContextStorageProvider.current()).isEqualTo(ctx);
-            assertThat(CustomContextStorageProvider.pushCalled()).isEqualTo(2);
+            assertThat(CustomRequestContextStorageProvider.current()).isEqualTo(ctx);
+            assertThat(CustomRequestContextStorageProvider.pushCalled()).isEqualTo(2);
         }
-        assertThat(CustomContextStorageProvider.current()).isNull();
-        assertThat(CustomContextStorageProvider.popCalled()).isOne();
+        assertThat(CustomRequestContextStorageProvider.current()).isNull();
+        assertThat(CustomRequestContextStorageProvider.popCalled()).isOne();
         latch2.countDown();
         latch3.await();
     }

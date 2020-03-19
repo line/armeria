@@ -78,6 +78,10 @@ import io.netty.resolver.dns.DnsNameResolverBuilder;
  */
 public final class ClientFactoryBuilder {
 
+    static {
+        RequestContextUtil.init();
+    }
+
     private final Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> options = new LinkedHashMap<>();
 
     // Netty-related properties:
@@ -561,7 +565,6 @@ public final class ClientFactoryBuilder {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
-        RequestContextUtil.init();
         return new DefaultClientFactory(new HttpClientFactory(buildOptions()));
     }
 
