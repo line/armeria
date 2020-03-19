@@ -48,8 +48,8 @@ export default function prettify(json: string) {
   }
 
   const tokenizer = /"|\n|\r/g;
-  const new_str = [];
-  let in_string = false;
+  const newStr = [];
+  let inString = false;
   let tmp: RegExpMatchArray | null;
   let ns = 0;
   let from = 0;
@@ -61,46 +61,46 @@ export default function prettify(json: string) {
 
   let indentation = 0;
 
-  // tslint:disable-next-line:no-conditional-assignment
+  // eslint-disable-next-line no-cond-assign
   while ((tmp = tokenizer.exec(json))) {
     lc = (RegExp as any).leftContext;
     rc = (RegExp as any).rightContext;
 
     let substr = lc.substring(from);
-    if (!in_string) {
+    if (!inString) {
       substr = substr.replace(/(\n|\r|\s)*/g, '');
       for (let i = 0; i < substr.length; i += 1) {
         const prettified = doPrettify(substr.charAt(i), indentation);
-        new_str[ns] = prettified[0];
+        newStr[ns] = prettified[0];
         ns += 1;
         indentation = prettified[1];
       }
     } else {
-      new_str[ns] = substr;
+      newStr[ns] = substr;
       ns += 1;
     }
     from = tokenizer.lastIndex;
 
     if (tmp[0] === '"') {
       const m = lc.match(/(\\)*$/);
-      if (!in_string || !m || m[0].length % 2 === 0) {
+      if (!inString || !m || m[0].length % 2 === 0) {
         // start of string with ", or unescaped " character found to end string
-        in_string = !in_string;
+        inString = !inString;
       }
       from -= 1; // include " character in next catch
       rc = json.substring(from);
     } else if (!/\n|\r|\s/.test(tmp[0])) {
-      new_str[ns] = tmp[0];
+      newStr[ns] = tmp[0];
       ns += 1;
     }
   }
 
   for (let i = 0; i < rc.length; i += 1) {
     const prettified = doPrettify(rc.charAt(i), indentation);
-    new_str[ns] = prettified[0];
+    newStr[ns] = prettified[0];
     ns += 1;
     indentation = prettified[1];
   }
 
-  return new_str.join('');
+  return newStr.join('');
 }

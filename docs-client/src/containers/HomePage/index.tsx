@@ -46,7 +46,7 @@ const HomePage: React.FunctionComponent<Props> = ({ versions }) => {
   const tableRows: JSX.Element[] = [];
 
   if (versions) {
-    versions.getVersions().forEach((version) => {
+    versions.getVersions().forEach(version => {
       tableRows.push(
         <TableRow key={version.artifactId}>
           <TableCell>{version.artifactId}</TableCell>
