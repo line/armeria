@@ -32,8 +32,6 @@ import React, {
 } from 'react';
 import { Option } from 'react-dropdown';
 import SyntaxHighlighter from 'react-syntax-highlighter';
-// react-syntax-highlighter type definitions are out of date.
-// @ts-ignore
 import githubGist from 'react-syntax-highlighter/dist/esm/styles/hljs/github-gist';
 
 import jsonMinify from 'jsonminify';
