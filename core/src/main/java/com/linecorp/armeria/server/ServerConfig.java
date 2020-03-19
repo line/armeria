@@ -38,10 +38,10 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.metric.ExecutorServiceMetrics;
+import com.linecorp.armeria.common.metric.TimedScheduledExecutorService;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
-import io.micrometer.core.instrument.internal.TimedExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.DomainNameMapping;
@@ -158,7 +158,9 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        if (!(blockingTaskExecutor instanceof TimedExecutorService)) {
+        if (!(blockingTaskExecutor instanceof TimedScheduledExecutorService ||
+              blockingTaskExecutor instanceof
+                      io.micrometer.core.instrument.internal.TimedScheduledExecutorService)) {
             blockingTaskExecutor = ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
                                                                   "armeriaBlockingTaskExecutor");
         }
