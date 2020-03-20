@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.server;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
@@ -28,7 +29,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Headers;
 
-public final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder {
+public final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
@@ -40,48 +41,48 @@ public final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder {
     }
 
     @Override
-    protected ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers, boolean endStream,
-                                           HttpHeaders additionalHeaders, HttpHeaders additionalTrailers) {
-        if (isStreamPresentAndWritable(streamId)) {
-            final boolean isTrailer = !headers.contains(HttpHeaderNames.STATUS);
-            final Http2Headers convertedHeaders;
-            if (!isTrailer) {
-                convertedHeaders = convertHeaders(headers, additionalHeaders, additionalTrailers, endStream);
-            } else {
-                convertedHeaders = ArmeriaHttpUtil.toNettyHttp2ServerTrailer(headers, additionalTrailers,
-                                                                             endStream);
-            }
-            // Writing to an existing stream.
-            return encoder().writeHeaders(ctx(), streamId, convertedHeaders, 0, endStream,
-                                          ctx().newPromise());
+    public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
+                                        boolean isTrailersEmpty) {
+        if (!isStreamPresentAndWritable(streamId)) {
+            // One of the following cases:
+            // - Stream has been closed already.
+            // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
+            return newFailedFuture(ClosedStreamException.get());
         }
 
-        // One of the following cases:
-        // - Stream has been closed already.
-        // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
-        return newFailedFuture(ClosedStreamException.get());
+        final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
+        return encoder().writeHeaders(ctx(), streamId, converted, 0, endStream, ctx().newPromise());
     }
 
-    private Http2Headers convertHeaders(HttpHeaders inputHeaders, HttpHeaders additionalHeaders,
-                                        HttpHeaders additionalTrailers, boolean endStream) {
-        final Http2Headers outputHeaders =
-                ArmeriaHttpUtil.toNettyHttp2ServerHeader(inputHeaders, additionalHeaders, additionalTrailers,
-                                                         endStream);
-        if (!additionalTrailers.isEmpty() &&
-            outputHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+    private Http2Headers convertHeaders(HttpHeaders inputHeaders, boolean isTrailersEmpty) {
+        final Http2Headers outHeaders = ArmeriaHttpUtil.toNettyHttp2ServerHeaders(inputHeaders);
+        if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
             // prevent the trailers from being sent so we go ahead and remove content-length to force
             // chunked encoding.
-            outputHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+            outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
         }
 
-        if (enableServerHeader && !outputHeaders.contains(HttpHeaderNames.SERVER)) {
-            outputHeaders.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
+        if (enableServerHeader && !outHeaders.contains(HttpHeaderNames.SERVER)) {
+            outHeaders.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
         }
 
-        if (enableDateHeader && !outputHeaders.contains(HttpHeaderNames.DATE)) {
-            outputHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
+        if (enableDateHeader && !outHeaders.contains(HttpHeaderNames.DATE)) {
+            outHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
         }
-        return outputHeaders;
+        return outHeaders;
+    }
+
+    @Override
+    public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
+        if (!isStreamPresentAndWritable(streamId)) {
+            // One of the following cases:
+            // - Stream has been closed already.
+            // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
+            return newFailedFuture(ClosedStreamException.get());
+        }
+
+        final Http2Headers converted = ArmeriaHttpUtil.toNettyHttp2ServerTrailer(headers);
+        return encoder().writeHeaders(ctx(), streamId, converted, 0, true, ctx().newPromise());
     }
 }

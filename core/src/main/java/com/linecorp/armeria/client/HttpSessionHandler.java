@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientHttp1ObjectEncoder;
 import com.linecorp.armeria.internal.client.ClientHttp2ObjectEncoder;
-import com.linecorp.armeria.internal.common.HttpObjectEncoder;
+import com.linecorp.armeria.internal.client.ClientHttpObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
@@ -88,7 +88,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Nullable
     private HttpResponseDecoder responseDecoder;
     @Nullable
-    private HttpObjectEncoder requestEncoder;
+    private ClientHttpObjectEncoder requestEncoder;
 
     /**
      * The maximum number of unfinished requests. In HTTP/2, this value is identical to MAX_CONCURRENT_STREAMS.

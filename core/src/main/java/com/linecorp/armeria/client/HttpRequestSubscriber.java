@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpSessionHandler.MAX_NUM_REQUESTS_SENT;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.composeRequestHeaders;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -41,7 +42,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.HttpObjectEncoder;
+import com.linecorp.armeria.internal.client.ClientHttpObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.netty.channel.Channel;
@@ -51,7 +52,7 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutureListener {
+final class HttpRequestSubscriber implements Subscriber<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpRequestSubscriber.class);
 
@@ -62,7 +63,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private final Channel ch;
-    private final HttpObjectEncoder encoder;
+    private final ClientHttpObjectEncoder encoder;
     private final HttpResponseDecoder responseDecoder;
     private final HttpRequest request;
     private final DecodedHttpResponse originalRes;
@@ -83,7 +84,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private boolean isSubscriptionCompleted;
     private boolean loggedRequestFirstBytesTransferred;
 
-    HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
+    HttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                           HttpRequest request, DecodedHttpResponse originalRes,
                           ClientRequestContext ctx, long timeoutMillis) {
         this.ch = ch;
@@ -94,44 +95,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         this.ctx = ctx;
         logBuilder = ctx.logBuilder();
         this.timeoutMillis = timeoutMillis;
-    }
-
-    /**
-     * Invoked on each write of an {@link HttpObject}.
-     */
-    @Override
-    public void operationComplete(ChannelFuture future) throws Exception {
-        // If a message has been sent out, cancel the timeout for starting a request.
-        cancelTimeout();
-
-        try (SafeCloseable ignored = RequestContextUtil.pop()) {
-            if (future.isSuccess()) {
-                // The first write is always the first headers, so log that we finished our first transfer
-                // over the wire.
-                if (!loggedRequestFirstBytesTransferred) {
-                    logBuilder.requestFirstBytesTransferred();
-                    loggedRequestFirstBytesTransferred = true;
-                }
-
-                if (state == State.DONE) {
-                    logBuilder.endRequest();
-                    // Successfully sent the request; schedule the response timeout.
-                    assert responseWrapper != null;
-                    responseWrapper.initTimeout();
-                }
-
-                // Request more messages regardless whether the state is DONE. It makes the producer have
-                // a chance to produce the last call such as 'onComplete' and 'onError' when there are
-                // no more messages it can produce.
-                if (!isSubscriptionCompleted) {
-                    assert subscription != null;
-                    subscription.request(1);
-                }
-                return;
-            }
-
-            failAndReset(future.cause());
-        }
     }
 
     @Override
@@ -192,16 +155,16 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        logBuilder.requestHeaders(firstHeaders);
-
         if (request.isEmpty()) {
             state = State.DONE;
         } else {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
-        final ChannelFuture future = encoder.writeHeaders(id, streamId(), firstHeaders, request.isEmpty(),
-                                                          ctx.additionalRequestHeaders(), HttpHeaders.of());
-        future.addListener(this);
+
+        final RequestHeaders composed = composeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
+        logBuilder.requestHeaders(firstHeaders);
+        final ChannelFuture future = encoder.writeHeaders(id, streamId(), composed, request.isEmpty());
+        future.addListener(new WriteFutureListener(true));
         ch.flush();
     }
 
@@ -278,14 +241,12 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final ChannelFuture future;
         if (o instanceof HttpHeaders) {
-            // trailers
-            future = encoder.writeHeaders(id, streamId(), (HttpHeaders) o, endOfStream,
-                                          HttpHeaders.of(), HttpHeaders.of());
+            future = encoder.writeTrailers(id, streamId(), (HttpHeaders) o);
         } else {
             future = encoder.writeData(id, streamId(), (HttpData) o, endOfStream);
         }
 
-        future.addListener(this);
+        future.addListener(new WriteFutureListener(false));
         ch.flush();
     }
 
@@ -369,5 +330,58 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         this.timeoutFuture = null;
         return timeoutFuture.cancel(false);
+    }
+
+    private class WriteFutureListener implements ChannelFutureListener {
+
+        private final boolean isRequestHeadersFuture;
+
+        WriteFutureListener(boolean isRequestHeadersFuture) {
+            this.isRequestHeadersFuture = isRequestHeadersFuture;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            // If a message has been sent out, cancel the timeout for starting a request.
+            cancelTimeout();
+
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                if (future.isSuccess()) {
+                    // The first write is always the first headers, so log that we finished our first transfer
+                    // over the wire.
+                    if (!loggedRequestFirstBytesTransferred) {
+                        logBuilder.requestFirstBytesTransferred();
+                        loggedRequestFirstBytesTransferred = true;
+                    }
+
+                    if (state == State.DONE) {
+                        logBuilder.endRequest();
+                        // Successfully sent the request; schedule the response timeout.
+                        assert responseWrapper != null;
+                        responseWrapper.initTimeout();
+                    }
+
+                    // Request more messages regardless whether the state is DONE. It makes the producer have
+                    // a chance to produce the last call such as 'onComplete' and 'onError' when there are
+                    // no more messages it can produce.
+                    if (!isSubscriptionCompleted) {
+                        assert subscription != null;
+                        subscription.request(1);
+                    }
+                    return;
+                }
+
+                if (isRequestHeadersFuture) {
+                    final Throwable cause = future.cause();
+                    if (cause instanceof UnprocessedRequestException) {
+                        fail(cause);
+                    } else {
+                        fail(new UnprocessedRequestException(cause));
+                    }
+                } else {
+                    failAndReset(future.cause());
+                }
+            }
+        }
     }
 }

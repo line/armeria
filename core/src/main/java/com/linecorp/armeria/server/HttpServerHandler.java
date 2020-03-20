@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -60,10 +59,10 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.server.ServerHttp2ObjectEncoder;
+import com.linecorp.armeria.internal.server.ServerHttpObjectEncoder;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -156,7 +155,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private SSLSession sslSession;
 
     @Nullable
-    private HttpObjectEncoder responseEncoder;
+    private ServerHttpObjectEncoder responseEncoder;
 
     @Nullable
     private final ProxiedAddresses proxiedAddresses;
@@ -167,7 +166,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
-                      @Nullable HttpObjectEncoder responseEncoder,
+                      @Nullable ServerHttpObjectEncoder responseEncoder,
                       SessionProtocol protocol,
                       @Nullable ProxiedAddresses proxiedAddresses) {
 
@@ -555,8 +554,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final ResponseHeaders immutableResHeaders = resHeaders.build();
         ChannelFuture future = responseEncoder.writeHeaders(
-                req.id(), req.streamId(), immutableResHeaders, !hasContent,
-                HttpHeaders.of(), HttpHeaders.of());
+                req.id(), req.streamId(), immutableResHeaders, !hasContent);
         logBuilder.responseHeaders(immutableResHeaders);
         if (hasContent) {
             logBuilder.increaseResponseLength(resContent);

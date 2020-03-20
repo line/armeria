@@ -34,8 +34,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.server.ServerHttp1ObjectEncoder;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -83,7 +83,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private final ServerConfig cfg;
     private final AsciiString scheme;
     private final InboundTrafficController inboundTrafficController;
-    private final Http1ObjectEncoder writer;
+    private final ServerHttp1ObjectEncoder writer;
 
     /** The request being decoded currently. */
     @Nullable
@@ -92,7 +92,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private boolean discarding;
 
     Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
-                        Http1ObjectEncoder writer) {
+                        ServerHttp1ObjectEncoder writer) {
         this.cfg = cfg;
         this.scheme = scheme;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
@@ -260,9 +260,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
 
         // Send a '100 Continue' response.
-        writer.writeHeaders(id, 1, CONTINUE_RESPONSE, false,
-                            com.linecorp.armeria.common.HttpHeaders.of(),
-                            com.linecorp.armeria.common.HttpHeaders.of());
+        writer.writeHeaders(id, 1, CONTINUE_RESPONSE, false);
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         nettyHeaders.remove(HttpHeaderNames.EXPECT);
@@ -281,9 +279,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
                                .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
                                .build();
-        writer.writeHeaders(id, 1, headers, false,
-                            com.linecorp.armeria.common.HttpHeaders.of(),
-                            com.linecorp.armeria.common.HttpHeaders.of());
+        writer.writeHeaders(id, 1, headers, false);
         writer.writeData(id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
     }
 
