@@ -28,7 +28,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.metric;
 
 import static java.util.stream.Collectors.toList;
 
@@ -69,15 +69,15 @@ class TimedScheduledExecutorService implements ScheduledExecutorService {
     /**
      * Creates a new instance.
      */
-    public TimedScheduledExecutorService(MeterRegistry registry, ScheduledExecutorService delegate,
-                                         String executorServiceName, Iterable<Tag> tags) {
+    TimedScheduledExecutorService(MeterRegistry registry, ScheduledExecutorService delegate,
+                                  String executorServiceName, String metricPrefix, Iterable<Tag> tags) {
         this.registry = registry;
         this.delegate = delegate;
         final Tags finalTags = Tags.concat(tags, "name", executorServiceName);
-        executionTimer = registry.timer("armeria.executor", finalTags);
-        idleTimer = registry.timer("armeria.executor.idle", finalTags);
-        scheduledOnce = registry.counter("armeria.executor.scheduled.once", finalTags);
-        scheduledRepetitively = registry.counter("armeria.executor.scheduled.repetitively", finalTags);
+        executionTimer = registry.timer(metricPrefix, finalTags);
+        idleTimer = registry.timer(metricPrefix + ".idle", finalTags);
+        scheduledOnce = registry.counter(metricPrefix + ".scheduled.once", finalTags);
+        scheduledRepetitively = registry.counter(metricPrefix + ".scheduled.repetitively", finalTags);
     }
 
     @Override

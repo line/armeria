@@ -14,7 +14,7 @@
  * under the License.
  */
 /*
- * Copyright 2017 Pivotal Software, Inc.
+ * Copyright 2019 Pivotal Software, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,42 +28,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.metric;
 
-import java.util.concurrent.Executor;
+import java.util.concurrent.Callable;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 
 /**
- * An {@link Executor} that is timed.
+ * A wrapper for a {@link Callable} with idle and execution timings.
  */
-class TimedExecutor implements Executor {
+class TimedCallable<V> implements Callable<V> {
 
     // Forked from Micrometer 1.3.6
-    // https://github.com/micrometer-metrics/micrometer/blob/e6ff3c2fe9542608a33a62b10fdf1222cd60feae/micrometer-core/src/main/java/io/micrometer/core/instrument/internal/TimedExecutor.java
+    // https://github.com/micrometer-metrics/micrometer/blob/5d1fe8685edfa50de56c9f5bee212dc0785b80e1/micrometer-core/src/main/java/io/micrometer/core/instrument/internal/TimedCallable.java
 
     private final MeterRegistry registry;
-    private final Executor delegate;
     private final Timer executionTimer;
     private final Timer idleTimer;
+    private final Callable<V> callable;
+    private final Timer.Sample idleSample;
 
-    /**
-     * Creates a new instance.
-     */
-    TimedExecutor(MeterRegistry registry, Executor delegate,
-                  String executorName, String prefix, Iterable<Tag> tags) {
+    TimedCallable(MeterRegistry registry, Timer executionTimer, Timer idleTimer, Callable<V> callable) {
         this.registry = registry;
-        this.delegate = delegate;
-        final Tags finalTags = Tags.concat(tags, "name", executorName);
-        executionTimer = registry.timer(prefix + ".executor.execution", finalTags);
-        idleTimer = registry.timer(prefix + ".executor.idle", finalTags);
+        this.executionTimer = executionTimer;
+        this.idleTimer = idleTimer;
+        this.callable = callable;
+        idleSample = Timer.start(registry);
     }
 
     @Override
-    public void execute(Runnable command) {
-        delegate.execute(new TimedRunnable(registry, executionTimer, idleTimer, command));
+    public V call() throws Exception {
+        idleSample.stop(idleTimer);
+        final Timer.Sample executionSample = Timer.start(registry);
+        try {
+            return callable.call();
+        } finally {
+            executionSample.stop(executionTimer);
+        }
     }
 }

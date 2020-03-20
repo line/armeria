@@ -36,9 +36,9 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.ExecutorServiceMetrics;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.metric.ExecutorServiceMetrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -157,9 +157,10 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        if (!ExecutorServiceMetrics.isMonitorableExecutor(blockingTaskExecutor)) {
-            blockingTaskExecutor = ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                                                  "armeriaBlockingTaskExecutor", "armeria");
+        if (!ExecutorServiceMetrics.isMonitoredExecutor(blockingTaskExecutor)) {
+            blockingTaskExecutor =
+                    ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
+                                                   "armeriaBlockingTaskExecutor", "armeria.executor");
         }
         this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;

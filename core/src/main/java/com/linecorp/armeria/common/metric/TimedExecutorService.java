@@ -28,7 +28,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.metric;
 
 import static java.util.stream.Collectors.toList;
 
@@ -62,12 +62,12 @@ class TimedExecutorService implements ExecutorService {
     private final Timer idleTimer;
 
     TimedExecutorService(MeterRegistry registry, ExecutorService delegate,
-                         String executorServiceName, Iterable<Tag> tags) {
+                         String executorServiceName, String metricPrefix, Iterable<Tag> tags) {
         this.registry = registry;
         this.delegate = delegate;
         final Tags finalTags = Tags.concat(tags, "name", executorServiceName);
-        executionTimer = registry.timer("armeria.executor", finalTags);
-        idleTimer = registry.timer("armeria.executor.idle", finalTags);
+        executionTimer = registry.timer(metricPrefix, finalTags);
+        idleTimer = registry.timer(metricPrefix + ".idle", finalTags);
     }
 
     @Override
