@@ -336,6 +336,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private void failAndReset(Throwable cause) {
         if (cause instanceof ProxyConnectException) {
+            // ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
             return;
         }
 
