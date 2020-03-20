@@ -141,6 +141,9 @@ final class TokenBucketSpec {
      * <limit>;window=<period(in seconds)>[;burst=<overdraftLimit>][;policy="token bucket"]
      * }</pre>
      * For example: "100;window=60;burst=1000".
+     * <br>
+     * This method used to compose Quota Policy response header to inform the client about rate
+     * limiting policy as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>.
      *
      * @return A {@link String} representation of the {@link BandwidthLimit}.
      */
@@ -157,9 +160,8 @@ final class TokenBucketSpec {
         if (overdraftLimit > limit) {
             sb.append(OPTIONS_SEPARATOR).append(OVERDRAFT).append(KEY_VALUE_SEPARATOR).append(overdraftLimit);
         }
-        //sb.append(OPTIONS_SEPARATOR).append(INITIAL).append(KEY_VALUE_SEPARATOR)
-        //  .append(bandwidthLimit.initialSize());
-        //sb.append(";policy=\"token bucket\"");
+        // We don't want to include INITIAL size with the Quota Policy response, since it's only relevant
+        // during the warm-up.
         return sb.toString();
     }
 
@@ -170,6 +172,9 @@ final class TokenBucketSpec {
      * <second limit>;window=<second period(in seconds)>[;burst=<second overdraftLimit>],<SPACE>etc.
      * }</pre>
      * For example: "100;window=60;burst=1000, 5000;window=3600".
+     * <br>
+     * This method used to compose Quota Policy response header to inform the client about rate
+     * limiting policy as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>.
      *
      * @return A {@link String} representation of the {@link TokenBucket}.
      */
